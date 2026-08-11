@@ -35,6 +35,13 @@ public final class MenuService {
 
     /** Carga la ficha del jugador y abre El Almanaque. */
     public static void openAlmanac(ServerPlayerEntity player) {
+        // Si el jugador tiene el mod de cliente, se le manda el Pad (D-025).
+        // Si no, cae al menu de cofre: el servidor sigue siendo jugable con
+        // un cliente sin mod, aunque se vea peor.
+        if (PadService.soportado(player)) {
+            AlmanacPad.abrir(player);
+            return;
+        }
         loadSnapshot(player, snapshot -> new AlmanacMenu(snapshot).open(player));
     }
 
@@ -48,6 +55,19 @@ public final class MenuService {
     public static void openChild(ServerPlayerEntity player, Menu parent,
                                  java.util.function.Function<PlayerSnapshot, Menu> factory) {
         loadSnapshot(player, snapshot -> parent.openChild(player, factory.apply(snapshot)));
+    }
+
+    /**
+     * Abre un menú de cofre SIN padre, desde el Pad (D-025).
+     *
+     * <p>El Pad no es un {@link Menu}, así que no puede ser el padre de nadie.
+     * {@code Menu} ya contempla {@code parent == null}: simplemente no dibuja
+     * el botón de volver. El Pad se reabre solo al cerrar el hijo.
+     */
+    public static void openStandalone(
+            ServerPlayerEntity player,
+            java.util.function.Function<PlayerSnapshot, Menu> factory) {
+        loadSnapshot(player, snapshot -> factory.apply(snapshot).open(player));
     }
 
     /** Ficha en caché, o {@code null} si todavía no se ha cargado. */

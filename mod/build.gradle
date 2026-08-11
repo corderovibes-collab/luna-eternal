@@ -7,6 +7,14 @@ version = project.mod_version
 group = project.maven_group
 base { archivesName = project.archives_base_name }
 
+loom {
+    // Separa src/main (servidor) de src/client (interfaz). Sin esto, el
+    // codigo de cliente compilaria contra el jar de servidor y no
+    // encontraria Screen, DrawContext ni MinecraftClient, que solo existen
+    // en el lado cliente.
+    splitEnvironmentSourceSets()
+}
+
 repositories {
     mavenCentral()
     // Cobblemon se publica aquí. Se usa la MISMA version que corre el

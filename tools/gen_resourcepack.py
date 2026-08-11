@@ -309,6 +309,9 @@ def main() -> None:
             antigua.unlink()
     print(f"  {len(banners)} insignias generadas")
 
+    n = texturas_pad(raiz / "assets" / NS / "textures" / "pad")
+    print(f"  Pad: panel, 3 celdas y {n} iconos")
+
     fuente = raiz / "assets" / NS / "font" / "gui.json"
     fuente.parent.mkdir(parents=True, exist_ok=True)
     fuente.write_text(json.dumps(construir_fuente(banners), indent=2),
@@ -413,6 +416,70 @@ def panel_vanilla(base: Image.Image) -> Image.Image:
         if hy >= alto_de(6) - 97:
             pozo(hx, hy + desplazo)
     return hoja
+
+
+
+
+# ------------------------------------------------- texturas del Pad (D-025)
+#
+# El Pad es una pantalla propia, asi que ya no manda la geometria del cofre:
+# el panel se estira desde una textura de 64x64 en nueve rodajas, y los
+# iconos son PNG de 16x16. Nada de esto depende de casillas de 18 px.
+
+ICONOS_PAD = ["pokedex", "cartera", "vias", "misiones", "kits", "tienda",
+              "gts", "centro", "puerta", "gimnasios", "tesoros", "clan",
+              "cosmeticos", "cazas", "explorar"]
+
+
+def _redondeado(w, h, r, relleno, borde):
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([0, 0, w - 1, h - 1], radius=r, fill=relleno,
+                        outline=borde, width=2)
+    return img
+
+
+def texturas_pad(destino: Path) -> int:
+    """Panel de nueve rodajas, celdas e iconos de relleno."""
+    destino.mkdir(parents=True, exist_ok=True)
+
+    # Panel 64x64: esquinas de 8 px que no se escalan.
+    _redondeado(64, 64, 10, (24, 20, 37, 245), (120, 96, 200, 255)) \
+        .save(destino / "panel.png")
+
+    # Estados de celda. Se distinguen por LUMINOSIDAD, no solo por color:
+    # asi se leen tambien con daltonismo.
+    _redondeado(32, 32, 6, (38, 31, 62, 255), (96, 78, 160, 255)) \
+        .save(destino / "celda.png")
+    _redondeado(32, 32, 6, (66, 54, 110, 255), (196, 172, 255, 255)) \
+        .save(destino / "celda_encima.png")
+    _redondeado(32, 32, 6, (26, 22, 38, 255), (60, 52, 84, 255)) \
+        .save(destino / "celda_bloqueada.png")
+
+    # Iconos: si existe el arte de esa pantalla, se usa su emblema; si no,
+    # una pieza de relleno que al menos distingue una celda de otra.
+    dir_ic = destino / "icono"
+    dir_ic.mkdir(exist_ok=True)
+    for i, nombre in enumerate(ICONOS_PAD):
+        src = RAIZ / "arte-origen" / f"{nombre}.png"
+        if src.exists():
+            b = Image.open(src).convert("RGBA")
+            banda = b.crop((round(b.width * 0.34), round(b.height * 0.03),
+                            round(b.width * 0.66), round(b.height * 0.21)))
+            lado = min(banda.size)
+            izq = (banda.width - lado) // 2
+            icono = banda.crop((izq, 0, izq + lado, lado)) \
+                         .resize((16, 16), Image.LANCZOS)
+        else:
+            icono = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+            d = ImageDraw.Draw(icono)
+            tono = 60 + (i * 37) % 160
+            d.rounded_rectangle([2, 2, 13, 13], radius=3,
+                                fill=(tono, 80, 200, 255),
+                                outline=(226, 214, 255, 255))
+        icono.save(dir_ic / f"{nombre}.png")
+
+    return len(ICONOS_PAD)
 
 
 if __name__ == "__main__":

@@ -93,6 +93,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             var player = handler.getPlayer();
             players.forget(player.getUuid());
             MenuService.forget(player);
+            net.pokereport.luna.ui.PadService.olvidar(player);
             Sidebar.remove(player);
             Tablist.onLeave(server, player);
         });
@@ -166,6 +167,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // Fondos de las interfaces (D-023). Si falla, los menús salen
             // grises pero el servidor arranca igual: es cosmético.
             net.pokereport.luna.ui.Skin.load();
+            // Protocolo del Pad (D-025). Se registra ANTES de que entre
+            // nadie: los tipos de paquete deben existir en el handshake.
+            net.pokereport.luna.ui.PadService.registrar();
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);

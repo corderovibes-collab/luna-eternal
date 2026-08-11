@@ -19,14 +19,26 @@ MC = "1.21.1"
 LOADER = "0.16.14"
 SERVIDOR = ("§6PokeReport §f: §bLuna Eternal", "s12.mia.us.tarohosting.com:33043")
 
-# Solo lo necesario. Cada mod de mas es RAM, un punto de fallo y un bloqueo
-# potencial cuando salga MC 1.22 (principio P5).
+# Mods que el servidor no lleva: van marcados para que el launcher no intente
+# instalarlos del lado equivocado.
 SOLO_CLIENTE = {"sodium", "entityculling", "modmenu", "worldedit-cui"}
-MODS = ["cobblemon", "fabric-api", "sodium", "lithium",
-        "ferrite-core", "entityculling", "modmenu",
-        # WorldEdit CUI dibuja la seleccion. Sin el se construye a ciegas:
-        # marcas dos esquinas y no ves que has marcado.
-        "worldedit-cui"]
+
+# Pack de JUGADOR: lo justo para jugar. Cada mod de mas es RAM, un punto de
+# fallo y un bloqueo cuando salga MC 1.22 (P5).
+MODS_JUGADOR = ["cobblemon", "fabric-api", "sodium", "lithium",
+                "ferrite-core", "entityculling", "modmenu"]
+
+# Pack de CONSTRUCTOR: lo anterior mas las herramientas de edicion. Son 45 MB
+# de utilidad de desarrollo que un jugador normal no necesita para nada, asi
+# que va en un pack aparte en vez de engordar el de todos.
+MODS_CONSTRUCTOR = MODS_JUGADOR + [
+    # Dibuja la seleccion de WorldEdit. Sin el se construye a ciegas: marcas
+    # dos esquinas y no ves que has marcado.
+    "worldedit-cui",
+    # Editor de construccion. Ver docs/world/construccion.md §3-bis: en
+    # multijugador hay que pedir whitelist gratis en su Discord.
+    "axiom",
+]
 
 
 def api(url):
@@ -58,9 +70,9 @@ def servers_dat(nombre, ip):
     return etiqueta(10, "", lista + b"\x00")
 
 
-def main():
+def construir(nombre_pack, mods, sufijo, resumen):
     ficheros, total = [], 0
-    for slug in MODS:
+    for slug in mods:
         v = version_de(slug)
         if not v:
             print(f"  AVISO: {slug} no tiene version para {MC}, se omite")
@@ -78,20 +90,29 @@ def main():
 
     index = {
         "formatVersion": 1, "game": "minecraft", "versionId": "0.1.0",
-        "name": "PokeReport: Luna Eternal",
-        "summary": "Cliente oficial. Lo justo para jugar: 137 MB y 4 GB de RAM bastan.",
+        "name": nombre_pack,
+        "summary": resumen,
         "files": ficheros,
         "dependencies": {"minecraft": MC, "fabric-loader": LOADER}}
 
     SALIDA.mkdir(parents=True, exist_ok=True)
-    destino = SALIDA / "PokeReport-LunaEternal-0.1.0.mrpack"
+    destino = SALIDA / f"PokeReport-LunaEternal{sufijo}-0.1.0.mrpack"
     with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("modrinth.index.json",
                    json.dumps(index, indent=2, ensure_ascii=False))
         z.writestr("overrides/servers.dat", servers_dat(*SERVIDOR))
 
-    print(f"\n{destino}")
-    print(f"{len(ficheros)} mods · descarga total {total // 1048576} MB")
+    print(f"  -> {destino.name}  ({len(ficheros)} mods, {total // 1048576} MB)\n")
+
+
+def main():
+    print("PACK DE JUGADOR")
+    construir("PokeReport: Luna Eternal", MODS_JUGADOR, "",
+              "Cliente oficial. Lo justo para jugar: 4 GB de RAM bastan.")
+    print("PACK DE CONSTRUCTOR")
+    construir("PokeReport: Luna Eternal (Constructor)", MODS_CONSTRUCTOR,
+              "-Constructor",
+              "Como el oficial, mas WorldEdit CUI y Axiom para construir.")
 
 
 if __name__ == "__main__":

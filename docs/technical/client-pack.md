@@ -10,7 +10,14 @@ Cómo entra un jugador. Qué necesita instalar y por qué.
 
 ## Current Status
 
-**Generado y listo.** `build/PokeReport-LunaEternal-0.1.0.mrpack` — 137 MB.
+**Generados y listos.** Son **dos** packs, no uno:
+
+| Pack | Fichero | Mods | Descarga |
+|---|---|---|---|
+| **Jugador** | `PokeReport-LunaEternal-0.1.0.mrpack` | 7 | **136 MB** |
+| **Constructor** | `PokeReport-LunaEternal-Constructor-0.1.0.mrpack` | 9 | 182 MB |
+
+Ambos en `build/`. **Tú quieres el de constructor** — ver §2-bis.
 
 ---
 
@@ -24,16 +31,16 @@ El principio corregido no es "cero mods" sino **el mínimo posible**:
 
 | | Diosesmon | Nosotros |
 |---|---|---|
-| Descarga | Modpack completo | **137 MB** |
+| Descarga | Modpack completo | **136 MB** |
 | RAM recomendada | **8 200 MB** | 4 GB sobran |
 | Mods | Decenas | **7** |
 | Obligatorio antes de jugar | Sí | Sí, pero es un import de dos minutos |
 
-La ventaja se mantiene, solo que la cifra honesta es 137 MB, no cero.
+La ventaja se mantiene, solo que la cifra honesta es 136 MB, no cero.
 
 ---
 
-## 2. Qué lleva, y por qué cada uno
+## 2. Qué lleva el pack de jugador, y por qué cada uno
 
 | Mod | Motivo | Licencia |
 |---|---|---|
@@ -44,13 +51,30 @@ La ventaja se mantiene, solo que la cifra honesta es 137 MB, no cero.
 | **FerriteCore** | Menos memoria | MIT |
 | **EntityCulling** | No dibuja lo que no se ve | tr7zw Protective |
 | **Mod Menu** | Gestionar mods desde el juego | MIT |
-| **WorldEdit CUI** | Dibuja la selección de WorldEdit | EPL-2.0 |
-
-> **WorldEdit CUI** solo hace falta a quien construya, pero pesa 200 KB y sin
-> él se construye a ciegas: marcas dos esquinas y no ves qué has marcado.
 
 **Nada más.** Cada mod añadido es un punto de fallo, RAM y un bloqueo
 potencial cuando salga Minecraft 1.22 (P5).
+
+---
+
+## 2-bis. El pack de constructor, y por qué está separado
+
+Añade dos mods que **solo sirven para construir**:
+
+| Mod | Motivo | Licencia |
+|---|---|---|
+| **WorldEdit CUI** | Dibuja la selección. Sin él marcas dos esquinas y no ves qué marcaste | EPL-2.0 |
+| **Axiom 5.4.2** | Editor de construcción con interfaz de verdad | propietaria — ver abajo |
+
+**Por qué no van en el pack de todos:** son 46 MB de herramienta de desarrollo
+que un jugador normal no usará jamás. Meterlos en el pack general contradice el
+propio P10 que acabamos de corregir — el mínimo posible es el mínimo *para
+jugar*, no el mínimo para trabajar.
+
+> **Axiom y su licencia (D-008):** su uso no comercial en un servidor privado
+> propio es gratuito, pero **exige pedir una whitelist en su Discord**. Está
+> instalado en el servidor; el trámite sigue pendiente y es del usuario.
+> Detalle en [construccion.md §3-bis](../world/construccion.md).
 
 > **Sobre licencias (D-008):** el `.mrpack` **no redistribuye** ningún mod:
 > guarda URLs y hashes, y el launcher los baja de Modrinth. Por eso las
@@ -99,8 +123,9 @@ Actions ya montada).
 
 ## 5. Regenerarlo
 
-El pack se genera con un script contra la API de Modrinth, así que actualizar
-versiones es volver a ejecutarlo — no editar JSON a mano.
+Los packs se generan con un script contra la API de Modrinth, así que
+actualizar versiones es volver a ejecutarlo — no editar JSON a mano. Una sola
+ejecución produce los dos.
 
 ```
 python tools/gen_modpack.py
@@ -108,8 +133,9 @@ python tools/gen_modpack.py
 
 ## Next Actions
 
-1. Probar el pack e informar de fallos
-2. `LNC-001` — adaptar el launcher de Electron cuando el servidor esté listo
+1. Importar el pack de **constructor** y entrar al servidor
+2. Pedir la whitelist de Axiom en su Discord (§2-bis)
+3. `LNC-001` — adaptar el launcher de Electron cuando el servidor esté listo
 
 ## Related Systems
 

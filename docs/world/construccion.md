@@ -11,10 +11,17 @@ se puede hacer fuera y traerlo?** Y con qué herramientas.
 
 ## Current Status
 
-**WorldEdit 7.3.8 instalado** en el servidor de desarrollo (2026-08-11), y la
-ciudadela tiene una **plataforma de 80×80** en el origen para empezar.
+Servidor de desarrollo listo para construir (2026-08-11):
 
-⚠️ **Axiom NO está instalado en el servidor**, y no por descuido — ver §3-bis.
+| | |
+|---|---|
+| **WorldEdit 7.3.8** | instalado y cargado |
+| **Axiom 5.4.2** | instalado y cargado — `Initializing Axiom/5.4.2` |
+| Ciudadela | plataforma de **80×80** en el origen, y=63 |
+
+⚠️ **Falta un paso que solo puedes dar tú:** pedir la whitelist multijugador
+gratuita en el Discord de Axiom — ver §3-bis. El mod está instalado, pero hasta
+que la concedan, editar en vivo no funcionará.
 
 ---
 
@@ -94,32 +101,37 @@ son mucho mejores.
 
 ---
 
-## 3-bis. Axiom: por qué no está en el servidor
+## 3-bis. Axiom: está instalado, y falta un trámite gratuito
 
-Sus propios términos, citados de su página:
+Sus términos, citados literalmente de su página:
 
-> *"If you wish to use it on your own **private multiplayer server**, you can
-> request a multiplayer whitelist through the Axiom discord"*
+> *"If you are using Axiom **non-commercially**, you can use it in singleplayer,
+> localhost servers, or plot-based servers... If you wish to use it on your own
+> **private multiplayer server**, you can request a multiplayer whitelist
+> through the Axiom discord"*
 
 > *"We ask that **'Professional Builders'** (i.e. people who make money through
-> building in Minecraft) purchase a **Commercial License**"* — y esa licencia
-> es la que desbloquea **Multiplayer Support**.
+> building in Minecraft) purchase a **Commercial License**"*
 
-O sea: **el modo multijugador de Axiom está condicionado**, y nuestro servidor
-va a tener tienda. Instalarlo sin resolver eso sería justo lo que D-008 dice
-que no hagamos.
+La licencia comercial apunta a **quien cobra por construir** — estudios que
+venden builds por encargo. No es nuestro caso: construimos nuestro propio
+servidor. La vía que nos corresponde es la primera, y es **gratuita**.
 
-### Las tres salidas, y no hay prisa por elegir
+### Lo que hay que hacer, y es un trámite
 
-| Opción | Coste | Cuándo |
+| Paso | Quién | Coste |
 |---|---|---|
-| **Axiom en local + WorldEdit para pegar** | 0 € | **Ahora.** No toca la restricción: en singleplayer es libre |
-| Pedir la whitelist en su Discord | 0 € | Si quieres editar en vivo y el servidor aún no factura |
-| Comprar la licencia comercial | € | Cuando el servidor gane dinero y quieras multijugador |
+| Instalar Axiom en el servidor | ✅ hecho | 0 € |
+| **Pedir la whitelist multijugador en el Discord de Axiom** | **tú** | 0 € |
+| Comprar licencia comercial | solo si algún día se vende el servicio de construcción | — |
 
-**La primera es la recomendada, y no por el dinero:** construir en local es
-mejor de todos modos — sin lag, sin nadie mirando, y el `.schem` te queda como
-copia de seguridad de la construcción.
+> **Por qué lo tienes que pedir tú:** la whitelist se solicita desde una cuenta
+> de Discord asociada al servidor. No es algo que se pueda automatizar ni que yo
+> pueda hacer en tu nombre.
+
+**Mientras tanto no estás bloqueado.** Axiom en local es libre sin ningún
+trámite, y el flujo `.schem` → `//paste` del §4 funciona hoy. De hecho es mejor
+flujo: sin lag, sin nadie mirando, y el `.schem` queda como copia de seguridad.
 
 ---
 
@@ -127,9 +139,11 @@ copia de seguridad de la construcción.
 
 ### Preparación (una vez)
 
-1. Instalar **WorldEdit** en el servidor → `mods/`
-2. Instalar **Axiom** en tu cliente (y en el servidor si quieres editar en vivo)
-3. Crear un mundo local en **creativo, superplano, sin estructuras**
+1. ~~Instalar **WorldEdit** en el servidor~~ ✅ hecho
+2. ~~Instalar **Axiom** en el servidor~~ ✅ hecho
+3. Instalar el **pack de constructor** en tu cliente — trae Axiom y WorldEdit
+   CUI ya montados ([client-pack.md](../technical/client-pack.md))
+4. Crear un mundo local en **creativo, superplano, sin estructuras**
 
 ### Cada vez que se construya algo
 
@@ -199,10 +213,11 @@ Nada de eso se puede hacer contra una dimensión vacía.
 
 ## Next Actions
 
-1. Decidir vía: descargar una base o construir desde cero
-2. Instalar WorldEdit en el servidor de desarrollo
-3. Construir plaza + laboratorio
-4. Avisarme con las coordenadas
+1. ~~Instalar WorldEdit y Axiom en el servidor~~ ✅ hecho
+2. **Pedir la whitelist multijugador en el Discord de Axiom** (§3-bis) — tuyo
+3. Decidir vía: descargar una base o construir desde cero
+4. Construir plaza + laboratorio
+5. Avisarme con las coordenadas → fijo spawn, NPC del inicial, taxi y `PCLink`
 
 ## Related Systems
 

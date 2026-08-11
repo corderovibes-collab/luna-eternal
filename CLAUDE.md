@@ -6,7 +6,7 @@
 **Última actualización:** 2026-08-11
 **Fase actual:** PHASE 2 — Core progression
 **Estado:** PHASE 0 y PHASE 1 completadas. 22 documentos, decisiones D-001 a
-D-020. **El mod está desplegado y funcionando contra MariaDB:** economía de
+D-022. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, cinco vías de progresión, y las interfaces base operativas.
 
 ---
@@ -30,9 +30,11 @@ Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Misiones (6 de tutorial + 2 diarias)
 Telemetría    /luna economia · informe automático al log cada hora
               Barra lateral y tablist con rangos
-Cliente       PokeReport-LunaEternal-0.1.0.mrpack · 137 MB · 7 mods
+Cliente       jugador     -0.1.0.mrpack · 136 MB · 7 mods
+              constructor -Constructor-0.1.0.mrpack · 182 MB · +CUI +Axiom
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
+Construcción  WorldEdit 7.3.8 + Axiom 5.4.2 cargados · plataforma 80×80
 ```
 
 > ⚠️ **`online-mode` tiene que ser `false`.** Verificado: `TheJuanCE` no existe
@@ -141,7 +143,7 @@ Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 | `SEC-006` | ¿El servidor nuevo nace con `online-mode=true`? Condiciona el anti-abuso |
 | `SEC-004` | Leer el texto oficial de Mojang sobre monetización (no accesible desde aquí) |
 | `INF-002` · `INF-007` | Backups fuera del hosting (mundo **y** base de datos) |
-| — | Tu nick de Minecraft, para añadirte a la whitelist del servidor de desarrollo |
+| `BLD-002` | **Pedir la whitelist multijugador de Axiom en su Discord.** Gratis. El mod ya está instalado, pero sin ese trámite no editará en vivo |
 
 ---
 
@@ -288,6 +290,7 @@ documentación · migración · rollback.
 | D-019 | 2026-08-11 | **No se venden Modificadores de estadísticas** (Diosesmon sí) | Un legendario es *una pieza*; un modificador es una mejora repetible sin techo aplicable a cualquier Pokémon. Lo segundo no tiene fondo |
 | D-021 | 2026-08-11 | **Cobblemon se instala desde el jar oficial, y su código fuente se clona como referencia** | Tener el fuente da la verdad sobre IDs, spawns y API sin adivinar. Ya sirvió: encontró la `moon_ball`, cuya efectividad depende de la fase lunar |
 | D-020 | 2026-08-11 | **Los cofres incluyen legendarios y legendarios shiny**, como Diosesmon | **Decisión del usuario, tomada tras leer el análisis de riesgo** de [treasures.md](docs/economy/treasures.md) §2. T4 admite esta excepción explícita. Obligatorias: probabilidades públicas, piedad acumulada, idempotencia y auditoría |
+| D-022 | 2026-08-11 | **Axiom se instala en el servidor**, y el pack de cliente se parte en dos: jugador y constructor | **Corrección mía.** Leí su licencia como si nos afectara la cláusula comercial; esa apunta a quien *cobra por construir*, no a quien construye su propio servidor. El uso no comercial en servidor privado es gratuito y solo pide una whitelist en su Discord. El pack se separa porque son 46 MB que un jugador no usa jamás (P10) |
 
 ## 6. Decisiones PENDIENTES (bloqueantes)
 

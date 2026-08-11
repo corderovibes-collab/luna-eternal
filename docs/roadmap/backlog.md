@@ -97,6 +97,7 @@ Nada de esto bloquea el desarrollo, pero **sí bloquea el lanzamiento**.
 | `UI-009` | Puerta del Mundo | teletransporta |
 | `UI-011` | **Tienda** | **guardián anti-arbitraje probado rompiéndolo** |
 | `WLD-002` | Las 4 dimensiones | carpetas creadas, bloques colocados |
+| `BLD-001` | **Herramientas de construcción**: WorldEdit 7.3.8 + Axiom 5.4.2 en el servidor, plataforma 80×80 en la ciudadela, pack de constructor aparte | ambos mods cargados en el log; `CIUDADELA-SUELO-OK` |
 
 > **Dos fallos reales que solo aparecieron al probar contra el servidor**, y
 > que ninguna revisión de código habría visto:
@@ -163,7 +164,9 @@ puede tocar**).
 | `PROG-002` | Catálogo de desbloqueos | — |
 | `PROG-003` | Medallas y gimnasios | — |
 | `WLD-003` | Protocolo de reinicio del Salvaje | `INF-002`, `INF-007` |
-| `WLD-005` | **Construir la ciudadela** (no es programación) | — |
+| `WLD-005` | **Construir la ciudadela** (no es programación) | `BLD-001` ✅ |
+| `BLD-002` | **Pedir la whitelist multijugador de Axiom** en su Discord — es del usuario, es gratis, y sin ella Axiom no edita en vivo | `BLD-001` ✅ |
+| `WLD-006` | Fijar spawn de la ciudadela, NPC del laboratorio, destinos de `LunaTaxi` y `PCLink` en coordenadas reales | `WLD-005` |
 | `PKM-002` | Diseño del inicial | — |
 | `PKM-003` | Cupo y condiciones de legendarios | — |
 | `SOC-001` | Clanes | — |

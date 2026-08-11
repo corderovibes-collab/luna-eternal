@@ -302,15 +302,45 @@ primaria de todo**: dinero, Pokémon, progresión, listados de GTS.
 resuelve la multicuenta**: cualquiera puede registrar cuentas nuevas
 indefinidamente.
 
-> **Recomendación:** el servidor nuevo debería nacer con `online-mode=true`.
-> Cuesta jugadores y hay que decidirlo con los ojos abiertos, pero es
-> **muchísimo más barato ahora que después de construir la economía encima.**
->
-> Si se mantiene offline, hay que diseñar mitigaciones **antes** de la economía:
-> límites por IP, verificación externa, periodos de carencia para operaciones
-> económicas, o restringir GTS a cuentas verificadas.
+### ⛔ `online-mode=true` NO es una opción — verificado 2026-08-11
 
-Es la decisión **B-004** y ahora tiene datos. Sigue siendo del usuario.
+Recomendé pasar a `online-mode=true`. **Ese consejo era inviable y queda
+retirado.** La comprobación:
+
+```
+api.mojang.com/users/profiles/minecraft/TheJuanCE
+  → "Couldn't find any profile with name TheJuanCE"
+```
+
+El propietario del servidor **no tiene cuenta premium de Mojang**. Con
+`online-mode=true` no podría entrar en su propio servidor, y es razonable
+suponer que buena parte de la comunidad está igual.
+
+> Confirmación adicional: el UUID offline calculado para `TheJuanCE`
+> (`432ef323-8ac3-3ba3-8175-aaf88c5589cf`) coincide **exactamente** con el que
+> tiene en producción. Los UUID offline son deterministas a partir del nombre.
+
+### Entonces: offline, con mitigaciones obligatorias
+
+El anti-abuso no puede apoyarse en la identidad de Mojang. Hay que construirlo:
+
+| Mitigación | Coste | Efecto |
+|---|---|---|
+| **Carencia**: una cuenta nueva no opera en el GTS hasta X horas de juego real | Bajo | **La más rentable.** No molesta a nadie legítimo y encarece crear alts |
+| Límites por IP para operaciones económicas | Bajo | Imperfecto, pero no trivial de saltar |
+| Vinculación a una cuenta externa (Discord) para vender | Medio | Da una identidad real reutilizable |
+| Detección de patrones alt→principal en el libro de asientos | Medio | `ledger_entry` ya guarda todo lo necesario |
+
+**La carencia se implementa desde el primer día.** El resto se prioriza con
+datos reales.
+
+> Y una nota de diseño que ahora vale doble: **la riqueza vive en Pokémon, no
+> en dinero** (§5). Con multicuenta imposible de erradicar, que el valor esté
+> en objetos únicos y rastreables —en vez de en un número fungible— limita
+> mucho el daño que puede hacer una granja de alts.
+
+Es la decisión **B-004 / `SEC-006`**, ahora con datos. La pregunta ya no es
+*"¿online o offline?"* sino *"¿cuánta mitigación construimos?"*.
 
 ---
 

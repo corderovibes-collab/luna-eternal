@@ -26,7 +26,8 @@ public final class Database implements AutoCloseable {
 
     /** Migraciones conocidas, en orden. Añadir aquí cada fichero nuevo. */
     private static final String[] MIGRATIONS = {
-        "V001__initial.sql"
+        "V001__initial.sql",
+        "V002__widen_idempotency_key.sql"
     };
 
     private final HikariDataSource ds;

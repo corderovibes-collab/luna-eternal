@@ -18,11 +18,17 @@ servidor de desarrollo.**
 ### Lo que funciona ahora mismo (verificado 2026-08-11)
 
 ```
-Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043 · whitelist ON
-              MC 1.21.1 Fabric · 45 mods · Done (4.8 s) · 647 MB / 4096
-Mod           lunaeternal 0.1.0 desplegado en /mods
-BD            MariaDB s11945_luna · migración V001 aplicada
+Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
+              MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
+Mod           lunaeternal 0.1.0 · migraciones V001 y V002 aplicadas
+BD            MariaDB s11945_luna
+Autotest      /luna autotest -> 19/19 invariantes correctos
 ```
+
+> ⚠️ **`online-mode` tiene que ser `false`.** Verificado: `TheJuanCE` no existe
+> como cuenta premium de Mojang. Con `online-mode=true` el propietario no
+> podría entrar en su propio servidor. El anti-abuso hay que construirlo
+> (`SEC-006`); el esquema ya es indiferente gracias a D-010.
 
 ### ⚠️ Dónde están las credenciales de la base de datos
 
@@ -40,14 +46,18 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: `MOD-005`
+### Siguiente tarea: implementar el GTS (`TRD-002`)
 
-Comando `/luna autotest` que valide los invariantes económicos sin necesitar
-un jugador conectado. Detalle en [backlog.md](docs/roadmap/backlog.md).
+El diseño está en [gts.md](docs/trading/gts.md) y el esquema en
+[data-model.md](docs/technical/data-model.md) §3. La base económica ya está
+probada, así que toca la custodia de Pokémon y la transacción de venta.
 
-Tres cosas quedaron **sin probar** porque `PlayerService` necesita un jugador
-real: el ciclo dar → saldo → auditar, la idempotencia y la concurrencia.
-`MOD-005` las cubre sin esperar a nadie.
+**Regla de trabajo establecida:** cada sistema económico nuevo añade sus
+invariantes a `/luna autotest` **antes** de desplegarse (`MOD-006`).
+
+> Esa regla no es burocracia: en su primera ejecución el autotest encontró que
+> **las transferencias fallaban siempre** por una columna 4 caracteres
+> demasiado corta. Ninguna revisión de código lo habría visto.
 
 ### Pendiente del usuario (nada bloquea el desarrollo)
 

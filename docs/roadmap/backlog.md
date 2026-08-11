@@ -161,33 +161,51 @@ Ejecutado en el servidor de desarrollo. **Resultados medidos, no supuestos:**
       persistencia
 - [x] Arranque limpio: `Done (4.786s)`, 647 MB de 4096
 
-**Pendiente — requiere un jugador conectado:**
-
-- [ ] `/luna dar` → `/luna saldo` → `/luna auditar` sin descuadre
-- [ ] Idempotencia: repetir la misma clave debe fallar la segunda vez
-- [ ] Concurrencia: dos operaciones simultáneas sobre el mismo saldo
-
-> Lo que falta no se puede probar por consola: `PlayerService` necesita un
-> `ServerPlayerEntity` real. **Alternativa mejor que esperar: escribir un
-> comando de autotest** que ejecute la batería contra un `player_id` sintético
-> y valide los invariantes. Es `MOD-005`.
+Cubierto por `MOD-005`, que no necesita jugadores conectados.
 
 ---
 
-### MOD-005 — Comando de autotest de invariantes económicos
-`READY` · 🟠 Alta · dep: `MOD-004`
+### MOD-005 — Autotest de invariantes económicos
+`DONE` ✅ · verificado 2026-08-11 · **19/19 correctas**
 
-`/luna autotest` (nivel 4) que verifique sin necesidad de jugadores:
+`/luna autotest` (nivel 4). Ejecuta la batería contra jugadores sintéticos y
+borra todo lo que crea.
 
-- [ ] Crédito y débito dejan el saldo correcto
-- [ ] La misma clave de idempotencia falla la segunda vez
-- [ ] Saldo insuficiente se rechaza y **no** deja asiento
-- [ ] `transfer` de Marcas se rechaza (`NOT_TRADEABLE`)
-- [ ] Tras N operaciones, `auditDiscrepancy() == 0`
-- [ ] Limpieza: los datos de prueba se borran al terminar
+- [x] Crédito y débito dejan el saldo correcto
+- [x] La misma clave de idempotencia falla la segunda vez y **no mueve saldo**
+- [x] Saldo insuficiente se rechaza y **no deja asiento en el libro**
+- [x] `transfer` de Marcas se rechaza (`NOT_TRADEABLE`), sin tocar ningún saldo
+- [x] Transferencia correcta: origen −300, destino +300
+- [x] Transferencia imposible: **no toca a ninguno de los dos**
+- [x] `auditDiscrepancy() == 0` en ambos jugadores y ambas monedas
+- [x] Limpieza verificada
 
-> Convierte "creo que funciona" en "lo comprueba una orden". Es lo que permite
-> tocar la economía más adelante sin miedo.
+#### 🐛 Encontró un fallo real en su primera ejecución
+
+`EconomyService.transfer()` deriva una clave por pata añadiendo `":out"` y
+`":in"`. Pero `idempotency_key` era `CHAR(36)` y un UUID ocupa exactamente 36
+caracteres:
+
+```
+Data too long for column 'idempotency_key'
+```
+
+**Las transferencias fallaban el 100 % de las veces.** No lo habría detectado
+ninguna revisión de código, porque el error solo aparece contra la base real.
+Corregido en la migración `V002` (`VARCHAR(64)`).
+
+> Justifica por sí solo el coste de escribir el autotest, y valida el sistema
+> de migraciones: V002 se aplicó sin reaplicar V001.
+
+---
+
+### MOD-006 — Ampliar el autotest según crezca el mod
+`IDEA` · dep: `MOD-005` ✅
+
+Cada sistema económico nuevo añade sus invariantes aquí **antes** de
+desplegarse. Próximos: custodia del GTS (que un Pokémon listado no exista en
+dos sitios), comisiones e impuestos, y concurrencia real con dos hilos
+comprando el mismo listado.
 
 ---
 
@@ -207,23 +225,29 @@ guarda la economía.
 
 ---
 
-### SEC-006 — Decidir `online-mode` del servidor nuevo (B-004)
-`READY` · 🔴 Crítica · dep: ninguna · **bloquea el anti-abuso económico**
+### SEC-006 — Anti-abuso sin identidad de Mojang (B-004)
+`DESIGN` · 🔴 Crítica · dep: ninguna
 
-Confirmado: producción va en `online-mode=false` (verificado por
-`server.properties` **y** por los UUIDs v3 de los ops). `easyauth` protege el
-acceso pero **no impide la multicuenta**: cualquiera registra cuentas nuevas sin
-límite.
+**Resuelto el "si": el servidor va en `online-mode=false` por obligación, no
+por elección.** Verificado 2026-08-11: `TheJuanCE` **no existe como cuenta
+premium** (`api.mojang.com` devuelve *"Couldn't find any profile"*). Con
+`online-mode=true` el propietario no podría entrar en su propio servidor.
 
-Con economía persistente eso significa que **todo límite "por jugador" es
-decorativo**: transferencia de riqueza con alts, evasión de baneos,
-manipulación de mercado.
+> El UUID offline calculado para ese nombre coincide **exactamente** con el de
+> producción (`432ef323-…`), confirmando que los UUID offline son deterministas.
 
-- [ ] Decidir si el servidor nuevo nace en `online-mode=true`
-- [ ] Si se mantiene offline: diseñar mitigaciones **antes** de la economía
-      (límites por IP, carencia para operar en GTS, cuentas verificadas)
+Queda el "cuánto": la multicuenta es imposible de erradicar, así que todo
+límite "por jugador" hay que construirlo.
 
-> **Cuesta mucho menos decidirlo ahora que después de construir la economía.**
+- [x] Determinar si `online-mode=true` es viable → **no lo es**
+- [ ] **Carencia**: sin operar en GTS hasta X horas de juego real ← lo primero
+- [ ] Límites por IP en operaciones económicas
+- [ ] Evaluar vinculación a Discord para poder vender
+- [ ] Detección de patrones alt→principal sobre `ledger_entry`
+
+> Amortiguador ya en el diseño: la riqueza vive en **Pokémon**, no en dinero
+> (`ECO-001` §5). Con valor en objetos únicos y rastreables, una granja de alts
+> hace mucho menos daño que en una economía puramente monetaria.
 
 ---
 

@@ -47,6 +47,10 @@ public final class LunaCommand {
             .then(literal("estado")
                 .requires(s -> s.hasPermissionLevel(3))
                 .executes(ctx -> status(ctx.getSource())))
+
+            .then(literal("autotest")
+                .requires(s -> s.hasPermissionLevel(4))
+                .executes(ctx -> autotest(ctx.getSource())))
         );
     }
 
@@ -128,6 +132,25 @@ public final class LunaCommand {
             } catch (Exception e) {
                 reply(p, "§cError al auditar: " + e.getMessage());
             }
+        });
+        return 1;
+    }
+
+    /**
+     * Ejecuta la batería de invariantes económicos. Funciona desde la consola,
+     * así que no hace falta ningún jugador conectado.
+     */
+    private static int autotest(ServerCommandSource src) {
+        var server = src.getServer();
+        src.sendFeedback(() -> Text.literal("§7Ejecutando autotest…"), false);
+        LunaEternal.submit(() -> {
+            var test = new net.pokereport.luna.test.AutoTest(
+                LunaEternal.database(),
+                LunaEternal.players(),
+                LunaEternal.economy(),
+                line -> server.execute(() ->
+                    src.sendFeedback(() -> Text.literal(line), false)));
+            test.run();
         });
         return 1;
     }

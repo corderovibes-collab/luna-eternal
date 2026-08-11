@@ -63,6 +63,7 @@ public final class AutoTest {
             testMarksAreNotTradeable(a, b);
             testTransferIsAtomic(a, b);
             testLedgerMatchesBalance(a, b);
+            testProgression(a);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -199,6 +200,39 @@ public final class AutoTest {
         }
     }
 
+    /**
+     * Progresión: una concesión grande debe cruzar varios niveles de golpe.
+     *
+     * <p>Si no lo hiciera, el jugador se quedaría con XP de sobra y el nivel
+     * sin subir — un fallo silencioso que solo se detecta mirando la tabla.
+     */
+    private void testProgression(long p) throws Exception {
+        var prog = LunaEternal.progression();
+        var path = net.pokereport.luna.progression.Path.EXPLORADOR;
+
+        var s1 = prog.grant(p, path, 50);
+        check("50 de XP no sube de nivel", s1.level() == 0 && s1.xp() == 50);
+
+        // 100 sube a nivel 1 (necesita 100) y deja 50 hacia el 2.
+        var s2 = prog.grant(p, path, 100);
+        check("cruzar el umbral sube de nivel", s2.level() == 1);
+        check("el sobrante se conserva", s2.xp() == 50);
+
+        // 100 + 400 + 1200 + 3000 + 7500 = 12 200 en total hasta el máximo.
+        var s3 = prog.grant(p, path, 100_000);
+        check("una concesión enorme llega al nivel máximo",
+              s3.level() == net.pokereport.luna.progression.Path.MAX_LEVEL);
+        check("al máximo no se acumula XP sobrante", s3.xp() == 0);
+
+        var dominant = prog.dominant(p);
+        check("la vía dominante es la de mayor nivel",
+              dominant != null && dominant.path() == path);
+
+        var all = prog.all(p);
+        check("las cinco vías existen siempre",
+              all.size() == net.pokereport.luna.progression.Path.values().length);
+    }
+
     // ------------------------------------------------------------ auxiliares
 
     private static String key() {
@@ -223,6 +257,8 @@ public final class AutoTest {
             c.setAutoCommit(false);
             try {
                 for (String sql : List.of(
+                    "DELETE pp FROM player_path pp JOIN player p "
+                        + "ON p.player_id = pp.player_id WHERE p.mc_uuid = ?",
                     "DELETE le FROM ledger_entry le JOIN player p "
                         + "ON p.player_id = le.player_id WHERE p.mc_uuid = ?",
                     "DELETE pe FROM player_economy pe JOIN player p "

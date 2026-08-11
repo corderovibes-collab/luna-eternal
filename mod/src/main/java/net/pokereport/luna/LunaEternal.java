@@ -43,6 +43,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static Database database;
     private static PlayerService players;
     private static EconomyService economy;
+    private static net.pokereport.luna.progression.ProgressionService progression;
     private static ExecutorService io;
 
     @Override
@@ -120,6 +121,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
 
             players = new PlayerService(database);
             economy = new EconomyService(database);
+            progression = new net.pokereport.luna.progression.ProgressionService(database);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);
@@ -165,4 +167,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static Database database() { return database; }
     public static PlayerService players() { return players; }
     public static EconomyService economy() { return economy; }
+    public static net.pokereport.luna.progression.ProgressionService progression() {
+        return progression;
+    }
 }

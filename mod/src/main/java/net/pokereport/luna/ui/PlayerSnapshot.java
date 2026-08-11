@@ -23,12 +23,21 @@ public final class PlayerSnapshot {
     public int moonPhase;
     public boolean night;
 
-    /** Vía dominante y su nivel. Provisional hasta implementar PROG-001. */
+    /** Estado de las cinco vías. */
+    public java.util.Map<net.pokereport.luna.progression.Path,
+                         net.pokereport.luna.progression.ProgressionService.PathState> paths
+        = new java.util.EnumMap<>(net.pokereport.luna.progression.Path.class);
+
+    /** Vía dominante, derivada de {@link #paths}. */
     public String dominantPath = "Sin definir";
     public int dominantLevel = 0;
     public String clan;
     public String job;
     public int badges;
+
+    /** Últimos movimientos, para la Cartera. */
+    public java.util.List<net.pokereport.luna.economy.EconomyService.Entry> recent =
+        java.util.List.of();
 
     public PlayerSnapshot(long playerId, String username) {
         this.playerId = playerId;

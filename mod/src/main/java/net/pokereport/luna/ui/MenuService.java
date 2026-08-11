@@ -38,6 +38,18 @@ public final class MenuService {
         loadSnapshot(player, snapshot -> new AlmanacMenu(snapshot).open(player));
     }
 
+    /**
+     * Abre un submenú recargando primero los datos.
+     *
+     * <p>Se recarga a propósito: entre que se abrió El Almanaque y se pulsó
+     * una sección, el saldo puede haber cambiado. Enseñar datos viejos en una
+     * pantalla de dinero es peor que tardar 50 ms más.
+     */
+    public static void openChild(ServerPlayerEntity player, Menu parent,
+                                 java.util.function.Function<PlayerSnapshot, Menu> factory) {
+        loadSnapshot(player, snapshot -> parent.openChild(player, factory.apply(snapshot)));
+    }
+
     /** Ficha en caché, o {@code null} si todavía no se ha cargado. */
     public static PlayerSnapshot cached(ServerPlayerEntity player) {
         return CACHE.get(player.getUuid());
@@ -69,6 +81,17 @@ public final class MenuService {
                 var snap = new PlayerSnapshot(id, profile.getName());
                 for (Currency c : Currency.values()) {
                     snap.setBalance(c, LunaEternal.economy().balance(id, c));
+                }
+                snap.paths = LunaEternal.progression().all(id);
+                snap.recent = LunaEternal.economy().recentEntries(id, 14);
+
+                var dominant = LunaEternal.progression().dominant(id);
+                if (dominant != null && dominant.level() > 0) {
+                    snap.dominantPath = dominant.path().displayName;
+                    snap.dominantLevel = dominant.level();
+                } else {
+                    snap.dominantPath = "Sin definir";
+                    snap.dominantLevel = 0;
                 }
 
                 // De vuelta al hilo del servidor: el mundo no se toca desde fuera.

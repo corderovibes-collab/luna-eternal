@@ -223,6 +223,44 @@ public final class EconomyService {
         }
     }
 
+    /** Una línea del libro, para mostrarla en la Cartera. */
+    public record Entry(Currency currency, long delta, long balanceAfter,
+                        String reason, java.time.LocalDateTime when) {}
+
+    /**
+     * Últimos movimientos del jugador, el más reciente primero.
+     *
+     * <p>Siempre con {@code LIMIT}: el libro es append-only y con el tiempo
+     * tiene millones de filas. Cargarlo entero para enseñar diez es la clase
+     * de consulta que tumba un servidor cuando por fin tiene jugadores.
+     */
+    public java.util.List<Entry> recentEntries(long playerId, int limit)
+            throws SQLException {
+        var out = new java.util.ArrayList<Entry>();
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement("""
+                SELECT currency, delta, balance_after, reason, created_at
+                FROM ledger_entry
+                WHERE player_id = ?
+                ORDER BY entry_id DESC
+                LIMIT ?
+                """)) {
+            ps.setLong(1, playerId);
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.add(new Entry(
+                        Currency.valueOf(rs.getString("currency")),
+                        rs.getLong("delta"),
+                        rs.getLong("balance_after"),
+                        rs.getString("reason"),
+                        rs.getTimestamp("created_at").toLocalDateTime()));
+                }
+            }
+        }
+        return out;
+    }
+
     /**
      * Comprueba que el saldo cuadra con el libro de asientos.
      * Un desajuste significa duplicación o pérdida: hay que investigarlo.

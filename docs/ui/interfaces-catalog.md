@@ -54,9 +54,9 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 1 | **LunaPad** (principal) | ✅ hecho | — | — |
 | 2 | **Barra lateral** | ✅ hecho | — | — |
 | 2b | **Tablist** (cabecera, pie, rangos) | ✅ hecho | — | — |
-| 3 | **Cartera** | ⬜ | 🔴 | nada, los datos ya están |
-| 4 | **Vías** | ⬜ | 🔴 | `PROG-001` |
-| 5 | **Puerta del mundo** | ⬜ | 🔴 | `WLD-002` |
+| 3 | **Cartera** | ✅ hecho | — | — |
+| 4 | **Vías** | ✅ hecho | — | — |
+| 5 | **Puerta del mundo** | ✅ hecho | — | dimensiones pendientes |
 | 6 | **Viajes / LunaTaxi** | ⬜ | 🟠 | ciudadela construida |
 | 7 | **Tienda** | ⬜ | 🟠 | catálogo y precios |
 | 8 | **GTS** | ⬜ | 🟠 | `TRD-002` |

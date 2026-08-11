@@ -64,10 +64,13 @@ public final class AlmanacMenu extends Menu {
                 .name("§eCartera")
                 .line("§6" + fmt(data.balance(Currency.POKEDOLLAR)) + " §7PokéDólares")
                 .line("§b" + fmt(data.balance(Currency.MARK)) + " §7Marcas")
-                .line("§e" + fmt(data.balance(Currency.REPORTCOIN)) + " §7ReportCoins")
+                .line("§e" + fmt(data.balance(Currency.REPORTCOIN)) + " §7"
+                      + Currency.REPORTCOIN.displayName)
                 .blank()
                 .line("§8Las tres monedas no se convierten entre sí.")
-                .build());
+                .action("Clic para ver la Cartera")
+                .build(),
+            (p, b) -> MenuService.openChild(p, this, WalletMenu::new));
     }
 
     // ------------------------------------------------------------ grupos
@@ -104,7 +107,13 @@ public final class AlmanacMenu extends Menu {
 
     private void selfRow() {
         group(4, "§d✦ TÚ");
-        open(4, 2, Items.NETHER_STAR,        "§dVías",       "Tus cinco reputaciones y desbloqueos.", "Vías");
+        set(4, 2, Icon.of(Items.NETHER_STAR)
+                .name("§dVías")
+                .line("§7Tus cinco reputaciones y desbloqueos.")
+                .line("§8Actual: §7" + data.dominantPath)
+                .action("Clic para abrir")
+                .build(),
+            (p, b) -> MenuService.openChild(p, this, PathsMenu::new));
         open(4, 3, Items.LEATHER_CHESTPLATE, "§dCosméticos", "Aspecto, títulos y efectos.", "Cosméticos");
         open(4, 4, Items.SHULKER_BOX,        "§dKits",       "Inicial, periódicos y de rango.", "Kits");
         locked(4, 5, Items.SHIELD,           "Clan",         "Crea o únete a un clan.",
@@ -119,6 +128,13 @@ public final class AlmanacMenu extends Menu {
                 .state(LockState.DISABLED)
                 .line("§8La ciudadela aún no está construida.")
                 .build());
+
+        set(46, Icon.of(Items.OAK_DOOR)
+                .name("§3Puerta del Mundo")
+                .line("§7Ir al Mundo Hogar o al Mundo Salvaje.")
+                .action("Clic para elegir")
+                .build(),
+            (p, b) -> openChild(p, new WorldGateMenu(-1)));
 
         if (hasParent()) {
             set(48, Icon.of(Items.ARROW).name("§7← Atrás").build(),

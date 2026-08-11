@@ -28,7 +28,8 @@ public final class Database implements AutoCloseable {
     private static final String[] MIGRATIONS = {
         "V001__initial.sql",
         "V002__widen_idempotency_key.sql",
-        "V003__add_reportcoin.sql"
+        "V003__add_reportcoin.sql",
+        "V004__player_paths.sql"
     };
 
     private final HikariDataSource ds;

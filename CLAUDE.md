@@ -20,10 +20,11 @@ servidor de desarrollo.**
 ```
 Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
-Mod           lunaeternal 0.1.0 · migraciones V001 a V003 aplicadas
-BD            MariaDB s11945_luna · 3 monedas
-Autotest      /luna autotest -> 24/24 invariantes correctos
-Interfaz      El Almanaque operativo (/menu o /almanaque)
+Mod           lunaeternal 0.1.0 · migraciones V001 a V004 aplicadas
+BD            MariaDB s11945_luna · 3 monedas · 5 vías
+Autotest      /luna autotest -> 31/31 invariantes correctos
+Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
+              Barra lateral y tablist con rangos
 ```
 
 > ⚠️ **`online-mode` tiene que ser `false`.** Verificado: `TheJuanCE` no existe
@@ -47,17 +48,16 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: rellenar las tres pantallas rojas
+### Siguiente tarea: las dimensiones (`WLD-002`)
 
-El LunaPad, la barra lateral y el objeto ya funcionan. Toca convertir el
-andamiaje en algo usable — y las tres primeras **no dependen de nada**:
+Las tres pantallas base ya están. Lo que las limita ahora es que **el mundo no
+existe**: la Puerta del Mundo enseña las dos tarjetas pero no lleva a ninguna
+parte, y los Viajes no tienen destinos.
 
-1. **Cartera** (`UI-007`) — los datos ya están en la base
-2. **Vías** (`UI-008`)
-3. **Puerta del mundo** (`UI-009`)
+Crear las dimensiones por datapack es barato y desbloquea las dos.
+Después: **Tienda** y **GTS**, que son los sistemas grandes.
 
-Catálogo completo de pantallas en
-[interfaces-catalog.md](docs/ui/interfaces-catalog.md).
+Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 
 > **Tesoros ya está decidido** (D-020): cofres con legendarios, como
 > Diosesmon. El análisis de riesgo queda archivado en

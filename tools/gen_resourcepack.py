@@ -461,6 +461,10 @@ def texturas_pad(destino: Path) -> int:
     dir_ic = destino / "icono"
     dir_ic.mkdir(exist_ok=True)
     for i, nombre in enumerate(ICONOS_PAD):
+        # Si tools/gen_iconos.py ya dibujo este icono, mandan sus siluetas:
+        # estan hechas para leerse a 24 px, y recortar un emblema no.
+        if (dir_ic / f"{nombre}.png").exists():
+            continue
         src = RAIZ / "arte-origen" / f"{nombre}.png"
         if src.exists():
             b = Image.open(src).convert("RGBA")

@@ -109,9 +109,12 @@ public class PadScreen extends Screen {
             ctx.drawTexture(fondo, x, y, 0, 0, CELDA_PX, CELDA_PX,
                             CELDA_PX, CELDA_PX);
 
+            // El icono es de 32x32 y se dibuja a 24: se pierde algo de
+            // nitidez, pero gana silueta. A 16 px reales no se distinguia
+            // una cartera de una tienda.
             Identifier icono = Identifier.of("lunaeternal",
                 "textures/pad/icono/" + c.icono() + ".png");
-            ctx.drawTexture(icono, x + 8, y + 8, 0, 0, 16, 16, 16, 16);
+            ctx.drawTexture(icono, x + 4, y + 4, 24, 24, 0, 0, 32, 32, 32, 32);
         }
 
         int py = panelY + panelAlto - MARGEN / 2 - datos.pie().size() * PIE_LINEA;

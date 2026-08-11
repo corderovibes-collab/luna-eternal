@@ -24,7 +24,7 @@ Cobblemon     1.7.3 instalado · 60 mods · Done (9,0 s) · ~1,9 GB de 4096
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 75/75 invariantes correctos
+Autotest      /luna autotest -> 86/86 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Tienda · GTS · Pokédex · Kits · Inicial · Curar
               Misiones (6 de tutorial + 2 diarias)
@@ -105,8 +105,13 @@ Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 > [treasures.md](docs/economy/treasures.md) §2 como registro de que la
 > decisión se tomó informada. **No volver a plantearlo.**
 
-**Regla de trabajo establecida:** cada sistema económico nuevo añade sus
-invariantes a `/luna autotest` **antes** de desplegarse (`MOD-006`).
+**Regla de trabajo establecida:** cada sistema nuevo añade sus invariantes a
+`/luna autotest` **antes** de desplegarse (`MOD-006`).
+
+> **Se incumplió una vez, con Misiones, y costó caro:** al escribirlos después,
+> seis fallaron a la primera. Uno era grave — `advance()` no hacía nada para
+> tipos no acumulativos, así que **la primera misión del tutorial no se
+> completaba nunca**. Habría llegado a producción.
 
 > Esa regla no es burocracia: en su primera ejecución el autotest encontró que
 > **las transferencias fallaban siempre** por una columna 4 caracteres

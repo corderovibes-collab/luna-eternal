@@ -69,6 +69,7 @@ public final class AutoTest {
             testGtsFlow(a, b);
             testPokedex(a);
             testKits(a);
+            testQuests(a);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -457,6 +458,67 @@ public final class AutoTest {
         }
     }
 
+    /**
+     * Misiones. Estos invariantes deberian haberse escrito ANTES de desplegar
+     * el sistema: la regla MOD-006 lo dice y no la cumpli. Se anaden ahora.
+     */
+    private void testQuests(long p) throws Exception {
+        var quests = LunaEternal.quests();
+        check("el catalogo de misiones esta cargado", !quests.catalogo().isEmpty());
+
+        var inicial = quests.byId("t1_inicial");
+        var segunda = quests.byId("t2_captura");
+        if (inicial == null || segunda == null) {
+            fail("misiones del tutorial", "no estan en el catalogo");
+            return;
+        }
+
+        // Una mision encadenada NO avanza mientras su requisito siga sin cobrar.
+        quests.advance(p, net.pokereport.luna.quest.Quest.Objective.Type.CATCH, 5);
+        check("una mision bloqueada por requisito NO avanza",
+              quests.state(p, segunda).progress() == 0);
+
+        // Completar y cobrar la primera desbloquea la segunda.
+        quests.advance(p, net.pokereport.luna.quest.Quest.Objective.Type.STARTER, 1);
+        var s1 = quests.state(p, inicial);
+        check("la primera se completa al cumplir el objetivo", s1.completed());
+        check("completada pero sin cobrar es cobrable", s1.claimable());
+
+        check("se cobra una vez", quests.claim(p, inicial));
+        check("NO se cobra dos veces", !quests.claim(p, inicial));
+        check("tras cobrar deja de ser cobrable",
+              !quests.state(p, inicial).claimable());
+
+        // Ahora si avanza la encadenada.
+        quests.advance(p, net.pokereport.luna.quest.Quest.Objective.Type.CATCH, 1);
+        check("desbloqueada la anterior, la siguiente ya avanza",
+              quests.state(p, segunda).progress() >= 1);
+
+        // Los objetivos de FOTO no se acumulan: fijar 3 dos veces deja 3.
+        var pokedex = quests.byId("t3_pokedex");
+        if (pokedex != null) {
+            quests.claim(p, segunda);
+            quests.setProgress(p,
+                net.pokereport.luna.quest.Quest.Objective.Type.POKEDEX, 3);
+            quests.setProgress(p,
+                net.pokereport.luna.quest.Quest.Objective.Type.POKEDEX, 3);
+            check("un objetivo de foto NO se acumula al repetirse",
+                  quests.state(p, pokedex).progress() == 3);
+            // Y nunca retrocede aunque llegue un valor menor.
+            quests.setProgress(p,
+                net.pokereport.luna.quest.Quest.Objective.Type.POKEDEX, 1);
+            check("un objetivo de foto nunca retrocede",
+                  quests.state(p, pokedex).progress() == 3);
+        }
+
+        // Cobrar algo sin completar no debe pasar.
+        var diaria = quests.byId("d_captura");
+        if (diaria != null) {
+            check("no se puede cobrar una mision sin completar",
+                  !quests.claim(p, diaria));
+        }
+    }
+
     // ------------------------------------------------------------ auxiliares
 
     private static String key() {
@@ -483,6 +545,8 @@ public final class AutoTest {
                 // Orden inverso a las claves ajenas: primero se sueltan las
                 // referencias al comprador, luego se borran los listados.
                 for (String sql : List.of(
+                    "DELETE qp FROM quest_progress qp JOIN player p "
+                        + "ON p.player_id = qp.player_id WHERE p.mc_uuid = ?",
                     "DELETE kc FROM kit_claim kc JOIN player p "
                         + "ON p.player_id = kc.player_id WHERE p.mc_uuid = ?",
                     "DELETE pd FROM pokedex_entry pd JOIN player p "

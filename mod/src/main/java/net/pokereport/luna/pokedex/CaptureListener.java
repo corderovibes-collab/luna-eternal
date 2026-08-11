@@ -87,18 +87,25 @@ public final class CaptureListener {
                         UUID.randomUUID().toString());
                 }
 
-                // Misiones. El total de la Pokédex se fija, no se suma: es
-                // una foto, no un contador.
-                var q = LunaEternal.quests();
-                q.advance(id, net.pokereport.luna.quest.Quest.Objective.Type.CATCH, 1);
+                // Misiones, TODO en una sola llamada. Antes eran cuatro, y
+                // cada una recorria el catalogo consultando la base por
+                // mision: decenas de consultas por Poke Ball lanzada.
+                var T = net.pokereport.luna.quest.Quest.Objective.Type.class;
+                var sumas = new java.util.EnumMap<
+                    net.pokereport.luna.quest.Quest.Objective.Type, Long>(T);
+                sumas.put(net.pokereport.luna.quest.Quest.Objective.Type.CATCH, 1L);
                 if (nueva) {
-                    q.advance(id,
-                        net.pokereport.luna.quest.Quest.Objective.Type.POKEDEX_NEW, 1);
+                    sumas.put(net.pokereport.luna.quest.Quest.Objective.Type.POKEDEX_NEW, 1L);
                 }
-                q.setProgress(id, net.pokereport.luna.quest.Quest.Objective.Type.POKEDEX,
-                    LunaEternal.pokedex().summary(id).caught());
-                q.setProgress(id, net.pokereport.luna.quest.Quest.Objective.Type.PATH_LEVEL,
+                var absolutos = new java.util.EnumMap<
+                    net.pokereport.luna.quest.Quest.Objective.Type, Long>(T);
+                // La Pokedex es una FOTO del total, no un contador.
+                absolutos.put(net.pokereport.luna.quest.Quest.Objective.Type.POKEDEX,
+                    (long) LunaEternal.pokedex().summary(id).caught());
+                absolutos.put(net.pokereport.luna.quest.Quest.Objective.Type.PATH_LEVEL,
                     maxNivelDeVia(id));
+
+                LunaEternal.quests().record(id, sumas, absolutos);
 
                 if (server != null) {
                     server.execute(() -> {

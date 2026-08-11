@@ -93,12 +93,74 @@ desbloqueos de progresión, los títulos de prestigio y las funciones avanzadas
 se pagan en Marcas — así el jugador rico no puede saltarse la progresión
 comprándola, y el veterano tiene algo que solo él tiene.
 
-> ⚠️ **Regla dura:** ninguna Marca se convierte en PokéDólares, ni al revés,
-> **en ninguna dirección y bajo ninguna circunstancia**. El día que exista una
-> conversión, las dos monedas son una sola y esto deja de funcionar.
+### 🪙 ReportCoin — premium, se compra con dinero real
 
-**No habrá una tercera moneda.** Cada moneda adicional divide la liquidez y
-multiplica la superficie de exploits sin añadir decisiones.
+Decisión del usuario (2026-08-11), equivalente a los *Diosescoins* de
+Diosesmon. Se adquiere fuera del juego y **solo compra identidad y comodidad**:
+cosméticos, accesorios, títulos, rangos.
+
+> **Revisión de lo que escribí antes.** Este documento decía *"no habrá una
+> tercera moneda: cada moneda divide la liquidez"*. Eso vale para monedas que
+> compiten dentro de la economía del juego. **ReportCoin no está en la economía
+> del juego**: es un token de pago que nunca toca el mercado, así que no divide
+> ninguna liquidez. La regla original se mantiene para monedas *de juego*.
+
+### La regla que sostiene las tres: bucles cerrados
+
+```
+   💰 PokéDólar          🔷 Marca              🪙 ReportCoin
+   ┌──────────┐         ┌──────────┐          ┌──────────┐
+   │ se gana  │         │ se gana  │          │ se compra│
+   │ jugando  │         │ logrando │          │ con € $  │
+   │          │         │          │          │          │
+   │ compra:  │         │ compra:  │          │ compra:  │
+   │ consumo  │         │ desbloq. │          │ cosmétic.│
+   │ mercado  │         │ prestigio│          │ comodidad│
+   └──────────┘         └──────────┘          └──────────┘
+        ✗ ────── no hay conversión ────── ✗ ────── ✗
+```
+
+**Ninguna se convierte en otra. En ninguna dirección. Nunca.**
+
+De esa única regla se derivan las tres garantías del proyecto:
+
+| Garantía | Porque… |
+|---|---|
+| **No se puede comprar poder** | ReportCoin no llega a PokéDólar ni a Marca |
+| **No se puede comprar progresión** | Las Marcas solo se ganan jugando |
+| **Pagar no infla la economía** | ReportCoin nunca entra en el mercado |
+
+> El día que exista una conversión —"cambia 100 ReportCoins por 50 000
+> PokéDólares"— **las tres monedas son una sola** y todo el diseño económico
+> de este documento deja de tener efecto. Es la línea roja del proyecto.
+
+### Qué puede y qué no puede comprar el ReportCoin
+
+| ✅ Sí | ❌ No |
+|---|---|
+| Cosméticos, accesorios, monturas visuales | PokéDólares o Marcas |
+| Títulos, prefijos, colores | Pokémon, objetos comerciables |
+| Rangos (paquete T1+T2) | IVs, EVs, shinies, legendarios |
+| Homes, espacio de PC, comodidad | Desbloqueos de progresión |
+| Aceleración acotada (T3, con topes) | Acceso a zonas o contenido cerrado |
+
+Clasificación completa y el test de 6 preguntas en
+[monetization.md](monetization.md).
+
+### Consecuencia técnica
+
+`Currency` pasa a tener tres valores, y **dos atributos independientes**:
+
+| Moneda | `tradeable` | `purchasable` |
+|---|---|---|
+| `POKEDOLLAR` | ✅ entre jugadores | ❌ |
+| `MARK` | ❌ | ❌ |
+| `REPORTCOIN` | ❌ | ✅ con dinero real |
+
+Que `REPORTCOIN` no sea `tradeable` es lo que impide el mercado gris: si se
+pudiera transferir, los jugadores lo venderían por PokéDólares y habríamos
+creado la conversión que la regla prohíbe — **por la puerta de atrás y sin
+darnos cuenta**.
 
 ---
 

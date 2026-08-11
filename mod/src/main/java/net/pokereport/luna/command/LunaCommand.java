@@ -27,7 +27,14 @@ public final class LunaCommand {
     private LunaCommand() {}
 
     public static void register(CommandDispatcher<ServerCommandSource> d) {
+
+        // Atajo para quien prefiera el teclado. NO es el camino principal:
+        // el Almanaque se abre con su objeto (docs/ui/navigation.md §2).
+        d.register(literal("menu").executes(ctx -> openAlmanac(ctx.getSource())));
+        d.register(literal("almanaque").executes(ctx -> openAlmanac(ctx.getSource())));
+
         d.register(literal("luna")
+            .executes(ctx -> openAlmanac(ctx.getSource()))
             .then(literal("saldo")
                 .executes(ctx -> balance(ctx.getSource())))
 
@@ -55,6 +62,16 @@ public final class LunaCommand {
     }
 
     // ------------------------------------------------------------------
+
+    private static int openAlmanac(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        net.pokereport.luna.ui.MenuService.openAlmanac(p);
+        return 1;
+    }
 
     private static int balance(ServerCommandSource src) {
         ServerPlayerEntity p = src.getPlayer();

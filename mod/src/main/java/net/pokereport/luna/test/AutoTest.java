@@ -134,20 +134,35 @@ public final class AutoTest {
               countEntries(p) == entriesBefore);
     }
 
-    /** ECO-001: las Marcas no circulan. Es lo que impide comprar progresión. */
+    /**
+     * ECO-001: ninguna moneda vinculada circula entre jugadores.
+     *
+     * <p>Son los dos invariantes que sostienen el modelo de negocio:
+     * <ul>
+     *   <li><b>Marcas</b> — si se transfirieran, la progresión se compraría a
+     *       otro jugador.</li>
+     *   <li><b>ReportCoins</b> — si se transfirieran, se revenderían por
+     *       PokéDólares y existiría de facto la conversión prohibida, creando
+     *       un mercado gris que nadie decidió abrir.</li>
+     * </ul>
+     */
     private void testMarksAreNotTradeable(long a, long b) throws Exception {
-        economy.credit(a, Currency.MARK, 50, "autotest", key());
-        boolean rejected = false;
-        try {
-            economy.transfer(a, b, Currency.MARK, 10, "autotest", key());
-        } catch (EconomyException e) {
-            rejected = e.kind == EconomyException.Kind.NOT_TRADEABLE;
+        for (Currency c : Currency.values()) {
+            if (c.tradeable) continue;
+
+            economy.credit(a, c, 50, "autotest", key());
+            boolean rejected = false;
+            try {
+                economy.transfer(a, b, c, 10, "autotest", key());
+            } catch (EconomyException e) {
+                rejected = e.kind == EconomyException.Kind.NOT_TRADEABLE;
+            }
+            check("transferir " + c.displayName + " se rechaza", rejected);
+            check(c.displayName + ": el origen conserva su saldo",
+                  economy.balance(a, c) == 50);
+            check(c.displayName + ": el destino no recibe nada",
+                  economy.balance(b, c) == 0);
         }
-        check("transferir Marcas se rechaza", rejected);
-        check("las Marcas del origen siguen ahí",
-              economy.balance(a, Currency.MARK) == 50);
-        check("el destino no recibió Marcas",
-              economy.balance(b, Currency.MARK) == 0);
     }
 
     /** Las dos patas de una transferencia ocurren o no ocurre ninguna. */

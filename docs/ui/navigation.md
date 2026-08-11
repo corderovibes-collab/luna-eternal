@@ -1,41 +1,55 @@
-# Arquitectura de navegación
+# Arquitectura de navegación — El Almanaque
 
 ## Purpose
 
-Definir el punto de entrada único al servidor y cómo se organiza todo lo que
-cuelga de él. **Antes de implementar ningún sistema** (brief §26: UI-first).
+Definir el punto de entrada único al juego, sus secciones, y la barra lateral
+permanente. **Antes de implementar ningún sistema** (brief §26: UI-first).
 
 ## Dependencies
 
 - [`../game-design/core-loop.md`](../game-design/core-loop.md)
 - [`../progression/progression-model.md`](../progression/progression-model.md)
-- [`../analysis/diosesmon-analysis.md`](../analysis/diosesmon-analysis.md) — el principio del hub
+- [`../world/world-structure.md`](../world/world-structure.md)
+- [`../analysis/diosesmon-analysis.md`](../analysis/diosesmon-analysis.md) §0
 
 ## Related Documents
 
-- [`../trading/gts.md`](../trading/gts.md)
+- [`../trading/gts.md`](../trading/gts.md) · [`../economy/economy-overview.md`](../economy/economy-overview.md)
 
 ## Current Status
 
-**PROPUESTA**, incluida una decisión de identidad (§1) que conviene ratificar.
+**PROPUESTA v2**, rehecha el 2026-08-11 tras observar el PokePad de Diosesmon.
 
 ## Last Decision
 
-Pendiente.
+Pendiente. Incluye una decisión de identidad (§1).
+
+---
+
+## 0. La regla que manda sobre todas
+
+> **Al jugador le da pereza escribir comandos. Si algo solo se puede hacer con
+> un comando, para la mayoría de la gente ese algo no existe.**
+
+Consecuencias, sin excepciones:
+
+- **Todo se hace con clics.** Comandos solo para administración.
+- Nada obliga a recordar nombres, IDs ni sintaxis.
+- Los comandos que existan son **atajos para quien los quiera**, nunca el
+  único camino.
+- Si al diseñar un sistema la respuesta es *"el jugador escribe `/algo`"*, el
+  diseño está incompleto.
 
 ---
 
 ## 1. El hub se llama **El Almanaque**
 
-Diosesmon tiene el *PokePad*: un dispositivo, una tablet. Funciona, pero es la
-metáfora obvia y podría estar en cualquier servidor.
+Diosesmon tiene el *PokePad*: una tablet. Funciona, pero es la metáfora obvia
+y podría estar en cualquier servidor.
 
-Propongo **El Almanaque**, y no es un cambio de nombre cosmético: **es la
-metáfora correcta para este juego en concreto.**
-
-Un almanaque es, literalmente, un libro de **fases lunares, estaciones y cuándo
-ocurren las cosas**. Es exactamente lo que
-[vision.md](../game-design/vision.md) define como pilar:
+**El Almanaque** es la metáfora correcta para *este* juego. Un almanaque es
+literalmente un libro de **fases lunares y de cuándo ocurren las cosas**, que
+es el pilar de [vision.md](../game-design/vision.md):
 
 > *El mundo tiene horarios. Saber cuándo es la progresión.*
 
@@ -46,188 +60,218 @@ ocurren las cosas**. Es exactamente lo que
 | Igual para todos | El tuyo refleja tu recorrido |
 | Metáfora de tecnología | Metáfora de **conocimiento** |
 
-El Almanaque empieza **casi vacío** y se llena conforme el jugador descubre.
-Las páginas bloqueadas no se ocultan: se ven en blanco, con lo que hace falta
-para escribirlas. Eso convierte la propia interfaz en un recordatorio constante
-de *"todavía me queda muchísimo por descubrir"* — la frase que el brief pone
-como criterio de éxito.
+Empieza casi vacío. Las secciones bloqueadas **no se ocultan**: se ven como
+páginas en blanco con lo que hace falta para escribirlas. La interfaz es en sí
+misma el recordatorio de *"todavía me queda muchísimo por descubrir"*.
 
-Y es coherente con la marca: **Luna Eternal**.
+Y encaja con la marca: **Luna Eternal**.
 
 ---
 
-## 2. Principios
+## 2. Cómo se abre — sin comandos
 
-| # | Principio | Origen |
+**Un objeto en el inventario: el Almanaque.** Clic derecho en cualquier
+momento y en cualquier sitio.
+
+| Regla | Motivo |
+|---|---|
+| Se entrega al entrar por primera vez | No hay que buscarlo |
+| **No se puede tirar, soltar ni perder** | Perderlo dejaría al jugador sin juego |
+| Si falta, se repone solo al conectar | Red de seguridad |
+| Ocupa un hueco fijo del inventario | Siempre en el mismo sitio |
+| `/menu` existe como atajo | Para quien prefiera teclado |
+
+> Alternativa evaluada y descartada: abrirlo con una tecla. Requiere **mod de
+> cliente obligatorio**, y eso excluye jugadores
+> ([diosesmon-analysis.md](../analysis/diosesmon-analysis.md) §3). El objeto
+> funciona con cualquier cliente.
+
+---
+
+## 3. La barra lateral — el progreso sin abrir nada
+
+Siempre visible a la derecha. Es lo que hace que el jugador **sienta** que
+progresa sin tener que consultarlo (principio N4).
+
+```
+╔═══════════════════════╗
+║   LUNA ETERNAL        ║
+╠═══════════════════════╣
+║ 🌕 Luna llena         ║   ← identidad del proyecto
+╟───────────────────────╢
+║ 💰 142.300            ║   PokéDólares
+║ 🔷 26 Marcas          ║
+║ 🪙 0 ReportCoins      ║
+╟───────────────────────╢
+║ Vía:   Explorador IV  ║   ← la vía dominante, no un nivel
+║ Clan:  Los Errantes   ║
+║ Oficio: Criador       ║
+╟───────────────────────╢
+║ Medallas: ▮▮▮▯▯▯▯▯    ║
+╚═══════════════════════╝
+```
+
+### Tres decisiones, contra lo que hace Diosesmon
+
+**1 · La fase lunar va arriba del todo.** Es el pilar del juego. Cada vez que
+el jugador mira la pantalla, ve el estado del mundo.
+
+**2 · Ningún hueco dice "¡Cómpralo!".** En Diosesmon, el rango de un jugador
+sin rango pone *"¡Cómpralo!"* — el HUD se convierte en un anuncio permanente.
+Aquí un hueco vacío **informa** (`Sin clan`), no vende. La tienda tiene su
+sitio; el HUD no lo es.
+
+**3 · No se anuncia lo que no existe.** Diosesmon reserva una fila para
+`DIVISION: ¡MUY PRONTO!`. Aquí una sección sin construir **no aparece**.
+
+---
+
+## 4. El Almanaque — la pantalla principal
+
+Menú de servidor de 6 filas (54 huecos). **Agrupado por temas**, no una
+rejilla plana de iconos.
+
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║                        EL  ALMANAQUE                              ║
+║  [perfil]   🌕 Luna llena · noche      💰142.300  🔷26  🪙0        ║
+╠═══════════════════════════════════════════════════════════════════╣
+║  TUS POKÉMON                                                      ║
+║   📕 Pokédex    📦 Caja(PC)   🎒 Mochila   ❤ Curar   🥚 Criadero  ║
+╟───────────────────────────────────────────────────────────────────╢
+║  AVENTURA                                                         ║
+║   📜 Misiones   🎯 Cazas      🏅 Medallas  💎 Tesoros  🗺 Explorar ║
+╟───────────────────────────────────────────────────────────────────╢
+║  ECONOMÍA                                                         ║
+║   ⚖ GTS        🏪 Tienda     🔨 Oficios   📈 Historial            ║
+╟───────────────────────────────────────────────────────────────────╢
+║  TÚ                                                               ║
+║   ✨ Vías       👕 Cosméticos 🎁 Kits      🛡 Clan     ⭐ Rangos   ║
+╟───────────────────────────────────────────────────────────────────╢
+║  🚕 Viajes                                            ✖ Cerrar    ║
+╚═══════════════════════════════════════════════════════════════════╝
+```
+
+### Por qué agrupado y no una rejilla de 15
+
+El PokePad de Diosesmon es una rejilla plana de 15 iconos sin jerarquía. Es
+exactamente el "cajón desastre" que este documento advertía en su v1: **con 15
+elementos indistintos, el jugador no busca — recuerda posiciones**, y cada
+sección nueva empeora el problema.
+
+Cuatro grupos de 4-5 elementos se leen de un vistazo. Y **hay sitio para
+crecer**: una sección nueva entra en su grupo sin rediseñar nada.
+
+### Las secciones
+
+| Sección | Qué hace | Se abre en |
 |---|---|---|
-| **N1** | **Un solo punto de entrada.** Ni `/gts`, ni `/kit`, ni `/warp` sueltos | Diosesmon, principio validado |
-| **N2** | **Profundidad, no un cajón.** Máximo 3 niveles; nunca una rejilla plana de 30 botones | Riesgo detectado en Diosesmon §5 |
-| **N3** | **Lo bloqueado se ve y se explica.** Nunca un botón que falla | Brief §27 |
-| **N4** | **El progreso se ve sin abrir nada.** Scoreboard y tablist | Diosesmon §4 |
-| **N5** | **Abre en contexto**, no en un menú | Ver §3 |
+| **Pokédex** | Vistos, capturados, lo que falta, dónde y cuándo aparece | G0 |
+| **Caja (PC)** | Almacenamiento, buscar y ordenar | G0 |
+| **Mochila** | Objetos | G0 |
+| **Curar** | Restaurar el equipo (con coste/cooldown) | G0 |
+| **Criadero** | Cría, IV/EV, linajes | Vía Criador I |
+| **Misiones** | Objetivos activos, historia, diarias | G0 |
+| **Cazas** | Objetivos rotativos con recompensa | Tras el tutorial |
+| **Medallas** | Salón: qué tienes, cuál sigue, **dónde está** | G0 |
+| **Tesoros** | Recompensas por descubrimiento y colección | Vía Explorador I |
+| **Explorar** | Mapa, zonas, requisitos de acceso visibles | G0 |
+| **GTS** | Mercado entre jugadores — ver [gts.md](../trading/gts.md) | G0 consultar · G2 vender |
+| **Tienda** | Compra a NPC de consumibles | G0 |
+| **Oficios** | Profesiones con progresión propia | Tutorial completo |
+| **Historial** | Movimientos de dinero y precios de mercado | G4 |
+| **Vías** | Las 5 reputaciones, desbloqueos, Marcas | G0 |
+| **Cosméticos** | Aspecto, títulos, efectos | G0 |
+| **Kits** | Inicial gratuito · periódicos · de rango | G0 |
+| **Clan** | Crear, unirse, gestionar | Nivel de progresión |
+| **Rangos** | Qué incluye cada uno y cómo se consigue | G0 |
+| **Viajes** | Puntos de la ciudadela y destinos desbloqueados | G0 dentro de la ciudadela |
 
-### Sobre N5, que es el que más cambia la experiencia
-
-La mayoría de hubs abren en una rejilla de iconos. El Almanaque abre en
-**Hoy**: qué fase lunar hay, qué cambia por eso, y qué tienes a medias.
-
-El jugador no entra a "navegar un menú": entra a **enterarse de algo**. Y de
-paso, la primera pantalla enseña el pilar del juego sin un tutorial.
-
----
-
-## 3. El árbol
-
-```
-EL ALMANAQUE
-│
-├── HOY                         ← pantalla de entrada
-│   ├── Fase lunar y qué cambia
-│   ├── Objetivos en curso
-│   ├── Novedades del mercado
-│   └── Avisos (expiraciones, entregas)
-│
-├── VÍAS                        ← el perfil: 5 barras
-│   ├── Explorador · Entrenador · Coleccionista · Comerciante · Criador
-│   ├── Desbloqueos          (LOCKED / AVAILABLE / UNLOCKED)
-│   ├── Marcas 🔷            en qué gastarlas
-│   └── Logros y medallas
-│
-├── POKÉMON
-│   ├── Equipo
-│   ├── Caja (PC)
-│   ├── Pokédex              lo visto, lo capturado, lo que falta
-│   ├── Colección            formas, shinies, variantes
-│   └── Criadero
-│
-├── MERCADO
-│   ├── GTS                  buscar · vender · mis listados
-│   ├── Tiendas              NPC
-│   ├── Cartera              💰 PokéDólares · 🔷 Marcas
-│   └── Historial            movimientos y precios
-│
-├── MUNDO
-│   ├── Mapa                 lo descubierto
-│   ├── Zonas                requisitos de acceso visibles
-│   ├── Descubrimientos      el registro del explorador
-│   └── Viajes               destinos desbloqueados y coste
-│
-├── SOCIAL
-│   ├── Amigos
-│   ├── Clan
-│   ├── Clasificaciones      por vía, no una general
-│   └── Perfil de jugador    ver el Almanaque público de otro
-│
-└── PERSONALIZACIÓN
-    ├── Cosméticos · Títulos · Efectos
-    └── Apariencia del Almanaque
-```
-
-**Tres niveles como máximo.** Cualquier cosa a cuatro niveles está mal colocada.
-
-### Decisiones del árbol
-
-**"Vías" va segundo, justo después de Hoy.** Es la respuesta a *"¿quién soy en
-este servidor?"*, y ponerlo arriba comunica que el progreso es un perfil, no un
-número ([progression-model.md §1](../progression/progression-model.md)).
-
-**"Aventuras" del brief §25 desaparece.** Sus contenidos (quests, historia,
-hunts, eventos) se reparten: los objetivos en curso van a **Hoy**, donde el
-jugador los verá de verdad, y las recompensas a **Vías**. Una sección "Aventuras"
-sería un cajón que nadie abre dos veces.
-
-**"Clasificaciones" es por vía, nunca general.** Una tabla global reintroduce por
-la puerta de atrás el nivel único que se rechazó en `PROG-001`.
-
-**"Perfil de jugador"** es el *player scan* de Diosesmon: ver el Almanaque de
-otro convierte el progreso en estatus social. Es de lo más barato de construir y
-de lo que más retiene.
+> **"Medallas" sustituye a "Gyms".** No es un cambio de nombre: en Diosesmon
+> abre la sala donde están todos los gimnasios. Aquí **muestra tu progreso y te
+> dice dónde ir** — los gimnasios están repartidos por el mundo
+> ([world-structure.md](../world/world-structure.md) §3).
 
 ---
 
-## 4. La pantalla de entrada
+## 5. Estados: nada falla en silencio
+
+Todo elemento tiene estado explícito (brief §27), y la interfaz **siempre**
+explica el porqué:
+
+`AVAILABLE · LOCKED · UNLOCKING · UNLOCKED · COOLDOWN · DISABLED · ERROR`
 
 ```
-╔══════════════════════════════════════════════╗
-║  EL ALMANAQUE                    🌕 Llena     ║
-╠══════════════════════════════════════════════╣
-║  Con luna llena, en las colinas               ║
-║  aparecen criaturas que no salen              ║
-║  ninguna otra noche.                          ║
-║                          [ Ver qué cambia ]   ║
-╟──────────────────────────────────────────────╢
-║  EN CURSO                                     ║
-║   · Descubrir las costas del norte    2/3     ║
-║   · Vender 5 objetos en el GTS        3/5     ║
-╟──────────────────────────────────────────────╢
-║  AVISOS                                       ║
-║   · Tu Gardevoir se vendió       +91 000 💰   ║
-║   · 1 listado caduca en 6 h                   ║
-╟──────────────────────────────────────────────╢
-║  💰 142 300      🔷 26 Marcas                 ║
-╟──────────────────────────────────────────────╢
-║  [Vías] [Pokémon] [Mercado] [Mundo] [Social]  ║
-╚══════════════════════════════════════════════╝
-```
-
-El aviso de la fase lunar **cambia con el ciclo** y es distinto según lo que el
-jugador ya haya descubierto: al principio es vago (*"algo cambia con la luna"*),
-y se vuelve específico conforme escribe su Almanaque. La interfaz **premia el
-conocimiento**, igual que el juego.
-
----
-
-## 5. Cómo se ve lo bloqueado
-
-Nunca se oculta. Nunca falla en silencio.
-
-```
-┌─ CRIADERO ──────────────────────── 🔒 ─┐
+┌─ CRIADERO ─────────────────────── 🔒 ─┐
 │ Aún no has escrito esta página.        │
 │                                        │
 │ Necesitas: Criador I                   │
-│ Cómo:      cría tu primer Pokémon      │
-│            en la guardería de Solaz    │
-│                          [ Cómo llegar ]│
+│ Cómo:      cría tu primer Pokémon en   │
+│            la guardería de Solaz       │
+│                                        │
+│            [ Cómo llegar ]             │
 └────────────────────────────────────────┘
 ```
 
-Tres elementos obligatorios: **qué es · qué falta · qué hacer ahora**. El tercero
-es el que más se olvida y el único que convierte un muro en un objetivo.
+**Tres elementos obligatorios: qué es · qué falta · qué hacer ahora.** El
+tercero es el que casi siempre se olvida y el único que convierte un muro en un
+objetivo.
+
+Un icono bloqueado **nunca** se oculta y **nunca** devuelve un error al pulsar.
 
 ---
 
 ## 6. Fuera del Almanaque
 
-No todo cabe en un menú. Lo que vive en pantalla:
-
 | Elemento | Contenido | Por qué fuera |
 |---|---|---|
-| **Scoreboard** | Vía dominante, medallas, saldo, fase lunar | Progreso pasivo (N4) |
+| **Barra lateral** | §3 | Progreso pasivo |
 | **Tablist** | Nombre, título, vía dominante | Identidad social |
 | **HUD de captura** | Probabilidad, ventaja de tipo | Decisión del bucle 1 |
-| **Avisos** | Ventas, expiraciones, descubrimientos | No requieren abrir nada |
+| **Avisos** | Ventas del GTS, expiraciones, descubrimientos | No requieren abrir nada |
 
 **Regla de contención:** si algo se mira más de una vez por minuto, va al HUD.
-Si se mira una vez por sesión, va al Almanaque. Nada en los dos sitios.
+Si se mira una vez por sesión, va al Almanaque. **Nada en los dos sitios.**
 
 ---
 
 ## 7. Implementación
 
-| Capa | Con qué | Estado |
+| Capa | Con qué | Cliente obligatorio |
 |---|---|---|
-| **Menús** | Interfaz de servidor sobre menús de cofre + Polymer | Ya instalado en producción |
-| **Estados de bloqueo** | Mod propio, consultando progresión | D-011 |
-| **Scoreboard y tablist** | Mod propio | D-011 |
-| **Pantallas completas** | FancyMenu (resourcepack) | Ya instalado |
-| **HUD** | Fuentes de mapa de bits + espacios negativos | Técnica ya conocida del proyecto anterior |
+| Menús | **Menús de cofre servidos por el mod propio** | ❌ No |
+| Iconos | Objetos vanilla + modelos personalizados por resourcepack | ❌ No |
+| Textos y marcos | Fuentes de mapa de bits + espacios negativos | ❌ No |
+| Barra lateral | Scoreboard del mod propio | ❌ No |
+| Pantallas completas | FancyMenu (resourcepack, opcional) | ❌ No |
 
-**Nada de esto exige un mod de cliente obligatorio.** Es una decisión
-deliberada: Diosesmon exige un modpack para "high-end rigs", y eso excluye
-jugadores ([diosesmon-analysis.md §3](../analysis/diosesmon-analysis.md)). El
-launcher propio permite distribuir mejoras opcionales, pero **el servidor debe
-ser jugable con un cliente normal**.
+**Ningún mod de cliente es obligatorio.** Decisión firme: Diosesmon exige un
+modpack "para equipos potentes" y eso excluye jugadores; un MMORPG necesita
+masa crítica. El launcher propio puede repartir mejoras **opcionales**.
+
+### El framework de interfaces
+
+Para que esto no acabe en 20 clases copiadas y pegadas, el mod necesita una
+base común. Especificación en `UI-002`:
+
+```
+Menu            plantilla: título, tamaño, contenido, refresco
+MenuItem        icono + nombre + descripción + estado + acción
+MenuRegistry    abre por id; guarda la pila para el botón "atrás"
+Paginated       listas largas (Pokédex, GTS, PC) con páginas
+LockState       AVAILABLE/LOCKED/… y cómo se dibuja cada uno
+Sidebar         la barra lateral, con refresco por eventos
+```
+
+**Reglas del framework:**
+
+| | |
+|---|---|
+| Un menú **nunca** consulta la base en el hilo del servidor | Cargar antes, dibujar después |
+| Todo clic se **revalida en servidor** | P6: nunca confiar en el cliente |
+| Los menús con datos vivos se **refrescan solos** | Saldo, listados del GTS |
+| Toda acción con coste pide **confirmación** | Ver [gts.md](../trading/gts.md) §6 |
+| Cerrar un menú **nunca** pierde estado | Se reabre donde estaba |
 
 ---
 
@@ -235,21 +279,21 @@ ser jugable con un cliente normal**.
 
 | Riesgo | Mitigación |
 |---|---|
-| Menús de cofre limitan el diseño visual | Fuentes personalizadas y arte en resourcepack. Ya se hizo en el proyecto anterior |
-| El Almanaque se convierte en un cajón | N2: máximo 3 niveles, revisión en cada sistema nuevo |
-| Demasiada información en "Hoy" | Máximo 3 objetivos y 3 avisos; el resto, en su sección |
-| El nombre no gusta | Es ratificable ahora; cambiarlo después cuesta arte y textos |
+| Los menús de cofre limitan el diseño visual | Fuentes y arte propio en resourcepack; ya se hizo en el proyecto anterior |
+| El Almanaque crece hasta ser inmanejable | Los 4 grupos son el límite. Sección nueva → entra en un grupo o no entra |
+| Consultas a la BD al abrir menús | Caché en memoria del jugador conectado; la BD solo al entrar y al actuar |
+| El nombre no gusta | Ratificable ahora; cambiarlo después cuesta arte y textos |
 
 ---
 
 ## Next Actions
 
-1. Ratificar **El Almanaque** como nombre e identidad del hub
-2. `UI-002` — maquetas de cada sección
-3. `UI-003` — scoreboard y tablist
-4. Implementación tras el esquema de datos
+1. Ratificar **El Almanaque**, los 4 grupos y la barra lateral
+2. `UI-002` — construir el framework de menús en el mod
+3. `UI-003` — barra lateral
+4. `UI-004` — maquetas sección por sección
 
 ## Related Systems
 
-- [Progresión](../progression/progression-model.md) · [GTS](../trading/gts.md)
-- [Visión](../game-design/vision.md) · [Diosesmon](../analysis/diosesmon-analysis.md)
+- [Estructura del mundo](../world/world-structure.md) · [Progresión](../progression/progression-model.md)
+- [GTS](../trading/gts.md) · [Economía](../economy/economy-overview.md)

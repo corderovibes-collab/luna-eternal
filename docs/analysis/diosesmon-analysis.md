@@ -18,11 +18,93 @@ implementación.
 
 ## Current Status
 
-Análisis basado en la presentación pública del modpack (CurseForge, 2026-08-11).
-**Limitación honesta:** no se ha jugado en el servidor. Se analiza lo que el
-producto *dice* de sí mismo, que revela su arquitectura de producto pero no su
-balance económico real. Los apartados de economía y cooldowns quedan como
-inferencia, marcados como tal.
+Análisis de la presentación pública (CurseForge) **+ observación directa del
+servidor** aportada por el usuario en capturas el 2026-08-11 — ver §0, que es
+ahora la fuente más fiable de este documento.
+
+Sigue sin medirse el **balance económico** (precios, cooldowns, ritmo de
+ingresos): eso exige jugar horas. Lo que hay de economía es inferencia.
+
+---
+
+## 0. Lo observado directamente (capturas, 2026-08-11)
+
+Esto ya no es marketing: es cómo funciona el servidor.
+
+### El recorrido de entrada
+
+```
+1. LOBBY (dimensión pequeña)
+   · pantalla flotante: "SURVIVAL — Explora un mundo lleno de criaturas…"
+     con Conectados: N y Capacidad: (barra)
+   · "→ Haz clic para ingresar"
+   · un NPC con clic derecho te mete al mundo
+   · barra lateral: marca, fecha, usuario, Rango, Lobby #1, jugadores, ping
+
+2. CIUDADELA (otra dimensión, ciudad entera)
+   · al llegar se abre un LIBRO automáticamente:
+     "¡Bienvenido a Diosesmon! Para comenzar tu aventura,
+      pulsa AQUÍ para reproducir la cinemática"
+   · el enlace abre un vídeo de YouTube (tutorial)
+
+3. LABORATORIO — NPC con diálogo de dos botones:
+   "Tengo Pokémon de dos regiones distintas.
+    ¿De qué generación quieres elegir tu compañero?"
+   [ Primera Generación (Kanto) ]  [ Segunda Generación (Johto) ]
+
+4. La ciudadela contiene TODO: sala con todos los gimnasios,
+   laboratorio, tiendas, puntos de teletransporte.
+```
+
+### La barra lateral dentro del juego
+
+```
+DINERO:       3.000$          ← moneda de juego
+DIOSESCOINS:  0               ← moneda premium, de pago
+CLAN:         (Sin clan)
+TRABAJO:      Sin trabajo
+DIVISION:     ¡MUY PRONTO!
+MEDALLAS:     [iconos de gimnasios conseguidos]
+```
+
+### El PokePad — rejilla de 15 accesos
+
+```
+Pokédex · Cosméticos · Trabajos · Misiones · Kits
+GTS     · Tesoros    · Tienda   · PC       · Curar
+Mochila · Cazas      · Gyms     · Warps    · Explorar
+```
+
+### Cuatro cosas que confirman o corrigen el análisis anterior
+
+**1 · Dos monedas separadas, y la premium se llama distinto.**
+`DINERO` (juego) y `DIOSESCOINS` (pago). Confirma que **no venden la moneda de
+juego**: venden un token aparte. Es el diseño correcto y coincide con el
+principio de `monetization.md`. Nosotros hacemos lo mismo con **ReportCoins**.
+
+**2 · El rango se vende desde la propia barra lateral.**
+Donde debería ir el rango pone `¡Cómpralo!`. Es agresivo — convierte el HUD en
+un anuncio permanente. 🔴 **Evitar.** Un hueco vacío que dice "sin clan" informa;
+uno que dice "cómpralo" molesta cada segundo de juego.
+
+**3 · La cinemática es un vídeo de YouTube, no una cinemática en el juego.**
+Barato de producir y fácil de actualizar, pero **saca al jugador del juego** al
+navegador en su primer minuto. 🟡 **Mejorar:** nosotros ya sabemos hacer
+cinemáticas dentro del juego (Cutscene API, usado en el proyecto anterior) y
+tenemos 57 líneas de voz grabadas. Es una ventaja real que ellos no tienen.
+
+**4 · "DIVISION: ¡MUY PRONTO!"** — una fila del HUD ocupada por algo que no
+existe. 🔴 **Evitar.** No se anuncia en la interfaz lo que no está hecho.
+
+### Lo que sí hay que copiar del recorrido
+
+El **orden** es correcto y está bien pensado:
+
+> lobby → contexto → cinemática → starter → ciudad → mundo
+
+El jugador nunca aparece perdido en medio de la nada. Cada paso le dice el
+siguiente. **Ese esqueleto lo adoptamos**; lo que cambia es el contenido, la
+identidad y la calidad de cada paso.
 
 ## Last Decision
 

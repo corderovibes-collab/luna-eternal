@@ -65,6 +65,10 @@ D-004 (formatear el servidor de desarrollo) · D-005 (mod propio obligatorio)
 | `MOD-001` | Esqueleto del mod: Gradle + Fabric 1.21.1 + Java 21 | ✅ `mod/` creado |
 | `MOD-002` | Persistencia: Hikari, migraciones, esquema V001 | ✅ `player` · `player_economy` · `ledger_entry` |
 | `MOD-003` | Servicios de identidad y economía | ✅ `PlayerService` (R1) · `EconomyService` (R2/R3/R4) |
+| `WLD-001` | Estructura del mundo: lobby, ciudadela, mundo | ✅ → `world/world-structure.md` |
+| `ECO-004` | ReportCoin, tercera moneda premium | ✅ 3 monedas en bucles cerrados sin conversión. Migración V003 |
+| `UI-002` | Framework de menús de servidor | ✅ `Menu` · `Icon` · `LockState` · `PlayerSnapshot` · `MenuService` |
+| `UI-005` | El Almanaque (pantalla principal) | ✅ 4 grupos, 19 secciones, estados de bloqueo. `/menu` |
 
 ---
 

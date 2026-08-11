@@ -25,7 +25,8 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`game-design/core-loop.md`](game-design/core-loop.md) | 🟡 | Tres bucles anidados — **propuesta** |
 | [`trading/gts.md`](trading/gts.md) | ✅ | Mercado: acceso por progresión, comisiones, anti-abuso |
 | [`progression/progression-model.md`](progression/progression-model.md) | ✅ | 5 vías, desbloqueos de dos factores, sin nivel de jugador |
-| [`ui/navigation.md`](ui/navigation.md) | ✅ | **El Almanaque**: hub, árbol, estados de bloqueo |
+| [`ui/navigation.md`](ui/navigation.md) | ✅ | **El Almanaque**: hub, 4 grupos, barra lateral, estados |
+| [`world/world-structure.md`](world/world-structure.md) | ✅ | Lobby · ciudadela · mundo, y el recorrido de entrada |
 
 ✅ escrito · 🟡 en curso · ⬜ pendiente
 

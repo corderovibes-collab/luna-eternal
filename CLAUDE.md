@@ -20,9 +20,10 @@ servidor de desarrollo.**
 ```
 Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
-Mod           lunaeternal 0.1.0 · migraciones V001 y V002 aplicadas
-BD            MariaDB s11945_luna
-Autotest      /luna autotest -> 19/19 invariantes correctos
+Mod           lunaeternal 0.1.0 · migraciones V001 a V003 aplicadas
+BD            MariaDB s11945_luna · 3 monedas
+Autotest      /luna autotest -> 24/24 invariantes correctos
+Interfaz      El Almanaque operativo (/menu o /almanaque)
 ```
 
 > ⚠️ **`online-mode` tiene que ser `false`.** Verificado: `TheJuanCE` no existe
@@ -46,11 +47,17 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: implementar el GTS (`TRD-002`)
+### Siguiente tarea: barra lateral + objeto del Almanaque (`UI-003`)
 
-El diseño está en [gts.md](docs/trading/gts.md) y el esquema en
-[data-model.md](docs/technical/data-model.md) §3. La base económica ya está
-probada, así que toca la custodia de Pokémon y la transacción de venta.
+El framework de menús ya funciona. Falta lo que lo hace usable sin comandos:
+
+1. **El objeto del Almanaque** — se entrega al entrar, no se puede perder,
+   clic derecho lo abre (`docs/ui/navigation.md` §2)
+2. **La barra lateral** — fase lunar, tres saldos, vía, clan, medallas (§3)
+3. Después: rellenar secciones, empezando por **Cartera** y **Vías**, que solo
+   necesitan datos que ya existen
+
+Luego el GTS (`TRD-002`), que es el sistema grande.
 
 **Regla de trabajo establecida:** cada sistema económico nuevo añade sus
 invariantes a `/luna autotest` **antes** de desplegarse (`MOD-006`).
@@ -104,6 +111,8 @@ cualquier sistema es:
 | P4 | **Free-to-play con paquetes de pago.** Se vende identidad, comodidad y aceleración **acotada**. La línea roja no es "ventaja" sino **inyección económica y poder competitivo** — ver [monetization.md](docs/economy/monetization.md). |
 | P5 | **Mínimo de dependencias.** Nativo → configuración → datapack → resourcepack → mod maduro → sistema propio. En ese orden. |
 | P6 | **Nunca confiar en el cliente.** Toda validación económica es de servidor. |
+| P9 | **Interfaz, nunca comando.** Todo se hace con clics (D-012). Si el diseño de un sistema termina en *"el jugador escribe `/algo`"*, está incompleto. |
+| P10 | **Ningún mod de cliente es obligatorio.** El launcher reparte mejoras opcionales; el servidor se juega con un cliente normal. |
 | P7 | **Nada crítico vive solo en la conversación.** Va a documentación. |
 | P8 | **Producción es sagrada.** `2a0a48ff` es READ-ONLY hasta que exista plan aprobado. |
 
@@ -202,6 +211,10 @@ documentación · migración · rollback.
 | D-009 | 2026-08-11 | **MariaDB como almacén principal**, no ficheros planos | El plan incluye 4 BD por servidor sin coste. Una venta de GTS exige atomicidad: sin transacciones, el Pokémon se pierde o se duplica. BD provisionada y verificada en desarrollo |
 | D-010 | 2026-08-11 | **Clave sustituta `player_id`** en todo el esquema, nunca el UUID de Minecraft | Aísla el modelo de datos de la decisión `online-mode` y de los cambios de nombre. Convierte una migración masiva en actualizar una columna |
 | D-011 | 2026-08-11 | **El mod propio lo escribe Claude.** B-006 cerrado | El usuario lo confirmó. Elimina el riesgo que sostenía toda la arquitectura (D-005, D-006, D-009). Implica también el SQL/JDBC y las migraciones |
+| D-012 | 2026-08-11 | **Todo se hace con clics, nunca con comandos** | Al jugador le da pereza escribir. Si algo solo existe por comando, para la mayoría no existe. Los comandos son atajos opcionales, jamás el único camino |
+| D-013 | 2026-08-11 | **Tercera moneda: ReportCoin** (premium, dinero real) | Decisión del usuario, equivalente a los Diosescoins. Es el diseño correcto porque **no se vende la moneda del juego**: se vende un token aparte que nunca toca el mercado |
+| D-014 | 2026-08-11 | **Ninguna moneda se convierte en otra, en ninguna dirección** | De esta única regla salen las tres garantías: no se compra poder, no se compra progresión, pagar no infla. `REPORTCOIN` tampoco es transferible: si lo fuera, se revendería por PokéDólares y existiría la conversión por la puerta de atrás |
+| D-015 | 2026-08-11 | **Tres espacios: lobby · ciudadela · mundo** | Cada uno con una sola función. Los gimnasios van **repartidos por el mundo**, no en una sala: concentrarlos contradice el pilar de exploración |
 
 ## 6. Decisiones PENDIENTES (bloqueantes)
 

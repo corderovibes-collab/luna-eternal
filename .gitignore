@@ -10,7 +10,10 @@
 # ...pero el wrapper de Gradle SÍ va al repo: sin él no se puede compilar.
 !gradle/wrapper/gradle-wrapper.jar
 !mod/gradle/wrapper/gradle-wrapper.jar
-world/
+# Anclado a la raiz: sin la barra inicial esto tambien ignoraba docs/world/,
+# que es documentacion. Costo que world-structure.md no se comiteara.
+/world/
+mod/run/world/
 logs/
 crash-reports/
 core

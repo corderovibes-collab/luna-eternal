@@ -29,9 +29,9 @@ D-019 · D-020 (qué se copia y qué no de su modelo)
 ## 1. Resumen honesto
 
 ```
-HECHO         █████████░░░░░░░░░░░░░░  13 / 32
+HECHO         ██████████░░░░░░░░░░░░░  14 / 32
 PARCIAL       ██░░░░░░░░░░░░░░░░░░░░░   3 / 32
-PENDIENTE     ░░░░░░░░░░░░░░░░░░░░░░░  16 / 32
+PENDIENTE     ░░░░░░░░░░░░░░░░░░░░░░░  15 / 32
 ```
 
 **Lo que ya está es el cimiento, no la fachada.** Economía auditada, mercado con
@@ -54,7 +54,7 @@ Leyenda: ✅ hecho · 🟡 parcial · ⬜ pendiente · ❌ descartado a propósi
 | 1 | Pokédex | Pokédex | ✅ | **Mejor:** enseña lo que aún no ha llegado, y la fase lunar de cada primera captura |
 | 2 | Cosméticos | Cosméticos | ⬜ | Necesita catálogo y arte |
 | 3 | Trabajos | Oficios | ⬜ | Ellos: 5 oficios, nivel 1/125 |
-| 4 | Misiones | Misiones | ⬜ | Ellos: árbol de nodos con recompensas |
+| 4 | Misiones | Misiones | ✅ | **Mejor:** el tutorial enseña el bucle en el orden en que se juega |
 | 5 | Warps | LunaTaxi | ⬜ | Bloqueado por la ciudadela, no por código |
 | 6 | Clan | Clan | ⬜ | |
 | 7 | GTS | GTS | ✅ | **Mejor:** custodia real, sin doble compra, impuesto progresivo por tramos, entrega diferida a prueba de caídas |
@@ -178,7 +178,7 @@ Reordenadas según §3.
 | | Tarea |
 |---|---|
 | B1 | Medallas y gimnasios |
-| B2 | Misiones (tutorial + diarias) |
+| B2 | ~~Misiones~~ ✅ | 6 de tutorial + 2 diarias |
 | B3 | Cazas rotativas |
 | B4 | Telemetría económica |
 

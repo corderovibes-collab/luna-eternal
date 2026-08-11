@@ -1,0 +1,97 @@
+{
+  "_comment": [
+    "Misiones. Ver docs/game-design/core-loop.md.",
+    "",
+    "LAS DEL TUTORIAL SON SECUENCIALES y no por capricho: enseñan el bucle en",
+    "el orden en que se juega. Salir, capturar, volver, gastar, comerciar. Un",
+    "jugador que las termine ha usado el juego entero sin leer un manual.",
+    "",
+    "Las recompensas son DELIBERADAMENTE modestas en PokeDolares y generosas",
+    "en Marcas: las Marcas no se comercian, asi que no inflan nada (ECO-001",
+    "§2). Premiar con lo que no circula es gratis para la economia.",
+    "",
+    "Tipos de objetivo disponibles hoy:",
+    "  STARTER        elegir el inicial",
+    "  CATCH          capturar N Pokemon",
+    "  POKEDEX        registrar N especies distintas",
+    "  SHOP_BUY       comprar N veces en la tienda",
+    "  GTS_SELL       vender N veces en el GTS",
+    "  PATH_LEVEL     alcanzar nivel N en una via",
+    "  EARN           ganar N PokeDolares en total"
+  ],
+
+  "quests": [
+    {
+      "id": "t1_inicial",
+      "chain": "tutorial", "order": 1,
+      "name": "§aUn compañero",
+      "description": "Nadie empieza solo. Elige tu primer Pokémon.",
+      "objective": { "type": "STARTER", "amount": 1 },
+      "rewards": { "pokedollar": 500, "mark": 3, "path": "ENTRENADOR", "xp": 20 }
+    },
+    {
+      "id": "t2_captura",
+      "chain": "tutorial", "order": 2,
+      "requires": "t1_inicial",
+      "name": "§aTu primera captura",
+      "description": "Sal al Mundo Salvaje y atrapa a alguien.",
+      "objective": { "type": "CATCH", "amount": 1 },
+      "rewards": { "pokedollar": 800, "mark": 5, "path": "COLECCIONISTA", "xp": 40 }
+    },
+    {
+      "id": "t3_pokedex",
+      "chain": "tutorial", "order": 3,
+      "requires": "t2_captura",
+      "name": "§aConoce el mundo",
+      "description": "Registra 5 especies distintas. Fíjate en dónde y cuándo salen.",
+      "objective": { "type": "POKEDEX", "amount": 5 },
+      "rewards": { "pokedollar": 1500, "mark": 10, "path": "EXPLORADOR", "xp": 60 }
+    },
+    {
+      "id": "t4_tienda",
+      "chain": "tutorial", "order": 4,
+      "requires": "t2_captura",
+      "name": "§6Prepara la expedición",
+      "description": "Compra algo en la tienda. Salir sin balls es salir a mirar.",
+      "objective": { "type": "SHOP_BUY", "amount": 1 },
+      "rewards": { "pokedollar": 400, "mark": 3, "path": "COMERCIANTE", "xp": 20 }
+    },
+    {
+      "id": "t5_gts",
+      "chain": "tutorial", "order": 5,
+      "requires": "t4_tienda",
+      "name": "§6Tu primer trato",
+      "description": "Vende algo en el GTS. Lo que a ti te sobra, a otro le falta.",
+      "objective": { "type": "GTS_SELL", "amount": 1 },
+      "rewards": { "pokedollar": 1000, "mark": 8, "path": "COMERCIANTE", "xp": 50 }
+    },
+    {
+      "id": "t6_via",
+      "chain": "tutorial", "order": 6,
+      "requires": "t3_pokedex",
+      "name": "§dElige quién eres",
+      "description": "Alcanza el nivel I en cualquier vía.",
+      "objective": { "type": "PATH_LEVEL", "amount": 1 },
+      "rewards": { "pokedollar": 2000, "mark": 15 }
+    },
+
+    {
+      "id": "d_captura",
+      "chain": "diaria",
+      "period": "DAY",
+      "name": "§eCacería del día",
+      "description": "Captura 10 Pokémon.",
+      "objective": { "type": "CATCH", "amount": 10 },
+      "rewards": { "pokedollar": 1200, "mark": 2, "path": "COLECCIONISTA", "xp": 30 }
+    },
+    {
+      "id": "d_especies",
+      "chain": "diaria",
+      "period": "DAY",
+      "name": "§eOjo nuevo",
+      "description": "Registra 3 especies que no tuvieras.",
+      "objective": { "type": "POKEDEX_NEW", "amount": 3 },
+      "rewards": { "pokedollar": 1500, "mark": 4, "path": "EXPLORADOR", "xp": 40 }
+    }
+  ]
+}

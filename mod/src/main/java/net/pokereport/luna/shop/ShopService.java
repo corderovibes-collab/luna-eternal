@@ -61,6 +61,8 @@ public final class ShopService {
 
                 // 2. Cobrar.
                 LunaEternal.economy().debit(id, entry.currency(), total, "shop_buy", key);
+                LunaEternal.quests().advance(id,
+                    net.pokereport.luna.quest.Quest.Objective.Type.SHOP_BUY, 1);
 
                 // 3. Entregar, ya en el hilo del servidor.
                 server.execute(() -> {

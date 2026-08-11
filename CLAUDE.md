@@ -21,12 +21,13 @@ tres monedas, cinco vías de progresión, y las interfaces base operativas.
 Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
 Cobblemon     1.7.3 instalado · 60 mods · Done (9,0 s) · ~1,9 GB de 4096
-Mod           lunaeternal 0.1.0 · migraciones V001 a V008 aplicadas
+Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
 Autotest      /luna autotest -> 75/75 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Tienda · GTS · Pokédex · Kits · Inicial · Curar
+              Misiones (6 de tutorial + 2 diarias)
               Barra lateral y tablist con rangos
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
@@ -66,11 +67,15 @@ Pokémon nada de lo construido servía. Resuelto:
 4. Compra, vende, comercia          ✅
 ```
 
-### Siguiente: FASE B — que haya algo que hacer
+### Siguiente: seguir FASE B
 
-1. **Medallas y gimnasios** (`UI-015`)
-2. **Misiones**: tutorial y diarias
-3. **Telemetría** (`ECO-003`) — ahora sí hay algo que medir
+1. ~~Misiones~~ ✅ — cadena de tutorial que enseña el bucle entero
+2. **Telemetría** (`ECO-003`) — ahora sí hay algo que medir
+3. **Medallas y gimnasios** (`UI-015`) — necesitan mundo construido
+
+> El recorrido completo del jugador nuevo ya funciona sin tocar un comando:
+> elige inicial → captura → registra → compra → vende en GTS → sube de vía.
+> Cada paso es una misión que le dice qué hacer y le paga por hacerlo.
 
 > El orden anterior ponía la telemetría primero. **Estaba mal**: medir una
 > economía que nadie puede jugar no sirve de nada.

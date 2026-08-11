@@ -43,6 +43,16 @@ public final class CaptureListener {
         LunaEternal.LOG.info("Pokédex: escuchando capturas de Cobblemon");
     }
 
+    /** Nivel más alto entre las cinco vías. */
+    private static long maxNivelDeVia(long playerId) {
+        try {
+            var dom = LunaEternal.progression().dominant(playerId);
+            return dom == null ? 0 : dom.level();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     private static void handle(ServerPlayerEntity player,
                                com.cobblemon.mod.common.pokemon.Pokemon pokemon) {
         if (player == null || pokemon == null) return;
@@ -76,6 +86,19 @@ public final class CaptureListener {
                         MARCAS_ESPECIE_NUEVA, "pokedex_nueva",
                         UUID.randomUUID().toString());
                 }
+
+                // Misiones. El total de la Pokédex se fija, no se suma: es
+                // una foto, no un contador.
+                var q = LunaEternal.quests();
+                q.advance(id, net.pokereport.luna.quest.Quest.Objective.Type.CATCH, 1);
+                if (nueva) {
+                    q.advance(id,
+                        net.pokereport.luna.quest.Quest.Objective.Type.POKEDEX_NEW, 1);
+                }
+                q.setProgress(id, net.pokereport.luna.quest.Quest.Objective.Type.POKEDEX,
+                    LunaEternal.pokedex().summary(id).caught());
+                q.setProgress(id, net.pokereport.luna.quest.Quest.Objective.Type.PATH_LEVEL,
+                    maxNivelDeVia(id));
 
                 if (server != null) {
                     server.execute(() -> {

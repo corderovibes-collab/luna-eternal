@@ -33,7 +33,8 @@ public final class Database implements AutoCloseable {
         "V005__gts.sql",
         "V006__gts_delivery.sql",
         "V007__pokedex.sql",
-        "V008__kits.sql"
+        "V008__kits.sql",
+        "V009__quests.sql"
     };
 
     private final HikariDataSource ds;

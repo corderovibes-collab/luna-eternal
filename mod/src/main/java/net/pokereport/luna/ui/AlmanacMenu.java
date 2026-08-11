@@ -97,7 +97,12 @@ public final class AlmanacMenu extends Menu {
 
     private void adventureRow() {
         group(2, "§a✦ AVENTURA");
-        open(2, 2, Items.WRITTEN_BOOK, "§aMisiones", "Objetivos activos e historia.", "Misiones");
+        set(2, 2, Icon.of(Items.WRITTEN_BOOK)
+                .name("§aMisiones")
+                .line("§7Qué hacer ahora.")
+                .action("Clic para abrir")
+                .build(),
+            (p, b) -> QuestsMenu.open(p, this));
         open(2, 3, Items.TARGET,       "§aCazas",    "Objetivos rotativos con recompensa.", "Cazas");
         open(2, 4, Items.GOLD_INGOT,   "§aMedallas", "Tu progreso y dónde está el siguiente gimnasio.", "Medallas");
         locked(2, 5, Items.CHEST,      "Tesoros",    "Recompensas por descubrir.",

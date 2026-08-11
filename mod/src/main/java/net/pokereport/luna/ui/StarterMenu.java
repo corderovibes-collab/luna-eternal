@@ -202,6 +202,8 @@ public final class StarterMenu extends Menu {
                         try {
                             LunaEternal.progression().grant(
                                 data.playerId, Path.ENTRENADOR, 25);
+                            LunaEternal.quests().advance(data.playerId,
+                                net.pokereport.luna.quest.Quest.Objective.Type.STARTER, 1);
                         } catch (Exception e) {
                             LunaEternal.LOG.error("No se pudo dar XP del inicial", e);
                         }

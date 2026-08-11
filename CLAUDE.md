@@ -3,11 +3,11 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-08-11 (fin de sesión)
+**Última actualización:** 2026-08-11
 **Fase actual:** PHASE 2 — Core progression
-**Estado:** PHASE 0 y PHASE 1 completadas. 17 documentos, decisiones D-001 a
-D-011. **El mod compila, está desplegado y funciona contra MariaDB en el
-servidor de desarrollo.**
+**Estado:** PHASE 0 y PHASE 1 completadas. 22 documentos, decisiones D-001 a
+D-020. **El mod está desplegado y funcionando contra MariaDB:** economía de
+tres monedas, cinco vías de progresión, y las interfaces base operativas.
 
 ---
 
@@ -116,10 +116,10 @@ cualquier sistema es:
 | P4 | **Free-to-play con paquetes de pago.** Se vende identidad, comodidad y aceleración **acotada**. La línea roja no es "ventaja" sino **inyección económica y poder competitivo** — ver [monetization.md](docs/economy/monetization.md). |
 | P5 | **Mínimo de dependencias.** Nativo → configuración → datapack → resourcepack → mod maduro → sistema propio. En ese orden. |
 | P6 | **Nunca confiar en el cliente.** Toda validación económica es de servidor. |
-| P9 | **Interfaz, nunca comando.** Todo se hace con clics (D-012). Si el diseño de un sistema termina en *"el jugador escribe `/algo`"*, está incompleto. |
-| P10 | **Ningún mod de cliente es obligatorio.** El launcher reparte mejoras opcionales; el servidor se juega con un cliente normal. |
 | P7 | **Nada crítico vive solo en la conversación.** Va a documentación. |
 | P8 | **Producción es sagrada.** `2a0a48ff` es READ-ONLY hasta que exista plan aprobado. |
+| P9 | **Interfaz, nunca comando.** Todo se hace con clics (D-012). Si el diseño de un sistema termina en *"el jugador escribe `/algo`"*, está incompleto. |
+| P10 | **Ningún mod de cliente es obligatorio.** El launcher reparte mejoras opcionales; el servidor se juega con un cliente normal. |
 
 ### Las 10 preguntas (P2)
 
@@ -152,7 +152,7 @@ Panel: `control.tarohosting.com` · Producción: `s17.mia.us.tarohosting.lat:334
 El servidor de desarrollo se formateó el 2026-08-11 (D-004), tras verificar el
 backup del proyecto que alojaba. Arranca correctamente:
 `Minecraft 1.21.1 · Fabric Loader 0.18.4 · Done (12,5 s) · 860 MB`.
-Whitelist activada, `online-mode=true`.
+Whitelist activada, `online-mode=false` (ver §0).
 
 > ⚠️ **Java 21 es obligatorio para MC 1.21.1.** La imagen del contenedor tenía
 > Java 17 y el arranque fallaba con `UnsupportedClassVersionError` (class file

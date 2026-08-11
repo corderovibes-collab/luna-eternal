@@ -16,8 +16,7 @@ que necesita cada una. Es la lista de trabajo de UI.
 ## Current Status
 
 **Vivo.** Se actualiza conforme se construyen pantallas.
-El framework (`Menu`, `Icon`, `LockState`) ya funciona; las pantallas concretas
-están casi todas por hacer.
+Framework y **6 pantallas operativas**; el resto por hacer.
 
 ## Last Decision
 
@@ -75,8 +74,8 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 21 | **Historial** | ⬜ | ⚪ | `ledger_entry` (ya existe) |
 | 22 | **Rangos** | ⬜ | ⚪ | catálogo |
 
-**Las tres primeras rojas no dependen de nada más** y convierten el LunaPad de
-andamiaje en algo usable.
+Las tres rojas ya están hechas. **Lo que ahora limita a Viajes y a la Puerta
+del Mundo no es la interfaz: es que las dimensiones no existen** (`WLD-002`).
 
 ---
 
@@ -199,9 +198,9 @@ base es una lista de destinos con iconos — funciona igual de bien y no bloquea
 
 ## Next Actions
 
-1. `UI-007` — Cartera (la más fácil y ya tiene datos)
-2. `UI-008` — Vías
-3. `UI-009` — Puerta del mundo
+1. `WLD-002` — crear las dimensiones; desbloquea Viajes y Puerta del Mundo
+2. `UI-011` — Tienda
+3. `UI-012` — GTS (el sistema grande)
 4. `ART-001` — arte, cuando haya pantallas que vestir
 
 ## Related Systems

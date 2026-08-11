@@ -37,7 +37,16 @@ public enum Currency {
      */
     REPORTCOIN("ReportCoins", "§e", false, true);
 
-    public final String displayName;
+    /**
+     * Nombre que ve el jugador. <b>No es final a propósito:</b> se puede
+     * cambiar desde la configuración sin tocar la base de datos.
+     *
+     * <p>El nombre de la moneda premium está sin decidir ("ReportCoins" o
+     * "LunaCoins"). Separar el identificador interno del nombre visible
+     * convierte esa decisión en una línea de configuración en vez de una
+     * migración de esquema (D-018).
+     */
+    public String displayName;
     /** Color de chat, para que cada moneda se reconozca de un vistazo. */
     public final String color;
     /** ¿Puede moverse entre jugadores? */
@@ -50,6 +59,13 @@ public enum Currency {
         this.color = color;
         this.tradeable = tradeable;
         this.purchasable = purchasable;
+    }
+
+    /** Aplica los nombres visibles de la configuración. */
+    public static void applyDisplayNames(String pokedollar, String mark, String premium) {
+        if (pokedollar != null && !pokedollar.isBlank()) POKEDOLLAR.displayName = pokedollar;
+        if (mark != null && !mark.isBlank()) MARK.displayName = mark;
+        if (premium != null && !premium.isBlank()) REPORTCOIN.displayName = premium;
     }
 
     public String format(long amount) {

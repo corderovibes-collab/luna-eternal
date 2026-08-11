@@ -47,17 +47,35 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: barra lateral + objeto del Almanaque (`UI-003`)
+### Siguiente tarea: rellenar las tres pantallas rojas
 
-El framework de menús ya funciona. Falta lo que lo hace usable sin comandos:
+El LunaPad, la barra lateral y el objeto ya funcionan. Toca convertir el
+andamiaje en algo usable — y las tres primeras **no dependen de nada**:
 
-1. **El objeto del Almanaque** — se entrega al entrar, no se puede perder,
-   clic derecho lo abre (`docs/ui/navigation.md` §2)
-2. **La barra lateral** — fase lunar, tres saldos, vía, clan, medallas (§3)
-3. Después: rellenar secciones, empezando por **Cartera** y **Vías**, que solo
-   necesitan datos que ya existen
+1. **Cartera** (`UI-007`) — los datos ya están en la base
+2. **Vías** (`UI-008`)
+3. **Puerta del mundo** (`UI-009`)
 
-Luego el GTS (`TRD-002`), que es el sistema grande.
+Catálogo completo de pantallas en
+[interfaces-catalog.md](docs/ui/interfaces-catalog.md).
+
+### ⚠️ Decisión pendiente que bloquea Tesoros
+
+[treasures.md](docs/economy/treasures.md) §2: pediste legendarios y
+legendarios shiny en cofres de pago. Eso es **T4** del marco que aprobaste,
+crea el mercado gris que D-014 evita, y son cajas de botín con dinero real
+—prohibidas en Bélgica y Países Bajos, reguladas en España—.
+
+Diosesmon lo hace (verificado en su wiki: venden legendarios shiny, habilidad
+oculta para competitivo y modificadores de estadísticas). **Que a ellos no les
+haya pasado nada no es lo mismo que sea seguro.**
+
+Alternativa en §3: **mismo sistema de cofres, contenido cosmético**. Los
+disfraces de Pokémon que mencionaste son exactamente lo correcto, y los
+legendarios salen del Mundo Salvaje con cupo por temporada.
+
+Si lo mantienes, en §5 están las cinco mitigaciones que reducen el daño.
+**Es tu decisión; solo quiero que se tome sabiendo el coste.**
 
 **Regla de trabajo establecida:** cada sistema económico nuevo añade sus
 invariantes a `/luna autotest` **antes** de desplegarse (`MOD-006`).
@@ -215,6 +233,10 @@ documentación · migración · rollback.
 | D-013 | 2026-08-11 | **Tercera moneda: ReportCoin** (premium, dinero real) | Decisión del usuario, equivalente a los Diosescoins. Es el diseño correcto porque **no se vende la moneda del juego**: se vende un token aparte que nunca toca el mercado |
 | D-014 | 2026-08-11 | **Ninguna moneda se convierte en otra, en ninguna dirección** | De esta única regla salen las tres garantías: no se compra poder, no se compra progresión, pagar no infla. `REPORTCOIN` tampoco es transferible: si lo fuera, se revendería por PokéDólares y existiría la conversión por la puerta de atrás |
 | D-015 | 2026-08-11 | **Tres espacios: lobby · ciudadela · mundo** | Cada uno con una sola función. Los gimnasios van **repartidos por el mundo**, no en una sala: concentrarlos contradice el pilar de exploración |
+| D-016 | 2026-08-11 | **Dos mundos: Hogar (permanente) y Salvaje (se reinicia)** | Un solo mundo no puede ser permanente y fresco a la vez. El reinicio renueva la exploración sin producir contenido, y nada importante vive en el terreno: todo está en la base de datos |
+| D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
+| D-018 | 2026-08-11 | **Una sola moneda premium**, con nombre visible configurable | Dos monedas de pago obligan a elegir *cuál* comprar antes de *qué* comprar. El enum es `REPORTCOIN`; "ReportCoins" o "LunaCoins" es una línea de configuración |
+| D-019 | 2026-08-11 | **No se venden Modificadores de estadísticas** (Diosesmon sí) | Es venta directa de poder competitivo — T4. Y su modelo *"paga y tendrás mejores Pokémon"* ya está ocupado por alguien más grande |
 
 ## 6. Decisiones PENDIENTES (bloqueantes)
 

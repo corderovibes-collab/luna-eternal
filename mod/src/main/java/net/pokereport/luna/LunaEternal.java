@@ -105,6 +105,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private void boot() {
         try {
             LunaConfig cfg = LunaConfig.load();
+            net.pokereport.luna.economy.Currency.applyDisplayNames(
+                cfg.nameePokedollar, cfg.nameMark, cfg.namePremium);
             database = new Database(cfg);
             database.migrate();
 

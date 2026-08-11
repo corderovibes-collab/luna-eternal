@@ -22,6 +22,11 @@ public final class LunaConfig {
     public final int     poolSize;
     public final boolean failFast;
 
+    /** Nombres visibles de las monedas (D-018). */
+    public final String  nameePokedollar;
+    public final String  nameMark;
+    public final String  namePremium;
+
     private LunaConfig(Properties p) {
         String host = req(p, "db.host");
         String port = p.getProperty("db.port", "3306");
@@ -33,6 +38,10 @@ public final class LunaConfig {
         this.password = req(p, "db.password");
         this.poolSize = Integer.parseInt(p.getProperty("db.pool.size", "6"));
         this.failFast = Boolean.parseBoolean(p.getProperty("db.failFast", "true"));
+
+        this.nameePokedollar = p.getProperty("currency.pokedollar", "PokéDólares");
+        this.nameMark        = p.getProperty("currency.mark", "Marcas");
+        this.namePremium     = p.getProperty("currency.premium", "ReportCoins");
     }
 
     private static String req(Properties p, String key) {
@@ -81,5 +90,12 @@ public final class LunaConfig {
         # Es lo correcto: arrancar sin persistencia significa perder datos
         # de los jugadores en silencio. Ver data-model.md §7.
         db.failFast=true
+
+        # Nombres visibles de las monedas. El identificador interno no cambia,
+        # asi que renombrar NO requiere migracion de base de datos (D-018).
+        # La moneda premium sigue sin nombre decidido: ReportCoins o LunaCoins.
+        currency.pokedollar=PokeDolares
+        currency.mark=Marcas
+        currency.premium=ReportCoins
         """;
 }

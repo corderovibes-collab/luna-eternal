@@ -439,51 +439,74 @@ def _redondeado(w, h, r, relleno, borde):
     return img
 
 
+def _grad(w, h, arriba, abajo):
+    """Degradado vertical. Es lo que da volumen sin dibujar sombras a mano."""
+    img = Image.new("RGBA", (w, h))
+    d = ImageDraw.Draw(img)
+    for y in range(h):
+        t = y / max(1, h - 1)
+        d.line([(0, y), (w, y)], fill=tuple(
+            round(a + (b - a) * t) for a, b in zip(arriba, abajo)))
+    return img
+
+
+def _pieza(w, h, r, arriba, abajo, borde, luz=True):
+    """Pieza redondeada con degradado, contorno y brillo superior.
+
+    El brillo es lo que hace que se lea como un boton fisico y no como un
+    rectangulo de color. Es todo el truco del estilo PokePad."""
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    mascara = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mascara).rounded_rectangle([0, 0, w - 1, h - 1], r, fill=255)
+    img.paste(_grad(w, h, arriba, abajo), (0, 0), mascara)
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([0, 0, w - 1, h - 1], r, outline=borde, width=2)
+    if luz:
+        # Brillo interior arriba: una linea clara a media opacidad.
+        d.rounded_rectangle([3, 3, w - 4, h // 2], max(1, r - 2),
+                            outline=(255, 255, 255, 70), width=2)
+    return img
+
+
+# Paleta PokePad: rojo Pokedex fuera, azul amable dentro.
+ROJO       = (206, 62, 48, 255)
+ROJO_OSC   = (142, 34, 26, 255)
+ROJO_CLARO = (236, 106, 92, 255)
+AZUL       = (86, 170, 224, 255)
+AZUL_OSC   = (44, 120, 180, 255)
+AZUL_CLARO = (150, 212, 245, 255)
+BLANCO     = (245, 250, 255, 255)
+
+
 def texturas_pad(destino: Path) -> int:
-    """Panel de nueve rodajas, celdas e iconos de relleno."""
+    """Todas las piezas del Pad. 9 rodajas donde hace falta estirar."""
     destino.mkdir(parents=True, exist_ok=True)
 
-    # Panel 64x64: esquinas de 8 px que no se escalan.
-    _redondeado(64, 64, 10, (24, 20, 37, 245), (120, 96, 200, 255)) \
-        .save(destino / "panel.png")
+    # Marco exterior rojo (se estira: 9 rodajas de 64x64, esquinas de 16).
+    _pieza(64, 64, 14, ROJO_CLARO, ROJO_OSC, (92, 20, 14, 255))         .save(destino / "panel.png")
 
-    # Estados de celda. Se distinguen por LUMINOSIDAD, no solo por color:
-    # asi se leen tambien con daltonismo.
-    _redondeado(32, 32, 6, (38, 31, 62, 255), (96, 78, 160, 255)) \
-        .save(destino / "celda.png")
-    _redondeado(32, 32, 6, (66, 54, 110, 255), (196, 172, 255, 255)) \
-        .save(destino / "celda_encima.png")
-    _redondeado(32, 32, 6, (26, 22, 38, 255), (60, 52, 84, 255)) \
-        .save(destino / "celda_bloqueada.png")
+    # Area interior azul, donde van las celdas.
+    _pieza(64, 64, 10, AZUL_CLARO, AZUL_OSC, (28, 84, 130, 255))         .save(destino / "interior.png")
 
-    # Iconos: si existe el arte de esa pantalla, se usa su emblema; si no,
-    # una pieza de relleno que al menos distingue una celda de otra.
-    dir_ic = destino / "icono"
-    dir_ic.mkdir(exist_ok=True)
-    for i, nombre in enumerate(ICONOS_PAD):
-        # Si tools/gen_iconos.py ya dibujo este icono, mandan sus siluetas:
-        # estan hechas para leerse a 24 px, y recortar un emblema no.
-        if (dir_ic / f"{nombre}.png").exists():
-            continue
-        src = RAIZ / "arte-origen" / f"{nombre}.png"
-        if src.exists():
-            b = Image.open(src).convert("RGBA")
-            banda = b.crop((round(b.width * 0.34), round(b.height * 0.03),
-                            round(b.width * 0.66), round(b.height * 0.21)))
-            lado = min(banda.size)
-            izq = (banda.width - lado) // 2
-            icono = banda.crop((izq, 0, izq + lado, lado)) \
-                         .resize((16, 16), Image.LANCZOS)
-        else:
-            icono = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-            d = ImageDraw.Draw(icono)
-            tono = 60 + (i * 37) % 160
-            d.rounded_rectangle([2, 2, 13, 13], radius=3,
-                                fill=(tono, 80, 200, 255),
-                                outline=(226, 214, 255, 255))
-        icono.save(dir_ic / f"{nombre}.png")
+    # Pestana del titulo, la que sobresale por arriba.
+    # 64x64 como todas: nueveRodajas asume esa hoja. Con 64x32 muestreaba
+    # fuera de la textura y la pestana salia cortada.
+    _pieza(64, 64, 10, ROJO, ROJO_OSC, (92, 20, 14, 255))         .save(destino / "pestana.png")
 
-    return len(ICONOS_PAD)
+    # Celdas: reposo, encima y bloqueada. Se distinguen por LUMINOSIDAD
+    # ademas de por color, para que se lean con daltonismo.
+    _pieza(48, 48, 8, BLANCO, AZUL_CLARO, (34, 96, 146, 255))         .save(destino / "celda.png")
+    _pieza(48, 48, 8, (255, 255, 255, 255), (196, 232, 255, 255),
+           (255, 236, 150, 255)).save(destino / "celda_encima.png")
+    _pieza(48, 48, 8, (150, 158, 170, 255), (96, 104, 118, 255),
+           (60, 66, 78, 255), luz=False).save(destino / "celda_bloqueada.png")
+
+    # Botones de la cabecera.
+    _pieza(24, 24, 6, AZUL_CLARO, AZUL_OSC, (28, 84, 130, 255))         .save(destino / "boton.png")
+    _pieza(24, 24, 6, (255, 255, 255, 255), AZUL_CLARO,
+           (255, 236, 150, 255)).save(destino / "boton_encima.png")
+
+    return 7
 
 
 if __name__ == "__main__":

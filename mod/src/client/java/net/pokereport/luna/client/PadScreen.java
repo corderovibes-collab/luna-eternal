@@ -42,13 +42,20 @@ public class PadScreen extends Screen {
         Identifier.of("lunaeternal", "textures/pad/celda_encima.png");
     private static final Identifier CELDA_BLOQUEADA =
         Identifier.of("lunaeternal", "textures/pad/celda_bloqueada.png");
+    private static final Identifier INTERIOR =
+        Identifier.of("lunaeternal", "textures/pad/interior.png");
+    private static final Identifier PESTANA =
+        Identifier.of("lunaeternal", "textures/pad/pestana.png");
 
-    /** Tamaño de una celda y separación, en píxeles de interfaz. */
-    private static final int CELDA_PX = 32;
-    private static final int SEPARACION = 6;
-    private static final int MARGEN = 14;
-    private static final int CABECERA = 26;
-    private static final int PIE_LINEA = 10;
+    /** Geometría, en píxeles de interfaz. */
+    private static final int CELDA_PX = 48;   // caja del icono
+    private static final int ETIQUETA = 12;   // texto bajo cada caja
+    private static final int SEPARACION = 8;
+    private static final int MARGEN = 12;     // marco rojo alrededor
+    private static final int BORDE_INT = 8;   // grosor del marco rojo
+    private static final int CABECERA = 24;   // fila de botones
+    private static final int PIE_LINEA = 11;
+    private static final int PESTANA_ALTO = 20;
 
     private final PadPayloads.Abrir datos;
     private int panelX, panelY, panelAncho, panelAlto;
@@ -59,18 +66,24 @@ public class PadScreen extends Screen {
         this.datos = datos;
     }
 
+    private int rejillaX, rejillaY;
+
     @Override
     protected void init() {
+        int celda = CELDA_PX + ETIQUETA;
         int rejillaAncho = datos.columnas() * CELDA_PX
                          + (datos.columnas() - 1) * SEPARACION;
-        int rejillaAlto = datos.filas() * CELDA_PX
+        int rejillaAlto = datos.filas() * celda
                         + (datos.filas() - 1) * SEPARACION;
 
-        panelAncho = rejillaAncho + MARGEN * 2;
-        panelAlto = CABECERA + rejillaAlto + MARGEN
+        panelAncho = rejillaAncho + (MARGEN + BORDE_INT) * 2;
+        panelAlto = BORDE_INT + CABECERA + rejillaAlto + MARGEN + BORDE_INT
                   + datos.pie().size() * PIE_LINEA;
         panelX = (this.width - panelAncho) / 2;
         panelY = (this.height - panelAlto) / 2;
+
+        rejillaX = panelX + MARGEN + BORDE_INT;
+        rejillaY = panelY + BORDE_INT + CABECERA;
     }
 
     // ------------------------------------------------------------ dibujo
@@ -86,19 +99,31 @@ public class PadScreen extends Screen {
         // incluido el texto.
         super.render(ctx, mouseX, mouseY, delta);
 
-        // El panel se estira desde una textura de 9 rodajas, para que el
-        // marco no se deforme al cambiar de tamaño la rejilla.
-        nueveRodajas(ctx, PANEL, panelX, panelY, panelAncho, panelAlto, 8);
+        // Marco rojo exterior: es la carcasa del aparato.
+        nueveRodajas(ctx, PANEL, panelX, panelY, panelAncho, panelAlto, 16);
 
+        // Pantalla azul interior, hundida dentro del marco.
+        nueveRodajas(ctx, INTERIOR,
+            panelX + BORDE_INT, panelY + BORDE_INT,
+            panelAncho - BORDE_INT * 2, panelAlto - BORDE_INT * 2, 12);
+
+        // Pestaña del título, sobresaliendo por arriba. Es lo que convierte
+        // un rectángulo en un aparato con identidad.
+        int anchoTitulo = this.textRenderer.getWidth(this.title);
+        int anchoPestana = Math.max(80, anchoTitulo + 28);
+        int pestanaX = panelX + (panelAncho - anchoPestana) / 2;
+        int pestanaY = panelY - PESTANA_ALTO + 6;
+        nueveRodajas(ctx, PESTANA, pestanaX, pestanaY,
+                     anchoPestana, PESTANA_ALTO + 8, 8);
         ctx.drawCenteredTextWithShadow(this.textRenderer, this.title,
-            panelX + panelAncho / 2, panelY + 9, 0xFFE2D6FF);
+            panelX + panelAncho / 2, pestanaY + 6, 0xFFFFFFFF);
 
         encima = -1;
         List<PadPayloads.Celda> celdas = datos.celdas();
         for (int i = 0; i < celdas.size(); i++) {
             var c = celdas.get(i);
-            int x = panelX + MARGEN + c.columna() * (CELDA_PX + SEPARACION);
-            int y = panelY + CABECERA + c.fila() * (CELDA_PX + SEPARACION);
+            int x = rejillaX + c.columna() * (CELDA_PX + SEPARACION);
+            int y = rejillaY + c.fila() * (CELDA_PX + ETIQUETA + SEPARACION);
 
             boolean dentro = mouseX >= x && mouseX < x + CELDA_PX
                           && mouseY >= y && mouseY < y + CELDA_PX;
@@ -109,12 +134,19 @@ public class PadScreen extends Screen {
             ctx.drawTexture(fondo, x, y, 0, 0, CELDA_PX, CELDA_PX,
                             CELDA_PX, CELDA_PX);
 
-            // El icono es de 32x32 y se dibuja a 24: se pierde algo de
-            // nitidez, pero gana silueta. A 16 px reales no se distinguia
-            // una cartera de una tienda.
+            // El icono se dibuja de 64 a 32: esa reducción es la que suaviza
+            // los bordes y lo hace parecer modelado.
             Identifier icono = Identifier.of("lunaeternal",
                 "textures/pad/icono/" + c.icono() + ".png");
-            ctx.drawTexture(icono, x + 4, y + 4, 24, 24, 0, 0, 32, 32, 32, 32);
+            ctx.drawTexture(icono, x + 8, y + 8, 32, 32, 0, 0, 64, 64, 64, 64);
+
+            // Etiqueta bajo la caja, como en la referencia. Recortada para
+            // que un nombre largo no invada la celda de al lado.
+            String etiqueta = quitarColores(c.titulo());
+            etiqueta = this.textRenderer.trimToWidth(etiqueta, CELDA_PX + 6);
+            ctx.drawCenteredTextWithShadow(this.textRenderer,
+                Text.literal(etiqueta), x + CELDA_PX / 2, y + CELDA_PX + 2,
+                c.bloqueada() ? 0xFF9AA6B8 : 0xFFFFFFFF);
         }
 
         int py = panelY + panelAlto - MARGEN / 2 - datos.pie().size() * PIE_LINEA;
@@ -134,6 +166,11 @@ public class PadScreen extends Screen {
         }
     }
 
+    /** Quita los códigos §c: en la etiqueta estorban, en el tooltip no. */
+    private static String quitarColores(String s) {
+        return s.replaceAll("§.", "");
+    }
+
     /**
      * Dibuja una textura estirable sin deformar el marco.
      *
@@ -144,7 +181,7 @@ public class PadScreen extends Screen {
      */
     private static void nueveRodajas(DrawContext ctx, Identifier tex,
                                      int x, int y, int w, int h, int b) {
-        int t = 64;  // la textura de origen es de 64x64
+        int t = 64;  // todas las piezas de origen son de 64 de ancho
         int c = t - b * 2;
         int iw = w - b * 2, ih = h - b * 2;
 

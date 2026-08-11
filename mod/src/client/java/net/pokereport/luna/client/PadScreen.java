@@ -77,7 +77,14 @@ public class PadScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        this.renderBackground(ctx, mouseX, mouseY, delta);
+        // super.render() YA difumina y oscurece el mundo: desde 1.20.5,
+        // Screen.render llama a renderBackground() por su cuenta.
+        //
+        // Va PRIMERO, y todo lo nuestro después. Al revés —que es como lo
+        // tenía— el desenfoque se aplicaba dos veces y el segundo pase
+        // emborronaba el panel ya dibujado: el menú entero salía movido,
+        // incluido el texto.
+        super.render(ctx, mouseX, mouseY, delta);
 
         // El panel se estira desde una textura de 9 rodajas, para que el
         // marco no se deforme al cambiar de tamaño la rejilla.
@@ -113,8 +120,6 @@ public class PadScreen extends Screen {
                 Text.literal(linea), panelX + panelAncho / 2, py, 0xFFB9A8E0);
             py += PIE_LINEA;
         }
-
-        super.render(ctx, mouseX, mouseY, delta);
 
         // El tooltip va el ultimo, para que quede por encima de todo.
         if (encima >= 0) {

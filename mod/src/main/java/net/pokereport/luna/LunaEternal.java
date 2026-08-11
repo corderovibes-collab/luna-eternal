@@ -65,6 +65,19 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             Sidebar.install(player);
             Tablist.onJoin(server, player);
             MenuService.refresh(player);
+
+            // Entregas pendientes del GTS: compras sin entregar, listados
+            // retirados y, sobre todo, listados CADUCADOS — que antes dejaban
+            // el objeto perdido para siempre.
+            var profile = player.getGameProfile();
+            submit(() -> {
+                try {
+                    long id = players.resolve(profile.getId(), profile.getName());
+                    net.pokereport.luna.gts.GtsDelivery.claimAll(player, id);
+                } catch (Exception e) {
+                    LOG.error("No se pudieron comprobar las entregas pendientes", e);
+                }
+            });
         });
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {

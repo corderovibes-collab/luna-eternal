@@ -323,6 +323,75 @@ public final class GtsService {
         }
     }
 
+    // ------------------------------------------------------- entrega diferida
+
+    /** Algo que el jugador tiene pendiente de recibir. */
+    public record Claim(long listingId, String displayName, byte[] payload, String reason) {}
+
+    /**
+     * Lo que el jugador tiene pendiente de recibir.
+     *
+     * <p>Existe porque el dinero vive en la base y los objetos en el
+     * inventario: <b>no hay transacción atómica entre los dos</b>. Si el
+     * servidor cae justo después del commit de una compra, el comprador ha
+     * pagado y no tiene nada. Con esto, la entrega deja de ser un efecto
+     * secundario y pasa a ser un estado consultable.
+     *
+     * <p>Cubre tres casos, y el tercero no estaba resuelto de ninguna forma:
+     * comprado sin entregar, cancelado sin devolver, y <b>caducado sin
+     * devolver</b> — antes, un listado que vencía dejaba el objeto perdido.
+     */
+    public List<Claim> pendingClaims(long playerId) throws SQLException {
+        List<Claim> out = new ArrayList<>();
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement("""
+                SELECT listing_id, display_name, payload, state, seller_id
+                FROM gts_listing
+                WHERE delivered_at IS NULL
+                  AND (   (state = 'SOLD'      AND buyer_id  = ?)
+                       OR (state IN ('CANCELLED','EXPIRED') AND seller_id = ?))
+                LIMIT 64
+                """)) {
+            ps.setLong(1, playerId);
+            ps.setLong(2, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String state = rs.getString("state");
+                    out.add(new Claim(
+                        rs.getLong("listing_id"),
+                        rs.getString("display_name"),
+                        rs.getBytes("payload"),
+                        switch (state) {
+                            case "SOLD"      -> "compra";
+                            case "CANCELLED" -> "listado retirado";
+                            default          -> "listado caducado";
+                        }));
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Marca una reclamación como entregada.
+     *
+     * <p><b>Se llama DESPUÉS de que el objeto esté en el inventario</b>, nunca
+     * antes. Si se marcara primero y la entrega fallara, el objeto
+     * desaparecería para siempre; marcándolo después, lo peor que puede pasar
+     * es entregarlo dos veces en un cierre inesperado — y entregar de más es
+     * recuperable, perder no.
+     */
+    public void markDelivered(long listingId) throws SQLException {
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement("""
+                UPDATE gts_listing SET delivered_at = CURRENT_TIMESTAMP(3)
+                WHERE listing_id = ? AND delivered_at IS NULL
+                """)) {
+            ps.setLong(1, listingId);
+            ps.executeUpdate();
+        }
+    }
+
     /** Marca como caducados los listados vencidos. */
     public int expireOld() throws SQLException {
         try (Connection c = db.connection();

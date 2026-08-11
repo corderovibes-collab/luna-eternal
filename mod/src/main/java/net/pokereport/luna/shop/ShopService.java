@@ -64,11 +64,17 @@ public final class ShopService {
 
                 // 3. Entregar, ya en el hilo del servidor.
                 server.execute(() -> {
-                    if (player.isRemoved() || !player.getInventory().insertStack(stack.copy())) {
-                        // 4. No se pudo entregar: devolver el dinero.
+                    if (player.isRemoved()) {
                         refund(id, entry, total, key, player, server);
                         return;
                     }
+                    // offerOrDrop, NO insertStack. insertStack inserta de forma
+                    // PARCIAL y devuelve false: el jugador se quedaría con la
+                    // mitad de los objetos Y con el reembolso completo, o sea
+                    // duplicando valor. offerOrDrop no puede fallar — lo que no
+                    // cabe cae al suelo — así que la rama de reembolso por falta
+                    // de hueco deja de existir.
+                    player.getInventory().offerOrDrop(stack.copy());
                     then.accept(new Result(true,
                         "§aComprado §f" + amount + "x " + entry.displayName()
                         + " §7por §f" + fmt(total) + " " + entry.currency().displayName));
@@ -171,12 +177,26 @@ public final class ShopService {
         return false;
     }
 
+    /**
+     * ¿Es un objeto "corriente" de este tipo?
+     *
+     * <p>Comparar solo por tipo (<code>isOf</code>) sería un fallo grave: al
+     * vender un "pico de hierro" el jugador podría perder <b>su pico encantado
+     * con nombre propio</b>, porque para el código serían el mismo objeto. Se
+     * exige que los componentes coincidan con los de un objeto recién creado,
+     * así lo personalizado nunca se toca.
+     */
+    private static boolean isPlain(ItemStack stack, ShopCatalog.Entry entry) {
+        if (!stack.isOf(entry.item())) return false;
+        return ItemStack.areItemsAndComponentsEqual(stack, new ItemStack(entry.item()));
+    }
+
     private static int countOf(ServerPlayerEntity player, ShopCatalog.Entry entry) {
         int total = 0;
         var inv = player.getInventory();
         for (int i = 0; i < inv.main.size(); i++) {
             ItemStack s = inv.main.get(i);
-            if (s.isOf(entry.item())) total += s.getCount();
+            if (isPlain(s, entry)) total += s.getCount();
         }
         return total;
     }
@@ -187,7 +207,7 @@ public final class ShopService {
         var inv = player.getInventory();
         for (int i = 0; i < inv.main.size() && remaining > 0; i++) {
             ItemStack s = inv.main.get(i);
-            if (!s.isOf(entry.item())) continue;
+            if (!isPlain(s, entry)) continue;
             int take = Math.min(remaining, s.getCount());
             s.decrement(take);
             remaining -= take;

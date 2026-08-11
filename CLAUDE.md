@@ -21,9 +21,9 @@ tres monedas, cinco vías de progresión, y las interfaces base operativas.
 Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
 Cobblemon     1.7.3 instalado · 60 mods · Done (9,0 s) · ~1,9 GB de 4096
-Mod           lunaeternal 0.1.0 · migraciones V001 a V005 aplicadas
+Mod           lunaeternal 0.1.0 · migraciones V001 a V006 aplicadas
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 50/50 invariantes correctos
+Autotest      /luna autotest -> 57/57 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Tienda · GTS
               Barra lateral y tablist con rangos

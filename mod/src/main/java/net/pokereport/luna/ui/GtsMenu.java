@@ -7,6 +7,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.pokereport.luna.LunaEternal;
 import net.pokereport.luna.gts.GtsService;
+import net.pokereport.luna.gts.GtsDelivery;
 import net.pokereport.luna.gts.ItemCodec;
 
 import java.time.Duration;
@@ -161,10 +162,9 @@ public final class GtsMenu extends Menu {
                 var r = LunaEternal.gts().cancel(data.playerId, l.id());
                 server.execute(() -> {
                     player.sendMessage(Text.literal(r.message()), false);
-                    if (r.ok() && r.payload() != null) {
-                        give(player, ItemCodec.decode(r.payload(),
-                            player.getRegistryManager()));
-                    }
+                    // La devolución va por la vía de entrega diferida, igual
+                    // que la compra: UNA sola ruta, y a prueba de caídas.
+                    if (r.ok()) GtsDelivery.claimAll(player, data.playerId);
                     MenuService.openAlmanac(player);
                 });
             } catch (Exception e) {
@@ -261,10 +261,11 @@ public final class GtsMenu extends Menu {
                     var r = LunaEternal.gts().buy(data.playerId, listing.id());
                     server.execute(() -> {
                         player.sendMessage(Text.literal(r.message()), false);
-                        if (r.ok() && r.payload() != null) {
-                            give(player, ItemCodec.decode(r.payload(),
-                                player.getRegistryManager()));
-                        }
+                        // No se entrega aqui: se marca vendido en la base y la
+                        // entrega diferida lo resuelve. Asi hay UNA sola ruta
+                        // de entrega, y si el servidor cae el objeto sigue
+                        // reclamable en vez de perderse.
+                        if (r.ok()) GtsDelivery.claimAll(player, data.playerId);
                     });
                 } catch (Exception e) {
                     LunaEternal.LOG.error("Error comprando en el GTS", e);

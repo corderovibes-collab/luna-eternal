@@ -30,7 +30,8 @@ public final class Database implements AutoCloseable {
         "V002__widen_idempotency_key.sql",
         "V003__add_reportcoin.sql",
         "V004__player_paths.sql",
-        "V005__gts.sql"
+        "V005__gts.sql",
+        "V006__gts_delivery.sql"
     };
 
     private final HikariDataSource ds;

@@ -354,6 +354,33 @@ public final class AutoTest {
         // EL invariante que impide duplicar.
         check("NO se puede comprar dos veces el mismo listado",
               !gts.buy(buyer, listingId).ok());
+
+        // ---- entrega diferida: lo comprado queda reclamable -----------------
+        var pendientesComprador = gts.pendingClaims(buyer);
+        check("lo comprado queda pendiente de entrega",
+              pendientesComprador.stream().anyMatch(c -> c.listingId() == listingId));
+        check("el vendedor NO puede reclamar lo que vendió",
+              gts.pendingClaims(seller).stream().noneMatch(c -> c.listingId() == listingId));
+
+        gts.markDelivered(listingId);
+        check("tras entregar deja de estar pendiente",
+              gts.pendingClaims(buyer).stream().noneMatch(c -> c.listingId() == listingId));
+        // Marcar dos veces no debe resucitar ni duplicar nada.
+        gts.markDelivered(listingId);
+        check("marcar entregado dos veces es inofensivo",
+              gts.pendingClaims(buyer).stream().noneMatch(c -> c.listingId() == listingId));
+
+        // ---- cancelar devuelve al vendedor ---------------------------------
+        var otra = gts.publish(seller, payload, "Prueba2", "minecraft:stone", 1, 5_000);
+        check("se puede publicar una segunda vez", otra.ok());
+        var mios = gts.mine(seller);
+        if (!mios.isEmpty()) {
+            long id2 = mios.get(0).id();
+            check("cancelar funciona", gts.cancel(seller, id2).ok());
+            check("lo cancelado queda pendiente para el VENDEDOR",
+                  gts.pendingClaims(seller).stream().anyMatch(c -> c.listingId() == id2));
+            gts.markDelivered(id2);
+        }
     }
 
     // ------------------------------------------------------------ auxiliares

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "lunaeternal",
+  "version": "${version}",
+  "name": "PokeReport: Luna Eternal",
+  "description": "Sistemas propios del servidor: progresión, economía, colección y mercado. Servidor únicamente.",
+  "authors": ["PokeReport"],
+  "license": "ARR",
+  "environment": "server",
+  "entrypoints": {
+    "server": ["net.pokereport.luna.LunaEternal"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

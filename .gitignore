@@ -1,0 +1,36 @@
+# Secretos — nunca al repositorio (CLAUDE.md §9)
+.env
+.env.*
+!.env.example
+*.key
+*credentials*
+
+# Artefactos de servidor
+*.jar
+# ...pero el wrapper de Gradle SÍ va al repo: sin él no se puede compilar.
+!gradle/wrapper/gradle-wrapper.jar
+!mod/gradle/wrapper/gradle-wrapper.jar
+world/
+logs/
+crash-reports/
+core
+hs_err_pid*.log
+backups/
+
+# Gradle
+.gradle/
+mod/build/
+mod/run/
+
+# Build / dependencias
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini

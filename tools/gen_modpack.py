@@ -16,8 +16,12 @@ SALIDA = RAIZ / "build"
 UA = {"User-Agent": "PokeReport-LunaEternal/0.1 (dev)"}
 
 MC = "1.21.1"
-LOADER = "0.16.14"
 SERVIDOR = ("§6PokeReport §f: §bLuna Eternal", "s12.mia.us.tarohosting.com:33043")
+
+# Version minima del cargador. Cobblemon 1.7.3 la exige y no arranca sin ella:
+# "requires version 0.17.2 or later of mod 'Fabric Loader'". Estaba escrita a
+# mano en 0.16.14 y el pack generado no arrancaba (2026-08-11).
+LOADER_MINIMO = (0, 17, 2)
 
 # Mods que el servidor no lleva: van marcados para que el launcher no intente
 # instalarlos del lado equivocado.
@@ -43,6 +47,20 @@ MODS_CONSTRUCTOR = MODS_JUGADOR + [
 
 def api(url):
     return json.load(urllib.request.urlopen(urllib.request.Request(url, headers=UA)))
+
+
+def loader_estable():
+    """Ultima version estable del cargador de Fabric, consultada, no escrita.
+
+    Se comprueba contra LOADER_MINIMO: si algun dia la ultima estable fuera
+    mas antigua que lo que exige Cobblemon, es mejor fallar aqui que generar
+    un pack que no arranca."""
+    d = api("https://meta.fabricmc.net/v2/versions/loader")
+    v = next(x["version"] for x in d if x.get("stable"))
+    if tuple(int(n) for n in v.split(".")[:3]) < LOADER_MINIMO:
+        raise SystemExit(f"Fabric Loader estable {v} < minimo "
+                         f"{'.'.join(map(str, LOADER_MINIMO))} que pide Cobblemon")
+    return v
 
 
 def version_de(slug):
@@ -93,7 +111,7 @@ def construir(nombre_pack, mods, sufijo, resumen):
         "name": nombre_pack,
         "summary": resumen,
         "files": ficheros,
-        "dependencies": {"minecraft": MC, "fabric-loader": LOADER}}
+        "dependencies": {"minecraft": MC, "fabric-loader": loader_estable()}}
 
     SALIDA.mkdir(parents=True, exist_ok=True)
     destino = SALIDA / f"PokeReport-LunaEternal{sufijo}-0.1.0.mrpack"

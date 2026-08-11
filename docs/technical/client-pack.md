@@ -131,6 +131,17 @@ ejecución produce los dos.
 python tools/gen_modpack.py
 ```
 
+> ⚠️ **La versión del cargador también se consulta, no se escribe.** Estaba
+> fijada a mano en `0.16.14` y el pack **no arrancaba**: Cobblemon 1.7.3 exige
+> `0.17.2` o superior y Fabric aborta con *"Incompatible mods found!"*. Ahora
+> se pide a `meta.fabricmc.net` la última estable y se comprueba contra
+> `LOADER_MINIMO`; si algún día fuera menor, el script falla en vez de generar
+> un pack roto.
+>
+> **La lección es la de siempre en este proyecto:** todo número escrito a mano
+> caduca en silencio. Las versiones de los 9 mods ya se consultaban; la del
+> cargador se me quedó fuera.
+
 ## Next Actions
 
 1. Importar el pack de **constructor** y entrar al servidor

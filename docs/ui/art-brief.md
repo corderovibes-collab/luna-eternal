@@ -18,13 +18,13 @@ generado sea utilizable de verdad**. `ART-001`.
 ## 0. Lee esto antes de generar nada
 
 **Ninguna IA de imágenes va a darte un PNG de 176×222 listo para usar.** No es
-pesimismo, es cómo funcionan: generan a 1024×1024, no respetan medidas exactas,
-y no saben que hay 54 casillas de 18×18 que deben quedar **transparentes**.
+pesimismo, es cómo funcionan: no respetan medidas exactas al píxel, y no saben
+que hay 54 casillas de 18×18 que deben quedar **transparentes**.
 
 Lo que sí funciona:
 
 ```
-1. La IA genera el ARTE     (fondo, marco, adornos)  → 1024×1024
+1. La IA genera el ARTE     (fondo, borde, adornos)  → ver prompts.md
 2. tools/importar_arte.py   recorta, escala y perfora los agujeros
 3. gen_resourcepack.py      valida y empaqueta
 ```
@@ -44,18 +44,35 @@ en su sitio exacto.
 
 Todo lo generado tiene que parecer del mismo sitio. Estas son las reglas:
 
+**El estilo es Pokémon; la Luna Eterna es el color, no la forma.**
+
+Es la corrección más importante de este documento. La primera versión pedía
+piedra tallada y filigrana de plata: eso es fantasía gótica, y un juego de
+Pokémon no se parece en nada a eso.
+
+| Sí | No |
+|---|---|
+| Esquinas redondeadas | Marcos de piedra tallada |
+| Bordes gruesos y limpios | Filigrana, adornos recargados |
+| Color plano con degradado suave | Texturas sucias, desgaste, grunge |
+| Legible de un vistazo | Detalle que compite con los iconos |
+| Amable y pulido | Gótico, medieval, oscuro |
+
 | | |
 |---|---|
-| **Tema** | La *Luna Eterna*. Noche perpetua, luz de luna, magia serena |
-| **Base** | Morado muy oscuro `#181425` |
-| **Acento** | Morado luminoso `#7860C8` |
-| **Luz** | Blanco lunar `#E2D6FF` |
+| **Tema** | La *Luna Eterna*: cielo nocturno, lunas crecientes, estrellas |
+| **Base** | Índigo profundo `#181425` |
+| **Acento** | Brillo lunar `#7860C8` |
+| **Luz** | Blanco luna `#E2D6FF` |
 | **Oro** | `#E8B33C`, solo para lo valioso |
-| **Material** | Piedra pulida oscura, vetas de plata, cristal |
-| **Prohibido** | Colores planos de saturación alta, degradados de arcoíris, estilo «móvil casual» |
+| **Sanación** | Menta `#9FE8D8`, solo en el Centro Pokémon |
 
 **Regla de oro:** el fondo es *fondo*. Si compite con los iconos, está mal. Lo
 importante de una pantalla son los objetos, no la decoración.
+
+> **Los prompts no dicen la palabra «Pokémon».** Nombrarla hace que el modelo
+> dibuje criaturas dentro del panel, que es justo lo que no queremos. Se
+> describe el estilo, que además funciona mejor.
 
 ---
 
@@ -67,39 +84,25 @@ Escríbelos **en inglés**: todos los modelos rinden bastante mejor así.
 
 Este bloque va **al final de todos** los prompts de fondo:
 
-```
-dark fantasy game UI panel, ornate stone frame with silver filigree,
-deep purple stone #181425 background, glowing moonlight accents #7860C8,
-soft inner shadow, symmetrical, centered composition, clean empty center area,
-game asset, UI sprite sheet style, flat lighting, no text, no letters,
-no characters, no creatures, transparent background
---ar 1:1 --style raw
-```
+Los prompts completos, ya montados y con su `--ar` correcto, están en
+**[prompts.md](prompts.md)**. Se copian y se pegan tal cual.
 
-### 2.2 · Negativo *(para Stable Diffusion; en Midjourney usa `--no`)*
+El bloque común es este:
 
 ```
-text, letters, words, watermark, signature, people, faces, pokemon,
-creatures, photorealistic, 3d render, busy center, clutter, high saturation,
-rainbow, drop shadow outside frame, cropped frame
+clean modern creature-collector RPG menu panel, Nintendo handheld game UI style,
+rounded corners, thick soft outline, flat cel shading with gentle gradients,
+friendly polished and highly readable,
+night sky theme: deep indigo #181425 panel, soft moonlight glow #7860C8,
+pale moon white #E2D6FF highlights, tiny scattered stars,
+large EMPTY CLEAN CENTER area, flat front view, game asset, no text, no letters
 ```
 
-### 2.3 · Por pantalla
+### 2.2 · Los 10 prompts
 
-Cada uno se combina con el **prompt base** del §2.1.
-
-| Pantalla | Prompt específico |
-|---|---|
-| **almanaque** | `an arcane tome interface, open grimoire border, crescent moon emblem at top center, constellation engravings in the corners` |
-| **cartera** | `a treasury interface, engraved coin motifs, small stacked coins in the corners, golden accents #E8B33C on dark purple` |
-| **vias** | `a skill tree interface, five vertical engraved pillars, connecting silver lines, subtle progression notches` |
-| **misiones** | `a quest board interface, aged parchment inset on dark stone, small pinned scrolls in the corners, wax seal emblem` |
-| **gts** | `a global trade interface, engraved world map inset, two crossed arrows emblem, subtle latitude lines` |
-| **pokedex** | `a bestiary catalogue interface, engraved index tabs on the right edge, magnifying lens emblem at top` |
-| **puerta** | `a portal gate interface, two carved stone pillars framing the sides, swirling moonlight portal in the upper area` |
-| **tienda** | `a merchant shop interface, hanging fabric awning at the top, small engraved scales emblem, warm golden trim` |
-| **kits** | `a supply crate interface, riveted metal corner plates, engraved crate lid at the top` |
-| **centro** | `a healing sanctuary interface, soft teal-white glow #9FE8D8, engraved heart-leaf emblem at top center, calm and clean` |
+**No se duplican aquí.** Están en **[prompts.md](prompts.md)**, ya montados,
+con el `--ar` y la resolución de cada pantalla. Tenerlos en dos sitios fue lo
+que dejó una tabla en estilo gótico cuando el estilo ya había cambiado.
 
 > **Deja el centro vacío a propósito.** Ahí van las casillas. Si el prompt
 > genera adornos en el medio, quedarán detrás de los objetos y ensucian.
@@ -114,29 +117,30 @@ script los baja a **32×32**.
 ### 3.1 · Prompt base de icono
 
 ```
-single centered game icon, dark fantasy RPG inventory item,
-silver and deep purple #7860C8 palette, moonlit rim light,
-thick clean silhouette, readable at very small size, flat vector-like shading,
-plain transparent background, no text, no border, no frame
---ar 1:1 --style raw
+single centered game icon, clean creature-collector RPG inventory item,
+Nintendo handheld game UI style, rounded shapes, thick clean outline,
+flat cel shading, indigo and moonlight purple #7860C8 palette,
+pale moon white #E2D6FF highlight, bold simple silhouette,
+readable at very small size, plain transparent background,
+no text, no border, no frame --ar 1:1 --style raw
 ```
 
 ### 3.2 · Los que hacen falta
 
 | Icono | Prompt específico |
 |---|---|
-| `moneda_pokedollar` | `a silver coin with a crescent moon minted on it` |
-| `moneda_marca` | `a glowing blue rune mark, arcane sigil` |
-| `moneda_premium` | `an ornate golden coin with a star, premium currency` |
-| `via_entrenador` | `a crossed sword and pokeball emblem` |
-| `via_coleccionista` | `an open display case with a small gem` |
-| `via_explorador` | `a brass compass with a moon needle` |
-| `via_criador` | `a nest with a single speckled egg` |
-| `via_comerciante` | `a merchant scale with coins on one plate` |
-| `flecha_atras` | `a simple engraved left arrow, stone tablet style` |
-| `flecha_siguiente` | `a simple engraved right arrow, stone tablet style` |
-| `candado` | `a closed iron padlock, worn metal` |
-| `marca_check` | `a glowing green checkmark, arcane style` |
+| `moneda_pokedollar` | `a rounded silver coin with a simple crescent moon on it` |
+| `moneda_marca` | `a glowing rounded blue star token, soft outline` |
+| `moneda_premium` | `a shiny rounded golden coin with a star, premium currency` |
+| `via_entrenador` | `a rounded badge with a crossed sword and a simple sphere` |
+| `via_coleccionista` | `a rounded display case badge with a small gem` |
+| `via_explorador` | `a rounded compass with a crescent moon needle` |
+| `via_criador` | `a simple rounded nest with one speckled egg` |
+| `via_comerciante` | `a rounded balance scale with a coin on one plate` |
+| `flecha_atras` | `a rounded left arrow button, soft glow` |
+| `flecha_siguiente` | `a rounded right arrow button, soft glow` |
+| `candado` | `a simple closed padlock, rounded shapes` |
+| `marca_check` | `a bold rounded green checkmark, soft glow` |
 
 ---
 
@@ -159,8 +163,8 @@ plain transparent background, no text, no border, no frame
 5. Publicar el release y apuntar el servidor al nuevo SHA-1
 ```
 
-> **Qué modelo usar.** Midjourney da el mejor resultado para marcos ornamentados.
-> Si usas otro, lo que importa es que respete `--ar 1:1` y deje el centro libre.
+> **Qué modelo usar.** Da igual, mientras respete el `--ar` de cada pantalla y
+> deje el centro libre. Si el tuyo no acepta `--ar`, pide el tamaño en palabras.
 
 ---
 

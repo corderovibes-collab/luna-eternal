@@ -57,7 +57,7 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 4 | **Vías** | ✅ hecho | — | — |
 | 5 | **Puerta del mundo** | ✅ hecho | — | — |
 | 6 | **Viajes / LunaTaxi** | ⬜ | 🟠 | ciudadela construida |
-| 7 | **Tienda** | ⬜ | 🟠 | catálogo y precios |
+| 7 | **Tienda** | ✅ hecho | — | — |
 | 8 | **GTS** | ⬜ | 🟠 | `TRD-002` |
 | 9 | **Pokédex** | ⬜ | 🟠 | `PKM-004` |
 | 10 | **Kits** | ⬜ | 🟠 | rangos |
@@ -199,8 +199,8 @@ base es una lista de destinos con iconos — funciona igual de bien y no bloquea
 
 ## Next Actions
 
-1. `UI-011` — Tienda
-2. `UI-012` — GTS
+1. `UI-012` — GTS (el sistema grande que queda)
+2. `UI-013` — Pokédex
 3. `WLD-005` — construir la ciudadela (no es programación)
 4. `ART-001` — arte, cuando haya pantallas que vestir
 

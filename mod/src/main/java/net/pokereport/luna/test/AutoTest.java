@@ -64,6 +64,7 @@ public final class AutoTest {
             testTransferIsAtomic(a, b);
             testLedgerMatchesBalance(a, b);
             testProgression(a);
+            testShopCatalog();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -231,6 +232,41 @@ public final class AutoTest {
         var all = prog.all(p);
         check("las cinco vías existen siempre",
               all.size() == net.pokereport.luna.progression.Path.values().length);
+    }
+
+    /**
+     * El catálogo de la tienda no puede permitir ganar dinero comprando y
+     * revendiendo.
+     *
+     * <p>Es el error clásico que mata una economía en días, y el que audité a
+     * mano en la configuración de producción. Aquí queda automatizado para que
+     * <b>no pueda reaparecer</b> el día que alguien retoque un precio.
+     */
+    private void testShopCatalog() {
+        var catalog = LunaEternal.shop();
+        check("el catálogo de la tienda está cargado", catalog != null);
+        if (catalog == null) return;
+
+        int arbitrage = 0, nonPositive = 0, total = 0;
+        for (var c : catalog.categories()) {
+            for (var e : c.entries()) {
+                total++;
+                if (e.sell() >= e.buy()) arbitrage++;
+                if (e.buy() <= 0) nonPositive++;
+            }
+        }
+        check("hay objetos en la tienda", total > 0);
+        check("ningún objeto se vende por más de lo que cuesta", arbitrage == 0);
+        check("todos los precios de compra son positivos", nonPositive == 0);
+
+        // La moneda premium no puede recomprarse: sería un mercado gris.
+        int premiumBuyback = 0;
+        for (var c : catalog.categories()) {
+            for (var e : c.entries()) {
+                if (!e.currency().tradeable && e.sell() > 0) premiumBuyback++;
+            }
+        }
+        check("la moneda premium no se puede recomprar", premiumBuyback == 0);
     }
 
     // ------------------------------------------------------------ auxiliares

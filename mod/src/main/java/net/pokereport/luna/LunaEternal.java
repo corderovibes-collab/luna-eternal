@@ -44,6 +44,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static PlayerService players;
     private static EconomyService economy;
     private static net.pokereport.luna.progression.ProgressionService progression;
+    private static net.pokereport.luna.shop.ShopCatalog shop;
     private static ExecutorService io;
 
     @Override
@@ -122,6 +123,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             players = new PlayerService(database);
             economy = new EconomyService(database);
             progression = new net.pokereport.luna.progression.ProgressionService(database);
+            // Valida el invariante anti-arbitraje. Si el catálogo permite
+            // ganar dinero comprando y revendiendo, el servidor NO arranca.
+            shop = net.pokereport.luna.shop.ShopCatalog.load();
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);
@@ -170,4 +174,5 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.progression.ProgressionService progression() {
         return progression;
     }
+    public static net.pokereport.luna.shop.ShopCatalog shop() { return shop; }
 }

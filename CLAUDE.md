@@ -22,8 +22,8 @@ Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
 Mod           lunaeternal 0.1.0 · migraciones V001 a V004 aplicadas
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 31/31 invariantes correctos
-Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
+Autotest      /luna autotest -> 36/36 invariantes correctos
+Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo · Tienda
               Barra lateral y tablist con rangos
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
               creadas por datapack y verificadas
@@ -50,13 +50,15 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: Tienda y GTS
+### Siguiente tarea: el GTS (`UI-012`)
 
-Las dimensiones ya existen y la Puerta del Mundo teletransporta. Lo que falta
-para que la ciudadela sea algo es **construirla**, y eso no es programación.
+Es el último sistema grande que queda, y el que sostiene la economía: su
+impuesto progresivo es el único sink que escala con la riqueza. Diseño
+completo en [gts.md](docs/trading/gts.md); el esquema de custodia, en
+[data-model.md](docs/technical/data-model.md) §3.
 
-En código, los siguientes son los dos sistemas grandes: **Tienda** (`UI-011`)
-y **GTS** (`UI-012`, diseño en [gts.md](docs/trading/gts.md)).
+Lo que falta para que la ciudadela sea algo es **construirla**, y eso no es
+programación.
 
 Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 

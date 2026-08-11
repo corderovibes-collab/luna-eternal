@@ -98,7 +98,12 @@ public final class AlmanacMenu extends Menu {
     private void economyRow() {
         group(3, "§6✦ ECONOMÍA");
         open(3, 2, Items.COMPARATOR, "§6GTS",    "Mercado entre jugadores.", "GTS");
-        open(3, 3, Items.EMERALD,    "§6Tienda", "Compra objetos y consumibles.", "Tienda");
+        set(3, 3, Icon.of(Items.EMERALD)
+                .name("§6Tienda")
+                .line("§7Compra objetos y consumibles.")
+                .action("Clic para abrir")
+                .build(),
+            (p, b) -> MenuService.openChild(p, this, ShopMenu::new));
         locked(3, 4, Items.IRON_PICKAXE, "Oficios", "Profesiones con progresión propia.",
                "Tutorial completo", "termina el tutorial");
         locked(3, 5, Items.PAPER,        "Historial", "Movimientos y precios de mercado.",

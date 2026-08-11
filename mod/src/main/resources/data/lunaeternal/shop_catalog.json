@@ -1,0 +1,85 @@
+{
+  "_comment": [
+    "Catálogo de la tienda NPC. Ver docs/economy/economy-overview.md.",
+    "",
+    "INVARIANTE: ningún objeto puede venderse al banco por más de lo que",
+    "cuesta comprarlo. Es el error clásico que genera dinero infinito, y el",
+    "arranque del servidor lo comprueba: si falla, no arranca.",
+    "",
+    "Los objetos que no existan (por ejemplo los de Cobblemon si aún no está",
+    "instalado) se omiten con un aviso en el log, no rompen nada. Así el mismo",
+    "catálogo vale antes y después de instalar Cobblemon.",
+    "",
+    "Precios de partida tomados de la configuración real de producción:",
+    "Poké Ball 400 · Poción 600/50 · Superpoción 900/175 · Revivir 3000/500."
+  ],
+
+  "categories": [
+    {
+      "id": "captura",
+      "name": "§cCaptura",
+      "icon": "minecraft:snowball",
+      "description": "Lo que necesitas para atrapar Pokémon.",
+      "entries": [
+        { "item": "cobblemon:poke_ball",   "buy": 400,  "sell": 40  },
+        { "item": "cobblemon:great_ball",  "buy": 750,  "sell": 75  },
+        { "item": "cobblemon:ultra_ball",  "buy": 1500, "sell": 150 },
+        { "item": "minecraft:snowball",    "buy": 25,   "sell": 2   }
+      ]
+    },
+    {
+      "id": "cuidado",
+      "name": "§aCuidado",
+      "icon": "minecraft:golden_apple",
+      "description": "Curar y recuperar a tu equipo.",
+      "entries": [
+        { "item": "cobblemon:potion",       "buy": 600,  "sell": 50  },
+        { "item": "cobblemon:super_potion", "buy": 900,  "sell": 175 },
+        { "item": "cobblemon:hyper_potion", "buy": 1600, "sell": 375 },
+        { "item": "cobblemon:revive",       "buy": 3000, "sell": 500 },
+        { "item": "minecraft:golden_apple", "buy": 1200, "sell": 200 },
+        { "item": "minecraft:cooked_beef",  "buy": 40,   "sell": 6   }
+      ]
+    },
+    {
+      "id": "expedicion",
+      "name": "§6Expedición",
+      "icon": "minecraft:torch",
+      "description": "Para salir al mundo y volver entero.",
+      "entries": [
+        { "item": "minecraft:torch",          "buy": 10,   "sell": 1    },
+        { "item": "minecraft:iron_pickaxe",   "buy": 350,  "sell": 45   },
+        { "item": "minecraft:iron_axe",       "buy": 350,  "sell": 45   },
+        { "item": "minecraft:fishing_rod",    "buy": 500,  "sell": 60   },
+        { "item": "minecraft:ender_pearl",    "buy": 900,  "sell": 120  },
+        { "item": "minecraft:boat",           "buy": 150,  "sell": 20   }
+      ]
+    },
+    {
+      "id": "materiales",
+      "name": "§7Materiales",
+      "icon": "minecraft:oak_log",
+      "description": "Para construir en el Mundo Hogar.",
+      "entries": [
+        { "item": "minecraft:oak_log",     "buy": 30,   "sell": 4   },
+        { "item": "minecraft:cobblestone", "buy": 8,    "sell": 1   },
+        { "item": "minecraft:glass",       "buy": 45,   "sell": 6   },
+        { "item": "minecraft:white_wool",  "buy": 60,   "sell": 8   },
+        { "item": "minecraft:iron_ingot",  "buy": 180,  "sell": 25  },
+        { "item": "minecraft:diamond",     "buy": 2500, "sell": 400 }
+      ]
+    },
+    {
+      "id": "premium",
+      "name": "§eBoutique",
+      "icon": "minecraft:sunflower",
+      "description": "Identidad y comodidad. No afecta al juego.",
+      "currency": "REPORTCOIN",
+      "entries": [
+        { "item": "minecraft:player_head",   "buy": 50,  "sell": 0, "label": "§eSombrero cosmético" },
+        { "item": "minecraft:firework_star", "buy": 30,  "sell": 0, "label": "§eEfecto de captura" },
+        { "item": "minecraft:name_tag",      "buy": 80,  "sell": 0, "label": "§eTítulo personalizado" }
+      ]
+    }
+  ]
+}

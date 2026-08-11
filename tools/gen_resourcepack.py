@@ -77,21 +77,64 @@ def desplazar(px: int) -> str:
 
 # --------------------------------------------------------------- texturas
 
-def marcador(ancho: int, alto: int, titulo: str) -> Image.Image:
+def huecos(filas: int) -> list[tuple[int, int]]:
+    """Esquina superior izquierda de cada casilla, en pixeles de interfaz.
+
+    IMPORTANTE. El titulo se dibuja DESPUES de los objetos, asi que nuestro
+    fondo queda POR ENCIMA de ellos. Si es opaco, tapa el inventario entero.
+    Por eso cada casilla tiene que ser un agujero transparente.
+
+    Geometria de GenericContainerScreenHandler (vanilla):
+      cofre    x = 8 + col*18   y = 18 + fila*18
+      mochila  x = 8 + col*18   y = 103 + fila*18 + (filas-4)*18
+      barra    x = 8 + col*18   y = 161 + (filas-4)*18
+    El hueco visible es de 18x18 y empieza un pixel antes.
+    """
+    i = (filas - 4) * 18
+    ys = [18 + f * 18 for f in range(filas)]           # cofre
+    ys += [103 + f * 18 + i for f in range(3)]         # mochila
+    ys += [161 + i]                                    # barra rapida
+    return [(8 + c * 18 - 1, y - 1) for y in ys for c in range(9)]
+
+
+def casillas_tapadas(img: Image.Image, filas: int) -> int:
+    """Cuantas casillas tienen pixeles opacos en el centro. Debe ser 0."""
+    rgba = img.convert("RGBA")
+    malas = 0
+    for (hx, hy) in huecos(filas):
+        # Se mira el centro, no el borde: el borde puede llevar marco.
+        for dx in (6, 9, 12):
+            for dy in (6, 9, 12):
+                if rgba.getpixel((hx + dx, hy + dy))[3] > 8:
+                    malas += 1
+                    break
+            else:
+                continue
+            break
+    return malas
+
+
+def marcador(ancho: int, alto: int, filas: int, titulo: str) -> Image.Image:
     """Textura de relleno hasta que exista arte de verdad (ART-001).
 
-    No es decorativa: dibuja el marco y una rejilla que permite comprobar
-    que la alineacion del espacio negativo es exacta. Si el fondo baila un
-    pixel, aqui se ve."""
+    No es decorativa: el marco y las marcas cada 18 px permiten comprobar que
+    la alineacion del espacio negativo es exacta al pixel. Si el fondo baila
+    uno solo, aqui se ve."""
     img = Image.new("RGBA", (ancho, alto), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, ancho - 1, alto - 1], fill=(24, 20, 37, 235),
                 outline=(120, 96, 200, 255))
     d.rectangle([1, 1, ancho - 2, alto - 2], outline=(60, 48, 100, 255))
-    # Marcas cada 18 px = una casilla de inventario. Verifica la rejilla.
     for x in range(0, ancho, 18):
         d.line([(x, 0), (x, 3)], fill=(120, 96, 200, 160))
     d.text((5, 4), titulo[:28], fill=(226, 214, 255, 255))
+
+    # Los agujeros van al final: se pintan a alpha 0 para que los objetos se
+    # vean a traves. Con un marco tenue alrededor, para que sigan pareciendo
+    # casillas.
+    for (hx, hy) in huecos(filas):
+        d.rectangle([hx, hy, hx + 17, hy + 17], fill=(0, 0, 0, 0))
+        d.rectangle([hx, hy, hx + 17, hy + 17], outline=(120, 96, 200, 90))
     return img
 
 
@@ -141,9 +184,16 @@ def asegurar_texturas() -> None:
                 raise SystemExit(
                     f"{p.name} mide {img.size} y deberia medir {(ANCHO, h)} "
                     f"({filas} filas). Un pixel de mas descuadra todo el fondo.")
-            print(f"  {nombre:<12} arte propio {img.size[0]}x{img.size[1]}, respetado")
+            opacos = casillas_tapadas(img, filas)
+            if opacos:
+                raise SystemExit(
+                    f"{p.name}: {opacos} casillas NO son transparentes. "
+                    f"El titulo se dibuja DESPUES de los objetos, asi que un "
+                    f"fondo opaco los tapa. Cada casilla de 18x18 tiene que "
+                    f"tener alpha 0. Ver docs/ui/art-brief.md")
+            print(f"  {nombre:<12} arte propio {img.size[0]}x{img.size[1]}, casillas OK")
             continue
-        marcador(ANCHO, h, nombre.upper()).save(p)
+        marcador(ANCHO, h, filas, nombre.upper()).save(p)
         print(f"  {nombre:<12} marcador generado {ANCHO}x{h} ({filas} filas)")
 
 

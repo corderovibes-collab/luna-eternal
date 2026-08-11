@@ -44,3 +44,4 @@ desktop.ini
 
 # Arte de origen: pesa mucho y se reimporta con tools/importar_arte.py
 arte-origen/
+!arte-origen/LEEME.txt

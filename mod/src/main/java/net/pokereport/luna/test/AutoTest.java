@@ -65,6 +65,8 @@ public final class AutoTest {
             testLedgerMatchesBalance(a, b);
             testProgression(a);
             testShopCatalog();
+            testGtsTax();
+            testGtsFlow(a, b);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -269,6 +271,91 @@ public final class AutoTest {
         check("la moneda premium no se puede recomprar", premiumBuyback == 0);
     }
 
+    /**
+     * El impuesto del GTS debe ser progresivo <b>por tramos</b>.
+     *
+     * <p>El fallo clásico es aplicar el porcentaje del tramo alto a todo el
+     * importe: entonces vender por 10 001 deja menos neto que vender por
+     * 10 000, y los jugadores encuentran ese escalón en horas. Aquí se
+     * comprueba que el neto <b>nunca decrece</b>.
+     */
+    private void testGtsTax() {
+        var gts = net.pokereport.luna.gts.GtsService.class;
+
+        long[] prices = {1, 100, 9_999, 10_000, 10_001, 99_999, 100_000, 100_001,
+                         999_999, 1_000_000, 1_000_001, 50_000_000};
+        long previousNet = -1;
+        boolean monotonic = true;
+        boolean taxBelowPrice = true;
+
+        for (long price : prices) {
+            long tax = net.pokereport.luna.gts.GtsService.taxFor(price);
+            long net = price - tax;
+            if (net < previousNet) monotonic = false;
+            if (tax >= price) taxBelowPrice = false;
+            previousNet = net;
+        }
+
+        check("el neto del GTS nunca decrece al subir el precio", monotonic);
+        check("el impuesto nunca se come el precio entero", taxBelowPrice);
+        check("un precio pequeño paga el tramo bajo",
+              net.pokereport.luna.gts.GtsService.taxFor(1_000) == 50);
+        check("la tasa de publicación es el 1 %",
+              net.pokereport.luna.gts.GtsService.listingFee(100_000) == 1_000);
+        check("la tasa mínima es 1, nunca 0",
+              net.pokereport.luna.gts.GtsService.listingFee(1) >= 1);
+    }
+
+    /**
+     * Ciclo completo: publicar, comprar y comprobar que <b>no se puede comprar
+     * dos veces</b>. Es el invariante que impide duplicar objetos.
+     */
+    private void testGtsFlow(long seller, long buyer) throws Exception {
+        var gts = LunaEternal.gts();
+        var economy = LunaEternal.economy();
+
+        economy.credit(seller, Currency.POKEDOLLAR, 100_000, "autotest", key());
+        economy.credit(buyer,  Currency.POKEDOLLAR, 100_000, "autotest", key());
+
+        long sellerBefore = economy.balance(seller, Currency.POKEDOLLAR);
+        long buyerBefore  = economy.balance(buyer,  Currency.POKEDOLLAR);
+
+        byte[] payload = "objeto-de-prueba".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        long price = 10_000;
+
+        var published = gts.publish(seller, payload, "Prueba",
+                                    "minecraft:stone", 1, price);
+        check("se puede publicar", published.ok());
+
+        long fee = net.pokereport.luna.gts.GtsService.listingFee(price);
+        check("publicar cobra la tasa por adelantado",
+              economy.balance(seller, Currency.POKEDOLLAR) == sellerBefore - fee);
+
+        var listings = gts.mine(seller);
+        check("el listado aparece como propio", !listings.isEmpty());
+        if (listings.isEmpty()) return;
+        long listingId = listings.get(0).id();
+
+        check("no se puede comprar el listado propio",
+              !gts.buy(seller, listingId).ok());
+
+        var bought = gts.buy(buyer, listingId);
+        check("otro jugador sí puede comprarlo", bought.ok());
+        check("el comprador recibe el objeto en custodia",
+              bought.payload() != null && bought.payload().length == payload.length);
+
+        long tax = net.pokereport.luna.gts.GtsService.taxFor(price);
+        check("el comprador paga el precio completo",
+              economy.balance(buyer, Currency.POKEDOLLAR) == buyerBefore - price);
+        check("el vendedor recibe el precio menos el impuesto",
+              economy.balance(seller, Currency.POKEDOLLAR)
+                  == sellerBefore - fee + (price - tax));
+
+        // EL invariante que impide duplicar.
+        check("NO se puede comprar dos veces el mismo listado",
+              !gts.buy(buyer, listingId).ok());
+    }
+
     // ------------------------------------------------------------ auxiliares
 
     private static String key() {
@@ -292,7 +379,14 @@ public final class AutoTest {
         try (Connection c = db.connection()) {
             c.setAutoCommit(false);
             try {
+                // Orden inverso a las claves ajenas: primero se sueltan las
+                // referencias al comprador, luego se borran los listados.
                 for (String sql : List.of(
+                    "UPDATE gts_listing g JOIN player p "
+                        + "ON p.player_id = g.buyer_id SET g.buyer_id = NULL "
+                        + "WHERE p.mc_uuid = ?",
+                    "DELETE g FROM gts_listing g JOIN player p "
+                        + "ON p.player_id = g.seller_id WHERE p.mc_uuid = ?",
                     "DELETE pp FROM player_path pp JOIN player p "
                         + "ON p.player_id = pp.player_id WHERE p.mc_uuid = ?",
                     "DELETE le FROM ledger_entry le JOIN player p "

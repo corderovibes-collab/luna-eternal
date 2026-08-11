@@ -97,7 +97,12 @@ public final class AlmanacMenu extends Menu {
 
     private void economyRow() {
         group(3, "§6✦ ECONOMÍA");
-        open(3, 2, Items.COMPARATOR, "§6GTS",    "Mercado entre jugadores.", "GTS");
+        set(3, 2, Icon.of(Items.COMPARATOR)
+                .name("§6GTS")
+                .line("§7Mercado entre jugadores.")
+                .action("Clic para abrir")
+                .build(),
+            (p, b) -> GtsMenu.open(p, this, 0));
         set(3, 3, Icon.of(Items.EMERALD)
                 .name("§6Tienda")
                 .line("§7Compra objetos y consumibles.")

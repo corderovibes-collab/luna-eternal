@@ -20,10 +20,11 @@ tres monedas, cinco vías de progresión, y las interfaces base operativas.
 ```
 Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
-Mod           lunaeternal 0.1.0 · migraciones V001 a V004 aplicadas
+Mod           lunaeternal 0.1.0 · migraciones V001 a V005 aplicadas
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 36/36 invariantes correctos
-Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo · Tienda
+Autotest      /luna autotest -> 50/50 invariantes correctos
+Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
+              Tienda · GTS
               Barra lateral y tablist con rangos
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
               creadas por datapack y verificadas
@@ -50,15 +51,21 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: el GTS (`UI-012`)
+### Siguiente tarea: `PKM-004`, el datapack de generaciones
 
-Es el último sistema grande que queda, y el que sostiene la economía: su
-impuesto progresivo es el único sink que escala con la riqueza. Diseño
-completo en [gts.md](docs/trading/gts.md); el esquema de custodia, en
-[data-model.md](docs/technical/data-model.md) §3.
+**Los sistemas económicos ya están completos**: economía, tienda y GTS, los
+tres con sus invariantes automatizados. Toca el contenido Pokémon.
 
-Lo que falta para que la ciudadela sea algo es **construirla**, y eso no es
-programación.
+`PKM-004` apaga todo lo que no sea Kanto y Johto con `"enabled": false`
+(D-017). Requiere un script que genere ~774 ficheros y auditar las cadenas
+evolutivas que cruzan generaciones.
+
+> **Para que esto se note hace falta instalar Cobblemon en desarrollo.** Hoy
+> no está: la tienda omite sus 8 objetos y el GTS solo mueve objetos, no
+> Pokémon. El esquema y el flujo ya los soportan — solo cambia qué se
+> serializa.
+
+Lo otro que falta es **construir la ciudadela**, y eso no es programación.
 
 Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 

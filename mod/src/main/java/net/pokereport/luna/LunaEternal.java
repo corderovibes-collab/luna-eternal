@@ -47,6 +47,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.shop.ShopCatalog shop;
     private static net.pokereport.luna.gts.GtsService gts;
     private static net.pokereport.luna.pokedex.PokedexService pokedex;
+    private static net.pokereport.luna.kit.KitCatalog kits;
+    private static net.pokereport.luna.kit.KitService kitService;
     private static ExecutorService io;
 
     @Override
@@ -147,6 +149,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             shop = net.pokereport.luna.shop.ShopCatalog.load();
             gts = new net.pokereport.luna.gts.GtsService(database);
             pokedex = new net.pokereport.luna.pokedex.PokedexService(database);
+            // Valida el tope diario. Si un kit inyecta de mas, NO arranca.
+            kits = net.pokereport.luna.kit.KitCatalog.load();
+            kitService = new net.pokereport.luna.kit.KitService(database);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);
@@ -198,4 +203,6 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.shop.ShopCatalog shop() { return shop; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }
+    public static net.pokereport.luna.kit.KitCatalog kits() { return kits; }
+    public static net.pokereport.luna.kit.KitService kitService() { return kitService; }
 }

@@ -60,7 +60,7 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 7 | **Tienda** | ✅ hecho | — | — |
 | 8 | **GTS** | ✅ hecho | — | Pokémon cuando haya Cobblemon |
 | 9 | **Pokédex** | ✅ hecho | — | — |
-| 10 | **Kits** | ⬜ | 🟠 | rangos |
+| 10 | **Kits** | ✅ hecho | — | rangos, para los de rango |
 | 11 | **Misiones** | ⬜ | 🟡 | sistema de quests |
 | 12 | **Cazas** | ⬜ | 🟡 | rotación |
 | 13 | **Medallas** | ⬜ | 🟡 | gimnasios |
@@ -199,8 +199,8 @@ base es una lista de destinos con iconos — funciona igual de bien y no bloquea
 
 ## Next Actions
 
-1. `UI-014` — Kits (inicial gratuito)
-2. `UI-015` — Medallas
+1. `UI-015` — Medallas
+2. `ECO-003` — telemetría (necesaria para calibrar de verdad)
 3. `WLD-005` — construir la ciudadela (no es programación)
 4. `ART-001` — arte, cuando haya pantallas que vestir
 

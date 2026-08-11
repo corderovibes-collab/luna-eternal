@@ -1,0 +1,69 @@
+{
+  "_comment": [
+    "Kits. Ver docs/economy/monetization.md (nivel T3) y economy-overview.md §3.",
+    "",
+    "LA REGLA QUE LOS GOBIERNA: los kits NUNCA pueden ser la fuente principal",
+    "de recursos. Si el dinero y los objetos vienen de reclamar, el jugador",
+    "optimiza hacia el cooldown y deja de jugar: entra, reclama y se va. Eso es",
+    "literalmente el problema que el brief describe del servidor actual.",
+    "",
+    "Por eso hay un tope diario de valor comprobado al arrancar: si un kit",
+    "periodico se pasa, el servidor NO arranca. Es la misma defensa que el",
+    "anti-arbitraje de la tienda.",
+    "",
+    "'value' es el valor de referencia en PokeDolares, para poder auditarlo.",
+    "Debe cuadrar con los precios de shop_catalog.json."
+  ],
+
+    "_tope": [
+    "6000 PokeDolares/dia es un PLACEHOLDER, no un numero medido. Se calibra",
+    "cuando ECO-003 (telemetria) diga cuanto gana de verdad un jugador por",
+    "hora: el objetivo de diseno es que los kits no pasen del 25% del ingreso",
+    "diario. Hasta entonces es una barrera de seguridad, no un balance."
+  ],
+  "maxDailyValue": 6000,
+
+  "kits": [
+    {
+      "id": "inicial",
+      "name": "§aKit de Inicio",
+      "icon": "minecraft:chest",
+      "description": "Lo justo para tu primera expedición.",
+      "cooldownHours": 0,
+      "once": true,
+      "items": [
+        { "item": "cobblemon:poke_ball",   "count": 10, "value": 400 },
+        { "item": "cobblemon:potion",      "count": 5,  "value": 600 },
+        { "item": "minecraft:cooked_beef", "count": 16, "value": 40  },
+        { "item": "minecraft:torch",       "count": 32, "value": 10  }
+      ]
+    },
+    {
+      "id": "diario",
+      "name": "§eKit Diario",
+      "icon": "minecraft:sunflower",
+      "description": "Un empujón, no un sueldo.",
+      "cooldownHours": 24,
+      "once": false,
+      "_calibracion": "4x400 + 1x600 = 2200/dia. Recalibrado: la version anterior sumaba 9650/dia entre todos los kits y el guardian de arranque la rechazo.",
+      "items": [
+        { "item": "cobblemon:poke_ball", "count": 4, "value": 400 },
+        { "item": "cobblemon:potion",    "count": 1, "value": 600 }
+      ]
+    },
+    {
+      "id": "entrenador",
+      "name": "§cKit Entrenador",
+      "icon": "minecraft:iron_sword",
+      "description": "Para quien ya sabe lo que hace.",
+      "cooldownHours": 24,
+      "once": false,
+      "requiredRank": "ENTRENADOR",
+      "_calibracion": "3x750 + 1x900 = 3150/dia. Suma con el diario: 5350/dia, por debajo del tope de 6000. Un jugador con rango puede reclamar AMBOS, asi que lo que importa es la suma, no cada kit por separado.",
+      "items": [
+        { "item": "cobblemon:great_ball",  "count": 3, "value": 750 },
+        { "item": "cobblemon:super_potion","count": 1, "value": 900 }
+      ]
+    }
+  ]
+}

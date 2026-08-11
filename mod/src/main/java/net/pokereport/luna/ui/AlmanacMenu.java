@@ -130,7 +130,12 @@ public final class AlmanacMenu extends Menu {
                 .build(),
             (p, b) -> MenuService.openChild(p, this, PathsMenu::new));
         open(4, 3, Items.LEATHER_CHESTPLATE, "§dCosméticos", "Aspecto, títulos y efectos.", "Cosméticos");
-        open(4, 4, Items.SHULKER_BOX,        "§dKits",       "Inicial, periódicos y de rango.", "Kits");
+        set(4, 4, Icon.of(Items.SHULKER_BOX)
+                .name("§dKits")
+                .line("§7Inicial, periódicos y de rango.")
+                .action("Clic para abrir")
+                .build(),
+            (p, b) -> KitsMenu.open(p, this));
         locked(4, 5, Items.SHIELD,           "Clan",         "Crea o únete a un clan.",
                "Nivel de progresión", "avanza en cualquier vía");
         open(4, 6, Items.NETHERITE_INGOT,    "§dRangos",     "Qué incluye cada rango.", "Rangos");

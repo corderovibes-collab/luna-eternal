@@ -68,6 +68,7 @@ public final class AutoTest {
             testGtsTax();
             testGtsFlow(a, b);
             testPokedex(a);
+            testKits(a);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -416,6 +417,46 @@ public final class AutoTest {
         }
     }
 
+    /**
+     * Kits: el cooldown tiene que impedir de verdad la segunda reclamacion, y
+     * el tope diario de valor tiene que estar por debajo del limite.
+     */
+    private void testKits(long p) throws Exception {
+        var catalogo = LunaEternal.kits();
+        var servicio = LunaEternal.kitService();
+
+        check("el catalogo de kits esta cargado", catalogo != null);
+        if (catalogo == null) return;
+        check("hay kits definidos", !catalogo.kits().isEmpty());
+
+        long inyeccionDiaria = catalogo.kits().stream()
+            .mapToLong(net.pokereport.luna.kit.KitCatalog.Kit::dailyValue).sum();
+        check("la inyeccion diaria de los kits esta bajo el tope",
+              inyeccionDiaria <= catalogo.maxDailyValue());
+
+        var unaVez = catalogo.kits().stream().filter(k -> k.once()).findFirst();
+        if (unaVez.isPresent()) {
+            var kit = unaVez.get();
+            check("un kit de una sola vez se puede reclamar",
+                  servicio.claim(p, kit));
+            check("NO se puede reclamar dos veces",
+                  !servicio.claim(p, kit));
+            check("su estado dice que ya se reclamo",
+                  !servicio.status(p, kit).claimable());
+        }
+
+        var periodico = catalogo.kits().stream()
+            .filter(k -> !k.once() && k.requiredRank() == null).findFirst();
+        if (periodico.isPresent()) {
+            var kit = periodico.get();
+            check("un kit periodico se reclama", servicio.claim(p, kit));
+            check("el cooldown impide la segunda", !servicio.claim(p, kit));
+            var st = servicio.status(p, kit);
+            check("el estado dice cuanto queda",
+                  !st.claimable() && st.nextAvailable() != null);
+        }
+    }
+
     // ------------------------------------------------------------ auxiliares
 
     private static String key() {
@@ -442,6 +483,8 @@ public final class AutoTest {
                 // Orden inverso a las claves ajenas: primero se sueltan las
                 // referencias al comprador, luego se borran los listados.
                 for (String sql : List.of(
+                    "DELETE kc FROM kit_claim kc JOIN player p "
+                        + "ON p.player_id = kc.player_id WHERE p.mc_uuid = ?",
                     "DELETE pd FROM pokedex_entry pd JOIN player p "
                         + "ON p.player_id = pd.player_id WHERE p.mc_uuid = ?",
                     "UPDATE gts_listing g JOIN player p "

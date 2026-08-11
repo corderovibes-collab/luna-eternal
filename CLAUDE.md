@@ -21,12 +21,12 @@ tres monedas, cinco vías de progresión, y las interfaces base operativas.
 Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
 Cobblemon     1.7.3 instalado · 60 mods · Done (9,0 s) · ~1,9 GB de 4096
-Mod           lunaeternal 0.1.0 · migraciones V001 a V007 aplicadas
+Mod           lunaeternal 0.1.0 · migraciones V001 a V008 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 66/66 invariantes correctos
+Autotest      /luna autotest -> 75/75 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
-              Tienda · GTS · Pokédex
+              Tienda · GTS · Pokédex · Kits
               Barra lateral y tablist con rangos
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
@@ -53,13 +53,16 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: Kits y Medallas
+### Siguiente tarea: telemetría (`ECO-003`)
 
-La Pokédex está completa: capturar anota, da Marcas la primera vez, sube la vía
-Coleccionista, y la pantalla enseña las 1 025 entradas con sus cuatro estados.
+Con Kits terminado, **todos los números del diseño son placeholders sin medir**:
+margen de expedición, tramos del impuesto, tope diario de kits, XP de las vías.
 
-Lo siguiente que da valor al jugador nuevo es **Kits** (`UI-014`) — el inicial
-gratuito — y después **Medallas** (`UI-015`).
+La telemetría sobre `ledger_entry` es lo que convierte esos números en
+decisiones informadas. Ya está toda la materia prima: cada movimiento lleva
+motivo y fecha, así que es un `GROUP BY`.
+
+Después: **Medallas** (`UI-015`) y **construir la ciudadela**.
 
 > ⚠️ **Al desplegar, verifica el tamaño del jar.** Una subida se corrompió sin
 > dar error (`Unexpected end of ZLIB input stream`) y el tamaño coincidía. Lo

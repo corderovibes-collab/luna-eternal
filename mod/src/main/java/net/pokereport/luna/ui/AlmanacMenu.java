@@ -85,7 +85,12 @@ public final class AlmanacMenu extends Menu {
             (p, b) -> PokedexMenu.open(p, this, 0));
         open(1, 3, Items.ENDER_CHEST,    "§bCaja",    "Tus Pokémon guardados.",        "Caja");
         open(1, 4, Items.BUNDLE,         "§bMochila", "Tus objetos.",                  "Mochila");
-        open(1, 5, Items.GOLDEN_APPLE,   "§bCurar",   "Restaura a tu equipo.",         "Curar");
+        set(1, 5, Icon.of(Items.GOLDEN_APPLE)
+                .name("§bCurar")
+                .line("§7Restaura a tu equipo. Gratis.")
+                .action("Clic para abrir")
+                .build(),
+            (p, b) -> HealMenu.open(p, this));
         locked(1, 6, Items.TURTLE_EGG,   "Criadero", "Cría y linajes.",
                "Criador I", "cría tu primer Pokémon en la guardería");
     }
@@ -142,6 +147,17 @@ public final class AlmanacMenu extends Menu {
     }
 
     private void footer() {
+        if (!data.tieneInicial) {
+            set(44, Icon.of(Items.WRITABLE_BOOK)
+                    .name("§6✦ Elige tu primer compañero ✦")
+                    .line("§7Sin un Pokémon no puedes empezar.")
+                    .blank()
+                    .line("§eEs lo primero que deberías hacer.")
+                    .action("Clic para elegir")
+                    .build(),
+                (p, b) -> StarterMenu.open(p, this));
+        }
+
         set(45, Icon.of(Items.MINECART)
                 .name("§8Viajes")
                 .line("§8Puntos de la ciudadela.")

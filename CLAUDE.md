@@ -26,7 +26,7 @@ Mod           lunaeternal 0.1.0 · migraciones V001 a V008 aplicadas
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
 Autotest      /luna autotest -> 75/75 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
-              Tienda · GTS · Pokédex · Kits
+              Tienda · GTS · Pokédex · Kits · Inicial · Curar
               Barra lateral y tablist con rangos
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
@@ -53,16 +53,27 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: telemetría (`ECO-003`)
+### El servidor YA SE PUEDE JUGAR
 
-Con Kits terminado, **todos los números del diseño son placeholders sin medir**:
-margen de expedición, tramos del impuesto, tope diario de kits, XP de las vías.
+La auditoría de [feature-gap-analysis.md](docs/analysis/feature-gap-analysis.md)
+destapó un bloqueo circular: **un jugador nuevo no tenía ningún Pokémon**, y sin
+Pokémon nada de lo construido servía. Resuelto:
 
-La telemetría sobre `ledger_entry` es lo que convierte esos números en
-decisiones informadas. Ya está toda la materia prima: cada movimiento lleva
-motivo y fecha, así que es un `GROUP BY`.
+```
+1. Elige inicial (Kanto o Johto)   ✅
+2. Captura                          ✅ se anota en la Pokédex y da Marcas
+3. Cura gratis                      ✅ cooldown 10 min
+4. Compra, vende, comercia          ✅
+```
 
-Después: **Medallas** (`UI-015`) y **construir la ciudadela**.
+### Siguiente: FASE B — que haya algo que hacer
+
+1. **Medallas y gimnasios** (`UI-015`)
+2. **Misiones**: tutorial y diarias
+3. **Telemetría** (`ECO-003`) — ahora sí hay algo que medir
+
+> El orden anterior ponía la telemetría primero. **Estaba mal**: medir una
+> economía que nadie puede jugar no sirve de nada.
 
 > ⚠️ **Al desplegar, verifica el tamaño del jar.** Una subida se corrompió sin
 > dar error (`Unexpected end of ZLIB input stream`) y el tamaño coincidía. Lo

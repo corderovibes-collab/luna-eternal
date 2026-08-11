@@ -83,6 +83,8 @@ public final class MenuService {
                     snap.setBalance(c, LunaEternal.economy().balance(id, c));
                 }
                 snap.paths = LunaEternal.progression().all(id);
+                snap.tieneInicial = LunaEternal.kitService()
+                    .hasClaimed(id, StarterMenu.CLAVE);
                 snap.recent = LunaEternal.economy().recentEntries(id, 14);
 
                 var dominant = LunaEternal.progression().dominant(id);

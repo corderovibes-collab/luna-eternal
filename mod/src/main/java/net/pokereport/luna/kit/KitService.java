@@ -132,6 +132,52 @@ public final class KitService {
     }
 
     /**
+     * Reclamación única y genérica, para cosas que no son kits del catálogo
+     * pero comparten la misma garantía: <b>una vez y solo una</b>.
+     *
+     * <p>Reutiliza la tabla y el bloqueo de fila en vez de inventar otra
+     * mecánica. La elección del inicial es el caso que lo motivó: dos clics
+     * rápidos no pueden entregar dos Pokémon.
+     *
+     * @return {@code true} si es la primera vez
+     */
+    public boolean claimOnce(long playerId, String key) throws SQLException {
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                 "INSERT IGNORE INTO kit_claim (player_id, kit_id, last_claimed) "
+               + "VALUES (?,?,CURRENT_TIMESTAMP(3))")) {
+            ps.setLong(1, playerId);
+            ps.setString(2, key);
+            // INSERT IGNORE: si la fila ya existe no inserta y devuelve 0.
+            // La unicidad la garantiza la clave primaria, no una comprobación
+            // previa que podría adelantarse otro hilo.
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /** ¿Ya reclamó esta cosa única? */
+    public boolean hasClaimed(long playerId, String key) throws SQLException {
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                 "SELECT 1 FROM kit_claim WHERE player_id = ? AND kit_id = ?")) {
+            ps.setLong(1, playerId);
+            ps.setString(2, key);
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
+        }
+    }
+
+    /** Deshace una reclamación única. */
+    public void undoOnce(long playerId, String key) throws SQLException {
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                 "DELETE FROM kit_claim WHERE player_id = ? AND kit_id = ?")) {
+            ps.setLong(1, playerId);
+            ps.setString(2, key);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
      * Deshace una reclamación.
      *
      * <p>Solo para cuando la entrega falla después de haber marcado. Es

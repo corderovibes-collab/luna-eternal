@@ -35,6 +35,9 @@ public final class PlayerSnapshot {
     public String job;
     public int badges;
 
+    /** ¿Ya eligió su primer Pokémon? Decide el aviso del Almanaque. */
+    public boolean tieneInicial;
+
     /** Últimos movimientos, para la Cartera. */
     public java.util.List<net.pokereport.luna.economy.EconomyService.Entry> recent =
         java.util.List.of();

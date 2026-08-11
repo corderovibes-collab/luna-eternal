@@ -1,6 +1,5 @@
 package net.pokereport.luna.ui;
 
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.pokereport.luna.LunaEternal;
@@ -44,15 +43,15 @@ public final class PadService {
 
     private PadService() {}
 
-    /** Se llama una vez al arrancar, antes de que entre nadie. */
+    /**
+     * Receptores del lado servidor.
+     *
+     * <p>Los TIPOS de paquete NO se declaran aqui: van en
+     * {@link net.pokereport.luna.LunaCommon}, que corre en los dos lados.
+     * Tenerlos aqui hacia que el cliente reventase al arrancar, porque este
+     * metodo solo se ejecuta en un servidor dedicado.
+     */
     public static void registrar() {
-        PayloadTypeRegistry.playS2C().register(
-            PadPayloads.Abrir.ID, PadPayloads.Abrir.CODEC);
-        PayloadTypeRegistry.playC2S().register(
-            PadPayloads.Pulsar.ID, PadPayloads.Pulsar.CODEC);
-        PayloadTypeRegistry.playC2S().register(
-            PadPayloads.Cerrar.ID, PadPayloads.Cerrar.CODEC);
-
         ServerPlayNetworking.registerGlobalReceiver(
             PadPayloads.Pulsar.ID, (payload, context) ->
                 context.server().execute(() ->

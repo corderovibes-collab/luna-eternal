@@ -25,6 +25,10 @@ backups/
 mod/build/
 mod/run/
 
+# Código de terceros clonado como referencia (336 MB).
+# Se recupera con:  git clone --depth 1 https://gitlab.com/cable-mc/cobblemon.git vendor/cobblemon
+vendor/
+
 # Build / dependencias
 node_modules/
 __pycache__/

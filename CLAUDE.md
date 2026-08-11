@@ -20,6 +20,7 @@ tres monedas, cinco vías de progresión, y las interfaces base operativas.
 ```
 Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
+Cobblemon     1.7.3 instalado · 60 mods · Done (9,0 s) · ~1,9 GB de 4096
 Mod           lunaeternal 0.1.0 · migraciones V001 a V005 aplicadas
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
 Autotest      /luna autotest -> 50/50 invariantes correctos
@@ -60,10 +61,10 @@ tres con sus invariantes automatizados. Toca el contenido Pokémon.
 (D-017). Requiere un script que genere ~774 ficheros y auditar las cadenas
 evolutivas que cruzan generaciones.
 
-> **Para que esto se note hace falta instalar Cobblemon en desarrollo.** Hoy
-> no está: la tienda omite sus 8 objetos y el GTS solo mueve objetos, no
-> Pokémon. El esquema y el flujo ya los soportan — solo cambia qué se
-> serializa.
+> **Cobblemon 1.7.3 ya está instalado** y el código fuente clonado en
+> `vendor/cobblemon` (336 MB, git-ignorado; se recupera con
+> `git clone --depth 1 https://gitlab.com/cable-mc/cobblemon.git vendor/cobblemon`).
+> La tienda pasó de 17 a **28 objetos, 0 omitidos**.
 
 Lo otro que falta es **construir la ciudadela**, y eso no es programación.
 
@@ -234,6 +235,7 @@ documentación · migración · rollback.
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
 | D-018 | 2026-08-11 | **Una sola moneda premium**, con nombre visible configurable | Dos monedas de pago obligan a elegir *cuál* comprar antes de *qué* comprar. El enum es `REPORTCOIN`; "ReportCoins" o "LunaCoins" es una línea de configuración |
 | D-019 | 2026-08-11 | **No se venden Modificadores de estadísticas** (Diosesmon sí) | Un legendario es *una pieza*; un modificador es una mejora repetible sin techo aplicable a cualquier Pokémon. Lo segundo no tiene fondo |
+| D-021 | 2026-08-11 | **Cobblemon se instala desde el jar oficial, y su código fuente se clona como referencia** | Tener el fuente da la verdad sobre IDs, spawns y API sin adivinar. Ya sirvió: encontró la `moon_ball`, cuya efectividad depende de la fase lunar |
 | D-020 | 2026-08-11 | **Los cofres incluyen legendarios y legendarios shiny**, como Diosesmon | **Decisión del usuario, tomada tras leer el análisis de riesgo** de [treasures.md](docs/economy/treasures.md) §2. T4 admite esta excepción explícita. Obligatorias: probabilidades públicas, piedad acumulada, idempotencia y auditoría |
 
 ## 6. Decisiones PENDIENTES (bloqueantes)

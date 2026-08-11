@@ -24,6 +24,13 @@
         { "item": "cobblemon:poke_ball",   "buy": 400,  "sell": 40  },
         { "item": "cobblemon:great_ball",  "buy": 750,  "sell": 75  },
         { "item": "cobblemon:ultra_ball",  "buy": 1500, "sell": 150 },
+
+        { "_comment": "La Moon Ball mejora cuanto más llena está la luna (nativo de Cobblemon). Es la ball temática del servidor: recompensa saber CUÁNDO salir, que es el pilar de la visión. Precio alto a propósito: se usa la noche buena, no todas.",
+          "item": "cobblemon:moon_ball",   "buy": 2200, "sell": 200,
+          "label": "§bMoon Ball §8· mejor con luna llena" },
+
+        { "item": "cobblemon:heal_ball",   "buy": 900,  "sell": 90  },
+        { "item": "cobblemon:dusk_ball",   "buy": 1800, "sell": 180 },
         { "item": "minecraft:snowball",    "buy": 25,   "sell": 2   }
       ]
     },
@@ -52,7 +59,7 @@
         { "item": "minecraft:iron_axe",       "buy": 350,  "sell": 45   },
         { "item": "minecraft:fishing_rod",    "buy": 500,  "sell": 60   },
         { "item": "minecraft:ender_pearl",    "buy": 900,  "sell": 120  },
-        { "item": "minecraft:boat",           "buy": 150,  "sell": 20   }
+        { "item": "minecraft:oak_boat",       "buy": 150,  "sell": 20   }
       ]
     },
     {

@@ -199,34 +199,65 @@ def asegurar_texturas() -> None:
 
 # --------------------------------------------------------------- fuente
 
-def construir_fuente() -> dict:
-    """El JSON de la fuente: un provider `space` y un `bitmap` por pantalla."""
+# El emblema de cada arte, reducido a una insignia para la barra de titulo.
+# El panel comun se genera SIN emblema (no cabe: la barra son 17 px y las
+# casillas lo partirian por la mitad). Aqui se recupera, pequeno y a la
+# derecha, y es lo unico que distingue una pantalla de otra.
+BANNER_ALTO = 15
+BANNER_DERECHA = 168     # borde derecho donde termina la insignia
+
+
+def banner(nombre: str) -> Image.Image | None:
+    """Recorta el emblema del arte original y lo reduce a la barra."""
+    src = RAIZ / "arte-origen" / f"{nombre}.png"
+    if not src.exists():
+        return None
+    b = Image.open(src).convert("RGBA")
+    # Misma banda que panel_vanilla descarta, para que encajen.
+    banda = b.crop((0, round(b.height * 0.03), b.width, round(b.height * 0.21)))
+    # Solo el centro, que es donde esta el emblema.
+    w = banda.width
+    banda = banda.crop((round(w * 0.34), 0, round(w * 0.66), banda.height))
+    escala = BANNER_ALTO / banda.height
+    return banda.resize((max(1, round(banda.width * escala)), BANNER_ALTO),
+                        Image.LANCZOS)
+
+
+def construir_fuente(banners: dict) -> dict:
+    """El JSON de la fuente: un provider `space` y un `bitmap` por insignia."""
     providers = [{
         "type": "space",
         "advances": {codepoint_espacio(px): px for px in DESPLAZAMIENTOS},
     }]
-    for i, (nombre, filas) in enumerate(PANTALLAS.items()):
+    for i, nombre in enumerate(PANTALLAS):
+        if nombre not in banners:
+            continue
         providers.append({
             "type": "bitmap",
-            "file": f"{NS}:gui/{nombre}.png",
-            "ascent": ASCENT,
-            "height": alto_de(filas),
+            "file": f"{NS}:gui/banner_{nombre}.png",
+            "ascent": 12,
+            "height": BANNER_ALTO,
             "chars": [chr(BASE_BITMAP + i)],
         })
     return {"providers": providers}
 
 
-def caracteres_pantalla() -> dict:
-    """Lo que necesita el mod: para cada pantalla, la cadena exacta que
-    dibuja su fondo. Se exporta a JSON para no duplicar la geometria en
-    Java."""
+def caracteres_pantalla(banners: dict) -> dict:
+    """Para cada pantalla, la cadena que dibuja su insignia y vuelve.
+
+    El titulo se dibuja en x=8. Se avanza hasta dejar la insignia pegada a
+    BANNER_DERECHA, se pinta, y se retrocede TODO lo avanzado (incluida la
+    anchura del glifo, que avanza w+1) para que el texto del titulo salga en
+    su sitio y no desplazado."""
     out = {}
     for i, nombre in enumerate(PANTALLAS):
-        # -8 lleva del punto donde se dibuja el titulo al borde del menu.
-        # Un glifo avanza su anchura + 1, asi que hay que retroceder eso para
-        # que el titulo de verdad salga en su sitio y no desplazado 177 px.
-        out[nombre] = (desplazar(-8) + chr(BASE_BITMAP + i)
-                       + desplazar(-(ANCHO + 1)) + desplazar(8))
+        img = banners.get(nombre)
+        if img is None:
+            continue
+        w = img.width
+        ida = BANNER_DERECHA - w - 8
+        out[nombre] = (desplazar(ida) + chr(BASE_BITMAP + i)
+                       + desplazar(-(ida + w + 1)))
     return out
 
 
@@ -248,9 +279,40 @@ def main() -> None:
         }
     }, indent=2), encoding="utf-8")
 
+    # Panel comun: sustituye la textura del cofre de vanilla.
+    #
+    # OJO: sale del arte ORIGINAL, no de la textura de resourcepack/, que ya
+    # esta perforada. Construirlo desde la perforada dejaba el panel lleno de
+    # agujeros — y ahi se dibuja ANTES que los objetos, asi que no hacen falta.
+    base = RAIZ / "arte-origen" / f"{PANEL_BASE}.png"
+    if base.exists():
+        destino_panel = (raiz / "assets" / "minecraft" / "textures" / "gui"
+                         / "container" / "generic_54.png")
+        destino_panel.parent.mkdir(parents=True, exist_ok=True)
+        panel_vanilla(Image.open(base)).save(destino_panel)
+        print(f"  panel comun generado desde {PANEL_BASE}")
+
+    # Insignias por pantalla, a partir del arte original.
+    banners = {}
+    dir_gui = raiz / "assets" / NS / "textures" / "gui"
+    dir_gui.mkdir(parents=True, exist_ok=True)
+    for nombre in PANTALLAS:
+        img = banner(nombre)
+        if img is None:
+            continue
+        banners[nombre] = img
+        img.save(dir_gui / f"banner_{nombre}.png")
+        # El panel ya dibuja el fondo, asi que la textura de pantalla
+        # completa deja de usarse: se quita del zip para no cargarla en balde.
+        antigua = dir_gui / f"{nombre}.png"
+        if antigua.exists():
+            antigua.unlink()
+    print(f"  {len(banners)} insignias generadas")
+
     fuente = raiz / "assets" / NS / "font" / "gui.json"
     fuente.parent.mkdir(parents=True, exist_ok=True)
-    fuente.write_text(json.dumps(construir_fuente(), indent=2), encoding="utf-8")
+    fuente.write_text(json.dumps(construir_fuente(banners), indent=2),
+                      encoding="utf-8")
 
     SALIDA.mkdir(parents=True, exist_ok=True)
     zip_path = SALIDA / "lunaeternal-resourcepack.zip"
@@ -274,7 +336,7 @@ def main() -> None:
     # El mod lee esto para no repetir la geometria en Java.
     mapa = RAIZ / "mod" / "src" / "main" / "resources" / "gui_chars.json"
     mapa.parent.mkdir(parents=True, exist_ok=True)
-    mapa.write_text(json.dumps(caracteres_pantalla(), indent=2,
+    mapa.write_text(json.dumps(caracteres_pantalla(banners), indent=2,
                                ensure_ascii=False), encoding="utf-8")
 
     print(f"\n{zip_path}")
@@ -282,6 +344,75 @@ def main() -> None:
     print(f"  sha1 = {sha1}")
     print(f"\nPara server.properties:")
     print(f"  resource-pack-sha1={sha1}")
+
+
+
+
+# --------------------------------------------------- panel de vanilla
+#
+# HALLAZGO que obligo a rediseñar (verificado leyendo el bytecode de
+# HandledScreen en el jar del cliente):
+#
+#     drawBackground  ->  drawSlot (objetos)  ->  drawForeground (titulo)
+#
+# ...y con disableDepthTest, asi que manda el orden. Nuestro fondo, que es el
+# titulo, va POR ENCIMA de los objetos. Por eso hay que perforar 90 agujeros
+# — y con 90 agujeros del arte solo se ve el borde.
+#
+# La salida es sustituir la textura del cofre, que se dibuja ANTES que los
+# objetos. Es UNA textura para todos los menus, asi que el panel es comun y
+# la identidad de cada pantalla la da su banda de titulo.
+
+PANEL_BASE = "almanaque"   # de que arte sale el panel comun
+
+
+def panel_vanilla(base: Image.Image) -> Image.Image:
+    """Construye assets/minecraft/textures/gui/container/generic_54.png.
+
+    Es una hoja de 256x256: arriba el cofre de 6 filas (176x222) y, a partir
+    de y=126, el trozo del inventario del jugador que el juego pega debajo
+    cuando el cofre tiene menos filas."""
+    hoja = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+    base = base.convert("RGBA")
+
+    # El arte trae un emblema grande arriba, pero un cofre solo deja 17 px de
+    # barra de titulo: las casillas empiezan en y=17 y lo taparian por la
+    # mitad, que se ve como un error. Se empalma el borde superior del marco
+    # directamente con el cuerpo, saltandose la banda del emblema.
+    borde = round(base.height * 0.03)      # filo del marco, se conserva
+    emblema = round(base.height * 0.21)    # emblema + aurora, se descarta
+    sin_emblema = Image.new("RGBA", (base.width, base.height - (emblema - borde)))
+    sin_emblema.paste(base.crop((0, 0, base.width, borde)), (0, 0))
+    sin_emblema.paste(base.crop((0, emblema, base.width, base.height)), (0, borde))
+
+    panel = sin_emblema.resize((ANCHO, alto_de(6)), Image.LANCZOS)
+    hoja.paste(panel, (0, 0))
+
+    # El trozo del inventario del jugador tiene que estar tambien en y=126,
+    # porque para 1-5 filas el juego lo copia de ahi.
+    inv = panel.crop((0, alto_de(6) - 97, ANCHO, alto_de(6)))
+    hoja.paste(inv, (0, 126))
+
+    d = ImageDraw.Draw(hoja)
+
+    def pozo(x, y):
+        """Una casilla: hueco oscuro con luz arriba-izquierda y brillo abajo,
+        que es como se lee un hundido."""
+        d.rectangle([x, y, x + 17, y + 17], fill=(18, 14, 32, 220))
+        d.line([(x, y), (x + 17, y)], fill=(10, 8, 20, 255))
+        d.line([(x, y), (x, y + 17)], fill=(10, 8, 20, 255))
+        d.line([(x, y + 17), (x + 17, y + 17)], fill=(120, 96, 200, 130))
+        d.line([(x + 17, y), (x + 17, y + 17)], fill=(120, 96, 200, 130))
+
+    # Casillas del cofre de 6 filas, y las del inventario en su sitio.
+    for (hx, hy) in huecos(6):
+        pozo(hx, hy)
+    # Y otra vez sobre la copia de y=126, con el desplazamiento que toca.
+    desplazo = 126 - (alto_de(6) - 97)
+    for (hx, hy) in huecos(6):
+        if hy >= alto_de(6) - 97:
+            pozo(hx, hy + desplazo)
+    return hoja
 
 
 if __name__ == "__main__":

@@ -16,15 +16,17 @@ llaves y dónde está la línea que no se cruza.
 
 ## Current Status
 
-**PROPUESTA con una objeción abierta.** El sistema tal y como lo pediste
-—legendarios y legendarios shiny en cofres de pago— entra en conflicto directo
-con `monetization.md`, que aprobaste. La objeción está en §2. **Si la
-mantienes, se implementa como pediste**; solo quiero que la decisión se tome
-sabiendo lo que cuesta.
+**DECIDIDO (D-020, 2026-08-11).** El usuario ratificó el sistema con
+legendarios, al estilo de Diosesmon. Se implementa así.
+
+El análisis de riesgos de §2 **se conserva como registro** de que la decisión
+se tomó con la información delante, no por descuido. Las mitigaciones de §5
+quedan **recomendadas pero opcionales**.
 
 ## Last Decision
 
-Pendiente.
+D-020 — Los cofres incluyen legendarios y legendarios shiny.
+`monetization.md` se ajusta: T4 admite esta excepción explícita y acotada.
 
 ---
 
@@ -120,7 +122,49 @@ responden a una.
 
 ---
 
-## 3. La alternativa: mismo sistema, otro contenido
+## 2-bis. La decisión tomada — D-020
+
+El usuario ratificó el sistema con legendarios tras leer §2. **Queda cerrado.**
+
+### Contenido de los cofres
+
+| Cofre | Contenido | Llave |
+|---|---|---|
+| **Común** | Cosméticos básicos, tintes, títulos | Juego |
+| **Rocket** | Disfraces para Pokémon | Juego o premium |
+| **Gachapón** | Objetos variados de progresión | Juego o premium |
+| **Legendario** | Legendarios, apertura progresiva | Premium |
+| **Legendario Shiny** | Legendarios con variante shiny | Premium |
+| **Evento** | Exclusivos de temporada | Temporal |
+
+### Lo que sigue siendo obligatorio, incluso con legendarios
+
+Estas cuatro no son una objeción reciclada: son **higiene del sistema** y
+protegen tanto al servidor como al jugador.
+
+| Regla | Motivo |
+|---|---|
+| **Probabilidades públicas** en cada cofre | Es lo que hace defendible el sistema. Diosesmon lo hace y es lo correcto |
+| **Piedad acumulada** (§4) | Acota el gasto máximo para conseguir algo concreto |
+| **Idempotencia** en cada apertura (R4) | Un doble clic no puede abrir dos veces |
+| **Registro en el libro de asientos** | Toda apertura auditada |
+
+### Lo que sigue fuera, y esto sí lo mantengo
+
+**Modificadores de estadísticas** (D-019). Diosesmon los vende; nosotros no.
+La diferencia con un legendario de cofre es real: un legendario es **una
+pieza**, un modificador es **una mejora aplicada a cualquier Pokémon**, sin
+techo y repetible. Lo segundo no tiene fondo.
+
+Si en algún momento quieres reconsiderarlo, lo hablamos — pero conviene que
+sea una decisión aparte, no un arrastre de esta.
+
+---
+
+## 3. La alternativa que NO se eligió (registro)
+
+> Se conserva porque si el sistema da problemas —regulatorios, de economía o
+> de percepción— este es el plan B ya escrito, no hay que rehacerlo.
 
 **No hay que renunciar a los cofres.** El gachapón funciona igual de bien —y
 factura igual de bien— con cosméticos. De hecho es lo que más se vende en

@@ -59,23 +59,10 @@ andamiaje en algo usable — y las tres primeras **no dependen de nada**:
 Catálogo completo de pantallas en
 [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 
-### ⚠️ Decisión pendiente que bloquea Tesoros
-
-[treasures.md](docs/economy/treasures.md) §2: pediste legendarios y
-legendarios shiny en cofres de pago. Eso es **T4** del marco que aprobaste,
-crea el mercado gris que D-014 evita, y son cajas de botín con dinero real
-—prohibidas en Bélgica y Países Bajos, reguladas en España—.
-
-Diosesmon lo hace (verificado en su wiki: venden legendarios shiny, habilidad
-oculta para competitivo y modificadores de estadísticas). **Que a ellos no les
-haya pasado nada no es lo mismo que sea seguro.**
-
-Alternativa en §3: **mismo sistema de cofres, contenido cosmético**. Los
-disfraces de Pokémon que mencionaste son exactamente lo correcto, y los
-legendarios salen del Mundo Salvaje con cupo por temporada.
-
-Si lo mantienes, en §5 están las cinco mitigaciones que reducen el daño.
-**Es tu decisión; solo quiero que se tome sabiendo el coste.**
+> **Tesoros ya está decidido** (D-020): cofres con legendarios, como
+> Diosesmon. El análisis de riesgo queda archivado en
+> [treasures.md](docs/economy/treasures.md) §2 como registro de que la
+> decisión se tomó informada. **No volver a plantearlo.**
 
 **Regla de trabajo establecida:** cada sistema económico nuevo añade sus
 invariantes a `/luna autotest` **antes** de desplegarse (`MOD-006`).
@@ -236,7 +223,8 @@ documentación · migración · rollback.
 | D-016 | 2026-08-11 | **Dos mundos: Hogar (permanente) y Salvaje (se reinicia)** | Un solo mundo no puede ser permanente y fresco a la vez. El reinicio renueva la exploración sin producir contenido, y nada importante vive en el terreno: todo está en la base de datos |
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
 | D-018 | 2026-08-11 | **Una sola moneda premium**, con nombre visible configurable | Dos monedas de pago obligan a elegir *cuál* comprar antes de *qué* comprar. El enum es `REPORTCOIN`; "ReportCoins" o "LunaCoins" es una línea de configuración |
-| D-019 | 2026-08-11 | **No se venden Modificadores de estadísticas** (Diosesmon sí) | Es venta directa de poder competitivo — T4. Y su modelo *"paga y tendrás mejores Pokémon"* ya está ocupado por alguien más grande |
+| D-019 | 2026-08-11 | **No se venden Modificadores de estadísticas** (Diosesmon sí) | Un legendario es *una pieza*; un modificador es una mejora repetible sin techo aplicable a cualquier Pokémon. Lo segundo no tiene fondo |
+| D-020 | 2026-08-11 | **Los cofres incluyen legendarios y legendarios shiny**, como Diosesmon | **Decisión del usuario, tomada tras leer el análisis de riesgo** de [treasures.md](docs/economy/treasures.md) §2. T4 admite esta excepción explícita. Obligatorias: probabilidades públicas, piedad acumulada, idempotencia y auditoría |
 
 ## 6. Decisiones PENDIENTES (bloqueantes)
 

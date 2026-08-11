@@ -53,6 +53,7 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 |---|---|---|---|---|
 | 1 | **LunaPad** (principal) | ✅ hecho | — | — |
 | 2 | **Barra lateral** | ✅ hecho | — | — |
+| 2b | **Tablist** (cabecera, pie, rangos) | ✅ hecho | — | — |
 | 3 | **Cartera** | ⬜ | 🔴 | nada, los datos ya están |
 | 4 | **Vías** | ⬜ | 🔴 | `PROG-001` |
 | 5 | **Puerta del mundo** | ⬜ | 🔴 | `WLD-002` |

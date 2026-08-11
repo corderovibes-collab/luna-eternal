@@ -18,6 +18,7 @@ import net.pokereport.luna.player.PlayerService;
 import net.pokereport.luna.ui.AlmanacItem;
 import net.pokereport.luna.ui.MenuService;
 import net.pokereport.luna.ui.Sidebar;
+import net.pokereport.luna.ui.Tablist;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,12 +52,15 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         ServerLifecycleEvents.SERVER_STARTING.register(server -> boot());
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> shutdown());
 
+        ServerLifecycleEvents.SERVER_STARTED.register(Tablist::setup);
+
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             var player = handler.getPlayer();
-            // El Almanaque y la barra lateral se montan ya: son lo primero
-            // que el jugador ve, y no dependen de la base de datos.
+            // El Almanaque, la barra lateral y el tablist se montan ya: son lo
+            // primero que el jugador ve y no dependen de la base de datos.
             AlmanacItem.ensure(player);
             Sidebar.install(player);
+            Tablist.onJoin(server, player);
             MenuService.refresh(player);
         });
 
@@ -65,6 +69,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             players.forget(player.getUuid());
             MenuService.forget(player);
             Sidebar.remove(player);
+            Tablist.onLeave(server, player);
         });
 
         // Clic derecho con el Almanaque: se abre. Sin comandos (P9).
@@ -88,6 +93,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         // la base de datos, y solo envía paquetes si el contenido cambió.
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (server.getTicks() % 20 != 0) return;
+            // El contador de conectados cambia con cada entrada y salida;
+            // recalcularlo aquí evita tener que engancharlo a cada evento.
+            Tablist.updateHeaderFooter(server);
             for (ServerPlayerEntity p : server.getPlayerManager().getPlayerList()) {
                 var snap = MenuService.cached(p);
                 if (snap == null) continue;

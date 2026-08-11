@@ -50,6 +50,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.kit.KitCatalog kits;
     private static net.pokereport.luna.kit.KitService kitService;
     private static net.pokereport.luna.quest.QuestService quests;
+    private static net.pokereport.luna.economy.EconomyStats stats;
     private static ExecutorService io;
 
     @Override
@@ -120,6 +121,13 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // El contador de conectados cambia con cada entrada y salida;
             // recalcularlo aquí evita tener que engancharlo a cada evento.
             Tablist.updateHeaderFooter(server);
+
+            // Informe economico al log cada hora. Sin historial no se puede
+            // ver una tendencia, y una tendencia es lo unico que permite
+            // corregir antes de que el problema sea visible.
+            if (server.getTicks() % 72_000 == 0) {
+                net.pokereport.luna.command.EconomyReport.logDaily();
+            }
             for (ServerPlayerEntity p : server.getPlayerManager().getPlayerList()) {
                 var snap = MenuService.cached(p);
                 if (snap == null) continue;
@@ -154,6 +162,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             kits = net.pokereport.luna.kit.KitCatalog.load();
             kitService = new net.pokereport.luna.kit.KitService(database);
             quests = new net.pokereport.luna.quest.QuestService(database);
+            stats = new net.pokereport.luna.economy.EconomyStats(database);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);
@@ -208,4 +217,5 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.kit.KitCatalog kits() { return kits; }
     public static net.pokereport.luna.kit.KitService kitService() { return kitService; }
     public static net.pokereport.luna.quest.QuestService quests() { return quests; }
+    public static net.pokereport.luna.economy.EconomyStats stats() { return stats; }
 }

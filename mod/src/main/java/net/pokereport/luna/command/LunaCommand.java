@@ -55,6 +55,18 @@ public final class LunaCommand {
                 .requires(s -> s.hasPermissionLevel(3))
                 .executes(ctx -> status(ctx.getSource())))
 
+            .then(literal("economia")
+                .requires(s -> s.hasPermissionLevel(3))
+                .executes(ctx -> { EconomyReport.send(ctx.getSource(), 24); return 1; })
+                .then(argument("horas", com.mojang.brigadier.arguments.IntegerArgumentType
+                        .integer(1, 720))
+                    .executes(ctx -> {
+                        EconomyReport.send(ctx.getSource(),
+                            com.mojang.brigadier.arguments.IntegerArgumentType
+                                .getInteger(ctx, "horas"));
+                        return 1;
+                    })))
+
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> autotest(ctx.getSource())))

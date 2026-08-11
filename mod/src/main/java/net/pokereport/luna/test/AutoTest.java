@@ -70,6 +70,7 @@ public final class AutoTest {
             testPokedex(a);
             testKits(a);
             testQuests(a);
+            testTelemetria(a, b);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -517,6 +518,47 @@ public final class AutoTest {
             check("no se puede cobrar una mision sin completar",
                   !quests.claim(p, diaria));
         }
+    }
+
+    /**
+     * Telemetria. El invariante que importa es el CUADRE GLOBAL: la suma de
+     * todos los saldos tiene que ser igual a la suma de todos los asientos.
+     *
+     * <p>Si no lo es, hay dinero creado o perdido fuera del sistema — y eso es
+     * lo unico que no se puede arreglar despues, porque no se sabe de donde
+     * salio. Se comprueba con datos reales dentro, no con la base vacia.
+     */
+    private void testTelemetria(long a, long b) throws Exception {
+        var stats = LunaEternal.stats();
+
+        for (Currency c : Currency.values()) {
+            check("la masa de " + c.displayName + " cuadra con el libro",
+                  stats.supplyDiscrepancy(c) == 0);
+        }
+
+        var supply = stats.moneySupply();
+        check("la masa monetaria se lee", supply.size() == Currency.values().length);
+
+        // Con los jugadores de prueba dentro, tiene que haber flujos.
+        var flujos = stats.flows(Currency.POKEDOLLAR, 24);
+        check("hay flujos registrados en las ultimas 24 h", !flujos.isEmpty());
+
+        boolean coherentes = flujos.stream()
+            .allMatch(f -> f.created() >= 0 && f.destroyed() >= 0 && f.operations() > 0);
+        check("todo flujo tiene importes no negativos y operaciones", coherentes);
+
+        var reparto = stats.wealth(Currency.POKEDOLLAR);
+        check("el reparto cuenta jugadores", reparto.players() >= 2);
+        check("los percentiles estan ordenados",
+              reparto.p50() <= reparto.p90() && reparto.p90() <= reparto.p99()
+              && reparto.p99() <= reparto.max());
+
+        check("hay jugadores activos", stats.activePlayers(24) >= 2);
+
+        // El informe completo debe generarse sin lanzar.
+        var lineas = new ArrayList<String>();
+        net.pokereport.luna.command.EconomyReport.render(stats, 24, lineas::add);
+        check("el informe se genera sin errores", lineas.size() > 10);
     }
 
     // ------------------------------------------------------------ auxiliares

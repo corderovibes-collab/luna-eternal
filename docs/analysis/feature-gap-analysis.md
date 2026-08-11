@@ -180,7 +180,7 @@ Reordenadas según §3.
 | B1 | Medallas y gimnasios |
 | B2 | ~~Misiones~~ ✅ | 6 de tutorial + 2 diarias |
 | B3 | Cazas rotativas |
-| B4 | Telemetría económica |
+| B4 | ~~Telemetría económica~~ ✅ | `/luna economia`, con diagnóstico automático |
 
 ### FASE C — Que se quiera volver
 

@@ -24,10 +24,11 @@ Cobblemon     1.7.3 instalado · 60 mods · Done (9,0 s) · ~1,9 GB de 4096
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 86/86 invariantes correctos
+Autotest      /luna autotest -> 96/96 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Tienda · GTS · Pokédex · Kits · Inicial · Curar
               Misiones (6 de tutorial + 2 diarias)
+Telemetría    /luna economia · informe automático al log cada hora
               Barra lateral y tablist con rangos
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
@@ -67,11 +68,25 @@ Pokémon nada de lo construido servía. Resuelto:
 4. Compra, vende, comercia          ✅
 ```
 
-### Siguiente: seguir FASE B
+### Siguiente: calibrar con datos reales
 
-1. ~~Misiones~~ ✅ — cadena de tutorial que enseña el bucle entero
-2. **Telemetría** (`ECO-003`) — ahora sí hay algo que medir
-3. **Medallas y gimnasios** (`UI-015`) — necesitan mundo construido
+FASE B está cerrada salvo los gimnasios, que necesitan mundo construido.
+
+**Lo que falta ahora no es código: son datos.** `/luna economia` mide, pero
+hasta que alguien juegue de verdad todos los números siguen siendo
+estimaciones:
+
+| Número | Hoy | Se calibra con |
+|---|---|---|
+| Margen de expedición | 1,5-2× supuesto | ingreso mediano diario |
+| Tope de kits | 6 000/día | ≤25 % del ingreso diario |
+| Tramos del impuesto GTS | 5-18 % | reparto P50/P99 |
+| XP de las vías | a ojo | tiempo real hasta nivel V |
+
+**Juega una sesión y ejecuta `/luna economia`.** El informe dice solo si hay
+inflación, si los sinks funcionan y si la riqueza se está concentrando.
+
+Después: **construir la ciudadela** (`WLD-005`) y **gimnasios** (`UI-015`).
 
 > El recorrido completo del jugador nuevo ya funciona sin tocar un comando:
 > elige inicial → captura → registra → compra → vende en GTS → sube de vía.

@@ -122,12 +122,26 @@ servidor. La vía que nos corresponde es la primera, y es **gratuita**.
 | Paso | Quién | Coste |
 |---|---|---|
 | Instalar Axiom en el servidor | ✅ hecho | 0 € |
-| **Pedir la whitelist multijugador en el Discord de Axiom** | **tú** | 0 € |
+| **Pedir la whitelist multijugador** en `https://discord.gg/axiomtool` | **tú** | 0 € |
 | Comprar licencia comercial | solo si algún día se vende el servicio de construcción | — |
 
-> **Por qué lo tienes que pedir tú:** la whitelist se solicita desde una cuenta
-> de Discord asociada al servidor. No es algo que se pueda automatizar ni que yo
-> pueda hacer en tu nombre.
+**El Discord es el único canal.** No hay formulario ni panel: su
+[documentación](https://axiomdocs.moulberry.com/) no menciona la whitelist, y
+en Modrinth el enlace de *issues* apunta al mismo Discord.
+
+> **Por qué lo tienes que pedir tú:** la whitelist se concede **por UUID**. Sus
+> propios términos lo dicen: *"Axiom sends a request with your UUID to
+> `https://axiom.moulberry.com/`"*. Es tu cuenta la que se autoriza, no la mía.
+
+> ⚠️ **Riesgo real, y conviene saberlo antes de escribirles:** el servidor está
+> en `online-mode=false` porque `TheJuanCE` no es cuenta premium (CLAUDE.md §0).
+> En ese modo el UUID **no lo emite Mojang**, se deriva del nombre. Si su
+> verificación exige un UUID premium, la whitelist podría no aplicarse aunque
+> te la concedan. **No lo he podido comprobar** — se sabrá al pedirla.
+> Si falla, el flujo `.schem` → `//paste` del §4 sigue funcionando igual.
+
+> Cuando el servidor sea público hay una segunda vía en el mismo sitio:
+> *"Large public servers may also request a **permanent server whitelist**"*.
 
 **Mientras tanto no estás bloqueado.** Axiom en local es libre sin ningún
 trámite, y el flujo `.schem` → `//paste` del §4 funciona hoy. De hecho es mejor

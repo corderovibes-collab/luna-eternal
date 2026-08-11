@@ -67,6 +67,7 @@ public final class AutoTest {
             testShopCatalog();
             testGtsTax();
             testGtsFlow(a, b);
+            testPokedex(a);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -383,6 +384,38 @@ public final class AutoTest {
         }
     }
 
+    /**
+     * Pokedex: la primera captura de una especie debe distinguirse de las
+     * siguientes, porque es la que da recompensa. Y la fecha y la luna de esa
+     * primera NO pueden sobrescribirse: son la historia del registro.
+     */
+    private void testPokedex(long p) throws Exception {
+        var dex = LunaEternal.pokedex();
+
+        boolean primera = dex.recordCapture(p, "__test_mon", 9001, false, 5, 0);
+        check("la primera captura se detecta como nueva", primera);
+
+        boolean segunda = dex.recordCapture(p, "__test_mon", 9001, false, 30, 4);
+        check("la segunda NO cuenta como nueva", !segunda);
+
+        var resumen = dex.summary(p);
+        check("el resumen cuenta una especie capturada", resumen.caught() == 1);
+        check("todavia no hay variocolor", resumen.shiny() == 0);
+
+        dex.recordCapture(p, "__test_mon", 9001, true, 10, 2);
+        check("capturar un variocolor lo registra", dex.summary(p).shiny() == 1);
+
+        var filas = dex.range(p, 9000, 9002);
+        check("la entrada aparece en el rango", filas.size() == 1);
+        if (!filas.isEmpty()) {
+            var e = filas.get(0);
+            check("cuenta las tres capturas", e.caughtCount() == 3);
+            check("guarda el mejor nivel", e.bestLevel() != null && e.bestLevel() == 30);
+            check("la luna de la PRIMERA captura no se sobrescribe",
+                  e.firstMoonPhase() != null && e.firstMoonPhase() == 0);
+        }
+    }
+
     // ------------------------------------------------------------ auxiliares
 
     private static String key() {
@@ -409,6 +442,8 @@ public final class AutoTest {
                 // Orden inverso a las claves ajenas: primero se sueltan las
                 // referencias al comprador, luego se borran los listados.
                 for (String sql : List.of(
+                    "DELETE pd FROM pokedex_entry pd JOIN player p "
+                        + "ON p.player_id = pd.player_id WHERE p.mc_uuid = ?",
                     "UPDATE gts_listing g JOIN player p "
                         + "ON p.player_id = g.buyer_id SET g.buyer_id = NULL "
                         + "WHERE p.mc_uuid = ?",

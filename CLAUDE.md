@@ -21,9 +21,10 @@ tres monedas, cinco vías de progresión, y las interfaces base operativas.
 Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
 Cobblemon     1.7.3 instalado · 60 mods · Done (9,0 s) · ~1,9 GB de 4096
-Mod           lunaeternal 0.1.0 · migraciones V001 a V006 aplicadas
+Mod           lunaeternal 0.1.0 · migraciones V001 a V007 aplicadas
+              compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 57/57 invariantes correctos
+Autotest      /luna autotest -> 66/66 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Tienda · GTS
               Barra lateral y tablist con rangos
@@ -52,10 +53,15 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: la Pokédex (`UI-013`)
+### Siguiente tarea: la pantalla de Pokédex
 
-Los sistemas económicos y el contenido base están. La Pokédex es la sección
-que da sentido a la vía Coleccionista y la que enseña qué falta por descubrir.
+**La Pokédex ya funciona por debajo**: capturar anota la especie, da Marcas la
+primera vez y sube la vía Coleccionista. Lo que falta es **la pantalla** que lo
+enseñe (`UI-013`).
+
+> ⚠️ **Al desplegar, verifica el tamaño del jar.** Una subida se corrompió sin
+> dar error (`Unexpected end of ZLIB input stream`) y el tamaño coincidía. Lo
+> fiable es **borrar el jar antiguo antes de subir** el nuevo.
 
 > ⚠️ **`PKM-004` está desplegado pero NO verificado en el juego.** El datapack
 > carga (aparece el último en `datapack list`, que es lo que le da prioridad

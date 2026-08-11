@@ -9,6 +9,13 @@ base { archivesName = project.archives_base_name }
 
 repositories {
     mavenCentral()
+    // Cobblemon se publica aquí. Se usa la MISMA version que corre el
+    // servidor (1.7.3); el `main` del repositorio va por 1.8.0 y su API
+    // puede diferir.
+    exclusiveContent {
+        forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
+        filter { includeGroup 'maven.modrinth' }
+    }
 }
 
 dependencies {
@@ -16,6 +23,17 @@ dependencies {
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // Cobblemon: SOLO para compilar. No se empaqueta ni se incluye — el
+    // servidor ya lo tiene, y meterlo en nuestro jar seria duplicar 130 MB
+    // y arriesgarse a que dos versiones convivan.
+    modCompileOnly "maven.modrinth:cobblemon:${project.cobblemon_version}"
+
+    // Cobblemon esta escrito en Kotlin y sus firmas usan tipos de Kotlin
+    // (Function1). Sin el stdlib, el compilador de Java no puede resolver
+    // que sobrecarga de subscribe() estamos llamando.
+    // compileOnly: Cobblemon ya empaqueta Kotlin, no hay que duplicarlo.
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib:2.0.21"
 
     // Persistencia (D-009). Van DENTRO del jar: el servidor no tiene classpath propio.
     // HikariCP  Apache-2.0        — compatible con uso comercial (D-008)

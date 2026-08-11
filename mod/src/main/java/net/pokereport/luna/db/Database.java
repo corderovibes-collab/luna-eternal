@@ -31,7 +31,8 @@ public final class Database implements AutoCloseable {
         "V003__add_reportcoin.sql",
         "V004__player_paths.sql",
         "V005__gts.sql",
-        "V006__gts_delivery.sql"
+        "V006__gts_delivery.sql",
+        "V007__pokedex.sql"
     };
 
     private final HikariDataSource ds;

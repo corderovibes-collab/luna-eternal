@@ -59,7 +59,7 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 6 | **Viajes / LunaTaxi** | ⬜ | 🟠 | ciudadela construida |
 | 7 | **Tienda** | ✅ hecho | — | — |
 | 8 | **GTS** | ✅ hecho | — | Pokémon cuando haya Cobblemon |
-| 9 | **Pokédex** | ⬜ | 🟠 | `PKM-004` |
+| 9 | **Pokédex** | 🟡 datos ✔, pantalla ⬜ | 🔴 | — |
 | 10 | **Kits** | ⬜ | 🟠 | rangos |
 | 11 | **Misiones** | ⬜ | 🟡 | sistema de quests |
 | 12 | **Cazas** | ⬜ | 🟡 | rotación |

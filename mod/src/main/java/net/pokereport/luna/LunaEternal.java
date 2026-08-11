@@ -46,6 +46,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.progression.ProgressionService progression;
     private static net.pokereport.luna.shop.ShopCatalog shop;
     private static net.pokereport.luna.gts.GtsService gts;
+    private static net.pokereport.luna.pokedex.PokedexService pokedex;
     private static ExecutorService io;
 
     @Override
@@ -55,7 +56,11 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         ServerLifecycleEvents.SERVER_STARTING.register(server -> boot());
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> shutdown());
 
-        ServerLifecycleEvents.SERVER_STARTED.register(Tablist::setup);
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            Tablist.setup(server);
+            // Se suscribe cuando Cobblemon ya esta cargado del todo.
+            net.pokereport.luna.pokedex.CaptureListener.register();
+        });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             var player = handler.getPlayer();
@@ -141,6 +146,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // ganar dinero comprando y revendiendo, el servidor NO arranca.
             shop = net.pokereport.luna.shop.ShopCatalog.load();
             gts = new net.pokereport.luna.gts.GtsService(database);
+            pokedex = new net.pokereport.luna.pokedex.PokedexService(database);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);
@@ -191,4 +197,5 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     }
     public static net.pokereport.luna.shop.ShopCatalog shop() { return shop; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
+    public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }
 }

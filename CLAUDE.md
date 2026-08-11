@@ -22,9 +22,23 @@ Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043 · whitelist ON
               MC 1.21.1 Fabric · 45 mods · Done (4.8 s) · 647 MB / 4096
 Mod           lunaeternal 0.1.0 desplegado en /mods
 BD            MariaDB s11945_luna · migración V001 aplicada
-Credenciales  en el .env del scratchpad y en config/lunaeternal.properties
-              del servidor. NO están en el repo
 ```
+
+### ⚠️ Dónde están las credenciales de la base de datos
+
+**No están en el repositorio, y es correcto.** La copia autoritativa vive en el
+propio servidor:
+
+```
+/config/lunaeternal.properties   en el servidor 7dc30799
+```
+
+Se lee por la API de Pterodactyl (`/files/contents`). El panel también muestra
+la base y el usuario en su sección de *Databases*, y permite regenerar la
+contraseña si se pierde.
+
+> La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
+> retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
 ### Siguiente tarea: `MOD-005`
 

@@ -19,9 +19,9 @@ Servidor de desarrollo listo para construir (2026-08-11):
 | **Axiom 5.4.2** | instalado y cargado — `Initializing Axiom/5.4.2` |
 | Ciudadela | plataforma de **80×80** en el origen, y=63 |
 
-⚠️ **Falta un paso que solo puedes dar tú:** pedir la whitelist multijugador
-gratuita en el Discord de Axiom — ver §3-bis. El mod está instalado, pero hasta
-que la concedan, editar en vivo no funcionará.
+**Axiom edita en vivo sin ningún trámite.** Verificado contra su propia API de
+autorización, no supuesto — ver §3-bis. El cliente está montado en la instancia
+`PokeReport-LunaEternal-0.1.0` de PrismLauncher.
 
 ---
 
@@ -101,7 +101,7 @@ son mucho mejores.
 
 ---
 
-## 3-bis. Axiom: está instalado, y falta un trámite gratuito
+## 3-bis. Axiom: instalado y funcionando, sin trámites
 
 Sus términos, citados literalmente de su página:
 
@@ -115,37 +115,51 @@ Sus términos, citados literalmente de su página:
 
 La licencia comercial apunta a **quien cobra por construir** — estudios que
 venden builds por encargo. No es nuestro caso: construimos nuestro propio
-servidor. La vía que nos corresponde es la primera, y es **gratuita**.
+servidor. La vía que nos corresponde es la primera, la no comercial.
 
-### Lo que hay que hacer, y es un trámite
+### ⚠️ La whitelist NO hace falta. Verificado, no supuesto
 
-| Paso | Quién | Coste |
-|---|---|---|
-| Instalar Axiom en el servidor | ✅ hecho | 0 € |
-| **Pedir la whitelist multijugador** en `https://discord.gg/axiomtool` | **tú** | 0 € |
-| Comprar licencia comercial | solo si algún día se vende el servicio de construcción | — |
+Yo dije que sí hacía falta. **Me equivoqué**, y esto es lo que lo demuestra.
 
-**El Discord es el único canal.** No hay formulario ni panel: su
-[documentación](https://axiomdocs.moulberry.com/) no menciona la whitelist, y
-en Modrinth el enlace de *issues* apunta al mismo Discord.
+El candado no está en el servidor: `AxiomServer` solo comprueba permisos
+(`axiom.*` o ser OP). Quien decide es **el cliente**, con este método:
 
-> **Por qué lo tienes que pedir tú:** la whitelist se concede **por UUID**. Sus
-> propios términos lo dicen: *"Axiom sends a request with your UUID to
-> `https://axiom.moulberry.com/`"*. Es tu cuenta la que se autoriza, no la mía.
+```
+Authorization.checkServer(server, host, uuid)
+  → GET https://axiom.moulberry.com/api/mcauth/connect?uuid=…&server=…&host=…
+  → HTTP != 200                      → NO          bloqueado
+  → JWT con claim commercial = true  → COMMERCIAL  exige licencia de pago
+  → JWT con claim commercial = false → YES         permitido
+```
 
-> ⚠️ **Riesgo real, y conviene saberlo antes de escribirles:** el servidor está
-> en `online-mode=false` porque `TheJuanCE` no es cuenta premium (CLAUDE.md §0).
-> En ese modo el UUID **no lo emite Mojang**, se deriva del nombre. Si su
-> verificación exige un UUID premium, la whitelist podría no aplicarse aunque
-> te la concedan. **No lo he podido comprobar** — se sabrá al pedirla.
-> Si falla, el flujo `.schem` → `//paste` del §4 sigue funcionando igual.
+Y en `ClientEvents`, `YES` hace `allowedOnServer = true`. Sin más condiciones.
 
-> Cuando el servidor sea público hay una segunda vía en el mismo sitio:
-> *"Large public servers may also request a **permanent server whitelist**"*.
+Consultado con nuestros datos reales, el 2026-08-11:
 
-**Mientras tanto no estás bloqueado.** Axiom en local es libre sin ningún
-trámite, y el flujo `.schem` → `//paste` del §4 funciona hoy. De hecho es mejor
-flujo: sin lag, sin nadie mirando, y el `.schem` queda como copia de seguridad.
+```
+GET …/connect?uuid=432ef323-…&server=s12.mia.us.tarohosting.com:33043
+HTTP 200   {"commercial": false, "sub": "432ef323-…/s12.mia.us…:33043"}
+        → YES → allowedOnServer = true
+```
+
+**Responde autorizado con el UUID offline**, así que `online-mode=false`
+tampoco lo impide — el riesgo que había anotado aquí no existe.
+
+> **Lo que sigue siendo cierto:** que no haya candado técnico no cambia sus
+> términos. La licencia comercial la piden a *"people who make money **through
+> building**"* — estudios que cobran por construir. No es nuestro caso (D-022).
+> Si algún día lo fuera, se compra.
+
+| Paso | Estado |
+|---|---|
+| Axiom en el servidor | ✅ hecho |
+| Axiom en el cliente | ✅ instalado en la instancia de PrismLauncher |
+| Pedir whitelist en su Discord | ❌ **innecesario** — `https://discord.gg/axiomtool` si algún día cambia |
+
+> **Si algún día dejara de funcionar**, el síntoma sería el mensaje
+> *"This server has Axiom, but your client doesn't support multiplayer"*, y el
+> diagnóstico se pide con el comando `/whynoaxiom`. El flujo `.schem` →
+> `//paste` del §4 seguiría funcionando igual.
 
 ---
 
@@ -155,9 +169,40 @@ flujo: sin lag, sin nadie mirando, y el `.schem` queda como copia de seguridad.
 
 1. ~~Instalar **WorldEdit** en el servidor~~ ✅ hecho
 2. ~~Instalar **Axiom** en el servidor~~ ✅ hecho
-3. Instalar el **pack de constructor** en tu cliente — trae Axiom y WorldEdit
-   CUI ya montados ([client-pack.md](../technical/client-pack.md))
-4. Crear un mundo local en **creativo, superplano, sin estructuras**
+3. ~~Instalar el **pack de constructor** en tu cliente~~ ✅ hecho: la instancia
+   `PokeReport-LunaEternal-0.1.0` ya lleva Axiom y WorldEdit CUI
+4. *(opcional)* Un mundo local en **creativo, superplano** si prefieres
+   construir fuera y pegar después
+
+### Entrar a construir
+
+```
+1. PrismLauncher → instancia PokeReport-LunaEternal-0.1.0 → Launch
+2. Multijugador → "PokeReport : Luna Eternal" (ya está en la lista)
+3. /gamemode creative
+4. /execute in lunaeternal:ciudadela run tp @s 0 64 0
+5. Pulsa  Shift derecho  → se abre el editor de Axiom
+```
+
+Teclas por defecto, **leídas del propio jar** (códigos GLFW en `ClientEvents`),
+no de memoria:
+
+| Tecla | Código | Qué hace |
+|---|---|---|
+| **Shift derecho** | 344 | Abre y cierra el editor (`toggle_editor_ui`) |
+| **Alt izquierdo** | 342 | Menú contextual: vuelo, no-clip, alcance infinito |
+| `R` | 82 | Modo reemplazo |
+| `0` | 48 | Ranura de herramienta de constructor |
+
+> `/whynoaxiom` es el comando de diagnóstico si el editor no se activa.
+
+> **Hace falta ser OP**, y lo eres (nivel 4). `AxiomServer` comprueba el permiso
+> `axiom.*` o el nivel de operador; sin eso responde *"The server hasn't given
+> you permission to use Axiom. Do you have OP?"*.
+
+> **Hace falta ser OP**, y lo eres (nivel 4). `AxiomServer` comprueba el permiso
+> `axiom.*` o el nivel de operador; sin eso responde *"The server hasn't given
+> you permission to use Axiom. Do you have OP?"*.
 
 ### Cada vez que se construya algo
 
@@ -228,7 +273,7 @@ Nada de eso se puede hacer contra una dimensión vacía.
 ## Next Actions
 
 1. ~~Instalar WorldEdit y Axiom en el servidor~~ ✅ hecho
-2. **Pedir la whitelist multijugador en el Discord de Axiom** (§3-bis) — tuyo
+2. ~~Pedir la whitelist de Axiom~~ ❌ innecesaria (§3-bis)
 3. Decidir vía: descargar una base o construir desde cero
 4. Construir plaza + laboratorio
 5. Avisarme con las coordenadas → fijo spawn, NPC del inicial, taxi y `PCLink`

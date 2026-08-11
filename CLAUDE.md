@@ -35,6 +35,7 @@ Cliente       jugador     -0.1.0.mrpack · 136 MB · 7 mods
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
 Construcción  WorldEdit 7.3.8 + Axiom 5.4.2 cargados · plataforma 80×80
+              Axiom edita en vivo SIN whitelist (verificado por su API)
 ```
 
 > ⚠️ **`online-mode` tiene que ser `false`.** Verificado: `TheJuanCE` no existe
@@ -143,7 +144,6 @@ Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 | `SEC-006` | ¿El servidor nuevo nace con `online-mode=true`? Condiciona el anti-abuso |
 | `SEC-004` | Leer el texto oficial de Mojang sobre monetización (no accesible desde aquí) |
 | `INF-002` · `INF-007` | Backups fuera del hosting (mundo **y** base de datos) |
-| `BLD-002` | **Pedir la whitelist multijugador de Axiom en su Discord.** Gratis. El mod ya está instalado, pero sin ese trámite no editará en vivo |
 
 ---
 

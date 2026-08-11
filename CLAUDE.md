@@ -28,7 +28,7 @@ Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Tienda · GTS
               Barra lateral y tablist con rangos
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
-              creadas por datapack y verificadas
+Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
 ```
 
 > ⚠️ **`online-mode` tiene que ser `false`.** Verificado: `TheJuanCE` no existe
@@ -52,14 +52,17 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: `PKM-004`, el datapack de generaciones
+### Siguiente tarea: la Pokédex (`UI-013`)
 
-**Los sistemas económicos ya están completos**: economía, tienda y GTS, los
-tres con sus invariantes automatizados. Toca el contenido Pokémon.
+Los sistemas económicos y el contenido base están. La Pokédex es la sección
+que da sentido a la vía Coleccionista y la que enseña qué falta por descubrir.
 
-`PKM-004` apaga todo lo que no sea Kanto y Johto con `"enabled": false`
-(D-017). Requiere un script que genere ~774 ficheros y auditar las cadenas
-evolutivas que cruzan generaciones.
+> ⚠️ **`PKM-004` está desplegado pero NO verificado en el juego.** El datapack
+> carga (aparece el último en `datapack list`, que es lo que le da prioridad
+> sobre Cobblemon), pero `/checkspawn` **exige un jugador conectado**, así que
+> desde consola no puedo comprobar que un Gen 3 ya no aparece.
+> **Cuando entres:** `/checkspawn common` en el Mundo Salvaje. Si sale algo de
+> Hoenn en adelante, el datapack no está surtiendo efecto.
 
 > **Cobblemon 1.7.3 ya está instalado** y el código fuente clonado en
 > `vendor/cobblemon` (336 MB, git-ignorado; se recupera con

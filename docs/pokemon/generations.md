@@ -16,12 +16,16 @@ generaciones con el tiempo.
 
 ## Current Status
 
-**PROPUESTA.** Decisión del usuario: arrancar solo con la primera y la segunda
-generación.
+**IMPLEMENTADO** (2026-08-11). Datapack generado y desplegado:
+**251 especies activas, 583 spawns apagados**. Generador en
+`tools/gen_generaciones.py`.
+
+⚠️ Carga confirmada, **efecto en el juego sin verificar**: `/checkspawn`
+requiere un jugador conectado.
 
 ## Last Decision
 
-Pendiente de registrar.
+D-017 · y la decisión de **no bloquear las evoluciones que cruzan** (§3-bis).
 
 ---
 
@@ -100,16 +104,47 @@ no toca y las apaga.** Nada de borrar archivos ni tocar el jar.
 > Coherente con la práctica del proyecto anterior que conservamos: **nada se
 > escribe a mano, todo se regenera desde un script.**
 
-### Lo que hay que comprobar antes
+### Lo comprobado
 
-- [ ] Que un Pokémon apagado **no aparece** por incursión, pesca ni huevo
-- [ ] Que las **evoluciones** no llevan fuera del rango activo
-      (ej.: un Gen 2 que evoluciona de un Gen 1 debe estar activo también)
-- [ ] Que la Pokédex muestra solo lo activo, o marca lo demás como "aún no"
-- [ ] Que la **cría** no produce especies apagadas
+- [x] **23 evoluciones cruzan** fuera de Kanto/Johto — auditadas una a una
+- [x] Nombres con caracteres raros normalizados (`farfetch'd`, `porygon-z`,
+      `mr. mime`…). **Sin esto, 4 especies de generaciones posteriores
+      —porygonz, mimejr, jangmoo, hakamoo— se habrían quedado activas**
+- [x] Comprobación cruzada: cero fugas entre los 823 ficheros
+- [x] La carpeta `herds/` solo tiene a Bulbasaur (Gen 1): no hay fuga por ahí
+- [ ] Que un Pokémon apagado no aparece por incursión, pesca ni huevo
+- [ ] Que la cría no produce especies apagadas
 
-El segundo es el que más cuidado necesita: las cadenas evolutivas cruzan
-generaciones en ambos sentidos.
+---
+
+## 3-bis. Las 23 evoluciones que cruzan — decisión
+
+Apagar el spawn **no** impide evolucionar. Podría haberlas bloqueado; **no lo
+hago, y es deliberado.**
+
+Esas 23 especies pasan a existir **únicamente por evolución**, nunca por
+aparición natural. Eso las convierte en las más difíciles del servidor: hay
+que tener la base, saber el requisito y cumplirlo.
+
+El caso que lo resume:
+
+```
+ursaring → ursaluna    requiere LUNA LLENA y de noche
+```
+
+Es literalmente el pilar de [vision.md](../game-design/vision.md) §3.1 —
+*saber cuándo es la progresión*— implementado de fábrica por Cobblemon.
+Bloquearlo sería tirar identidad a la basura.
+
+Las otras 22: ambipom, dudunsparce, sylveon, leafeon, glaceon, electivire,
+farigiraf, gliscor, lickilicky, magmortar, magnezone, mismagius, honchkrow,
+mamoswine, annihilape, rhyperior, kleavor, weavile, wyrdeer, tangrowth,
+togekiss, yanmega.
+
+> **Pendiente:** varias piden objetos de generaciones posteriores
+> (`electirizer`, `magmarizer`, `protector`, `razor_fang`, `razor_claw`). Si
+> esos objetos no son obtenibles, la evolución es un callejón sin salida que
+> frustra. Deben entrar en la tienda o en Tesoros — tarea `PKM-005`.
 
 ---
 

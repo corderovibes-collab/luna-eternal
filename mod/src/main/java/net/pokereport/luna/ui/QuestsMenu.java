@@ -24,7 +24,7 @@ public final class QuestsMenu extends Menu {
     private final List<QuestService.State> estados;
 
     private QuestsMenu(PlayerSnapshot data, List<QuestService.State> estados) {
-        super("§8✦ §aMisiones §8✦", 6);
+        super("§8✦ §aMisiones §8✦", 6, "misiones");
         this.data = data;
         this.estados = estados;
     }

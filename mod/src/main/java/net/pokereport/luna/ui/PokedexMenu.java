@@ -35,7 +35,8 @@ public final class PokedexMenu extends Menu {
     private PokedexMenu(PlayerSnapshot data, PokedexService.Summary resumen,
                         Map<Integer, PokedexService.Entry> registro, int pagina) {
         super("§8✦ §bPokédex §8· §7" + (pagina * POR_PAGINA + 1)
-              + "-" + Math.min((pagina + 1) * POR_PAGINA, TOTAL) + " §8✦", 6);
+              + "-" + Math.min((pagina + 1) * POR_PAGINA, TOTAL) + " §8✦", 6,
+              "pokedex");
         this.data = data;
         this.resumen = resumen;
         this.registro = registro;

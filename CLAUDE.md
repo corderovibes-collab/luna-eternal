@@ -24,7 +24,7 @@ Cobblemon     1.7.3 instalado · Done (9,0 s) · ~1,9 GB de 4096
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 96/96 invariantes correctos
+Autotest      /luna autotest -> 109/109 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Tienda · GTS · Pokédex · Kits · Inicial · Curar
               Misiones (6 de tutorial + 2 diarias)
@@ -37,6 +37,9 @@ Cliente       jugador     -0.1.0.mrpack · 136 MB · 7 mods
               Fabric Loader 0.19.3 (Cobblemon exige >= 0.17.2)
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
+Interfaz2.0   resource pack propio · 10 fondos · fuente de espacio negativo
+              require-resource-pack=true · se descarga solo al entrar
+              repos: luna-eternal (privado) · luna-eternal-pack (publico)
 Construcción  WorldEdit 7.3.8 + Axiom 5.4.2 cargados · plataforma 80×80
               Axiom edita en vivo SIN whitelist (verificado por su API)
 ```

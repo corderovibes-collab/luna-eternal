@@ -21,7 +21,7 @@ public final class ShopMenu extends Menu {
     private final ShopCatalog catalog;
 
     public ShopMenu(PlayerSnapshot data) {
-        super("§8✦ §6Tienda §8✦", 4);
+        super("§8✦ §6Tienda §8✦", 4, "tienda");
         this.data = data;
         this.catalog = LunaEternal.shop();
     }

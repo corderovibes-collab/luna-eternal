@@ -13,7 +13,21 @@ se arregla sin romper P10.
 
 ## Current Status
 
-`DESIGN`. La técnica está verificada como viable; no hay nada implementado.
+`DONE` la infraestructura · `PENDING` el arte.
+
+**Desplegado y verificado el 2026-08-11.** El servidor sirve el pack, el mod
+dibuja los 10 fondos y el autotest pasa 109/109.
+
+| | |
+|---|---|
+| Pack | `luna-eternal-pack` v1.0.0, público, SHA-1 verificado tras descarga |
+| Servidor | `require-resource-pack=true`, `resource-pack-id` fijo |
+| Mod | `Skin.java` + `Menu(title, rows, skin)` · `Interfaz: 10 fondos cargados` |
+| Arte | ⚠️ **marcadores de posición.** Falta `ART-001` |
+
+> Las texturas actuales son cuadros morados con una rejilla de comprobación.
+> **Sirven para validar que la alineación es exacta al píxel**, no para ser
+> bonitas. El sistema está listo; lo que falta es dibujar.
 
 ## Last Decision
 
@@ -175,9 +189,9 @@ Analizado el 2026-08-11: `cobblemon-fabric` 1.7.3, **76 mods, 180,7 MB**.
 
 | # | Tarea | Depende de |
 |---|---|---|
-| `UI-016` | Crear el repositorio en GitHub y publicar el primer pack vacío | — |
-| `UI-017` | Fuente de espacio negativo + script generador | `UI-016` |
-| `UI-018` | Fondo propio del Almanaque, como prueba de concepto | `UI-017` |
+| ~~`UI-016`~~ | ✅ Repositorios creados y pack publicado | — |
+| ~~`UI-017`~~ | ✅ Fuente de espacio negativo + `gen_resourcepack.py` | — |
+| ~~`UI-018`~~ | ✅ Las 10 pantallas ya llevan fondo | — |
 | `ART-001` | **Arte real**: fondos, marcos, iconos | `UI-018` |
 | `UI-019` | Migrar el resto de pantallas al nuevo estilo | `ART-001` |
 | `UI-020` | BossBar, ActionBar y Titles con la fuente propia | `UI-017` |

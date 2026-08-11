@@ -24,7 +24,7 @@ public final class KitsMenu extends Menu {
     private final Map<String, KitService.Status> estados;
 
     private KitsMenu(PlayerSnapshot data, Map<String, KitService.Status> estados) {
-        super("§8✦ §aKits §8✦", 4);
+        super("§8✦ §aKits §8✦", 4, "kits");
         this.data = data;
         this.estados = estados;
     }

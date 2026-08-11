@@ -71,6 +71,7 @@ public final class AutoTest {
             testKits(a);
             testQuests(a);
             testTelemetria(a, b);
+            testSkins();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -248,6 +249,37 @@ public final class AutoTest {
      * mano en la configuración de producción. Aquí queda automatizado para que
      * <b>no pueda reaparecer</b> el día que alguien retoque un precio.
      */
+    /**
+     * Fondos de las interfaces (D-023).
+     *
+     * <p>El fallo que esto atrapa no es visible leyendo el código: si el
+     * nombre de un fondo en Java no coincide con el del generador de Python,
+     * el menú sale gris <b>sin ningún error</b>. Nadie se entera hasta que un
+     * jugador dice «esta pantalla se ve rara».
+     */
+    private void testSkins() {
+        check("el mapa de fondos está cargado",
+              net.pokereport.luna.ui.Skin.disponible());
+        if (!net.pokereport.luna.ui.Skin.disponible()) return;
+
+        // Cada pantalla que declara fondo debe tenerlo en el pack.
+        for (String s : new String[]{"almanaque", "cartera", "vias", "misiones",
+                                     "gts", "pokedex", "puerta", "tienda",
+                                     "kits", "centro"}) {
+            check("existe el fondo '" + s + "'",
+                  net.pokereport.luna.ui.Skin.tiene(s));
+        }
+
+        // Un fondo inexistente no puede reventar: tiene que degradar a gris.
+        var t = net.pokereport.luna.ui.Skin.title("no-existe", "X");
+        check("un fondo inexistente degrada sin excepción", t != null);
+
+        // Sin fondo declarado, el título sale tal cual.
+        var plano = net.pokereport.luna.ui.Skin.title(null, "Hola");
+        check("sin fondo, el título es el texto plano",
+              plano.getString().equals("Hola"));
+    }
+
     private void testShopCatalog() {
         var catalog = LunaEternal.shop();
         check("el catálogo de la tienda está cargado", catalog != null);

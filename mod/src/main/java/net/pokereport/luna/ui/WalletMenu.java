@@ -23,7 +23,7 @@ public final class WalletMenu extends Menu {
     private final PlayerSnapshot data;
 
     public WalletMenu(PlayerSnapshot data) {
-        super("§8✦ §eCartera §8✦", 6);
+        super("§8✦ §eCartera §8✦", 6, "cartera");
         this.data = data;
     }
 

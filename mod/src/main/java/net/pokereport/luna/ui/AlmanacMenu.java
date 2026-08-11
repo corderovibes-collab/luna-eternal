@@ -23,7 +23,7 @@ public final class AlmanacMenu extends Menu {
     private final PlayerSnapshot data;
 
     public AlmanacMenu(PlayerSnapshot data) {
-        super("§8✦ §6El Almanaque §8✦", 6);
+        super("§8✦ §6El Almanaque §8✦", 6, "almanaque");
         this.data = data;
     }
 

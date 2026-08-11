@@ -29,7 +29,7 @@ public final class GtsMenu extends Menu {
     private final int page;
 
     public GtsMenu(PlayerSnapshot data, List<GtsService.Listing> listings, int page) {
-        super("§8✦ §6GTS §8· §7página " + (page + 1) + " §8✦", 6);
+        super("§8✦ §6GTS §8· §7página " + (page + 1) + " §8✦", 6, "gts");
         this.data = data;
         this.listings = listings;
         this.page = page;

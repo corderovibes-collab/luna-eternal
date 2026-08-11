@@ -23,7 +23,7 @@ public final class WorldGateMenu extends Menu {
     private final int daysToReset;
 
     public WorldGateMenu(int daysToReset) {
-        super("§8✦ §3Puerta del Mundo §8✦", 5);
+        super("§8✦ §3Puerta del Mundo §8✦", 5, "puerta");
         this.daysToReset = daysToReset;
     }
 

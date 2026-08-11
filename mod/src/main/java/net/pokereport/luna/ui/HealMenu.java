@@ -34,7 +34,7 @@ public final class HealMenu extends Menu {
     private final long segundosRestantes;
 
     private HealMenu(PlayerSnapshot data, List<Pokemon> equipo, long restantes) {
-        super("§8✦ §aCentro Pokémon §8✦", 3);
+        super("§8✦ §aCentro Pokémon §8✦", 3, "centro");
         this.data = data;
         this.equipo = equipo;
         this.segundosRestantes = restantes;

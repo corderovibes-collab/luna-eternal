@@ -163,6 +163,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             kitService = new net.pokereport.luna.kit.KitService(database);
             quests = new net.pokereport.luna.quest.QuestService(database);
             stats = new net.pokereport.luna.economy.EconomyStats(database);
+            // Fondos de las interfaces (D-023). Si falla, los menús salen
+            // grises pero el servidor arranca igual: es cosmético.
+            net.pokereport.luna.ui.Skin.load();
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);

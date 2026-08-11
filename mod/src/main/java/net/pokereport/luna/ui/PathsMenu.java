@@ -20,7 +20,7 @@ public final class PathsMenu extends Menu {
     private final PlayerSnapshot data;
 
     public PathsMenu(PlayerSnapshot data) {
-        super("§8✦ §dTus Vías §8✦", 6);
+        super("§8✦ §dTus Vías §8✦", 6, "vias");
         this.data = data;
     }
 

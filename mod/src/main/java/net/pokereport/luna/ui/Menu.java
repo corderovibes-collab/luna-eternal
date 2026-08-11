@@ -43,15 +43,28 @@ public abstract class Menu implements NamedScreenHandlerFactory {
     private final SimpleInventory inventory;
     private final Map<Integer, ClickAction> actions = new HashMap<>();
 
+    /** Fondo propio de esta pantalla (D-023). {@code null} = cofre gris. */
+    private final String skin;
+
     /** Menú al que vuelve el botón "atrás". {@code null} si es la raíz. */
     private Menu parent;
 
     protected Menu(String title, int rows) {
+        this(title, rows, null);
+    }
+
+    /**
+     * @param skin nombre del fondo en {@code gui_chars.json}. Si la pantalla
+     *             aún no tiene arte, se pasa {@code null} y sale el cofre
+     *             normal — se puede migrar pantalla a pantalla.
+     */
+    protected Menu(String title, int rows, String skin) {
         if (rows < 1 || rows > 6) {
             throw new IllegalArgumentException("Un cofre tiene entre 1 y 6 filas");
         }
         this.title = title;
         this.rows = rows;
+        this.skin = skin;
         this.inventory = new SimpleInventory(rows * COLS);
     }
 
@@ -159,7 +172,7 @@ public abstract class Menu implements NamedScreenHandlerFactory {
 
     @Override
     public Text getDisplayName() {
-        return Text.literal(title).setStyle(Style.EMPTY.withItalic(false));
+        return Skin.title(skin, title);
     }
 
     @Override

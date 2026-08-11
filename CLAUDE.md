@@ -6,7 +6,7 @@
 **Última actualización:** 2026-08-11
 **Fase actual:** PHASE 2 — Core progression
 **Estado:** PHASE 0 y PHASE 1 completadas. 22 documentos, decisiones D-001 a
-D-022. **El mod está desplegado y funcionando contra MariaDB:** economía de
+D-024. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, cinco vías de progresión, y las interfaces base operativas.
 
 ---
@@ -121,6 +121,12 @@ Después: **construir la ciudadela** (`WLD-005`) y **gimnasios** (`UI-015`).
 Lo otro que falta es **construir la ciudadela**, y eso no es programación.
 
 Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
+
+> ⚠️ **La interfaz actual es funcional pero fea, y el usuario lo dijo.** Son
+> menús de cofre vanilla. El plan para arreglarlo sin obligar a instalar nada
+> está en [visual-identity.md](docs/ui/visual-identity.md) (D-023): resource
+> pack con fuente de espacio negativo. **El cuello de botella será el arte, no
+> el código.**
 
 > **Tesoros ya está decidido** (D-020): cofres con legendarios, como
 > Diosesmon. El análisis de riesgo queda archivado en
@@ -293,6 +299,8 @@ documentación · migración · rollback.
 | D-019 | 2026-08-11 | **No se venden Modificadores de estadísticas** (Diosesmon sí) | Un legendario es *una pieza*; un modificador es una mejora repetible sin techo aplicable a cualquier Pokémon. Lo segundo no tiene fondo |
 | D-021 | 2026-08-11 | **Cobblemon se instala desde el jar oficial, y su código fuente se clona como referencia** | Tener el fuente da la verdad sobre IDs, spawns y API sin adivinar. Ya sirvió: encontró la `moon_ball`, cuya efectividad depende de la fase lunar |
 | D-020 | 2026-08-11 | **Los cofres incluyen legendarios y legendarios shiny**, como Diosesmon | **Decisión del usuario, tomada tras leer el análisis de riesgo** de [treasures.md](docs/economy/treasures.md) §2. T4 admite esta excepción explícita. Obligatorias: probabilidades públicas, piedad acumulada, idempotencia y auditoría |
+| D-023 | 2026-08-11 | **La interfaz se hace bonita con un resource pack** (fuente de espacio negativo + `custom_model_data`), no con un mod de cliente | **Crítica del usuario, y tenía razón**: los menús de cofre vanilla parecen un plugin de 2015. Apliqué P10 como si fuera "solo servidor y punto", sin ver que **un resource pack no es un mod**: lo envía el servidor, el jugador no instala nada, y P10 queda intacto. Ver [visual-identity.md](docs/ui/visual-identity.md) |
+| D-024 | 2026-08-11 | **El modpack oficial de Cobblemon NO se adopta**; se cosechan mods sueltos | 76 mods y 180 MB de cosas **de cliente**: shaders, mapas, partículas. Cero reglas de juego, que es lo único que nos diferencia. Y **`stendhal` es CC-BY-NC-ND**: no comercial y sin derivadas, la misma trampa que CobbleVerse (D-006) |
 | D-022 | 2026-08-11 | **Axiom se instala en el servidor**, y el pack de cliente se parte en dos: jugador y constructor | **Corrección mía.** Leí su licencia como si nos afectara la cláusula comercial; esa apunta a quien *cobra por construir*, no a quien construye su propio servidor. El uso no comercial en servidor privado es gratuito y solo pide una whitelist en su Discord. El pack se separa porque son 46 MB que un jugador no usa jamás (P10) |
 
 ## 6. Decisiones PENDIENTES (bloqueantes)

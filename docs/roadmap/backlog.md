@@ -170,7 +170,12 @@ puede tocar**).
 | `PKM-002` | Diseño del inicial | — |
 | `PKM-003` | Cupo y condiciones de legendarios | — |
 | `SOC-001` | Clanes | — |
-| `ART-001` | Arte de interfaces | pantallas hechas |
+| `UI-016` | Repositorio en GitHub y alojamiento del resource pack | D-023 |
+| `UI-017` | Fuente de espacio negativo + generador del pack | `UI-016` |
+| `UI-018` | Fondo propio del Almanaque (prueba de concepto) | `UI-017` |
+| `UI-019` | Migrar el resto de pantallas al estilo nuevo | `ART-001` |
+| `UI-020` | BossBar, ActionBar y Titles con la fuente propia | `UI-017` |
+| `ART-001` | **Arte de interfaces** — fondos, marcos, iconos. **Cuello de botella real** | `UI-018` |
 | `SEC-005` | Licencias de todos los mods candidatos | D-008 |
 | `AUD-004` | Clasificar los 74 mods sin categorizar | — |
 | `INF-003` | Flags de JVM | `INF-005` |

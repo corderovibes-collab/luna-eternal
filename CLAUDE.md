@@ -105,6 +105,14 @@ Después: **construir la ciudadela** (`WLD-005`) y **gimnasios** (`UI-015`).
 > El orden anterior ponía la telemetría primero. **Estaba mal**: medir una
 > economía que nadie puede jugar no sirve de nada.
 
+> ⚠️ **NUNCA reemplaces el jar del cliente con Minecraft abierto.** Fabric
+> carga las clases cuando las necesita, así que el juego sigue tan tranquilo
+> hasta que toca cargar una nueva — y entonces revienta con
+> `ZipFile invalid LOC header` dentro de un stack de netty que **no se parece
+> en nada a la causa**. Usa `python tools/instalar_cliente.py`, que se niega a
+> copiar si el juego está abierto y comprueba la copia leyendo una clase de
+> dentro.
+
 > ⚠️ **Al desplegar, verifica el tamaño del jar.** Una subida se corrompió sin
 > dar error (`Unexpected end of ZLIB input stream`) y el tamaño coincidía. Lo
 > fiable es **borrar el jar antiguo antes de subir** el nuevo.
@@ -194,6 +202,7 @@ cualquier sistema es:
 | P6 | **Nunca confiar en el cliente.** Toda validación económica es de servidor. |
 | P7 | **Nada crítico vive solo en la conversación.** Va a documentación. |
 | P8 | **Producción es sagrada.** `2a0a48ff` es READ-ONLY hasta que exista plan aprobado. |
+| P9-bis | **Toda interfaz nueva se hace en el Pad.** Se instala en el cliente, y **el servidor decide cuándo abrirla y con qué contenido** (D-025). Los menús de cofre son legado: se conservan como respaldo para clientes sin el mod, no se amplían. |
 | P9 | **Interfaz, nunca comando.** Todo se hace con clics (D-012). Si el diseño de un sistema termina en *"el jugador escribe `/algo`"*, está incompleto. |
 | P10 | **El cliente pesa poco; eso no significa que no haga nada.** El límite es el **peso de la descarga**, no la ambición de la interfaz. Referencia: **136 MB frente a los 8 GB de Diosesmon**. Un mod propio de cliente de 300 KB no toca esa cifra, así que **no está limitado por este principio** (D-025). Lo que sí sigue prohibido es engordar el pack con mods ajenos que no aporten (P5). Ver [client-pack.md](docs/technical/client-pack.md). |
 

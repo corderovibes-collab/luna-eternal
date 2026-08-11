@@ -25,6 +25,8 @@ BD            MariaDB s11945_luna · 3 monedas · 5 vías
 Autotest      /luna autotest -> 31/31 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Barra lateral y tablist con rangos
+Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
+              creadas por datapack y verificadas
 ```
 
 > ⚠️ **`online-mode` tiene que ser `false`.** Verificado: `TheJuanCE` no existe
@@ -48,14 +50,13 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: las dimensiones (`WLD-002`)
+### Siguiente tarea: Tienda y GTS
 
-Las tres pantallas base ya están. Lo que las limita ahora es que **el mundo no
-existe**: la Puerta del Mundo enseña las dos tarjetas pero no lleva a ninguna
-parte, y los Viajes no tienen destinos.
+Las dimensiones ya existen y la Puerta del Mundo teletransporta. Lo que falta
+para que la ciudadela sea algo es **construirla**, y eso no es programación.
 
-Crear las dimensiones por datapack es barato y desbloquea las dos.
-Después: **Tienda** y **GTS**, que son los sistemas grandes.
+En código, los siguientes son los dos sistemas grandes: **Tienda** (`UI-011`)
+y **GTS** (`UI-012`, diseño en [gts.md](docs/trading/gts.md)).
 
 Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 

@@ -55,7 +55,7 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 2b | **Tablist** (cabecera, pie, rangos) | ✅ hecho | — | — |
 | 3 | **Cartera** | ✅ hecho | — | — |
 | 4 | **Vías** | ✅ hecho | — | — |
-| 5 | **Puerta del mundo** | ✅ hecho | — | dimensiones pendientes |
+| 5 | **Puerta del mundo** | ✅ hecho | — | — |
 | 6 | **Viajes / LunaTaxi** | ⬜ | 🟠 | ciudadela construida |
 | 7 | **Tienda** | ⬜ | 🟠 | catálogo y precios |
 | 8 | **GTS** | ⬜ | 🟠 | `TRD-002` |
@@ -74,8 +74,9 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 21 | **Historial** | ⬜ | ⚪ | `ledger_entry` (ya existe) |
 | 22 | **Rangos** | ⬜ | ⚪ | catálogo |
 
-Las tres rojas ya están hechas. **Lo que ahora limita a Viajes y a la Puerta
-del Mundo no es la interfaz: es que las dimensiones no existen** (`WLD-002`).
+Las tres rojas están hechas y **las dimensiones ya existen** (`WLD-002`): la
+Puerta del Mundo teletransporta de verdad. Lo que falta ahora es **construir**
+la ciudadela, no programarla.
 
 ---
 
@@ -198,9 +199,9 @@ base es una lista de destinos con iconos — funciona igual de bien y no bloquea
 
 ## Next Actions
 
-1. `WLD-002` — crear las dimensiones; desbloquea Viajes y Puerta del Mundo
-2. `UI-011` — Tienda
-3. `UI-012` — GTS (el sistema grande)
+1. `UI-011` — Tienda
+2. `UI-012` — GTS
+3. `WLD-005` — construir la ciudadela (no es programación)
 4. `ART-001` — arte, cuando haya pantallas que vestir
 
 ## Related Systems

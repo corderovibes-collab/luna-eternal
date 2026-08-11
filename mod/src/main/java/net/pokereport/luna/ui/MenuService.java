@@ -22,11 +22,34 @@ import net.pokereport.luna.economy.Currency;
  */
 public final class MenuService {
 
+    /**
+     * Ficha en memoria de cada jugador conectado.
+     *
+     * <p>Es lo que permite que la barra lateral se repinte cada segundo sin
+     * tocar la base de datos ni una sola vez.
+     */
+    private static final java.util.Map<java.util.UUID, PlayerSnapshot> CACHE =
+        new java.util.concurrent.ConcurrentHashMap<>();
+
     private MenuService() {}
 
     /** Carga la ficha del jugador y abre El Almanaque. */
     public static void openAlmanac(ServerPlayerEntity player) {
         loadSnapshot(player, snapshot -> new AlmanacMenu(snapshot).open(player));
+    }
+
+    /** Ficha en caché, o {@code null} si todavía no se ha cargado. */
+    public static PlayerSnapshot cached(ServerPlayerEntity player) {
+        return CACHE.get(player.getUuid());
+    }
+
+    public static void forget(ServerPlayerEntity player) {
+        CACHE.remove(player.getUuid());
+    }
+
+    /** Recarga desde la base y actualiza la caché. */
+    public static void refresh(ServerPlayerEntity player) {
+        loadSnapshot(player, s -> {});
     }
 
     /**
@@ -54,6 +77,7 @@ public final class MenuService {
                     var world = player.getWorld();
                     snap.moonPhase = world.getMoonPhase();
                     snap.night = !world.isDay();
+                    CACHE.put(player.getUuid(), snap);
                     then.accept(snap);
                 });
 

@@ -59,7 +59,7 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 6 | **Viajes / LunaTaxi** | ⬜ | 🟠 | ciudadela construida |
 | 7 | **Tienda** | ✅ hecho | — | — |
 | 8 | **GTS** | ✅ hecho | — | Pokémon cuando haya Cobblemon |
-| 9 | **Pokédex** | 🟡 datos ✔, pantalla ⬜ | 🔴 | — |
+| 9 | **Pokédex** | ✅ hecho | — | — |
 | 10 | **Kits** | ⬜ | 🟠 | rangos |
 | 11 | **Misiones** | ⬜ | 🟡 | sistema de quests |
 | 12 | **Cazas** | ⬜ | 🟡 | rotación |
@@ -199,8 +199,8 @@ base es una lista de destinos con iconos — funciona igual de bien y no bloquea
 
 ## Next Actions
 
-1. `PKM-004` — datapack de generaciones (Kanto + Johto)
-2. `UI-013` — Pokédex
+1. `UI-014` — Kits (inicial gratuito)
+2. `UI-015` — Medallas
 3. `WLD-005` — construir la ciudadela (no es programación)
 4. `ART-001` — arte, cuando haya pantallas que vestir
 

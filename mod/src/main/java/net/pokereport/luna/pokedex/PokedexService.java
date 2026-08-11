@@ -101,6 +101,35 @@ public final class PokedexService {
         }
     }
 
+    /**
+     * Número de Pokédex más bajo que el jugador aún no ha capturado.
+     *
+     * <p>Se resuelve <b>en la base</b>, no mirando la página que se está
+     * enseñando: con la página en memoria solo se ve una ventana de 28
+     * entradas, y el "ir a lo que falta" acabaría mandando siempre al
+     * principio.
+     *
+     * @return el número, o {@code maxDex + 1} si ya están todas
+     */
+    public int firstUncaughtDex(long playerId, int maxDex) throws SQLException {
+        var capturadas = new java.util.HashSet<Integer>();
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement("""
+                SELECT dex_number FROM pokedex_entry
+                WHERE player_id = ? AND caught = 1 AND dex_number <= ?
+                """)) {
+            ps.setLong(1, playerId);
+            ps.setInt(2, maxDex);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) capturadas.add(rs.getInt(1));
+            }
+        }
+        for (int dex = 1; dex <= maxDex; dex++) {
+            if (!capturadas.contains(dex)) return dex;
+        }
+        return maxDex + 1;
+    }
+
     public Summary summary(long playerId) throws SQLException {
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement("""

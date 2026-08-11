@@ -26,7 +26,7 @@ Mod           lunaeternal 0.1.0 · migraciones V001 a V007 aplicadas
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
 Autotest      /luna autotest -> 66/66 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
-              Tienda · GTS
+              Tienda · GTS · Pokédex
               Barra lateral y tablist con rangos
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
@@ -53,11 +53,13 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### Siguiente tarea: la pantalla de Pokédex
+### Siguiente tarea: Kits y Medallas
 
-**La Pokédex ya funciona por debajo**: capturar anota la especie, da Marcas la
-primera vez y sube la vía Coleccionista. Lo que falta es **la pantalla** que lo
-enseñe (`UI-013`).
+La Pokédex está completa: capturar anota, da Marcas la primera vez, sube la vía
+Coleccionista, y la pantalla enseña las 1 025 entradas con sus cuatro estados.
+
+Lo siguiente que da valor al jugador nuevo es **Kits** (`UI-014`) — el inicial
+gratuito — y después **Medallas** (`UI-015`).
 
 > ⚠️ **Al desplegar, verifica el tamaño del jar.** Una subida se corrompió sin
 > dar error (`Unexpected end of ZLIB input stream`) y el tamaño coincidía. Lo

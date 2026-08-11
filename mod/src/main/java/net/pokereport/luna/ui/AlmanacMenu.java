@@ -77,7 +77,12 @@ public final class AlmanacMenu extends Menu {
 
     private void pokemonRow() {
         group(1, "§b✦ TUS POKÉMON");
-        open(1, 2, Items.ENCHANTED_BOOK, "§bPokédex", "Lo que has visto y capturado.", "Pokédex");
+        set(1, 2, Icon.of(Items.ENCHANTED_BOOK)
+                .name("§bPokédex")
+                .line("§7Lo que has visto y capturado.")
+                .action("Clic para abrir")
+                .build(),
+            (p, b) -> PokedexMenu.open(p, this, 0));
         open(1, 3, Items.ENDER_CHEST,    "§bCaja",    "Tus Pokémon guardados.",        "Caja");
         open(1, 4, Items.BUNDLE,         "§bMochila", "Tus objetos.",                  "Mochila");
         open(1, 5, Items.GOLDEN_APPLE,   "§bCurar",   "Restaura a tu equipo.",         "Curar");

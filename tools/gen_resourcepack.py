@@ -254,10 +254,20 @@ def main() -> None:
 
     SALIDA.mkdir(parents=True, exist_ok=True)
     zip_path = SALIDA / "lunaeternal-resourcepack.zip"
+    # El zip tiene que ser REPRODUCIBLE: el servidor publica un SHA-1 y el
+    # cliente rechaza el pack si no coincide. Un zip normal guarda la fecha
+    # de cada fichero, asi que volver a generarlo daba un hash distinto con
+    # el mismo contenido — y eso acaba en un desajuste imposible de explicar.
+    # Fecha fija y orden fijo lo resuelven.
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(raiz.rglob("*")):
-            if f.is_file():
-                z.write(f, f.relative_to(raiz).as_posix())
+            if not f.is_file():
+                continue
+            info = zipfile.ZipInfo(f.relative_to(raiz).as_posix(),
+                                   date_time=(2020, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            z.writestr(info, f.read_bytes())
 
     sha1 = hashlib.sha1(zip_path.read_bytes()).hexdigest()
 

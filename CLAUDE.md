@@ -30,6 +30,7 @@ Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Misiones (6 de tutorial + 2 diarias)
 Telemetría    /luna economia · informe automático al log cada hora
               Barra lateral y tablist con rangos
+Cliente       PokeReport-LunaEternal-0.1.0.mrpack · 137 MB · 7 mods
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
 ```
@@ -180,7 +181,7 @@ cualquier sistema es:
 | P7 | **Nada crítico vive solo en la conversación.** Va a documentación. |
 | P8 | **Producción es sagrada.** `2a0a48ff` es READ-ONLY hasta que exista plan aprobado. |
 | P9 | **Interfaz, nunca comando.** Todo se hace con clics (D-012). Si el diseño de un sistema termina en *"el jugador escribe `/algo`"*, está incompleto. |
-| P10 | **Ningún mod de cliente es obligatorio.** El launcher reparte mejoras opcionales; el servidor se juega con un cliente normal. |
+| P10 | **El cliente mínimo es el mínimo posible, no cero.** ~~Ningún mod obligatorio~~ — **corregido 2026-08-11**: Cobblemon es cliente+servidor, así que hace falta Fabric + Fabric API + Cobblemon. El principio real es **136 MB frente a los 8 GB que exige Diosesmon**. Ver [client-pack.md](docs/technical/client-pack.md). |
 
 ### Las 10 preguntas (P2)
 

@@ -20,7 +20,7 @@ tres monedas, cinco vías de progresión, y las interfaces base operativas.
 ```
 Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
-Cobblemon     1.7.3 instalado · 60 mods · Done (9,0 s) · ~1,9 GB de 4096
+Cobblemon     1.7.3 instalado · Done (9,0 s) · ~1,9 GB de 4096
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
@@ -30,8 +30,11 @@ Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Misiones (6 de tutorial + 2 diarias)
 Telemetría    /luna economia · informe automático al log cada hora
               Barra lateral y tablist con rangos
+Mods          servidor 5 jars · cliente 9 · NO tienen que coincidir
+              tabla definitiva en docs/technical/client-pack.md §2-ter
 Cliente       jugador     -0.1.0.mrpack · 136 MB · 7 mods
               constructor -Constructor-0.1.0.mrpack · 182 MB · +CUI +Axiom
+              Fabric Loader 0.19.3 (Cobblemon exige >= 0.17.2)
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
 Construcción  WorldEdit 7.3.8 + Axiom 5.4.2 cargados · plataforma 80×80

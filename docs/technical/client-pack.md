@@ -83,6 +83,49 @@ jugar*, no el mínimo para trabajar.
 
 ---
 
+## 2-ter. Qué va en cada lado — la tabla definitiva
+
+**Las dos listas NO tienen que coincidir, y es correcto que no coincidan.**
+Un mod va donde hace su trabajo. Verificado el 2026-08-11 listando los dos
+directorios, no de memoria.
+
+| Mod | Cliente | Servidor | Por qué |
+|---|:---:|:---:|---|
+| **Cobblemon** | ✅ | ✅ | Es el juego. Necesita los dos lados |
+| **Fabric API** | ✅ | ✅ | Dependencia de todo lo demás |
+| **Axiom** | ✅ | ✅ | Editar en vivo necesita los dos lados |
+| **lunaeternal** (el nuestro) | ❌ | ✅ | Toda su lógica es de servidor. Las interfaces son menús de cofre vanilla, así que el cliente no instala nada (P6, P10) |
+| **WorldEdit** | ❌ | ✅ | Los comandos `//` se ejecutan en el servidor |
+| **WorldEdit CUI** | ✅ | ❌ | Solo dibuja la selección en tu pantalla |
+| **Sodium** | ✅ | ❌ | Gráficos. Un servidor no dibuja |
+| **Lithium** | ✅ | ❌ | Rendimiento del cliente |
+| **FerriteCore** | ✅ | ❌ | Memoria del cliente |
+| **EntityCulling** | ✅ | ❌ | No dibuja lo que no se ve |
+| **Mod Menu** | ✅ | ❌ | Menú de mods, es de interfaz |
+| | **9 jars** | **5 jars** | |
+
+> **Por qué el servidor dice «60 mods» y aquí pone 5:** Fabric API es un
+> paquete de ~40 submódulos y el log los cuenta uno por uno. **Jars instalados
+> hay 5.** Las dos cifras son ciertas, cuentan cosas distintas.
+
+> **La versión de Fabric API difiere** (cliente `0.116.15`, servidor
+> `0.116.14`). **Es inofensivo y no hay que tocarlo**: Fabric API mantiene
+> compatibilidad entre parches. Solo importaría si un mod pidiera una versión
+> mínima concreta, y ninguno lo hace.
+
+### La regla, para no volver a preguntarlo
+
+```
+¿el mod dibuja algo o toca la interfaz?   → CLIENTE
+¿el mod decide reglas, datos o economía?  → SERVIDOR
+¿ambas cosas?                             → LOS DOS
+```
+
+**Añadir en el lado equivocado no rompe nada, pero no sirve de nada** — es la
+lección ya pagada con Litematica en el proyecto anterior.
+
+---
+
 ## 3. Cómo se instala
 
 ### PrismLauncher *(el que ya tienes)*

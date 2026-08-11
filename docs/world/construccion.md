@@ -228,10 +228,32 @@ EN EL SERVIDOR
 
 ### Antes de pegar nada grande
 
-**Backup.** Pegar es destructivo y no siempre hay `//undo` disponible tras un
-reinicio. La ciudadela es una dimensión aparte
-([worlds.md](worlds.md)), así que el riesgo está acotado — pero acotado no es
-cero.
+**Backup**, y aquí hay un problema que conviene saber.
+
+> ⚠️ **Este servidor tiene 0 ranuras de backup.** El panel responde
+> `TooManyBackupsException: limit of 0 backups`. El botón de backups de
+> Pterodactyl **no existe para nosotros** (`INF-002`).
+
+**La vía que sí funciona**, verificada de extremo a extremo el 2026-08-11:
+comprimir la dimensión por la API y descargarla.
+
+```
+POST /files/compress   {"root":"/world/dimensions/lunaeternal",
+                        "files":["ciudadela"]}
+PUT  /files/rename     → ciudadela-AAAA-MM-DD.tar.gz
+GET  /files/download   → se baja a build/backups/
+```
+
+La primera instantánea ya existe: `ciudadela-2026-08-11-vacia.tar.gz`
+(408 KB, la plataforma vacía). Pídemela cuando quieras otra.
+
+**Y además, guarda un `.schem` al terminar cada sesión.** Es mejor backup que
+el del mundo: pesa poco, es independiente del servidor y se puede volver a
+pegar en cualquier sitio.
+
+```
+//pos1 · //pos2 · //copy · //schem save plaza-v3
+```
 
 ---
 

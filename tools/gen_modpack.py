@@ -21,9 +21,12 @@ SERVIDOR = ("§6PokeReport §f: §bLuna Eternal", "s12.mia.us.tarohosting.com:33
 
 # Solo lo necesario. Cada mod de mas es RAM, un punto de fallo y un bloqueo
 # potencial cuando salga MC 1.22 (principio P5).
-SOLO_CLIENTE = {"sodium", "entityculling", "modmenu"}
+SOLO_CLIENTE = {"sodium", "entityculling", "modmenu", "worldedit-cui"}
 MODS = ["cobblemon", "fabric-api", "sodium", "lithium",
-        "ferrite-core", "entityculling", "modmenu"]
+        "ferrite-core", "entityculling", "modmenu",
+        # WorldEdit CUI dibuja la seleccion. Sin el se construye a ciegas:
+        # marcas dos esquinas y no ves que has marcado.
+        "worldedit-cui"]
 
 
 def api(url):

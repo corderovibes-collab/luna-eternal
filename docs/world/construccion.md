@@ -11,7 +11,10 @@ se puede hacer fuera y traerlo?** Y con qué herramientas.
 
 ## Current Status
 
-Guía operativa. La ciudadela **no está construida**; esto es el cómo.
+**WorldEdit 7.3.8 instalado** en el servidor de desarrollo (2026-08-11), y la
+ciudadela tiene una **plataforma de 80×80** en el origen para empezar.
+
+⚠️ **Axiom NO está instalado en el servidor**, y no por descuido — ver §3-bis.
 
 ---
 
@@ -87,9 +90,36 @@ son mucho mejores.
 
 ### Recomendación
 
-**Axiom para construir, WorldEdit para pegar.** Axiom da una interfaz de
-edición seria —selecciones, pinceles, deshacer— y exporta a formatos que
-WorldEdit entiende.
+**Axiom en local para construir, WorldEdit en el servidor para pegar.**
+
+---
+
+## 3-bis. Axiom: por qué no está en el servidor
+
+Sus propios términos, citados de su página:
+
+> *"If you wish to use it on your own **private multiplayer server**, you can
+> request a multiplayer whitelist through the Axiom discord"*
+
+> *"We ask that **'Professional Builders'** (i.e. people who make money through
+> building in Minecraft) purchase a **Commercial License**"* — y esa licencia
+> es la que desbloquea **Multiplayer Support**.
+
+O sea: **el modo multijugador de Axiom está condicionado**, y nuestro servidor
+va a tener tienda. Instalarlo sin resolver eso sería justo lo que D-008 dice
+que no hagamos.
+
+### Las tres salidas, y no hay prisa por elegir
+
+| Opción | Coste | Cuándo |
+|---|---|---|
+| **Axiom en local + WorldEdit para pegar** | 0 € | **Ahora.** No toca la restricción: en singleplayer es libre |
+| Pedir la whitelist en su Discord | 0 € | Si quieres editar en vivo y el servidor aún no factura |
+| Comprar la licencia comercial | € | Cuando el servidor gane dinero y quieras multijugador |
+
+**La primera es la recomendada, y no por el dinero:** construir en local es
+mejor de todos modos — sin lag, sin nadie mirando, y el `.schem` te queda como
+copia de seguridad de la construcción.
 
 ---
 

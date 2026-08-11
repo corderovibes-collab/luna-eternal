@@ -44,6 +44,10 @@ La ventaja se mantiene, solo que la cifra honesta es 137 MB, no cero.
 | **FerriteCore** | Menos memoria | MIT |
 | **EntityCulling** | No dibuja lo que no se ve | tr7zw Protective |
 | **Mod Menu** | Gestionar mods desde el juego | MIT |
+| **WorldEdit CUI** | Dibuja la selección de WorldEdit | EPL-2.0 |
+
+> **WorldEdit CUI** solo hace falta a quien construya, pero pesa 200 KB y sin
+> él se construye a ciegas: marcas dos esquinas y no ves qué has marcado.
 
 **Nada más.** Cada mod añadido es un punto de fallo, RAM y un bloqueo
 potencial cuando salga Minecraft 1.22 (P5).

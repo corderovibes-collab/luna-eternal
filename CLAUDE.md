@@ -40,6 +40,9 @@ Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
 PokePad       mod de cliente propio (D-025) · pantalla propia, no cofre
               PokePad · Cartera · Vias · Mundos · Pokedex 3D · Cazas
               protocolo VERSIONADO en el canal: cliente viejo -> cofre
+3D en el Pad  funciona. Si vuelve a parpadear, son TRES cosas juntas:
+              rotacion nueva por llamada · dibujar en pasadas · limpiar
+              la profundidad. Ver docs/ui/visual-identity.md
 Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
               solo captura las avanza; crianza cuenta al ECLOSIONAR
 Interfaz2.0   resource pack propio · 10 fondos · fuente de espacio negativo

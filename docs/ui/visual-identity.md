@@ -29,6 +29,36 @@ dibuja los 10 fondos y el autotest pasa 109/109.
 > **Sirven para validar que la alineación es exacta al píxel**, no para ser
 > bonitas. El sistema está listo; lo que falta es dibujar.
 
+## Dibujar Pokémon en 3D: lo que costó cuatro intentos
+
+Si alguna vez vuelve a parpadear un modelo dentro del Pad, **son estas tres
+cosas y en este orden**. Las tres hacen falta; ninguna basta sola.
+
+```java
+// 1. Una rotación NUEVA por llamada.
+//    drawProfilePokemon hace rotation.conjugate(), que MUTA el objeto.
+//    Con una constante compartida, la rotación se invierte en cada llamada.
+
+// 2. Dibujar en PASADAS: todos los fondos, luego todos los modelos,
+//    luego todo el texto. Intercalar tarjeta-modelo-tarjeta-modelo hace
+//    que cada fondo se pinte contra la profundidad del modelo anterior.
+
+// 3. LIMPIAR LA PROFUNDIDAD después de los modelos:
+RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, MinecraftClient.IS_SYSTEM_MAC);
+//    El modelo se dibuja con scale(s, s, -s) — Z invertida — y deja el
+//    buffer escrito. Sin limpiarlo, lo que venga después se compara contra
+//    esa profundidad y unas veces pasa y otras no.
+```
+
+> **Cómo se encontró, que importa más que el arreglo:** los tres primeros
+> intentos fueron tocar estado de render por intuición y fallaron. Lo que lo
+> resolvió fue una prueba de treinta segundos del usuario —**abrir la Caja de
+> PC de Cobblemon**, que no parpadeaba— porque eso descartó de golpe el driver
+> y el propio Cobblemon, y dejó claro que el fallo era nuestro.
+>
+> Ante un problema de render: **primero acota de quién es el fallo, después
+> compara con código que se sabe que funciona.** Nunca al revés.
+
 ## Last Decision
 
 D-023 — Resource pack con fuente de espacio negativo. Ver §4.

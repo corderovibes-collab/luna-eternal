@@ -45,13 +45,14 @@ def medir_pantalla(im: Image.Image):
     w, h = im.size
     px = im.convert("RGBA").load()
 
-    # Se compara con el PIXEL DEL CENTRO, no con "azul": cada fondo tiñe su
-    # pantalla de otro color (verde en Cazas, rosa en Crianza...). Buscar
-    # azul funcionaba con un solo fondo y habria fallado con los diez.
-    base = px[w // 2, h // 2]
-
+    # Se mide SOLO sobre pokepad.png, que es el fondo de referencia y tiene
+    # la pantalla azul. Probe a generalizarlo comparando con el pixel del
+    # centro para que valiera con los diez fondos, y salio PEOR: el
+    # degradado de la pantalla corta el barrido a media altura (0,66 en vez
+    # de 0,83). Los otros fondos se comprueban aparte, contra esta medida.
     def azul(p):
-        return p[3] > 200 and all(abs(a - b) < 45 for a, b in zip(p[:3], base[:3]))
+        r, g, b, a = p
+        return a > 200 and b > 120 and b > r + 40 and g > 60
 
     def tramo(fijo, horizontal):
         centro = (w if horizontal else h) // 2

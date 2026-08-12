@@ -191,19 +191,28 @@ public class PadScreen extends Screen {
 
         encima = -1;
         List<PadPayloads.Celda> celdas = datos.celdas();
+        boolean tarjeta = "tarjetas".equals(datos.estilo());
+
+        // TRES PASADAS, y no una por celda intercalando.
+        //
+        // Un modelo de Pokemon escribe en el buffer de profundidad, y ademas
+        // con la Z invertida (drawProfilePokemon hace scale(s, s, -s)). Si se
+        // dibuja tarjeta-modelo-tarjeta-modelo, cada tarjeta se pinta contra
+        // la profundidad que dejo el modelo anterior y unas u otras se
+        // descartan distinto en cada fotograma: eso era el parpadeo.
+        //
+        // La Caja de PC de Cobblemon no parpadea porque hace justo esto:
+        // primero todos los fondos, luego todos los modelos.
+
+        // --- 1: fondos, y de paso se calcula que celda esta bajo el raton
         for (int i = 0; i < celdas.size(); i++) {
             var c = celdas.get(i);
-            int x = rejillaX + c.columna() * (celdaAncho + SEPARACION);
-            int y = rejillaY + c.fila() * (celdaAlto + textoAlto + SEPARACION);
-
+            int x = celdaX(c), y = celdaY(c);
             boolean dentro = mouseX >= x && mouseX < x + celdaAncho
                           && mouseY >= y && mouseY < y + celdaAlto;
             if (dentro && !c.bloqueada()) encima = i;
 
-            boolean tarjeta = "tarjetas".equals(datos.estilo());
             if (tarjeta) {
-                // Dibujada, no estirada: un PNG de 128x128 llevado a una
-                // tarjeta alta y estrecha deforma las esquinas en ovalos.
                 int arriba = c.bloqueada() ? 0xFFB9C0CC
                            : dentro ? 0xFFFFFFFF : 0xFFF2F8FF;
                 int abajo  = c.bloqueada() ? 0xFF7C8595
@@ -218,67 +227,51 @@ public class PadScreen extends Screen {
                 ctx.drawTexture(fondo, x, y, celdaAncho, celdaAlto,
                                 0, 0, 128, 128, 128, 128);
             }
+        }
 
-            // OJO: el margen sale del ARTE, no de la celda. Con celdaPx
-            // —que en una tarjeta es su ALTO— salia m=43 sobre un arte de
-            // 89, y el icono se dibujaba de 3 px. Eso era lo diminuto.
-            // En tarjeta el arte manda: 60 % del alto. Con la mitad, los
-            // Pokemon salian pequeños en una tarjeta grande y medio vacia.
-            int arte = tarjeta
-                     ? Math.min(celdaAncho - 6, (int) (celdaAlto * 0.70))
-                     : celdaAncho;
-            int m = Math.max(1, arte / 12);
+        // --- 2: iconos y modelos 3D, todos juntos
+        for (var c : celdas) {
+            int x = celdaX(c), y = celdaY(c);
+            int arte = arteDe(tarjeta);
             int ax = x + (celdaAncho - arte) / 2;
             int ay = y + (tarjeta ? 6 : 0);
 
             if (c.icono().startsWith(MARCA_POKEMON)) {
-                // El modelo se dibuja desde la BASE de la celda y centrado:
-                // un Snorlax y un Caterpie no miden lo mismo, y anclarlos
-                // arriba dejaria a uno flotando.
                 PokemonRender.dibujar(ctx,
                     c.icono().substring(MARCA_POKEMON.length()),
                     ax, ay, arte, delta);
             } else {
+                int m = Math.max(1, arte / 12);
                 Identifier icono = Identifier.of("lunaeternal",
                     "textures/pad/icono/" + c.icono() + ".png");
                 ctx.drawTexture(icono, ax + m, ay + m, arte - m * 2,
                                 arte - m * 2, 0, 0, 128, 128, 128, 128);
             }
+        }
 
-            // Recorte al ancho de la CELDA, no mas: con celdaPx + 8 las
-            // etiquetas de dos celdas vecinas se tocaban ("Centro PPuerta d").
-            // En tarjeta el texto va DENTRO, bajo la imagen. En rejilla,
-            // debajo de la casilla.
-            int ty = tarjeta ? ay + arte + 4 : y + celdaAlto + 1;
+        // --- 3: texto, siempre por encima de todo lo anterior
+        for (var c : celdas) {
+            int x = celdaX(c), y = celdaY(c);
+            int arte = arteDe(tarjeta);
             int anchoTexto = celdaAncho - 4;
-            ctx.drawCenteredTextWithShadow(this.textRenderer,
-                Text.literal(this.textRenderer.trimToWidth(
-                    quitarColores(c.titulo()), anchoTexto)),
-                x + celdaAncho / 2, ty,
-                // En tarjeta el titulo va DENTRO (fondo blanco): tinta
-                // oscura. En rejilla va fuera, sobre la pantalla azul:
-                // blanco. Con un solo color uno de los dos no se leia.
-                // Calido sobre la tarjeta clara: el azul apagado se perdia
-                // contra el degradado azul del fondo de la propia tarjeta.
-                c.bloqueada() ? 0xFF7A8698
-                              : tarjeta ? 0xFFB4471F : 0xFFFFFFFF);
+            int ty = tarjeta ? y + 6 + arte + 4 : y + celdaAlto + 1;
 
-            // En tarjetas, la descripción se pinta debajo del título: es el
-            // sitio donde de verdad se lee, no en un tooltip que hay que
-            // buscar con el ratón.
-            if (tarjeta) {
-                int dy = ty + PIE_LINEA + 2;
+            if (!tarjeta) {
+                int color = c.bloqueada() ? 0xFF7A8698 : 0xFFFFFFFF;
+                for (String linea : partir(quitarColores(c.titulo()),
+                                           anchoTexto)) {
+                    ctx.drawCenteredTextWithShadow(this.textRenderer,
+                        Text.literal(linea), x + celdaAncho / 2, ty, color);
+                    ty += PIE_LINEA;
+                }
+            } else {
+                // Solo las estrellas: el detalle vive en el tooltip.
                 for (String l : c.descripcion()) {
-                    if (l.isEmpty()) continue;
-                    if (dy > y + celdaAlto - PIE_LINEA) break;
-                    // Solo las estrellas. Todo lo demas se lee al pasar el
-                    // raton: en la tarjeta estorba.
-                    if (l.startsWith(MARCA_ESTRELLAS)) {
-                        Tarjeta.estrellas(ctx, this.textRenderer,
-                            x + celdaAncho / 2, dy,
-                            l.charAt(MARCA_ESTRELLAS.length()) - '0');
-                        dy += PIE_LINEA;
-                    }
+                    if (!l.startsWith(MARCA_ESTRELLAS)) continue;
+                    Tarjeta.estrellas(ctx, this.textRenderer,
+                        x + celdaAncho / 2, ty,
+                        l.charAt(MARCA_ESTRELLAS.length()) - '0');
+                    break;
                 }
             }
         }
@@ -383,6 +376,19 @@ public class PadScreen extends Screen {
             // Si la skin no esta lista todavia, mejor un hueco que un crash.
             LunaClient.LOG.debug("No se pudo dibujar la cabeza", e);
         }
+    }
+
+    private int celdaX(PadPayloads.Celda c) {
+        return rejillaX + c.columna() * (celdaAncho + SEPARACION);
+    }
+
+    private int celdaY(PadPayloads.Celda c) {
+        return rejillaY + c.fila() * (celdaAlto + textoAlto + SEPARACION);
+    }
+
+    private int arteDe(boolean tarjeta) {
+        return tarjeta ? Math.min(celdaAncho - 6, (int) (celdaAlto * 0.70))
+                       : celdaAncho;
     }
 
     /** Botón cuadrado de la fila de navegación. Devuelve si el ratón está. */

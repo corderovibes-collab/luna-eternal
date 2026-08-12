@@ -80,11 +80,9 @@ public final class PokemonRender {
         // Recorte a la celda. Ademas de evitar que un Snorlax invada la de al
         // lado, es lo que quita el parpadeo: sin el, el modelo se dibuja fuera
         // y se pelea con lo que ya habia pintado ahi.
-        // Vaciar el lote de la interfaz ANTES. El modelo usa el MISMO
-        // bufferSource que DrawContext y llama a endBatch() por dentro, asi
-        // que volcaria nuestros cuadros pendientes a destiempo y cambiaria
-        // el orden de dibujado.
-        ctx.draw();
+        // enableScissor ya vuelca el lote pendiente por dentro, asi que no
+        // hace falta un ctx.draw() extra. El orden lo garantiza PadScreen,
+        // que dibuja en tres pasadas: fondos, modelos y texto.
         ctx.enableScissor(x, y, x + lado, y + lado);
         matrices.push();
 

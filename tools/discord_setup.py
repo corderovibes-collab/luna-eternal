@@ -79,12 +79,22 @@ FASE1 = [
     ("📌 INFORMACIÓN", [
         texto("bienvenida", "Empieza por aquí. Qué es Luna Eternal y cómo "
               "entrar cuando abramos.", escribir=False),
-        # tipo 5 = canal de anuncios: otros servidores pueden SEGUIRLO y ver
-        # nuestras noticias. Es publicidad gratis y solo funciona con este tipo.
+        # Se crea como texto NORMAL y se convierte a «anuncio» a mano.
+        # Discord no deja crear el tipo 5 por API: primero hay que activar
+        # el modo Comunidad en el servidor, y eso pide reglas y un canal de
+        # avisos de moderacion. Una vez activado:
+        #   Editar canal -> Convertir en canal de anuncios
+        # Entonces otros servidores pueden SEGUIRLO y las noticias les llegan.
         texto("anuncios", "Novedades importantes del proyecto.",
-              escribir=False, tipo=5),
+              escribir=False),
         texto("actualizaciones", "Qué se ha construido esta semana. El diario "
               "de desarrollo.", escribir=False),
+        # Discord EXIGE un canal de normas para activar el modo Comunidad.
+        # Va aparte de «bienvenida»: la bienvenida cuenta qué es esto, las
+        # normas dicen qué pasa si te las saltas. Mezclarlas hace que nadie
+        # lea ninguna de las dos.
+        texto("normas", "Lo que se puede y lo que no. Entrar implica "
+              "aceptarlas.", escribir=False),
     ]),
     ("💬 COMUNIDAD", [
         texto("general", "Charla general. Sé majo."),
@@ -98,6 +108,12 @@ FASE1 = [
     ("🔒 STAFF", [
         texto("staff", "Coordinación interna."),
         texto("registro", "Registro automático de moderación.",
+              escribir=False),
+        # El otro canal que pide el modo Comunidad: aquí Discord manda
+        # avisos a los administradores. Va en STAFF porque parte de eso es
+        # información sensible —denuncias, avisos de seguridad—, y el propio
+        # Discord recomienda restringirlo.
+        texto("avisos-discord", "Avisos de Discord para administradores.",
               escribir=False),
     ]),
 ]
@@ -154,6 +170,16 @@ class Discord:
         if not self.aplicar:
             return {"id": "(simulado)", **cuerpo}
         return self._req("POST", ruta, cuerpo)
+
+    def patch(self, ruta, cuerpo):
+        if not self.aplicar:
+            return None
+        return self._req("PATCH", ruta, cuerpo)
+
+    def delete(self, ruta):
+        if not self.aplicar:
+            return None
+        return self._req("DELETE", ruta)
 
 
 def main() -> None:
@@ -265,6 +291,43 @@ def main() -> None:
                 "name": nombre, "type": 2, "parent_id": padre,
                 "permission_overwrites": permisos})
             print(f"    creado      {nombre}")
+
+    # --- jerarquía de roles
+    #
+    # Crear un rol lo deja SIEMPRE en la posición 1, por mucho orden que
+    # lleve la lista. La jerarquía se fija con un PATCH aparte, y sin ella un
+    # Moderador no puede expulsar a nadie: en Discord solo mandas sobre
+    # quien tiene un rol por debajo del tuyo.
+    orden = [{"id": roles[n], "position": i + 1}
+             for i, (n, *_) in enumerate(ROLES)]
+    if orden:
+        d.patch(f"/guilds/{guild}/roles", orden)
+        print("\nJERARQUÍA  " + " < ".join(n for n, *_ in ROLES))
+
+    # --- limpieza de lo que Discord crea solo
+    #
+    # Un servidor nuevo trae «Canales de texto» y «Canales de voz» con un
+    # general dentro. El de texto se APROVECHA moviéndolo a COMUNIDAD; las
+    # categorías que queden vacías y el canal de voz duplicado se borran.
+    chs = {c["name"]: c for c in d.get(f"/guilds/{guild}/channels")}
+    com = chs.get("💬 COMUNIDAD")
+    if com and "general" in chs and chs["general"].get("parent_id") != com["id"]:
+        d.patch(f"/channels/{chs['general']['id']}", {"parent_id": com["id"]})
+        print("LIMPIEZA   general movido a 💬 COMUNIDAD")
+        chs["general"]["parent_id"] = com["id"]
+
+    for sobra in ("Canales de texto", "Canales de voz", "General"):
+        c = chs.get(sobra)
+        if not c:
+            continue
+        # Una categoría con canales dentro NO se toca: borrarla se llevaría
+        # por delante lo que hubiera.
+        if c["type"] == 4 and any(x.get("parent_id") == c["id"]
+                                  for x in chs.values()):
+            print(f"LIMPIEZA   {sobra} tiene canales dentro, no se borra")
+            continue
+        d.delete(f"/channels/{c['id']}")
+        print(f"LIMPIEZA   {sobra} eliminado (estaba vacío)")
 
     print("\nHecho." if aplicar else
           "\nNada creado. Vuelve a lanzarlo con --aplicar cuando lo veas bien.")

@@ -127,14 +127,26 @@ public class PadScreen extends Screen {
         // El tamaño de celda SALE de la pantalla, no al revés. Así el Pad
         // vale para una rejilla de 3x2 y para una de 7x5 sin tocar nada.
         int porAncho = (pw - (cols - 1) * SEPARACION) / cols;
-        boolean tarjetas = "tarjetas".equals(datos.estilo());
-        int textoAlto = tarjetas ? PIE_LINEA * 4 : ETIQUETA;
-        int porAlto = (util - (filas - 1) * SEPARACION) / filas - textoAlto;
-        celdaPx = Math.max(16, Math.min(porAncho, porAlto));
+        int porAlto = (util - (filas - 1) * SEPARACION) / filas;
+
+        if ("tarjetas".equals(datos.estilo())) {
+            // Tarjeta vertical: ocupa TODO el alto disponible y su parte del
+            // ancho. Es lo que la hace parecer una carta y no una casilla con
+            // texto debajo.
+            celdaAncho = porAncho;
+            celdaAlto = Math.max(48, porAlto);
+            textoAlto = 0;
+        } else {
+            // Rejilla: casillas cuadradas con la etiqueta debajo.
+            int lado = Math.max(16, Math.min(porAncho, porAlto - ETIQUETA));
+            celdaAncho = lado;
+            celdaAlto = lado;
+            textoAlto = ETIQUETA;
+        }
+        celdaPx = celdaAlto;
 
         int rejAncho = cols * celdaAncho + (cols - 1) * SEPARACION;
-        this.textoAlto = textoAlto;
-        int rejAlto = filas * (celdaPx + textoAlto) + (filas - 1) * SEPARACION;
+        int rejAlto = filas * (celdaAlto + textoAlto) + (filas - 1) * SEPARACION;
         rejillaX = px + (pw - rejAncho) / 2;
         rejillaY = py + TITULO_ALTO + alturaNav + (util - rejAlto) / 2;
         panelPie = py + ph - pieAlto;
@@ -222,7 +234,11 @@ public class PadScreen extends Screen {
                 Text.literal(this.textRenderer.trimToWidth(
                     quitarColores(c.titulo()), anchoTexto)),
                 x + celdaAncho / 2, ty,
-                c.bloqueada() ? 0xFF7A8698 : 0xFF16324B);
+                // En tarjeta el titulo va DENTRO (fondo blanco): tinta
+                // oscura. En rejilla va fuera, sobre la pantalla azul:
+                // blanco. Con un solo color uno de los dos no se leia.
+                c.bloqueada() ? 0xFF7A8698
+                              : tarjeta ? 0xFF16324B : 0xFFFFFFFF);
 
             // En tarjetas, la descripción se pinta debajo del título: es el
             // sitio donde de verdad se lee, no en un tooltip que hay que

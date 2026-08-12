@@ -479,8 +479,30 @@ BLANCO     = (245, 250, 255, 255)
 
 
 def texturas_pad(destino: Path) -> int:
-    """Todas las piezas del Pad. 9 rodajas donde hace falta estirar."""
+    """Piezas del Pad que NO vengan ya importadas.
+
+    tools/importar_pad.py trae el arte de verdad. Lo de aqui es relleno para
+    lo que falte, para que el Pad nunca salga con cuadros de textura ausente."""
     destino.mkdir(parents=True, exist_ok=True)
+
+    def falta(nombre):
+        return not (destino / nombre).exists()
+
+    if not falta("pokepad.png"):
+        # Hay arte importado: solo se completan los estados de celda.
+        base = Image.open(destino / "celda.png").convert("RGBA")             if not falta("celda.png") else None
+        if base is not None:
+            if falta("celda_encima.png"):
+                claro = Image.new("RGBA", base.size, (255, 255, 255, 60))
+                enc = base.copy(); enc.alpha_composite(claro)
+                enc.save(destino / "celda_encima.png")
+            if falta("celda_bloqueada.png"):
+                gris = base.convert("LA").convert("RGBA")
+                oscuro = Image.new("RGBA", base.size, (0, 0, 0, 90))
+                gris.alpha_composite(oscuro)
+                gris.putalpha(base.split()[3])
+                gris.save(destino / "celda_bloqueada.png")
+        return 3
 
     # Marco exterior rojo (se estira: 9 rodajas de 64x64, esquinas de 16).
     _pieza(64, 64, 14, ROJO_CLARO, ROJO_OSC, (92, 20, 14, 255))         .save(destino / "panel.png")

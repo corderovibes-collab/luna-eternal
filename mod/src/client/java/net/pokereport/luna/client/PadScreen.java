@@ -34,28 +34,25 @@ public class PadScreen extends Screen {
 
     // Texturas del resource pack. Si faltan, el juego dibuja el cuadro
     // morado-negro de textura ausente y se ve en el acto que falta el pack.
-    private static final Identifier PANEL =
-        Identifier.of("lunaeternal", "textures/pad/panel.png");
+    private static final Identifier POKEPAD =
+        Identifier.of("lunaeternal", "textures/pad/pokepad.png");
     private static final Identifier CELDA =
         Identifier.of("lunaeternal", "textures/pad/celda.png");
     private static final Identifier CELDA_ENCIMA =
         Identifier.of("lunaeternal", "textures/pad/celda_encima.png");
     private static final Identifier CELDA_BLOQUEADA =
         Identifier.of("lunaeternal", "textures/pad/celda_bloqueada.png");
-    private static final Identifier INTERIOR =
-        Identifier.of("lunaeternal", "textures/pad/interior.png");
-    private static final Identifier PESTANA =
-        Identifier.of("lunaeternal", "textures/pad/pestana.png");
 
-    /** Geometría, en píxeles de interfaz. */
-    private static final int CELDA_PX = 48;   // caja del icono
-    private static final int ETIQUETA = 12;   // texto bajo cada caja
-    private static final int SEPARACION = 8;
-    private static final int MARGEN = 12;     // marco rojo alrededor
-    private static final int BORDE_INT = 8;   // grosor del marco rojo
-    private static final int CABECERA = 24;   // fila de botones
-    private static final int PIE_LINEA = 11;
-    private static final int PESTANA_ALTO = 20;
+    /** Proporción del arte: 1024x576. Se respeta siempre. */
+    private static final double ASPECTO = 1024.0 / 576.0;
+
+    /** Dónde cae la pantalla azul dentro del arte, medido, no adivinado. */
+    private static double PX0 = 0.2401, PY0 = 0.1926, PX1 = 0.7479, PY1 = 0.8306;
+
+    private static final int SEPARACION = 6;
+    private static final int ETIQUETA = 10;
+    private static final int TITULO_ALTO = 12;
+    private static final int PIE_LINEA = 10;
 
     private final PadPayloads.Abrir datos;
     private int panelX, panelY, panelAncho, panelAlto;
@@ -66,24 +63,38 @@ public class PadScreen extends Screen {
         this.datos = datos;
     }
 
-    private int rejillaX, rejillaY;
+    private int rejillaX, rejillaY, celdaPx, panelPie;
 
     @Override
     protected void init() {
-        int celda = CELDA_PX + ETIQUETA;
-        int rejillaAncho = datos.columnas() * CELDA_PX
-                         + (datos.columnas() - 1) * SEPARACION;
-        int rejillaAlto = datos.filas() * celda
-                        + (datos.filas() - 1) * SEPARACION;
-
-        panelAncho = rejillaAncho + (MARGEN + BORDE_INT) * 2;
-        panelAlto = BORDE_INT + CABECERA + rejillaAlto + MARGEN + BORDE_INT
-                  + datos.pie().size() * PIE_LINEA;
+        // El aparato ocupa lo que quepa, sin deformarse y sin salirse.
+        panelAncho = (int) Math.min(this.width * 0.94,
+                                    this.height * 0.94 * ASPECTO);
+        panelAlto = (int) Math.round(panelAncho / ASPECTO);
         panelX = (this.width - panelAncho) / 2;
         panelY = (this.height - panelAlto) / 2;
 
-        rejillaX = panelX + MARGEN + BORDE_INT;
-        rejillaY = panelY + BORDE_INT + CABECERA;
+        // La pantalla azul, en píxeles.
+        int px = panelX + (int) (panelAncho * PX0);
+        int py = panelY + (int) (panelAlto * PY0);
+        int pw = (int) (panelAncho * (PX1 - PX0));
+        int ph = (int) (panelAlto * (PY1 - PY0));
+
+        int filas = datos.filas(), cols = datos.columnas();
+        int pieAlto = datos.pie().size() * PIE_LINEA;
+        int util = ph - TITULO_ALTO - pieAlto;
+
+        // El tamaño de celda SALE de la pantalla, no al revés. Así el Pad
+        // vale para una rejilla de 3x2 y para una de 7x5 sin tocar nada.
+        int porAncho = (pw - (cols - 1) * SEPARACION) / cols;
+        int porAlto = (util - (filas - 1) * SEPARACION) / filas - ETIQUETA;
+        celdaPx = Math.max(16, Math.min(porAncho, porAlto));
+
+        int rejAncho = cols * celdaPx + (cols - 1) * SEPARACION;
+        int rejAlto = filas * (celdaPx + ETIQUETA) + (filas - 1) * SEPARACION;
+        rejillaX = px + (pw - rejAncho) / 2;
+        rejillaY = py + TITULO_ALTO + (util - rejAlto) / 2;
+        panelPie = py + ph - pieAlto;
     }
 
     // ------------------------------------------------------------ dibujo
@@ -99,60 +110,51 @@ public class PadScreen extends Screen {
         // incluido el texto.
         super.render(ctx, mouseX, mouseY, delta);
 
-        // Marco rojo exterior: es la carcasa del aparato.
-        nueveRodajas(ctx, PANEL, panelX, panelY, panelAncho, panelAlto, 16);
+        // El aparato, entero y proporcional. NO se estira: sus salientes y
+        // los paneles laterales están compuestos y se romperían.
+        ctx.drawTexture(POKEPAD, panelX, panelY, panelAncho, panelAlto,
+                        0, 0, 1024, 576, 1024, 576);
 
-        // Pantalla azul interior, hundida dentro del marco.
-        nueveRodajas(ctx, INTERIOR,
-            panelX + BORDE_INT, panelY + BORDE_INT,
-            panelAncho - BORDE_INT * 2, panelAlto - BORDE_INT * 2, 12);
-
-        // Pestaña del título, sobresaliendo por arriba. Es lo que convierte
-        // un rectángulo en un aparato con identidad.
-        int anchoTitulo = this.textRenderer.getWidth(this.title);
-        int anchoPestana = Math.max(80, anchoTitulo + 28);
-        int pestanaX = panelX + (panelAncho - anchoPestana) / 2;
-        int pestanaY = panelY - PESTANA_ALTO + 6;
-        nueveRodajas(ctx, PESTANA, pestanaX, pestanaY,
-                     anchoPestana, PESTANA_ALTO + 8, 8);
+        // El título va DENTRO de la pantalla azul: el marco de arriba tiene
+        // relieve y una gema, y el texto encima quedaría ilegible.
         ctx.drawCenteredTextWithShadow(this.textRenderer, this.title,
-            panelX + panelAncho / 2, pestanaY + 6, 0xFFFFFFFF);
+            panelX + panelAncho / 2,
+            panelY + (int) (panelAlto * PY0) + 2, 0xFFFFFFFF);
 
         encima = -1;
         List<PadPayloads.Celda> celdas = datos.celdas();
         for (int i = 0; i < celdas.size(); i++) {
             var c = celdas.get(i);
-            int x = rejillaX + c.columna() * (CELDA_PX + SEPARACION);
-            int y = rejillaY + c.fila() * (CELDA_PX + ETIQUETA + SEPARACION);
+            int x = rejillaX + c.columna() * (celdaPx + SEPARACION);
+            int y = rejillaY + c.fila() * (celdaPx + ETIQUETA + SEPARACION);
 
-            boolean dentro = mouseX >= x && mouseX < x + CELDA_PX
-                          && mouseY >= y && mouseY < y + CELDA_PX;
+            boolean dentro = mouseX >= x && mouseX < x + celdaPx
+                          && mouseY >= y && mouseY < y + celdaPx;
             if (dentro && !c.bloqueada()) encima = i;
 
             Identifier fondo = c.bloqueada() ? CELDA_BLOQUEADA
                              : dentro ? CELDA_ENCIMA : CELDA;
-            ctx.drawTexture(fondo, x, y, 0, 0, CELDA_PX, CELDA_PX,
-                            CELDA_PX, CELDA_PX);
+            ctx.drawTexture(fondo, x, y, celdaPx, celdaPx, 0, 0, 128, 128,
+                            128, 128);
 
-            // El icono se dibuja de 64 a 32: esa reducción es la que suaviza
-            // los bordes y lo hace parecer modelado.
+            // El icono, con margen dentro de la celda.
+            int m = Math.max(2, celdaPx / 8);
             Identifier icono = Identifier.of("lunaeternal",
                 "textures/pad/icono/" + c.icono() + ".png");
-            ctx.drawTexture(icono, x + 8, y + 8, 32, 32, 0, 0, 64, 64, 64, 64);
+            ctx.drawTexture(icono, x + m, y + m, celdaPx - m * 2,
+                            celdaPx - m * 2, 0, 0, 128, 128, 128, 128);
 
-            // Etiqueta bajo la caja, como en la referencia. Recortada para
-            // que un nombre largo no invada la celda de al lado.
-            String etiqueta = quitarColores(c.titulo());
-            etiqueta = this.textRenderer.trimToWidth(etiqueta, CELDA_PX + 6);
+            String etiqueta = this.textRenderer.trimToWidth(
+                quitarColores(c.titulo()), celdaPx + 8);
             ctx.drawCenteredTextWithShadow(this.textRenderer,
-                Text.literal(etiqueta), x + CELDA_PX / 2, y + CELDA_PX + 2,
-                c.bloqueada() ? 0xFF9AA6B8 : 0xFFFFFFFF);
+                Text.literal(etiqueta), x + celdaPx / 2, y + celdaPx + 1,
+                c.bloqueada() ? 0xFF7A8698 : 0xFFFFFFFF);
         }
 
-        int py = panelY + panelAlto - MARGEN / 2 - datos.pie().size() * PIE_LINEA;
+        int py = panelPie;
         for (String linea : datos.pie()) {
             ctx.drawCenteredTextWithShadow(this.textRenderer,
-                Text.literal(linea), panelX + panelAncho / 2, py, 0xFFB9A8E0);
+                Text.literal(linea), panelX + panelAncho / 2, py, 0xFFEAF4FF);
             py += PIE_LINEA;
         }
 
@@ -169,33 +171,6 @@ public class PadScreen extends Screen {
     /** Quita los códigos §c: en la etiqueta estorban, en el tooltip no. */
     private static String quitarColores(String s) {
         return s.replaceAll("§.", "");
-    }
-
-    /**
-     * Dibuja una textura estirable sin deformar el marco.
-     *
-     * <p>Se parte en nueve trozos: cuatro esquinas que no se escalan, cuatro
-     * bordes que se estiran en un solo eje, y el centro que se estira en los
-     * dos. Es lo que permite que el mismo arte valga para una rejilla de 3×2 y
-     * para una de 9×6 — que es justo lo que el menú de cofre no permitía.
-     */
-    private static void nueveRodajas(DrawContext ctx, Identifier tex,
-                                     int x, int y, int w, int h, int b) {
-        int t = 64;  // todas las piezas de origen son de 64 de ancho
-        int c = t - b * 2;
-        int iw = w - b * 2, ih = h - b * 2;
-
-        ctx.drawTexture(tex, x, y, b, b, 0, 0, b, b, t, t);
-        ctx.drawTexture(tex, x + w - b, y, b, b, t - b, 0, b, b, t, t);
-        ctx.drawTexture(tex, x, y + h - b, b, b, 0, t - b, b, b, t, t);
-        ctx.drawTexture(tex, x + w - b, y + h - b, b, b, t - b, t - b, b, b, t, t);
-
-        ctx.drawTexture(tex, x + b, y, iw, b, b, 0, c, b, t, t);
-        ctx.drawTexture(tex, x + b, y + h - b, iw, b, b, t - b, c, b, t, t);
-        ctx.drawTexture(tex, x, y + b, b, ih, 0, b, b, c, t, t);
-        ctx.drawTexture(tex, x + w - b, y + b, b, ih, t - b, b, b, c, t, t);
-
-        ctx.drawTexture(tex, x + b, y + b, iw, ih, b, b, c, c, t, t);
     }
 
     // ------------------------------------------------------------ entrada

@@ -225,7 +225,7 @@ public class PadScreen extends Screen {
             // En tarjeta el arte manda: 60 % del alto. Con la mitad, los
             // Pokemon salian pequeños en una tarjeta grande y medio vacia.
             int arte = tarjeta
-                     ? Math.min(celdaAncho - 6, (int) (celdaAlto * 0.55))
+                     ? Math.min(celdaAncho - 6, (int) (celdaAlto * 0.70))
                      : celdaAncho;
             int m = Math.max(1, arte / 12);
             int ax = x + (celdaAncho - arte) / 2;
@@ -271,20 +271,14 @@ public class PadScreen extends Screen {
                 for (String l : c.descripcion()) {
                     if (l.isEmpty()) continue;
                     if (dy > y + celdaAlto - PIE_LINEA) break;
+                    // Solo las estrellas. Todo lo demas se lee al pasar el
+                    // raton: en la tarjeta estorba.
                     if (l.startsWith(MARCA_ESTRELLAS)) {
                         Tarjeta.estrellas(ctx, this.textRenderer,
                             x + celdaAncho / 2, dy,
                             l.charAt(MARCA_ESTRELLAS.length()) - '0');
-                    } else {
-                        for (String w : partir(l, anchoTexto)) {
-                            ctx.drawCenteredTextWithShadow(this.textRenderer,
-                                Text.literal(w), x + celdaAncho / 2, dy,
-                                0xFF6B3A14);
-                            dy += PIE_LINEA;
-                        }
-                        dy -= PIE_LINEA;
+                        dy += PIE_LINEA;
                     }
-                    dy += PIE_LINEA;
                 }
             }
         }
@@ -305,11 +299,14 @@ public class PadScreen extends Screen {
         panelLateral(ctx, datos.derecha(), MX0, MX1);
 
         // El tooltip va el ultimo, para que quede por encima de todo.
-        if (encima >= 0 && !"tarjetas".equals(datos.estilo())) {
+        if (encima >= 0) {
             var c = celdas.get(encima);
             List<Text> lineas = new ArrayList<>();
             lineas.add(Text.literal(c.titulo()));
-            for (String l : c.descripcion()) lineas.add(Text.literal(l));
+            for (String l : c.descripcion()) {
+                if (l.startsWith(MARCA_ESTRELLAS)) continue;  // ya se ven
+                lineas.add(Text.literal(l));
+            }
             ctx.drawTooltip(this.textRenderer, lineas, mouseX, mouseY);
         }
     }

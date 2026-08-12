@@ -268,15 +268,19 @@ public final class PantallasPad {
         for (int i = 0; i < objetivos.size(); i++) {
             var o = objetivos.get(i);
             List<String> desc = new ArrayList<>();
-            desc.add("@estrellas:" + o.rareza());
-            desc.add((o.completo() ? "§a" : "§7") + o.hechos() + " / " + o.necesarios());
-            desc.add("§6" + o.premioDolar() + " PD");
-            desc.add(o.cobrado() ? "§8Cobrado"
-                   : o.completo() ? "§a¡Cobrar!" : "§8Pendiente");
+            desc.add("@estrellas:" + o.rareza());       // lo unico visible
+            desc.add("§7" + (captura ? "Captura" : "Cría") + ": §f"
+                     + o.hechos() + " / " + o.necesarios());
+            desc.add("§6Recompensa: §f" + o.premioDolar() + " PokéDólares");
+            desc.add("§b" + o.premioMarca() + " Marcas");
+            desc.add("");
+            desc.add(o.cobrado() ? "§8Ya cobrada"
+                   : o.completo() ? "§a¡Clic para cobrar!"
+                   : "§8Aún no completada");
 
             long objetivoId = o.id();
             p.celda(i, 0, "pokemon:" + o.especie(),
-                    (o.cobrado() ? "§8" : "§f") + o.especie(),
+                    (o.cobrado() ? "§8" : "§f") + mayus(o.especie()),
                     desc, false, (j, d) -> cobrar(j, objetivoId, tipo));
         }
 
@@ -334,6 +338,12 @@ public final class PantallasPad {
 
     private static String recorta(String s) {
         return s.length() <= 9 ? s : s.substring(0, 8) + "…";
+    }
+
+    /** «graveler» → «Graveler». En un tooltip, en minúscula canta. */
+    private static String mayus(String s) {
+        return s.isEmpty() ? s
+             : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     private static String romano(int n) {

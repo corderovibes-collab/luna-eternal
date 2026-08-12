@@ -11,8 +11,29 @@ gente esperando en vez de con un mundo vacío.
 
 ## Current Status
 
-`READY`. `tools/discord_setup.py` crea roles, categorías, canales y permisos.
-Falta que el usuario cree el servidor y el bot — eso no se puede automatizar.
+`DONE` la fase 1. **Montado y verificado el 2026-08-12.**
+
+```
+Modo Comunidad  activo
+Roles           7, con jerarquía correcta
+Canales         13 en 5 categorías, ninguno suelto
+```
+
+### Los tres pasos que NO se pueden automatizar
+
+Ninguno es un fallo del guion; los tres exigen la cuenta del dueño.
+
+| Paso | Por qué |
+|---|---|
+| Crear el servidor y el bot | Requiere tu cuenta de Discord |
+| **Ordenar los roles la primera vez** | Discord los crea todos en la posición 1, así que el del bot **no queda por encima de nadie** aunque salga arriba en la lista. Hasta que alguien arrastre uno y Discord renumere, el bot no puede ordenarlos |
+| Convertir `anuncios` en canal de anuncios | El tipo «anuncio» no se puede crear por API: exige el modo Comunidad activo antes |
+
+> **La lección del segundo:** mi mensaje de error decía «sube el rol del bot
+> arriba del todo», el usuario lo hizo dos veces y seguía fallando — porque
+> ya estaba arriba. **Un error que manda hacer lo que ya está hecho es peor
+> que no decir nada.** Ahora el guion mira las posiciones y distingue si
+> están empatadas o si el bot está realmente bajo.
 
 ---
 

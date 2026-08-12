@@ -67,6 +67,10 @@ public final class LunaCommand {
                         return 1;
                     })))
 
+            .then(literal("rotarcazas")
+                .requires(s -> s.hasPermissionLevel(3))
+                .executes(ctx -> rotarCazas(ctx.getSource())))
+
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> autotest(ctx.getSource())))
@@ -180,6 +184,23 @@ public final class LunaCommand {
                 line -> server.execute(() ->
                     src.sendFeedback(() -> Text.literal(line), false)));
             test.run();
+        });
+        return 1;
+    }
+
+    /** Fuerza la rotación de cazas. Herramienta de administración. */
+    private static int rotarCazas(ServerCommandSource src) {
+        var server = src.getServer();
+        LunaEternal.submit(() -> {
+            try {
+                int n = LunaEternal.hunts().rotarYa();
+                server.execute(() -> src.sendFeedback(() -> Text.literal(
+                    "§aCiclos caducados: " + n
+                    + ". El próximo vistazo sorteará cazas nuevas."), true));
+            } catch (Exception e) {
+                server.execute(() -> src.sendError(
+                    Text.literal("No se pudo rotar: " + e.getMessage())));
+            }
         });
         return 1;
     }

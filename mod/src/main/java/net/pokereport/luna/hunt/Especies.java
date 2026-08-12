@@ -25,6 +25,19 @@ public final class Especies {
     /** Kanto + Johto (D-017). */
     private static final int MAX_DEX = 251;
 
+    /**
+     * Etiquetas que descartan una especie como objetivo de caza.
+     *
+     * <p>Salio Mewtwo en el primer ciclo y no puede ser: una caza tiene que
+     * ser <b>alcanzable en 12 horas</b>. Un legendario aparece una vez cada
+     * mucho o directamente no aparece, asi que la caza seria imposible y el
+     * jugador solo aprenderia a ignorarlas.
+     *
+     * <p>Los legendarios tienen su sitio —los cofres (D-020)—, no aqui.
+     */
+    private static final java.util.Set<String> PROHIBIDAS = java.util.Set.of(
+        "legendary", "mythical", "ultra_beast", "paradox", "restricted");
+
     public record Especie(String nombre, int dex) {}
 
     private static volatile List<Especie> cache;
@@ -40,9 +53,23 @@ public final class Especies {
         try {
             for (var s : PokemonSpecies.getImplemented()) {
                 int dex = s.getNationalPokedexNumber();
-                if (dex >= 1 && dex <= MAX_DEX) {
-                    out.add(new Especie(s.getName().toLowerCase(), dex));
+                if (dex < 1 || dex > MAX_DEX) continue;
+
+                boolean rara = false;
+                try {
+                    for (String etiqueta : s.getLabels()) {
+                        if (PROHIBIDAS.contains(etiqueta.toLowerCase())) {
+                            rara = true;
+                            break;
+                        }
+                    }
+                } catch (Throwable ignored) {
+                    // Si algun dia desaparecen las etiquetas, es preferible
+                    // dejar pasar la especie que quedarse sin cazas.
                 }
+                if (rara) continue;
+
+                out.add(new Especie(s.getName().toLowerCase(), dex));
             }
         } catch (Throwable t) {
             LunaEternal.LOG.error("No se pudo leer el registro de especies", t);
@@ -58,6 +85,8 @@ public final class Especies {
             out.add(new Especie("pikachu", 25));
             out.add(new Especie("chikorita", 152));
         }
+        LunaEternal.LOG.info("Cazas: {} especies candidatas (Kanto+Johto, "
+                             + "sin legendarios)", out.size());
         cache = out;
         return out;
     }

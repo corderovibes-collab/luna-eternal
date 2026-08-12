@@ -7,13 +7,6 @@
 -- Solo cuenta CAPTURAR, no combatir: un combate contra otro jugador se
 -- amaña en dos minutos y la caza dejaria de valer nada.
 
--- El intento anterior fallo A MEDIAS: creo hunt_cycle y hunt_target y
--- reventó en hunt_progress. Como la migracion no se marco aplicada, vuelve
--- a ejecutarse entera; se limpia lo que quedo para que sea reproducible.
-DROP TABLE IF EXISTS hunt_progress;
-DROP TABLE IF EXISTS hunt_target;
-DROP TABLE IF EXISTS hunt_cycle;
-
 CREATE TABLE IF NOT EXISTS hunt_cycle (
   id          BIGINT       NOT NULL AUTO_INCREMENT,
   started_at  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -55,3 +48,11 @@ CREATE TABLE IF NOT EXISTS hunt_progress (
   CONSTRAINT fk_progress_player FOREIGN KEY (player_id)
     REFERENCES player (player_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- SIN ESTA LINEA LA MIGRACION SE REAPLICA EN CADA ARRANQUE.
+-- Cada migracion se registra a si misma; el motor solo comprueba la tabla.
+-- Olvidarla aqui, combinado con unos DROP TABLE que habia al principio,
+-- borraba las cazas de todo el servidor cada vez que se reiniciaba.
+INSERT INTO schema_version (version, description)
+VALUES (10, 'cazas y crianza')
+ON DUPLICATE KEY UPDATE version = version;

@@ -57,15 +57,26 @@ public final class PokemonRender {
      * @param especie nombre corto: «pikachu», «snorlax»
      * @param x       centro horizontal, en píxeles de interfaz
      * @param y       base del modelo
-     * @param escala  4,5 es el tamaño de una casilla de PC; sube para más
+     * @param lado    lado de la celda: de ahí sale la escala
      */
     public static void dibujar(DrawContext ctx, String especie,
-                               int x, int y, float escala, float delta) {
+                               int x, int y, int lado, float delta) {
         PosableState estado = ESTADOS.computeIfAbsent(especie,
                                                       k -> new FloatingState());
         var matrices = ctx.getMatrices();
+
+        // Recorte a la celda. Ademas de evitar que un Snorlax invada la de al
+        // lado, es lo que quita el parpadeo: sin el, el modelo se dibuja fuera
+        // y se pelea con lo que ya habia pintado ahi.
+        ctx.enableScissor(x, y, x + lado, y + lado);
         matrices.push();
-        matrices.translate(x, y, 0);
+
+        // Cobblemon aplica DOS escalas: la de la matriz y la del propio
+        // metodo. Yo solo pasaba la segunda, y por eso salia diminuto.
+        // Referencia: StorageSlot usa SIZE=25, scale(2,5) y scale=4,5F.
+        matrices.translate(x + lado / 2.0, y + lado * 0.06, 0);
+        float k = lado / 25F * 2.5F;
+        matrices.scale(k, k, 1F);
         try {
             PokemonGuiUtilsKt.drawProfilePokemon(
                 Identifier.of("cobblemon", especie),
@@ -74,7 +85,7 @@ public final class PokemonRender {
                 PoseType.PROFILE,
                 estado,
                 delta,
-                escala,
+                4.5F,
                 true,    // applyProfileTransform
                 false,   // applyBaseScale
                 false,   // doQuirks
@@ -86,6 +97,7 @@ public final class PokemonRender {
             LunaClient.LOG.warn("No se pudo dibujar '{}': {}", especie, t.toString());
         } finally {
             matrices.pop();
+            ctx.disableScissor();
         }
     }
 

@@ -98,6 +98,19 @@ public final class Database implements AutoCloseable {
                 } finally {
                     c.setAutoCommit(prev);
                 }
+                // Cada migracion se registra a si misma con un INSERT final.
+                // Se COMPRUEBA que lo haya hecho: olvidarlo hace que la
+                // migracion se reaplique en cada arranque, y si contiene un
+                // DROP TABLE eso borra datos de produccion en silencio. Paso
+                // con V010 y solo se noto por casualidad.
+                if (!appliedVersions(c).contains(version)) {
+                    throw new SQLException(
+                        "La migracion " + file + " no se registro en "
+                      + "schema_version. Le falta el INSERT final: "
+                      + "INSERT INTO schema_version (version, description) "
+                      + "VALUES (" + version + ", '...') "
+                      + "ON DUPLICATE KEY UPDATE version = version;");
+                }
                 LunaEternal.LOG.info("Migracion {} aplicada", file);
             }
         }

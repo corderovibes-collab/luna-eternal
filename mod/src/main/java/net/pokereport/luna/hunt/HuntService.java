@@ -162,6 +162,23 @@ public final class HuntService {
         return new Ciclo(cicloId, termina, out);
     }
 
+    /**
+     * Cierra el ciclo vigente para que el siguiente vistazo sortee otro.
+     *
+     * <p>Existe porque un ciclo malo dura 12 horas, y esperarlas para
+     * comprobar un arreglo no es razonable. No borra: <b>caduca</b>. Borrar
+     * se llevaria por delante el progreso de quien ya hubiera capturado algo,
+     * y ese progreso es suyo aunque la caza fuera mala.
+     */
+    public int rotarYa() throws SQLException {
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                 "UPDATE hunt_cycle SET ends_at = CURRENT_TIMESTAMP(3) "
+               + "WHERE ends_at > CURRENT_TIMESTAMP(3)")) {
+            return ps.executeUpdate();
+        }
+    }
+
     // ------------------------------------------------------------ progreso
 
     /**

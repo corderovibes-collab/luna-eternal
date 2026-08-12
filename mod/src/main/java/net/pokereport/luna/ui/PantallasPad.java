@@ -29,7 +29,8 @@ public final class PantallasPad {
      */
     public static void cartera(ServerPlayerEntity jugador) {
         MenuService.loadSnapshot(jugador, snap -> {
-            var p = new PadService.Pantalla("cartera", "Cartera", 3, 1);
+            var p = new PadService.Pantalla("cartera", "Cartera", 3, 1)
+                .tarjetas();
 
             celdaMoneda(p, 0, "moneda_dolar", Currency.POKEDOLLAR, snap,
                 "Se gana jugando.", "Se gasta en la tienda y el GTS.");
@@ -175,6 +176,8 @@ public final class PantallasPad {
 
         var p = new PadService.Pantalla("pokedex_" + pagina,
             "Pokédex  " + desde + "-" + (desde + POR_PAGINA - 1), 5, 3);
+        // La Pokédex se queda en rejilla: son 15 a la vez y como tarjetas
+        // no cabrian. Las tarjetas son para pantallas de 2 a 5 opciones.
 
         var porDex = new java.util.HashMap<Integer,
             net.pokereport.luna.pokedex.PokedexService.Entry>();

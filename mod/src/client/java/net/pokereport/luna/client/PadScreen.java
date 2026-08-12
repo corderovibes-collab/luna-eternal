@@ -92,8 +92,10 @@ public class PadScreen extends Screen {
     private int rejillaX, rejillaY, celdaPx, panelPie, navX, navY;
     private int navEncima = 0;   // 0 nada · -1 atrás · -2 inicio
     private int textoAlto = ETIQUETA;
+    private int celdaAncho, celdaAlto;
     private int masX, masY, masLado;
     private boolean masEncima;
+    private boolean hayNav;
     private int mouseXAct, mouseYAct;
 
     @Override
@@ -113,9 +115,14 @@ public class PadScreen extends Screen {
 
         int filas = datos.filas(), cols = datos.columnas();
         int pieAlto = datos.pie().size() * PIE_LINEA;
+        // La fila de navegacion solo existe si hay botones. En la pantalla
+        // raiz no hay "atras" ni tiene sentido "inicio" —ya estas en el
+        // inicio—, asi que reservar su altura solo encogia los iconos.
+        hayNav = datos.hayAtras();
         navY = py + TITULO_ALTO;
         navX = px + 2;
-        int util = ph - TITULO_ALTO - NAV - NAV_HUECO - pieAlto;
+        int alturaNav = hayNav ? NAV + NAV_HUECO : 0;
+        int util = ph - TITULO_ALTO - alturaNav - pieAlto;
 
         // El tamaño de celda SALE de la pantalla, no al revés. Así el Pad
         // vale para una rejilla de 3x2 y para una de 7x5 sin tocar nada.
@@ -125,11 +132,11 @@ public class PadScreen extends Screen {
         int porAlto = (util - (filas - 1) * SEPARACION) / filas - textoAlto;
         celdaPx = Math.max(16, Math.min(porAncho, porAlto));
 
-        int rejAncho = cols * celdaPx + (cols - 1) * SEPARACION;
+        int rejAncho = cols * celdaAncho + (cols - 1) * SEPARACION;
         this.textoAlto = textoAlto;
         int rejAlto = filas * (celdaPx + textoAlto) + (filas - 1) * SEPARACION;
         rejillaX = px + (pw - rejAncho) / 2;
-        rejillaY = py + TITULO_ALTO + NAV + NAV_HUECO + (util - rejAlto) / 2;
+        rejillaY = py + TITULO_ALTO + alturaNav + (util - rejAlto) / 2;
         panelPie = py + ph - pieAlto;
     }
 
@@ -159,69 +166,76 @@ public class PadScreen extends Screen {
 
         // Fila de navegación: atrás a la izquierda, inicio a la derecha.
         navEncima = 0;
-        int pw = (int) (panelAncho * (PX1 - PX0));
-        if (datos.hayAtras()) {
+        if (hayNav) {
+            int pw = (int) (panelAncho * (PX1 - PX0));
             if (boton(ctx, navX, navY, "<", mouseX, mouseY)) navEncima = -1;
+            if (boton(ctx, navX + pw - NAV - 4, navY, "⌂", mouseX, mouseY)) {
+                navEncima = -2;
+            }
         }
-        int inicioX = navX + pw - NAV - 4;
-        if (boton(ctx, inicioX, navY, "⌂", mouseX, mouseY)) navEncima = -2;
 
         encima = -1;
         List<PadPayloads.Celda> celdas = datos.celdas();
         for (int i = 0; i < celdas.size(); i++) {
             var c = celdas.get(i);
-            int x = rejillaX + c.columna() * (celdaPx + SEPARACION);
-            int y = rejillaY + c.fila() * (celdaPx + textoAlto + SEPARACION);
+            int x = rejillaX + c.columna() * (celdaAncho + SEPARACION);
+            int y = rejillaY + c.fila() * (celdaAlto + textoAlto + SEPARACION);
 
-            boolean dentro = mouseX >= x && mouseX < x + celdaPx
-                          && mouseY >= y && mouseY < y + celdaPx;
+            boolean dentro = mouseX >= x && mouseX < x + celdaAncho
+                          && mouseY >= y && mouseY < y + celdaAlto;
             if (dentro && !c.bloqueada()) encima = i;
 
             Identifier fondo = c.bloqueada() ? CELDA_BLOQUEADA
                              : dentro ? CELDA_ENCIMA : CELDA;
-            ctx.drawTexture(fondo, x, y, celdaPx, celdaPx, 0, 0, 128, 128,
+            ctx.drawTexture(fondo, x, y, celdaAncho, celdaAlto, 0, 0, 128, 128,
                             128, 128);
 
             // El icono, con margen dentro de la celda.
             int m = Math.max(2, celdaPx / 8);
+            boolean tarjeta = "tarjetas".equals(datos.estilo());
+            int arte = tarjeta ? Math.min(celdaAncho - 8, celdaAlto / 2)
+                               : celdaAncho;
+            int ax = x + (celdaAncho - arte) / 2;
+            int ay = y + (tarjeta ? 6 : 0);
+
             if (c.icono().startsWith(MARCA_POKEMON)) {
                 // El modelo se dibuja desde la BASE de la celda y centrado:
                 // un Snorlax y un Caterpie no miden lo mismo, y anclarlos
                 // arriba dejaria a uno flotando.
                 PokemonRender.dibujar(ctx,
                     c.icono().substring(MARCA_POKEMON.length()),
-                    x + celdaPx / 2, y + celdaPx - m,
-                    celdaPx / 9F, delta);
+                    ax, ay, arte, delta);
             } else {
                 Identifier icono = Identifier.of("lunaeternal",
                     "textures/pad/icono/" + c.icono() + ".png");
-                ctx.drawTexture(icono, x + m, y + m, celdaPx - m * 2,
-                                celdaPx - m * 2, 0, 0, 128, 128, 128, 128);
+                ctx.drawTexture(icono, ax + m, ay + m, arte - m * 2,
+                                arte - m * 2, 0, 0, 128, 128, 128, 128);
             }
 
             // Recorte al ancho de la CELDA, no mas: con celdaPx + 8 las
             // etiquetas de dos celdas vecinas se tocaban ("Centro PPuerta d").
-            int ty = y + celdaPx + 1;
-            int anchoTexto = "tarjetas".equals(datos.estilo())
-                           ? celdaPx + SEPARACION : celdaPx;
+            // En tarjeta el texto va DENTRO, bajo la imagen. En rejilla,
+            // debajo de la casilla.
+            int ty = tarjeta ? ay + arte + 4 : y + celdaAlto + 1;
+            int anchoTexto = celdaAncho - 4;
             ctx.drawCenteredTextWithShadow(this.textRenderer,
                 Text.literal(this.textRenderer.trimToWidth(
                     quitarColores(c.titulo()), anchoTexto)),
-                x + celdaPx / 2, ty,
-                c.bloqueada() ? 0xFF7A8698 : 0xFFFFFFFF);
+                x + celdaAncho / 2, ty,
+                c.bloqueada() ? 0xFF7A8698 : 0xFF16324B);
 
             // En tarjetas, la descripción se pinta debajo del título: es el
             // sitio donde de verdad se lee, no en un tooltip que hay que
             // buscar con el ratón.
-            if ("tarjetas".equals(datos.estilo())) {
-                int dy = ty + PIE_LINEA;
+            if (tarjeta) {
+                int dy = ty + PIE_LINEA + 2;
                 for (String l : c.descripcion()) {
                     if (l.isEmpty()) continue;
+                    if (dy > y + celdaAlto - PIE_LINEA) break;
                     ctx.drawCenteredTextWithShadow(this.textRenderer,
                         Text.literal(this.textRenderer.trimToWidth(l, anchoTexto)),
-                        x + celdaPx / 2, dy, 0xFFDCEBFF);
+                        x + celdaAncho / 2, dy, 0xFF2C5B84);
                     dy += PIE_LINEA;
-                    if (dy > ty + textoAlto) break;
                 }
             }
         }

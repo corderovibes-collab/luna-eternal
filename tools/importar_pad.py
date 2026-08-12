@@ -89,6 +89,25 @@ def main() -> None:
     destino_json = RAIZ / "mod" / "src" / "main" / "resources" / "pad_layout.json"
     destino_json.write_text(json.dumps(pantalla, indent=2), encoding="utf-8")
 
+    # --- fondos por pantalla, si el usuario los ha generado
+    #
+    # Uno por app es lo que hace que cada pantalla parezca disenada y no una
+    # plantilla rellenada. Si falta alguno, el mod usa el comun; se pueden ir
+    # anadiendo de uno en uno.
+    n_fondos = 0
+    for nombre in ("pokepad", "cazas", "crianza", "cartera", "vias",
+                   "misiones", "gts", "tienda", "kits", "tesoros",
+                   "mundos", "centro", "clanes", "cosmeticos", "explorar"):
+        p_f = ORIGEN / f"fondo_{nombre}.png"
+        if not p_f.exists():
+            continue
+        im_f = Image.open(p_f).convert("RGBA")
+        alto_f = round(ANCHO_PAD * im_f.height / im_f.width)
+        im_f.resize((ANCHO_PAD, alto_f), Image.LANCZOS)             .save(PAD / f"pokepad_{nombre}.png")
+        n_fondos += 1
+    if n_fondos:
+        print(f"  fondos       {n_fondos} propios por pantalla")
+
     # --- la celda
     celda = ORIGEN / "celda.png"
     if celda.exists():

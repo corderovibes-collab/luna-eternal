@@ -1,6 +1,7 @@
 package net.pokereport.luna.client;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.screen.Screen;
@@ -11,7 +12,9 @@ import net.minecraft.util.Identifier;
 import net.pokereport.luna.net.PadPayloads;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * El Pad: la interfaz propia de Luna Eternal (D-025).
@@ -37,6 +40,31 @@ public class PadScreen extends Screen {
     // morado-negro de textura ausente y se ve en el acto que falta el pack.
     private static final Identifier POKEPAD =
         Identifier.of("lunaeternal", "textures/pad/pokepad.png");
+
+    /**
+     * Fondo propio por pantalla, si existe.
+     *
+     * <p>Es lo que hace que cada aplicación parezca diseñada y no una
+     * plantilla rellenada: la referencia tiene un PNG completo por app
+     * ({@code pokepad_cazas.png}, {@code pokepad_gts.png}…), no un marco
+     * genérico con contenido dentro.
+     *
+     * <p>Si el fichero no está, se usa el común. Así se pueden ir añadiendo
+     * de uno en uno sin romper nada.
+     */
+    private static final Map<String, Identifier> FONDOS = new HashMap<>();
+
+    private static Identifier fondoDe(String pantalla) {
+        return FONDOS.computeIfAbsent(pantalla, nombre -> {
+            // El id lleva solo la parte estable: "pokedex_3" comparte fondo
+            // con "pokedex_0", que es lo que se quiere.
+            String base = nombre.replaceAll("_[0-9]+$", "");
+            Identifier propio = Identifier.of("lunaeternal",
+                "textures/pad/pokepad_" + base + ".png");
+            return MinecraftClient.getInstance().getResourceManager()
+                       .getResource(propio).isPresent() ? propio : POKEPAD;
+        });
+    }
     private static final Identifier CELDA =
         Identifier.of("lunaeternal", "textures/pad/celda.png");
     private static final Identifier CELDA_ENCIMA =
@@ -170,7 +198,8 @@ public class PadScreen extends Screen {
 
         // El aparato, entero y proporcional. NO se estira: sus salientes y
         // los paneles laterales están compuestos y se romperían.
-        ctx.drawTexture(POKEPAD, panelX, panelY, panelAncho, panelAlto,
+        ctx.drawTexture(fondoDe(datos.pantalla()),
+                        panelX, panelY, panelAncho, panelAlto,
                         0, 0, 1024, 576, 1024, 576);
 
         // El título va DENTRO de la pantalla azul: el marco de arriba tiene

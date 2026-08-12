@@ -45,9 +45,13 @@ def medir_pantalla(im: Image.Image):
     w, h = im.size
     px = im.convert("RGBA").load()
 
+    # Se compara con el PIXEL DEL CENTRO, no con "azul": cada fondo tiñe su
+    # pantalla de otro color (verde en Cazas, rosa en Crianza...). Buscar
+    # azul funcionaba con un solo fondo y habria fallado con los diez.
+    base = px[w // 2, h // 2]
+
     def azul(p):
-        r, g, b, a = p
-        return a > 200 and b > 120 and b > r + 40 and g > 60
+        return p[3] > 200 and all(abs(a - b) < 45 for a, b in zip(p[:3], base[:3]))
 
     def tramo(fijo, horizontal):
         centro = (w if horizontal else h) // 2

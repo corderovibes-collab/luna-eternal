@@ -62,8 +62,16 @@ public final class PadPayloads {
     }
 
     /** Servidor → cliente: abre esta pantalla. */
+    /**
+     * @param izquierda líneas del panel verde · @param derecha las del morado
+     *
+     * <p>Son los dos paneles laterales del arte. Cada linea se recorta al
+     * ancho del panel en el cliente: ahi caben unos 47-62 px, o sea 8-10
+     * caracteres. Lo que se mande mas largo se corta, no se desborda.
+     */
     public record Abrir(String pantalla, String titulo, int columnas, int filas,
-                        List<Celda> celdas, List<String> pie)
+                        List<Celda> celdas, List<String> pie,
+                        List<String> izquierda, List<String> derecha)
             implements CustomPayload {
 
         public static final CustomPayload.Id<Abrir> ID = new CustomPayload.Id<>(ABRIR);
@@ -78,10 +86,8 @@ public final class PadPayloads {
                     int n = b.readVarInt();
                     List<Celda> celdas = new ArrayList<>(n);
                     for (int i = 0; i < n; i++) celdas.add(Celda.CODEC.decode(b));
-                    int m = b.readVarInt();
-                    List<String> pie = new ArrayList<>(m);
-                    for (int i = 0; i < m; i++) pie.add(b.readString(256));
-                    return new Abrir(pantalla, titulo, cols, fils, celdas, pie);
+                    return new Abrir(pantalla, titulo, cols, fils, celdas,
+                                     lista(b), lista(b), lista(b));
                 }
 
                 @Override
@@ -92,10 +98,23 @@ public final class PadPayloads {
                     b.writeVarInt(a.filas);
                     b.writeVarInt(a.celdas.size());
                     for (Celda c : a.celdas) Celda.CODEC.encode(b, c);
-                    b.writeVarInt(a.pie.size());
-                    for (String s : a.pie) b.writeString(s, 256);
+                    escribir(b, a.pie);
+                    escribir(b, a.izquierda);
+                    escribir(b, a.derecha);
                 }
             };
+
+        private static List<String> lista(RegistryByteBuf b) {
+            int n = b.readVarInt();
+            List<String> out = new ArrayList<>(n);
+            for (int i = 0; i < n; i++) out.add(b.readString(256));
+            return out;
+        }
+
+        private static void escribir(RegistryByteBuf b, List<String> l) {
+            b.writeVarInt(l.size());
+            for (String s : l) b.writeString(s, 256);
+        }
 
         @Override
         public CustomPayload.Id<? extends CustomPayload> getId() { return ID; }

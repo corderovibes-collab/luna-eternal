@@ -21,6 +21,25 @@ public final class AlmanacPad {
 
     private AlmanacPad() {}
 
+    /** Recorta sin romper: 9 caracteres es lo que cabe en un panel. */
+    private static String corto(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max - 1) + "…";
+    }
+
+    /**
+     * 1250 → «1,2k». Un panel de 47 px no admite «1.250.000», y cortarlo
+     * daria «1.250» — que no es un numero grande mal escrito, es un numero
+     * DISTINTO. Abreviar miente menos que truncar.
+     */
+    private static String abreviar(long v) {
+        if (v < 10_000) return String.valueOf(v);
+        if (v < 1_000_000) return String.format("%.1fk", v / 1_000.0)
+                                        .replace('.', ',');
+        if (v < 1_000_000_000L) return String.format("%.1fM", v / 1_000_000.0)
+                                             .replace('.', ',');
+        return String.format("%.1fG", v / 1_000_000_000.0).replace('.', ',');
+    }
+
     public static void abrir(ServerPlayerEntity jugador) {
         var snap = MenuService.cached(jugador);
 
@@ -84,10 +103,27 @@ public final class AlmanacPad {
         p.celda(4, 2, "explorar", "§8Explorar",
                 List.of("§7Aún no disponible."), true, (j, d) -> {});
 
+        // Paneles laterales del arte. Son estrechos —caben unos 9
+        // caracteres— asi que las cifras van abreviadas y los rotulos
+        // cortos. Mejor "1,2k" legible que "1250" cortado a "12".
+        p.izquierda("§f" + corto(jugador.getGameProfile().getName(), 9));
         if (snap != null) {
-            p.pie("§7" + jugador.getGameProfile().getName()
-                  + " §8· §6" + snap.balance(Currency.POKEDOLLAR)
-                  + " §8· §b" + snap.balance(Currency.MARK));
+            p.izquierda("");
+            p.izquierda("§7Via");
+            p.izquierda("§d" + corto(snap.dominantPath, 9));
+            p.izquierda("§7Nivel §f" + snap.dominantLevel);
+            p.izquierda("");
+            p.izquierda("§7Medallas");
+            p.izquierda("§e" + snap.badges + "§7/8");
+
+            p.derecha("§6Dolares");
+            p.derecha("§f" + abreviar(snap.balance(Currency.POKEDOLLAR)));
+            p.derecha("");
+            p.derecha("§bMarcas");
+            p.derecha("§f" + abreviar(snap.balance(Currency.MARK)));
+            p.derecha("");
+            p.derecha("§dReportC");
+            p.derecha("§f" + abreviar(snap.balance(Currency.REPORTCOIN)));
         }
 
         try {

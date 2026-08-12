@@ -49,6 +49,11 @@ public class PadScreen extends Screen {
     /** Dónde cae la pantalla azul dentro del arte, medido, no adivinado. */
     private static double PX0 = 0.2401, PY0 = 0.1926, PX1 = 0.7479, PY1 = 0.8306;
 
+    /** Los dos paneles laterales del arte, medidos igual que la pantalla. */
+    private static final double VX0 = 0.0979, VX1 = 0.1964;   // verde
+    private static final double MX0 = 0.7911, MX1 = 0.8917;   // morado
+    private static final double LY0 = 0.2593, LY1 = 0.7972;   // ambos
+
     private static final int SEPARACION = 6;
     private static final int ETIQUETA = 10;
     private static final int TITULO_ALTO = 12;
@@ -158,6 +163,11 @@ public class PadScreen extends Screen {
             py += PIE_LINEA;
         }
 
+        // Paneles laterales. Van despues de la rejilla porque no se solapan
+        // con ella: estan fuera de la pantalla azul.
+        panelLateral(ctx, datos.izquierda(), VX0, VX1);
+        panelLateral(ctx, datos.derecha(), MX0, MX1);
+
         // El tooltip va el ultimo, para que quede por encima de todo.
         if (encima >= 0) {
             var c = celdas.get(encima);
@@ -165,6 +175,32 @@ public class PadScreen extends Screen {
             lineas.add(Text.literal(c.titulo()));
             for (String l : c.descripcion()) lineas.add(Text.literal(l));
             ctx.drawTooltip(this.textRenderer, lineas, mouseX, mouseY);
+        }
+    }
+
+    /**
+     * Texto centrado dentro de uno de los paneles laterales.
+     *
+     * <p>Son estrechos de verdad —entre 47 y 62 px segun la escala— asi que
+     * cada linea se recorta al ancho real. Es preferible cortar a que el
+     * texto se salga por encima del marco.
+     */
+    private void panelLateral(DrawContext ctx, List<String> lineas,
+                              double x0, double x1) {
+        if (lineas.isEmpty()) return;
+        int px = panelX + (int) (panelAncho * x0);
+        int pw = (int) (panelAncho * (x1 - x0));
+        int ph = (int) (panelAlto * (LY1 - LY0));
+        int alto = lineas.size() * PIE_LINEA;
+        int y = panelY + (int) (panelAlto * LY0) + Math.max(0, (ph - alto) / 2);
+
+        for (String linea : lineas) {
+            if (!linea.isEmpty()) {
+                Text t = Text.literal(this.textRenderer.trimToWidth(linea, pw - 2));
+                ctx.drawCenteredTextWithShadow(this.textRenderer, t,
+                                               px + pw / 2, y, 0xFFFFFFFF);
+            }
+            y += PIE_LINEA;
         }
     }
 

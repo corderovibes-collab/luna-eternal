@@ -75,6 +75,8 @@ public final class PadService {
         private final List<PadPayloads.Celda> celdas = new ArrayList<>();
         private final List<Accion> acciones = new ArrayList<>();
         private final List<String> pie = new ArrayList<>();
+        private final List<String> izquierda = new ArrayList<>();
+        private final List<String> derecha = new ArrayList<>();
 
         public Pantalla(String id, String titulo, int columnas, int filas) {
             this.id = id;
@@ -102,11 +104,24 @@ public final class PadService {
             return this;
         }
 
+        /** Panel verde de la izquierda. Caben ~9 caracteres por linea. */
+        public Pantalla izquierda(String linea) {
+            izquierda.add(linea);
+            return this;
+        }
+
+        /** Panel morado de la derecha. Mismo ancho que el verde. */
+        public Pantalla derecha(String linea) {
+            derecha.add(linea);
+            return this;
+        }
+
         public void abrir(ServerPlayerEntity jugador) {
             ABIERTAS.put(jugador.getUuid(), new Abierta(id, List.copyOf(acciones)));
             ServerPlayNetworking.send(jugador, new PadPayloads.Abrir(
                 id, titulo, columnas, filas, List.copyOf(celdas),
-                List.copyOf(pie)));
+                List.copyOf(pie), List.copyOf(izquierda),
+                List.copyOf(derecha)));
         }
     }
 

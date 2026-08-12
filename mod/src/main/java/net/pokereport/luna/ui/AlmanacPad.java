@@ -61,8 +61,8 @@ public final class AlmanacPad {
                 List.of("§7Tus tres monedas.", "", "§eClic para abrir"),
                 false, (j, d) -> PantallasPad.cartera(j));
 
-        p.celda(2, 0, "vias", "§dVías",
-                List.of("§7Las cinco formas de progresar.", "", "§eClic para abrir"),
+        p.celda(2, 0, "vias", "§dTrabajos",
+                List.of("§7Los cinco trabajos.", "", "§eClic para abrir"),
                 false, (j, d) -> PantallasPad.vias(j));
 
         p.celda(3, 0, "misiones", "§aMisiones",

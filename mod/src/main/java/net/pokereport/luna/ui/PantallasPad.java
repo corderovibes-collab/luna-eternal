@@ -72,7 +72,11 @@ public final class PantallasPad {
      */
     public static void vias(ServerPlayerEntity jugador) {
         MenuService.loadSnapshot(jugador, snap -> {
-            var p = new PadService.Pantalla("vias", "Tus Vías", 5, 1).tarjetas();
+            // 3x2 y no 5x1: con cinco columnas la tarjeta mide 52 px utiles
+            // y "Coleccionista" pide 65. Partir la palabra daria
+            // "Coleccio / nista", que es peor que reordenar la rejilla.
+            // Comprobado con tools/auditar_textos.py.
+            var p = new PadService.Pantalla("vias", "Trabajos", 3, 2).tarjetas();
 
             int col = 0;
             for (Path via : Path.values()) {
@@ -80,17 +84,17 @@ public final class PantallasPad {
                 int nivel = estado == null ? 0 : estado.level();
                 long xp = estado == null ? 0 : estado.xp();
 
-                p.celda(col++, 0, iconoVia(via), via.displayName,
-                        List.of("§eNivel " + romano(nivel),
-                                "§7" + xp + " XP"),
+                p.celda(col % 3, col / 3, iconoVia(via), via.displayName,
+                        List.of("Nivel " + romano(nivel), xp + " XP"),
                         false, (j, d) -> {});
+                col++;
             }
 
             p.izquierda("@cabeza");
             p.izquierda("");
             p.izquierda("§f" + recorta(jugador.getGameProfile().getName()));
 
-            p.pie("§7Las cinco avanzan a la vez. No hay que elegir");
+            p.pie("§7Los cinco avanzan a la vez. No hay que elegir");
             p.abrirDesde(jugador, () -> AlmanacPad.abrir(jugador));
         });
     }

@@ -219,13 +219,15 @@ public class PadScreen extends Screen {
                                 0, 0, 128, 128, 128, 128);
             }
 
-            // El icono, con margen dentro de la celda.
-            int m = Math.max(2, celdaPx / 8);
+            // OJO: el margen sale del ARTE, no de la celda. Con celdaPx
+            // —que en una tarjeta es su ALTO— salia m=43 sobre un arte de
+            // 89, y el icono se dibujaba de 3 px. Eso era lo diminuto.
             // En tarjeta el arte manda: 60 % del alto. Con la mitad, los
             // Pokemon salian pequeños en una tarjeta grande y medio vacia.
             int arte = tarjeta
-                     ? Math.min(celdaAncho - 6, (int) (celdaAlto * 0.60))
+                     ? Math.min(celdaAncho - 6, (int) (celdaAlto * 0.55))
                      : celdaAncho;
+            int m = Math.max(1, arte / 12);
             int ax = x + (celdaAncho - arte) / 2;
             int ay = y + (tarjeta ? 6 : 0);
 
@@ -256,8 +258,10 @@ public class PadScreen extends Screen {
                 // En tarjeta el titulo va DENTRO (fondo blanco): tinta
                 // oscura. En rejilla va fuera, sobre la pantalla azul:
                 // blanco. Con un solo color uno de los dos no se leia.
+                // Calido sobre la tarjeta clara: el azul apagado se perdia
+                // contra el degradado azul del fondo de la propia tarjeta.
                 c.bloqueada() ? 0xFF7A8698
-                              : tarjeta ? 0xFF16324B : 0xFFFFFFFF);
+                              : tarjeta ? 0xFFB4471F : 0xFFFFFFFF);
 
             // En tarjetas, la descripción se pinta debajo del título: es el
             // sitio donde de verdad se lee, no en un tooltip que hay que
@@ -272,10 +276,13 @@ public class PadScreen extends Screen {
                             x + celdaAncho / 2, dy,
                             l.charAt(MARCA_ESTRELLAS.length()) - '0');
                     } else {
-                        ctx.drawCenteredTextWithShadow(this.textRenderer,
-                            Text.literal(this.textRenderer.trimToWidth(
-                                l, anchoTexto)),
-                            x + celdaAncho / 2, dy, 0xFF2C5B84);
+                        for (String w : partir(l, anchoTexto)) {
+                            ctx.drawCenteredTextWithShadow(this.textRenderer,
+                                Text.literal(w), x + celdaAncho / 2, dy,
+                                0xFF6B3A14);
+                            dy += PIE_LINEA;
+                        }
+                        dy -= PIE_LINEA;
                     }
                     dy += PIE_LINEA;
                 }
@@ -394,6 +401,47 @@ public class PadScreen extends Screen {
                                        x + NAV / 2, y + (NAV - 8) / 2,
                                        0xFF16324B);
         return dentro;
+    }
+
+    /**
+     * Parte un texto en las líneas que quepan en {@code ancho}.
+     *
+     * <p>Se corta por palabras; solo si una sola palabra no cabe se parte por
+     * letras. Recortar con puntos suspensivos era peor: «Colecci» no dice
+     * nada, «Coleccio / nista» sí.
+     */
+    private List<String> partir(String texto, int ancho) {
+        List<String> out = new ArrayList<>();
+        if (this.textRenderer.getWidth(texto) <= ancho) {
+            out.add(texto);
+            return out;
+        }
+        StringBuilder linea = new StringBuilder();
+        for (String palabra : texto.split(" ")) {
+            String prueba = linea.isEmpty() ? palabra : linea + " " + palabra;
+            if (this.textRenderer.getWidth(prueba) <= ancho) {
+                linea = new StringBuilder(prueba);
+                continue;
+            }
+            if (!linea.isEmpty()) {
+                out.add(linea.toString());
+                linea = new StringBuilder();
+            }
+            // Palabra sola demasiado larga: se trocea por letras.
+            while (this.textRenderer.getWidth(palabra) > ancho) {
+                int corte = 1;
+                while (corte < palabra.length()
+                       && this.textRenderer.getWidth(
+                              palabra.substring(0, corte + 1)) <= ancho) {
+                    corte++;
+                }
+                out.add(palabra.substring(0, corte));
+                palabra = palabra.substring(corte);
+            }
+            linea = new StringBuilder(palabra);
+        }
+        if (!linea.isEmpty()) out.add(linea.toString());
+        return out;
     }
 
     /** Quita los códigos §c: en la etiqueta estorban, en el tooltip no. */

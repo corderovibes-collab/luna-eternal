@@ -46,10 +46,22 @@ public final class PokemonRender {
      */
     private static final Map<String, PosableState> ESTADOS = new HashMap<>();
 
-    /** Tres cuartos, como en las pantallas de Cobblemon. */
-    private static final Quaternionf ROTACION =
-        QuaternionUtilsKt.fromEulerXYZDegrees(new Quaternionf(),
-                                              new Vector3f(13F, 35F, 0F));
+    /** Ángulos de tres cuartos, los mismos que usa Cobblemon. */
+    private static final Vector3f ANGULOS = new Vector3f(13F, 35F, 0F);
+
+    /**
+     * Una rotación NUEVA en cada llamada. Esto no es derroche: es la causa
+     * del parpadeo.
+     *
+     * <p>{@code drawProfilePokemon} hace {@code rotation.conjugate()}, que
+     * <b>modifica el objeto que recibe</b>. Con una constante compartida, la
+     * rotación se invertía en cada llamada: tres modelos a sesenta fotogramas
+     * por segundo la dejaban oscilando sin parar. Cobblemon crea una nueva en
+     * cada fotograma por exactamente este motivo.
+     */
+    private static Quaternionf rotacion() {
+        return QuaternionUtilsKt.fromEulerXYZDegrees(new Quaternionf(), ANGULOS);
+    }
 
     private PokemonRender() {}
 
@@ -68,11 +80,10 @@ public final class PokemonRender {
         // Recorte a la celda. Ademas de evitar que un Snorlax invada la de al
         // lado, es lo que quita el parpadeo: sin el, el modelo se dibuja fuera
         // y se pelea con lo que ya habia pintado ahi.
-        // Vaciar el lote ANTES y DESPUES. El modelo se dibuja con su propio
-        // VertexConsumerProvider y, si quedan vertices de la interfaz sin
-        // volcar, unos y otros se ordenan distinto en cada fotograma: eso es
-        // el parpadeo. Forzando el volcado, el orden deja de depender del
-        // azar.
+        // Vaciar el lote de la interfaz ANTES. El modelo usa el MISMO
+        // bufferSource que DrawContext y llama a endBatch() por dentro, asi
+        // que volcaria nuestros cuadros pendientes a destiempo y cambiaria
+        // el orden de dibujado.
         ctx.draw();
         ctx.enableScissor(x, y, x + lado, y + lado);
         matrices.push();
@@ -87,7 +98,7 @@ public final class PokemonRender {
             PokemonGuiUtilsKt.drawProfilePokemon(
                 Identifier.of("cobblemon", especie),
                 matrices,
-                ROTACION,
+                rotacion(),
                 PoseType.PROFILE,
                 estado,
                 delta,
@@ -103,13 +114,10 @@ public final class PokemonRender {
             LunaClient.LOG.warn("No se pudo dibujar '{}': {}", especie, t.toString());
         } finally {
             matrices.pop();
-            ctx.draw();
             ctx.disableScissor();
-            // El modelo deja activadas la prueba de profundidad y la luz
-            // difusa 3D. Sin devolverlas a su sitio, lo que se dibuje
-            // despues sale con sombreado raro o directamente no sale.
-            com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
-            net.minecraft.client.render.DiffuseLighting.enableGuiDepthLighting();
+            // La iluminacion NO se toca aqui: drawProfilePokemon termina con
+            // Lighting.setupFor3DItems() por su cuenta. Restaurarla ademas
+            // desde fuera era pelearse con el.
         }
     }
 

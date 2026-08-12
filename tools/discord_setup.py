@@ -308,10 +308,25 @@ def main() -> None:
             # NO se aborta: ordenar roles es lo único que exige que el rol
             # del bot esté arriba, y dejar el resto sin hacer por eso sería
             # castigar dos veces el mismo despiste.
-            print("\n⚠  No se pudo ordenar los roles: el rol del bot tiene que")
-            print("   estar POR ENCIMA de los que va a mover.")
-            print("   Ajustes del servidor → Roles → arrastra «PokeReport»")
-            print("   arriba del todo, y vuelve a lanzar esto.")
+            # Ojo con el diagnostico: si TODOS los roles estan en la misma
+            # posicion —que es como los deja Discord al crearlos— el del bot
+            # sale arriba en la lista pero NO esta estrictamente por encima,
+            # y el rechazo es el mismo. Arrastrarlo "arriba del todo" no
+            # cambia nada porque ya lo esta; hay que forzar una renumeracion.
+            pos = {r["name"]: r["position"]
+                   for r in d.get(f"/guilds/{guild}/roles")}
+            empatados = len({p for p in pos.values() if p > 0}) <= 1
+            print("\n⚠  No se pudieron ordenar los roles.")
+            if empatados:
+                print("   Estan TODOS en la misma posicion, incluido el del")
+                print("   bot: aunque salga arriba, no esta por encima.")
+                print("   Arrastra un rol —por ejemplo «🌙 Fundador»— una")
+                print("   posicion hacia abajo y sueltalo. Eso obliga a")
+                print("   Discord a renumerarlos, y ya podre ordenarlos yo.")
+            else:
+                print("   El rol «PokeReport» tiene que quedar por ENCIMA de")
+                print("   todos los que va a mover.")
+            print("   Luego vuelve a lanzar esto.")
 
     # --- limpieza de lo que Discord crea solo
     #

@@ -353,6 +353,48 @@ def main() -> None:
         d.delete(f"/channels/{c['id']}")
         print(f"LIMPIEZA   {sobra} eliminado (estaba vacío)")
 
+    # --- automoderación nativa
+    #
+    # Esto lo trae DISCORD. Es la parte del trabajo de Carl-bot que no
+    # necesita ningún bot conectado: filtra siempre, no se cae, y no obliga
+    # a confiarle el servidor a un tercero.
+    #
+    # Tres reglas y ninguna más: cada filtro de más es un falso positivo
+    # esperando, y un servidor que censura a gente inocente se vacía más
+    # rápido que uno con algún insulto suelto.
+    alerta = chs.get("registro", {}).get("id")
+    acciones = [{"type": 1}]                       # bloquear el mensaje
+    if alerta:
+        acciones.append({"type": 2, "metadata": {"channel_id": alerta}})
+
+    reglas = {r["name"] for r in
+              d.get(f"/guilds/{guild}/auto-moderation/rules")}
+    automod = [
+        ("Spam", {"trigger_type": 3, "trigger_metadata": {}}),
+        ("Menciones masivas",
+         {"trigger_type": 5, "trigger_metadata": {"mention_total_limit": 6}}),
+        ("Lenguaje ofensivo",
+         {"trigger_type": 4,
+          # 1 groserías · 2 contenido sexual · 3 insultos discriminatorios
+          "trigger_metadata": {"presets": [1, 2, 3]}}),
+    ]
+    print("\nAUTOMODERACIÓN")
+    for nombre, cfg in automod:
+        if nombre in reglas:
+            print(f"  ya existe   {nombre}")
+            continue
+        try:
+            d.post(f"/guilds/{guild}/auto-moderation/rules", {
+                "name": nombre, "event_type": 1, "enabled": True,
+                "actions": acciones,
+                # El staff queda exento: si un moderador no puede citar lo
+                # que está moderando, no puede moderar.
+                "exempt_roles": [roles["🛡️ Moderador"], roles["🌙 Fundador"]],
+                **cfg})
+            print(f"  creada      {nombre}")
+        except SystemExit as e:
+            print(f"  fallo       {nombre}: {e}")
+
     print("\nHecho." if aplicar else
           "\nNada creado. Vuelve a lanzarlo con --aplicar cuando lo veas bien.")
 

@@ -301,8 +301,17 @@ def main() -> None:
     orden = [{"id": roles[n], "position": i + 1}
              for i, (n, *_) in enumerate(ROLES)]
     if orden:
-        d.patch(f"/guilds/{guild}/roles", orden)
-        print("\nJERARQUÍA  " + " < ".join(n for n, *_ in ROLES))
+        try:
+            d.patch(f"/guilds/{guild}/roles", orden)
+            print("\nJERARQUÍA  " + " < ".join(n for n, *_ in ROLES))
+        except SystemExit:
+            # NO se aborta: ordenar roles es lo único que exige que el rol
+            # del bot esté arriba, y dejar el resto sin hacer por eso sería
+            # castigar dos veces el mismo despiste.
+            print("\n⚠  No se pudo ordenar los roles: el rol del bot tiene que")
+            print("   estar POR ENCIMA de los que va a mover.")
+            print("   Ajustes del servidor → Roles → arrastra «PokeReport»")
+            print("   arriba del todo, y vuelve a lanzar esto.")
 
     # --- limpieza de lo que Discord crea solo
     #

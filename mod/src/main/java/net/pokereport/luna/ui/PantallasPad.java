@@ -1,6 +1,7 @@
 package net.pokereport.luna.ui;
 
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.pokereport.luna.LunaEternal;
 import net.pokereport.luna.economy.Currency;
 import net.pokereport.luna.progression.Path;
 
@@ -130,6 +131,83 @@ public final class PantallasPad {
 
         p.izquierda("@cabeza");
         p.pie("§7Nada de lo importante vive en el terreno");
+        p.abrirDesde(jugador, () -> AlmanacPad.abrir(jugador));
+    }
+
+    // ------------------------------------------------------------ Pokédex
+
+    /** Cuántas especies caben en una pantalla del Pad. */
+    private static final int POR_PAGINA = 15;   // 5 x 3
+
+    /**
+     * La Pokédex, con los Pokémon en 3D.
+     *
+     * <p>Cada celda dibuja el <b>modelo real</b> de Cobblemon, no un icono.
+     * Es la diferencia entre una lista y una coleccion: un numero 025 no dice
+     * nada, un Pikachu girado en tres cuartos si.
+     *
+     * <p>Solo se dibujan los CAPTURADOS. Los que faltan salen bloqueados y sin
+     * modelo — enseñar la silueta de lo que no tienes es de otro juego; aqui
+     * el premio de capturar es justamente ver al Pokémon.
+     */
+    public static void pokedex(ServerPlayerEntity jugador, int pagina) {
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players().resolve(
+                    jugador.getUuid(), jugador.getGameProfile().getName());
+                int desde = pagina * POR_PAGINA + 1;
+                var entradas = LunaEternal.pokedex()
+                    .range(id, desde, desde + POR_PAGINA - 1);
+                var resumen = LunaEternal.pokedex().summary(id);
+
+                jugador.getServer().execute(() ->
+                    pintarPokedex(jugador, pagina, desde, entradas, resumen));
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo abrir la Pokédex", e);
+            }
+        });
+    }
+
+    private static void pintarPokedex(
+            ServerPlayerEntity jugador, int pagina, int desde,
+            List<net.pokereport.luna.pokedex.PokedexService.Entry> entradas,
+            net.pokereport.luna.pokedex.PokedexService.Summary resumen) {
+
+        var p = new PadService.Pantalla("pokedex_" + pagina,
+            "Pokédex  " + desde + "-" + (desde + POR_PAGINA - 1), 5, 3);
+
+        var porDex = new java.util.HashMap<Integer,
+            net.pokereport.luna.pokedex.PokedexService.Entry>();
+        for (var e : entradas) porDex.put(e.dexNumber(), e);
+
+        for (int i = 0; i < POR_PAGINA; i++) {
+            int dex = desde + i;
+            if (dex > 251) break;              // Kanto + Johto (D-017)
+            var e = porDex.get(dex);
+            boolean tiene = e != null && e.caught();
+
+            String num = String.format("%03d", dex);
+            p.celda(i % 5, i / 5,
+                    tiene ? "pokemon:" + e.species() : "pokedex",
+                    tiene ? "§f" + num : "§8" + num,
+                    tiene
+                        ? List.of("§7" + e.species(),
+                                  "§7Capturados: §f" + e.caughtCount(),
+                                  e.shinyCaught() ? "§6¡Shiny!" : "")
+                        : List.of("§8Sin capturar"),
+                    !tiene, (j, d) -> {});
+        }
+
+        p.izquierda("@cabeza");
+        p.izquierda("");
+        p.izquierda("§f" + resumen.caught() + "§7/251");
+        if (resumen.shiny() > 0) p.izquierda("§6" + resumen.shiny() + " shiny");
+
+        // Paginación con las flechas del propio Pad seria confuso: esas son
+        // navegacion. Aqui van como celdas del pie.
+        p.pie("§7Página " + (pagina + 1) + " de "
+              + ((251 + POR_PAGINA - 1) / POR_PAGINA));
+
         p.abrirDesde(jugador, () -> AlmanacPad.abrir(jugador));
     }
 

@@ -55,7 +55,7 @@ public final class AlmanacPad {
 
         p.celda(0, 0, "pokedex", "§bPokédex",
                 List.of("§7Lo que has registrado.", "", "§eClic para abrir"),
-                false, (j, d) -> PokedexMenu.open(j, null, 0));
+                false, (j, d) -> PantallasPad.pokedex(j, 0));
 
         p.celda(1, 0, "cartera", "§eCartera",
                 List.of("§7Tus tres monedas.", "", "§eClic para abrir"),

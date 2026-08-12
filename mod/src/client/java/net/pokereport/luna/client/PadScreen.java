@@ -69,6 +69,9 @@ public class PadScreen extends Screen {
     private static final String MARCA_ICONO = "@icono:";
     private static final String MARCA_CABEZA = "@cabeza";
 
+    /** Icono especial: en vez de textura, el modelo 3D de un Pokémon. */
+    private static final String MARCA_POKEMON = "pokemon:";
+
     /** Botones de navegación: alto de la fila y tamaño del botón. */
     private static final int NAV = 18;
     private static final int NAV_HUECO = 4;
@@ -175,10 +178,20 @@ public class PadScreen extends Screen {
 
             // El icono, con margen dentro de la celda.
             int m = Math.max(2, celdaPx / 8);
-            Identifier icono = Identifier.of("lunaeternal",
-                "textures/pad/icono/" + c.icono() + ".png");
-            ctx.drawTexture(icono, x + m, y + m, celdaPx - m * 2,
-                            celdaPx - m * 2, 0, 0, 128, 128, 128, 128);
+            if (c.icono().startsWith(MARCA_POKEMON)) {
+                // El modelo se dibuja desde la BASE de la celda y centrado:
+                // un Snorlax y un Caterpie no miden lo mismo, y anclarlos
+                // arriba dejaria a uno flotando.
+                PokemonRender.dibujar(ctx,
+                    c.icono().substring(MARCA_POKEMON.length()),
+                    x + celdaPx / 2, y + celdaPx - m,
+                    celdaPx / 9F, delta);
+            } else {
+                Identifier icono = Identifier.of("lunaeternal",
+                    "textures/pad/icono/" + c.icono() + ".png");
+                ctx.drawTexture(icono, x + m, y + m, celdaPx - m * 2,
+                                celdaPx - m * 2, 0, 0, 128, 128, 128, 128);
+            }
 
             // Recorte al ancho de la CELDA, no mas: con celdaPx + 8 las
             // etiquetas de dos celdas vecinas se tocaban ("Centro PPuerta d").
@@ -340,6 +353,7 @@ public class PadScreen extends Screen {
         // Avisar al servidor: sin esto se quedaria pensando que la pantalla
         // sigue abierta y aceptaria pulsaciones de una pantalla ya cerrada.
         ClientPlayNetworking.send(new PadPayloads.Cerrar(datos.pantalla()));
+        PokemonRender.olvidar();
         super.removed();
     }
 

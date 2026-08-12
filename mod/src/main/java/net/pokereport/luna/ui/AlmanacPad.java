@@ -55,7 +55,7 @@ public final class AlmanacPad {
 
         p.celda(0, 0, "pokedex", "§bPokédex",
                 List.of("§7Lo que has registrado.", "", "§eClic para abrir"),
-                false, (j, d) -> PantallasPad.pokedex(j, 0));
+                false, (j, d) -> net.pokereport.luna.net.PadPayloads.abrirPokedex(j));
 
         p.celda(1, 0, "cartera", "§eCartera",
                 List.of("§7Tus tres monedas.", "", "§eClic para abrir"),
@@ -102,8 +102,10 @@ public final class AlmanacPad {
         p.celda(1, 2, "clan", "§8Clanes",
                 List.of("§7Aún no disponibles."), true, (j, d) -> {});
 
-        p.celda(2, 2, "cosmeticos", "§8Cosmét.",
-                List.of("§fCosméticos", "§7Aún no disponibles."), true, (j, d) -> {});
+        p.celda(2, 2, "centro", "§dCrianza",
+                List.of("§7Cría con la especie del ciclo.",
+                        "§7Rota cada 12 horas.", "", "§eClic para abrir"),
+                false, (j, d) -> PantallasPad.crianza(j));
 
         p.celda(3, 2, "cazas", "§6Cazas",
                 List.of("§7Objetivos del servidor.",

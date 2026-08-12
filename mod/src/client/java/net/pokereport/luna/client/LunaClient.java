@@ -28,7 +28,31 @@ public final class LunaClient implements ClientModInitializer {
             PadPayloads.Abrir.ID, (payload, context) ->
                 context.client().execute(() -> abrir(payload)));
 
+        // Pokédex: se cierra el Pad y se abre la de Cobblemon. Es un atajo
+        // al objeto, no una copia — su pantalla ya existe y es mejor.
+        ClientPlayNetworking.registerGlobalReceiver(
+            PadPayloads.AbrirPokedex.ID, (payload, context) ->
+                context.client().execute(LunaClient::abrirPokedex));
+
         LOG.info("Luna Eternal — interfaz de cliente lista");
+    }
+
+    private static void abrirPokedex() {
+        try {
+            com.cobblemon.mod.common.client.gui.pokedex.PokedexGUI.Companion.open(
+                com.cobblemon.mod.common.client.CobblemonClient.INSTANCE
+                    .getClientPokedexData(),
+                // PokedexType es un enum, no un objeto con companion.
+                com.cobblemon.mod.common.client.pokedex.PokedexType.RED,
+                null, null);
+        } catch (Throwable t) {
+            LOG.error("No se pudo abrir la Pokédex de Cobblemon", t);
+            MinecraftClient c = MinecraftClient.getInstance();
+            if (c.player != null) {
+                c.player.sendMessage(net.minecraft.text.Text.literal(
+                    "§cNo se pudo abrir la Pokédex."), false);
+            }
+        }
     }
 
     private static void abrir(PadPayloads.Abrir datos) {

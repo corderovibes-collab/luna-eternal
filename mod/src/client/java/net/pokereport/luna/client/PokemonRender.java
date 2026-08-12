@@ -68,6 +68,12 @@ public final class PokemonRender {
         // Recorte a la celda. Ademas de evitar que un Snorlax invada la de al
         // lado, es lo que quita el parpadeo: sin el, el modelo se dibuja fuera
         // y se pelea con lo que ya habia pintado ahi.
+        // Vaciar el lote ANTES y DESPUES. El modelo se dibuja con su propio
+        // VertexConsumerProvider y, si quedan vertices de la interfaz sin
+        // volcar, unos y otros se ordenan distinto en cada fotograma: eso es
+        // el parpadeo. Forzando el volcado, el orden deja de depender del
+        // azar.
+        ctx.draw();
         ctx.enableScissor(x, y, x + lado, y + lado);
         matrices.push();
 
@@ -97,7 +103,13 @@ public final class PokemonRender {
             LunaClient.LOG.warn("No se pudo dibujar '{}': {}", especie, t.toString());
         } finally {
             matrices.pop();
+            ctx.draw();
             ctx.disableScissor();
+            // El modelo deja activadas la prueba de profundidad y la luz
+            // difusa 3D. Sin devolverlas a su sitio, lo que se dibuje
+            // despues sale con sombreado raro o directamente no sale.
+            com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
+            net.minecraft.client.render.DiffuseLighting.enableGuiDepthLighting();
         }
     }
 

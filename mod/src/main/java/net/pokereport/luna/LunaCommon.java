@@ -34,5 +34,7 @@ public final class LunaCommon implements ModInitializer {
             PadPayloads.Pulsar.ID, PadPayloads.Pulsar.CODEC);
         PayloadTypeRegistry.playC2S().register(
             PadPayloads.Cerrar.ID, PadPayloads.Cerrar.CODEC);
+        PayloadTypeRegistry.playS2C().register(
+            PadPayloads.AbrirPokedex.ID, PadPayloads.AbrirPokedex.CODEC);
     }
 }

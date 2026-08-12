@@ -41,7 +41,7 @@ public final class PadPayloads {
      * de una desconexion, una interfaz mas fea. <b>Sube este numero cada vez
      * que cambies un record de este fichero.</b>
      */
-    public static final int VERSION = 3;
+    public static final int VERSION = 4;
 
     public static final Identifier ABRIR  =
         Identifier.of("lunaeternal", "pad_abrir_v" + VERSION);
@@ -49,6 +49,8 @@ public final class PadPayloads {
         Identifier.of("lunaeternal", "pad_pulsar_v" + VERSION);
     public static final Identifier CERRAR =
         Identifier.of("lunaeternal", "pad_cerrar_v" + VERSION);
+    public static final Identifier POKEDEX =
+        Identifier.of("lunaeternal", "pad_pokedex_v" + VERSION);
 
     /** Estilos de pantalla. Ver PadScreen. */
     public static final String REJILLA = "rejilla";   // celdas pequeñas
@@ -174,6 +176,32 @@ public final class PadPayloads {
 
         @Override
         public CustomPayload.Id<? extends CustomPayload> getId() { return ID; }
+    }
+
+    /**
+     * Servidor → cliente: abre la Pokédex de Cobblemon.
+     *
+     * <p>No dibujamos nuestra propia Pokédex: la de Cobblemon ya existe, es
+     * mejor y se mantiene sola. El PokePad solo es el <b>atajo</b> para no
+     * tener que llevar el objeto en la mano.
+     */
+    public record AbrirPokedex() implements CustomPayload {
+
+        public static final CustomPayload.Id<AbrirPokedex> ID =
+            new CustomPayload.Id<>(POKEDEX);
+
+        public static final PacketCodec<RegistryByteBuf, AbrirPokedex> CODEC =
+            PacketCodec.unit(new AbrirPokedex());
+
+        @Override
+        public CustomPayload.Id<? extends CustomPayload> getId() { return ID; }
+    }
+
+    /** Manda al cliente abrir la Pokédex de Cobblemon. */
+    public static void abrirPokedex(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
+            .send(jugador, new AbrirPokedex());
     }
 
     /** Cliente → servidor: he cerrado la pantalla. */

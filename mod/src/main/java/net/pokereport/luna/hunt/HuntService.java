@@ -30,15 +30,25 @@ public final class HuntService {
     /** Cada cuánto rota. 12 h: cabe una sesión de tarde y una de noche. */
     private static final long HORAS = 12;
 
-    /** Cuántos objetivos de cada tipo por ciclo. */
+    /**
+     * Tres de cada tipo. Tres caben grandes en el Pad; con cinco cada tarjeta
+     * se quedaba estrecha y el Pokémon salía pequeño.
+     */
     private static final int CAZAS = 3;
-    private static final int CRIANZAS = 2;
+    private static final int CRIANZAS = 3;
 
     public enum Tipo { CAPTURA, CRIANZA }
 
+    /**
+     * @param rareza 1 basico · 2 intermedio · 3 raro
+     *
+     * <p>La rareza sale de la POSICION dentro de su tipo, no del azar: asi
+     * cada ciclo tiene siempre uno facil, uno medio y uno dificil. Si fuera
+     * aleatoria, habria ciclos de tres dificiles que nadie completaria.
+     */
     public record Objetivo(long id, Tipo tipo, String especie, int necesarios,
                            long premioDolar, long premioMarca,
-                           int hechos, boolean cobrado) {
+                           int hechos, boolean cobrado, int rareza) {
         public boolean completo() { return hechos >= necesarios; }
     }
 
@@ -108,16 +118,17 @@ public final class HuntService {
               + "reward_dollar, reward_mark) VALUES (?,?,?,?,?,?)")) {
             for (int i = 0; i < elegidas.size(); i++) {
                 boolean caza = i < CAZAS;
+                int rareza = (caza ? i : i - CAZAS) + 1;   // 1, 2, 3
                 var esp = elegidas.get(i);
-                // Criar cuesta mucho más que capturar, así que pide una sola
-                // unidad y paga más. Si pidiera tres, nadie lo intentaría.
-                int necesarios = caza ? 1 + (i % 3) : 1;
+                // Criar cuesta mucho más que capturar, así que pide menos
+                // unidades y paga más. Si pidiera tres, nadie lo intentaría.
+                int necesarios = caza ? rareza : 1;
                 ps.setLong(1, id);
                 ps.setString(2, caza ? "CAPTURA" : "CRIANZA");
                 ps.setString(3, esp.nombre());
                 ps.setInt(4, necesarios);
-                ps.setLong(5, (caza ? 600L : 1500L) * necesarios);
-                ps.setLong(6, (caza ? 8L : 20L) * necesarios);
+                ps.setLong(5, (caza ? 600L : 1500L) * rareza);
+                ps.setLong(6, (caza ? 8L : 20L) * rareza);
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -151,11 +162,15 @@ public final class HuntService {
             ps.setLong(1, playerId);
             ps.setLong(2, cicloId);
             try (ResultSet rs = ps.executeQuery()) {
+                int nCaptura = 0, nCrianza = 0;
                 while (rs.next()) {
-                    out.add(new Objetivo(rs.getLong(1),
-                        Tipo.valueOf(rs.getString(2)), rs.getString(3),
+                    var tipo = Tipo.valueOf(rs.getString(2));
+                    // La rareza es la posicion dentro de su tipo. Se deriva
+                    // al leer para no necesitar una columna nueva.
+                    int rareza = tipo == Tipo.CAPTURA ? ++nCaptura : ++nCrianza;
+                    out.add(new Objetivo(rs.getLong(1), tipo, rs.getString(3),
                         rs.getInt(4), rs.getLong(5), rs.getLong(6),
-                        rs.getInt(7), rs.getBoolean(8)));
+                        rs.getInt(7), rs.getBoolean(8), rareza));
                 }
             }
         }

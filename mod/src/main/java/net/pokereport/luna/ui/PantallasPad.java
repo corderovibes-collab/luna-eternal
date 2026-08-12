@@ -224,41 +224,56 @@ public final class PantallasPad {
      * no solo por el texto.
      */
     public static void cazas(ServerPlayerEntity jugador) {
+        abrirHunt(jugador, net.pokereport.luna.hunt.HuntService.Tipo.CAPTURA);
+    }
+
+    /** La otra mitad: criar. Pantalla aparte, no una fila mas. */
+    public static void crianza(ServerPlayerEntity jugador) {
+        abrirHunt(jugador, net.pokereport.luna.hunt.HuntService.Tipo.CRIANZA);
+    }
+
+    private static void abrirHunt(ServerPlayerEntity jugador,
+                                  net.pokereport.luna.hunt.HuntService.Tipo tipo) {
         LunaEternal.submit(() -> {
             try {
                 long id = LunaEternal.players().resolve(
                     jugador.getUuid(), jugador.getGameProfile().getName());
                 var ciclo = LunaEternal.hunts().cicloActual(id);
-                jugador.getServer().execute(() -> pintarCazas(jugador, ciclo));
+                jugador.getServer().execute(
+                    () -> pintarCazas(jugador, ciclo, tipo));
             } catch (Exception e) {
                 LunaEternal.LOG.error("No se pudieron abrir las Cazas", e);
             }
         });
     }
 
-    private static void pintarCazas(ServerPlayerEntity jugador,
-                                    net.pokereport.luna.hunt.HuntService.Ciclo ciclo) {
-        var objetivos = ciclo.objetivos();
-        int cols = Math.max(1, Math.min(5, objetivos.size()));
-        var p = new PadService.Pantalla("cazas", "Cazas", cols, 1).tarjetas();
+    private static void pintarCazas(
+            ServerPlayerEntity jugador,
+            net.pokereport.luna.hunt.HuntService.Ciclo ciclo,
+            net.pokereport.luna.hunt.HuntService.Tipo tipo) {
 
-        for (int i = 0; i < objetivos.size() && i < cols; i++) {
+        boolean captura = tipo == net.pokereport.luna.hunt.HuntService.Tipo.CAPTURA;
+        var objetivos = ciclo.objetivos().stream()
+            .filter(o -> o.tipo() == tipo).toList();
+
+        int cols = Math.max(1, objetivos.size());
+        var p = new PadService.Pantalla(captura ? "cazas" : "crianza",
+                                        captura ? "Cazas" : "Crianza",
+                                        cols, 1).tarjetas();
+
+        for (int i = 0; i < objetivos.size(); i++) {
             var o = objetivos.get(i);
-            boolean captura = o.tipo() ==
-                net.pokereport.luna.hunt.HuntService.Tipo.CAPTURA;
-
             List<String> desc = new ArrayList<>();
-            desc.add(captura ? "§bCapturar" : "§dCriar");
-            desc.add((o.completo() ? "§a" : "§7") + o.hechos() + "/" + o.necesarios());
+            desc.add("@estrellas:" + o.rareza());
+            desc.add((o.completo() ? "§a" : "§7") + o.hechos() + " / " + o.necesarios());
+            desc.add("§6" + o.premioDolar() + " PD");
             desc.add(o.cobrado() ? "§8Cobrado"
-                   : o.completo() ? "§e¡Clic para cobrar!"
-                   : "§7" + o.premioDolar() + "§8 PD");
+                   : o.completo() ? "§a¡Cobrar!" : "§8Pendiente");
 
             long objetivoId = o.id();
             p.celda(i, 0, "pokemon:" + o.especie(),
                     (o.cobrado() ? "§8" : "§f") + o.especie(),
-                    desc, false,
-                    (j, d) -> cobrar(j, objetivoId));
+                    desc, false, (j, d) -> cobrar(j, objetivoId, tipo));
         }
 
         p.izquierda("@cabeza");
@@ -266,11 +281,21 @@ public final class PantallasPad {
         p.izquierda("§7Rota en");
         p.izquierda("§f" + restante(ciclo.terminaEn()));
 
-        p.pie("§7Solo cuenta capturar. Criar cuenta en las de Crianza");
+        // La otra mitad del sistema, para saber que existe. Se llega desde
+        // el PokePad; poner aqui un boton propio exigiria otro indice
+        // reservado y no compensa por un salto.
+        p.derecha(captura ? "@icono:centro" : "@icono:cazas");
+        p.derecha(captura ? "§dCrianza" : "§bCazas");
+        p.derecha("§8en el");
+        p.derecha("§8PokePad");
+
+        p.pie(captura ? "§7Captúralo para completarla"
+                      : "§7Cría con esa especie para completarla");
         p.abrirDesde(jugador, () -> AlmanacPad.abrir(jugador));
     }
 
-    private static void cobrar(ServerPlayerEntity jugador, long objetivoId) {
+    private static void cobrar(ServerPlayerEntity jugador, long objetivoId,
+                               net.pokereport.luna.hunt.HuntService.Tipo tipo) {
         LunaEternal.submit(() -> {
             try {
                 long id = LunaEternal.players().resolve(
@@ -285,7 +310,7 @@ public final class PantallasPad {
                 };
                 jugador.getServer().execute(() -> {
                     jugador.sendMessage(net.minecraft.text.Text.literal(msg), false);
-                    cazas(jugador);   // refrescar, para que se vea el cambio
+                    abrirHunt(jugador, tipo);   // refrescar en su pantalla
                 });
             } catch (Exception e) {
                 LunaEternal.LOG.error("Error cobrando una caza", e);

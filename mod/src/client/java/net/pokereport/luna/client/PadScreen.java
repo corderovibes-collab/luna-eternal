@@ -75,6 +75,9 @@ public class PadScreen extends Screen {
     /** Botón «+» de un panel lateral. Envía el índice reservado -3. */
     private static final String MARCA_MAS = "@mas";
 
+    /** «@estrellas:2» pinta ★★☆ en vez de una línea de texto. */
+    private static final String MARCA_ESTRELLAS = "@estrellas:";
+
     /** Botones de navegación: alto de la fila y tamaño del botón. */
     private static final int NAV = 18;
     private static final int NAV_HUECO = 4;
@@ -197,16 +200,32 @@ public class PadScreen extends Screen {
                           && mouseY >= y && mouseY < y + celdaAlto;
             if (dentro && !c.bloqueada()) encima = i;
 
-            Identifier fondo = c.bloqueada() ? CELDA_BLOQUEADA
-                             : dentro ? CELDA_ENCIMA : CELDA;
-            ctx.drawTexture(fondo, x, y, celdaAncho, celdaAlto, 0, 0, 128, 128,
-                            128, 128);
+            boolean tarjeta = "tarjetas".equals(datos.estilo());
+            if (tarjeta) {
+                // Dibujada, no estirada: un PNG de 128x128 llevado a una
+                // tarjeta alta y estrecha deforma las esquinas en ovalos.
+                int arriba = c.bloqueada() ? 0xFFB9C0CC
+                           : dentro ? 0xFFFFFFFF : 0xFFF2F8FF;
+                int abajo  = c.bloqueada() ? 0xFF7C8595
+                           : dentro ? 0xFFBFE4FF : 0xFF96D4F5;
+                int borde  = c.bloqueada() ? 0xFF4A5260
+                           : dentro ? 0xFFFFE08C : 0xFF2C78B4;
+                Tarjeta.dibujar(ctx, x, y, celdaAncho, celdaAlto,
+                                arriba, abajo, borde);
+            } else {
+                Identifier fondo = c.bloqueada() ? CELDA_BLOQUEADA
+                                 : dentro ? CELDA_ENCIMA : CELDA;
+                ctx.drawTexture(fondo, x, y, celdaAncho, celdaAlto,
+                                0, 0, 128, 128, 128, 128);
+            }
 
             // El icono, con margen dentro de la celda.
             int m = Math.max(2, celdaPx / 8);
-            boolean tarjeta = "tarjetas".equals(datos.estilo());
-            int arte = tarjeta ? Math.min(celdaAncho - 8, celdaAlto / 2)
-                               : celdaAncho;
+            // En tarjeta el arte manda: 60 % del alto. Con la mitad, los
+            // Pokemon salian pequeños en una tarjeta grande y medio vacia.
+            int arte = tarjeta
+                     ? Math.min(celdaAncho - 6, (int) (celdaAlto * 0.60))
+                     : celdaAncho;
             int ax = x + (celdaAncho - arte) / 2;
             int ay = y + (tarjeta ? 6 : 0);
 
@@ -248,9 +267,16 @@ public class PadScreen extends Screen {
                 for (String l : c.descripcion()) {
                     if (l.isEmpty()) continue;
                     if (dy > y + celdaAlto - PIE_LINEA) break;
-                    ctx.drawCenteredTextWithShadow(this.textRenderer,
-                        Text.literal(this.textRenderer.trimToWidth(l, anchoTexto)),
-                        x + celdaAncho / 2, dy, 0xFF2C5B84);
+                    if (l.startsWith(MARCA_ESTRELLAS)) {
+                        Tarjeta.estrellas(ctx, this.textRenderer,
+                            x + celdaAncho / 2, dy,
+                            l.charAt(MARCA_ESTRELLAS.length()) - '0');
+                    } else {
+                        ctx.drawCenteredTextWithShadow(this.textRenderer,
+                            Text.literal(this.textRenderer.trimToWidth(
+                                l, anchoTexto)),
+                            x + celdaAncho / 2, dy, 0xFF2C5B84);
+                    }
                     dy += PIE_LINEA;
                 }
             }
@@ -360,8 +386,10 @@ public class PadScreen extends Screen {
                           int mouseX, int mouseY) {
         boolean dentro = mouseX >= x && mouseX < x + NAV
                       && mouseY >= y && mouseY < y + NAV;
-        ctx.drawTexture(dentro ? CELDA_ENCIMA : CELDA, x, y, NAV, NAV,
-                        0, 0, 128, 128, 128, 128);
+        Tarjeta.dibujar(ctx, x, y, NAV, NAV,
+                        dentro ? 0xFFFFFFFF : 0xFFF2F8FF,
+                        dentro ? 0xFFBFE4FF : 0xFF96D4F5,
+                        dentro ? 0xFFFFE08C : 0xFF2C78B4);
         ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal(glifo),
                                        x + NAV / 2, y + (NAV - 8) / 2,
                                        0xFF16324B);

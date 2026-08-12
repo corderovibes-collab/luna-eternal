@@ -27,9 +27,28 @@ public final class PadPayloads {
 
     private PadPayloads() {}
 
-    public static final Identifier ABRIR  = Identifier.of("lunaeternal", "pad_abrir");
-    public static final Identifier PULSAR = Identifier.of("lunaeternal", "pad_pulsar");
-    public static final Identifier CERRAR = Identifier.of("lunaeternal", "pad_cerrar");
+    /**
+     * Version del protocolo. <b>Va en el nombre del canal a proposito.</b>
+     *
+     * <p>Cuando cambia el formato de un paquete y el cliente se queda atras,
+     * lo que pasa es que el cliente intenta leer el formato viejo y revienta
+     * con {@code DecoderException} — un error que no dice nada sobre la causa
+     * real y que ademas TIRA LA CONEXION.
+     *
+     * <p>Con la version en el canal, un cliente desactualizado sencillamente
+     * no tiene registrado {@code pad_abrir_v2}. {@code PadService.soportado()}
+     * devuelve false y el servidor le abre el menu de cofre de siempre. En vez
+     * de una desconexion, una interfaz mas fea. <b>Sube este numero cada vez
+     * que cambies un record de este fichero.</b>
+     */
+    public static final int VERSION = 3;
+
+    public static final Identifier ABRIR  =
+        Identifier.of("lunaeternal", "pad_abrir_v" + VERSION);
+    public static final Identifier PULSAR =
+        Identifier.of("lunaeternal", "pad_pulsar_v" + VERSION);
+    public static final Identifier CERRAR =
+        Identifier.of("lunaeternal", "pad_cerrar_v" + VERSION);
 
     /** Estilos de pantalla. Ver PadScreen. */
     public static final String REJILLA = "rejilla";   // celdas pequeñas
@@ -38,6 +57,7 @@ public final class PadPayloads {
     /** Índices reservados que el cliente puede enviar sin ser una celda. */
     public static final int ATRAS = -1;
     public static final int INICIO = -2;
+    public static final int COMPRAR = -3;
 
     /** Una celda del Pad: icono, texto y estado. */
     public record Celda(String icono, String titulo, List<String> descripcion,

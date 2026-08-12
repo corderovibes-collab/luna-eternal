@@ -51,7 +51,7 @@ public final class AlmanacPad {
     public static void abrir(ServerPlayerEntity jugador) {
         var snap = MenuService.cached(jugador);
 
-        var p = new PadService.Pantalla("almanaque", "El Almanaque", 5, 3);
+        var p = new PadService.Pantalla("pokepad", "PokePad", 5, 3);
 
         p.celda(0, 0, "pokedex", "§bPokédex",
                 List.of("§7Lo que has registrado.", "", "§eClic para abrir"),
@@ -114,13 +114,15 @@ public final class AlmanacPad {
         // Paneles laterales del arte. Son estrechos —caben unos 9
         // caracteres— asi que las cifras van abreviadas y los rotulos
         // cortos. Mejor "1,2k" legible que "1250" cortado a "12".
-        // Verde: identidad. La cabeza cabe donde no cabe una palabra.
+        // Verde: la cabeza y, debajo, la moneda premium con su boton «+»,
+        // como en la referencia. El NOMBRE se quita: en 47 px salia cortado
+        // ("TheJu") y un nombre a medias es peor que ninguno — ya lo tienes
+        // en el tablist y sobre tu cabeza.
         p.izquierda("@cabeza");
         p.izquierda("");
-        p.izquierda("§f" + corto(jugador.getGameProfile().getName(), 9));
-        if (snap != null && snap.dominantLevel > 0) {
-            p.izquierda("§d" + romano(snap.dominantLevel));
-        }
+        p.izquierda("@icono:moneda_premium");
+        p.izquierda("§f" + (snap == null ? 0 : snap.balance(Currency.REPORTCOIN)));
+        p.izquierda("@mas");
 
         // Morado: lo que TIENES PENDIENTE. El dinero ya no va aqui — se ve
         // entero en la Cartera, y repetirlo abreviado solo restaba sitio.

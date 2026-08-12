@@ -24,7 +24,8 @@ PROPIOS = RAIZ / "arte-origen" / "icono"
 DESTINO = (RAIZ / "resourcepack" / "assets" / "lunaeternal"
            / "textures" / "pad" / "icono")
 
-LADO = 64
+LADO = 64          # se DIBUJA a 64 (las formas estan en esas coordenadas)
+SALIDA = 128       # se GUARDA a 128: es lo que el Pad muestrea
 TRAZO = (38, 34, 50, 255)          # contorno, casi negro pero no del todo
 
 # Paleta amable, la de la referencia: saturada pero no chillona.
@@ -295,7 +296,7 @@ def main() -> None:
                         if (PROPIOS / f"{nombre}{e}").exists()), None)
         if externo:
             Image.open(externo).convert("RGBA") \
-                 .resize((LADO, LADO), Image.LANCZOS) \
+                 .resize((SALIDA, SALIDA), Image.LANCZOS) \
                  .save(DESTINO / f"{nombre}.png")
             propios += 1
             print(f"  {nombre:<12} {externo.name}, propio")
@@ -303,7 +304,9 @@ def main() -> None:
 
         img = Image.new("RGBA", (LADO, LADO), (0, 0, 0, 0))
         dibuja(img)
-        sombra(img).save(DESTINO / f"{nombre}.png")
+        # A 128 al guardar: PadScreen muestrea texturas de 128x128 y con una
+        # de 64 dibujaria solo un cuarto del icono, estirado.
+        sombra(img).resize((SALIDA, SALIDA), Image.LANCZOS)                    .save(DESTINO / f"{nombre}.png")
         print(f"  {nombre:<12} dibujado {LADO}x{LADO}")
 
     print(f"\n{len(ICONOS)} iconos · {propios} propios · "

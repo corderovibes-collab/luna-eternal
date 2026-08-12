@@ -22,6 +22,7 @@ from PIL import Image
 RAIZ = Path(__file__).resolve().parent.parent
 ORIGEN = Path("C:/Users/JUAN/Downloads/interfazpokepad")
 PAD = RAIZ / "resourcepack" / "assets" / "lunaeternal" / "textures" / "pad"
+ORIGEN_ICONOS = RAIZ / "arte-origen" / "icono"
 
 # El nombre que trae -> el nombre que usa el mod.
 ICONOS = {
@@ -102,9 +103,14 @@ def main() -> None:
         if not p.exists():
             print(f"  {nombre:<12} FALTA ({origen}.png)")
             continue
-        Image.open(p).convert("RGBA") \
-             .resize((LADO_ICONO, LADO_ICONO), Image.LANCZOS) \
-             .save(PAD / "icono" / f"{nombre}.png")
+        img = Image.open(p).convert("RGBA")
+        img.resize((LADO_ICONO, LADO_ICONO), Image.LANCZOS) \
+           .save(PAD / "icono" / f"{nombre}.png")
+        # Y ademas al ORIGEN. Sin esto, la siguiente ejecucion de
+        # gen_iconos.py los pisaba con los dibujados por codigo y el arte
+        # del usuario desaparecia sin avisar. Paso de verdad.
+        ORIGEN_ICONOS.mkdir(parents=True, exist_ok=True)
+        img.save(ORIGEN_ICONOS / f"{nombre}.png")
         n += 1
     print(f"  iconos       {n} de {len(ICONOS)}")
     print("\nAhora: python tools/gen_resourcepack.py")

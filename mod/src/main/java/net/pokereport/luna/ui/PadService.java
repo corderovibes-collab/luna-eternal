@@ -60,6 +60,14 @@ public final class PadService {
         inicio = r;
     }
 
+    /** Qué pasa al pulsar el «+» de la moneda premium. */
+    private static java.util.function.Consumer<ServerPlayerEntity> comprar =
+        j -> {};
+
+    public static void comprar(java.util.function.Consumer<ServerPlayerEntity> r) {
+        comprar = r;
+    }
+
     private PadService() {}
 
     /**
@@ -190,6 +198,10 @@ public final class PadService {
             var pila = HISTORIAL.get(jugador.getUuid());
             if (pila != null && !pila.isEmpty()) pila.pop().run();
             else inicio.accept(jugador);
+            return;
+        }
+        if (p.indice() == PadPayloads.COMPRAR) {
+            comprar.accept(jugador);
             return;
         }
         if (p.indice() == PadPayloads.INICIO) {

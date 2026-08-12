@@ -172,6 +172,11 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.ui.PadService.registrar();
             net.pokereport.luna.ui.PadService.inicio(
                 net.pokereport.luna.ui.AlmanacPad::abrir);
+            // El «+» de la moneda premium. Cuando exista la tienda web, aqui
+            // se enviara el enlace; de momento avisa y no miente.
+            net.pokereport.luna.ui.PadService.comprar(j -> j.sendMessage(
+                net.minecraft.text.Text.literal(
+                    "§dLa tienda de ReportCoins aún no está abierta."), false));
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);

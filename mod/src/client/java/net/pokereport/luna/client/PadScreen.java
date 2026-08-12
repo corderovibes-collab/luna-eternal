@@ -72,6 +72,9 @@ public class PadScreen extends Screen {
     /** Icono especial: en vez de textura, el modelo 3D de un Pokémon. */
     private static final String MARCA_POKEMON = "pokemon:";
 
+    /** Botón «+» de un panel lateral. Envía el índice reservado -3. */
+    private static final String MARCA_MAS = "@mas";
+
     /** Botones de navegación: alto de la fila y tamaño del botón. */
     private static final int NAV = 18;
     private static final int NAV_HUECO = 4;
@@ -89,6 +92,9 @@ public class PadScreen extends Screen {
     private int rejillaX, rejillaY, celdaPx, panelPie, navX, navY;
     private int navEncima = 0;   // 0 nada · -1 atrás · -2 inicio
     private int textoAlto = ETIQUETA;
+    private int masX, masY, masLado;
+    private boolean masEncima;
+    private int mouseXAct, mouseYAct;
 
     @Override
     protected void init() {
@@ -229,6 +235,9 @@ public class PadScreen extends Screen {
 
         // Paneles laterales. Van despues de la rejilla porque no se solapan
         // con ella: estan fuera de la pantalla azul.
+        mouseXAct = mouseX;
+        mouseYAct = mouseY;
+        masEncima = false;
         panelLateral(ctx, datos.izquierda(), VX0, VX1);
         panelLateral(ctx, datos.derecha(), MX0, MX1);
 
@@ -272,6 +281,17 @@ public class PadScreen extends Screen {
                                 grafico, grafico, 0, 0, 128, 128, 128, 128);
             } else if (linea.equals(MARCA_CABEZA)) {
                 cabeza(ctx, px + (pw - grafico) / 2, y, grafico);
+            } else if (linea.equals(MARCA_MAS)) {
+                int b = 14;
+                int bx = px + (pw - b) / 2;
+                masX = bx; masY = y; masLado = b;
+                boolean dentro = mouseXAct >= bx && mouseXAct < bx + b
+                              && mouseYAct >= y && mouseYAct < y + b;
+                if (dentro) masEncima = true;
+                ctx.drawTexture(dentro ? CELDA_ENCIMA : CELDA, bx, y, b, b,
+                                0, 0, 128, 128, 128, 128);
+                ctx.drawCenteredTextWithShadow(this.textRenderer,
+                    Text.literal("+"), bx + b / 2, y + 3, 0xFF16324B);
             } else if (!linea.isEmpty()) {
                 Text t = Text.literal(this.textRenderer.trimToWidth(linea, pw - 2));
                 ctx.drawCenteredTextWithShadow(this.textRenderer, t,
@@ -282,6 +302,7 @@ public class PadScreen extends Screen {
     }
 
     private static int altoLinea(String l, int grafico) {
+        if (l.equals(MARCA_MAS)) return 16;
         return (l.startsWith(MARCA_ICONO) || l.equals(MARCA_CABEZA))
              ? grafico + 2 : PIE_LINEA;
     }
@@ -326,6 +347,12 @@ public class PadScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (masEncima && button == 0) {
+            clic();
+            ClientPlayNetworking.send(new PadPayloads.Pulsar(
+                datos.pantalla(), PadPayloads.COMPRAR, false));
+            return true;
+        }
         if (navEncima != 0 && button == 0) {
             clic();
             ClientPlayNetworking.send(new PadPayloads.Pulsar(

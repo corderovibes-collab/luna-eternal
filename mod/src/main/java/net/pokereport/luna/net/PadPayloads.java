@@ -31,6 +31,14 @@ public final class PadPayloads {
     public static final Identifier PULSAR = Identifier.of("lunaeternal", "pad_pulsar");
     public static final Identifier CERRAR = Identifier.of("lunaeternal", "pad_cerrar");
 
+    /** Estilos de pantalla. Ver PadScreen. */
+    public static final String REJILLA = "rejilla";   // celdas pequeñas
+    public static final String TARJETAS = "tarjetas"; // tarjetas grandes
+
+    /** Índices reservados que el cliente puede enviar sin ser una celda. */
+    public static final int ATRAS = -1;
+    public static final int INICIO = -2;
+
     /** Una celda del Pad: icono, texto y estado. */
     public record Celda(String icono, String titulo, List<String> descripcion,
                         boolean bloqueada, int columna, int fila) {
@@ -69,7 +77,9 @@ public final class PadPayloads {
      * ancho del panel en el cliente: ahi caben unos 47-62 px, o sea 8-10
      * caracteres. Lo que se mande mas largo se corta, no se desborda.
      */
-    public record Abrir(String pantalla, String titulo, int columnas, int filas,
+    public record Abrir(String pantalla, String titulo, String estilo,
+                        boolean hayAtras,
+                        int columnas, int filas,
                         List<Celda> celdas, List<String> pie,
                         List<String> izquierda, List<String> derecha)
             implements CustomPayload {
@@ -82,18 +92,22 @@ public final class PadPayloads {
                 public Abrir decode(RegistryByteBuf b) {
                     String pantalla = b.readString(64);
                     String titulo = b.readString(256);
+                    String estilo = b.readString(32);
+                    boolean atras = b.readBoolean();
                     int cols = b.readVarInt(), fils = b.readVarInt();
                     int n = b.readVarInt();
                     List<Celda> celdas = new ArrayList<>(n);
                     for (int i = 0; i < n; i++) celdas.add(Celda.CODEC.decode(b));
-                    return new Abrir(pantalla, titulo, cols, fils, celdas,
-                                     lista(b), lista(b), lista(b));
+                    return new Abrir(pantalla, titulo, estilo, atras, cols,
+                                     fils, celdas, lista(b), lista(b), lista(b));
                 }
 
                 @Override
                 public void encode(RegistryByteBuf b, Abrir a) {
                     b.writeString(a.pantalla, 64);
                     b.writeString(a.titulo, 256);
+                    b.writeString(a.estilo, 32);
+                    b.writeBoolean(a.hayAtras);
                     b.writeVarInt(a.columnas);
                     b.writeVarInt(a.filas);
                     b.writeVarInt(a.celdas.size());

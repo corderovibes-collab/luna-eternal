@@ -68,6 +68,10 @@ public class PadScreen extends Screen {
      */
     private static final String MARCA_ICONO = "@icono:";
     private static final String MARCA_CABEZA = "@cabeza";
+
+    /** Botones de navegación: alto de la fila y tamaño del botón. */
+    private static final int NAV = 18;
+    private static final int NAV_HUECO = 4;
     private static final int PIE_LINEA = 10;
 
     private final PadPayloads.Abrir datos;
@@ -79,7 +83,9 @@ public class PadScreen extends Screen {
         this.datos = datos;
     }
 
-    private int rejillaX, rejillaY, celdaPx, panelPie;
+    private int rejillaX, rejillaY, celdaPx, panelPie, navX, navY;
+    private int navEncima = 0;   // 0 nada · -1 atrás · -2 inicio
+    private int textoAlto = ETIQUETA;
 
     @Override
     protected void init() {
@@ -98,18 +104,23 @@ public class PadScreen extends Screen {
 
         int filas = datos.filas(), cols = datos.columnas();
         int pieAlto = datos.pie().size() * PIE_LINEA;
-        int util = ph - TITULO_ALTO - pieAlto;
+        navY = py + TITULO_ALTO;
+        navX = px + 2;
+        int util = ph - TITULO_ALTO - NAV - NAV_HUECO - pieAlto;
 
         // El tamaño de celda SALE de la pantalla, no al revés. Así el Pad
         // vale para una rejilla de 3x2 y para una de 7x5 sin tocar nada.
         int porAncho = (pw - (cols - 1) * SEPARACION) / cols;
-        int porAlto = (util - (filas - 1) * SEPARACION) / filas - ETIQUETA;
+        boolean tarjetas = "tarjetas".equals(datos.estilo());
+        int textoAlto = tarjetas ? PIE_LINEA * 4 : ETIQUETA;
+        int porAlto = (util - (filas - 1) * SEPARACION) / filas - textoAlto;
         celdaPx = Math.max(16, Math.min(porAncho, porAlto));
 
         int rejAncho = cols * celdaPx + (cols - 1) * SEPARACION;
-        int rejAlto = filas * (celdaPx + ETIQUETA) + (filas - 1) * SEPARACION;
+        this.textoAlto = textoAlto;
+        int rejAlto = filas * (celdaPx + textoAlto) + (filas - 1) * SEPARACION;
         rejillaX = px + (pw - rejAncho) / 2;
-        rejillaY = py + TITULO_ALTO + (util - rejAlto) / 2;
+        rejillaY = py + TITULO_ALTO + NAV + NAV_HUECO + (util - rejAlto) / 2;
         panelPie = py + ph - pieAlto;
     }
 
@@ -137,12 +148,21 @@ public class PadScreen extends Screen {
             panelX + panelAncho / 2,
             panelY + (int) (panelAlto * PY0) + 2, 0xFFFFFFFF);
 
+        // Fila de navegación: atrás a la izquierda, inicio a la derecha.
+        navEncima = 0;
+        int pw = (int) (panelAncho * (PX1 - PX0));
+        if (datos.hayAtras()) {
+            if (boton(ctx, navX, navY, "<", mouseX, mouseY)) navEncima = -1;
+        }
+        int inicioX = navX + pw - NAV - 4;
+        if (boton(ctx, inicioX, navY, "⌂", mouseX, mouseY)) navEncima = -2;
+
         encima = -1;
         List<PadPayloads.Celda> celdas = datos.celdas();
         for (int i = 0; i < celdas.size(); i++) {
             var c = celdas.get(i);
             int x = rejillaX + c.columna() * (celdaPx + SEPARACION);
-            int y = rejillaY + c.fila() * (celdaPx + ETIQUETA + SEPARACION);
+            int y = rejillaY + c.fila() * (celdaPx + textoAlto + SEPARACION);
 
             boolean dentro = mouseX >= x && mouseX < x + celdaPx
                           && mouseY >= y && mouseY < y + celdaPx;
@@ -162,11 +182,29 @@ public class PadScreen extends Screen {
 
             // Recorte al ancho de la CELDA, no mas: con celdaPx + 8 las
             // etiquetas de dos celdas vecinas se tocaban ("Centro PPuerta d").
-            String etiqueta = this.textRenderer.trimToWidth(
-                quitarColores(c.titulo()), celdaPx);
+            int ty = y + celdaPx + 1;
+            int anchoTexto = "tarjetas".equals(datos.estilo())
+                           ? celdaPx + SEPARACION : celdaPx;
             ctx.drawCenteredTextWithShadow(this.textRenderer,
-                Text.literal(etiqueta), x + celdaPx / 2, y + celdaPx + 1,
+                Text.literal(this.textRenderer.trimToWidth(
+                    quitarColores(c.titulo()), anchoTexto)),
+                x + celdaPx / 2, ty,
                 c.bloqueada() ? 0xFF7A8698 : 0xFFFFFFFF);
+
+            // En tarjetas, la descripción se pinta debajo del título: es el
+            // sitio donde de verdad se lee, no en un tooltip que hay que
+            // buscar con el ratón.
+            if ("tarjetas".equals(datos.estilo())) {
+                int dy = ty + PIE_LINEA;
+                for (String l : c.descripcion()) {
+                    if (l.isEmpty()) continue;
+                    ctx.drawCenteredTextWithShadow(this.textRenderer,
+                        Text.literal(this.textRenderer.trimToWidth(l, anchoTexto)),
+                        x + celdaPx / 2, dy, 0xFFDCEBFF);
+                    dy += PIE_LINEA;
+                    if (dy > ty + textoAlto) break;
+                }
+            }
         }
 
         int py = panelPie;
@@ -182,7 +220,7 @@ public class PadScreen extends Screen {
         panelLateral(ctx, datos.derecha(), MX0, MX1);
 
         // El tooltip va el ultimo, para que quede por encima de todo.
-        if (encima >= 0) {
+        if (encima >= 0 && !"tarjetas".equals(datos.estilo())) {
             var c = celdas.get(encima);
             List<Text> lineas = new ArrayList<>();
             lineas.add(Text.literal(c.titulo()));
@@ -253,6 +291,19 @@ public class PadScreen extends Screen {
         }
     }
 
+    /** Botón cuadrado de la fila de navegación. Devuelve si el ratón está. */
+    private boolean boton(DrawContext ctx, int x, int y, String glifo,
+                          int mouseX, int mouseY) {
+        boolean dentro = mouseX >= x && mouseX < x + NAV
+                      && mouseY >= y && mouseY < y + NAV;
+        ctx.drawTexture(dentro ? CELDA_ENCIMA : CELDA, x, y, NAV, NAV,
+                        0, 0, 128, 128, 128, 128);
+        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal(glifo),
+                                       x + NAV / 2, y + (NAV - 8) / 2,
+                                       0xFF16324B);
+        return dentro;
+    }
+
     /** Quita los códigos §c: en la etiqueta estorban, en el tooltip no. */
     private static String quitarColores(String s) {
         return s.replaceAll("§.", "");
@@ -262,16 +313,26 @@ public class PadScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (navEncima != 0 && button == 0) {
+            clic();
+            ClientPlayNetworking.send(new PadPayloads.Pulsar(
+                datos.pantalla(), navEncima, false));
+            return true;
+        }
         if (encima >= 0 && (button == 0 || button == 1)) {
-            if (this.client != null) {
-                this.client.getSoundManager().play(PositionedSoundInstance
-                    .master(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-            }
+            clic();
             ClientPlayNetworking.send(new PadPayloads.Pulsar(
                 datos.pantalla(), encima, button == 1));
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    private void clic() {
+        if (this.client != null) {
+            this.client.getSoundManager().play(PositionedSoundInstance
+                .master(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+        }
     }
 
     @Override

@@ -33,6 +33,17 @@ public final class PadService {
     /** Qué pantalla tiene abierta cada jugador, y con qué celdas. */
     private record Abierta(String pantalla, List<Accion> acciones) {}
 
+    /**
+     * Historial de navegación por jugador.
+     *
+     * <p>Vive en el SERVIDOR, no en el cliente. Si el cliente decidiera a
+     * dónde vuelve el botón «atrás», bastaría con modificarlo para saltar a
+     * una pantalla que no te corresponde. Aquí, «atrás» solo puede llevarte
+     * a algo que el servidor te abrió antes.
+     */
+    private static final Map<UUID, java.util.Deque<Runnable>> HISTORIAL =
+        new ConcurrentHashMap<>();
+
     /** Qué hace una celda al pulsarla. */
     @FunctionalInterface
     public interface Accion {
@@ -40,6 +51,14 @@ public final class PadService {
     }
 
     private static final Map<UUID, Abierta> ABIERTAS = new ConcurrentHashMap<>();
+
+    /** Cómo se vuelve al inicio. Lo fija el mod al arrancar. */
+    private static java.util.function.Consumer<ServerPlayerEntity> inicio =
+        j -> {};
+
+    public static void inicio(java.util.function.Consumer<ServerPlayerEntity> r) {
+        inicio = r;
+    }
 
     private PadService() {}
 
@@ -77,6 +96,8 @@ public final class PadService {
         private final List<String> pie = new ArrayList<>();
         private final List<String> izquierda = new ArrayList<>();
         private final List<String> derecha = new ArrayList<>();
+        private String estilo = PadPayloads.REJILLA;
+        private Runnable reabrir;
 
         public Pantalla(String id, String titulo, int columnas, int filas) {
             this.id = id;
@@ -99,6 +120,18 @@ public final class PadService {
             return this;
         }
 
+        /** Tarjetas grandes con texto, en vez de celdas pequeñas. */
+        public Pantalla tarjetas() {
+            this.estilo = PadPayloads.TARJETAS;
+            return this;
+        }
+
+        /** Cómo se vuelve a ESTA pantalla desde una hija. */
+        public Pantalla reabrirCon(Runnable r) {
+            this.reabrir = r;
+            return this;
+        }
+
         public Pantalla pie(String linea) {
             pie.add(linea);
             return this;
@@ -116,12 +149,25 @@ public final class PadService {
             return this;
         }
 
+        /** Abre como pantalla raíz: borra el historial. */
         public void abrir(ServerPlayerEntity jugador) {
+            HISTORIAL.remove(jugador.getUuid());
+            enviar(jugador, false);
+        }
+
+        /** Abre como hija: se podrá volver a {@code desde}. */
+        public void abrirDesde(ServerPlayerEntity jugador, Runnable desde) {
+            HISTORIAL.computeIfAbsent(jugador.getUuid(),
+                                      k -> new java.util.ArrayDeque<>()).push(desde);
+            enviar(jugador, true);
+        }
+
+        private void enviar(ServerPlayerEntity jugador, boolean atras) {
             ABIERTAS.put(jugador.getUuid(), new Abierta(id, List.copyOf(acciones)));
             ServerPlayNetworking.send(jugador, new PadPayloads.Abrir(
-                id, titulo, columnas, filas, List.copyOf(celdas),
-                List.copyOf(pie), List.copyOf(izquierda),
-                List.copyOf(derecha)));
+                id, titulo, estilo, atras, columnas, filas,
+                List.copyOf(celdas), List.copyOf(pie),
+                List.copyOf(izquierda), List.copyOf(derecha)));
         }
     }
 
@@ -135,6 +181,20 @@ public final class PadService {
         if (abierta == null || !abierta.pantalla().equals(p.pantalla())) {
             LunaEternal.LOG.warn("{} pulsó en '{}' sin tenerla abierta",
                 jugador.getGameProfile().getName(), p.pantalla());
+            return;
+        }
+
+        // Navegación. Va antes de validar el índice porque estos dos son
+        // reservados y no corresponden a ninguna celda.
+        if (p.indice() == PadPayloads.ATRAS) {
+            var pila = HISTORIAL.get(jugador.getUuid());
+            if (pila != null && !pila.isEmpty()) pila.pop().run();
+            else inicio.accept(jugador);
+            return;
+        }
+        if (p.indice() == PadPayloads.INICIO) {
+            HISTORIAL.remove(jugador.getUuid());
+            inicio.accept(jugador);
             return;
         }
 
@@ -152,6 +212,7 @@ public final class PadService {
     /** Al desconectar, se olvida: si no, el mapa crecería sin límite. */
     public static void olvidar(ServerPlayerEntity jugador) {
         ABIERTAS.remove(jugador.getUuid());
+        HISTORIAL.remove(jugador.getUuid());
     }
 
     /** Para el autotest. */

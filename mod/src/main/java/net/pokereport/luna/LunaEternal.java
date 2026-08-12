@@ -170,6 +170,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // Protocolo del Pad (D-025). Se registra ANTES de que entre
             // nadie: los tipos de paquete deben existir en el handshake.
             net.pokereport.luna.ui.PadService.registrar();
+            net.pokereport.luna.ui.PadService.inicio(
+                net.pokereport.luna.ui.AlmanacPad::abrir);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);

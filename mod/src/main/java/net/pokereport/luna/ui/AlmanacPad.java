@@ -59,11 +59,11 @@ public final class AlmanacPad {
 
         p.celda(1, 0, "cartera", "§eCartera",
                 List.of("§7Tus tres monedas.", "", "§eClic para abrir"),
-                false, (j, d) -> MenuService.openStandalone(j, WalletMenu::new));
+                false, (j, d) -> PantallasPad.cartera(j));
 
         p.celda(2, 0, "vias", "§dVías",
                 List.of("§7Las cinco formas de progresar.", "", "§eClic para abrir"),
-                false, (j, d) -> MenuService.openStandalone(j, PathsMenu::new));
+                false, (j, d) -> PantallasPad.vias(j));
 
         p.celda(3, 0, "misiones", "§aMisiones",
                 List.of("§7Qué hacer ahora.", "", "§eClic para abrir"),
@@ -87,7 +87,7 @@ public final class AlmanacPad {
 
         p.celda(3, 1, "puerta", "§3Puerta",
                 List.of("§fPuerta del Mundo", "§7Viajar entre mundos.", "", "§eClic para abrir"),
-                false, (j, d) -> new WorldGateMenu(-1).open(j));
+                false, (j, d) -> PantallasPad.mundos(j));
 
         // Bloqueadas: existen en la rejilla para que se vea que el juego
         // continúa. Una rejilla a medias parece un error; una con candados
@@ -122,20 +122,17 @@ public final class AlmanacPad {
             p.izquierda("§d" + romano(snap.dominantLevel));
         }
 
-        // Morado: las tres monedas, con su icono. Sin rotulo: la palabra
-        // "PokeDolares" no cabe en 47 px y cortada no dice nada.
+        // Morado: lo que TIENES PENDIENTE. El dinero ya no va aqui — se ve
+        // entero en la Cartera, y repetirlo abreviado solo restaba sitio.
+        // Esto en cambio es lo unico que hace que pulses algo.
         if (snap != null) {
-            for (Currency c : new Currency[]{Currency.POKEDOLLAR,
-                                             Currency.MARK,
-                                             Currency.REPORTCOIN}) {
-                p.derecha("@icono:" + switch (c) {
-                    case POKEDOLLAR -> "moneda_dolar";
-                    case MARK -> "moneda_marca";
-                    default -> "moneda_premium";
-                });
-                p.derecha("§f" + abreviar(snap.balance(c)));
-                p.derecha("");
-            }
+            p.derecha("@icono:kits");
+            p.derecha("§aKit");
+            p.derecha("§7listo");
+            p.derecha("");
+            p.derecha("@icono:misiones");
+            p.derecha("§e" + snap.badges);
+            p.derecha("§7activas");
         }
 
         try {

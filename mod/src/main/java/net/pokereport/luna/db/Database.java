@@ -26,6 +26,15 @@ public final class Database implements AutoCloseable {
 
     /** Migraciones conocidas, en orden. Añadir aquí cada fichero nuevo. */
     private static final String[] MIGRATIONS = {
+        // ⚠️ AÑADIR AQUI CADA MIGRACION NUEVA.
+        //
+        // La lista es manual a proposito: el orden de aplicacion tiene que
+        // ser explicito y no depender de como el sistema de ficheros ordene
+        // un directorio dentro de un jar.
+        //
+        // El precio es este: crear V010__cazas.sql y olvidarse de listarla
+        // hizo que el servidor arrancara sin la tabla, y solo lo pillo el
+        // autotest. Si anades un fichero, anade la linea.
         "V001__initial.sql",
         "V002__widen_idempotency_key.sql",
         "V003__add_reportcoin.sql",
@@ -34,7 +43,8 @@ public final class Database implements AutoCloseable {
         "V006__gts_delivery.sql",
         "V007__pokedex.sql",
         "V008__kits.sql",
-        "V009__quests.sql"
+        "V009__quests.sql",
+        "V010__cazas.sql"
     };
 
     private final HikariDataSource ds;

@@ -211,6 +211,93 @@ public final class PantallasPad {
         p.abrirDesde(jugador, () -> AlmanacPad.abrir(jugador));
     }
 
+    // ------------------------------------------------------------ Cazas
+
+    /**
+     * Cazas y Crianza, con los Pokémon en 3D (HUNT-001).
+     *
+     * <p>Las mismas para todo el servidor y rotan cada 12 h. Arriba las de
+     * captura, abajo las de crianza — se distinguen por posición y por color,
+     * no solo por el texto.
+     */
+    public static void cazas(ServerPlayerEntity jugador) {
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players().resolve(
+                    jugador.getUuid(), jugador.getGameProfile().getName());
+                var ciclo = LunaEternal.hunts().cicloActual(id);
+                jugador.getServer().execute(() -> pintarCazas(jugador, ciclo));
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudieron abrir las Cazas", e);
+            }
+        });
+    }
+
+    private static void pintarCazas(ServerPlayerEntity jugador,
+                                    net.pokereport.luna.hunt.HuntService.Ciclo ciclo) {
+        var objetivos = ciclo.objetivos();
+        int cols = Math.max(1, Math.min(5, objetivos.size()));
+        var p = new PadService.Pantalla("cazas", "Cazas", cols, 1).tarjetas();
+
+        for (int i = 0; i < objetivos.size() && i < cols; i++) {
+            var o = objetivos.get(i);
+            boolean captura = o.tipo() ==
+                net.pokereport.luna.hunt.HuntService.Tipo.CAPTURA;
+
+            List<String> desc = new ArrayList<>();
+            desc.add(captura ? "§bCapturar" : "§dCriar");
+            desc.add((o.completo() ? "§a" : "§7") + o.hechos() + "/" + o.necesarios());
+            desc.add(o.cobrado() ? "§8Cobrado"
+                   : o.completo() ? "§e¡Clic para cobrar!"
+                   : "§7" + o.premioDolar() + "§8 PD");
+
+            long objetivoId = o.id();
+            p.celda(i, 0, "pokemon:" + o.especie(),
+                    (o.cobrado() ? "§8" : "§f") + o.especie(),
+                    desc, false,
+                    (j, d) -> cobrar(j, objetivoId));
+        }
+
+        p.izquierda("@cabeza");
+        p.izquierda("");
+        p.izquierda("§7Rota en");
+        p.izquierda("§f" + restante(ciclo.terminaEn()));
+
+        p.pie("§7Solo cuenta capturar. Criar cuenta en las de Crianza");
+        p.abrirDesde(jugador, () -> AlmanacPad.abrir(jugador));
+    }
+
+    private static void cobrar(ServerPlayerEntity jugador, long objetivoId) {
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players().resolve(
+                    jugador.getUuid(), jugador.getGameProfile().getName());
+                var r = LunaEternal.hunts().cobrar(id, objetivoId,
+                                                   java.util.UUID.randomUUID());
+                String msg = switch (r) {
+                    case PAGADO -> "§a¡Recompensa cobrada!";
+                    case NO_COMPLETO -> "§7Esa caza aún no está completa.";
+                    case YA_COBRADO -> "§7Ya cobraste esa caza.";
+                    case CADUCADO -> "§cEsa caza ya ha rotado.";
+                };
+                jugador.getServer().execute(() -> {
+                    jugador.sendMessage(net.minecraft.text.Text.literal(msg), false);
+                    cazas(jugador);   // refrescar, para que se vea el cambio
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.error("Error cobrando una caza", e);
+            }
+        });
+    }
+
+    /** «7h 20m». En el panel lateral no caben más caracteres. */
+    private static String restante(long finUnix) {
+        long seg = finUnix - System.currentTimeMillis() / 1000L;
+        if (seg <= 0) return "ya";
+        long h = seg / 3600, m = (seg % 3600) / 60;
+        return h > 0 ? h + "h " + m + "m" : m + "m";
+    }
+
     // ------------------------------------------------------------ utilidades
 
     private static String recorta(String s) {

@@ -51,6 +51,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.kit.KitService kitService;
     private static net.pokereport.luna.quest.QuestService quests;
     private static net.pokereport.luna.economy.EconomyStats stats;
+    private static net.pokereport.luna.hunt.HuntService hunts;
     private static ExecutorService io;
 
     @Override
@@ -164,6 +165,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             kitService = new net.pokereport.luna.kit.KitService(database);
             quests = new net.pokereport.luna.quest.QuestService(database);
             stats = new net.pokereport.luna.economy.EconomyStats(database);
+            hunts = new net.pokereport.luna.hunt.HuntService(database);
             // Fondos de las interfaces (D-023). Si falla, los menús salen
             // grises pero el servidor arranca igual: es cosmético.
             net.pokereport.luna.ui.Skin.load();
@@ -226,6 +228,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         return progression;
     }
     public static net.pokereport.luna.shop.ShopCatalog shop() { return shop; }
+    public static net.pokereport.luna.hunt.HuntService hunts() { return hunts; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }
     public static net.pokereport.luna.kit.KitCatalog kits() { return kits; }

@@ -105,8 +105,10 @@ public final class AlmanacPad {
         p.celda(2, 2, "cosmeticos", "§8Cosmét.",
                 List.of("§fCosméticos", "§7Aún no disponibles."), true, (j, d) -> {});
 
-        p.celda(3, 2, "cazas", "§8Cazas",
-                List.of("§7Aún no disponibles."), true, (j, d) -> {});
+        p.celda(3, 2, "cazas", "§6Cazas",
+                List.of("§7Objetivos del servidor.",
+                        "§7Rotan cada 12 horas.", "", "§eClic para abrir"),
+                false, (j, d) -> PantallasPad.cazas(j));
 
         p.celda(4, 2, "explorar", "§8Explorar",
                 List.of("§7Aún no disponible."), true, (j, d) -> {});

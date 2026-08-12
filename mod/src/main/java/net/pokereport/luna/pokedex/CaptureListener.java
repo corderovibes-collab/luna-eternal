@@ -40,7 +40,49 @@ public final class CaptureListener {
                 LunaEternal.LOG.error("Error anotando una captura", t);
             }
         });
+        // Crianza: cuenta al ECLOSIONAR, no al recoger el huevo. Recoger es
+        // gratis y se podria repetir; nacer ocurre una vez.
+        try {
+            CobblemonEvents.HATCH_EGG_POST.subscribe(event -> {
+                try {
+                    eclosion(event.getPlayer(), event.getPokemon());
+                } catch (Throwable t) {
+                    LunaEternal.LOG.error("Error anotando una eclosión", t);
+                }
+            });
+            LunaEternal.LOG.info("Crianza: escuchando eclosiones");
+        } catch (Throwable t) {
+            LunaEternal.LOG.warn("No se pudo escuchar eclosiones: {}", t.toString());
+        }
+
         LunaEternal.LOG.info("Pokédex: escuchando capturas de Cobblemon");
+    }
+
+    /**
+     * Un huevo ha eclosionado: cuenta para la vía de Crianza (HUNT-001).
+     *
+     * <p>Se cuenta al NACER y no al recoger el huevo. Recoger es gratis y
+     * repetible; nacer ocurre una sola vez por huevo, así que no se puede
+     * inflar el contador.
+     */
+    private static void eclosion(ServerPlayerEntity player,
+                                 com.cobblemon.mod.common.pokemon.Pokemon pokemon) {
+        if (player == null || pokemon == null) return;
+        String especie = pokemon.getSpecies().getName().toLowerCase();
+        UUID uuid = player.getGameProfile().getId();
+        String username = player.getGameProfile().getName();
+
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players().resolve(uuid, username);
+                if (LunaEternal.hunts() != null) {
+                    LunaEternal.hunts().avanzar(id, especie,
+                        net.pokereport.luna.hunt.HuntService.Tipo.CRIANZA);
+                }
+            } catch (Exception e) {
+                LunaEternal.LOG.error("Error anotando la eclosión de {}", especie, e);
+            }
+        });
     }
 
     /** Nivel más alto entre las cinco vías. */
@@ -74,6 +116,12 @@ public final class CaptureListener {
 
                 boolean nueva = LunaEternal.pokedex()
                     .recordCapture(id, name.toLowerCase(), dex, shiny, level, moon);
+
+                // Cazas: capturar es lo UNICO que las avanza (HUNT-001).
+                if (LunaEternal.hunts() != null) {
+                    LunaEternal.hunts().avanzar(id, name.toLowerCase(),
+                        net.pokereport.luna.hunt.HuntService.Tipo.CAPTURA);
+                }
 
                 // Progresión: capturar sube Coleccionista.
                 LunaEternal.progression().grant(id, Path.COLECCIONISTA,

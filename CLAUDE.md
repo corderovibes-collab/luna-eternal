@@ -24,7 +24,7 @@ Cobblemon     1.7.3 instalado · Done (9,0 s) · ~1,9 GB de 4096
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 109/109 invariantes correctos
+Autotest      /luna autotest -> 125/125 invariantes correctos
 Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
               Tienda · GTS · Pokédex · Kits · Inicial · Curar
               Misiones (6 de tutorial + 2 diarias)
@@ -37,6 +37,11 @@ Cliente       jugador     -0.1.0.mrpack · 136 MB · 7 mods
               Fabric Loader 0.19.3 (Cobblemon exige >= 0.17.2)
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
+PokePad       mod de cliente propio (D-025) · pantalla propia, no cofre
+              PokePad · Cartera · Vias · Mundos · Pokedex 3D · Cazas
+              protocolo VERSIONADO en el canal: cliente viejo -> cofre
+Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
+              solo captura las avanza; crianza cuenta al ECLOSIONAR
 Interfaz2.0   resource pack propio · 10 fondos · fuente de espacio negativo
               require-resource-pack=true · se descarga solo al entrar
               repos: luna-eternal (privado) · luna-eternal-pack (publico)
@@ -104,6 +109,14 @@ Después: **construir la ciudadela** (`WLD-005`) y **gimnasios** (`UI-015`).
 
 > El orden anterior ponía la telemetría primero. **Estaba mal**: medir una
 > economía que nadie puede jugar no sirve de nada.
+
+> ⚠️ **Al crear una migración, añádela a la lista de `Database.java`.** La
+> lista es manual a propósito (el orden debe ser explícito), y olvidarla hizo
+> que el servidor arrancara sin la tabla. Y usa `BIGINT UNSIGNED` para
+> `player_id`: con `BIGINT` a secas la clave ajena no se forma (errno 150).
+
+> ⚠️ **Si una migración falla a medias, el servidor entra en bucle** y el panel
+> se queda en `stopping`. Se sale con `kill` y luego `start`.
 
 > ⚠️ **NUNCA reemplaces el jar del cliente con Minecraft abierto.** Fabric
 > carga las clases cuando las necesita, así que el juego sigue tan tranquilo

@@ -72,6 +72,7 @@ public final class AutoTest {
             testQuests(a);
             testTelemetria(a, b);
             testSkins();
+            testCazas(a);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -278,6 +279,71 @@ public final class AutoTest {
         var plano = net.pokereport.luna.ui.Skin.title(null, "Hola");
         check("sin fondo, el título es el texto plano",
               plano.getString().equals("Hola"));
+    }
+
+    /**
+     * Cazas (HUNT-001). MOD-006: los invariantes ANTES de desplegar.
+     *
+     * <p>Lo que se persigue aquí es el fallo caro: <b>cobrar dos veces</b>.
+     * Un doble clic, o dos paquetes que llegan a la vez, no pueden pagar dos
+     * premios. Es exactamente la clase de agujero que no se ve leyendo el
+     * código.
+     */
+    private void testCazas(long jugador) throws Exception {
+        var hunts = LunaEternal.hunts();
+        check("el servicio de cazas está cargado", hunts != null);
+        if (hunts == null) return;
+
+        var ciclo = hunts.cicloActual(jugador);
+        check("hay un ciclo de cazas vigente", ciclo != null && ciclo.id() > 0);
+        check("el ciclo tiene objetivos", !ciclo.objetivos().isEmpty());
+        check("el ciclo termina en el futuro",
+              ciclo.terminaEn() > System.currentTimeMillis() / 1000L);
+
+        // Dos llamadas seguidas deben dar el MISMO ciclo: si cada consulta
+        // creara uno nuevo, las cazas cambiarian al abrir la pantalla.
+        var otra = hunts.cicloActual(jugador);
+        check("consultar dos veces no crea un ciclo nuevo",
+              otra.id() == ciclo.id());
+
+        var obj = ciclo.objetivos().get(0);
+        check("un objetivo empieza sin progreso", obj.hechos() == 0);
+        check("un objetivo empieza sin cobrar", !obj.cobrado());
+
+        // Sin completar, no se paga.
+        long antes = LunaEternal.economy().balance(jugador, Currency.POKEDOLLAR);
+        var r0 = hunts.cobrar(jugador, obj.id(), java.util.UUID.randomUUID());
+        check("cobrar sin completar se rechaza",
+              r0 == net.pokereport.luna.hunt.HuntService.Resultado.NO_COMPLETO);
+        check("un cobro rechazado no paga",
+              LunaEternal.economy().balance(jugador, Currency.POKEDOLLAR) == antes);
+
+        // Completar y cobrar.
+        for (int i = 0; i < obj.necesarios(); i++) {
+            hunts.avanzar(jugador, obj.especie(), obj.tipo());
+        }
+        var conProgreso = hunts.cicloActual(jugador).objetivos().stream()
+            .filter(o -> o.id() == obj.id()).findFirst().orElseThrow();
+        check("avanzar suma progreso", conProgreso.hechos() >= obj.necesarios());
+        check("el objetivo aparece completo", conProgreso.completo());
+
+        var r1 = hunts.cobrar(jugador, obj.id(), java.util.UUID.randomUUID());
+        check("cobrar completo paga",
+              r1 == net.pokereport.luna.hunt.HuntService.Resultado.PAGADO);
+        long despues = LunaEternal.economy().balance(jugador, Currency.POKEDOLLAR);
+        check("el pago llega al saldo", despues == antes + obj.premioDolar());
+
+        // EL INVARIANTE QUE IMPORTA.
+        var r2 = hunts.cobrar(jugador, obj.id(), java.util.UUID.randomUUID());
+        check("cobrar dos veces se rechaza",
+              r2 == net.pokereport.luna.hunt.HuntService.Resultado.YA_COBRADO);
+        check("el segundo cobro NO paga",
+              LunaEternal.economy().balance(jugador, Currency.POKEDOLLAR) == despues);
+
+        // Avanzar una especie que no esta de caza no puede romper nada.
+        hunts.avanzar(jugador, "no-existe-este-pokemon",
+                      net.pokereport.luna.hunt.HuntService.Tipo.CAPTURA);
+        check("avanzar una especie sin caza no falla", true);
     }
 
     private void testShopCatalog() {
@@ -619,6 +685,8 @@ public final class AutoTest {
                 // Orden inverso a las claves ajenas: primero se sueltan las
                 // referencias al comprador, luego se borran los listados.
                 for (String sql : List.of(
+                    "DELETE hp FROM hunt_progress hp JOIN player p "
+                        + "ON p.player_id = hp.player_id WHERE p.mc_uuid = ?",
                     "DELETE qp FROM quest_progress qp JOIN player p "
                         + "ON p.player_id = qp.player_id WHERE p.mc_uuid = ?",
                     "DELETE kc FROM kit_claim kc JOIN player p "

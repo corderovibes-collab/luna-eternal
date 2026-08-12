@@ -2,6 +2,7 @@ package net.pokereport.luna.client;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.sound.SoundEvents;
@@ -57,6 +58,16 @@ public class PadScreen extends Screen {
     private static final int SEPARACION = 6;
     private static final int ETIQUETA = 10;
     private static final int TITULO_ALTO = 12;
+
+    /**
+     * Marcas que el SERVIDOR puede meter en una linea de panel lateral.
+     *
+     * <p>Mantienen el protocolo generico: no hay campos nuevos por cada cosa
+     * que se quiera dibujar. El servidor manda texto y decide con estas
+     * marcas si esa linea es un icono, una cabeza o una frase.
+     */
+    private static final String MARCA_ICONO = "@icono:";
+    private static final String MARCA_CABEZA = "@cabeza";
     private static final int PIE_LINEA = 10;
 
     private final PadPayloads.Abrir datos;
@@ -149,8 +160,10 @@ public class PadScreen extends Screen {
             ctx.drawTexture(icono, x + m, y + m, celdaPx - m * 2,
                             celdaPx - m * 2, 0, 0, 128, 128, 128, 128);
 
+            // Recorte al ancho de la CELDA, no mas: con celdaPx + 8 las
+            // etiquetas de dos celdas vecinas se tocaban ("Centro PPuerta d").
             String etiqueta = this.textRenderer.trimToWidth(
-                quitarColores(c.titulo()), celdaPx + 8);
+                quitarColores(c.titulo()), celdaPx);
             ctx.drawCenteredTextWithShadow(this.textRenderer,
                 Text.literal(etiqueta), x + celdaPx / 2, y + celdaPx + 1,
                 c.bloqueada() ? 0xFF7A8698 : 0xFFFFFFFF);
@@ -191,16 +204,52 @@ public class PadScreen extends Screen {
         int px = panelX + (int) (panelAncho * x0);
         int pw = (int) (panelAncho * (x1 - x0));
         int ph = (int) (panelAlto * (LY1 - LY0));
-        int alto = lineas.size() * PIE_LINEA;
+        int grafico = Math.min(28, pw - 8);
+
+        // Se mide antes de pintar, para poder centrar verticalmente.
+        int alto = 0;
+        for (String l : lineas) alto += altoLinea(l, grafico);
         int y = panelY + (int) (panelAlto * LY0) + Math.max(0, (ph - alto) / 2);
 
         for (String linea : lineas) {
-            if (!linea.isEmpty()) {
+            int h = altoLinea(linea, grafico);
+            if (linea.startsWith(MARCA_ICONO)) {
+                Identifier ic = Identifier.of("lunaeternal",
+                    "textures/pad/icono/" + linea.substring(MARCA_ICONO.length())
+                    + ".png");
+                ctx.drawTexture(ic, px + (pw - grafico) / 2, y,
+                                grafico, grafico, 0, 0, 128, 128, 128, 128);
+            } else if (linea.equals(MARCA_CABEZA)) {
+                cabeza(ctx, px + (pw - grafico) / 2, y, grafico);
+            } else if (!linea.isEmpty()) {
                 Text t = Text.literal(this.textRenderer.trimToWidth(linea, pw - 2));
                 ctx.drawCenteredTextWithShadow(this.textRenderer, t,
                                                px + pw / 2, y, 0xFFFFFFFF);
             }
-            y += PIE_LINEA;
+            y += h;
+        }
+    }
+
+    private static int altoLinea(String l, int grafico) {
+        return (l.startsWith(MARCA_ICONO) || l.equals(MARCA_CABEZA))
+             ? grafico + 2 : PIE_LINEA;
+    }
+
+    /**
+     * La cabeza del jugador, con su skin real.
+     *
+     * <p>Es lo unico del Pad que el cliente saca por su cuenta, y puede
+     * hacerlo porque no es informacion de juego: es la textura que el propio
+     * cliente ya tiene cargada para dibujarse a si mismo.
+     */
+    private void cabeza(DrawContext ctx, int x, int y, int tam) {
+        if (this.client == null || this.client.player == null) return;
+        try {
+            PlayerSkinDrawer.draw(ctx,
+                this.client.player.getSkinTextures().texture(), x, y, tam);
+        } catch (Exception e) {
+            // Si la skin no esta lista todavia, mejor un hueco que un crash.
+            LunaClient.LOG.debug("No se pudo dibujar la cabeza", e);
         }
     }
 

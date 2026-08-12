@@ -251,7 +251,34 @@ def explorar(i):
     brillo(i, [14, 10, 34, 26])
 
 
+def moneda_dolar(i):
+    elipse(i, [6, 6, 58, 58], (252, 216, 96, 255), ORO_OSC)
+    elipse(i, [14, 14, 50, 50], (250, 206, 78, 255), (214, 156, 34, 255), w=2)
+    d = ImageDraw.Draw(i)
+    d.line([(32, 20), (32, 44)], fill=(140, 96, 10, 255), width=4)
+    d.arc([22, 20, 42, 32], 180, 360, fill=(140, 96, 10, 255), width=4)
+    d.arc([22, 32, 42, 44], 0, 180, fill=(140, 96, 10, 255), width=4)
+    brillo(i, [14, 12, 34, 28])
+
+
+def moneda_marca(i):
+    poli(i, [(32, 4), (56, 32), (32, 60), (8, 32)],
+         (150, 214, 250, 255), AZUL_OSC)
+    poli(i, [(32, 16), (44, 32), (32, 48), (20, 32)], BLANCO, (170, 220, 250, 255), w=2)
+    brillo(i, [18, 12, 36, 28])
+
+
+def moneda_premium(i):
+    elipse(i, [6, 6, 58, 58], (254, 232, 150, 255), (206, 148, 24, 255))
+    poli(i, [(32, 14), (38, 28), (52, 30), (41, 40), (44, 54),
+             (32, 46), (20, 54), (23, 40), (12, 30), (26, 28)],
+         (255, 250, 210, 255), (222, 168, 40, 255), w=2)
+    brillo(i, [14, 12, 34, 28])
+
+
 ICONOS = {
+    "moneda_dolar": moneda_dolar, "moneda_marca": moneda_marca,
+    "moneda_premium": moneda_premium,
     "pokedex": pokedex, "cartera": cartera, "vias": vias,
     "misiones": misiones, "kits": kits, "tienda": tienda, "gts": gts,
     "centro": centro, "puerta": puerta, "gimnasios": gimnasios,

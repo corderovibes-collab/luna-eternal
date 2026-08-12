@@ -21,6 +21,14 @@ public final class AlmanacPad {
 
     private AlmanacPad() {}
 
+    /** Nivel en romano: ocupa menos y se lee mejor que "Nivel 3". */
+    private static String romano(int n) {
+        return switch (n) {
+            case 1 -> "I"; case 2 -> "II"; case 3 -> "III";
+            case 4 -> "IV"; case 5 -> "V"; default -> String.valueOf(n);
+        };
+    }
+
     /** Recorta sin romper: 9 caracteres es lo que cabe en un panel. */
     private static String corto(String s, int max) {
         return s.length() <= max ? s : s.substring(0, max - 1) + "…";
@@ -53,7 +61,7 @@ public final class AlmanacPad {
                 List.of("§7Tus tres monedas.", "", "§eClic para abrir"),
                 false, (j, d) -> MenuService.openStandalone(j, WalletMenu::new));
 
-        p.celda(2, 0, "vias", "§dTus Vías",
+        p.celda(2, 0, "vias", "§dVías",
                 List.of("§7Las cinco formas de progresar.", "", "§eClic para abrir"),
                 false, (j, d) -> MenuService.openStandalone(j, PathsMenu::new));
 
@@ -73,19 +81,19 @@ public final class AlmanacPad {
                 List.of("§7Mercado entre jugadores.", "", "§eClic para abrir"),
                 false, (j, d) -> GtsMenu.open(j, null, 0));
 
-        p.celda(2, 1, "centro", "§aCentro Pokémon",
-                List.of("§7Curar tu equipo. Gratis.", "", "§eClic para abrir"),
+        p.celda(2, 1, "centro", "§aCentro",
+                List.of("§fCentro Pokémon", "§7Curar tu equipo. Gratis.", "", "§eClic para abrir"),
                 false, (j, d) -> HealMenu.open(j, null));
 
-        p.celda(3, 1, "puerta", "§3Puerta del Mundo",
-                List.of("§7Viajar entre mundos.", "", "§eClic para abrir"),
+        p.celda(3, 1, "puerta", "§3Puerta",
+                List.of("§fPuerta del Mundo", "§7Viajar entre mundos.", "", "§eClic para abrir"),
                 false, (j, d) -> new WorldGateMenu(-1).open(j));
 
         // Bloqueadas: existen en la rejilla para que se vea que el juego
         // continúa. Una rejilla a medias parece un error; una con candados
         // parece una promesa.
-        p.celda(4, 1, "gimnasios", "§8Gimnasios",
-                List.of("§7Aún no disponibles.", "§8Necesitan mundo construido."),
+        p.celda(4, 1, "gimnasios", "§8Gimnasio",
+                List.of("§fGimnasios", "§7Aún no disponibles.", "§8Necesitan mundo construido."),
                 true, (j, d) -> {});
 
         p.celda(0, 2, "tesoros", "§8Tesoros",
@@ -94,8 +102,8 @@ public final class AlmanacPad {
         p.celda(1, 2, "clan", "§8Clanes",
                 List.of("§7Aún no disponibles."), true, (j, d) -> {});
 
-        p.celda(2, 2, "cosmeticos", "§8Cosméticos",
-                List.of("§7Aún no disponibles."), true, (j, d) -> {});
+        p.celda(2, 2, "cosmeticos", "§8Cosmét.",
+                List.of("§fCosméticos", "§7Aún no disponibles."), true, (j, d) -> {});
 
         p.celda(3, 2, "cazas", "§8Cazas",
                 List.of("§7Aún no disponibles."), true, (j, d) -> {});
@@ -106,24 +114,28 @@ public final class AlmanacPad {
         // Paneles laterales del arte. Son estrechos —caben unos 9
         // caracteres— asi que las cifras van abreviadas y los rotulos
         // cortos. Mejor "1,2k" legible que "1250" cortado a "12".
+        // Verde: identidad. La cabeza cabe donde no cabe una palabra.
+        p.izquierda("@cabeza");
+        p.izquierda("");
         p.izquierda("§f" + corto(jugador.getGameProfile().getName(), 9));
-        if (snap != null) {
-            p.izquierda("");
-            p.izquierda("§7Via");
-            p.izquierda("§d" + corto(snap.dominantPath, 9));
-            p.izquierda("§7Nivel §f" + snap.dominantLevel);
-            p.izquierda("");
-            p.izquierda("§7Medallas");
-            p.izquierda("§e" + snap.badges + "§7/8");
+        if (snap != null && snap.dominantLevel > 0) {
+            p.izquierda("§d" + romano(snap.dominantLevel));
+        }
 
-            p.derecha("§6Dolares");
-            p.derecha("§f" + abreviar(snap.balance(Currency.POKEDOLLAR)));
-            p.derecha("");
-            p.derecha("§bMarcas");
-            p.derecha("§f" + abreviar(snap.balance(Currency.MARK)));
-            p.derecha("");
-            p.derecha("§dReportC");
-            p.derecha("§f" + abreviar(snap.balance(Currency.REPORTCOIN)));
+        // Morado: las tres monedas, con su icono. Sin rotulo: la palabra
+        // "PokeDolares" no cabe en 47 px y cortada no dice nada.
+        if (snap != null) {
+            for (Currency c : new Currency[]{Currency.POKEDOLLAR,
+                                             Currency.MARK,
+                                             Currency.REPORTCOIN}) {
+                p.derecha("@icono:" + switch (c) {
+                    case POKEDOLLAR -> "moneda_dolar";
+                    case MARK -> "moneda_marca";
+                    default -> "moneda_premium";
+                });
+                p.derecha("§f" + abreviar(snap.balance(c)));
+                p.derecha("");
+            }
         }
 
         try {

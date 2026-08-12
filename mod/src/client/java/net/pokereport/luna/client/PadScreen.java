@@ -249,6 +249,16 @@ public class PadScreen extends Screen {
             }
         }
 
+        // Los modelos han dejado el buffer de profundidad escrito, y con la
+        // Z invertida. Todo lo que se dibuje despues —texto, tooltip— se
+        // comparara contra esa profundidad y unas veces pasara y otras no.
+        // Limpiarlo es el remedio estandar para dibujar entidades dentro de
+        // una interfaz; sin esto, el orden de las pasadas no basta.
+        // El segundo parametro es la comprobacion de errores de macOS.
+        com.mojang.blaze3d.systems.RenderSystem.clear(
+            org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT,
+            net.minecraft.client.MinecraftClient.IS_SYSTEM_MAC);
+
         // --- 3: texto, siempre por encima de todo lo anterior
         for (var c : celdas) {
             int x = celdaX(c), y = celdaY(c);

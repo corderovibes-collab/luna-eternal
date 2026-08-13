@@ -38,16 +38,18 @@ habria forma de arreglarlo desde aqui.
 De ahi la regla de este script:
 
     la pantalla cambia de TONO pero conserva la LUMINANCIA
-    el casco si se oscurece: encima no hay texto
 
 El turquesa fijo, ademas, encaja de forma natural en una paleta azul, asi que
 los acentos siguen pegando en vez de chocar.
 
 QUE SE TOCA Y QUE NO
 
-Se desplazan **solo los pixeles en la banda del cian** (tono 165-205 grados).
-Asi las plataformas de tipo --fuego naranja, planta verde-- se quedan como
-estan sin tener que listarlas: no son cian, no se tocan.
+Dos filtros, y los dos evitan tener que mantener listas a mano:
+
+  * **Solo la pantalla.** La carcasa (`pokedex_base_*`) no se toca: su color es
+    el del objeto Pokedex --hay siete-- y lo elige el jugador. Ver SIN_TOCAR.
+  * **Solo los pixeles cian** (tono 165-205 grados). Asi las plataformas de
+    tipo --fuego naranja, planta verde-- se quedan como estan sin listarlas.
 
 LICENCIA
 
@@ -97,31 +99,16 @@ CIAN = (165, 205)
 TONO_LUNA = 232 / 360
 SATURACION_MAX = 0.46
 
-# El casco no lleva texto encima, asi que ahi si se puede ir a oscuro de verdad.
-CASCO_BRILLO = 0.45
-CASCO_SATURACION = 0.55
-
-# Cuanto se arrastra el tono del casco hacia el azul de luna. Ni 0 ni 1 a
-# proposito: Cobblemon tiene SIETE Pokedex de colores distintos (rojo, azul,
-# verde, rosa...) y son objetos separados.
+# EL CASCO NO SE TOCA.
 #
-#   con 0.0  cada una conserva su color y la roja se ve granate, no lunar
-#   con 1.0  las siete quedan identicas y se pierde el poder elegir
-#   con 0.7  todas leen como "de noche" y aun se distinguen entre si
-MEZCLA_CASCO = 0.7
-
-
-def _mezclar_tono(h: float, destino: float, t: float) -> float:
-    """Interpola dos tonos por el camino corto del circulo.
-
-    Sin esto, ir de rojo (0.02) a azul (0.64) pasaria por verde y amarillo, que
-    es justo el arcoiris que no queremos."""
-    d = destino - h
-    if d > 0.5:
-        d -= 1.0
-    elif d < -0.5:
-        d += 1.0
-    return (h + d * t) % 1.0
+# Se reviste la pantalla, no la carcasa. Cobblemon tiene SIETE Pokedex de
+# colores distintos --roja, azul, verde, rosa, negra, blanca, amarilla-- y son
+# objetos separados: el color es una eleccion del jugador, no decoracion
+# nuestra. Pisarlo le quitaba sentido a tener siete.
+#
+# Se probo tenirlo al 70 % hacia el azul y, visto en el juego, la decision del
+# usuario fue clara: la carcasa se queda como Cobblemon la hizo.
+SIN_TOCAR = ("pokedex_base_",)
 
 
 def jar_cobblemon() -> bytes:
@@ -140,7 +127,7 @@ def jar_cobblemon() -> bytes:
     return cache.read_bytes()
 
 
-def a_luna(im: Image.Image, casco: bool) -> Image.Image:
+def a_luna(im: Image.Image) -> Image.Image:
     im = im.convert("RGBA")
     px = im.load()
     tocados = 0
@@ -150,19 +137,11 @@ def a_luna(im: Image.Image, casco: bool) -> Image.Image:
             if a == 0:
                 continue
             h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
-            if casco:
-                # Arrastra el tono hacia la luna sin borrarlo del todo, para
-                # que las siete Pokedex de colores sigan distinguiendose.
-                nh = _mezclar_tono(h, TONO_LUNA, MEZCLA_CASCO)
-                ns, nv = s * CASCO_SATURACION, v * CASCO_BRILLO
-            else:
-                grados = h * 360
-                if not (CIAN[0] <= grados <= CIAN[1]):
-                    continue          # no es cian: plataformas de tipo, iconos
-                # Se conserva v a proposito: es lo que mantiene legible el texto
-                # que pinta el codigo.
-                nh, ns, nv = TONO_LUNA, min(s, SATURACION_MAX), v
-            nr, ng, nb = colorsys.hsv_to_rgb(nh, ns, nv)
+            if not (CIAN[0] <= h * 360 <= CIAN[1]):
+                continue              # no es cian: plataformas de tipo, iconos
+            # Se conserva v a proposito: es lo que mantiene legible el texto
+            # que pinta el codigo.
+            nr, ng, nb = colorsys.hsv_to_rgb(TONO_LUNA, min(s, SATURACION_MAX), v)
             px[x, y] = (round(nr * 255), round(ng * 255), round(nb * 255), a)
             tocados += 1
     return im, tocados
@@ -203,8 +182,11 @@ def generar(comparativa: bool = False) -> Path:
     antes_despues = {}
     for n in nombres:
         corto = n[len(RUTA_TEX):]
+        if corto.startswith(SIN_TOCAR):
+            intactas.append(corto)
+            continue          # la carcasa es del jugador: ver SIN_TOCAR
         original = Image.open(io.BytesIO(z.read(n)))
-        nueva, tocados = a_luna(original, casco=corto.startswith("pokedex_base_"))
+        nueva, tocados = a_luna(original)
         total_px += tocados
         if tocados == 0:
             intactas.append(corto)
@@ -213,7 +195,7 @@ def generar(comparativa: bool = False) -> Path:
         destino.parent.mkdir(parents=True, exist_ok=True)
         nueva.save(destino, "PNG")
         incluidas += 1
-        if corto in ("pokedex_screen.png", "pokedex_base_red.png"):
+        if corto == "pokedex_screen.png":
             antes_despues[corto] = (original.convert("RGBA"), nueva)
 
     peso = sum(p.stat().st_size for p in DESTINO.rglob("*") if p.is_file())
@@ -228,18 +210,14 @@ def generar(comparativa: bool = False) -> Path:
 
 
 def _comparativa(pares: dict) -> None:
-    """Monta casco + pantalla, antes y despues, para poder mirarlo."""
-    def montar(idx):
-        out = Image.new("RGBA", (345, 207), (0, 0, 0, 0))
-        out.alpha_composite(pares["pokedex_screen.png"][idx])
-        out.alpha_composite(pares["pokedex_base_red.png"][idx])
-        return out
-
+    """La pantalla, antes y despues. El casco no sale: no se toca."""
+    antes, despues = pares["pokedex_screen.png"]
     E = 2
-    hoja = Image.new("RGB", (345 * E * 2 + 24, 207 * E + 16), (14, 14, 20))
-    for i, idx in enumerate((0, 1)):
-        im = montar(idx).resize((345 * E, 207 * E), Image.NEAREST)
-        hoja.paste(im, (8 + i * (345 * E + 8), 8), im)
+    ancho, alto = antes.size
+    hoja = Image.new("RGB", (ancho * E * 2 + 24, alto * E + 16), (14, 14, 20))
+    for i, im in enumerate((antes, despues)):
+        esc = im.resize((ancho * E, alto * E), Image.NEAREST)
+        hoja.paste(esc, (8 + i * (ancho * E + 8), 8), esc)
     ruta = SALIDA / "pokedex-comparativa.png"
     hoja.save(ruta)
     print(f"  -> {ruta.relative_to(RAIZ)}  (antes | despues)")

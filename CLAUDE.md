@@ -89,11 +89,14 @@ Pokedex       revestida de azul luna · docs/ui/pokedex-luna.md
                 esa plantilla solo si options.txt no existe, o sea
                 nunca para quien ya ha jugado. Se instalaba apagado
 Publicar      ⚠ nuestros jars se publican con la HUELLA en el nombre
-              (lunaneon-0.1.0-aa7d0d3bbc.jar). raw.githubusercontent
+              (lunaneon-0.1.0-3598884202.jar). raw.githubusercontent
               cachea ~3 min POR RUTA y no hay parametro que lo salte:
               con nombre fijo, el manifiesto anunciaba una huella que
               el CDN aun no servia. Contenido nuevo = URL nueva. En
               el cliente el fichero conserva su nombre de siempre
+              una ruta NUEVA tarda ~36 s en responder (da 404 antes),
+              pero el manifiesto tarda ~3 min en salir de cache: para
+              cuando el cliente lo ve, el jar lleva rato disponible
 Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
               Iris + EuphoriaPatcher + Complementary Unbound r5.8.1
               + MakeUp Ultra Fast (el tier ligero)

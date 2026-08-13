@@ -11,8 +11,8 @@ dónde se puede llegar sin tocar código ajeno.
 
 ## Current Status
 
-**Desplegado.** 83 texturas revestidas (66 KB), incrustadas en `lunaneon` y
-**activadas solas**.
+**Desplegado.** 76 texturas revestidas (54 KB), incrustadas en `lunaneon` y
+**activadas solas**. La carcasa conserva su color; solo cambia la pantalla.
 
 ```
 genera    python tools/gen_pokedex.py --comparativa
@@ -64,9 +64,9 @@ Nada se dibuja a mano: si Cobblemon cambia sus texturas, se reejecuta.
 
 | | |
 |---|---|
+| **Solo la pantalla** | La carcasa (`pokedex_base_*`) **no se toca**. Su color es el del objeto Pokédex —hay siete: roja, azul, verde, rosa, negra, blanca, amarilla— y lo elige el jugador. Se probó teñirla al 70 % hacia el azul y, visto en el juego, se descartó: pisarla le quita el sentido a tener siete |
 | **Solo el cian** | Se desplazan únicamente los píxeles con tono entre 165° y 205°. Así las plataformas de tipo —fuego naranja, planta verde— se quedan intactas **sin tener que listarlas**: no son cian, no se tocan |
-| **83 de 114** | Las otras 28 no llevan ni un píxel cian (flechas, iconos) y no se incluyen: solo pesarían |
-| **El casco, al 70 %** | Cobblemon tiene **siete** Pokédex de colores distintos, y son objetos separados. Arrastrar el tono del todo las dejaría idénticas; no moverlo dejaba la roja en granate. Al 70 % todas leen como nocturnas y aún se distinguen |
+| **76 de 114** | Las otras 38 son los 7 cascos y las que no llevan ni un píxel cian (flechas, iconos). No se incluyen: solo pesarían |
 
 ---
 

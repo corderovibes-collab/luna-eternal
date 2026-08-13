@@ -12,7 +12,7 @@ del jugador desde que entra por primera vez.
 
 ## Related Documents
 
-- [`../ui/navigation.md`](../ui/navigation.md)
+- [`../ui/interfaz-cliente.md`](../ui/interfaz-cliente.md)
 - [`../progression/progression-model.md`](../progression/progression-model.md)
 
 ## Current Status
@@ -248,5 +248,5 @@ la ciudad esté hecha.
 
 ## Related Systems
 
-- [Navegación](../ui/navigation.md) · [Core loop](../game-design/core-loop.md)
+- [La interfaz de cliente](../ui/interfaz-cliente.md) · [Core loop](../game-design/core-loop.md)
 - [Progresión](../progression/progression-model.md)

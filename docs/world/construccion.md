@@ -117,12 +117,57 @@ La licencia comercial apunta a **quien cobra por construir** — estudios que
 venden builds por encargo. No es nuestro caso: construimos nuestro propio
 servidor. La vía que nos corresponde es la primera, la no comercial.
 
-### ⚠️ La whitelist NO hace falta. Verificado, no supuesto
+### ⚠️ CORRECCIÓN (2026-08-12): la whitelist SÍ hace falta, y hay cuenta atrás
 
-Yo dije que sí hacía falta. **Me equivoqué**, y esto es lo que lo demuestra.
+Aquí decía *"la whitelist NO hace falta, verificado"*. **La observación era
+correcta y la conclusión estaba mal.** Axiom sí autoriza — pero por un motivo
+que caduca.
 
-El candado no está en el servidor: `AxiomServer` solo comprueba permisos
-(`axiom.*` o ser OP). Quien decide es **el cliente**, con este método:
+De su documentación oficial, literal:
+
+> *"An **automatic 30d multiplayer whitelist** is given the first time using
+> Axiom on a server."*
+> *"For non-commercial purposes, a whitelist can be requested to gain
+> multiplayer access for **90 days**, or **180 days** for Patrons or Discord
+> Server Boosters."*
+> *"Some servers, like Builder's Refuge or The Bakery, have a **server
+> whitelist**, making it possible for everyone to use Axiom without needing a
+> whitelist."*
+
+Es decir: lo que funciona hoy es **el periodo de cortesía de 30 días**, que
+empieza la primera vez que cada persona usa Axiom en este servidor.
+
+| | |
+|---|---|
+| Primer uso del propietario | 2026-08-11 |
+| **Deja de funcionar** | **~2026-09-10**, salvo que se pida la whitelist |
+| Cada constructor nuevo | tiene **sus propios** 30 días desde su primer uso |
+
+**Verificado hoy con dos UUID inventados**, no con el nuestro: los dos reciben
+`HTTP 200` y `commercial: false` contra nuestra dirección. Eso confirma las dos
+cosas a la vez — que **cualquier constructor entrará sin trámite** (por eso
+"funciona y es raro") y que **la concesión es automática**, o sea, la de 30
+días.
+
+```
+GET …/connect?uuid=11111111-2222-…&server=s12.mia.us.tarohosting.lat:33043
+HTTP 200  JWT → {"commercial": false, "exp": +24 h, "sub": "<uuid>/<servidor>"}
+```
+
+> **Qué hay que hacer, y es del usuario:** pedir la **whitelist de servidor**
+> en `#whitelist-request` del Discord de Axiom (`https://discord.gg/axiomtool`).
+> La de servidor, no la personal: cubre a **todo el equipo de construcción** de
+> golpe y no hay que repetir el trámite por cada persona nueva.
+>
+> Si se deja pasar, el síntoma llegará un mes después de empezar a construir y
+> será *"This server has Axiom, but your client doesn't support multiplayer"*.
+> Diagnóstico: `/whynoaxiom`. El flujo `.schem` → `//paste` del §4 seguiría
+> funcionando igual, así que **no se pierde nada de lo construido**.
+
+### Dónde NO está el candado
+
+El servidor no comprueba nada de licencias: `AxiomServer` solo mira permisos.
+Quien decide es **el cliente**, con este método:
 
 ```
 Authorization.checkServer(server, host, uuid)
@@ -137,7 +182,7 @@ Y en `ClientEvents`, `YES` hace `allowedOnServer = true`. Sin más condiciones.
 Consultado con nuestros datos reales, el 2026-08-11:
 
 ```
-GET …/connect?uuid=432ef323-…&server=s12.mia.us.tarohosting.com:33043
+GET …/connect?uuid=432ef323-…&server=s12.mia.us.tarohosting.lat:33043
 HTTP 200   {"commercial": false, "sub": "432ef323-…/s12.mia.us…:33043"}
         → YES → allowedOnServer = true
 ```
@@ -153,13 +198,206 @@ tampoco lo impide — el riesgo que había anotado aquí no existe.
 | Paso | Estado |
 |---|---|
 | Axiom en el servidor | ✅ hecho |
-| Axiom en el cliente | ✅ instalado en la instancia de PrismLauncher |
-| Pedir whitelist en su Discord | ❌ **innecesario** — `https://discord.gg/axiomtool` si algún día cambia |
+| Axiom en el cliente | ✅ va en el pack de constructor |
+| **Pedir la whitelist de SERVIDOR en su Discord** | ⬜ **pendiente, con fecha límite ~2026-09-10** |
 
-> **Si algún día dejara de funcionar**, el síntoma sería el mensaje
-> *"This server has Axiom, but your client doesn't support multiplayer"*, y el
-> diagnóstico se pide con el comando `/whynoaxiom`. El flujo `.schem` →
-> `//paste` del §4 seguiría funcionando igual.
+---
+
+## 3-ter. Construir entre varios a la vez
+
+Sí se puede, y no hace falta instalar nada más en el servidor. Lo que hace
+falta es dar de alta a cada persona en **dos** sitios.
+
+### 1 · Darlos de alta — un solo comando
+
+```
+python tools/constructor.py --anadir Pepe Ana Luis
+python tools/constructor.py --listar
+python tools/constructor.py --quitar Pepe
+```
+
+Hace las dos cosas que hacen falta —whitelist **y** operador de nivel 2— y
+calcula el UUID offline correcto. **No lo hagas a mano**: el riesgo está en el
+§2 de aquí abajo.
+
+> ⚠️ Con `online-mode=false`, **el nombre ES la identidad**. Quien se lo cambie
+> aparece como otra persona: pierde sus permisos, su inventario y su progreso.
+> Que cada uno elija el suyo a la primera y no lo toque.
+
+> `ops.json` **se lee al arrancar**, así que quien acabe de ser dado de alta no
+> tendrá permisos hasta el siguiente reinicio. La whitelist sí se recarga en
+> caliente, y el script lo hace solo.
+
+### 2 · Por qué nivel 2 y no nivel 4
+
+Esto es lo importante, y está **leído de los dos jars**, no supuesto:
+
+| Mod | Qué comprueba | Leído en |
+|---|---|---|
+| **Axiom 5.4.2** | `isOp(jugador)` → `hasPermissionLevel(2)`. Si es OP, concede **todos** los permisos `axiom.*` de golpe | `AxiomServer.isOp` |
+| **WorldEdit 7.3.8** | `cheatMode \|\| playerManager.isOperator(perfil) \|\| (creativeEnable && modo == CREATIVO)` | `FabricPermissionsProvider$VanillaPermissionsProvider` |
+
+Conclusión: **con ser operador de nivel 2 basta para los dos.** No hace falta
+LuckPerms ni ningún mod de permisos (P5).
+
+Y el nivel importa mucho:
+
+| Nivel | Qué da | Para quién |
+|---|---|---|
+| 2 | creativo, `/tp`, `//paste`, Axiom completo | ✅ **constructores** |
+| 3 | además `/ban`, `/kick`, `/op`, `/whitelist` | moderación |
+| 4 | además `/stop`, `/save-all` | solo el propietario |
+
+**`/op <nombre>` da nivel 4 directamente**, que es demasiado: un constructor con
+nivel 4 puede apagar el servidor o quitarte a ti el OP, por accidente. Por eso
+existe el script del §1, que escribe la entrada con el nivel correcto:
+
+```json
+{ "uuid": "…", "name": "Pepe", "level": 2, "bypassesPlayerLimit": false }
+```
+
+> El UUID offline se calcula del nombre —UUID v3 sobre
+> `"OfflinePlayer:<nombre>"`— y **la fórmula está verificada** contra el UUID
+> real de `TheJuanCE` que ya estaba en `ops.json`.
+
+### 3 · Ajustes del servidor que hicieron falta
+
+Aplicados el 2026-08-12 y **verificados leyendo `server.properties` después**:
+
+| Ajuste | Antes | Ahora | Por qué |
+|---|---|---|---|
+| `allow-flight` | `false` | **`true`** | Axiom mueve la cámara en vuelo libre y con no-clip. Sin esto, el servidor expulsa con *"Flying is not enabled on this server"* en mitad de una construcción |
+| `enforce-secure-profile` | `true` | **`false`** | Con `online-mode=false` los perfiles no van firmados: se estaba exigiendo una firma que nadie puede dar |
+| `require-resource-pack` | `true` | **`false`** | El pack solo maquillaba los menús de cofre, que ya no existen (D-026). Con `true`, quien lo rechazara era expulsado por un pack inútil |
+| `resource-pack*` | URL + SHA1 | vacío | Idem |
+
+> ⚠️ **`allow-flight=true` hay que revertirlo antes de abrir a jugadores.** Es
+> el hueco por el que entra un hack de vuelo en supervivencia. Mientras el
+> servidor sea whitelist de constructores, el riesgo es cero.
+
+### 4 · El solar (2026-08-12)
+
+**Ahora mismo hay una sola isla: la plaza, 56×56, flotando en el vacío.** Todo
+lo demás está limpio, a propósito — se empieza por una zona y punto.
+
+| | |
+|---|---|
+| Plaza | `-28..27` en los dos ejes, centrada en el origen |
+| Suelo | y=**63**, cuarzo liso. Se camina en 64 |
+| Arriba / abajo | hasta y=319 y hasta y=-64. **Se puede construir hacia abajo** |
+| Borde del mundo | 208, con aviso a 4 |
+
+> El vacío alrededor no es un descampado a medias: es una decisión. Una isla
+> flotante deja ver **dónde acaba** lo que estás construyendo, y su canto se ve
+> desde abajo — es silueta, no un corte de un bloque.
+
+El plan completo de la ciudad sigue existiendo y se puede volver a dibujar
+cuando toque. Son nueve parcelas de 56×56 con avenidas de 8:
+
+```
+                       NORTE  (-Z)
+        ┌────────────┬────────────┬────────────┐
+        │  Salón de  │Laboratorio │   Gremio   │
+        │  Medallas  │            │            │
+        ├────────────┼────────────┼────────────┤
+ OESTE  │   Centro   │   PLAZA    │  Mercado   │  ESTE
+ (-X)   │   Pokémon  │  CENTRAL   │            │  (+X)
+        ├────────────┼────────────┼────────────┤
+        │ Sastrería  │  Puerta    │ Reservado  │
+        │            │  al Mundo  │            │
+        └────────────┴────────────┴────────────┘
+                        SUR  (+Z)
+```
+
+**La plaza deja sitio a eso:** cuatro accesos, uno por lado, centrados y de al
+menos 8 de ancho. Es lo único que hay que respetar mientras se construye sola.
+
+### Las órdenes
+
+```bash
+python tools/ciudadela.py --solo-centro          # una isla de 56x56, nada más
+python tools/ciudadela.py --solo-centro --tam 80 # ...más grande
+python tools/ciudadela.py --plano                # el replanteo de las 9 parcelas
+python tools/ciudadela.py --limpiar              # solar liso de 192x192
+```
+
+### Cómo se llega
+
+```
+/luna ir ciudadela
+```
+
+Hace falta ser operador de **nivel 2**, o sea: los constructores lo tienen.
+También `lobby`, `hogar` y `salvaje`. Sustituye a la Puerta del Mundo, que se
+fue con los menús (D-026).
+
+### La ciudadela es de NOCHE, siempre
+
+`fixed_time: 18000` en su `dimension_type`. El servidor se llama *Luna Eternal*
+y tener su plaza principal a pleno sol era una oportunidad tirada.
+
+**No cuesta nada:** `monster_spawn_light_level: 0` ya impedía que apareciera un
+solo monstruo, así que la noche aquí es puro ambiente sin ningún riesgo. Se
+subió `ambient_light` de `0.3` a `0.45` para que se siga viendo sin depender de
+que nadie tenga shaders.
+
+> El `dimension_type` **solo se relee al arrancar**. Cambiarlo obliga a
+> redesplegar el mod y reiniciar; no basta con recargar datapacks.
+
+### La luna gigante: hay que construirla
+
+**El tamaño de la luna de Minecraft no se puede cambiar desde el servidor.** Un
+resource pack solo sustituye su textura (`moon_phases.png`), no su tamaño: el
+cuadrado sobre el que se dibuja es fijo. Y el shader que instalamos
+—Complementary Reimagined— **tampoco tiene ese ajuste**: comprobado grepeando
+sus `.glsl`, no existe ninguna opción de tamaño de sol o luna.
+
+Así que la luna gigante **se construye**, que además es lo único que ve todo el
+mundo tenga o no shaders. Con WorldEdit es un comando: vuela a donde la
+quieras y
+
+```
+//hsphere white_concrete 36
+```
+
+`hsphere` es hueca — una esfera maciza de radio 36 son 195 000 bloques y no
+aporta nada, porque solo se ve la cáscara.
+
+| | |
+|---|---|
+| Radio recomendado | 30-40 |
+| Altura | y ≈ 180-220 |
+| Distancia | dentro de ~100 bloques del centro, o queda fuera de los chunks cargados |
+| Material | `white_concrete` para la cara, y por dentro algo que emita luz |
+
+> Para que **brille de verdad**, la cáscara exterior de bloque opaco y una capa
+> de `sea_lantern` o `glowstone` justo debajo, o `light` con `//replace`. Una
+> esfera de piedra blanca de noche es una mancha gris.
+
+### Ajustes de obra ya aplicados
+
+`doWeatherCycle`, `doFireTick`, `mobGriefing` y `doMobSpawning` en `false`,
+`keepInventory` en `true`, y sobre todo **`randomTickSpeed 0`** — el que evita
+que la hierba crezca y el hielo se derrita encima de lo que estás construyendo.
+El mediodía fijo y la ausencia de monstruos vienen del `dimension_type`.
+
+> ⚠️ Los gamerules de Minecraft son **globales**, no por dimensión: también
+> afectan al Hogar y al Salvaje. En desarrollo da igual; antes de abrir a
+> jugadores hay que revisarlo.
+
+---
+
+### 5 · Reglas de convivencia mientras se construye
+
+Axiom **no bloquea la zona en la que estás**: el último que escribe, gana. No
+es un problema si se reparte el terreno.
+
+| Regla | Por qué |
+|---|---|
+| **Una zona por persona**, acordada antes de empezar | Es lo único que evita pisarse. Axiom no avisa |
+| `//pos1` `//pos2` `//copy` `//schem save <zona>-<fecha>` al terminar cada sesión | Un `.schem` pesa poco y es mejor backup que el del mundo (§4) |
+| Nadie construye en el **Mundo Hogar** ni en el **Salvaje** | El Salvaje se reinicia por temporada (D-016): lo que se construya ahí se pierde |
+| Operaciones de más de ~200×200 bloques, de una en una | 4 GB de RAM. Dos personas rellenando a la vez es lo que tira el servidor |
 
 ---
 

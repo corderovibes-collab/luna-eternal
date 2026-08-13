@@ -17,7 +17,14 @@
 mod/run/world/
 logs/
 crash-reports/
-core
+# Volcados de la JVM. ⚠ ANCLADOS a proposito: la regla era `core` a secas y se
+# tragaba CUALQUIER carpeta llamada asi — entre ellas
+# `launcher/src/main/core/`, o sea **el nucleo entero del launcher**: 17
+# ficheros (instalacion, arranque, red, diagnostico) fuera del control de
+# versiones sin que nadie se enterara. El launcher es el canal oficial de
+# distribucion (D-027); perder esa carpeta era perderlo.
+/core
+core.[0-9]*
 hs_err_pid*.log
 backups/
 

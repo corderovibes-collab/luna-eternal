@@ -9,7 +9,7 @@
  * Uso:  node tools/smoke-test.mjs
  */
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, readdir, stat } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, readdir, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -22,6 +22,7 @@ const { offlineUuid, createOfflineAccount } = await import('../src/main/core/aut
 const { download } = await import('../src/main/core/net.js');
 const { diagnosticar } = await import('../src/main/core/diagnostico.js');
 const { syncPack } = await import('../src/main/core/pack.js');
+const { paths } = await import('../src/main/core/paths.js');
 
 let passed = 0;
 let failed = 0;
@@ -192,6 +193,44 @@ await test('el jugador normal no descarga las herramientas de construcción', as
 await test('el constructor descarga las dos cosas', async () => {
   const plan = await syncPack(MANIFIESTO, { perfil: 'constructor' });
   assert.equal(plan.toDownload.length, 2);
+});
+
+await test('el estado que se guardará solo anota lo del perfil', async () => {
+  // `applySync` guarda `plan.nextState`. Antes guardaba `manifest.files`
+  // entero, así que un jugador normal quedaba con Axiom anotado como instalado
+  // sin haberlo descargado jamás: el fichero de estado mentía.
+  const plan = await syncPack(MANIFIESTO, { perfil: 'jugador' });
+  assert.deepEqual(Object.keys(plan.nextState), ['mods/cobblemon.jar'],
+    'anotar como instalado algo que no se ha bajado engaña al atajo del '
+    + 'siguiente arranque');
+});
+
+await test('el atajo se fía de installed.json; reparar no', async () => {
+  // Se deja en disco un fichero del tamaño correcto pero con contenido que NO
+  // corresponde a su SHA1, y `installed.json` diciendo que está bien.
+  const sha1 = 'c'.repeat(40);
+  const M = {
+    packVersion: 't',
+    files: [{ path: 'mods/x.jar', sha1, size: 4, url: 'http://x/9' }],
+  };
+  const jar = path.join(paths.instance, 'mods', 'x.jar');
+  await mkdir(path.dirname(jar), { recursive: true });
+  await writeFile(jar, 'AAAA');
+  await writeFile(paths.state, JSON.stringify({ files: { 'mods/x.jar': sha1 } }));
+
+  try {
+    const rapido = await syncPack(M, { perfil: 'jugador' });
+    assert.equal(rapido.toDownload.length, 0,
+      'el arranque normal no puede releer y resumir los 185 MB del pack');
+
+    const reparar = await syncPack(M, { perfil: 'jugador', forzar: true });
+    assert.equal(reparar.toDownload.length, 1,
+      'reparar existe justo para cazar un jar corrupto del tamaño correcto');
+  } finally {
+    // Las pruebas siguientes cuentan con que no hay nada instalado.
+    await writeFile(paths.state, JSON.stringify({ version: null, files: {} }));
+    await rm(jar, { force: true });
+  }
 });
 
 console.log('\n== Los ajustes del jugador son SUYOS ==');

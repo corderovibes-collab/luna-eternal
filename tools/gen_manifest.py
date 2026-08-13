@@ -61,6 +61,7 @@ from gen_modpack import (EXTRA_CONSTRUCTOR, EXTRA_JUGADOR,  # noqa: E402
                          IRIS_PROPERTIES, MC, SERVIDOR, SHADERS, base,
                          loader_estable, servers_dat, verificar_dependencias,
                          version_de)
+from gen_pokedex import generar as generar_pokedex  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parent.parent
 SALIDA = RAIZ / "build" / "pack"
@@ -148,6 +149,33 @@ def marcar(entrada: dict) -> dict:
     return entrada
 
 
+def activar_pokedex(datos: bytes, nombre_zip: str) -> bytes:
+    """Deja el resource pack de la Pokedex ACTIVADO en las opciones de partida.
+
+    Instalarlo sin activarlo no sirve de nada: quedaria en la lista de packs
+    disponibles y nadie lo veria. Se toca `config/yosbr/options.txt`, que es la
+    plantilla que YOSBR copia a `options.txt` **solo si no existe**.
+
+    Consecuencia que hay que tener clara: esto activa el pack en las
+    instalaciones NUEVAS. A quien ya tenga su `options.txt` no se le toca — y es
+    lo correcto, porque ese fichero son sus controles y sus ajustes de video.
+    Esos pocos lo activan una vez a mano.
+    """
+    linea = 'resourcePacks:'
+    entrada = f'"file/{nombre_zip}"'
+    salida = []
+    for l in datos.decode("utf-8", "replace").splitlines():
+        if l.startswith(linea) and entrada not in l:
+            try:
+                lista = json.loads(l[len(linea):])
+                lista.append(f"file/{nombre_zip}")
+                l = linea + json.dumps(lista, separators=(",", ":"))
+            except Exception:
+                pass  # formato inesperado: mejor dejarlo como esta que romperlo
+        salida.append(l)
+    return ("\n".join(salida) + "\n").encode("utf-8")
+
+
 def construir() -> dict:
     ficheros = []
     base_ficheros, overrides, z = base()
@@ -210,7 +238,19 @@ def construir() -> dict:
         })
         print(f"  {entrada['prefijo']:<15} {jar.name:<26} nuestro")
 
-    # 5. La configuracion del pack oficial. Son 113 ficheros de texto, 143 KB
+    # 5. Nuestro resource pack: la Pokedex a luz de luna. Se genera aqui para
+    #    que una sola orden deje el pack entero listo.
+    zip_pokedex = generar_pokedex()
+    datos = zip_pokedex.read_bytes()
+    ficheros.append(marcar({
+        "path": f"resourcepacks/{zip_pokedex.name}",
+        "sha1": hashlib.sha1(datos).hexdigest(),
+        "size": len(datos),
+        "url": f"{BASE_RAW}/resourcepacks/{zip_pokedex.name}",
+    }))
+    print(f"  pokedex         {zip_pokedex.name:<26} {len(datos)//1024} KB")
+
+    # 6. La configuracion del pack oficial. Son 113 ficheros de texto, 143 KB
     #    en total, que afinan los mods. Van marcados `once`: se escriben si
     #    faltan y no se pisan nunca, para que si un jugador ajusta algo no se lo
     #    revertamos en la siguiente actualizacion.
@@ -220,6 +260,8 @@ def construir() -> dict:
     for n in overrides:
         rel = n[len("overrides/"):]
         datos = z.read(n)
+        if rel == "config/yosbr/options.txt":
+            datos = activar_pokedex(datos, zip_pokedex.name)
         destino = dir_cfg / rel
         destino.parent.mkdir(parents=True, exist_ok=True)
         destino.write_bytes(datos)
@@ -293,6 +335,11 @@ def publicar() -> None:
     if (clon / "overrides").exists():
         shutil.rmtree(clon / "overrides")
     shutil.copytree(SALIDA / "overrides", clon / "overrides")
+
+    # Nuestros resource packs (la Pokedex a luz de luna).
+    if (clon / "resourcepacks").exists():
+        shutil.rmtree(clon / "resourcepacks")
+    shutil.copytree(SALIDA / "resourcepacks", clon / "resourcepacks")
 
     # Nuestros jars. Se borran antes los de versiones anteriores: si se dejaran,
     # el repositorio acumularia un jar por version para siempre, y `raw` sirve

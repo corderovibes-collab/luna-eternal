@@ -73,6 +73,17 @@ Luz de color  ⚠ LA LUZ DE MINECRAFT NO TIENE COLOR. El motor guarda
               el suelo. Complementary > Performance > COLORED_LIGHTING
               viene en 0. Hacen cosas distintas, no se estorban
               detalle en docs/world/neon.md §1
+Pokedex       revestida de azul luna · docs/ui/pokedex-luna.md
+              resource pack de 70 KB, 83 texturas, ACTIVADO solo
+              python tools/gen_pokedex.py --comparativa
+              ⚠ el TEXTO lo pinta el codigo de Cobblemon: 0x606B6E
+                gris (16 usos) y 0x3A96B6 turquesa (3). Y el gris va
+                sobre los paneles CLAROS, asi que la pantalla puede
+                cambiar de tono pero NO oscurecerse: se volveria
+                ilegible. El casco si va oscuro, no lleva texto
+              se activa via config/yosbr/options.txt, que YOSBR copia
+              solo si falta -> vale para instalaciones NUEVAS; quien
+              ya tenga options.txt lo activa una vez a mano
 Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
               Iris + EuphoriaPatcher + Complementary Unbound r5.8.1
               + MakeUp Ultra Fast (el tier ligero)

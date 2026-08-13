@@ -150,7 +150,7 @@ togekiss, yanmega.
 
 ## 4. Qué ve el jugador
 
-**Lo bloqueado no se oculta** (P9 y `navigation.md` §5). La Pokédex muestra
+**Lo bloqueado no se oculta** (P9 e `interfaz-cliente.md`). La Pokédex muestra
 las 1 025 entradas, pero las inactivas dicen por qué:
 
 ```

@@ -157,4 +157,4 @@ material de sobra**: cada avance del mod es una publicación.
 
 ## Related Systems
 
-- [Identidad visual](../ui/visual-identity.md) — de ahí sale el arte del servidor
+- [La interfaz de cliente](../ui/interfaz-cliente.md) — de ahí sale el arte del servidor

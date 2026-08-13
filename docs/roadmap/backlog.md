@@ -170,12 +170,16 @@ puede tocar**).
 | `PKM-002` | Diseño del inicial | — |
 | `PKM-003` | Cupo y condiciones de legendarios | — |
 | `SOC-001` | Clanes | — |
-| `UI-016` | Repositorio en GitHub y alojamiento del resource pack | D-023 |
-| `UI-017` | Fuente de espacio negativo + generador del pack | `UI-016` |
-| `UI-018` | Fondo propio del Almanaque (prueba de concepto) | `UI-017` |
-| `UI-019` | Migrar el resto de pantallas al estilo nuevo | `ART-001` |
-| `UI-020` | BossBar, ActionBar y Titles con la fuente propia | `UI-017` |
-| `ART-001` | **Arte de interfaces** — fondos, marcos, iconos. **Cuello de botella real** | `UI-018` |
+| ~~`UI-016`~~ · ~~`UI-017`~~ · ~~`UI-018`~~ · ~~`UI-019`~~ · ~~`UI-020`~~ | **Anuladas por D-026.** Eran el camino del resource pack sobre menús de cofre: se retiró entero | — |
+| **`ART-002`** | 🔴 **Arte de la interfaz de cliente** — fondos, celdas, iconos, botones. **Es del usuario y bloquea toda la UI** | — |
+| `UI-021` | Rehacer `mod/src/client/` y el protocolo, con el arte ya medido | `ART-002` |
+| `UI-022` | Las pantallas, por orden del catálogo | `UI-021` |
+| ~~`LNC-001`~~ | ~~Adaptar el launcher de Electron~~ ✅ **hecho** — `launcher/`, 25/25 pruebas, `.exe` compilado | — |
+| **`LNC-002`** | Crear el secreto `PACK_TOKEN` para publicar releases del launcher | — |
+| `LNC-003` | Arte propio del launcher: icono e imagen del raíl (hoy son los del proyecto anterior) | `ART-002` |
+| **`WLD-007`** | ⏰ **Pedir la whitelist de servidor de Axiom** — límite ~2026-09-10 | — |
+| `WLD-008` | Dar de alta a los constructores: whitelist + `ops.json` nivel **2** | `WLD-007` |
+| `INF-009` | Quitar `require-resource-pack` del servidor: el pack se borró con los menús | — |
 | `SEC-005` | Licencias de todos los mods candidatos | D-008 |
 | `AUD-004` | Clasificar los 74 mods sin categorizar | — |
 | `INF-003` | Flags de JVM | `INF-005` |

@@ -3,11 +3,16 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-08-11
-**Fase actual:** PHASE 2 — Core progression
-**Estado:** PHASE 0 y PHASE 1 completadas. 22 documentos, decisiones D-001 a
-D-024. **El mod está desplegado y funcionando contra MariaDB:** economía de
+**Última actualización:** 2026-08-12
+**Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela)
+**Estado:** PHASE 0 y PHASE 1 completadas. 23 documentos, decisiones D-001 a
+D-028. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, cinco vías de progresión, y las interfaces base operativas.
+
+> **2026-08-12 — la interfaz del PokePad se ha retirado ENTERA** (D-026). No es
+> una regresión accidental: se borró a propósito para rehacerla con arte real.
+> **Y con ella se han ido los menús de cofre**, también por decisión suya: no
+> se quiere ninguna pantalla de Minecraft, ni siquiera provisional. Ver §0-bis.
 
 ---
 
@@ -18,39 +23,66 @@ tres monedas, cinco vías de progresión, y las interfaces base operativas.
 ### Lo que funciona ahora mismo (verificado 2026-08-11)
 
 ```
-Servidor dev  7dc30799 · s12.mia.us.tarohosting.com:33043
+Servidor dev  7dc30799 · s12.mia.us.tarohosting.lat:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
 Cobblemon     1.7.3 instalado · Done (9,0 s) · ~1,9 GB de 4096
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 125/125 invariantes correctos
-Interfaz      Almanaque · Cartera · Vías · Puerta del Mundo
-              Tienda · GTS · Pokédex · Kits · Inicial · Curar
-              Misiones (6 de tutorial + 2 diarias)
+Autotest      /luna autotest -> 112/112 correctos (2026-08-12, en vivo)
+              eran 125: los 13 de fondos se fueron con el resource pack
 Telemetría    /luna economia · informe automático al log cada hora
-              Barra lateral y tablist con rangos
+              tablist con rangos (la barra lateral se borro, D-026)
 Mods          servidor 5 jars · cliente 9 · NO tienen que coincidir
               tabla definitiva en docs/technical/client-pack.md §2-ter
-Cliente       jugador     -0.1.0.mrpack · 136 MB · 7 mods
-              constructor -Constructor-0.1.0.mrpack · 182 MB · +CUI +Axiom
+Launcher      launcher/ · Electron 43 · 26/26 pruebas del nucleo
+              PUBLICADO: .../luna-eternal-pack/releases/latest
+              se autoactualiza SOLO (electron-updater) y el pack tambien
+              dos perfiles en un solo .exe: Jugador · Constructor
+              reparar instalacion + diagnostico de por que se cerro
+              ⚠ NO publicar otras releases en ese repo: el actualizador
+                mira "la ultima release" y se perderia
+Cliente       (respaldo) mrpack jugador 136 MB · constructor 182 MB
               Fabric Loader 0.19.3 (Cobblemon exige >= 0.17.2)
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
-PokePad       mod de cliente propio (D-025) · pantalla propia, no cofre
-              PokePad · Cartera · Vias · Mundos · Pokedex 3D · Cazas
-              protocolo VERSIONADO en el canal: cliente viejo -> cofre
-3D en el Pad  funciona. Si vuelve a parpadear, son TRES cosas juntas:
-              rotacion nueva por llamada · dibujar en pasadas · limpiar
-              la profundidad. Ver docs/ui/visual-identity.md
+Interfaz      NO HAY. Se borro entera (D-026): Pad y menus de cofre
+              a la espera del arte real. Debajo todo sigue vivo:
+              /luna autotest sigue verde y la logica no se toco
 Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
               solo captura las avanza; crianza cuenta al ECLOSIONAR
-Interfaz2.0   resource pack propio · 10 fondos · fuente de espacio negativo
-              require-resource-pack=true · se descarga solo al entrar
-              repos: luna-eternal (privado) · luna-eternal-pack (publico)
-Construcción  WorldEdit 7.3.8 + Axiom 5.4.2 cargados · plataforma 80×80
-              Axiom edita en vivo SIN whitelist (verificado por su API)
+Repos         luna-eternal (privado) · luna-eternal-pack (publico)
+              ⚠ OJO: la rama de luna-eternal-pack es master, NO main
+Manifiesto    publicado y responde 200 · 10 ficheros · 182 MB
+              .../luna-eternal-pack/master/manifest.json
+Acceso        SIN whitelist · EasyAuth 3.4.4 (/register /login)
+              TheJuanCE PRE-REGISTRADO para que nadie le robe el nombre
+              /luna constructor <clave> -> OP nivel 2 solo (builder.key)
+              guia del equipo en EQUIPO.md
+Ciudadela     NOCHE PERMANENTE (fixed_time 18000) · ambient_light 0.45
+              SIN borde de mundo mientras se construye
+              llegada en 4,69,0 (centro de la plaza, medido en el juego)
+              la luna gigante hay que CONSTRUIRLA: //hsphere
+              UNA isla de 56x56 flotando en el vacio: la plaza central
+              -28..27 en los dos ejes · suelo y=63 · se camina en 64
+              se puede construir hacia ARRIBA (319) y hacia ABAJO (-64)
+              se llega con /luna ir ciudadela (nivel 2)
+              tools/ciudadela.py --solo-centro / --plano / --limpiar
+              el plan de las 9 parcelas sigue vivo, se redibuja cuando toque
+Construcción  WorldEdit 7.3.8 + Axiom 5.4.2 cargados
+              varios constructores a la vez: SI. OP nivel 2 basta
+              alta de un constructor: python tools/constructor.py --anadir
+              ⚠ la licencia de Axiom es una cortesia de 30 DIAS, POR
+                PERSONA, desde su primer uso. La del dueno vence ~10-sep
+Servidor      allow-flight=true (lo exige Axiom; revertir al abrir)
+              enforce-secure-profile=false · require-resource-pack=false
 ```
+
+> ⚠️ **La direccion del servidor de desarrollo es `.lat`, no `.com`.** El
+> `.com` estaba escrito en la documentacion y en el generador del pack, y **no
+> existe en DNS**: el launcher decia "servidor no responde" con el servidor
+> perfectamente vivo. Real, leida del panel: `s12.mia.us.tarohosting.lat:33043`
+> (IP `103.195.100.223`).
 
 > ⚠️ **`online-mode` tiene que ser `false`.** Verificado: `TheJuanCE` no existe
 > como cuenta premium de Mojang. Con `online-mode=true` el propietario no
@@ -73,24 +105,75 @@ contraseña si se pierde.
 > La copia del scratchpad de la sesión **es temporal y desaparece**. Si al
 > retomar no aparece, se recupera del servidor — no hay que recrear la base.
 
-### El servidor YA SE PUEDE JUGAR
+### 0-bis · Qué se borró el 2026-08-12, y qué NO
+
+**Decisión del usuario (D-026): la interfaz del PokePad se retira entera** para
+rehacerla con arte propio que él va a enviar. Se borró de verdad, no se
+comentó:
+
+**Decisión del usuario (D-026), en dos tiempos el mismo día:** primero retirar
+el PokePad, y después —al ver que quedaban los menús de cofre como respaldo—
+**retirar también esos**. Su criterio, literal: *todo lo que hay en la PokePad
+va a tener interfaz de cliente bien hecha con arte real, así que nada de menús
+de Minecraft*.
+
+| Se borró | Se conservó |
+|---|---|
+| `mod/src/client/` entero y el protocolo del Pad | **Toda la lógica de juego**, intacta y probada |
+| Los **11 menús de cofre** y su framework (`Menu`, `Icon`, `LockState`) | La caché de fichas, ahora `PlayerCache` — nunca fue cosa de la interfaz sino de no machacar la base |
+| `Skin` + `gui_chars.json` + el resource pack entero | La barra lateral y el tablist: son HUD, no menús |
+| El Almanaque (el objeto que abría el menú) | Los servicios: economía, tienda, GTS, Pokédex, kits, misiones, cazas, viaje |
+| **La barra lateral** (marcador de vanilla) — 12-ago, estorbaba al construir | El **tablist**, que no molesta y sirve para ver quién está conectado |
+| `tools/`: los 6 scripts de arte e instalación | `gen_modpack` · `gen_manifest` · `gen_generaciones` · `discord_setup` |
+
+**Antes de borrar se rescató la lógica de juego que vivía dentro de los menús**,
+que es lo único que no se podía volver a escribir mirando la pantalla:
+
+| Nuevo servicio | Qué salvó |
+|---|---|
+| `starter/StarterService` | El catálogo de iniciales y la entrega **idempotente con vuelta atrás**: se marca antes de entregar, porque entregar dos es un exploit permanente y no entregar uno se arregla |
+| `heal/HealService` | La curación gratuita y su cooldown de 10 minutos |
+
+Consecuencias, verificadas:
+
+```
+mod          vuelve a ser SOLO servidor    environment: "server"
+             compila limpio                BUILD SUCCESSFUL
+cliente      NO instala ningun mod nuestro  → una cosa menos que romper
+jugabilidad  el jugador NO tiene pantallas todavia. Es el precio
+             aceptado a cambio de no fijar el diseno a un cofre
+```
+
+> ⚠️ **Esto sí es una regresión de cara al jugador, y es deliberada.** Hasta que
+> exista la interfaz de cliente, un jugador no puede elegir inicial, comprar ni
+> usar el GTS. Lo de debajo funciona y está probado; lo que falta es la
+> pantalla. **Por eso `ART-002` —el arte— es ahora la tarea que desbloquea el
+> proyecto**, y por eso mientras tanto el foco es la ciudadela, que no depende
+> de ella.
+
+> **Lo que hay que recordar al rehacerla:** el análisis de la interfaz de
+> referencia sigue en [pokepad-referencia.md](docs/ui/pokepad-referencia.md), y
+> **el motivo por el que un cofre no basta** (5 columnas, sin inventario,
+> botones fuera de la rejilla) no ha cambiado. El plan está en
+> [interfaz-cliente.md](docs/ui/interfaz-cliente.md).
+
+### El recorrido del jugador: construido, pero sin puerta de entrada
 
 La auditoría de [feature-gap-analysis.md](docs/analysis/feature-gap-analysis.md)
 destapó un bloqueo circular: **un jugador nuevo no tenía ningún Pokémon**, y sin
-Pokémon nada de lo construido servía. Resuelto:
+Pokémon nada de lo construido servía. El sistema se resolvió y **sigue
+resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 
 ```
-1. Elige inicial (Kanto o Johto)   ✅
-2. Captura                          ✅ se anota en la Pokédex y da Marcas
-3. Cura gratis                      ✅ cooldown 10 min
-4. Compra, vende, comercia          ✅
+1. Elige inicial (Kanto o Johto)   ✅ StarterService · ⬜ falta pantalla
+2. Captura                          ✅ funciona solo, sin interfaz
+3. Cura gratis                      ✅ HealService · ⬜ falta pantalla
+4. Compra, vende, comercia          ✅ servicios · ⬜ falta pantalla
 ```
 
-### Siguiente: calibrar con datos reales
+### Y cuando haya interfaz: calibrar con datos reales
 
-FASE B está cerrada salvo los gimnasios, que necesitan mundo construido.
-
-**Lo que falta ahora no es código: son datos.** `/luna economia` mide, pero
+**Lo que falta ahí no es código: son datos.** `/luna economia` mide, pero
 hasta que alguien juegue de verdad todos los números siguen siendo
 estimaciones:
 
@@ -101,10 +184,33 @@ estimaciones:
 | Tramos del impuesto GTS | 5-18 % | reparto P50/P99 |
 | XP de las vías | a ojo | tiempo real hasta nivel V |
 
-**Juega una sesión y ejecuta `/luna economia`.** El informe dice solo si hay
-inflación, si los sinks funcionan y si la riqueza se está concentrando.
+`/luna economia` dice si hay inflación, si los sinks funcionan y si la riqueza
+se concentra — pero **hasta que se pueda jugar de verdad no hay nada que
+medir**, así que esto espera a la interfaz.
 
-Después: **construir la ciudadela** (`WLD-005`) y **gimnasios** (`UI-015`).
+### El foco de ahora: la ciudadela
+
+Y eso **no es programación**, así que el trabajo del proyecto es quitar de en
+medio todo lo que impida construirla. Al 2026-08-12 ya no queda nada técnico:
+
+| | |
+|---|---|
+| ¿Existe la dimensión? | ✅ `lunaeternal:ciudadela`, vacía, plataforma 80×80 en el origen |
+| ¿Se puede construir con Axiom en multijugador? | ✅ **sí**, y con varias personas a la vez |
+| ¿Hace falta un mod de permisos? | ❌ **no**. OP nivel **2** basta para Axiom *y* WorldEdit — leído de los dos jars, no supuesto |
+| ¿Cómo entran los demás? | El launcher, perfil **Constructor** |
+| ¿Y los permisos? | `python tools/constructor.py --anadir <nombres>` — whitelist y nivel 2 de una vez |
+| ¿Hay dónde construir? | ✅ **la plaza, sola, 56×56 flotando en el vacío**. Decisión del usuario: una zona cada vez |
+| ¿Cómo se llega? | `/luna ir ciudadela` (nivel 2) |
+| ¿Qué falta? | **Los nombres de quienes van a construir**, pedir la whitelist de Axiom (§Pendiente) y **construir** |
+
+> ⚠️ **No des OP con `/op` a secas: eso es nivel 4** y permite apagar el
+> servidor y quitarte a ti el OP. Los constructores van a nivel 2. El
+> procedimiento exacto está en
+> [construccion.md §3-ter](docs/world/construccion.md).
+
+Después de la ciudadela: **gimnasios** (`UI-015`) y la **interfaz nueva**
+cuando llegue el arte (`ART-002`).
 
 > El recorrido completo del jugador nuevo ya funciona sin tocar un comando:
 > elige inicial → captura → registra → compra → vende en GTS → sube de vía.
@@ -121,13 +227,13 @@ Después: **construir la ciudadela** (`WLD-005`) y **gimnasios** (`UI-015`).
 > ⚠️ **Si una migración falla a medias, el servidor entra en bucle** y el panel
 > se queda en `stopping`. Se sale con `kill` y luego `start`.
 
-> ⚠️ **NUNCA reemplaces el jar del cliente con Minecraft abierto.** Fabric
-> carga las clases cuando las necesita, así que el juego sigue tan tranquilo
-> hasta que toca cargar una nueva — y entonces revienta con
-> `ZipFile invalid LOC header` dentro de un stack de netty que **no se parece
-> en nada a la causa**. Usa `python tools/instalar_cliente.py`, que se niega a
-> copiar si el juego está abierto y comprueba la copia leyendo una clase de
-> dentro.
+> ⚠️ **La lección del jar corrupto sigue viva, aunque el script ya no exista.**
+> Reemplazar un jar con Minecraft abierto revienta más tarde con
+> `ZipFile invalid LOC header`, dentro de un stack de netty que **no se parece
+> en nada a la causa**. `tools/instalar_cliente.py` se borró con el mod de
+> cliente (D-026), pero el conocimiento no se pierde: **está codificado en el
+> launcher**, que reconoce ese síntoma y ofrece reparar
+> (`launcher/src/main/core/diagnostico.js`, con prueba que lo fija).
 
 > ⚠️ **Al desplegar, verifica el tamaño del jar.** Una subida se corrompió sin
 > dar error (`Unexpected end of ZLIB input stream`) y el tamaño coincidía. Lo
@@ -149,11 +255,10 @@ Lo otro que falta es **construir la ciudadela**, y eso no es programación.
 
 Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 
-> ⚠️ **La interfaz actual es funcional pero fea, y el usuario lo dijo.** Son
-> menús de cofre vanilla. El plan para arreglarlo sin obligar a instalar nada
-> está en [visual-identity.md](docs/ui/visual-identity.md) (D-023): resource
-> pack con fuente de espacio negativo. **El cuello de botella será el arte, no
-> el código.**
+> ⚠️ **No hay interfaz, y es a propósito.** El plan para la nueva está en
+> [interfaz-cliente.md](docs/ui/interfaz-cliente.md). **El cuello de botella es
+> el arte, no el código**: la implementación anterior se escribió en un día y su
+> techo lo puso el arte de relleno.
 
 > **Tesoros ya está decidido** (D-020): cofres con legendarios, como
 > Diosesmon. El análisis de riesgo queda archivado en
@@ -176,7 +281,10 @@ Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 
 | | |
 |---|---|
-| `SEC-001` | **Rotar la API key de Pterodactyl.** Circuló en texto plano; lleva pendiente desde el 3-ago |
+| **`WLD-006`** | ⏰ **Pedir la whitelist de SERVIDOR de Axiom** en `#whitelist-request` de su Discord. **Fecha límite ~2026-09-10.** Lo que funciona hoy es una cortesía automática de 30 días — ver [construccion.md §3-bis](docs/world/construccion.md) |
+| **`LNC-002`** | Crear el token `PACK_TOKEN` para que el launcher publique sus releases — ver [launcher.md §2](docs/technical/launcher.md) |
+| **`ART-002`** | Enviar el arte de la interfaz nueva: fondos, botones, iconos (D-026) |
+| `SEC-001` | **Rotar la API key de Pterodactyl.** Ha vuelto a circular en texto plano el 2026-08-12. Está en `.env` (git-ignorado) y funciona; conviene regenerarla en el panel cuando se cierre la fase de construcción |
 | `SEC-006` | ¿El servidor nuevo nace con `online-mode=true`? Condiciona el anti-abuso |
 | `SEC-004` | Leer el texto oficial de Mojang sobre monetización (no accesible desde aquí) |
 | `INF-002` · `INF-007` | Backups fuera del hosting (mundo **y** base de datos) |
@@ -218,7 +326,7 @@ cualquier sistema es:
 | P6 | **Nunca confiar en el cliente.** Toda validación económica es de servidor. |
 | P7 | **Nada crítico vive solo en la conversación.** Va a documentación. |
 | P8 | **Producción es sagrada.** `2a0a48ff` es READ-ONLY hasta que exista plan aprobado. |
-| P9-bis | **Toda interfaz nueva se hace en el Pad.** Se instala en el cliente, y **el servidor decide cuándo abrirla y con qué contenido** (D-025). Los menús de cofre son legado: se conservan como respaldo para clientes sin el mod, no se amplían. |
+| P9-bis | **Todo lo que el jugador ve se dibuja en el cliente, con arte propio, y lo decide el servidor** (D-025, D-026). **Ninguna pantalla se hace como menú de cofre** — ni provisional, ni de respaldo, ni «mientras tanto»: un provisional que funciona se queda, y fija el diseño de lo que venga después a la rejilla de un cofre. Si algo necesita pantalla y no hay arte, **espera**. Ver [interfaz-cliente.md](docs/ui/interfaz-cliente.md). |
 | P9 | **Interfaz, nunca comando.** Todo se hace con clics (D-012). Si el diseño de un sistema termina en *"el jugador escribe `/algo`"*, está incompleto. |
 | P10 | **El cliente pesa poco; eso no significa que no haga nada.** El límite es el **peso de la descarga**, no la ambición de la interfaz. Referencia: **136 MB frente a los 8 GB de Diosesmon**. Un mod propio de cliente de 300 KB no toca esa cifra, así que **no está limitado por este principio** (D-025). Lo que sí sigue prohibido es engordar el pack con mods ajenos que no aporten (P5). Ver [client-pack.md](docs/technical/client-pack.md). |
 
@@ -327,11 +435,14 @@ documentación · migración · rollback.
 | D-019 | 2026-08-11 | **No se venden Modificadores de estadísticas** (Diosesmon sí) | Un legendario es *una pieza*; un modificador es una mejora repetible sin techo aplicable a cualquier Pokémon. Lo segundo no tiene fondo |
 | D-021 | 2026-08-11 | **Cobblemon se instala desde el jar oficial, y su código fuente se clona como referencia** | Tener el fuente da la verdad sobre IDs, spawns y API sin adivinar. Ya sirvió: encontró la `moon_ball`, cuya efectividad depende de la fase lunar |
 | D-020 | 2026-08-11 | **Los cofres incluyen legendarios y legendarios shiny**, como Diosesmon | **Decisión del usuario, tomada tras leer el análisis de riesgo** de [treasures.md](docs/economy/treasures.md) §2. T4 admite esta excepción explícita. Obligatorias: probabilidades públicas, piedad acumulada, idempotencia y auditoría |
-| D-025 | 2026-08-11 | **Se escribe un mod de cliente propio, `lunaeternal` con entrypoint de cliente, y la interfaz deja de estar atada al menú de cofre** | **Decisión del usuario, y correctora de un error mío.** Leí P10 como "ningún mod propio" y de ahí salió una interfaz con techo bajo. La captura de Diosesmon lo demostró: su POKEPAD **no puede ser un cofre** — no muestra inventario del jugador, tiene 5 columnas (un cofre tiene 9) y botones fuera de la rejilla. Es una pantalla propia. La nuestra también lo será. **P6 no se toca:** toda la lógica sigue en el servidor; el cliente solo dibuja lo que le mandan |
+| D-025 | 2026-08-11 | **Se escribe un mod de cliente propio, `lunaeternal` con entrypoint de cliente, y la interfaz deja de estar atada al menú de cofre** · **implementación retirada por D-026; el criterio sigue vigente** | **Decisión del usuario, y correctora de un error mío.** Leí P10 como "ningún mod propio" y de ahí salió una interfaz con techo bajo. La captura de Diosesmon lo demostró: su POKEPAD **no puede ser un cofre** — no muestra inventario del jugador, tiene 5 columnas (un cofre tiene 9) y botones fuera de la rejilla. Es una pantalla propia. La nuestra también lo será. **P6 no se toca:** toda la lógica sigue en el servidor; el cliente solo dibuja lo que le mandan |
 | D-023 | 2026-08-11 | ~~**La interfaz se bonita con un resource pack**~~ **Superada por D-025.** Lo hecho se conserva y se reutiliza (panel, arte, iconos): el mod de cliente dibuja, el resource pack aporta las texturas | Fue la decisión correcta *bajo la restricción equivocada*. En cuanto la restricción cayó, el cofre dejó de ser el techo |
-| D-023-bis | 2026-08-11 | **La interfaz se hace bonita con un resource pack** (fuente de espacio negativo + `custom_model_data`), no con un mod de cliente | **Crítica del usuario, y tenía razón**: los menús de cofre vanilla parecen un plugin de 2015. Apliqué P10 como si fuera "solo servidor y punto", sin ver que **un resource pack no es un mod**: lo envía el servidor, el jugador no instala nada, y P10 queda intacto. Ver [visual-identity.md](docs/ui/visual-identity.md) |
+| D-023-bis | 2026-08-11 | ~~**La interfaz se hace bonita con un resource pack**~~ **Anulada por D-026.** El truco de la fuente de espacio negativo funcionaba, y aun así el techo seguía siendo el de un cofre | Fue una corrección correcta a un error mío, pero resolvía el problema equivocado: hacía *bonito* un menú de cofre en vez de dejar de usar menús de cofre |
 | D-024 | 2026-08-11 | **El modpack oficial de Cobblemon NO se adopta**; se cosechan mods sueltos | 76 mods y 180 MB de cosas **de cliente**: shaders, mapas, partículas. Cero reglas de juego, que es lo único que nos diferencia. Y **`stendhal` es CC-BY-NC-ND**: no comercial y sin derivadas, la misma trampa que CobbleVerse (D-006) |
 | D-022 | 2026-08-11 | **Axiom se instala en el servidor**, y el pack de cliente se parte en dos: jugador y constructor | **Corrección mía.** Leí su licencia como si nos afectara la cláusula comercial; esa apunta a quien *cobra por construir*, no a quien construye su propio servidor. El uso no comercial en servidor privado es gratuito y solo pide una whitelist en su Discord. El pack se separa porque son 46 MB que un jugador no usa jamás (P10) |
+| D-026 | 2026-08-12 | **La interfaz del PokePad se borra ENTERA y se rehace con arte real.** El mod vuelve a ser solo de servidor | **Decisión del usuario.** La implementación estaba montada sobre arte de relleno generado por script, y el techo visual lo ponía ese arte, no el código. Rehacer encima habría sido pintar sobre una maqueta. Se borra la implementación, **no el diagnóstico**: sigue siendo cierto que un menú de cofre no puede ser la interfaz (D-025), así que la nueva volverá a ser pantalla propia. Efecto lateral bueno: el cliente deja de instalar ningún mod nuestro |
+| D-027 | 2026-08-12 | **El launcher propio (`.exe`) es el canal oficial de distribución**, y se autoactualiza. El `.mrpack` queda como respaldo | El `.mrpack` obliga a instalar PrismLauncher, importar a mano y reimportar en cada actualización. Con 12 personas se puede pedir; con un servidor abierto, no. Se adapta el launcher de `D:\PokeReport 2` —que ya funcionaba— y se le añade lo que le faltaba: **autoactualización del propio launcher** (electron-updater), **perfiles** jugador/constructor en un solo instalador, **reparar** por SHA1 y **diagnóstico** de por qué se cerró el juego |
+| D-028 | 2026-08-12 | **Los constructores llevan OP de nivel 2, no 4**, y no se instala ningún mod de permisos | Verificado leyendo los dos jars: Axiom concede todo con `hasPermissionLevel(2)` y WorldEdit con `isOperator()`. LuckPerms sería un mod más para no ganar nada (P5). El nivel importa: con `/op` a secas (nivel 4) un constructor puede apagar el servidor o quitarle el OP al dueño **sin querer** |
 
 ## 6. Decisiones PENDIENTES (bloqueantes)
 
@@ -361,6 +472,8 @@ docs/game-design/                  ← visión, core loop
 docs/economy/ · progression/ · trading/ · ui/
 docs/roadmap/backlog.md            ← tareas con estado
 mod/                               ← el mod de servidor (D-011)
+launcher/                          ← el launcher de escritorio (D-027)
+tools/                             ← scripts: pack, manifiesto, arte, Discord
 ```
 
 Los directorios se crean **cuando tienen contenido real**. No se generan stubs

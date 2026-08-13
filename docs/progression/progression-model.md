@@ -13,7 +13,7 @@ consigue que sea lento sin ser aburrido.
 ## Related Documents
 
 - [`../trading/gts.md`](../trading/gts.md) — su acceso es progresión
-- `../ui/navigation.md` — pendiente
+- [`../ui/interfaz-cliente.md`](../ui/interfaz-cliente.md) — cómo se dibujará
 
 ## Current Status
 

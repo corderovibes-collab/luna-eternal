@@ -25,12 +25,14 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`game-design/core-loop.md`](game-design/core-loop.md) | 🟡 | Tres bucles anidados — **propuesta** |
 | [`trading/gts.md`](trading/gts.md) | ✅ | Mercado: acceso por progresión, comisiones, anti-abuso |
 | [`progression/progression-model.md`](progression/progression-model.md) | ✅ | 5 vías, desbloqueos de dos factores, sin nivel de jugador |
-| [`ui/navigation.md`](ui/navigation.md) | ✅ | **El Almanaque**: hub, 4 grupos, barra lateral, estados |
+| [`ui/interfaz-cliente.md`](ui/interfaz-cliente.md) | ✅ | **Cómo se hace la interfaz**, y por qué nunca como menú de cofre |
 | [`world/world-structure.md`](world/world-structure.md) | ✅ | Lobby · ciudadela · mundo, y el recorrido de entrada |
 | [`world/worlds.md`](world/worlds.md) | ✅ | Hogar permanente vs Salvaje que reinicia; lobby y modpack |
 | [`pokemon/generations.md`](pokemon/generations.md) | ✅ | Kanto + Johto primero, despliegue progresivo |
 | [`economy/treasures.md`](economy/treasures.md) | ⚠️ | Cofres y llaves — **con una objeción abierta sobre legendarios** |
 | [`ui/interfaces-catalog.md`](ui/interfaces-catalog.md) | ✅ | Las 22 pantallas, prioridad y patrones comunes |
+| [`technical/launcher.md`](technical/launcher.md) | ✅ | **El launcher**: se autoactualiza él y el pack, perfiles, reparar, diagnóstico |
+| [`world/construccion.md`](world/construccion.md) | ✅ | Construir la ciudadela con Axiom, **entre varios a la vez** |
 
 ✅ escrito · 🟡 en curso · ⬜ pendiente
 

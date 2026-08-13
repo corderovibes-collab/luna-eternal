@@ -33,7 +33,7 @@ D-003 — Producción (`2a0a48ff`) es READ-ONLY hasta plan aprobado.
 | | Paquete Ender Dragon | Paquete Esqueleto |
 |---|---|---|
 | **ID** | `2a0a48ff` | `7dc30799` |
-| **Nodo** | `s17.mia.us.tarohosting.lat` | `s12.mia.us.tarohosting.com` |
+| **Nodo** | `s17.mia.us.tarohosting.lat` | `s12.mia.us.tarohosting.lat` |
 | **RAM** | 16 384 MB | 4 096 MB |
 | **CPU** | 300 % (3 núcleos) | 300 % (3 núcleos) |
 | **Disco** | 184 320 MB (70 795 usados, 38 %) | 61 440 MB (2 977 usados, 5 %) |

@@ -3,21 +3,15 @@
   "id": "lunaeternal",
   "version": "${version}",
   "name": "PokeReport: Luna Eternal",
-  "description": "Sistemas propios del servidor: progresion, economia, coleccion y mercado. Incluye la interfaz de cliente (el Pad).",
+  "description": "Sistemas propios del servidor: progresion, economia, coleccion y mercado. Servidor unicamente.",
   "authors": [
     "PokeReport"
   ],
   "license": "ARR",
-  "environment": "*",
+  "environment": "server",
   "entrypoints": {
-    "main": [
-      "net.pokereport.luna.LunaCommon"
-    ],
     "server": [
       "net.pokereport.luna.LunaEternal"
-    ],
-    "client": [
-      "net.pokereport.luna.client.LunaClient"
     ]
   },
   "depends": {

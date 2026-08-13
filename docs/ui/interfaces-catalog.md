@@ -7,7 +7,7 @@ que necesita cada una. Es la lista de trabajo de UI.
 
 ## Dependencies
 
-- [`navigation.md`](navigation.md) — El LunaPad y sus cuatro grupos
+- [`interfaz-cliente.md`](interfaz-cliente.md) — cómo se construye y qué NO se hace
 
 ## Related Documents
 
@@ -15,12 +15,19 @@ que necesita cada una. Es la lista de trabajo de UI.
 
 ## Current Status
 
-**Vivo.** Se actualiza conforme se construyen pantallas.
-Framework y **6 pantallas operativas**; el resto por hacer.
+**Vivo, y ahora mismo todo está por construir.** El 2026-08-12 se retiró la
+implementación entera (D-026): las pantallas que aquí figuraban como hechas
+eran menús de cofre, y se borraron para rehacerlas como interfaz de cliente con
+arte real.
+
+**Este documento sobrevive porque el inventario sigue siendo válido.** Lo que
+caducó es *cómo* se dibujaban, no *qué* pantallas hacen falta ni qué debe haber
+en cada una — eso se pensó una vez y sigue en pie.
 
 ## Last Decision
 
-Pendiente.
+D-026 · la interfaz se rehace en el cliente. Ninguna pantalla se implementa
+como menú de cofre.
 
 ---
 
@@ -50,17 +57,17 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 
 | # | Pantalla | Estado | Prioridad | Depende de |
 |---|---|---|---|---|
-| 1 | **LunaPad** (principal) | ✅ hecho | — | — |
-| 2 | **Barra lateral** | ✅ hecho | — | — |
-| 2b | **Tablist** (cabecera, pie, rangos) | ✅ hecho | — | — |
-| 3 | **Cartera** | ✅ hecho | — | — |
-| 4 | **Vías** | ✅ hecho | — | — |
-| 5 | **Puerta del mundo** | ✅ hecho | — | — |
+| 1 | **LunaPad** (principal) | ⬜ **rehacer** | 🔴 | — |
+| 2 | **Barra lateral** | ⬜ **rehacer** | 🔴 | — |
+| 2b | **Tablist** (cabecera, pie, rangos) | ⬜ **rehacer** | 🔴 | — |
+| 3 | **Cartera** | ⬜ **rehacer** | 🔴 | — |
+| 4 | **Vías** | ⬜ **rehacer** | 🔴 | — |
+| 5 | **Puerta del mundo** | ⬜ **rehacer** | 🔴 | — |
 | 6 | **Viajes / LunaTaxi** | ⬜ | 🟠 | ciudadela construida |
-| 7 | **Tienda** | ✅ hecho | — | — |
-| 8 | **GTS** | ✅ hecho | — | Pokémon cuando haya Cobblemon |
-| 9 | **Pokédex** | ✅ hecho | — | — |
-| 10 | **Kits** | ✅ hecho | — | rangos, para los de rango |
+| 7 | **Tienda** | ⬜ **rehacer** | 🔴 | — |
+| 8 | **GTS** | ⬜ **rehacer** | 🔴 | Pokémon cuando haya Cobblemon |
+| 9 | **Pokédex** | ⬜ **rehacer** | 🔴 | — |
+| 10 | **Kits** | ⬜ **rehacer** | 🔴 | rangos, para los de rango |
 | 11 | **Misiones** | ⬜ | 🟡 | sistema de quests |
 | 12 | **Cazas** | ⬜ | 🟡 | rotación |
 | 13 | **Medallas** | ⬜ | 🟡 | gimnasios |
@@ -74,16 +81,21 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 21 | **Historial** | ⬜ | ⚪ | `ledger_entry` (ya existe) |
 | 22 | **Rangos** | ⬜ | ⚪ | catálogo |
 
-Las tres rojas están hechas y **las dimensiones ya existen** (`WLD-002`): la
-Puerta del Mundo teletransporta de verdad. Lo que falta ahora es **construir**
-la ciudadela, no programarla.
+> **Ojo con leer esta tabla como trabajo perdido.** Lo que hay que rehacer es
+> la pantalla; **lo de debajo sigue vivo y probado**: economía, progresión,
+> tienda, GTS, Pokédex, kits, misiones, cazas y viaje entre dimensiones siguen
+> en el mod con sus invariantes en `/luna autotest`. Rehacer la Cartera es
+> dibujarla, no reinventar la cartera.
+
+Las dimensiones ya existen (`WLD-002`), así que la Puerta del Mundo tiene a
+dónde llevar. Lo que falta ahí es **construir** la ciudadela, no programarla.
 
 ---
 
 ## 2. Patrones comunes
 
-Para no rediseñar cada pantalla desde cero. Todas usan el framework de
-[`navigation.md`](navigation.md) §7.
+Para no rediseñar cada pantalla desde cero. Son patrones de **contenido**, no
+de rejilla de cofre: siguen valiendo para la interfaz de cliente.
 
 ### 2.1 · Lista paginada
 `Pokédex · GTS · Caja · Cosméticos · Tienda`
@@ -131,7 +143,7 @@ navegación: lista → detalle → atrás.
 | Título con el nombre de la sección, siempre | El jugador debe saber dónde está |
 | **Atrás** en el hueco 48, **Cerrar** en el 53 | Posición fija en todas |
 | Marco de cristal gris; el color solo para lo importante | Si todo destaca, nada destaca |
-| Lo bloqueado: **qué es · qué falta · qué hacer** | `navigation.md` §5 |
+| Lo bloqueado: **qué es · qué falta · qué hacer** | nunca se oculta (P9) |
 | Los saldos, siempre en el mismo sitio | Se consultan sin buscar |
 | Sonido al pulsar; sonido distinto si no hace nada | El jugador sabe si falló él o la interfaz |
 | Sin cursivas (Minecraft las mete por defecto) | Ya resuelto en `Icon` |
@@ -206,5 +218,5 @@ base es una lista de destinos con iconos — funciona igual de bien y no bloquea
 
 ## Related Systems
 
-- [Navegación](navigation.md) · [Los mundos](../world/worlds.md)
+- [La interfaz de cliente](interfaz-cliente.md) · [Los mundos](../world/worlds.md)
 - [Tesoros](../economy/treasures.md) · [GTS](../trading/gts.md)

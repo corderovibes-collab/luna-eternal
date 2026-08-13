@@ -2,22 +2,15 @@ package net.pokereport.luna;
 
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.TypedActionResult;
 import net.pokereport.luna.command.LunaCommand;
 import net.pokereport.luna.db.Database;
 import net.pokereport.luna.economy.EconomyService;
 import net.pokereport.luna.player.PlayerService;
-import net.pokereport.luna.ui.AlmanacItem;
-import net.pokereport.luna.ui.MenuService;
-import net.pokereport.luna.ui.Sidebar;
+import net.pokereport.luna.ui.PlayerCache;
 import net.pokereport.luna.ui.Tablist;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +46,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.economy.EconomyStats stats;
     private static net.pokereport.luna.hunt.HuntService hunts;
     private static ExecutorService io;
+    /** Clave de alta de constructor. Vacía = las altas están cerradas. */
+    private static String builderKey = "";
 
     @Override
     public void onInitializeServer() {
@@ -69,12 +64,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             var player = handler.getPlayer();
-            // El Almanaque, la barra lateral y el tablist se montan ya: son lo
-            // primero que el jugador ve y no dependen de la base de datos.
-            AlmanacItem.ensure(player);
-            Sidebar.install(player);
             Tablist.onJoin(server, player);
-            MenuService.refresh(player);
+            PlayerCache.refresh(player);
 
             // Entregas pendientes del GTS: compras sin entregar, listados
             // retirados y, sobre todo, listados CADUCADOS — que antes dejaban
@@ -93,31 +84,34 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             var player = handler.getPlayer();
             players.forget(player.getUuid());
-            MenuService.forget(player);
-            net.pokereport.luna.ui.PadService.olvidar(player);
-            Sidebar.remove(player);
+            PlayerCache.forget(player);
+            net.pokereport.luna.heal.HealService.olvidar(player);
             Tablist.onLeave(server, player);
         });
 
-        // Clic derecho con el Almanaque: se abre. Sin comandos (P9).
-        UseItemCallback.EVENT.register((player, world, hand) -> {
-            ItemStack stack = player.getStackInHand(hand);
-            if (!world.isClient() && AlmanacItem.is(stack)
-                    && player instanceof ServerPlayerEntity sp) {
-                MenuService.openAlmanac(sp);
-                return TypedActionResult.success(stack, false);
-            }
-            return TypedActionResult.pass(stack);
-        });
+        // AQUI IBA LA INTERFAZ.
+        //
+        // El clic derecho con El Almanaque abria el menu de cofre. Se retiro
+        // entero con los menus (D-026): la interfaz se rehace en el cliente,
+        // con arte real, y el disparador lo pondra ella.
+        //
+        // Lo que hay debajo —economia, progresion, tienda, GTS, Pokedex, kits,
+        // misiones, cazas, viaje entre mundos— sigue intacto y con sus
+        // invariantes en /luna autotest. Lo que falta es la pantalla.
 
-        // Si alguien consigue tirarlo, el objeto tirado se desvanece: el
-        // jugador lo recupera solo, así que dejarlo crearía duplicados.
-        ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-            if (entity instanceof ItemEntity item) AlmanacItem.discardIfAlmanac(item);
-        });
+        // LA BARRA LATERAL TAMBIEN SE FUE (D-026).
+        //
+        // Era un marcador de vanilla, y se notaba: la columna de numeros rojos
+        // que Minecraft dibuja a la derecha no se puede quitar, y las lineas en
+        // gris apagado eran las de un objetivo que no cabia. Estorbaba mientras
+        // se construye y ademas era justo el tipo de interfaz que este proyecto
+        // ha decidido no tener.
+        //
+        // Lo que ENSEÑABA sigue siendo la especificacion del HUD del cliente
+        // —fase lunar, tres saldos, via dominante, clan, oficio, medallas—, y
+        // todo eso lo sigue calculando PlayerCache. Lo que se tira es el
+        // marcador, no el diseño.
 
-        // Refresco de la barra lateral. Lee de la caché en memoria, nunca de
-        // la base de datos, y solo envía paquetes si el contenido cambió.
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (server.getTicks() % 20 != 0) return;
             // El contador de conectados cambia con cada entrada y salida;
@@ -130,14 +124,6 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             if (server.getTicks() % 72_000 == 0) {
                 net.pokereport.luna.command.EconomyReport.logDaily();
             }
-            for (ServerPlayerEntity p : server.getPlayerManager().getPlayerList()) {
-                var snap = MenuService.cached(p);
-                if (snap == null) continue;
-                snap.moonPhase = p.getWorld().getMoonPhase();
-                snap.night = !p.getWorld().isDay();
-                Sidebar.update(p, snap);
-                AlmanacItem.ensure(p);
-            }
         });
 
         CommandRegistrationCallback.EVENT.register(
@@ -149,6 +135,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             LunaConfig cfg = LunaConfig.load();
             net.pokereport.luna.economy.Currency.applyDisplayNames(
                 cfg.nameePokedollar, cfg.nameMark, cfg.namePremium);
+            builderKey = cfg.builderKey;
+            LOG.info("Altas de constructor: {}",
+                     builderKey.isBlank() ? "CERRADAS" : "abiertas con clave");
             database = new Database(cfg);
             database.migrate();
 
@@ -166,19 +155,6 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             quests = new net.pokereport.luna.quest.QuestService(database);
             stats = new net.pokereport.luna.economy.EconomyStats(database);
             hunts = new net.pokereport.luna.hunt.HuntService(database);
-            // Fondos de las interfaces (D-023). Si falla, los menús salen
-            // grises pero el servidor arranca igual: es cosmético.
-            net.pokereport.luna.ui.Skin.load();
-            // Protocolo del Pad (D-025). Se registra ANTES de que entre
-            // nadie: los tipos de paquete deben existir en el handshake.
-            net.pokereport.luna.ui.PadService.registrar();
-            net.pokereport.luna.ui.PadService.inicio(
-                net.pokereport.luna.ui.AlmanacPad::abrir);
-            // El «+» de la moneda premium. Cuando exista la tienda web, aqui
-            // se enviara el enlace; de momento avisa y no miente.
-            net.pokereport.luna.ui.PadService.comprar(j -> j.sendMessage(
-                net.minecraft.text.Text.literal(
-                    "§dLa tienda de ReportCoins aún no está abierta."), false));
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);
@@ -221,6 +197,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         });
     }
 
+    public static String builderKey() { return builderKey; }
     public static Database database() { return database; }
     public static PlayerService players() { return players; }
     public static EconomyService economy() { return economy; }

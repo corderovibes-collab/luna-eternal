@@ -27,6 +27,20 @@ public final class LunaConfig {
     public final String  nameMark;
     public final String  namePremium;
 
+    /**
+     * Clave de invitación de constructor. Vacía = el comando no existe.
+     *
+     * <p>Existe por un problema muy concreto: para construir hace falta OP de
+     * nivel 2 —lo exigen Axiom y WorldEdit—, y darlo requiere saber el nombre
+     * de cada persona <b>de antemano</b>. Cuando el equipo entra mientras el
+     * dueño no está, eso bloquea a todo el mundo.
+     *
+     * <p>Con esto, el dueño reparte una clave por privado y cada constructor se
+     * da de alta él mismo. <b>Nunca da nivel 4</b>: un constructor no puede
+     * apagar el servidor ni quitarle el OP a nadie.
+     */
+    public final String  builderKey;
+
     private LunaConfig(Properties p) {
         String host = req(p, "db.host");
         String port = p.getProperty("db.port", "3306");
@@ -42,6 +56,7 @@ public final class LunaConfig {
         this.nameePokedollar = p.getProperty("currency.pokedollar", "PokéDólares");
         this.nameMark        = p.getProperty("currency.mark", "Marcas");
         this.namePremium     = p.getProperty("currency.premium", "ReportCoins");
+        this.builderKey      = p.getProperty("builder.key", "").trim();
     }
 
     private static String req(Properties p, String key) {

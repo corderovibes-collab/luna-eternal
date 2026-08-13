@@ -1,5 +1,5 @@
 {
-  "_comment": "Ciudadela: la ciudad. Mediodia fijo para que siempre se vea bien, sin monstruos, sin lluvia. Es un espacio de servicios, no de juego: aqui no hay nada que descubrir.",
+  "_comment": "Ciudadela: la ciudad. NOCHE PERMANENTE (fixed_time 18000): el servidor se llama Luna Eternal y su plaza principal a pleno sol era una oportunidad tirada. La noche no cuesta nada aqui porque monster_spawn_light_level 0 ya impide que aparezca un solo monstruo, asi que es puro ambiente sin riesgo. ambient_light subido a 0.45 para que se siga viendo de noche sin depender de shaders.",
   "ultrawarm": false,
   "natural": false,
   "piglin_safe": false,
@@ -9,8 +9,8 @@
   "has_skylight": true,
   "has_ceiling": false,
   "coordinate_scale": 1.0,
-  "ambient_light": 0.3,
-  "fixed_time": 6000,
+  "ambient_light": 0.45,
+  "fixed_time": 18000,
   "logical_height": 384,
   "effects": "minecraft:overworld",
   "infiniburn": "#minecraft:infiniburn_overworld",

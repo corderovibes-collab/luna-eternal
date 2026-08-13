@@ -1,74 +1,38 @@
 package net.pokereport.luna.ui;
 
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
 import net.pokereport.luna.LunaEternal;
 import net.pokereport.luna.economy.Currency;
+import net.pokereport.luna.starter.StarterService;
 
 /**
- * Abre interfaces respetando la separación de hilos.
+ * Ficha en memoria de cada jugador conectado.
+ *
+ * <p>Es lo que permite que la barra lateral se repinte cada segundo sin tocar
+ * la base de datos ni una sola vez. Y será lo que alimente la interfaz de
+ * cliente cuando exista: el servidor manda una ficha ya calculada, no una
+ * conversación de veinte preguntas.
  *
  * <p>El orden importa y no es negociable:
  * <ol>
  *   <li>los datos de la base se leen en el hilo de E/S,</li>
- *   <li>el estado del mundo se lee en el hilo del servidor,</li>
- *   <li>el menú se abre en el hilo del servidor.</li>
+ *   <li>el estado del mundo se lee en el hilo del servidor.</li>
  * </ol>
  *
  * <p>Hacerlo al revés —consultar la base mientras se dibuja— congela el
- * servidor entero cada vez que alguien abre un menú, y con cien jugadores eso
- * no es un detalle: es el servidor caído
- * ({@code docs/technical/data-model.md} §4).
+ * servidor entero, y con cien jugadores eso no es un detalle: es el servidor
+ * caído ({@code docs/technical/data-model.md} §4).
+ *
+ * <p><b>Antes se llamaba {@code MenuService}</b> y además abría menús de cofre.
+ * Los menús se retiraron (D-026); la caché no, porque nunca fue cosa de la
+ * interfaz sino de no machacar la base de datos.
  */
-public final class MenuService {
+public final class PlayerCache {
 
-    /**
-     * Ficha en memoria de cada jugador conectado.
-     *
-     * <p>Es lo que permite que la barra lateral se repinte cada segundo sin
-     * tocar la base de datos ni una sola vez.
-     */
     private static final java.util.Map<java.util.UUID, PlayerSnapshot> CACHE =
         new java.util.concurrent.ConcurrentHashMap<>();
 
-    private MenuService() {}
-
-    /** Carga la ficha del jugador y abre El Almanaque. */
-    public static void openAlmanac(ServerPlayerEntity player) {
-        // Si el jugador tiene el mod de cliente, se le manda el Pad (D-025).
-        // Si no, cae al menu de cofre: el servidor sigue siendo jugable con
-        // un cliente sin mod, aunque se vea peor.
-        if (PadService.soportado(player)) {
-            AlmanacPad.abrir(player);
-            return;
-        }
-        loadSnapshot(player, snapshot -> new AlmanacMenu(snapshot).open(player));
-    }
-
-    /**
-     * Abre un submenú recargando primero los datos.
-     *
-     * <p>Se recarga a propósito: entre que se abrió El Almanaque y se pulsó
-     * una sección, el saldo puede haber cambiado. Enseñar datos viejos en una
-     * pantalla de dinero es peor que tardar 50 ms más.
-     */
-    public static void openChild(ServerPlayerEntity player, Menu parent,
-                                 java.util.function.Function<PlayerSnapshot, Menu> factory) {
-        loadSnapshot(player, snapshot -> parent.openChild(player, factory.apply(snapshot)));
-    }
-
-    /**
-     * Abre un menú de cofre SIN padre, desde el Pad (D-025).
-     *
-     * <p>El Pad no es un {@link Menu}, así que no puede ser el padre de nadie.
-     * {@code Menu} ya contempla {@code parent == null}: simplemente no dibuja
-     * el botón de volver. El Pad se reabre solo al cerrar el hijo.
-     */
-    public static void openStandalone(
-            ServerPlayerEntity player,
-            java.util.function.Function<PlayerSnapshot, Menu> factory) {
-        loadSnapshot(player, snapshot -> factory.apply(snapshot).open(player));
-    }
+    private PlayerCache() {}
 
     /** Ficha en caché, o {@code null} si todavía no se ha cargado. */
     public static PlayerSnapshot cached(ServerPlayerEntity player) {
@@ -103,8 +67,7 @@ public final class MenuService {
                     snap.setBalance(c, LunaEternal.economy().balance(id, c));
                 }
                 snap.paths = LunaEternal.progression().all(id);
-                snap.tieneInicial = LunaEternal.kitService()
-                    .hasClaimed(id, StarterMenu.CLAVE);
+                snap.tieneInicial = StarterService.yaEligio(id);
                 snap.recent = LunaEternal.economy().recentEntries(id, 14);
 
                 var dominant = LunaEternal.progression().dominant(id);
@@ -129,8 +92,6 @@ public final class MenuService {
             } catch (Exception e) {
                 LunaEternal.LOG.error("No se pudo cargar la ficha de {}",
                                       profile.getName(), e);
-                server.execute(() -> player.sendMessage(Text.literal(
-                    "§cNo se pudo abrir el Almanaque. Inténtalo de nuevo."), false));
             }
         });
     }

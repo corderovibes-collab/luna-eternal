@@ -7,13 +7,9 @@ version = project.mod_version
 group = project.maven_group
 base { archivesName = project.archives_base_name }
 
-loom {
-    // Separa src/main (servidor) de src/client (interfaz). Sin esto, el
-    // codigo de cliente compilaria contra el jar de servidor y no
-    // encontraria Screen, DrawContext ni MinecraftClient, que solo existen
-    // en el lado cliente.
-    splitEnvironmentSourceSets()
-}
+// El mod es SOLO de servidor. No hay src/client, asi que no hace falta
+// splitEnvironmentSourceSets(): se retiro junto con el Pad, y volvera el dia
+// que se escriba la interfaz nueva (D-025-bis).
 
 repositories {
     mavenCentral()
@@ -36,13 +32,6 @@ dependencies {
     // servidor ya lo tiene, y meterlo en nuestro jar seria duplicar 130 MB
     // y arriesgarse a que dos versiones convivan.
     modCompileOnly "maven.modrinth:cobblemon:${project.cobblemon_version}"
-
-    // El lado cliente tambien necesita Cobblemon para compilar: de ahi sale
-    // drawProfilePokemon, que es lo que dibuja el Pokemon en la interfaz.
-    // Con splitEnvironmentSourceSets, src/client tiene sus propias
-    // configuraciones y NO hereda las de src/main.
-    modClientCompileOnly "maven.modrinth:cobblemon:${project.cobblemon_version}"
-    clientCompileOnly "org.jetbrains.kotlin:kotlin-stdlib:2.0.21"
 
     // Cobblemon esta escrito en Kotlin y sus firmas usan tipos de Kotlin
     // (Function1). Sin el stdlib, el compilador de Java no puede resolver

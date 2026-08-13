@@ -170,7 +170,7 @@ public final class CaptureListener {
                         }
                         // El saldo y las vías han cambiado: refrescar la caché
                         // para que la barra lateral no muestre datos viejos.
-                        net.pokereport.luna.ui.MenuService.refresh(player);
+                        net.pokereport.luna.ui.PlayerCache.refresh(player);
                     });
                 }
 

@@ -8,7 +8,7 @@ material para copiar: no se importa aquí ni su código ni su arte.
 
 ## Dependencies
 
-- [`visual-identity.md`](visual-identity.md) — nuestro Pad (D-025)
+- [`interfaz-cliente.md`](interfaz-cliente.md) — cómo se construye la nuestra
 
 ## Current Status
 
@@ -124,4 +124,4 @@ activa visible en pantalla sin abrir nada.
 
 ## Related Systems
 
-- [Identidad visual](visual-identity.md) · [Prompts del Pad](prompts-pad.md)
+- [La interfaz de cliente](interfaz-cliente.md) · [Catálogo](interfaces-catalog.md)

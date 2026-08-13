@@ -28,8 +28,19 @@ import java.util.Set;
  */
 public final class TravelService {
 
-    /** Punto de aparición de las dimensiones vacías. */
-    private static final BlockPos VOID_SPAWN = new BlockPos(0, 64, 0);
+    /**
+     * Dónde aterriza cada dimensión vacía.
+     *
+     * <p><b>La ciudadela ya no es 0,64,0.</b> Se construyó la plaza y su centro
+     * quedó en {@code 4, 69, 0} — medido dentro del juego, no calculado. Dejarlo
+     * en el origen soltaba al jugador seis bloques por debajo del suelo nuevo.
+     *
+     * <p>Es una constante y no un ajuste porque cambiarla es una línea y un
+     * despliegue, y no va a cambiar a menudo. Cuando la ciudadela esté acabada,
+     * esto pasará a leerse de la base de datos junto con los puntos de viaje.
+     */
+    private static final BlockPos SPAWN_CIUDADELA = new BlockPos(4, 69, 0);
+    private static final BlockPos SPAWN_LOBBY = new BlockPos(0, 64, 0);
     /** Radio de la plataforma de emergencia. */
     private static final int PLATFORM_RADIUS = 4;
 
@@ -79,8 +90,10 @@ public final class TravelService {
                       || world.getRegistryKey().equals(LunaDimensions.CIUDADELA);
 
         if (isVoid) {
-            ensurePlatform(world, VOID_SPAWN);
-            return VOID_SPAWN.up();
+            BlockPos punto = world.getRegistryKey().equals(LunaDimensions.CIUDADELA)
+                ? SPAWN_CIUDADELA : SPAWN_LOBBY;
+            ensurePlatform(world, punto.down());
+            return punto;
         }
 
         BlockPos spawn = world.getSpawnPos();
@@ -94,11 +107,17 @@ public final class TravelService {
     }
 
     /**
-     * Coloca una plataforma bajo el punto de aparición si no hay nada.
+     * Coloca una plataforma <b>de suelo</b> si en ese punto no hay nada.
      *
-     * <p>Es una red de seguridad, no decoración: en cuanto la ciudadela esté
-     * construida no se activará nunca. Pero mientras tanto evita el fallo más
-     * tonto y más frustrante posible — caer al vacío al entrar por primera vez.
+     * <p>Es una red de seguridad, no decoración: evita el fallo más tonto y más
+     * frustrante posible — caer al vacío al entrar por primera vez.
+     *
+     * <p><b>Ojo con el nivel al que se le llama.</b> Antes se le pasaba el
+     * punto de aparición (y=64) en vez del suelo (y=63), así que en cuanto la
+     * ciudadela tuvo suelo real la comprobación «¿es aire?» daba que sí —
+     * porque el aire estaba <i>encima</i> del suelo— y plantaba nueve por nueve
+     * bloques de piedra en mitad de la plaza. La plataforma va donde va el
+     * suelo, no donde van los pies.
      */
     private static void ensurePlatform(ServerWorld world, BlockPos center) {
         // Sin esto no funciona nada: en una dimensión sin jugadores los chunks

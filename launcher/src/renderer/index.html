@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self';" />
+  <title>Luna Eternal</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+<div class="device">
+
+  <!-- ============================================ carcasa: raíl izquierdo -->
+  <aside class="rail">
+    <div class="crest">
+      <img class="ball" id="ball" src="img/logo.png" alt="" width="150" height="150" />
+      <div class="crest-text">
+        <strong>POKEREPORT</strong>
+        <span>Luna Eternal</span>
+      </div>
+    </div>
+
+    <nav class="nav" role="tablist" aria-label="Secciones">
+      <button class="nav-item is-active" role="tab" data-view="play" aria-selected="true">
+        <span class="nav-key">01</span> Jugar
+      </button>
+      <button class="nav-item" role="tab" data-view="accounts" aria-selected="false">
+        <span class="nav-key">02</span> Cuentas
+      </button>
+      <button class="nav-item" role="tab" data-view="requisitos" aria-selected="false">
+        <span class="nav-key">03</span> Requisitos
+      </button>
+      <button class="nav-item" role="tab" data-view="settings" aria-selected="false">
+        <span class="nav-key">04</span> Ajustes
+      </button>
+    </nav>
+
+    <!-- Los pilotos reflejan estado real, no decoran: cuenta elegida, pack al día
+         y resultado del ping al servidor. -->
+    <dl class="lamps" aria-label="Estado">
+      <div class="lamp" id="lamp-account">
+        <dt><i></i> Cuenta</dt>
+        <dd>Sin elegir</dd>
+      </div>
+      <div class="lamp" id="lamp-pack">
+        <dt><i></i> Modpack</dt>
+        <dd>Sin instalar</dd>
+      </div>
+      <div class="lamp" id="lamp-server">
+        <dt><i></i> Servidor</dt>
+        <dd>Comprobando…</dd>
+      </div>
+    </dl>
+
+    <p class="rail-foot" id="app-info"></p>
+  </aside>
+
+  <!-- ================================================= pantalla: contenido -->
+  <main class="screen">
+
+    <!-- Aviso de actualización DEL LAUNCHER. Oculto salvo que haya novedad: un
+         banner permanente se convierte en parte del decorado y deja de leerse. -->
+    <div class="updatebar" id="updatebar" hidden>
+      <span id="update-text">Hay una versión nueva del launcher.</span>
+      <button class="btn btn-small" id="btn-update">Reiniciar e instalar</button>
+    </div>
+
+    <div class="stage">
+
+      <!-- ------------------------------------------------------- Jugar -->
+      <section class="view is-active" id="view-play">
+        <header class="view-head">
+          <h1>Listo para atraparlos</h1>
+          <p>
+            Cada vez que juegas se comprueba el modpack y se descarga solo lo que
+            haya cambiado. La primera instalación tarda; las siguientes son segundos.
+          </p>
+        </header>
+
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-label">Modpack</span>
+            <strong class="stat-value" id="stat-pack">—</strong>
+            <span class="stat-note">Minecraft 1.21.1 · Fabric</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Jugadores</span>
+            <strong class="stat-value" id="stat-players">—</strong>
+            <span class="stat-note" id="stat-server">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Memoria</span>
+            <strong class="stat-value" id="stat-ram">—</strong>
+            <span class="stat-note">Ajustable en Ajustes</span>
+          </div>
+        </div>
+
+        <p class="notice" id="play-error" hidden></p>
+
+        <!-- Diagnóstico del último cierre. No es un `alert`: la causa se queda
+             en pantalla, con su botón de arreglo, hasta que se resuelve. -->
+        <article class="panel crash-panel" id="crash" hidden>
+          <h2 id="crash-title">—</h2>
+          <p class="dim" id="crash-detail">—</p>
+          <div class="inline wrap">
+            <button class="btn" id="btn-crash-action" hidden>Reparar instalación</button>
+            <button class="btn btn-quiet" id="btn-crash-logs">Ver el registro</button>
+            <button class="btn btn-quiet" id="btn-crash-close">Entendido</button>
+          </div>
+        </article>
+
+        <!-- Perfil. Es lo que separa a quien juega de quien construye, sin
+             obligar a repartir dos instaladores distintos. -->
+        <article class="panel">
+          <h2>Cómo entras</h2>
+          <div class="perfiles">
+            <label class="perfil">
+              <input type="radio" name="perfil" value="jugador" />
+              <div>
+                <strong>Jugador</strong>
+                <span>Lo justo para jugar. Es lo que quiere casi todo el mundo.</span>
+              </div>
+            </label>
+            <label class="perfil">
+              <input type="radio" name="perfil" value="constructor" />
+              <div>
+                <strong>Constructor</strong>
+                <span>Añade Axiom y WorldEdit CUI para construir la ciudadela.
+                      46 MB más, y hace falta permiso en el servidor.</span>
+              </div>
+            </label>
+          </div>
+          <p class="dim small">
+            Cambiar de perfil instala o desinstala esas herramientas la próxima
+            vez que juegues. No toca tus mundos ni tus ajustes.
+          </p>
+        </article>
+
+        <!-- Los cuatro pasos reales de `prepare()`. Se encienden solos conforme
+             avanzan, así se ve dónde está tardando en vez de una barra opaca. -->
+        <article class="panel steps-panel">
+          <h2>Qué pasa al pulsar Jugar</h2>
+          <ol class="steps">
+            <li class="step" data-phase="java">
+              <span class="step-dot"></span>
+              <div>
+                <strong>Java 21</strong>
+                <span>Se descarga una sola vez, aparte del Java que tengas.</span>
+              </div>
+            </li>
+            <li class="step" data-phase="minecraft">
+              <span class="step-dot"></span>
+              <div>
+                <strong>Minecraft 1.21.1</strong>
+                <span>Cliente, librerías y sonidos, desde los servidores de Mojang.</span>
+              </div>
+            </li>
+            <li class="step" data-phase="fabric">
+              <span class="step-dot"></span>
+              <div>
+                <strong>Fabric</strong>
+                <span>El cargador de mods. La versión la manda el manifiesto.</span>
+              </div>
+            </li>
+            <li class="step" data-phase="pack">
+              <span class="step-dot"></span>
+              <div>
+                <strong>Modpack</strong>
+                <span>Solo lo que haya cambiado desde la última vez.</span>
+              </div>
+            </li>
+          </ol>
+        </article>
+
+        <details class="log">
+          <summary>Registro de la partida</summary>
+          <pre id="console-out"></pre>
+        </details>
+      </section>
+
+      <!-- ----------------------------------------------------- Cuentas -->
+      <section class="view" id="view-accounts">
+        <header class="view-head">
+          <h1>Cuentas</h1>
+          <p>
+            Elige con cuál entras. Puedes tener varias guardadas y cambiar cuando quieras.
+            Si ya tenías cuenta de Minecraft, pon <strong>tu nombre de siempre</strong>: el
+            launcher te recupera tu skin de Mojang automáticamente.
+          </p>
+        </header>
+
+        <article class="panel">
+            <h2>Offline</h2>
+            <p class="dim">
+              Para el servidor de pruebas. Elige bien el nombre:
+              <strong>tu progreso y tus Pokémon quedan atados a él</strong>. Si lo
+              cambias, empiezas de cero.
+            </p>
+            <form class="inline" id="form-offline">
+              <input id="offline-name" type="text" placeholder="Nombre de jugador"
+                     maxlength="16" autocomplete="off" spellcheck="false"
+                     aria-label="Nombre de jugador" />
+              <button class="btn" type="submit">Añadir</button>
+            </form>
+            <p class="notice" id="offline-error" hidden></p>
+        </article>
+
+        <article class="panel skin-panel">
+          <div class="skin-stage" id="skin-stage"></div>
+          <div class="skin-info">
+            <h2>Tu personaje</h2>
+            <p class="dim" id="skin-source">—</p>
+            <p class="dim small">
+              Si ya tenías cuenta de Minecraft, tu skin se pone sola al entrar. Para
+              una propia hace falta un <strong>enlace directo al PNG</strong> y, dentro
+              del juego, <code>/skin set web classic "enlace-al-png"</code> — con las
+              comillas. El PNG que elijas aquí queda copiado como
+              <code>mi-skin.png</code> en la carpeta del juego.
+            </p>
+            <div class="inline wrap">
+              <button class="btn" id="btn-skin">Elegir un PNG</button>
+              <button class="btn btn-quiet" id="btn-skin-clear" hidden>Quitar la mía</button>
+            </div>
+            <p class="notice" id="skin-error" hidden></p>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>Guardadas</h2>
+          <ul class="accounts" id="account-list"></ul>
+        </article>
+      </section>
+
+      <!-- -------------------------------------------------- Requisitos -->
+      <section class="view" id="view-requisitos">
+        <header class="view-head">
+          <h1>Requisitos del equipo</h1>
+          <p>
+            El launcher se trae Java, Minecraft y el modpack. Esto es lo que tiene que
+            poner tu PC. Si algo sale en rojo, el juego no abrirá hasta arreglarlo.
+          </p>
+        </header>
+
+        <article class="panel">
+          <ul class="reqs" id="req-list"></ul>
+          <p class="notice" id="req-error" hidden></p>
+        </article>
+      </section>
+
+      <!-- ----------------------------------------------------- Ajustes -->
+      <section class="view" id="view-settings">
+        <header class="view-head">
+          <h1>Ajustes</h1>
+          <p>Lo que cambies se guarda solo.</p>
+        </header>
+
+        <article class="panel">
+          <h2>Memoria para el juego</h2>
+          <p class="dim">
+            Poner de más <strong>no</strong> mejora nada: alarga las pausas del
+            recolector de basura y va peor. Con 6 GB va sobrado.
+          </p>
+          <div class="inline">
+            <input type="range" id="ram" min="3" max="12" step="1" aria-label="Memoria en GB" />
+            <output class="pill" id="ram-out">6 GB</output>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>Al entrar</h2>
+          <label class="check">
+            <input type="checkbox" id="opt-extra" />
+            <span>Instalar los mods extra de optimización (recomendado si vas justo de FPS)</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" id="opt-keepopen" />
+            <span>Dejar el launcher abierto mientras juego</span>
+          </label>
+        </article>
+
+        <article class="panel">
+          <h2>Si algo va mal</h2>
+          <p class="dim">
+            <strong>Reparar</strong> comprueba uno a uno todos los ficheros del pack
+            contra su huella y vuelve a bajar los que no cuadren. Es lo que arregla
+            el caso más traicionero: un fichero que se descargó a medias, pesa lo que
+            debe y aun así está roto. No borra tus mundos ni tus ajustes.
+          </p>
+          <div class="inline wrap">
+            <button class="btn" id="btn-repair">Reparar instalación</button>
+            <button class="btn btn-quiet" id="btn-check-update">Buscar actualización del launcher</button>
+          </div>
+          <p class="notice" id="repair-msg" hidden></p>
+        </article>
+
+        <article class="panel">
+          <h2>Avanzado</h2>
+          <label class="field">
+            <span>Manifiesto del modpack</span>
+            <input type="text" id="manifest-url" spellcheck="false" />
+          </label>
+          <div class="inline wrap">
+            <button class="btn btn-quiet" id="btn-folder">Abrir carpeta del juego</button>
+            <button class="btn btn-quiet" id="btn-logs">Abrir carpeta de registros</button>
+          </div>
+        </article>
+      </section>
+    </div>
+
+    <!-- ================================================ barra de acción -->
+    <footer class="actionbar">
+      <div class="progress" id="progress" hidden>
+        <div class="progress-text">
+          <span id="progress-message">Preparando…</span>
+          <span class="mono" id="progress-percent">0%</span>
+        </div>
+        <div class="track"><div class="fill" id="progress-bar"></div></div>
+      </div>
+
+      <div class="who" id="who" hidden>
+        <span class="who-avatar" id="who-avatar"></span>
+        <div>
+          <strong id="who-name">—</strong>
+          <span id="who-kind">—</span>
+        </div>
+      </div>
+
+      <button class="play" id="btn-play">
+        <span id="play-label">JUGAR</span>
+      </button>
+      <button class="btn btn-quiet" id="btn-stop" hidden>Cerrar el juego</button>
+    </footer>
+  </main>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

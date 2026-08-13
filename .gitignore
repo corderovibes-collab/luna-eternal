@@ -37,6 +37,13 @@ __pycache__/
 dist/
 build/
 
+# ...pero `launcher/build/` NO es un directorio de compilacion: es el
+# `buildResources` de electron-builder, con el icono y los entitlements de
+# macOS. Sin el, la compilacion en CI falla. Hacen falta las dos lineas: sin
+# re-incluir el DIRECTORIO, git ni siquiera entra a mirar lo de dentro.
+!launcher/build/
+!launcher/build/**
+
 # Sistema
 .DS_Store
 Thumbs.db

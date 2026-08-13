@@ -1,0 +1,108 @@
+# Compila el launcher y publica el instalador.
+#
+# POR QUE ESTO ES LO QUE HACE POSIBLE LA AUTOACTUALIZACION
+#
+# electron-updater busca un `latest.yml` en las releases de un repositorio
+# PUBLICO (ver launcher/electron-builder.yml). Este trabajo es quien lo pone
+# ahi. Sin este paso, el launcher comprueba, no encuentra nada y se queda en la
+# version que tenga cada uno para siempre.
+#
+# Y de paso queda reproducible: se ve con que se compilo cada version, en vez de
+# depender de que alguien lo hiciera bien en su portatil.
+#
+# COMO SE USA
+#
+#   1. Subir la version en launcher/package.json
+#   2. git tag launcher-v1.0.1 && git push --tags
+#   3. Esperar unos minutos
+#
+# UNA COSA QUE HAY QUE HACER UNA SOLA VEZ
+#
+# El codigo vive en el repositorio PRIVADO y los binarios se publican en el
+# PUBLICO, asi que el GITHUB_TOKEN de este repositorio no vale: solo tiene
+# permiso sobre si mismo. Hace falta un token personal:
+#
+#   1. github.com/settings/tokens  ->  Fine-grained token
+#   2. Repositorio:  corderovibes-collab/luna-eternal-pack
+#   3. Permiso:      Contents = Read and write
+#   4. Guardarlo aqui como secreto  PACK_TOKEN
+#
+# Sin el secreto el trabajo NO falla: compila igual y deja el .exe como
+# artefacto descargable. Asi se puede probar la compilacion antes de montar el
+# token.
+
+name: Launcher
+
+on:
+  push:
+    tags: ['launcher-v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      # `fail-fast: false` a proposito: si falla Mac quiero ver igualmente si
+      # Windows compilo, en vez de quedarme sin ninguno de los dos.
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            nombre: windows
+          # `macos-latest` es Apple Silicon. Compila los dos DMG porque
+          # electron-builder hace cross-compile entre arquitecturas del mismo
+          # sistema sin problema; entre sistemas distintos no.
+          - os: macos-latest
+            nombre: mac
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.nombre }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: launcher/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: launcher
+        run: npm ci
+
+      - name: Comprobar el nucleo
+        working-directory: launcher
+        # Barato y atrapa justo lo que mas duele: natives mal elegidos dejan el
+        # juego sin arrancar y sin decir por que, y un perfil mal filtrado le
+        # mete Axiom a todo el mundo.
+        run: npm test
+
+      - name: Compilar y publicar
+        working-directory: launcher
+        env:
+          # Sin certificado de Apple. Sin esto, electron-builder intenta firmar
+          # y aborta en un runner limpio.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          GH_TOKEN: ${{ secrets.PACK_TOKEN }}
+        shell: bash
+        # `--publish always` solo si hay token. OJO: con GH_TOKEN presente y
+        # `--publish never`, electron-builder entra igualmente en su rama de
+        # publicacion y revienta buscando metadatos del repositorio
+        # ("Cannot detect repository by .git/config"). Por eso son dos ramas
+        # limpias y no un flag condicional.
+        run: |
+          if [ -n "$GH_TOKEN" ]; then
+            npx electron-builder --publish always
+          else
+            echo "Sin PACK_TOKEN: se compila pero no se publica."
+            GH_TOKEN= npx electron-builder --publish never
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launcher-${{ matrix.nombre }}
+          path: |
+            launcher/dist/*.exe
+            launcher/dist/*.dmg
+            launcher/dist/*.yml
+          if-no-files-found: error

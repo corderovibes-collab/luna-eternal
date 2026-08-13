@@ -1,0 +1,28 @@
+{
+  "name": "luna-eternal-launcher",
+  "productName": "Luna Eternal",
+  "version": "1.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/corderovibes-collab/luna-eternal-pack.git"
+  },
+  "description": "Launcher del servidor PokeReport: Luna Eternal",
+  "private": true,
+  "type": "module",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64",
+    "dist:dir": "electron-builder --win --x64 --dir",
+    "test": "node tools/smoke-test.mjs",
+    "test:visual": "node tools/visual-test.mjs"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
+    "playwright": "^1.62.0"
+  }
+}

@@ -1,0 +1,80 @@
+appId: com.pokereport.lunaeternal
+productName: Luna Eternal
+copyright: Uso privado
+
+directories:
+  output: dist
+  buildResources: build
+
+# `node_modules` NO se lista aquí a propósito: electron-builder incluye siempre
+# el árbol de dependencias de PRODUCCIÓN (electron-updater) y descarta las de
+# desarrollo (electron, electron-builder, playwright). Listarlo a mano metería
+# también las de desarrollo y el instalador pasaría de ~95 MB a varios cientos.
+files:
+  - src/**/*
+  - package.json
+
+# ---------------------------------------------------------------- publicación
+#
+# De aquí sale el `app-update.yml` que va DENTRO de la app, y es lo que hace
+# posible la autoactualización: sin este bloque, electron-updater no sabe a
+# dónde mirar y falla con "No published versions on GitHub".
+#
+# El repositorio es el PÚBLICO. Tiene que serlo: electron-updater pide el
+# `latest.yml` sin credenciales, y contra un repositorio privado recibiría un
+# 404 en casa de cada jugador. El código del launcher sigue viviendo en el
+# repositorio privado; aquí solo se publican los binarios.
+publish:
+  provider: github
+  owner: corderovibes-collab
+  repo: luna-eternal-pack
+  releaseType: release
+
+# El launcher se reparte por enlace directo: un NSIS que se instala sin permisos
+# de administrador evita la mitad de los problemas de soporte.
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: LunaEternal-${version}-setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Luna Eternal
+  # Genera el .blockmap con el que electron-updater baja SOLO los bloques que
+  # cambian. Una actualización típica son unos pocos MB en vez de 95.
+  differentialPackage: true
+
+# macOS. Se publica un DMG por arquitectura en vez de uno universal: el
+# universal pesa el doble y aquí no aporta nada, porque cada quien se baja el
+# suyo desde la página de descargas.
+mac:
+  icon: build/icon.png
+  category: public.app-category.games
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  artifactName: LunaEternal-${version}-${arch}.${ext}
+  # El launcher descarga Java, el pack y los assets, y lanza un proceso hijo.
+  # Sin estos permisos macOS lo mata en cuanto intenta salir a la red.
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    NSNetworkVolumesUsageDescription: Luna Eternal descarga el modpack desde internet.
+
+dmg:
+  artifactName: LunaEternal-${version}-${arch}.${ext}
+
+# Sin firma de código: es privado.
+#
+#   Windows   SmartScreen avisa la primera vez. La autoactualización SÍ funciona
+#             sin firma: electron-updater verifica el SHA512 del `latest.yml`.
+#   macOS     Gatekeeper lo bloquea: clic derecho -> Abrir la primera vez. Y la
+#             autoactualización NO puede aplicarse sin firma, así que en Mac el
+#             launcher solo avisa y abre la página de descargas.
+forceCodeSigning: false

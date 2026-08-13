@@ -16,7 +16,7 @@ SALIDA = RAIZ / "build"
 UA = {"User-Agent": "PokeReport-LunaEternal/0.1 (dev)"}
 
 MC = "1.21.1"
-SERVIDOR = ("§6PokeReport §f: §bLuna Eternal", "s12.mia.us.tarohosting.com:33043")
+SERVIDOR = ("§6PokeReport §f: §bLuna Eternal", "s12.mia.us.tarohosting.lat:33043")
 
 # Version minima del cargador. Cobblemon 1.7.3 la exige y no arranca sin ella:
 # "requires version 0.17.2 or later of mod 'Fabric Loader'". Estaba escrita a

@@ -1,0 +1,48 @@
+{
+  // POR QUE EXISTE ESTE FICHERO
+  //
+  // Al abrir este proyecto en VS Code se arrancaban solos SIETE procesos de
+  // Java —3,1 GB— sin haber abierto Minecraft ni compilado nada. No era el
+  // juego: eran las extensiones de Java y Gradle, que al ver un `build.gradle`
+  // importan el proyecto, levantan su servidor de lenguaje y con el varios
+  // demonios de Gradle que se quedan vivos horas.
+  //
+  // En un portatil de 16 GB con grafica integrada, eso es la mitad de la RAM
+  // gastada en autocompletado de Java que aqui no hace falta: el mod se
+  // compila con `bash mod/build.sh`, no desde el editor.
+  //
+  // Todo esto es SOLO de este espacio de trabajo. No toca la configuracion
+  // global ni afecta a los otros proyectos de la maquina.
+
+  // 1. No importar el proyecto Gradle al abrir la carpeta. Es lo que
+  //    encadenaba: importar -> servidor de lenguaje -> demonios.
+  "java.import.gradle.enabled": false,
+  "java.import.maven.enabled": false,
+  "java.configuration.updateBuildConfiguration": "disabled",
+
+  // 2. Sin compilacion automatica en segundo plano.
+  "java.autobuild.enabled": false,
+
+  // 3. La extension de Gradle no arranca su propio servidor.
+  "gradle.nestedProjects": false,
+  "gradle.autoDetect": "off",
+
+  // 4. Nada de indexar lo que pesa y no se edita nunca.
+  "files.watcherExclude": {
+    "**/build/**": true,
+    "**/.gradle/**": true,
+    "**/node_modules/**": true,
+    "**/vendor/**": true,
+    "**/launcher/dist/**": true
+  },
+  "search.exclude": {
+    "**/build": true,
+    "**/.gradle": true,
+    "**/node_modules": true,
+    "**/vendor": true,
+    "**/launcher/dist": true
+  },
+
+  "files.encoding": "utf8",
+  "files.eol": "\n"
+}

@@ -68,6 +68,30 @@ la versión del cargador (§5).
 | **`stendhal`** | **CC-BY-NC-ND-4.0.** El *NonCommercial* prohíbe el uso con ánimo comercial, y el plan incluye venta de paquetes (D-007). No es cuestión de redistribuir: es **usarlo** lo que no se puede. Misma cláusula que descartó CobbleVerse (D-006) |
 | **`bisect-mod`** | Es el mod de integración de BisectHosting: publicidad de un hosting que no es el nuestro |
 
+### ⚠️ Mezclar sus versiones con las nuestras obliga a comprobar el resultado
+
+El pack oficial fija `fabric-api 0.116.8`. Shine, que añadimos nosotros
+resuelto a la última, exige `>= 0.116.9`. Resultado: **el juego no arrancaba** —
+*«Incompatible mods found!»* nada más darle a Jugar.
+
+Se arregla con `SUBIR`, un mapa de versiones que sustituimos a las suyas **con
+el motivo escrito al lado**. Hoy solo tiene `fabric-api`: es aditiva y
+compatible hacia atrás dentro de una versión de Minecraft, así que subirla es
+seguro, y la alternativa era quedarnos sin luz de color en los neones.
+
+Pero el arreglo de verdad es que **el generador no publique packs rotos**.
+`gen_modpack.py` lee el `fabric.mod.json` de cada jar y aborta si algo no
+cuadra. Tres detalles lo separan de ser ruido inútil:
+
+| | |
+|---|---|
+| **`provides`** | Un mod declara alias. `balm` provee `balm-fabric`; Fabric API provee sus ~40 submódulos |
+| **Jar-in-jar** | `xaerolib`, `kirin` y `owo-lib` no son ficheros sueltos: viajan **dentro** del jar que los usa |
+| **La versión más alta** | Un módulo puede venir en varios jars a la vez. Fabric carga la mayor, no la última |
+
+Sin esos tres, la comprobación escupía **19 fallos inventados**. Con ellos, dos
+reales — y los dos eran ciertos.
+
 ### Lo que no se copia de su pack
 
 | | |

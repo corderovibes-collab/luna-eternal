@@ -65,6 +65,20 @@ EXCLUIDOS = {
         "que no es el nuestro. Nuestro servidor esta en TaroHosting",
 }
 
+# Versiones donde la del pack oficial NO nos sirve, y por que. Se sustituyen
+# por la ultima estable de Modrinth.
+#
+# Ojo: subir algo aqui es apartarse de lo que ellos han probado. Solo para
+# librerias aditivas y con el motivo escrito.
+SUBIR = {
+    "fabric-api":
+        "Shine 1.0.0 exige >= 0.116.9 y el pack oficial fija 0.116.8, asi que "
+        "el juego ni arrancaba: 'Incompatible mods found'. Fabric API es "
+        "aditiva y compatible hacia atras dentro de una misma version de "
+        "Minecraft, asi que subirla es seguro. La alternativa era quitar Shine "
+        "y quedarnos sin luz de color en los neones",
+}
+
 # Overrides de la base que NO se copian.
 OVERRIDES_FUERA = (
     # 97 MB y 2267 ficheros de un mundo tutorial de UN JUGADOR. Nuestros
@@ -209,16 +223,178 @@ def base():
 
     ficheros = []
     for f in idx["files"]:
-        motivo = EXCLUIDOS.get(f.get("slug"))
+        slug = f.get("slug")
+        motivo = EXCLUIDOS.get(slug)
         if motivo:
-            print(f"  FUERA  {f['slug']:<22} {motivo[:64]}...")
+            print(f"  FUERA  {slug:<22} {motivo[:64]}...")
             continue
+        if slug in SUBIR:
+            v = version_de(slug)
+            nuevo = v["files"][0]
+            if nuevo["filename"] != f["path"].split("/")[-1]:
+                print(f"  SUBIDO {slug:<22} {v['version_number']} "
+                      f"(el pack fijaba {f['path'].split('/')[-1]})")
+                f = {"path": f"mods/{nuevo['filename']}",
+                     "hashes": {"sha1": nuevo["hashes"]["sha1"],
+                                "sha512": nuevo["hashes"]["sha512"]},
+                     "env": f["env"], "downloads": [nuevo["url"]],
+                     "fileSize": nuevo["size"], "slug": slug}
         ficheros.append(f)
 
     overrides = [n for n in z.namelist()
                  if n.startswith("overrides/") and not n.endswith("/")
                  and not any(n[10:].startswith(x) for x in OVERRIDES_FUERA)]
     return ficheros, overrides, z
+
+
+# ---------------------------------------------------------------------------
+# VERIFICACION DE DEPENDENCIAS
+#
+# Existe por un fallo que llego hasta la pantalla del jugador: Shine exigia
+# fabric-api >= 0.116.9, el pack oficial fijaba 0.116.8, y Fabric se negaba a
+# arrancar con "Incompatible mods found!". Mezclar las versiones que fija un
+# pack con mods resueltos a la ultima **obliga** a comprobar el resultado.
+#
+# Se lee el `fabric.mod.json` de cada jar, no los metadatos de Modrinth: la
+# dependencia de verdad esta dentro del jar. Se cachea por SHA1, asi que solo
+# la primera ejecucion paga la descarga.
+# ---------------------------------------------------------------------------
+
+CACHE_META = SALIDA / "meta-mods-v2.json"
+
+# Lo aporta el entorno, no un jar del pack.
+LO_PONE_EL_JUEGO = {"minecraft", "java", "fabricloader", "fabric"}
+
+
+def _sha1(f):
+    return f["hashes"]["sha1"] if "hashes" in f else f["sha1"]
+
+
+def _url(f):
+    return f["downloads"][0] if "downloads" in f else f["url"]
+
+
+def _leer_jar(datos: bytes) -> list:
+    """[(id, version, depends)] del jar Y de los que lleva dentro.
+
+    Los dos matices que convierten esta comprobacion en util o en ruido:
+
+      provides  un mod puede declarar alias. `balm` declara `balm-fabric`, y
+                Fabric API declara sus ~40 submodulos. Sin esto, medio pack
+                parece que le falten dependencias.
+      jars      **jar-in-jar**: xaerolib, kirin u owo-lib no son ficheros
+                sueltos, viajan DENTRO del jar que los usa. Sin abrirlos, otra
+                tanda de falsos positivos.
+    """
+    z = zipfile.ZipFile(io.BytesIO(datos))
+    m = json.loads(z.read("fabric.mod.json"), strict=False)
+    version = m.get("version")
+    salida = [(m.get("id"), version, m.get("depends") or {})]
+    for alias in m.get("provides", []):
+        salida.append((alias, version, {}))
+    for anidado in m.get("jars", []):
+        try:
+            salida += _leer_jar(z.read(anidado["file"]))
+        except Exception:
+            pass  # un JiJ ilegible no invalida el jar que lo contiene
+    return salida
+
+
+def metadatos_de(ficheros: list) -> dict:
+    """{sha1: [[id, version, depends], ...]} de cada mod, leido de su jar."""
+    try:
+        cache = json.loads(CACHE_META.read_text(encoding="utf-8"))
+    except Exception:
+        cache = {}
+    nuevos = 0
+    for f in ficheros:
+        if _sha1(f) in cache or not f["path"].startswith("mods/"):
+            continue
+        try:
+            cache[_sha1(f)] = _leer_jar(bajar(_url(f)))
+        except Exception:
+            cache[_sha1(f)] = []
+        nuevos += 1
+    if nuevos:
+        SALIDA.mkdir(parents=True, exist_ok=True)
+        CACHE_META.write_text(json.dumps(cache), encoding="utf-8")
+        print(f"  (leidos {nuevos} jars nuevos para comprobar dependencias)")
+    return cache
+
+
+def _num(v: str) -> tuple:
+    """'0.116.8+1.21.1' -> (0, 116, 8). Lo de despues del + es metadato."""
+    base = re.split(r"[+\-]", str(v))[0]
+    partes = []
+    for p in base.split("."):
+        partes.append(int(p) if p.isdigit() else 0)
+    return tuple(partes + [0] * (4 - len(partes)))[:4]
+
+
+def cumple(version: str, rango) -> bool:
+    """¿`version` satisface `rango` de Fabric? Subconjunto pragmatico.
+
+    Ante un formato que no se sabe leer devuelve True: el objetivo es cazar el
+    caso claro (una version por debajo del minimo), no reimplementar el
+    resolutor de Fabric y bloquear publicaciones por un falso positivo.
+    """
+    if isinstance(rango, list):
+        return any(cumple(version, r) for r in rango)
+    r = str(rango).strip()
+    if r in ("*", ""):
+        return True
+    if r.startswith(">="):
+        return _num(version) >= _num(r[2:])
+    if r.startswith(">"):
+        return _num(version) > _num(r[1:])
+    if r.endswith(".x"):
+        pedido = _num(r[:-2])
+        n = len(r[:-2].split("."))
+        return _num(version)[:n] == pedido[:n]
+    if r.startswith("~"):   # mismo major.minor, patch por encima
+        return _num(version)[:2] == _num(r[1:])[:2] and _num(version) >= _num(r[1:])
+    if r.startswith("^"):   # mismo major
+        return _num(version)[:1] == _num(r[1:])[:1] and _num(version) >= _num(r[1:])
+    return True
+
+
+def verificar_dependencias(ficheros: list) -> None:
+    """Aborta si un mod pide algo que el pack no le da."""
+    meta = metadatos_de(ficheros)
+    # Un mismo modulo puede venir en varios jars a la vez (cloth-config suelto y
+    # ademas incrustado dentro de otro mod). Fabric carga **la version mas
+    # alta**, asi que hay que quedarse con esa: comparar con la ultima leida da
+    # un fallo inventado que no existe en el juego.
+    presentes = {}
+    for f in ficheros:
+        for mid, version, _ in meta.get(_sha1(f)) or []:
+            if not mid:
+                continue
+            if mid not in presentes or _num(version or "0") > _num(presentes[mid]):
+                presentes[mid] = version or "0"
+
+    problemas = []
+    for f in ficheros:
+        for mid, version, depends in meta.get(_sha1(f)) or []:
+            for dep, rango in (depends or {}).items():
+                if dep in LO_PONE_EL_JUEGO:
+                    continue
+                if dep not in presentes:
+                    problemas.append(f"{mid} {version} necesita '{dep}' {rango} "
+                                     f"y NO esta en el pack")
+                elif not cumple(presentes[dep], rango):
+                    problemas.append(f"{mid} {version} necesita {dep} {rango} "
+                                     f"y el pack trae {presentes[dep]}")
+
+    if problemas:
+        print("\n  *** EL PACK NO ARRANCARIA ***")
+        for p in problemas:
+            print(f"    {p}")
+        raise SystemExit(
+            "\n  No se genera nada. Esto es exactamente lo que el jugador veria "
+            "como\n  'Incompatible mods found!' al darle a Jugar. Arreglalo con "
+            "SUBIR o EXCLUIDOS.")
+    print(f"  dependencias: {len(presentes)} mods, todas satisfechas")
 
 
 def servers_dat(nombre, ip):
@@ -290,6 +466,8 @@ def construir(nombre_pack, extra, sufijo, resumen):
             "downloads": [f["url"]],
             "fileSize": f["size"]})
         print(f"  shader {slug:<22} {v['version_number']}")
+
+    verificar_dependencias(ficheros)
 
     index = {
         "formatVersion": 1, "game": "minecraft", "versionId": "0.1.0",

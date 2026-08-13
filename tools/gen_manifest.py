@@ -59,7 +59,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gen_modpack import (EXTRA_CONSTRUCTOR, EXTRA_JUGADOR,  # noqa: E402
                          IRIS_PROPERTIES, MC, SERVIDOR, SHADERS, base,
-                         loader_estable, servers_dat, version_de)
+                         loader_estable, servers_dat, verificar_dependencias,
+                         version_de)
 
 RAIZ = Path(__file__).resolve().parent.parent
 SALIDA = RAIZ / "build" / "pack"
@@ -249,6 +250,16 @@ def construir() -> dict:
             "url": f"{BASE_RAW}/{nombre}",
             "once": True,
         })
+
+    # Se comprueban los DOS perfiles por separado. El de jugador no es un
+    # subconjunto inofensivo: es el que corre casi todo el mundo, y un fallo
+    # ahi no lo ve nadie hasta que le da a Jugar y le sale
+    # "Incompatible mods found!". Pasó de verdad con Shine y fabric-api.
+    for perfil in ("jugador", "constructor"):
+        print(f"  perfil {perfil}:", end=" ")
+        verificar_dependencias([f for f in ficheros
+                                if "constructor" not in f.get("profiles", [])
+                                or perfil == "constructor"])
 
     host, puerto = SERVIDOR[1].split(":")
     return {

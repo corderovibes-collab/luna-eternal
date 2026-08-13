@@ -42,6 +42,17 @@ Pack base     EL MODPACK OFICIAL DE COBBLEMON (D-031, revoca D-024)
                      bisect-mod (publicidad de otro hosting)
               NO se copia su mundo tutorial: 97 MB de un jugador
               NO se copia su FancyMenu: lleva la marca de Cobblemon
+              SUBIR = versiones que sustituimos a la suya, con motivo
+              hoy solo fabric-api: Shine exige >=0.116.9 y ellos
+              fijan 0.116.8, y el juego NO ARRANCABA
+              ⚠ mezclar SUS versiones con mods nuestros a la ultima
+                OBLIGA a comprobar el resultado. gen_modpack.py lee
+                el fabric.mod.json de cada jar y ABORTA si algo no
+                cuadra, en vez de publicar un pack que no arranca.
+                Mira `provides` (alias) y los jars ANIDADOS (JiJ), y
+                se queda con la version MAS ALTA de cada modulo, que
+                es lo que hace Fabric. Sin esas tres cosas salen 19
+                falsos positivos y la comprobacion no sirve
 Mods          servidor 14 jars · cliente 79 · NO tienen que coincidir
               ⚠ EL SERVIDOR TIENE QUE SER SUBCONJUNTO DEL CLIENTE.
                 Al reves echa a la gente con "Registry remapping

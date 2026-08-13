@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "luz=0": {
+      "model": "lunaneon:block/neon_azul_claro"
+    },
+    "luz=1": {
+      "model": "lunaneon:block/neon_azul_claro"
+    },
+    "luz=2": {
+      "model": "lunaneon:block/neon_azul_claro"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "variants": {
+    "type=bottom,luz=0": {
+      "model": "lunaneon:block/neon_azul_claro_losa"
+    },
+    "type=bottom,luz=1": {
+      "model": "lunaneon:block/neon_azul_claro_losa"
+    },
+    "type=bottom,luz=2": {
+      "model": "lunaneon:block/neon_azul_claro_losa"
+    },
+    "type=top,luz=0": {
+      "model": "lunaneon:block/neon_azul_claro_losa_arriba"
+    },
+    "type=top,luz=1": {
+      "model": "lunaneon:block/neon_azul_claro_losa_arriba"
+    },
+    "type=top,luz=2": {
+      "model": "lunaneon:block/neon_azul_claro_losa_arriba"
+    },
+    "type=double,luz=0": {
+      "model": "lunaneon:block/neon_azul_claro"
+    },
+    "type=double,luz=1": {
+      "model": "lunaneon:block/neon_azul_claro"
+    },
+    "type=double,luz=2": {
+      "model": "lunaneon:block/neon_azul_claro"
+    }
+  }
+}

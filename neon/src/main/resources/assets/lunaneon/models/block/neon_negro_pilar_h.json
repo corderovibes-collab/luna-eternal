@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_column_horizontal",
+  "ambientocclusion": false,
+  "textures": {
+    "end": "lunaneon:block/neon_negro_pilar_tapa",
+    "side": "lunaneon:block/neon_negro_pilar"
+  }
+}

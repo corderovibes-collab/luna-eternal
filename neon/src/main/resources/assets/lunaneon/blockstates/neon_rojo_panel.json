@@ -1,0 +1,58 @@
+{
+  "variants": {
+    "facing=up,luz=0": {
+      "model": "lunaneon:block/neon_rojo_panel_up"
+    },
+    "facing=up,luz=1": {
+      "model": "lunaneon:block/neon_rojo_panel_up"
+    },
+    "facing=up,luz=2": {
+      "model": "lunaneon:block/neon_rojo_panel_up"
+    },
+    "facing=down,luz=0": {
+      "model": "lunaneon:block/neon_rojo_panel_down"
+    },
+    "facing=down,luz=1": {
+      "model": "lunaneon:block/neon_rojo_panel_down"
+    },
+    "facing=down,luz=2": {
+      "model": "lunaneon:block/neon_rojo_panel_down"
+    },
+    "facing=north,luz=0": {
+      "model": "lunaneon:block/neon_rojo_panel_north"
+    },
+    "facing=north,luz=1": {
+      "model": "lunaneon:block/neon_rojo_panel_north"
+    },
+    "facing=north,luz=2": {
+      "model": "lunaneon:block/neon_rojo_panel_north"
+    },
+    "facing=south,luz=0": {
+      "model": "lunaneon:block/neon_rojo_panel_south"
+    },
+    "facing=south,luz=1": {
+      "model": "lunaneon:block/neon_rojo_panel_south"
+    },
+    "facing=south,luz=2": {
+      "model": "lunaneon:block/neon_rojo_panel_south"
+    },
+    "facing=west,luz=0": {
+      "model": "lunaneon:block/neon_rojo_panel_west"
+    },
+    "facing=west,luz=1": {
+      "model": "lunaneon:block/neon_rojo_panel_west"
+    },
+    "facing=west,luz=2": {
+      "model": "lunaneon:block/neon_rojo_panel_west"
+    },
+    "facing=east,luz=0": {
+      "model": "lunaneon:block/neon_rojo_panel_east"
+    },
+    "facing=east,luz=1": {
+      "model": "lunaneon:block/neon_rojo_panel_east"
+    },
+    "facing=east,luz=2": {
+      "model": "lunaneon:block/neon_rojo_panel_east"
+    }
+  }
+}

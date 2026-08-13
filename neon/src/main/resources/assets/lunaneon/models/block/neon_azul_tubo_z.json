@@ -1,0 +1,43 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "lunaneon:block/neon_azul_tubo",
+    "neon": "lunaneon:block/neon_azul_tubo"
+  },
+  "elements": [
+    {
+      "from": [
+        6,
+        6,
+        0
+      ],
+      "to": [
+        10,
+        10,
+        16
+      ],
+      "faces": {
+        "down": {
+          "texture": "#neon"
+        },
+        "up": {
+          "texture": "#neon"
+        },
+        "north": {
+          "texture": "#neon",
+          "cullface": "north"
+        },
+        "south": {
+          "texture": "#neon",
+          "cullface": "south"
+        },
+        "west": {
+          "texture": "#neon"
+        },
+        "east": {
+          "texture": "#neon"
+        }
+      }
+    }
+  ]
+}

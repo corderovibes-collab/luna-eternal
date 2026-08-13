@@ -1,0 +1,40 @@
+{
+  "variants": {
+    "axis=y,luz=0": {
+      "model": "lunaneon:block/neon_gris_claro_pilar"
+    },
+    "axis=y,luz=1": {
+      "model": "lunaneon:block/neon_gris_claro_pilar"
+    },
+    "axis=y,luz=2": {
+      "model": "lunaneon:block/neon_gris_claro_pilar"
+    },
+    "axis=z,luz=0": {
+      "model": "lunaneon:block/neon_gris_claro_pilar_h",
+      "x": 90
+    },
+    "axis=z,luz=1": {
+      "model": "lunaneon:block/neon_gris_claro_pilar_h",
+      "x": 90
+    },
+    "axis=z,luz=2": {
+      "model": "lunaneon:block/neon_gris_claro_pilar_h",
+      "x": 90
+    },
+    "axis=x,luz=0": {
+      "model": "lunaneon:block/neon_gris_claro_pilar_h",
+      "x": 90,
+      "y": 90
+    },
+    "axis=x,luz=1": {
+      "model": "lunaneon:block/neon_gris_claro_pilar_h",
+      "x": 90,
+      "y": 90
+    },
+    "axis=x,luz=2": {
+      "model": "lunaneon:block/neon_gris_claro_pilar_h",
+      "x": 90,
+      "y": 90
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "lunaneon",
+  "version": "${version}",
+  "name": "Luna Eternal · Neon",
+  "description": "Bloques de neon para la ciudadela: 16 colores en bloque, losa, escalera, pilar, panel y tubo. Se dibujan a brillo maximo y la luz que sueltan se regula bloque a bloque.",
+  "authors": [
+    "PokeReport"
+  ],
+  "license": "ARR",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.pokereport.neon.LunaNeon"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

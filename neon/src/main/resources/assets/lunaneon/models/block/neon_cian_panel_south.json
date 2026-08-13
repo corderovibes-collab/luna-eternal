@@ -1,0 +1,42 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "lunaneon:block/neon_cian",
+    "neon": "lunaneon:block/neon_cian"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        1
+      ],
+      "faces": {
+        "down": {
+          "texture": "#neon"
+        },
+        "up": {
+          "texture": "#neon"
+        },
+        "north": {
+          "texture": "#neon",
+          "cullface": "north"
+        },
+        "south": {
+          "texture": "#neon"
+        },
+        "west": {
+          "texture": "#neon"
+        },
+        "east": {
+          "texture": "#neon"
+        }
+      }
+    }
+  ]
+}

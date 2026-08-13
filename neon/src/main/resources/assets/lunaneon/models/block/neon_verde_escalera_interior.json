@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/inner_stairs",
+  "ambientocclusion": false,
+  "textures": {
+    "bottom": "lunaneon:block/neon_verde",
+    "top": "lunaneon:block/neon_verde",
+    "side": "lunaneon:block/neon_verde"
+  }
+}

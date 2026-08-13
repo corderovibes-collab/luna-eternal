@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/outer_stairs",
+  "ambientocclusion": false,
+  "textures": {
+    "bottom": "lunaneon:block/neon_gris_claro",
+    "top": "lunaneon:block/neon_gris_claro",
+    "side": "lunaneon:block/neon_gris_claro"
+  }
+}

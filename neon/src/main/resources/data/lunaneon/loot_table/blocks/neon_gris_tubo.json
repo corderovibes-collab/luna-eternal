@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:block",
+  "random_sequence": "lunaneon:blocks/neon_gris_tubo",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "lunaneon:neon_gris_tubo",
+          "functions": [
+            {
+              "function": "minecraft:explosion_decay"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/slab",
+  "ambientocclusion": false,
+  "textures": {
+    "bottom": "lunaneon:block/neon_gris",
+    "top": "lunaneon:block/neon_gris",
+    "side": "lunaneon:block/neon_gris"
+  }
+}

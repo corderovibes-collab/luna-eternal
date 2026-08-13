@@ -1,0 +1,48 @@
+plugins {
+    id 'fabric-loom' version '1.7-SNAPSHOT'
+    id 'java'
+}
+
+version = project.mod_version
+group = project.maven_group
+base { archivesName = project.archives_base_name }
+
+// Este mod SI va en el cliente, al reves que `mod/` (D-029).
+//
+// No hay src/client ni entrypoint de cliente, y no es un descuido: un bloque
+// solido se dibuja entero desde JSON —blockstate, modelo y textura—, asi que no
+// hace falta ni una linea de codigo de renderizado. El cliente necesita el jar
+// solo por el REGISTRO: sin el, no sabe que existe `lunaneon:neon_cian` y lo
+// pinta como el cubo negro y morado de textura ausente. Y Axiom, que es de
+// cliente, no podria ni ofrecerlo en su paleta.
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    // Solo para el grupo del inventario creativo. NO se empaqueta: Fabric API
+    // ya esta en los dos lados porque Cobblemon lo exige.
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') {
+        expand 'version': project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = 'UTF-8'
+    it.options.release = 21
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}

@@ -1,0 +1,31 @@
+{
+  "variants": {
+    "axis=y,luz=0": {
+      "model": "lunaneon:block/neon_morado_tubo_y"
+    },
+    "axis=y,luz=1": {
+      "model": "lunaneon:block/neon_morado_tubo_y"
+    },
+    "axis=y,luz=2": {
+      "model": "lunaneon:block/neon_morado_tubo_y"
+    },
+    "axis=x,luz=0": {
+      "model": "lunaneon:block/neon_morado_tubo_x"
+    },
+    "axis=x,luz=1": {
+      "model": "lunaneon:block/neon_morado_tubo_x"
+    },
+    "axis=x,luz=2": {
+      "model": "lunaneon:block/neon_morado_tubo_x"
+    },
+    "axis=z,luz=0": {
+      "model": "lunaneon:block/neon_morado_tubo_z"
+    },
+    "axis=z,luz=1": {
+      "model": "lunaneon:block/neon_morado_tubo_z"
+    },
+    "axis=z,luz=2": {
+      "model": "lunaneon:block/neon_morado_tubo_z"
+    }
+  }
+}

@@ -33,6 +33,7 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`ui/interfaces-catalog.md`](ui/interfaces-catalog.md) | ✅ | Las 22 pantallas, prioridad y patrones comunes |
 | [`technical/launcher.md`](technical/launcher.md) | ✅ | **El launcher**: se autoactualiza él y el pack, perfiles, reparar, diagnóstico |
 | [`world/construccion.md`](world/construccion.md) | ✅ | Construir la ciudadela con Axiom, **entre varios a la vez** |
+| [`world/neon.md`](world/neon.md) | ✅ | **Los bloques de neón**: 96 piezas, brillo sin luz, y el orden del despliegue |
 
 ✅ escrito · 🟡 en curso · ⬜ pendiente
 

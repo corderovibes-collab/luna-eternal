@@ -33,16 +33,61 @@ Autotest      /luna autotest -> 112/112 correctos (2026-08-12, en vivo)
               eran 125: los 13 de fondos se fueron con el resource pack
 Telemetría    /luna economia · informe automático al log cada hora
               tablist con rangos (la barra lateral se borro, D-026)
-Mods          servidor 5 jars · cliente 9 · NO tienen que coincidir
+Pack base     EL MODPACK OFICIAL DE COBBLEMON (D-031, revoca D-024)
+              cobblemon-fabric 1.7.3 · 76 ficheros · MC 1.21.1
+              la lista NO se mantiene a mano: gen_modpack.py baja su
+              .mrpack, lee el indice y usa SUS versiones probadas
+              encima van EXCLUIDOS (2) y EXTRA (6) nuestros
+              FUERA: stendhal (CC-BY-NC-ND, choca con D-007) y
+                     bisect-mod (publicidad de otro hosting)
+              NO se copia su mundo tutorial: 97 MB de un jugador
+              NO se copia su FancyMenu: lleva la marca de Cobblemon
+Mods          servidor 14 jars · cliente 79 · NO tienen que coincidir
+              ⚠ EL SERVIDOR TIENE QUE SER SUBCONJUNTO DEL CLIENTE.
+                Al reves echa a la gente con "Registry remapping
+                failed". Por eso mods_servidor.py lee las versiones
+                DEL MANIFIESTO: mismo fichero byte a byte
+              de los 76 del pack, 34 se declaran de cliente y la
+              mayoria del resto son interfaz: en el servidor solo
+              gastarian RAM. Van los 5 que trabajan de verdad
+              (lithium, ferritecore, krypton, clumps, letmedespawn)
+              alta/baja: python tools/mods_servidor.py --aplicar
               tabla definitiva en docs/technical/client-pack.md §2-ter
-Launcher      launcher/ · Electron 43 · 26/26 pruebas del nucleo
+Luz de color  ⚠ LA LUZ DE MINECRAFT NO TIENE COLOR. El motor guarda
+              un numero 0-15 y ya: un neon cian ILUMINA EN BLANCO y
+              eso NO se puede arreglar desde el mod, no hay API
+              Shine (instalado, sin shaders) -> halo del color del
+              bloque, solo en emisores: los 96 neones sin declarar
+              Shaders (instalados) -> luz de color de verdad, tine
+              el suelo. Complementary > Performance > COLORED_LIGHTING
+              viene en 0. Hacen cosas distintas, no se estorban
+              detalle en docs/world/neon.md §1
+Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
+              Iris + EuphoriaPatcher + Complementary Unbound r5.8.1
+              + MakeUp Ultra Fast (el tier ligero)
+              el mismo aspecto que CobbleVerse, por la via oficial:
+              Euphoria llega como PARCHEADOR y se genera en el PC
+              del jugador, que es lo unico que permite su licencia
+              ⚠ NO se copian ni se renombran los packs de CobbleVerse.
+                Son Complementary + Euphoria renombrados, y su
+                licencia lo prohibe (§1.3.d, §1.2.d, §2.1)
+              ⚠ SODIUM BAJO A 0.6.13 y es correcto: Iris estable
+                para 1.21.1 exige 0.6.x y se niega a arrancar fuera
+                de rango. El numero NO esta escrito a mano: se lee
+                del jar de Iris. §2-quinquies
+Launcher      launcher/ · Electron 43 · 28/28 pruebas (npm test)
+              ⚠ una prueba baja el manifiesto EN VIVO y exige que
+                nada bajo config/ shaderpacks/ resourcepacks/ pise
+                lo del jugador: va marcado `once` o falla. Ya cazo
+                un fallo real. Ojo: el CDN de GitHub cachea unos
+                minutos, asi que tras publicar puede dar rojo falso
               PUBLICADO: .../luna-eternal-pack/releases/latest
               se autoactualiza SOLO (electron-updater) y el pack tambien
               dos perfiles en un solo .exe: Jugador · Constructor
               reparar instalacion + diagnostico de por que se cerro
               ⚠ NO publicar otras releases en ese repo: el actualizador
                 mira "la ultima release" y se perderia
-Cliente       (respaldo) mrpack jugador 136 MB · constructor 182 MB
+Cliente       (respaldo) mrpack jugador 185 MB · constructor 233 MB
               Fabric Loader 0.19.3 (Cobblemon exige >= 0.17.2)
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
@@ -53,8 +98,11 @@ Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
               solo captura las avanza; crianza cuenta al ECLOSIONAR
 Repos         luna-eternal (privado) · luna-eternal-pack (publico)
               ⚠ OJO: la rama de luna-eternal-pack es master, NO main
-Manifiesto    publicado y responde 200 · 10 ficheros · 182 MB
+Manifiesto    publicado y responde 200 · 198 ficheros · pack 0.2.0
+              jugador 185 MB · constructor 234 MB
               .../luna-eternal-pack/master/manifest.json
+              incluye mods/lunaneon-0.1.0.jar (descarga verificada byte
+              a byte contra el local)
 Acceso        SIN whitelist · EasyAuth 3.4.4 (/register /login)
               TheJuanCE PRE-REGISTRADO para que nadie le robe el nombre
               /luna constructor <clave> -> OP nivel 2 solo (builder.key)
@@ -74,6 +122,18 @@ Construcción  WorldEdit 7.3.8 + Axiom 5.4.2 cargados
               alta de un constructor: python tools/constructor.py --anadir
               ⚠ la licencia de Axiom es una cortesia de 30 DIAS, POR
                 PERSONA, desde su primer uso. La del dueno vence ~10-sep
+Neon          mod lunaneon 0.1.0 · neon/ · DESPLEGADO 2026-08-13
+              "Neon: 96 bloques en 16 colores" en el log · Done (5,3 s)
+              las 6 formas verificadas en vivo con setblock
+              16 colores x 6 formas = 96 bloques (D-029)
+              bloque · losa · escalera · pilar · panel · tubo
+              brillan SIEMPRE a tope; la luz que sueltan es 0/7/15
+              y se cambia con clic derecho o [luz=N]
+              se genera entero: python tools/gen_neon.py
+              se verifica:      python tools/gen_neon.py --verificar
+              ⚠ va en el CLIENTE tambien, y el cliente va PRIMERO:
+                Fabric sincroniza el registro y a quien le falte el
+                mod no le deja entrar. Orden en docs/world/neon.md §7
 Servidor      allow-flight=true (lo exige Axiom; revertir al abrir)
               enforce-secure-profile=false · require-resource-pack=false
 ```
@@ -234,6 +294,14 @@ cuando llegue el arte (`ART-002`).
 > cliente (D-026), pero el conocimiento no se pierde: **está codificado en el
 > launcher**, que reconoce ese síntoma y ofrece reparar
 > (`launcher/src/main/core/diagnostico.js`, con prueba que lo fija).
+
+> ⚠️ **Un mod de servidor puede exigir otro, y no te enteras hasta el
+> reinicio.** Subir `letmedespawn` sin `almanac` dejó el servidor **sin
+> arrancar** con `Incompatible mods found!`, y el fallo solo aparece al
+> reiniciar — el peor momento posible. `tools/mods_servidor.py` ahora resuelve
+> las dependencias en cadena leyendo el `fabric.mod.json` de cada jar, y
+> **aborta sin tocar nada** si alguna no está en el manifiesto del cliente.
+> `python tools/mods_servidor.py` sin argumentos dice qué haría.
 
 > ⚠️ **Al desplegar, verifica el tamaño del jar.** Una subida se corrompió sin
 > dar error (`Unexpected end of ZLIB input stream`) y el tamaño coincidía. Lo
@@ -438,11 +506,14 @@ documentación · migración · rollback.
 | D-025 | 2026-08-11 | **Se escribe un mod de cliente propio, `lunaeternal` con entrypoint de cliente, y la interfaz deja de estar atada al menú de cofre** · **implementación retirada por D-026; el criterio sigue vigente** | **Decisión del usuario, y correctora de un error mío.** Leí P10 como "ningún mod propio" y de ahí salió una interfaz con techo bajo. La captura de Diosesmon lo demostró: su POKEPAD **no puede ser un cofre** — no muestra inventario del jugador, tiene 5 columnas (un cofre tiene 9) y botones fuera de la rejilla. Es una pantalla propia. La nuestra también lo será. **P6 no se toca:** toda la lógica sigue en el servidor; el cliente solo dibuja lo que le mandan |
 | D-023 | 2026-08-11 | ~~**La interfaz se bonita con un resource pack**~~ **Superada por D-025.** Lo hecho se conserva y se reutiliza (panel, arte, iconos): el mod de cliente dibuja, el resource pack aporta las texturas | Fue la decisión correcta *bajo la restricción equivocada*. En cuanto la restricción cayó, el cofre dejó de ser el techo |
 | D-023-bis | 2026-08-11 | ~~**La interfaz se hace bonita con un resource pack**~~ **Anulada por D-026.** El truco de la fuente de espacio negativo funcionaba, y aun así el techo seguía siendo el de un cofre | Fue una corrección correcta a un error mío, pero resolvía el problema equivocado: hacía *bonito* un menú de cofre en vez de dejar de usar menús de cofre |
-| D-024 | 2026-08-11 | **El modpack oficial de Cobblemon NO se adopta**; se cosechan mods sueltos | 76 mods y 180 MB de cosas **de cliente**: shaders, mapas, partículas. Cero reglas de juego, que es lo único que nos diferencia. Y **`stendhal` es CC-BY-NC-ND**: no comercial y sin derivadas, la misma trampa que CobbleVerse (D-006) |
+| D-024 | 2026-08-11 | ~~**El modpack oficial de Cobblemon NO se adopta**; se cosechan mods sueltos~~ **REVOCADA por D-031.** El aviso sobre `stendhal` (CC-BY-NC-ND) seguía siendo correcto y por eso ese mod se excluye a mano | 76 mods y 180 MB de cosas **de cliente**: shaders, mapas, partículas. Cero reglas de juego, que es lo único que nos diferencia. Y **`stendhal` es CC-BY-NC-ND**: no comercial y sin derivadas, la misma trampa que CobbleVerse (D-006) |
 | D-022 | 2026-08-11 | **Axiom se instala en el servidor**, y el pack de cliente se parte en dos: jugador y constructor | **Corrección mía.** Leí su licencia como si nos afectara la cláusula comercial; esa apunta a quien *cobra por construir*, no a quien construye su propio servidor. El uso no comercial en servidor privado es gratuito y solo pide una whitelist en su Discord. El pack se separa porque son 46 MB que un jugador no usa jamás (P10) |
 | D-026 | 2026-08-12 | **La interfaz del PokePad se borra ENTERA y se rehace con arte real.** El mod vuelve a ser solo de servidor | **Decisión del usuario.** La implementación estaba montada sobre arte de relleno generado por script, y el techo visual lo ponía ese arte, no el código. Rehacer encima habría sido pintar sobre una maqueta. Se borra la implementación, **no el diagnóstico**: sigue siendo cierto que un menú de cofre no puede ser la interfaz (D-025), así que la nueva volverá a ser pantalla propia. Efecto lateral bueno: el cliente deja de instalar ningún mod nuestro |
 | D-027 | 2026-08-12 | **El launcher propio (`.exe`) es el canal oficial de distribución**, y se autoactualiza. El `.mrpack` queda como respaldo | El `.mrpack` obliga a instalar PrismLauncher, importar a mano y reimportar en cada actualización. Con 12 personas se puede pedir; con un servidor abierto, no. Se adapta el launcher de `D:\PokeReport 2` —que ya funcionaba— y se le añade lo que le faltaba: **autoactualización del propio launcher** (electron-updater), **perfiles** jugador/constructor en un solo instalador, **reparar** por SHA1 y **diagnóstico** de por qué se cerró el juego |
 | D-028 | 2026-08-12 | **Los constructores llevan OP de nivel 2, no 4**, y no se instala ningún mod de permisos | Verificado leyendo los dos jars: Axiom concede todo con `hasPermissionLevel(2)` y WorldEdit con `isOperator()`. LuckPerms sería un mod más para no ganar nada (P5). El nivel importa: con `/op` a secas (nivel 4) un constructor puede apagar el servidor o quitarle el OP al dueño **sin querer** |
+| D-031 | 2026-08-13 | **El pack parte del MODPACK OFICIAL de Cobblemon, y se personaliza quitando.** Revoca D-024 | **Decisión del usuario**, con el precedente de Diosesmon: coger el pack oficial y editarlo encima. D-024 decía «se cosechan mods sueltos» y la lista se quedó en 7; el oficial trae 76 probados juntos, con Cobblemon 1.7.3 y MC 1.21.1 — **exactamente nuestras versiones**. La lista **no se mantiene a mano**: `gen_modpack.py` baja su `.mrpack` y lee el índice, así que actualizar es reejecutar. Se quitan dos: **`stendhal`** (CC-BY-NC-ND: el NC prohíbe el uso comercial y el plan incluye venta de paquetes, D-007 — es la cláusula que ya descartó CobbleVerse) y **`bisect-mod`** (publicidad de un hosting que no es el nuestro). Y no se copia su mundo tutorial —97 MB de un jugador— ni su menú de FancyMenu, que lleva la marca de Cobblemon. **P10 se relaja a conciencia**: 143 → 185 MB de descarga |
+| D-030 | 2026-08-13 | **Los shaders se reparten por su canal oficial y con su nombre real; no se copian de CobbleVerse ni se renombran a «PokeReport - Shaders»** | **Corrección a una petición del usuario, y las licencias venían dentro de la propia carpeta.** Los packs de CobbleVerse son **Complementary Unbound r5.8.1 + Euphoria Patches renombrados**. Complementary §1.3.d exige que un pack renombrado *«se vea claramente distinto del original, al margen de cambios de ajustes»* —renombrar no lo hace—; §1.2.d prohíbe servirlo por «direct file upload»; y Euphoria §2.1 solo permite obtenerlo **ejecutando su mod Patcher**. Conservar el fichero de licencia dentro es *una* condición, no un salvoconducto. **El resultado para el jugador es idéntico**: el mismo shader, el mismo aspecto, instalado solo y apagado — Complementary por URL de Modrinth y Euphoria como parcheador que se ejecuta en su PC. Pesa más aquí que en un servidor cualquiera porque el plan incluye venta de paquetes (D-007) |
+| D-029 | 2026-08-13 | **Los bloques de neón son un mod propio, `lunaneon`, aparte del grande y sí instalado en el cliente** | La ciudadela es de noche permanente y va llena de neón, y **vanilla no tiene ni una escalera ni una losa que emita luz**. Un datapack no puede cambiar la luz de un bloque (está en el código, no en los datos) y un resource pack solo repinta los ocho que ya existen. Adoptar un mod de neón ajeno choca con D-008: los que hay no declaran licencia comercial clara. **Polymer** mantendría el cliente limpio pero **Axiom no vería los bloques** —es de cliente—, o sea que no se podría construir con la herramienta con la que se construye. Va **separado** de `lunaeternal` para que el jar que se reparte solo tenga bloques: ni economía, ni base de datos. **No toca D-026 ni P9-bis**: aquello va de pantallas, y un bloque no es una pantalla |
 
 ## 6. Decisiones PENDIENTES (bloqueantes)
 
@@ -472,8 +543,10 @@ docs/game-design/                  ← visión, core loop
 docs/economy/ · progression/ · trading/ · ui/
 docs/roadmap/backlog.md            ← tareas con estado
 mod/                               ← el mod de servidor (D-011)
+neon/                              ← el mod de bloques de neón (D-029)
 launcher/                          ← el launcher de escritorio (D-027)
-tools/                             ← scripts: pack, manifiesto, arte, Discord
+tools/                             ← scripts: pack, manifiesto, neón, despliegue
+                                     `mods_servidor.py` decide qué corre en el servidor
 ```
 
 Los directorios se crean **cuando tienen contenido real**. No se generan stubs

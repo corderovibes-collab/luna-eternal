@@ -7,13 +7,23 @@ dentro a proposito: es la capa de "hablar con el panel" y nada mas.
 
     ptero.leer(ruta)             contenido de un fichero del servidor
     ptero.escribir(ruta, datos)  lo sobrescribe
+    ptero.subir(dir, nom, datos) sube un BINARIO (jars) — ver aviso abajo
+    ptero.borrar(dir, [nombres]) borra ficheros
     ptero.listar(directorio)     [(nombre, tamano, es_fichero)]
     ptero.comando("list")        encola un comando en la consola
+    ptero.potencia("restart")    start / stop / restart / kill
     ptero.estado()               estado y consumo del servidor
 
 > La API **no devuelve la salida** de un comando: solo lo encola. Para leer lo
 > que respondio, usa `rcon.enviar()`, que marca el log antes y despues.
+
+> ⚠️ **`escribir()` NO vale para un jar.** Es el endpoint de edicion de texto:
+> el cuerpo viaja como texto y un jar sube con bytes cambiados, sin que nadie
+> avise. El sintoma llega mucho despues y no se parece a la causa —
+> `Unexpected end of ZLIB input stream` al arrancar. Para binarios, `subir()`,
+> que usa el endpoint de subida real (URL firmada + multipart).
 """
+import hashlib
 import json
 import os
 import sys
@@ -74,14 +84,58 @@ def escribir(ruta, contenido):
     return pedir("POST", f"/files/write?file={urllib.parse.quote(ruta)}", contenido)
 
 
-def listar(directorio="/"):
-    d = pedir("GET", f"/files/list?directory={urllib.parse.quote(directorio)}")
+def listar(directorio="/", servidor=None):
+    d = pedir("GET", f"/files/list?directory={urllib.parse.quote(directorio)}",
+              servidor=servidor)
     return [(a["attributes"]["name"], a["attributes"]["size"],
              a["attributes"]["is_file"]) for a in d["data"]]
 
 
+def borrar(directorio, nombres, servidor=None):
+    return pedir("POST", "/files/delete",
+                 {"root": directorio, "files": list(nombres)}, servidor=servidor)
+
+
+def subir(directorio, nombre, datos, servidor=None):
+    """Sube un fichero BINARIO. Devuelve el tamano que reporta el panel.
+
+    Va en dos pasos porque asi lo hace Pterodactyl: primero se pide una URL
+    firmada al panel, y despues se sube el fichero al NODO, que es otra maquina
+    distinta. Es el mismo camino que usa el boton "Upload" de la web, con lo
+    cual es tambien el unico probado contra binarios grandes.
+
+    Se comprueba el tamano al terminar en vez de dar por buena la subida: un
+    jar truncado no se queja al subir, se queja al arrancar el servidor.
+    """
+    url = pedir("GET", "/files/upload", servidor=servidor)["attributes"]["url"]
+    frontera = "----LunaEternal" + hashlib.sha1(datos[:4096]).hexdigest()[:16]
+    cuerpo = (
+        f"--{frontera}\r\n"
+        f'Content-Disposition: form-data; name="files"; filename="{nombre}"\r\n'
+        f"Content-Type: application/java-archive\r\n\r\n"
+    ).encode() + datos + f"\r\n--{frontera}--\r\n".encode()
+
+    req = urllib.request.Request(
+        f"{url}&directory={urllib.parse.quote(directorio)}", data=cuerpo,
+        headers={"Content-Type": f"multipart/form-data; boundary={frontera}",
+                 "User-Agent": "Mozilla/5.0"}, method="POST")
+    with urllib.request.urlopen(req) as r:
+        r.read()
+
+    for n, tam, es_fichero in listar(directorio, servidor=servidor):
+        if n == nombre and es_fichero:
+            return tam
+    raise RuntimeError(f"{nombre} no aparece en {directorio} despues de subirlo")
+
+
 def comando(cmd):
     return pedir("POST", "/command", {"command": cmd})
+
+
+def potencia(senal):
+    """start · stop · restart · kill. `kill` es el unico que saca al servidor
+    de un `stopping` colgado (CLAUDE.md: migracion a medias)."""
+    return pedir("POST", "/power", {"signal": senal})
 
 
 def estado():

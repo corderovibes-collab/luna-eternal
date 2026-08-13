@@ -5,6 +5,9 @@ import java.util.List;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Block;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
@@ -87,6 +90,39 @@ public class LunaNeon implements ModInitializer {
                         .build());
 
         LOG.info("Neon: {} bloques en {} colores", ORDEN.size(), Paleta.COLORES.length);
+
+        registrarPokedexLuna();
+    }
+
+    /**
+     * Activa el revestido azul luna de la Pokédex de Cobblemon.
+     *
+     * <p>El pack vive <b>dentro de este jar</b>, en {@code resourcepacks/pokedex_luna/},
+     * y lo genera {@code tools/gen_pokedex.py}. {@code DEFAULT_ENABLED} hace que
+     * Minecraft lo encienda solo la primera vez que lo ve, y aun así deja
+     * apagarlo desde <i>Opciones → Paquetes de recursos</i> como cualquier otro.
+     *
+     * <p><b>Por qué aquí y no como un .zip suelto:</b> el primer intento fue un
+     * zip en {@code resourcepacks/} más una línea en la plantilla
+     * {@code config/yosbr/options.txt}. No funcionó, y no por un descuido: YOSBR
+     * copia esa plantilla <b>solo si {@code options.txt} no existe</b>, así que a
+     * quien ya había jugado no le llegaba nunca. El pack se instalaba y se
+     * quedaba apagado. Cobblemon ya hacía lo correcto delante de nuestras
+     * narices: {@code cobblemon:gyaradosjump} y {@code cobblemon:regionbiasforms}
+     * son packs incrustados en su jar, y por eso aparecen solos.
+     */
+    private static void registrarPokedexLuna() {
+        // En try/catch a propósito: esto es puramente cosmético y de cliente, y
+        // el mismo jar corre en el servidor. Que falle aquí no puede llevarse
+        // por delante el registro de los 96 bloques, que sí es esencial.
+        try {
+            FabricLoader.getInstance().getModContainer(MOD_ID).ifPresent(mod ->
+                    ResourceManagerHelper.registerBuiltinResourcePack(
+                            Identifier.of(MOD_ID, "pokedex_luna"), mod,
+                            ResourcePackActivationType.DEFAULT_ENABLED));
+        } catch (Throwable e) {
+            LOG.warn("No se pudo registrar el revestido de la Pokedex: {}", e.toString());
+        }
     }
 
     private static <T extends Block> T registrar(String nombre, T bloque) {

@@ -5,8 +5,23 @@ Genera el resource pack que viste la Pokedex de Cobblemon de azul luna.
 QUE HACE, EN UNA FRASE
 
 Lee las 114 texturas de la Pokedex del jar de Cobblemon, les cambia el TONO
---de cian tropical a azul de luna-- y las escribe en un resource pack. Nada se
-dibuja a mano: si Cobblemon cambia sus texturas, se vuelve a ejecutar esto.
+--de cian tropical a azul de luna-- y las escribe DENTRO del mod `lunaneon`
+como resource pack incrustado. Nada se dibuja a mano: si Cobblemon cambia sus
+texturas, se vuelve a ejecutar esto.
+
+POR QUE VA DENTRO DEL MOD Y NO COMO .ZIP SUELTO
+
+Primer intento: un `.zip` en `resourcepacks/` y una linea anadida a la
+plantilla `config/yosbr/options.txt`. **No funciono**, y el motivo es
+estructural: YOSBR copia esa plantilla **solo si `options.txt` no existe**. A
+quien ya ha jugado una vez no le llega nunca. Se instalaba el pack y se quedaba
+apagado.
+
+La via buena estaba delante: en el `options.txt` de cualquier jugador se leen
+`cobblemon:gyaradosjump` y `cobblemon:regionbiasforms`. Son resource packs que
+Cobblemon lleva DENTRO de su jar y registra con `DEFAULT_ENABLED`. Minecraft los
+activa solo la primera vez que los ve, tenga el jugador el `options.txt` que
+tenga, y ademas los deja apagables desde el menu de siempre.
 
 EL LIMITE, Y POR QUE EL FONDO NO PUEDE SER OSCURO
 
@@ -42,13 +57,16 @@ texturas derivan de las suyas, asi que siguen siendo MPL-2.0 y el pack lleva el
 aviso dentro. Ver LICENSE-COBBLEMON.txt en la raiz del pack generado.
 
 Uso:
-    python tools/gen_pokedex.py                # genera el .zip en build/pack/
+    python tools/gen_pokedex.py                # escribe en neon/src/main/resources
     python tools/gen_pokedex.py --comparativa  # ademas una imagen antes/despues
+
+Despues hay que recompilar el mod:  cd neon && bash build.sh
 """
 import argparse
 import colorsys
 import io
 import json
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -59,8 +77,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gen_modpack import SALIDA, bajar, version_de  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parent.parent
-DESTINO = SALIDA / "pack" / "resourcepacks"
-NOMBRE = "PokeReport-Luna-Pokedex.zip"
+
+# El pack va incrustado en el jar de `lunaneon`, que ya llega a todos los
+# clientes. La ruta la fija Fabric: `resourcepacks/<ruta del Identifier>`.
+ID_PACK = "pokedex_luna"
+DESTINO = RAIZ / "neon" / "src" / "main" / "resources" / "resourcepacks" / ID_PACK
 RUTA_TEX = "assets/cobblemon/textures/gui/pokedex/"
 
 # `pack_format` de Minecraft 1.21.1. Un numero equivocado aqui hace que el juego
@@ -164,47 +185,46 @@ def generar(comparativa: bool = False) -> Path:
     nombres = [n for n in z.namelist()
                if n.startswith(RUTA_TEX) and n.endswith(".png")]
 
+    # Se borra antes: si Cobblemon retira una textura, la nuestra tiene que
+    # desaparecer o quedaria revistiendo algo que ya no existe.
+    if DESTINO.exists():
+        shutil.rmtree(DESTINO)
     DESTINO.mkdir(parents=True, exist_ok=True)
-    salida = DESTINO / NOMBRE
-    total_px = 0
-    intactas = []
+
+    (DESTINO / "pack.mcmeta").write_text(json.dumps({
+        "pack": {
+            "pack_format": PACK_FORMAT,
+            "description": "PokeReport : Luna Eternal — Pokedex a luz de luna",
+        }
+    }, indent=2, ensure_ascii=False), encoding="utf-8")
+    (DESTINO / "LICENSE-COBBLEMON.txt").write_text(AVISO, encoding="utf-8")
+
+    total_px, incluidas, intactas = 0, 0, []
     antes_despues = {}
+    for n in nombres:
+        corto = n[len(RUTA_TEX):]
+        original = Image.open(io.BytesIO(z.read(n)))
+        nueva, tocados = a_luna(original, casco=corto.startswith("pokedex_base_"))
+        total_px += tocados
+        if tocados == 0:
+            intactas.append(corto)
+            continue          # sin cambios: no se incluye, solo pesaria
+        destino = DESTINO / n
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        nueva.save(destino, "PNG")
+        incluidas += 1
+        if corto in ("pokedex_screen.png", "pokedex_base_red.png"):
+            antes_despues[corto] = (original.convert("RGBA"), nueva)
 
-    with zipfile.ZipFile(salida, "w", zipfile.ZIP_DEFLATED) as pack:
-        pack.writestr("pack.mcmeta", json.dumps({
-            "pack": {
-                "pack_format": PACK_FORMAT,
-                "description": "PokeReport : Luna Eternal — Pokedex a luz de luna",
-            }
-        }, indent=2, ensure_ascii=False))
-        pack.writestr("LICENSE-COBBLEMON.txt", AVISO)
-
-        for n in nombres:
-            corto = n[len(RUTA_TEX):]
-            original = Image.open(io.BytesIO(z.read(n)))
-            es_casco = corto.startswith("pokedex_base_")
-            nueva, tocados = a_luna(original, casco=es_casco)
-            total_px += tocados
-            if tocados == 0:
-                intactas.append(corto)
-                continue          # no se incluye: sin cambios, solo pesaria
-            buf = io.BytesIO()
-            nueva.save(buf, "PNG")
-            pack.writestr(n, buf.getvalue())
-            if corto in ("pokedex_screen.png", "pokedex_base_red.png"):
-                antes_despues[corto] = (original.convert("RGBA"), nueva)
-
-    with zipfile.ZipFile(salida) as p:
-        incluidas = len([x for x in p.namelist() if x.endswith(".png")])
+    peso = sum(p.stat().st_size for p in DESTINO.rglob("*") if p.is_file())
     print(f"  {incluidas} texturas revestidas, {len(intactas)} intactas")
     print(f"  ({total_px:,} pixeles cambiados)".replace(",", "."))
-    print(f"  intactas por no ser cian: "
-          f"{', '.join(sorted(intactas)[:4])}{' ...' if len(intactas) > 4 else ''}")
-    print(f"  -> {salida.relative_to(RAIZ)}  ({salida.stat().st_size // 1024} KB)")
+    print(f"  -> {DESTINO.relative_to(RAIZ)}  ({peso // 1024} KB)")
+    print("     recompila el mod:  cd neon && bash build.sh")
 
     if comparativa and antes_despues:
         _comparativa(antes_despues)
-    return salida
+    return DESTINO
 
 
 def _comparativa(pares: dict) -> None:

@@ -81,9 +81,19 @@ Pokedex       revestida de azul luna · docs/ui/pokedex-luna.md
                 sobre los paneles CLAROS, asi que la pantalla puede
                 cambiar de tono pero NO oscurecerse: se volveria
                 ilegible. El casco si va oscuro, no lleva texto
-              se activa via config/yosbr/options.txt, que YOSBR copia
-              solo si falta -> vale para instalaciones NUEVAS; quien
-              ya tenga options.txt lo activa una vez a mano
+              va INCRUSTADO en el jar de lunaneon y se registra con
+              DEFAULT_ENABLED, como hace Cobblemon con sus propios
+              packs (cobblemon:gyaradosjump). Se enciende solo
+              ⚠ el primer intento fue un .zip suelto + una linea en
+                config/yosbr/options.txt, y NO FUNCIONO: YOSBR copia
+                esa plantilla solo si options.txt no existe, o sea
+                nunca para quien ya ha jugado. Se instalaba apagado
+Publicar      ⚠ nuestros jars se publican con la HUELLA en el nombre
+              (lunaneon-0.1.0-aa7d0d3bbc.jar). raw.githubusercontent
+              cachea ~3 min POR RUTA y no hay parametro que lo salte:
+              con nombre fijo, el manifiesto anunciaba una huella que
+              el CDN aun no servia. Contenido nuevo = URL nueva. En
+              el cliente el fichero conserva su nombre de siempre
 Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
               Iris + EuphoriaPatcher + Complementary Unbound r5.8.1
               + MakeUp Ultra Fast (el tier ligero)

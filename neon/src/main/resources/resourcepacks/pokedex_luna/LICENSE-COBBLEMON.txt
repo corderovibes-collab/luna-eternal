@@ -1,0 +1,8 @@
+Texturas derivadas de Cobblemon (https://cobblemon.com), (C) Cobblemon
+Contributors, distribuidas bajo la Mozilla Public License 2.0.
+
+Este pack contiene versiones MODIFICADAS de esas texturas: se les ha cambiado
+el tono para la identidad visual del servidor PokeReport: Luna Eternal. Al ser
+el MPL copyleft por fichero, esas texturas modificadas siguen siendo MPL-2.0.
+
+Texto completo de la licencia: https://mozilla.org/MPL/2.0/

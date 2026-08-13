@@ -11,11 +11,14 @@ dónde se puede llegar sin tocar código ajeno.
 
 ## Current Status
 
-**Desplegado.** Resource pack de 70 KB, 83 texturas revestidas, activado solo.
+**Desplegado.** 83 texturas revestidas (66 KB), incrustadas en `lunaneon` y
+**activadas solas**.
 
 ```
 genera    python tools/gen_pokedex.py --comparativa
-publica   python tools/gen_manifest.py --publicar   (lo genera de paso)
+compila   cd neon && bash build.sh
+despliega python tools/desplegar.py neon --reiniciar
+publica   python tools/gen_manifest.py --publicar
 ```
 
 ---
@@ -69,23 +72,32 @@ Nada se dibuja a mano: si Cobblemon cambia sus texturas, se reejecuta.
 
 ## 3. Cómo llega activado
 
-Instalarlo sin activarlo no serviría de nada: se quedaría en la lista de packs
-disponibles y nadie lo vería.
+**El pack vive dentro del jar de `lunaneon`**, en
+`resourcepacks/pokedex_luna/`, y el mod lo registra con
+`ResourcePackActivationType.DEFAULT_ENABLED`. Minecraft lo enciende solo la
+primera vez que lo ve, y sigue pudiendo apagarse en *Opciones → Paquetes de
+recursos* como cualquier otro.
 
-El pack oficial trae `config/yosbr/options.txt`, la plantilla que **YOSBR copia
-a `options.txt` solo si no existe**. El generador le añade nuestra entrada:
+### El intento que falló, y por qué
+
+Primero se hizo como un `.zip` en `resourcepacks/` más una línea añadida a la
+plantilla `config/yosbr/options.txt`. **El zip se instalaba y se quedaba
+apagado.** No fue un descuido: YOSBR copia esa plantilla **solo si
+`options.txt` no existe**, así que a quien ya había jugado una vez no le
+llegaba nunca — es decir, a todo el mundo.
+
+La vía buena estaba a la vista en el `options.txt` de cualquier jugador:
 
 ```
-resourcePacks:[…,"file/PokeReport-Luna-Pokedex.zip"]
+resourcePacks:["vanilla","fabric","cobblemon:gyaradosjump","cobblemon:regionbiasforms",…]
 ```
 
-> ⚠️ **Eso activa el pack en instalaciones NUEVAS.** A quien ya tenga su
-> `options.txt` no se le toca, y es lo correcto: ese fichero son sus controles y
-> sus ajustes de vídeo. Los pocos que ya jugaban lo activan una vez a mano en
-> *Opciones → Paquetes de recursos*.
+Esos `cobblemon:` son packs que Cobblemon lleva **dentro de su jar** y registra
+igual. Por eso aparecen solos.
 
-El `.zip` va marcado `once` en el manifiesto, como todo lo que cae en
-`resourcepacks/`: si alguien lo retoca, no se lo revertimos.
+> El registro va en un `try/catch`: es puramente cosmético y de cliente, pero el
+> mismo jar corre en el servidor. Que falle no puede llevarse por delante el
+> registro de los 96 bloques de neón, que sí es esencial.
 
 ---
 

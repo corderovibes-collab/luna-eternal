@@ -75,7 +75,7 @@ Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
                 para 1.21.1 exige 0.6.x y se niega a arrancar fuera
                 de rango. El numero NO esta escrito a mano: se lee
                 del jar de Iris. §2-quinquies
-Launcher      launcher/ · Electron 43 · 28/28 pruebas (npm test)
+Launcher      launcher/ · Electron 43 · 30/30 pruebas (npm test)
               ⚠ una prueba baja el manifiesto EN VIVO y exige que
                 nada bajo config/ shaderpacks/ resourcepacks/ pise
                 lo del jugador: va marcado `once` o falla. Ya cazo
@@ -87,6 +87,13 @@ Launcher      launcher/ · Electron 43 · 28/28 pruebas (npm test)
               reparar instalacion + diagnostico de por que se cerro
               ⚠ NO publicar otras releases en ese repo: el actualizador
                 mira "la ultima release" y se perderia
+              ⚠ SU NUCLEO ESTUVO 100% FUERA DE GIT hasta 2026-08-13:
+                .gitignore tenia `core` a secas (por los volcados de
+                la JVM) y se tragaba launcher/src/main/core/ entero,
+                17 ficheros. Corregido a `/core` + `core.[0-9]*` y
+                commiteado en 72a7de3. La leccion: una regla de
+                .gitignore sin anclar casa a CUALQUIER profundidad,
+                y ya habia mordido antes (world-structure.md)
 Cliente       (respaldo) mrpack jugador 185 MB · constructor 233 MB
               Fabric Loader 0.19.3 (Cobblemon exige >= 0.17.2)
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)

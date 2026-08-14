@@ -23,13 +23,27 @@ public class PokePadScreen extends Screen {
     private static final Identifier ENCIMA = tex("encima");
     private static final Identifier BLOQUEADA = tex("bloqueada");
 
-    /** El chasis, tal cual salió del troceador. */
+    /** El tamaño en pantalla, en píxeles de interfaz. */
     private static final int ANCHO = 345, ALTO = 207;
 
+    /**
+     * Cuántas veces más grande es la textura que el hueco donde se dibuja.
+     *
+     * <p>Las texturas se guardan a 4× ({@code tools/gen_pokepad.py}) y se
+     * dibujan en su tamaño de interfaz. Minecraft escala las interfaces según
+     * el ajuste <i>GUI Scale</i>: a escala 3 estos 345 píxeles ocupan 1035 en
+     * pantalla, y con una textura de 345 cada texel se estira a tres píxeles
+     * gordos. Con una de 1380 hay detalle de sobra.
+     */
+    private static final int ESCALA = 4;
+
     /** La rejilla, en coordenadas del chasis. Ver §8 del documento. */
-    private static final int REJ_X = 113, REJ_Y = 46;
-    private static final int CELDA = 37, HUECO = 4, ICONO = 24;
+    private static final int REJ_X = 110, REJ_Y = 45;
+    private static final int CELDA = 38, HUECO = 4, ICONO = 24;
     private static final int COLS = 5, FILAS = 3;
+
+    /** Gris apagado para el icono de una celda bloqueada. */
+    private static final int APAGADO = 0xFF6A6A78;
 
     /** Esquina superior izquierda del chasis dentro de la ventana. */
     private int x0, y0;
@@ -57,7 +71,7 @@ public class PokePadScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int ratonX, int ratonY, float delta) {
         super.render(ctx, ratonX, ratonY, delta);
-        ctx.drawTexture(CHASIS, x0, y0, 0, 0, ANCHO, ALTO, ANCHO, ALTO);
+        dibujar(ctx, CHASIS, x0, y0, ANCHO, ALTO, 0xFFFFFFFF);
 
         App bajoElRaton = null;
         for (int i = 0; i < App.TODAS.length; i++) {
@@ -69,9 +83,14 @@ public class PokePadScreen extends Screen {
             }
 
             Identifier fondo = !app.abierta() ? BLOQUEADA : encima ? ENCIMA : REPOSO;
-            ctx.drawTexture(fondo, cx, cy, 0, 0, CELDA, CELDA, CELDA, CELDA);
-            ctx.drawTexture(app.icono(), cx + (CELDA - ICONO) / 2,
-                    cy + (CELDA - ICONO) / 2, 0, 0, ICONO, ICONO, ICONO, ICONO);
+            dibujar(ctx, fondo, cx, cy, CELDA, CELDA, 0xFFFFFFFF);
+
+            // El icono de una celda bloqueada va apagado. No es solo estetica:
+            // la celda bloqueada trae un candado en su esquina, y con el icono
+            // a todo color los dos se pisan y no se lee ninguno.
+            int tinte = app.abierta() ? 0xFFFFFFFF : APAGADO;
+            dibujar(ctx, app.icono(), cx + (CELDA - ICONO) / 2,
+                    cy + (CELDA - ICONO) / 2, ICONO, ICONO, tinte);
         }
 
         // El nombre va en la placa de arriba, no debajo de cada celda: el arte
@@ -106,6 +125,32 @@ public class PokePadScreen extends Screen {
             }
         }
         return super.mouseClicked(ratonX, ratonY, boton);
+    }
+
+    /**
+     * Dibuja una textura de 4× dentro de un hueco de 1×.
+     *
+     * <p>Hace falta la sobrecarga larga de {@code drawTexture}: la corta usa el
+     * mismo número para el tamaño en pantalla y para la región de la textura,
+     * así que <b>no puede escalar</b>. Esta separa las dos cosas, que es justo
+     * lo que permite guardar el arte a mayor resolución sin agrandar la
+     * interfaz.
+     */
+    private static void dibujar(DrawContext ctx, Identifier tex,
+                                int x, int y, int ancho, int alto, int tinte) {
+        int tw = ancho * ESCALA, th = alto * ESCALA;
+        boolean tenido = tinte != 0xFFFFFFFF;
+        if (tenido) {
+            // El color del shader MULTIPLICA a la textura, así que se pone
+            // antes de dibujar. Ponerlo después no tiñe nada, y dibujar dos
+            // veces deja el original visible debajo.
+            ctx.setShaderColor(((tinte >> 16) & 0xFF) / 255f,
+                    ((tinte >> 8) & 0xFF) / 255f, (tinte & 0xFF) / 255f, 1f);
+        }
+        ctx.drawTexture(tex, x, y, ancho, alto, 0f, 0f, tw, th, tw, th);
+        if (tenido) {
+            ctx.setShaderColor(1f, 1f, 1f, 1f);
+        }
     }
 
     private int celdaX(int i) {

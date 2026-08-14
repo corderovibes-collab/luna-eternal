@@ -56,6 +56,16 @@ MAQUETA = RAIZ / "build" / "pokepad"
 # deformarlo ni recortarlo.
 ALTO = 207
 
+# Cuantas veces mas grande se guarda la textura respecto al tamano al que se
+# dibuja. La interfaz mide 345x207 PIXELES DE INTERFAZ --eso no cambia, es su
+# tamano fisico en pantalla-- pero la textura se guarda a 4x.
+#
+# Por que: Minecraft dibuja las interfaces escaladas por el ajuste GUI Scale.
+# A escala 3, esos 345 px ocupan 1035 en pantalla. Con una textura de 345 cada
+# texel se estira a 3 px y se ve el pixelado; con una de 1380 hay detalle de
+# sobra para esos 1035.
+ESCALA = 4
+
 # Los quince iconos, en el orden en que estan en la hoja: 5 columnas x 3 filas.
 ICONOS = [
     "pokedex", "cosmeticos", "trabajos", "misiones", "warps",
@@ -158,7 +168,11 @@ def encoger(im: Image.Image, w: int, h: int) -> Image.Image:
     pre = Image.fromarray(a.astype(np.uint8), "RGBA").resize((w, h), Image.LANCZOS)
     b = np.array(pre).astype(float)
     al = b[..., 3:4] / 255.0
-    np.divide(b[..., :3], al, out=b[..., :3], where=al > 0.004)
+    # El umbral NO es cosmetico. Dividir por un alfa casi nulo multiplica el
+    # ruido por doscientos, y eso salia como chispas de colores alrededor de
+    # cada icono. Por debajo de este alfa el color no se ve igual, asi que se
+    # deja tal cual en vez de amplificarlo.
+    np.divide(b[..., :3], al, out=b[..., :3], where=al > 0.20)
     return Image.fromarray(np.clip(b, 0, 255).astype(np.uint8), "RGBA")
 
 
@@ -180,13 +194,13 @@ def hacer_chasis() -> tuple:
     caja = recortar(a, 0, 0, im.size[0], im.size[1])
     x0, y0, x1, y1 = caja
     ancho = round((x1 - x0) * ALTO / (y1 - y0))
-    final = encoger(im.crop(caja), ancho, ALTO)
+    final = encoger(im.crop(caja), ancho * ESCALA, ALTO * ESCALA)
     guardar(final, "pokepad")
     print(f"  chasis    {im.size[0]}x{im.size[1]} -> {ancho}x{ALTO}")
     return final, im.crop(caja)
 
 
-def medir_pantalla(chasis: Image.Image) -> tuple:
+def medir_pantalla(chasis: Image.Image, escala: int = 1) -> tuple:
     """Dónde cae el área azul dentro del chasis ya reducido.
 
     Es **el número que congela la composición**: el código dibuja la rejilla
@@ -197,7 +211,8 @@ def medir_pantalla(chasis: Image.Image) -> tuple:
     d = np.abs(a[..., :3] - np.array([135, 145, 207])).sum(axis=2)
     m = (a[..., 3] > 128) & (d < 60)
     ys, xs = np.where(m)
-    return int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1
+    return (int(xs.min()) // escala, int(ys.min()) // escala,
+            int(xs.max() + 1) // escala, int(ys.max() + 1) // escala)
 
 
 def bandas(cuentas: np.ndarray, umbral: float, minimo: int = 3) -> list:
@@ -299,7 +314,7 @@ def hacer_tira(nombre: str, cols: int, filas: int, etiquetas, lado: int,
             piezas.append((etiquetas[clave], im.crop((x0, y0, x1, y1))))
 
     for nom, pieza in piezas:
-        guardar(encoger(pieza, lado, lado), nom)
+        guardar(encoger(pieza, lado * ESCALA, lado * ESCALA), nom)
     print(f"  {nombre:<9} {W}x{H} -> {len(piezas)} piezas de {lado}x{lado}")
     return piezas
 
@@ -312,7 +327,7 @@ def main() -> None:
 
     print("POKEPAD  ·  troceando el arte")
     chasis, _ = hacer_chasis()
-    x0, y0, x1, y1 = medir_pantalla(chasis)
+    x0, y0, x1, y1 = medir_pantalla(chasis, ESCALA)
     print(f"  pantalla  x {x0}-{x1}  y {y0}-{y1}   ({x1-x0} x {y1-y0})")
 
     # La celda sale de dividir el area util entre 5 columnas y 3 filas. No se
@@ -342,7 +357,8 @@ def main() -> None:
 
 def maqueta(chasis: Image.Image, origen, lado, hueco) -> None:
     """Monta la pantalla principal para poder mirarla antes de escribir código."""
-    rx, ry = origen
+    rx, ry = origen[0] * ESCALA, origen[1] * ESCALA
+    lado, hueco = lado * ESCALA, hueco * ESCALA
     out = chasis.copy()
     celda = Image.open(SALIDA / "reposo.png")
     for i, nombre in enumerate(ICONOS):
@@ -351,9 +367,9 @@ def maqueta(chasis: Image.Image, origen, lado, hueco) -> None:
         cy = ry + f * (lado + hueco)
         out.alpha_composite(celda, (cx, cy))
         ico = Image.open(SALIDA / f"{nombre}.png")
-        out.alpha_composite(ico, (cx + (lado - 24) // 2, cy + (lado - 24) // 2))
-    E = 3
-    grande = out.resize((out.size[0] * E, out.size[1] * E), Image.NEAREST)
+        out.alpha_composite(ico, (cx + (lado - 24 * ESCALA) // 2,
+                                  cy + (lado - 24 * ESCALA) // 2))
+    grande = out
     fondo = Image.new("RGBA", grande.size, (14, 14, 20, 255))
     fondo.alpha_composite(grande)
     MAQUETA.mkdir(parents=True, exist_ok=True)

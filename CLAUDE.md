@@ -3,11 +3,18 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-08-12
+**Última actualización:** 2026-08-13
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela)
-**Estado:** PHASE 0 y PHASE 1 completadas. 23 documentos, decisiones D-001 a
-D-028. **El mod está desplegado y funcionando contra MariaDB:** economía de
+**Estado:** PHASE 0 y PHASE 1 completadas. 25 documentos, decisiones D-001 a
+D-031. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, cinco vías de progresión, y las interfaces base operativas.
+
+> **2026-08-13 — el día que el servidor pasó a tener cara propia.** El pack ya
+> no es una lista de siete mods elegidos a ojo: **parte del modpack oficial de
+> Cobblemon** (D-031). Encima van 96 bloques de neón propios (D-029), shaders
+> por su canal oficial (D-030) y **323 texturas de interfaz revestidas de azul
+> luna**. Lo que sigue faltando es lo mismo de siempre: **la pantalla desde la
+> que un jugador nuevo empieza** (`ART-002`). Ver §0-bis.
 
 > **2026-08-12 — la interfaz del PokePad se ha retirado ENTERA** (D-026). No es
 > una regresión accidental: se borró a propósito para rehacerla con arte real.

@@ -282,46 +282,85 @@ sus separaciones caben de sobra.
 
 ## 5. Prompt 3 — Los quince iconos
 
-**La pieza donde más se nota el estilo «PokeCraft»**, porque cada icono mezcla
-un objeto de Minecraft con algo de Pokémon.
+**La pieza donde se ve el estilo «PokeCraft»**: cada icono mezcla a la vista un
+objeto de Minecraft con algo de Pokémon. Y son **más amigables** que el resto
+de la interfaz a propósito — el chasis es un aparato serio, los iconos son lo
+que invita a tocarlo.
+
+> ⚠️ **Este prompt CAMBIA una línea de la biblia de estilo.** La biblia dice
+> *«Not toy-like, not cartoonish»*, que es lo correcto para el chasis pero
+> pelea con unos iconos amigables. El bloque `MOOD OVERRIDE` de abajo la
+> sustituye. Si no lo pegas, salen fríos y técnicos.
 
 ```
 [PEGA AQUÍ LA BIBLIA DE ESTILO]
+
+MOOD OVERRIDE for these icons only: replace the "Mood" line of the style
+bible with this one. Friendly, warm, inviting, collectible. Rounded chunky
+shapes, generous thick outlines, a little bit of charm and bounce - like
+enamel pins or sticker art. Still pixel art, still the same palette, but
+welcoming instead of cold. Cute is good here.
+
+PALETTE ADDITION for these icons only: you may also use warm accents
+  #FFE12E  neon yellow    gold, shine, sparkles
+  #FF7A14  neon orange    wood, leather, fire
+  #1EDF5C  neon green     nature, grass
+  #FF2A3C  neon red       Poke Ball tops, ribbons
 
 Subject: a sprite sheet of 15 game menu icons, laid out in a strict grid of
 5 columns by 3 rows on a pure black background. Even spacing. Every icon
 occupies the same square area and is centered in its cell.
 
-Each icon must read clearly at very small size: one single object, bold
-silhouette, no scene, no background, no frame around it.
+Each icon: ONE single object, bold silhouette, no scene, no background, no
+frame around it, no drop shadow. It must read instantly at very small size.
+
+THE FUSION RULE - this is the point of the whole set: every icon combines
+a recognizable MINECRAFT object with a recognizable POKEMON element. Not
+one or the other. Both, in the same object.
 
 The icons, in order, left to right, top to bottom:
- 1. Pokedex      - a closed handheld dex device, three-quarter blocky
- 2. Cosmetics    - a Minecraft-style armor helmet with a small sparkle
- 3. Jobs         - a Minecraft iron pickaxe crossed with a wooden axe
- 4. Quests       - a Minecraft-style book with a glowing bookmark ribbon
- 5. Warps        - a map pin / marker over a tiny folded map
- 6. Clan         - a heraldic banner on a pole
- 7. GTS          - a stack of gold coins with a small arrow loop around it
- 8. Shop         - a small market stall with a striped awning
- 9. Treasures    - a Minecraft treasure chest, lid slightly open, light inside
-10. Wiki         - a question mark carved as a blocky 3D shape
-11. Hunts        - a crosshair / target reticle over a paw print
-12. Kits         - a crown resting on a small blocky pedestal
-13. Backpack     - a Minecraft-style bag / satchel with straps
-14. Gyms         - a stylized badge / medal with wings
-15. Explore      - a blocky globe with continents
+ 1. Pokedex     - a chunky blocky handheld dex, closed, with a round red
+                  and white Poke Ball style button on its face
+ 2. Cosmetics   - a Minecraft diamond helmet with a small Poke Ball crest
+                  on the forehead and one yellow sparkle
+ 3. Jobs        - a Minecraft iron pickaxe crossed with a fishing rod,
+                  wooden handles, a tiny Poke Ball hanging from the line
+ 4. Quests      - a Minecraft enchanted book, slightly open, with a Poke
+                  Ball used as the bookmark and a warm glow between pages
+ 5. Warps       - a Minecraft ender pearl floating above a rounded map pin
+ 6. Clan        - a Minecraft cloth banner on a wooden pole, with a simple
+                  Poke Ball emblem stitched on it
+ 7. GTS         - two Poke Balls facing each other with a green Minecraft
+                  emerald between them and a soft circular exchange arrow
+ 8. Shop        - a small wooden market stall with a striped awning and a
+                  round Poke Ball sign hanging from it
+ 9. Treasures   - a Minecraft wooden treasure chest, lid slightly open,
+                  a golden Poke Ball glowing inside
+10. Wiki        - a Minecraft bookshelf block with a friendly rounded
+                  question mark floating in front of it
+11. Hunts       - a chunky rounded paw print inside a simple crosshair ring
+12. Kits        - a Minecraft chest wrapped like a gift with a ribbon, a
+                  small golden crown resting on the lid
+13. Backpack    - a rounded leather satchel with straps and a Poke Ball
+                  as the front clasp
+14. Gyms        - a badge shaped like a Minecraft block, with small wings
+                  and a golden shine
+15. Explore     - a Minecraft grass block turned into a little round
+                  planet, green top, dirt below, one tiny cloud
 
-Style reminder for the icons specifically: they must look like they belong
-to the same set - same outline weight, same light direction (top-left),
-same level of detail, same visual weight. Solid, chunky, readable.
+Consistency is more important than detail: same outline weight, same light
+direction (top-left), same level of detail, same visual weight, same amount
+of rounding. They must look like one family, not fifteen drawings.
 ```
 
-> **Truco si salen desiguales:** genera **uno por uno** reusando la biblia y
-> pidiendo *"in the exact same style as the previous icon"*. Es más lento pero
-> es la diferencia entre un set y quince dibujos sueltos.
+> **Truco si salen desiguales:** genera **uno por uno** reusando la biblia + el
+> `MOOD OVERRIDE`, y añade *"in the exact same style, outline weight and level
+> of detail as the previous icon"*. Es más lento, pero es la diferencia entre
+> un set y quince dibujos sueltos.
 
----
+> **Aquí sí vale generar de uno en uno**, al revés que con las celdas: son
+> quince objetos **distintos**, no el mismo en tres estados. No hay silueta
+> compartida que preservar, así que lo único en juego es el detalle.
 
 ## 6. Prompt 4 — Los botones pequeños
 

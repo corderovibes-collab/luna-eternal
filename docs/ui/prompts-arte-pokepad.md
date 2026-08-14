@@ -410,3 +410,39 @@ Symbols must be centered, chunky and readable at tiny size.
 
 - [La interfaz de cliente](interfaz-cliente.md) · [El PokePad de referencia](pokepad-referencia.md)
 - [Catálogo de pantallas](interfaces-catalog.md)
+
+---
+
+## 8. La composición, CONGELADA
+
+Medida sobre el arte real el 2026-08-13 con `python tools/gen_pokepad.py`. **El
+código dibuja aquí y no vuelve a medir.**
+
+```
+pokepad.png     345 x 207     el chasis entero
+pantalla azul   x 106-321  y 28-184        (215 x 156)
+rejilla         x 113      y 46            (201 x 119)
+celda           37 x 37    hueco de 4      5 columnas x 3 filas
+icono           24 x 24    centrado en la celda
+boton           16 x 16
+```
+
+Los números **no están escritos a mano**: el script localiza la pantalla azul
+por color y calcula la celda a partir de ella. Si el chasis se regenera, se
+reejecuta y salen los nuevos.
+
+### Lo que costó, para no repetirlo
+
+Trocear hojas de IA no es cortar por una rejilla: no la traen. Se localiza cada
+pieza proyectando el contenido sobre cada eje, y ahí hubo tres trampas, las
+tres descubiertas mirando la maqueta:
+
+| Síntoma | Causa |
+|---|---|
+| Los iconos se llevaban su rótulo | Proyectar con `any()`: **basta un píxel** para que una fila cuente como llena, y dos o tres restos del suavizado puenteaban el hueco. Se arregló exigiendo un mínimo de píxeles por fila |
+| Una celda salía partida en dos | El borde cian del estado «encima» deja un hueco interno. Se fusionan los tramos más cercanos hasta llegar al número esperado |
+| Las celdas cogían una franja vacía | Se cogían las bandas pares dando por hecho «pieza, rótulo, pieza…». Esa hoja trae además una franja fina arriba. Ahora se cogen las bandas **más altas**, que son las piezas |
+
+> **La maqueta no es un adorno.** `--maqueta` monta la pantalla completa con
+> todo en su sitio, y las tres trampas se vieron ahí antes de escribir una sola
+> línea de interfaz.

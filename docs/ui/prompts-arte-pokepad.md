@@ -300,72 +300,71 @@ referencia:
 Reducir una ilustración de 2 750 colores a 24 píxeles no la convierte en pixel
 art: la emborrona. Hay que pedir pixel art **desde el principio**.
 
-### 5.1 · La biblia de los iconos
+### 5.1 · ⚠️ El prompt va en PROSA, no en documento
 
-Va pegada antes de **cada uno** de los quince. Es lo que los hace familia.
+La primera versión estaba escrita con títulos, listas y una tabla de colores.
+**Gemini dibujó el documento**: devolvió una imagen del propio prompt, con el
+icono metido en una esquina.
 
-```
-ICON STYLE BIBLE — paste this before every single icon prompt
+No es un capricho del modelo. Un generador de imágenes no distingue entre «esto
+son mis instrucciones» y «esto es lo que quiero ver»: todo lo que le llega es
+descripción. Si le mandas algo con pinta de ficha técnica, dibuja una ficha
+técnica. Peor aún, aquella llevaba la línea *«paste this before every single
+icon prompt»*, que es una instrucción **para la persona**, y también salió
+pintada.
 
-A single game menu icon, pixel art, on a pure black background.
-Square canvas, 1:1.
+Las cuatro reglas que lo evitan:
 
-THE GRID IS THE POINT:
-- Draw it as if on a 24 by 24 pixel grid: big, chunky, uniform square
-  pixels. Every block the same size, aligned to the grid.
-- NO anti-aliasing, NO gradients, NO blur, NO soft edges, NO 3D render.
-- MAXIMUM 14 colors in the whole image. Fewer is better.
-- One hard outline, one base tone, one shadow tone, one highlight. That is
-  all the shading there is.
+| | |
+|---|---|
+| **El sujeto, primero** | Lo que va al principio es lo que ancla la imagen. Nunca empezar por las normas |
+| **Prosa, no listas** | Ni títulos, ni viñetas, ni tablas, ni cabeceras en mayúsculas |
+| **Pocos códigos de color** | Una lista de catorce hex se dibuja como lista. Se nombran los colores y se citan dos o tres hex sueltos |
+| **Nada dirigido a ti** | «pega esto antes de…», «opcional», «ver §4» — todo eso acaba en la imagen |
 
-COMPOSITION, identical in all of them:
-- The object FILLS the square, almost touching the edges. No empty margin.
-- Straight-on or slight three-quarter view. No perspective tricks.
-- Under the object, a flat dark blue ellipse as a ground shadow
-  (#2A3A5E), same size and position in every icon. This is what makes the
-  whole set look like one family.
-- Light comes from the top-left in every icon.
+### 5.2 · La plantilla
 
-ABSOLUTELY NO TEXT, no letters, no numbers, no labels, no watermark.
-
-Palette — pick from these only:
-  #1B1E26 outline   #2A3A5E shadow ellipse   #F2FAFF white
-  #8B93D8 moon blue   #C8D2F0 pale blue   #16F2E6 cyan
-  #FF2A3C red   #FF7A14 orange   #FFE12E yellow
-  #1EDF5C green   #9A34FF purple   #A0714A wood brown
-  #6C7A88 grey   #C0C8D0 light grey
-
-THE FUSION RULE: the object combines something from MINECRAFT with
-something from POKEMON, both recognizable, in the same object.
-```
-
-### 5.2 · Los quince, uno por generación
-
-Cada uno se pide **por separado**, pegando antes la biblia de arriba. A partir
-del segundo, añade al final:
+Se cambia solo lo que va después de *«pixel art game icon of»*. Todo lo demás
+se repite igual en los quince, y es lo que los hace familia.
 
 ```
-Match the previous icon exactly: same outline weight, same palette, same
-ground shadow, same amount of detail.
+A 24x24 pixel art game icon of A_QUI_VA_EL_OBJETO, drawn with chunky
+uniform square pixels aligned to a coarse grid, hard edges, no
+anti-aliasing and no gradients. Flat limited palette of at most 14 colors
+with a single dark outline (#1B1E26), one base tone, one shadow tone and
+one highlight. The object fills almost the entire square and nearly
+touches the edges, lit from the top left, sitting on a flat dark blue
+ellipse (#2A3A5E) used as a ground shadow. Plain solid black background.
+No text, no letters, no numbers, no labels, no watermark, no border, no
+user interface, no document, no color swatches.
 ```
 
-| # | Fichero | Prompt (va después de la biblia) |
+> Ese final —`no document, no color swatches`— está puesto a mano porque es
+> exactamente lo que se equivocó la primera vez. Vale la pena dejarlo.
+
+### 5.3 · Los quince objetos
+
+Cada uno sustituye a `A_QUI_VA_EL_OBJETO`. A partir del segundo, añadir al
+final: `Same style, outline weight, palette and ground shadow as the previous
+icon.`
+
+| # | Fichero | Objeto |
 |---|---|---|
-| 1 | `pokedex` | `Subject: a chunky closed handheld Pokedex device seen from the front, dark grey casing, with a big round red and white Poke Ball style button on its face and two small lights above it.` |
-| 2 | `cosmeticos` | `Subject: a Minecraft-style diamond helmet, pale cyan, seen from the front, with a small red and white Poke Ball crest on the forehead and one yellow four-point sparkle at the top right.` |
-| 3 | `trabajos` | `Subject: a Minecraft iron pickaxe and a fishing rod crossed in an X, both with wooden handles, and a tiny Poke Ball hanging from the fishing line.` |
-| 4 | `misiones` | `Subject: a closed Minecraft-style book standing upright, purple cover, golden corners, with a red ribbon bookmark and a small Poke Ball emblem on the cover.` |
-| 5 | `warps` | `Subject: a rounded map pin marker, red and white like a Poke Ball, standing on a small folded green map, with a purple ender pearl floating above it.` |
-| 6 | `clan` | `Subject: a hanging cloth banner on a short wooden pole, moon blue fabric with a pointed bottom, and a Poke Ball emblem stitched in the middle.` |
-| 7 | `gts` | `Subject: two Poke Balls facing each other with a bright green Minecraft emerald floating between them, and a simple circular arrow looping around all three.` |
-| 8 | `tienda` | `Subject: a small wooden market stall seen from the front, with a red and white striped awning and a round Poke Ball sign hanging under it.` |
-| 9 | `tesoros` | `Subject: a wooden Minecraft treasure chest with the lid open, golden hinges, and a glowing golden Poke Ball rising out of it with two yellow sparkles.` |
-| 10 | `wiki` | `Subject: a Minecraft bookshelf block seen from the front, wooden frame with colorful book spines, and a chunky white question mark floating in front of it.` |
-| 11 | `cazas` | `Subject: a thick round crosshair ring, dark metal, with a chunky pale blue paw print centered inside it.` |
-| 12 | `kits` | `Subject: a Minecraft chest wrapped as a gift with a red ribbon and bow, and a small golden crown resting on the lid.` |
-| 13 | `mochila` | `Subject: a brown leather satchel backpack seen from the front, with two straps, a flap, and a red and white Poke Ball as the front clasp.` |
-| 14 | `gyms` | `Subject: a badge shaped like a small grey Minecraft block, with two white feathered wings spreading from its sides and a golden shine on top.` |
-| 15 | `explorar` | `Subject: a Minecraft grass block turned into a small round planet: green grass on top, brown dirt below, curved like a tiny world, with one small white cloud beside it.` |
+| 1 | `pokedex` | `a chunky closed handheld Pokedex device seen from the front, dark grey casing, with a big round red and white Poke Ball button on its face and two small lights above it` |
+| 2 | `cosmeticos` | `a pale cyan Minecraft diamond helmet seen from the front, with a small red and white Poke Ball crest on the forehead and one yellow four-point sparkle` |
+| 3 | `trabajos` | `a Minecraft iron pickaxe and a fishing rod crossed in an X, both with wooden handles, a tiny Poke Ball hanging from the fishing line` |
+| 4 | `misiones` | `a closed purple book standing upright with golden corners, a red ribbon bookmark and a small Poke Ball emblem on the cover` |
+| 5 | `warps` | `a rounded map pin marker colored red and white like a Poke Ball, standing on a small folded green map, with a purple ender pearl floating above it` |
+| 6 | `clan` | `a hanging moon blue cloth banner with a pointed bottom on a short wooden pole, a Poke Ball emblem stitched in the middle` |
+| 7 | `gts` | `two Poke Balls facing each other with a bright green emerald floating between them and a simple circular arrow looping around all three` |
+| 8 | `tienda` | `a small wooden market stall seen from the front with a red and white striped awning and a round Poke Ball sign hanging under it` |
+| 9 | `tesoros` | `an open wooden treasure chest with golden hinges and a glowing golden Poke Ball rising out of it with two yellow sparkles` |
+| 10 | `wiki` | `a wooden bookshelf block seen from the front full of colorful book spines, with a chunky white question mark floating in front of it` |
+| 11 | `cazas` | `a thick round dark metal crosshair ring with a chunky pale blue paw print centered inside it` |
+| 12 | `kits` | `a wooden chest wrapped as a gift with a red ribbon and bow, and a small golden crown resting on the lid` |
+| 13 | `mochila` | `a brown leather satchel backpack seen from the front with two straps, a flap, and a red and white Poke Ball as the front clasp` |
+| 14 | `gyms` | `a small grey stone badge with two white feathered wings spreading from its sides and a golden shine on top` |
+| 15 | `explorar` | `a Minecraft grass block turned into a small round planet, green grass on top and brown dirt below, with one small white cloud beside it` |
 
 ## 6. Prompt 4 — Los botones pequeños
 

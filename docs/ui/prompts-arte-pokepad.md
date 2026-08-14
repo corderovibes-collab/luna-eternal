@@ -26,6 +26,24 @@ Tres condiciones. Si el arte falla una, no sirve y hay que regenerarlo.
 
 La pantalla entera son **346 × 207 píxeles de interfaz**. No 1024. No 2048.
 
+> **⚠️ Una captura de pantalla NO sirve para medir esto, y engaña mucho.**
+> Minecraft dibuja las interfaces **escaladas** por el ajuste *GUI Scale*: a
+> escala 3, una textura de 346 px ocupa 1 038 px en pantalla. Por eso una
+> captura de ~1 100 px de ancho es perfectamente coherente con una textura de
+> 346.
+>
+> El número está **medido sobre los ficheros PNG** del mod de referencia, no
+> sobre una captura:
+>
+> ```
+> 346 x 207   12 texturas   los fondos completos, uno por app
+>  24 x 25    23 texturas   los iconos de app
+>  24 x 17    38 texturas   placas y botones pequeños
+> ```
+>
+> Si algún día hay que rehacer esta medición, se hace así: abrir el jar y leer
+> el tamaño de los PNG. Nunca contar píxeles en una captura.
+
 Un generador de imágenes no sabe dibujar a 346 px, así que **se genera grande y
 se reduce**. Para que reducir no lo convierta en papilla, el arte tiene que ser
 **pixel art de verdad**: bloques planos de color, sin degradados y sin

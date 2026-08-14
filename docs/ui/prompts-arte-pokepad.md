@@ -156,45 +156,103 @@ premium. Not toy-like, not cartoonish, not glossy plastic.
 
 ---
 
-## 3. Prompt 1 — El chasis
+## 3. El sistema de chasis: uno por aplicación
 
-Lo primero y lo único de esta fase que hay que congelar. Es el aparato: marco,
-panel lateral y el hueco donde irá la rejilla.
+**Copiado del Pad de referencia, porque es lo que hace que cada pantalla se
+sienta diseñada.** Ellos no tienen un marco genérico con contenido dentro:
+tienen **doce fondos completos de 346×207**, uno por aplicación.
+
+```
+pokepad_base_new.png    la rejilla de aplicaciones
+pokepad_gts.png         el GTS, entero
+pokepad_cazas.png       las Cazas, enteras
+pokepad_tienda.png      ...una por app
+```
+
+Nosotros teníamos un solo fondo compartido, y por eso todas nuestras pantallas
+se parecían.
+
+### 3.1 · La regla que no se puede romper
+
+> **La composición tiene que ser IDÉNTICA en todos los fondos.** El código mide
+> una sola vez dónde cae el área de contenido. Si en un fondo queda más arriba
+> o más estrecha, la rejilla no encaja y hay que medir a mano pantalla por
+> pantalla.
+
+Por eso el fondo base **se genera primero y se congela**, y los demás se piden
+como variantes suyas, no desde cero.
+
+### 3.2 · El fondo base
 
 ```
 [PEGA AQUÍ LA BIBLIA DE ESTILO]
 
 Subject: a handheld gaming device UI frame, seen straight on, filling the
-whole canvas. Canvas aspect ratio 16:9.
+whole canvas. Canvas aspect ratio 5:3.
+
+Pixel art on a grid: chunky uniform square pixels, hard edges, maximum 22
+colors in the whole image, no gradients and no anti-aliasing.
 
 Layout, exactly:
 - Outer shell in graphite (#1B1E26) with soft graphite (#2A2E3A) bevels,
-  like a rugged plastic-and-metal handheld console. Rounded corners.
-- Thin neon cyan (#16F2E6) accent lines inset along the shell edges, like
-  light strips on a device at night. Subtle, 1 pixel, not glowing.
-- LEFT COLUMN, about 25% of the width: a vertical dark panel with three
-  stacked EMPTY recessed slots:
-    top    - a square slot, roughly 1:1, for a player avatar
-    middle - a wide rectangular slot, for a rank badge card
-    bottom - a short wide slot with a small square button on its right,
-             for a currency readout
-  All three slots must be EMPTY - just the recess, the frame and the inner
-  shadow. Nothing inside them.
+  rounded corners, like a rugged handheld console.
+- Thin neon cyan (#16F2E6) accent lines inset along the shell edges.
+- LEFT COLUMN, about 25% of the width: three stacked EMPTY recessed slots -
+  a square one on top for an avatar, a wide one in the middle for a rank
+  card, a short wide one at the bottom with a small square button beside it.
+  All EMPTY: just the recess and its inner shadow.
 - RIGHT AREA, the remaining 75%: one single large recessed screen in moon
-  blue (#8B93D8), with a #C8D2F0 rim and #6C78C8 inner shadow. It must be
-  COMPLETELY EMPTY and perfectly rectangular - a flat blue panel. This is
-  where the game will draw the app grid.
-- TOP CENTER: an empty raised nameplate/banner shape spanning the top of
-  the screen area, for a title. Empty, no text.
-
-Critical: the empty screen area must be a clean rectangle with uniform
-color, no decoration inside it, no grid lines, no icons.
+  blue (#8B93D8) with a #C8D2F0 rim. COMPLETELY EMPTY and perfectly
+  rectangular. No grid, no cells, no icons inside it.
+- TOP CENTER: an empty raised nameplate shape. Empty, no text.
 ```
 
-**Qué mirar cuando llegue:** que el rectángulo azul esté **vacío y sea
-rectangular**. Es lo que se mide una vez y condiciona todo lo demás.
+> **La pantalla vacía no es pereza, es la arquitectura.** Las celdas las dibuja
+> el código como rectángulos planos —igual que ellos—, y por eso el fondo no
+> las lleva pintadas. Ver §4.
 
----
+### 3.3 · Los fondos de cada aplicación
+
+Se piden **uno a uno**, y siempre a partir del base:
+
+```
+[PEGA AQUÍ LA BIBLIA DE ESTILO]
+
+Same handheld device frame as before: identical shell, identical left
+column with its three empty slots, identical nameplate, identical size and
+proportions. Pixel art, same palette, maximum 22 colors.
+
+The ONLY difference is what is inside the big blue screen area:
+
+<<AQUÍ LA DESCRIPCIÓN DE ESA PANTALLA>>
+
+Everything outside the blue screen must be pixel-identical to the base.
+```
+
+Y en `<<...>>` va lo que pide cada una. Por ejemplo:
+
+| Pantalla | Qué lleva dentro |
+|---|---|
+| **Pokédex** | `a vertical list area on the left with empty rows, and a large empty square preview panel on the right` |
+| **GTS** | `a grid of empty listing slots, with an empty wide search bar across the top` |
+| **Tienda** | `two columns of empty item rows, and an empty wide banner across the top` |
+| **Cazas** | `three tall empty panels side by side, each with an empty circle at its top` |
+
+> **No las generes todas ahora.** Cada fondo se pide cuando se va a construir
+> esa pantalla, no antes: si el base cambia, hay que rehacer todos los que ya
+> existieran.
+
+### 3.4 · La resolución, ya para siempre
+
+```
+tú pides    proporción 5:3, pixel art de rejilla, máximo 22 colores
+yo reduzco  345 × 207
+```
+
+Un generador no dibuja a 345 px de ancho —sale una mancha—, así que se genera
+grande y se reduce. **Lo que hace que la reducción salga bien no es el tamaño,
+es que el original ya sea pixel art**: bloques planos y bordes duros
+sobreviven a reducirse; los degradados y el suavizado, no.
 
 ## 4. Prompt 2 — La celda, en sus tres estados
 
@@ -280,87 +338,88 @@ sus separaciones caben de sobra.
 
 ---
 
-## 5. Prompt 3 — Los quince iconos
+## 5. Los iconos: uno a uno, y nacidos como pixel art
 
-**La pieza donde se ve el estilo «PokeCraft»**: cada icono mezcla a la vista un
-objeto de Minecraft con algo de Pokémon. Y son **más amigables** que el resto
-de la interfaz a propósito — el chasis es un aparato serio, los iconos son lo
-que invita a tocarlo.
+**Cambio de método, y el motivo está medido.** Los primeros salieron de una
+hoja de 5×3 y se veían sucios en el juego. Comparando con el Pad de
+referencia:
 
-> ⚠️ **Este prompt CAMBIA una línea de la biblia de estilo.** La biblia dice
-> *«Not toy-like, not cartoonish»*, que es lo correcto para el chasis pero
-> pelea con unos iconos amigables. El bloque `MOOD OVERRIDE` de abajo la
-> sustituye. Si no lo pegas, salen fríos y técnicos.
+| | Ellos | La primera tanda nuestra |
+|---|---|---|
+| Colores por icono | **5 a 20** | 2 750 |
+| Cómo nacieron | dibujados a 24×25 | ilustración grande, reducida ×22 |
+| Sombra | una elipse oscura, **igual en los 23** | ninguna |
+| Silueta | llena el cuadro | con aire alrededor, se ve pequeño |
+
+Reducir una ilustración de 2 750 colores a 24 píxeles no la convierte en pixel
+art: la emborrona. Hay que pedir pixel art **desde el principio**.
+
+### 5.1 · La biblia de los iconos
+
+Va pegada antes de **cada uno** de los quince. Es lo que los hace familia.
 
 ```
-[PEGA AQUÍ LA BIBLIA DE ESTILO]
+ICON STYLE BIBLE — paste this before every single icon prompt
 
-MOOD OVERRIDE for these icons only: replace the "Mood" line of the style
-bible with this one. Friendly, warm, inviting, collectible. Rounded chunky
-shapes, generous thick outlines, a little bit of charm and bounce - like
-enamel pins or sticker art. Still pixel art, still the same palette, but
-welcoming instead of cold. Cute is good here.
+A single game menu icon, pixel art, on a pure black background.
+Square canvas, 1:1.
 
-PALETTE ADDITION for these icons only: you may also use warm accents
-  #FFE12E  neon yellow    gold, shine, sparkles
-  #FF7A14  neon orange    wood, leather, fire
-  #1EDF5C  neon green     nature, grass
-  #FF2A3C  neon red       Poke Ball tops, ribbons
+THE GRID IS THE POINT:
+- Draw it as if on a 24 by 24 pixel grid: big, chunky, uniform square
+  pixels. Every block the same size, aligned to the grid.
+- NO anti-aliasing, NO gradients, NO blur, NO soft edges, NO 3D render.
+- MAXIMUM 14 colors in the whole image. Fewer is better.
+- One hard outline, one base tone, one shadow tone, one highlight. That is
+  all the shading there is.
 
-Subject: a sprite sheet of 15 game menu icons, laid out in a strict grid of
-5 columns by 3 rows on a pure black background. Even spacing. Every icon
-occupies the same square area and is centered in its cell.
+COMPOSITION, identical in all of them:
+- The object FILLS the square, almost touching the edges. No empty margin.
+- Straight-on or slight three-quarter view. No perspective tricks.
+- Under the object, a flat dark blue ellipse as a ground shadow
+  (#2A3A5E), same size and position in every icon. This is what makes the
+  whole set look like one family.
+- Light comes from the top-left in every icon.
 
-Each icon: ONE single object, bold silhouette, no scene, no background, no
-frame around it, no drop shadow. It must read instantly at very small size.
+ABSOLUTELY NO TEXT, no letters, no numbers, no labels, no watermark.
 
-THE FUSION RULE - this is the point of the whole set: every icon combines
-a recognizable MINECRAFT object with a recognizable POKEMON element. Not
-one or the other. Both, in the same object.
+Palette — pick from these only:
+  #1B1E26 outline   #2A3A5E shadow ellipse   #F2FAFF white
+  #8B93D8 moon blue   #C8D2F0 pale blue   #16F2E6 cyan
+  #FF2A3C red   #FF7A14 orange   #FFE12E yellow
+  #1EDF5C green   #9A34FF purple   #A0714A wood brown
+  #6C7A88 grey   #C0C8D0 light grey
 
-The icons, in order, left to right, top to bottom:
- 1. Pokedex     - a chunky blocky handheld dex, closed, with a round red
-                  and white Poke Ball style button on its face
- 2. Cosmetics   - a Minecraft diamond helmet with a small Poke Ball crest
-                  on the forehead and one yellow sparkle
- 3. Jobs        - a Minecraft iron pickaxe crossed with a fishing rod,
-                  wooden handles, a tiny Poke Ball hanging from the line
- 4. Quests      - a Minecraft enchanted book, slightly open, with a Poke
-                  Ball used as the bookmark and a warm glow between pages
- 5. Warps       - a Minecraft ender pearl floating above a rounded map pin
- 6. Clan        - a Minecraft cloth banner on a wooden pole, with a simple
-                  Poke Ball emblem stitched on it
- 7. GTS         - two Poke Balls facing each other with a green Minecraft
-                  emerald between them and a soft circular exchange arrow
- 8. Shop        - a small wooden market stall with a striped awning and a
-                  round Poke Ball sign hanging from it
- 9. Treasures   - a Minecraft wooden treasure chest, lid slightly open,
-                  a golden Poke Ball glowing inside
-10. Wiki        - a Minecraft bookshelf block with a friendly rounded
-                  question mark floating in front of it
-11. Hunts       - a chunky rounded paw print inside a simple crosshair ring
-12. Kits        - a Minecraft chest wrapped like a gift with a ribbon, a
-                  small golden crown resting on the lid
-13. Backpack    - a rounded leather satchel with straps and a Poke Ball
-                  as the front clasp
-14. Gyms        - a badge shaped like a Minecraft block, with small wings
-                  and a golden shine
-15. Explore     - a Minecraft grass block turned into a little round
-                  planet, green top, dirt below, one tiny cloud
-
-Consistency is more important than detail: same outline weight, same light
-direction (top-left), same level of detail, same visual weight, same amount
-of rounding. They must look like one family, not fifteen drawings.
+THE FUSION RULE: the object combines something from MINECRAFT with
+something from POKEMON, both recognizable, in the same object.
 ```
 
-> **Truco si salen desiguales:** genera **uno por uno** reusando la biblia + el
-> `MOOD OVERRIDE`, y añade *"in the exact same style, outline weight and level
-> of detail as the previous icon"*. Es más lento, pero es la diferencia entre
-> un set y quince dibujos sueltos.
+### 5.2 · Los quince, uno por generación
 
-> **Aquí sí vale generar de uno en uno**, al revés que con las celdas: son
-> quince objetos **distintos**, no el mismo en tres estados. No hay silueta
-> compartida que preservar, así que lo único en juego es el detalle.
+Cada uno se pide **por separado**, pegando antes la biblia de arriba. A partir
+del segundo, añade al final:
+
+```
+Match the previous icon exactly: same outline weight, same palette, same
+ground shadow, same amount of detail.
+```
+
+| # | Fichero | Prompt (va después de la biblia) |
+|---|---|---|
+| 1 | `pokedex` | `Subject: a chunky closed handheld Pokedex device seen from the front, dark grey casing, with a big round red and white Poke Ball style button on its face and two small lights above it.` |
+| 2 | `cosmeticos` | `Subject: a Minecraft-style diamond helmet, pale cyan, seen from the front, with a small red and white Poke Ball crest on the forehead and one yellow four-point sparkle at the top right.` |
+| 3 | `trabajos` | `Subject: a Minecraft iron pickaxe and a fishing rod crossed in an X, both with wooden handles, and a tiny Poke Ball hanging from the fishing line.` |
+| 4 | `misiones` | `Subject: a closed Minecraft-style book standing upright, purple cover, golden corners, with a red ribbon bookmark and a small Poke Ball emblem on the cover.` |
+| 5 | `warps` | `Subject: a rounded map pin marker, red and white like a Poke Ball, standing on a small folded green map, with a purple ender pearl floating above it.` |
+| 6 | `clan` | `Subject: a hanging cloth banner on a short wooden pole, moon blue fabric with a pointed bottom, and a Poke Ball emblem stitched in the middle.` |
+| 7 | `gts` | `Subject: two Poke Balls facing each other with a bright green Minecraft emerald floating between them, and a simple circular arrow looping around all three.` |
+| 8 | `tienda` | `Subject: a small wooden market stall seen from the front, with a red and white striped awning and a round Poke Ball sign hanging under it.` |
+| 9 | `tesoros` | `Subject: a wooden Minecraft treasure chest with the lid open, golden hinges, and a glowing golden Poke Ball rising out of it with two yellow sparkles.` |
+| 10 | `wiki` | `Subject: a Minecraft bookshelf block seen from the front, wooden frame with colorful book spines, and a chunky white question mark floating in front of it.` |
+| 11 | `cazas` | `Subject: a thick round crosshair ring, dark metal, with a chunky pale blue paw print centered inside it.` |
+| 12 | `kits` | `Subject: a Minecraft chest wrapped as a gift with a red ribbon and bow, and a small golden crown resting on the lid.` |
+| 13 | `mochila` | `Subject: a brown leather satchel backpack seen from the front, with two straps, a flap, and a red and white Poke Ball as the front clasp.` |
+| 14 | `gyms` | `Subject: a badge shaped like a small grey Minecraft block, with two white feathered wings spreading from its sides and a golden shine on top.` |
+| 15 | `explorar` | `Subject: a Minecraft grass block turned into a small round planet: green grass on top, brown dirt below, curved like a tiny world, with one small white cloud beside it.` |
 
 ## 6. Prompt 4 — Los botones pequeños
 

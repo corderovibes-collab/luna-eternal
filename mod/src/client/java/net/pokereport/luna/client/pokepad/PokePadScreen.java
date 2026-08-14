@@ -30,7 +30,7 @@ public class PokePadScreen extends Screen {
     private static final int BORDE_ENCIMA = 0xFF16F2E6;
 
     /** El chasis en las unidades en que están medidas las demás constantes. */
-    private static final int ANCHO = 345, ALTO = 207;
+    private static final int ANCHO = 346, ALTO = 207;
 
     /**
      * La textura mide lo mismo que el hueco donde se dibuja: 1×.
@@ -48,8 +48,10 @@ public class PokePadScreen extends Screen {
     private static final int ESCALA = 1;
 
     /** La rejilla, en las mismas unidades. Ver §8 del documento. */
-    private static final int REJ_X = 113, REJ_Y = 46;
-    private static final int CELDA = 37, HUECO = 4, ICONO = 24;
+    // Los da `tools/gen_pokepad.py` al preparar el arte: los imprime al final.
+    // No se escriben a ojo, se copian de ahi.
+    private static final int REJ_X = 118, REJ_Y = 49;
+    private static final int CELDA = 35, HUECO = 4, ICONO = 25;
     private static final int COLS = 5;
 
     /** Gris apagado para el icono de una celda bloqueada. */

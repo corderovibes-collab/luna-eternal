@@ -142,3 +142,55 @@ atribución y el aviso. No hace falta nada más.
 ## Related Systems
 
 - [El pack de cliente](../technical/client-pack.md) · [La interfaz propia](interfaz-cliente.md)
+
+---
+
+## 5. El haz de la Poké Ball
+
+Al guardar un Pokémon con **R** —y al sacarlo— Cobblemon dibuja un haz **rojo**.
+Ahora es azul luna, el mismo de la pantalla.
+
+### Por qué no vale un resource pack
+
+La textura del haz (`textures/phase_beam.png`) es **blanca** (`#DFDFDF`). El rojo
+sale de multiplicarla por un vector escrito en el código:
+
+```kotlin
+// PokemonRenderer.kt:71
+val recallBeamColour = Vector4f(1F, 0.1F, 0.1F, 1F)
+```
+
+Repintar la textura de cian daría un haz **casi negro**: el verde y el azul
+quedan al 10 %. No hay ninguna opción por datos ni por configuración — ese
+`Vector4f` es el único sitio donde vive el color.
+
+### Por qué basta con reflexión, sin mixin
+
+`val` en Kotlin fija la **referencia**, no el contenido, y `Vector4f` es
+mutable. Así que se le cambia el valor por dentro:
+
+```java
+Field campo = Class.forName(CLASE).getDeclaredField("recallBeamColour");
+campo.setAccessible(true);
+((Vector4f) campo.get(null)).set(R, G, B, 1F);
+```
+
+Va **por reflexión y no compilando contra Cobblemon** a propósito: es un campo
+interno de su renderizador, no una API que ellos mantengan. Con una dependencia
+de compilación, el día que lo renombren el mod reventaría en la pantalla del
+jugador. Así, como mucho, el haz se queda rojo y aparece una línea en el log:
+
+```
+[main/INFO]: Haz de la Poke Ball: azul luna        ← funcionó
+[main/WARN]: No se pudo tenir el haz ...           ← Cobblemon lo movió
+```
+
+Se hace en `CLIENT_STARTED`, no durante la inicialización: tocarlo antes
+obligaría a cargar la clase del renderizador cuando aún no están listas sus
+texturas. El haz no se dibuja hasta que alguien saca un Pokémon, así que llega
+de sobra.
+
+> El color está apagado a propósito (`#8B93D8`, el de la Pokédex). El original
+> es rojo a plena saturación y contra la noche fija de la ciudadela se come todo
+> lo demás. Si se ve demasiado lavado, son tres constantes en
+> `LunaNeonCliente.java`.

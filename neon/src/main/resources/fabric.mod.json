@@ -12,6 +12,9 @@
   "entrypoints": {
     "main": [
       "net.pokereport.neon.LunaNeon"
+    ],
+    "client": [
+      "net.pokereport.neon.LunaNeonCliente"
     ]
   },
   "depends": {

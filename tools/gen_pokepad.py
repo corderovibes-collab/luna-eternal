@@ -56,15 +56,42 @@ MAQUETA = RAIZ / "build" / "pokepad"
 # deformarlo ni recortarlo.
 ALTO = 207
 
-# Cuantas veces mas grande se guarda la textura respecto al tamano al que se
-# dibuja. La interfaz mide 345x207 PIXELES DE INTERFAZ --eso no cambia, es su
-# tamano fisico en pantalla-- pero la textura se guarda a 4x.
+# La textura se guarda al MISMO tamano al que se dibuja: 1x.
 #
-# Por que: Minecraft dibuja las interfaces escaladas por el ajuste GUI Scale.
-# A escala 3, esos 345 px ocupan 1035 en pantalla. Con una textura de 345 cada
-# texel se estira a 3 px y se ve el pixelado; con una de 1380 hay detalle de
-# sobra para esos 1035.
-ESCALA = 4
+# Se probo a 4x pensando que mas resolucion daria mas nitidez, y fue peor. La
+# prueba esta en el mod de referencia:
+#
+#     su chasis    346x207   21 colores
+#     el nuestro  1380x828   18905 colores
+#
+# Lo suyo es PIXEL ART DE VERDAD. Minecraft amplia las interfaces con vecino
+# mas proximo, que a un dibujo de 21 colores le sienta de maravilla --sale
+# nitido y a proposito-- y a una ilustracion suavizada la deja sucia a
+# cualquier tamano. El problema nunca fue la resolucion.
+ESCALA = 1
+
+# Cuantos colores como maximo tiene cada pieza ya convertida. Los numeros salen
+# de medir los suyos: el chasis 21, los iconos 14.
+COLORES_CHASIS = 24
+COLORES_PIEZA = 16
+
+
+def pixelizar(im: Image.Image, colores: int) -> Image.Image:
+    """Convierte una ilustracion suavizada en pixel art de verdad.
+
+    Dos cosas, y las dos importan:
+
+      el ALFA se vuelve binario   Un borde medio transparente es lo que produce
+        el halo sucio al ampliar. En pixel art un pixel esta o no esta.
+      el COLOR se reduce a una paleta   Sin difuminado: el difuminado inventa
+        texturas de ruido que al ampliar x3 se ven como suciedad.
+    """
+    a = np.array(im.convert("RGBA"))
+    duro = (a[..., 3] >= 128).astype(np.uint8) * 255
+    rgb = Image.fromarray(a[..., :3], "RGB").quantize(
+        colors=colores, method=Image.MEDIANCUT, dither=Image.Dither.NONE)
+    salida = np.dstack([np.array(rgb.convert("RGB")), duro])
+    return Image.fromarray(salida, "RGBA")
 
 # Los quince iconos, en el orden en que estan en la hoja: 5 columnas x 3 filas.
 ICONOS = [
@@ -194,10 +221,14 @@ def hacer_chasis() -> tuple:
     caja = recortar(a, 0, 0, im.size[0], im.size[1])
     x0, y0, x1, y1 = caja
     ancho = round((x1 - x0) * ALTO / (y1 - y0))
-    final = encoger(im.crop(caja), ancho * ESCALA, ALTO * ESCALA)
-    guardar(final, "pokepad")
+    # Se mide sobre el reducido SIN cuantizar y se guarda el cuantizado.
+    # Cuantizar junta tonos parecidos, y con la paleta reducida la deteccion
+    # por color de la pantalla azul se comia tambien el marco claro: la celda
+    # salia de 55 px en vez de 38.
+    suave = encoger(im.crop(caja), ancho, ALTO)
+    guardar(pixelizar(suave, COLORES_CHASIS), "pokepad")
     print(f"  chasis    {im.size[0]}x{im.size[1]} -> {ancho}x{ALTO}")
-    return final, im.crop(caja)
+    return suave, im.crop(caja)
 
 
 def medir_pantalla(chasis: Image.Image, escala: int = 1) -> tuple:
@@ -314,7 +345,7 @@ def hacer_tira(nombre: str, cols: int, filas: int, etiquetas, lado: int,
             piezas.append((etiquetas[clave], im.crop((x0, y0, x1, y1))))
 
     for nom, pieza in piezas:
-        guardar(encoger(pieza, lado * ESCALA, lado * ESCALA), nom)
+        guardar(pixelizar(encoger(pieza, lado, lado), COLORES_PIEZA), nom)
     print(f"  {nombre:<9} {W}x{H} -> {len(piezas)} piezas de {lado}x{lado}")
     return piezas
 

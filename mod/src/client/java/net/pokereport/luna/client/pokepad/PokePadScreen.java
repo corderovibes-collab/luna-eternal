@@ -1,6 +1,5 @@
 package net.pokereport.luna.client.pokepad;
 
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.sound.SoundEvents;
@@ -25,12 +24,24 @@ public class PokePadScreen extends Screen {
     /** El chasis en las unidades en que están medidas las demás constantes. */
     private static final int ANCHO = 345, ALTO = 207;
 
-    /** Cuántas veces más grande es la textura. Ver {@code gen_pokepad.py}. */
-    private static final int ESCALA = 4;
+    /**
+     * La textura mide lo mismo que el hueco donde se dibuja: 1×.
+     *
+     * <p>Se probó a 4× creyendo que más resolución daría más nitidez, y salió
+     * peor. La prueba está en el mod de referencia: su chasis es de 346×207 con
+     * <b>21 colores</b>, el nuestro era de 1380×828 con <b>18 905</b>.
+     *
+     * <p>Minecraft amplía las interfaces con vecino más próximo. A un dibujo de
+     * veintitantos colores eso le sienta de maravilla —sale nítido y con
+     * aspecto deliberado— y a una ilustración suavizada la deja sucia a
+     * cualquier tamaño. El arreglo no era subir la resolución sino
+     * <b>cuantizar</b>, que es lo que hace ahora {@code gen_pokepad.py}.
+     */
+    private static final int ESCALA = 1;
 
     /** La rejilla, en las mismas unidades. Ver §8 del documento. */
-    private static final int REJ_X = 110, REJ_Y = 45;
-    private static final int CELDA = 38, HUECO = 4, ICONO = 24;
+    private static final int REJ_X = 113, REJ_Y = 46;
+    private static final int CELDA = 37, HUECO = 4, ICONO = 24;
     private static final int COLS = 5;
 
     /** Gris apagado para el icono de una celda bloqueada. */
@@ -48,39 +59,18 @@ public class PokePadScreen extends Screen {
     }
 
     /**
-     * Calcula el tamaño del Pad para que <b>un texel caiga en un píxel de
-     * pantalla</b>.
+     * Centra el Pad.
      *
-     * <p>Aquí estuvo el error que hacía que todo se viera sucio. Minecraft
-     * dibuja las interfaces multiplicadas por el ajuste <i>GUI Scale</i>: a
-     * escala 3, un Pad de 345 «píxeles de interfaz» ocupa 1035 píxeles reales.
-     * Dándole una textura de 1380 para pintar 1035, el juego la <b>reduce con
-     * vecino más próximo</b>, que se salta uno de cada cuatro texeles: las
-     * líneas de un píxel se rompen y los biseles quedan con dientes.
-     *
-     * <p>La cuenta correcta es al revés: si la textura tiene 1380 texeles, hay
-     * que pedir <b>1380 ÷ escala</b> píxeles de interfaz, que son exactamente
-     * 1380 píxeles reales. Ni se estira ni se reduce.
-     *
-     * <p>Efecto secundario bueno: el Pad ocupa siempre la misma porción de la
-     * pantalla sea cual sea el ajuste del jugador, en vez de encogerse cuando
-     * alguien sube la escala.
+     * <p>Se dibuja al tamaño de la textura y se deja que Minecraft lo amplíe
+     * por el ajuste <i>GUI Scale</i>, que es como funciona cualquier interfaz
+     * del juego —y como lo hace el Pad de referencia—. Con la textura ya
+     * cuantizada a pixel art, ampliar con vecino más próximo da bordes limpios.
      */
     @Override
     protected void init() {
-        int gs = Math.max(1, (int) MinecraftClient.getInstance()
-                .getWindow().getScaleFactor());
-        ancho = ANCHO * ESCALA / gs;
-        alto = ALTO * ESCALA / gs;
-
-        // En una ventana pequeña no cabe. Se reduce a la mitad, que sigue
-        // siendo una proporción entera y por tanto sigue sin dar dientes.
-        while ((ancho > width || alto > height) && ancho > ANCHO / 2) {
-            ancho /= 2;
-            alto /= 2;
-        }
-
-        k = ancho / (float) ANCHO;
+        ancho = ANCHO;
+        alto = ALTO;
+        k = 1f;
         x0 = (width - ancho) / 2;
         y0 = (height - alto) / 2;
     }

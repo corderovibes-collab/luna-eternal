@@ -80,6 +80,26 @@ Luz de color  ⚠ LA LUZ DE MINECRAFT NO TIENE COLOR. El motor guarda
               el suelo. Complementary > Performance > COLORED_LIGHTING
               viene en 0. Hacen cosas distintas, no se estorban
               detalle en docs/world/neon.md §1
+PokePad       LA PANTALLA PRINCIPAL EXISTE (2026-08-14). Tecla B
+              mod/src/client/ · lunaeternal vuelve a tener cliente
+              (D-025) y su jar YA SE REPARTE a los jugadores
+              chasis + rejilla 5x3 + 15 iconos + cara + saldo + cerrar
+              el saldo se PIDE al abrir, no se empuja: primer trozo de
+              protocolo. Los tipos de paquete van en el entrypoint
+              `main`, el unico que corre en los dos lados
+              celdas dibujadas por CODIGO, sin texturas (como ellos)
+              medidas: tools/gen_pokepad.py las imprime al terminar
+              ⚠ DECISION ABIERTA, es lo primero al retomar:
+                los iconos de 25x25 se ven pobres. NO es la resolucion:
+                los suyos son 24x25 con 9-15 COLORES y contorno negro
+                duro; los nuestros 25x25 con 387-471 y sin contorno.
+                Una IA da una ILUSTRACION ENCOGIDA, no pixel art
+                A) prompt mucho mas duro (contorno negro, max 12
+                   colores, prohibido el degradado) y vale el tamano
+                B) irse a HD: iconos 96x96 y el Pad dibujado a
+                   PIXELES REALES, saltandose el GUI Scale
+                el usuario lleva pidiendo HD, asi que B
+              docs/ui/prompts-arte-pokepad.md tiene los prompts
 Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md
               323 texturas (211 KB), ACTIVADO solo
               python tools/gen_interfaz.py --comparativa

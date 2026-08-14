@@ -109,9 +109,15 @@ ciertos:
 
 ## Next Actions
 
-1. **Recibir el arte** (`ART-002`) — es del usuario, y bloquea todo lo demás
-2. Definir la composición sobre el primer fondo real
-3. Volver a crear `mod/src/client/` y el protocolo, con el arte ya medido
+1. ~~Recibir el arte~~ ✅ 2026-08-13
+2. ~~Definir la composición sobre el primer fondo real~~ ✅ la mide
+   `tools/gen_pokepad.py` y la imprime al terminar
+3. ~~Volver a crear `mod/src/client/` y el protocolo~~ ✅ 2026-08-14: la
+   pantalla principal funciona, y el saldo ya viaja del servidor al Pad
+4. **Decidir la estética de los iconos** — ver `CLAUDE.md` §0, «PokePad».
+   Es lo único que bloquea seguir
+5. Abrir la primera aplicación. La **Pokédex** es la más barata: su servicio
+   está probado y solo hay que leer y pintar
 4. Pantallas por orden del catálogo, empezando por la principal y la Cartera
 
 ## Related Systems

@@ -30,7 +30,7 @@ más grande que te deje; del tamaño final me encargo yo.
 | Pieza | En Gemini pides | Sale de ahí | Fichero final |
 |---|---|---|---|
 | **Chasis** | **16:9**, máxima resolución | 1 imagen | **368 × 207** |
-| **Celdas** | **16:9** | 3 en fila | 32 × 32 cada una |
+| **Celdas** | **16:9** | 3 en fila | **44 × 44** cada una |
 | **Iconos** | **1:1** | rejilla 5×3 | **24 × 24** cada uno |
 | **Botones** | **16:9** | 6 en fila | 16 × 16 cada uno |
 
@@ -245,12 +245,32 @@ tercio. Pero los números salen holgados:
 
 ```
 lienzo 1024 de ancho ÷ 3 celdas   ≈  340 px por celda
-tamaño final de una celda          =   32 px
-                                       ~10 veces más de lo necesario
+tamaño final de una celda          =   44 px
+                                       ~8 veces más de lo necesario
 ```
 
-A 32 píxeles finales sobra muchísimo. **Lo que de verdad arruina un botón no es
+A 44 píxeles finales sobra muchísimo. **Lo que de verdad arruina un botón no es
 la falta de detalle, es que baile.**
+
+### ⚠️ Por qué 44 y no 32, que es lo que ponía aquí antes
+
+Era un número puesto a ojo, y estaba **mal**. La cuenta que faltaba es que el
+icono tiene que **caber dentro**:
+
+```
+celda de 32 px  −  contorno y bisel (~5 px por lado)  =  22 px libres
+icono                                                  =  24 px
+                                                          NO CABE
+```
+
+Con 44 px quedan unos 30 libres y el icono de 24 entra con margen. La rejilla
+tampoco sufre: el área azul mide unos 270 px de ancho, y 5 columnas de 44 con
+sus separaciones caben de sobra.
+
+> **Dato de la referencia:** ellos **no tienen textura de celda**. Las celdas
+> van pintadas dentro del fondo de cada pantalla, y por eso cada app es una
+> ilustración entera. Nosotros la separamos a propósito: una textura dibujada
+> quince veces permite cambiar la lista de apps sin repintar el fondo.
 
 > **Red de seguridad:** si aun así las tres vuelven desiguales, no hace falta
 > regenerar. Me quedo con la de reposo y **derivo las otras dos** —más clara

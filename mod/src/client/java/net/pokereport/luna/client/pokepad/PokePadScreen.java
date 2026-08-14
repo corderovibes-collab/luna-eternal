@@ -20,6 +20,8 @@ import net.pokereport.luna.net.Red;
 public class PokePadScreen extends Screen {
 
     private static final Identifier CHASIS = tex("pokepad");
+    private static final Identifier BOTON_MAS = tex("boton_mas");
+    private static final Identifier BOTON_CERRAR = tex("boton_cerrar");
     // Las celdas NO son texturas: las dibuja el código.
     //
     // Lo eran, y era el motivo de que la pantalla se viera sucia: una celda con
@@ -60,9 +62,21 @@ public class PokePadScreen extends Screen {
     /** Gris apagado para el icono de una celda bloqueada. */
     private static final int APAGADO = 0xFF6A6A78;
 
-    /** Las ranuras del panel izquierdo, medidas sobre el chasis. */
-    private static final int CARA_X = 30, CARA_Y = 34, CARA_LADO = 40;
-    private static final int SALDO_X = 30, SALDO_Y = 168;
+    // Las ranuras del panel izquierdo, MEDIDAS sobre el chasis y no puestas a
+    // ojo. La primera version tenia la cara en 30,34 de 40 px y se salia del
+    // hueco por arriba y por la izquierda.
+    //
+    //   avatar    x 30-77   y  31-80    (47 x 49)
+    //   tarjeta   x 23-86   y  93-145   (63 x 52)
+    //   saldo     x 23-69   y 159-177   (46 x 18)
+    private static final int CARA_X = 32, CARA_Y = 33, CARA_LADO = 44;
+    private static final int SALDO_CX = 46, SALDO_Y = 164;
+
+    /** El cuadradito a la derecha del saldo: lleva a la tienda. */
+    private static final int MAS_X = 84, MAS_Y = 162, MAS_W = 14, MAS_H = 11;
+
+    /** Cerrar, arriba a la derecha del chasis. */
+    private static final int CERRAR_X = 316, CERRAR_Y = 5, CERRAR_W = 20, CERRAR_H = 16;
 
     private int x0, y0, ancho, alto;
     private float k;
@@ -137,12 +151,15 @@ public class PokePadScreen extends Screen {
 
         panelLateral(ctx);
 
+        // La placa de arriba: el nombre de la app senalada, o el del Pad.
+        Text placa = bajoElRaton != null ? bajoElRaton.nombre() : getTitle();
+        ctx.drawCenteredTextWithShadow(textRenderer, placa,
+                x0 + ancho / 2, y0 + Math.round(11 * k), 0xFFC8D2F0);
+
         if (bajoElRaton != null) {
             Text nombre = bajoElRaton.abierta()
                     ? bajoElRaton.nombre()
                     : bajoElRaton.nombre().copy().formatted(Formatting.GRAY);
-            ctx.drawCenteredTextWithShadow(textRenderer, nombre,
-                    x0 + ancho / 2, y0 + Math.round(9 * k), 0xFFF2FAFF);
             ctx.drawTooltip(textRenderer, bajoElRaton.descripcion(), ratonX, ratonY);
         }
     }
@@ -150,6 +167,11 @@ public class PokePadScreen extends Screen {
     @Override
     public boolean mouseClicked(double ratonX, double ratonY, int boton) {
         int celda = Math.round(CELDA * k);
+        if (boton == 0 && dentroDe(ratonX, ratonY, CERRAR_X, CERRAR_Y,
+                                   CERRAR_W, CERRAR_H)) {
+            close();
+            return true;
+        }
         if (boton == 0) {
             for (int i = 0; i < App.TODAS.length; i++) {
                 int cx = celdaX(i), cy = celdaY(i);
@@ -198,9 +220,19 @@ public class PokePadScreen extends Screen {
         // Guiones mientras no ha llegado la respuesta: "no lo sé" y "tienes
         // cero" no son lo mismo, y un cero falso en un saldo asusta.
         String texto = saldo == null ? "- - -" : String.format("%,d", saldo.pokedolares());
-        ctx.drawTextWithShadow(textRenderer, Text.literal(texto),
-                x0 + Math.round(SALDO_X * k), y0 + Math.round(SALDO_Y * k),
+        // Centrado en su ranura, no pegado al borde izquierdo.
+        ctx.drawCenteredTextWithShadow(textRenderer, Text.literal(texto),
+                x0 + Math.round(SALDO_CX * k), y0 + Math.round(SALDO_Y * k),
                 0xFFFFE12E);
+
+        // El "+" de la tienda y el aspa de cerrar. No se dibujan atras,
+        // adelante, inicio ni ajustes: **todavia no hay a donde ir**, y un
+        // boton que no hace nada ensena a no pulsar los botones.
+        dibujar(ctx, BOTON_MAS, x0 + Math.round(MAS_X * k), y0 + Math.round(MAS_Y * k),
+                Math.round(MAS_W * k), Math.round(MAS_H * k), 30, 24, 0xFFFFFFFF);
+        dibujar(ctx, BOTON_CERRAR,
+                x0 + Math.round(CERRAR_X * k), y0 + Math.round(CERRAR_Y * k),
+                Math.round(CERRAR_W * k), Math.round(CERRAR_H * k), 30, 24, 0xFFFFFFFF);
     }
 
     /**
@@ -244,6 +276,13 @@ public class PokePadScreen extends Screen {
         if (tenido) {
             ctx.setShaderColor(1f, 1f, 1f, 1f);
         }
+    }
+
+    /** ¿Cae el ratón dentro de un rectángulo dado en unidades del chasis? */
+    private boolean dentroDe(double rx, double ry, int cx, int cy, int cw, int ch) {
+        int x = x0 + Math.round(cx * k), y = y0 + Math.round(cy * k);
+        return rx >= x && rx < x + Math.round(cw * k)
+                && ry >= y && ry < y + Math.round(ch * k);
     }
 
     private int celdaX(int i) {

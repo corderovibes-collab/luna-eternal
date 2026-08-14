@@ -35,6 +35,7 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`world/construccion.md`](world/construccion.md) | ✅ | Construir la ciudadela con Axiom, **entre varios a la vez** |
 | [`world/neon.md`](world/neon.md) | ✅ | **Los bloques de neón**: 96 piezas, brillo sin luz, y el orden del despliegue |
 | [`ui/interfaz-luna.md`](ui/interfaz-luna.md) | ✅ | **La interfaz de azul luna**: 323 texturas, y qué lo pinta el código |
+| [`ui/prompts-arte-pokepad.md`](ui/prompts-arte-pokepad.md) | ✅ | **Los prompts para el arte del PokePad**, y las 3 condiciones que debe cumplir |
 
 ✅ escrito · 🟡 en curso · ⬜ pendiente
 

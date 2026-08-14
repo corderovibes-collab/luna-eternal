@@ -9,7 +9,8 @@ celdas, los quince iconos y los botones. Este script las recorta pieza a pieza,
 las reduce al tamano real de interfaz y escribe los PNG finales.
 
     arte/pokepad/chasis.png    2656x1600  ->  pokepad.png        344x207
-    arte/pokepad/celdas.png    2816x1536  ->  celda_*.png          40x40
+    (celdas.png ya no se trocea: las celdas las dibuja el codigo, ver
+     docs/ui/prompts-arte-pokepad.md §4)
     arte/pokepad/iconos.png    2656x1600  ->  icono_*.png          24x24
     arte/pokepad/botones.png   2816x1536  ->  boton_*.png          16x16
 
@@ -106,8 +107,6 @@ BOTONES = {
     (0, 0): "atras", (1, 0): "adelante", (2, 0): "ajustes", (3, 0): "inicio",
     (1, 1): "mas", (3, 1): "cerrar",
 }
-
-CELDAS = ["reposo", "encima", "bloqueada"]
 
 
 def contenido(a: np.ndarray) -> np.ndarray:
@@ -378,7 +377,6 @@ def main() -> None:
     print(f"  celda     {lado} x {lado}  (hueco {hueco})")
     print(f"  rejilla   x {rej_x}  y {rej_y}   ({rej_w} x {rej_h})")
 
-    hacer_tira("celdas", 3, 1, CELDAS, lado, True)
     hacer_tira("iconos", 5, 3, ICONOS, 24, True)
     hacer_tira("botones", 4, 2, BOTONES, 16, False)
 
@@ -391,12 +389,11 @@ def maqueta(chasis: Image.Image, origen, lado, hueco) -> None:
     rx, ry = origen[0] * ESCALA, origen[1] * ESCALA
     lado, hueco = lado * ESCALA, hueco * ESCALA
     out = chasis.copy()
-    celda = Image.open(SALIDA / "reposo.png")
+    celda = None
     for i, nombre in enumerate(ICONOS):
         c, f = i % 5, i // 5
         cx = rx + c * (lado + hueco)
         cy = ry + f * (lado + hueco)
-        out.alpha_composite(celda, (cx, cy))
         ico = Image.open(SALIDA / f"{nombre}.png")
         out.alpha_composite(ico, (cx + (lado - 24 * ESCALA) // 2,
                                   cy + (lado - 24 * ESCALA) // 2))

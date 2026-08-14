@@ -254,89 +254,35 @@ grande y se reduce. **Lo que hace que la reducción salga bien no es el tamaño,
 es que el original ya sea pixel art**: bloques planos y bordes duros
 sobreviven a reducirse; los degradados y el suavizado, no.
 
-## 4. Prompt 2 — La celda, en sus tres estados
+## 4. Las celdas NO se generan: las dibuja el código
 
-La rejilla son celdas iguales repetidas. Hacen falta las tres, **y van juntas
-en una fila a propósito**: ver el porqué justo debajo.
+**No hay prompt para esto, y es a propósito.** Aquí había uno pidiendo las tres
+celdas —reposo, encima, bloqueada— y se generaron. En el juego se veían mal, y
+mirando el Pad de referencia se entendió por qué:
 
-```
-[PEGA AQUÍ LA BIBLIA DE ESTILO]
+> En sus **111 texturas no hay ni una sola celda**. Su fondo llega con la
+> pantalla **vacía**, y las celdas son rectángulos planos que pinta el código.
 
-Subject: three UI button tiles for a pixel-art game menu, arranged in one
-horizontal row on a pure black background, evenly spaced, identical size
-and shape, square with slightly rounded corners.
-Canvas aspect ratio 16:9.
+Una celda con bisel en relieve, estampada quince veces en huecos de 37 píxeles,
+es demasiado ruido: la rejilla parecía una plancha de botones y tapaba los
+iconos. Planas y de un tono más claras que la pantalla, desaparecen y dejan ver
+lo único que importa, que es el icono.
 
-All three are EMPTY containers - no icon inside, no symbol, no text.
-They look gently recessed, like empty sockets waiting for an icon.
+Y sale gratis lo que con textura costaba: los tres estados son tres colores, no
+tres imágenes que hay que mantener idénticas en silueta.
 
-Tile 1 - RESTING: moon blue (#8B93D8) fill, #C8D2F0 top and left inner
-  rim, #6C78C8 bottom and right inner shadow.
-Tile 2 - HOVERED: same shape, slightly brighter fill, and a clean 1 pixel
-  neon cyan (#16F2E6) border all around the outside.
-Tile 3 - LOCKED: same shape, desaturated graphite (#2A2E3A) fill, dimmer,
-  with a small closed padlock in the lower-right corner drawn in #6C78C8.
-  The padlock is the only content allowed anywhere.
-
-CRITICAL: the three tiles must be pixel-identical in silhouette, size,
-corner rounding and bevel width. ONLY the fill color, the border and the
-padlock change between them.
+```java
+reposo     relleno #7A83C8   borde #C8D2F0
+encima     relleno #9AA3E8   borde #16F2E6   (cian, para que se vea el foco)
+cerrada    la misma celda, con el ICONO apagado
 ```
 
-### Por qué en fila y no una imagen por celda
+> **Las aplicaciones cerradas no llevan candado.** Quince candados en una
+> rejilla de quince son más ruido que información, y encima tapan el icono que
+> intentan describir. Se distinguen con el icono apagado.
 
-**Porque los tres estados son el mismo botón.** Solo cambia el color y el
-borde; la forma tiene que ser idéntica píxel a píxel.
-
-Si generas tres imágenes por separado, cada una sale con las esquinas, el
-grosor del bisel y las proporciones un poco distintas. Como el juego cambia de
-una a otra **en el mismo sitio de la pantalla**, al pasar el ratón por encima
-el botón **daría un salto** — se estiraría o se movería un píxel. Es de esos
-defectos que no sabes nombrar pero se ven al instante.
-
-Generadas de una sola vez, salen de la misma «mano» y encajan.
-
-### Y la resolución no se resiente, que era la única pega
-
-Es la duda razonable: si tres celdas comparten lienzo, cada una se lleva un
-tercio. Pero los números salen holgados:
-
-```
-lienzo 1024 de ancho ÷ 3 celdas   ≈  340 px por celda
-tamaño final de una celda          =   44 px
-                                       ~8 veces más de lo necesario
-```
-
-A 44 píxeles finales sobra muchísimo. **Lo que de verdad arruina un botón no es
-la falta de detalle, es que baile.**
-
-### ⚠️ Por qué 44 y no 32, que es lo que ponía aquí antes
-
-Era un número puesto a ojo, y estaba **mal**. La cuenta que faltaba es que el
-icono tiene que **caber dentro**:
-
-```
-celda de 32 px  −  contorno y bisel (~5 px por lado)  =  22 px libres
-icono                                                  =  24 px
-                                                          NO CABE
-```
-
-Con 44 px quedan unos 30 libres y el icono de 24 entra con margen. La rejilla
-tampoco sufre: el área azul mide unos 270 px de ancho, y 5 columnas de 44 con
-sus separaciones caben de sobra.
-
-> **Dato de la referencia:** ellos **no tienen textura de celda**. Las celdas
-> van pintadas dentro del fondo de cada pantalla, y por eso cada app es una
-> ilustración entera. Nosotros la separamos a propósito: una textura dibujada
-> quince veces permite cambiar la lista de apps sin repintar el fondo.
-
-> **Red de seguridad:** si aun así las tres vuelven desiguales, no hace falta
-> regenerar. Me quedo con la de reposo y **derivo las otras dos** —más clara
-> con borde cian, y desaturada con candado—, que es exactamente lo que ya se
-> hizo con los 96 bloques de neón y las 323 texturas de interfaz: una fuente,
-> variantes generadas.
-
----
+Está en `PokePadScreen.celda()`, y son diez líneas: un rectángulo, otro dentro,
+y las cuatro esquinas mordidas —que es como se redondea en pixel art—.
 
 ## 5. Los iconos: uno a uno, y nacidos como pixel art
 

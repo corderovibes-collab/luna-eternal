@@ -7,9 +7,23 @@ version = project.mod_version
 group = project.maven_group
 base { archivesName = project.archives_base_name }
 
-// El mod es SOLO de servidor. No hay src/client, asi que no hace falta
-// splitEnvironmentSourceSets(): se retiro junto con el Pad, y volvera el dia
-// que se escriba la interfaz nueva (D-025-bis).
+// El mod vuelve a tener lado de cliente: el PokePad (D-025). Vive AQUI y no en
+// `lunaneon` porque necesita hablar con la economia, el GTS y las misiones, que
+// estan en este mod. `lunaneon` se separo para que el jar de bloques no llevara
+// nada de eso dentro, y sigue siendo cierto.
+//
+// `splitEnvironmentSourceSets()` crea el conjunto `client`, que Loom compila
+// contra el jar de cliente. Lo que se escriba ahi NO existe en el servidor, y
+// es justo lo que se quiere: el servidor no dibuja.
+loom {
+    splitEnvironmentSourceSets()
+    mods {
+        "lunaeternal" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
 
 repositories {
     mavenCentral()

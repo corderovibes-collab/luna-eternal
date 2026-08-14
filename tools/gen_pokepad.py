@@ -44,7 +44,12 @@ from PIL import Image
 
 RAIZ = Path(__file__).resolve().parent.parent
 ARTE = RAIZ / "arte" / "pokepad"
-SALIDA = RAIZ / "build" / "pokepad"
+# Las texturas van DIRECTAS al mod de cliente. El PokePad vive en
+# `lunaeternal` y no en `lunaneon` porque necesita hablar con la economia, el
+# GTS y las misiones, que estan ahi (D-025).
+SALIDA = (RAIZ / "mod" / "src" / "client" / "resources" / "assets"
+          / "lunaeternal" / "textures" / "gui" / "pokepad")
+MAQUETA = RAIZ / "build" / "pokepad"
 
 # El tamano final de la interfaz. Sale de la referencia (346x207, medido en sus
 # PNG) ajustado a la proporcion EXACTA del chasis que llego, 1.66, para no
@@ -351,8 +356,10 @@ def maqueta(chasis: Image.Image, origen, lado, hueco) -> None:
     grande = out.resize((out.size[0] * E, out.size[1] * E), Image.NEAREST)
     fondo = Image.new("RGBA", grande.size, (14, 14, 20, 255))
     fondo.alpha_composite(grande)
-    fondo.convert("RGB").save(SALIDA / "maqueta.png")
-    print(f"  -> {(SALIDA / 'maqueta.png').relative_to(RAIZ)}")
+    MAQUETA.mkdir(parents=True, exist_ok=True)
+    ruta = MAQUETA / "maqueta.png"
+    fondo.convert("RGB").save(ruta)
+    print(f"  -> {ruta.relative_to(RAIZ)}")
 
 
 if __name__ == "__main__":

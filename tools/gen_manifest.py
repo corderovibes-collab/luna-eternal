@@ -100,11 +100,18 @@ VERSION_PACK = "0.2.0"
 # ciudadela entera se ve como cubos negros y morados de "textura ausente". No
 # es un mod de adorno, es la mitad del decorado.
 #
-# `lunaeternal` NO esta aqui y no debe estarlo: es de servidor, y su jar lleva
-# dentro la logica de economia y el conector de la base de datos. Lo unico que
-# se reparte es contenido.
+# `lunaeternal` TAMBIEN va al cliente desde que existe el PokePad (D-025): la
+# interfaz vive en su conjunto de fuentes `client`, y sin el jar no hay
+# pantalla que abrir.
+#
+# Su jar lleva dentro la logica de economia y el conector de MariaDB, que un
+# cliente no usa. Es el precio aceptado de D-025 y no es un descuido:
+# separarlo en dos mods obligaria a duplicar los tipos que viajan entre
+# cliente y servidor, y eso se desincroniza a la primera. Credenciales NO
+# lleva: se leen de `config/` en el servidor y nunca entran en el jar.
 PROPIOS = [
     {"carpeta": "neon", "prefijo": "lunaneon"},
+    {"carpeta": "mod", "prefijo": "lunaeternal"},
 ]
 
 

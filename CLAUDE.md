@@ -74,20 +74,27 @@ Luz de color  ⚠ LA LUZ DE MINECRAFT NO TIENE COLOR. El motor guarda
               viene en 0. Hacen cosas distintas, no se estorban
               detalle en docs/world/neon.md §1
 Pokedex       revestida de azul luna · docs/ui/pokedex-luna.md
-              resource pack de 70 KB, 83 texturas, ACTIVADO solo
+              76 texturas (54 KB), ACTIVADO solo
               python tools/gen_pokedex.py --comparativa
               ⚠ el TEXTO lo pinta el codigo de Cobblemon: 0x606B6E
                 gris (16 usos) y 0x3A96B6 turquesa (3). Y el gris va
                 sobre los paneles CLAROS, asi que la pantalla puede
                 cambiar de tono pero NO oscurecerse: se volveria
-                ilegible. El casco si va oscuro, no lleva texto
-              va INCRUSTADO en el jar de lunaneon y se registra con
-              DEFAULT_ENABLED, como hace Cobblemon con sus propios
-              packs (cobblemon:gyaradosjump). Se enciende solo
-              ⚠ el primer intento fue un .zip suelto + una linea en
-                config/yosbr/options.txt, y NO FUNCIONO: YOSBR copia
-                esa plantilla solo si options.txt no existe, o sea
-                nunca para quien ya ha jugado. Se instalaba apagado
+                ilegible, y un resource pack no lo alcanza
+              va INCRUSTADO en el jar de lunaneon (resourcepacks/) y
+              se registra con ALWAYS_ENABLED. En el log del arranque:
+              "Pokedex: revestido de luna activado"
+              solo se reviste la PANTALLA: la carcasa conserva el
+              color de cada Pokedex (hay 7 y las elige el jugador)
+              ⚠ DOS intentos fallidos antes, los dos MUDOS:
+                1) .zip suelto + linea en config/yosbr/options.txt.
+                   YOSBR copia esa plantilla solo si options.txt no
+                   existe: nunca para quien ya ha jugado
+                2) DEFAULT_ENABLED. El javadoc de Fabric lo dice:
+                   "a resource pack cannot be enabled by default,
+                   only data packs can". Se registraba y se quedaba
+                   apagado — y no se veia porque yo IGNORABA el
+                   booleano que devuelve registerBuiltinResourcePack
 Publicar      ⚠ nuestros jars se publican con la HUELLA en el nombre
               (lunaneon-0.1.0-3598884202.jar). raw.githubusercontent
               cachea ~3 min POR RUTA y no hay parametro que lo salte:
@@ -110,7 +117,7 @@ Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
                 para 1.21.1 exige 0.6.x y se niega a arrancar fuera
                 de rango. El numero NO esta escrito a mano: se lee
                 del jar de Iris. §2-quinquies
-Launcher      launcher/ · Electron 43 · 30/30 pruebas (npm test)
+Launcher      launcher/ · Electron 43 · 32/32 pruebas (npm test)
               ⚠ una prueba baja el manifiesto EN VIVO y exige que
                 nada bajo config/ shaderpacks/ resourcepacks/ pise
                 lo del jugador: va marcado `once` o falla. Ya cazo

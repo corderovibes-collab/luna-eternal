@@ -74,9 +74,31 @@ Nada se dibuja a mano: si Cobblemon cambia sus texturas, se reejecuta.
 
 **El pack vive dentro del jar de `lunaneon`**, en
 `resourcepacks/pokedex_luna/`, y el mod lo registra con
-`ResourcePackActivationType.DEFAULT_ENABLED`. Minecraft lo enciende solo la
-primera vez que lo ve, y sigue pudiendo apagarse en *Opciones → Paquetes de
-recursos* como cualquier otro.
+`ResourcePackActivationType.ALWAYS_ENABLED`.
+
+### ⚠️ `DEFAULT_ENABLED` no vale para un resource pack
+
+Fue el segundo intento fallido, y el javadoc de Fabric lo dice con todas las
+letras:
+
+> *«a resource pack cannot be enabled by default, only data packs can»*
+
+Con `DEFAULT_ENABLED` el pack se registraba y **se quedaba apagado**, sin un
+solo aviso en el log. Lo que lo hizo invisible fue un error mío aparte:
+`registerBuiltinResourcePack` **devuelve un booleano** y yo lo ignoraba. Ahora
+se registra el resultado:
+
+```
+[main/INFO]: Pokedex: revestido de luna activado
+```
+
+Si algún día vuelve a fallar, saldrá `el revestido NO se registro` en el log en
+vez de no salir nada.
+
+> **`ALWAYS_ENABLED` significa que el jugador no puede quitarlo** desde el menú
+> de paquetes. Es una decisión consciente: es la identidad visual del servidor,
+> como el resto del pack. Si algún día se quiere que sea opcional, hay que
+> volver a `NORMAL` y aceptar que casi nadie lo activará.
 
 ### El intento que falló, y por qué
 

@@ -116,10 +116,23 @@ public class LunaNeon implements ModInitializer {
         // el mismo jar corre en el servidor. Que falle aquí no puede llevarse
         // por delante el registro de los 96 bloques, que sí es esencial.
         try {
-            FabricLoader.getInstance().getModContainer(MOD_ID).ifPresent(mod ->
-                    ResourceManagerHelper.registerBuiltinResourcePack(
+            boolean ok = FabricLoader.getInstance().getModContainer(MOD_ID)
+                    .map(mod -> ResourceManagerHelper.registerBuiltinResourcePack(
                             Identifier.of(MOD_ID, "pokedex_luna"), mod,
-                            ResourcePackActivationType.DEFAULT_ENABLED));
+                            // ALWAYS_ENABLED y no DEFAULT_ENABLED: el javadoc de
+                            // Fabric avisa de que "a resource pack cannot be
+                            // enabled by default, only data packs can". Con
+                            // DEFAULT_ENABLED el pack se registraba y se quedaba
+                            // apagado, sin dar ni un aviso en el log.
+                            ResourcePackActivationType.ALWAYS_ENABLED))
+                    .orElse(false);
+            // Se registra el resultado. La version anterior ignoraba este
+            // booleano, y por eso el fallo fue mudo: ni error, ni pack.
+            if (ok) {
+                LOG.info("Pokedex: revestido de luna activado");
+            } else {
+                LOG.warn("Pokedex: el revestido NO se registro (resourcepacks/pokedex_luna)");
+            }
         } catch (Throwable e) {
             LOG.warn("No se pudo registrar el revestido de la Pokedex: {}", e.toString());
         }

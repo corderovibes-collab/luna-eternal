@@ -20,11 +20,46 @@ utilizable.
 
 ## 1. Léete esto antes de generar nada
 
-Tres condiciones. Si el arte falla una, no sirve y hay que regenerarlo.
+Cuatro cosas. Si el arte falla una, no sirve y hay que regenerarlo.
 
-### 1.1 · El tamaño real es diminuto
+### 1.0 · La tabla, para no tener que pensar
 
-La pantalla entera son **346 × 207 píxeles de interfaz**. No 1024. No 2048.
+**Lo que le pides a Gemini es una PROPORCIÓN, no una resolución.** Genera lo
+más grande que te deje; del tamaño final me encargo yo.
+
+| Pieza | En Gemini pides | Sale de ahí | Fichero final |
+|---|---|---|---|
+| **Chasis** | **16:9**, máxima resolución | 1 imagen | **368 × 207** |
+| **Celdas** | **16:9** | 3 en fila | 32 × 32 cada una |
+| **Iconos** | **1:1** | rejilla 5×3 | **24 × 24** cada uno |
+| **Botones** | **16:9** | 6 en fila | 16 × 16 cada uno |
+
+Nada más. Si Gemini te da 1920×1080 para el chasis, perfecto. Si te da
+1408×792, también. **Lo único que no puede cambiar es la proporción**, porque
+es lo que evita que haya que recortar a ojo y descuadrarlo todo.
+
+### 1.1 · De dónde sale el 368 × 207, y por qué no es 346
+
+El PokePad de referencia usa **346 × 207**, medido en sus PNG. Funciona y se ve
+nítido, así que **la altura se conserva**: 207.
+
+Pero 346 × 207 es proporción 5:3, y **ningún generador de imágenes ofrece 5:3**.
+Pedirlo en 16:9 y recortar a mano es exactamente como se descuadra un chasis.
+
+```
+207 × 16 ÷ 9 = 368       ->   368 × 207 es 16:9 EXACTO
+```
+
+Seis por ciento más ancho que el de referencia, misma altura, y **se genera y
+se reduce sin recortar ni un píxel**. Los iconos pasan de 24×25 a **24 × 24**
+por lo mismo: cuadrado es 1:1, que sí es un preset.
+
+> El tamaño final es cosa nuestra, no de nadie: 346 era **su** número, no una
+> ley. Se elige el que hace el trabajo más fácil sin perder calidad.
+
+### 1.2 · Por qué el tamaño final es tan pequeño
+
+La pantalla entera son **368 × 207 píxeles de interfaz**. No 1024. No 2048.
 
 > **⚠️ Una captura de pantalla NO sirve para medir esto, y engaña mucho.**
 > Minecraft dibuja las interfaces **escaladas** por el ajuste *GUI Scale*: a
@@ -44,22 +79,18 @@ La pantalla entera son **346 × 207 píxeles de interfaz**. No 1024. No 2048.
 > Si algún día hay que rehacer esta medición, se hace así: abrir el jar y leer
 > el tamaño de los PNG. Nunca contar píxeles en una captura.
 
-Un generador de imágenes no sabe dibujar a 346 px, así que **se genera grande y
-se reduce**. Para que reducir no lo convierta en papilla, el arte tiene que ser
-**pixel art de verdad**: bloques planos de color, sin degradados y sin
-suavizado. Por eso todos los prompts piden `crisp pixel art`, `no
-anti-aliasing`, `flat color blocks`.
-
 ```
-generar en   1384 × 828   (exactamente 4× de 346 × 207)
-reducir a     346 × 207   con vecino más próximo, nunca bicúbico
+tú generas    16:9, lo más grande que te deje Gemini
+yo reduzco    368 × 207   con vecino más próximo, nunca bicúbico
 ```
 
-> Si Gemini no deja fijar ese tamaño, pide **relación 5:3** y lo más grande que
-> permita. Lo importante es la proporción y que los bloques de color sean
-> gruesos y limpios.
+Un generador de imágenes no sabe dibujar a 368 px de ancho: le sale una mancha.
+Por eso se genera grande y se reduce. Y para que reducir no lo convierta en
+papilla, el arte tiene que ser **pixel art de verdad** —bloques planos, sin
+degradados y sin suavizado—, que es lo que piden todos los prompts con
+`crisp pixel art`, `no anti-aliasing`, `flat color blocks`.
 
-### 1.2 · Sin una sola letra
+### 1.3 · Sin una sola letra
 
 **El texto lo dibuja el juego**, no la textura. Está traducido, y un jugador en
 inglés vería «Cazas» pintado a fuego.
@@ -68,7 +99,7 @@ Todos los prompts llevan `absolutely no text, no letters, no numbers, no
 labels`. Si vuelve con letras, se regenera. **No vale borrarlas a mano**: el
 hueco tiene que estar pensado desde el principio.
 
-### 1.3 · La composición no se mueve
+### 1.4 · La composición no se mueve
 
 El código mide **una sola vez** dónde cae el área de contenido. Si un fondo la
 deja más arriba o más estrecha, la rejilla no encaja y hay que medir a mano
@@ -134,7 +165,7 @@ panel lateral y el hueco donde irá la rejilla.
 [PEGA AQUÍ LA BIBLIA DE ESTILO]
 
 Subject: a handheld gaming device UI frame, seen straight on, filling the
-whole canvas. Canvas aspect ratio 5:3.
+whole canvas. Canvas aspect ratio 16:9.
 
 Layout, exactly:
 - Outer shell in graphite (#1B1E26) with soft graphite (#2A2E3A) bevels,
@@ -263,7 +294,7 @@ Symbols must be centered, chunky and readable at tiny size.
 ## 7. Qué hacer con lo que llegue
 
 1. **Revisar contra §1**: ¿tiene letras? ¿tiene degradados? ¿la proporción es
-   5:3? Si falla algo, regenerar — retocar a mano sale más caro.
+   la de la tabla de §1.0? Si falla algo, regenerar — retocar a mano sale más caro.
 2. Mandármelo. Yo lo reduzco a las medidas reales, lo recorto en piezas y
    **mido la composición** sobre el chasis.
 3. Con el chasis medido y congelado, se escribe el código de la pantalla

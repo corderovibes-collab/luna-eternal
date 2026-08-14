@@ -1,11 +1,14 @@
 package net.pokereport.luna.client.pokepad;
 
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.pokereport.luna.client.EstadoCliente;
+import net.pokereport.luna.net.Red;
 
 /**
  * La pantalla principal del PokePad: el chasis y su rejilla de aplicaciones.
@@ -57,6 +60,10 @@ public class PokePadScreen extends Screen {
     /** Gris apagado para el icono de una celda bloqueada. */
     private static final int APAGADO = 0xFF6A6A78;
 
+    /** Las ranuras del panel izquierdo, medidas sobre el chasis. */
+    private static final int CARA_X = 30, CARA_Y = 34, CARA_LADO = 40;
+    private static final int SALDO_X = 30, SALDO_Y = 168;
+
     private int x0, y0, ancho, alto;
     private float k;
 
@@ -78,6 +85,11 @@ public class PokePadScreen extends Screen {
      */
     @Override
     protected void init() {
+        // Se pide el saldo cada vez que se abre, en vez de que el servidor lo
+        // empuje en cada movimiento de la economia: asi el numero siempre esta
+        // fresco y un Pad cerrado no cuesta nada.
+        ClientPlayNetworking.send(new Red.PedirSaldo());
+
         ancho = ANCHO;
         alto = ALTO;
         k = 1f;
@@ -123,6 +135,8 @@ public class PokePadScreen extends Screen {
                     app.abierta() ? 0xFFFFFFFF : APAGADO);
         }
 
+        panelLateral(ctx);
+
         if (bajoElRaton != null) {
             Text nombre = bajoElRaton.abierta()
                     ? bajoElRaton.nombre()
@@ -155,6 +169,38 @@ public class PokePadScreen extends Screen {
             }
         }
         return super.mouseClicked(ratonX, ratonY, boton);
+    }
+
+    /**
+     * El panel de la izquierda: quién eres y cuánto tienes.
+     *
+     * <p>Las tres ranuras ya vienen dibujadas en el chasis; aquí solo se rellena
+     * lo que cambia.
+     */
+    private void panelLateral(DrawContext ctx) {
+        if (client == null || client.player == null) {
+            return;
+        }
+        // La cabeza del jugador. Sale de su propia skin, así que no hace falta
+        // pedirle nada al servidor.
+        int lado = Math.round(CARA_LADO * k);
+        ctx.drawTexture(client.player.getSkinTextures().texture(),
+                x0 + Math.round(CARA_X * k), y0 + Math.round(CARA_Y * k),
+                lado, lado, 8f, 8f, 8, 8, 64, 64);
+
+        // Y el sombrero, la segunda capa. Sin ella, a quien lleve gorra en la
+        // skin se le ve la cabeza pelada.
+        ctx.drawTexture(client.player.getSkinTextures().texture(),
+                x0 + Math.round(CARA_X * k), y0 + Math.round(CARA_Y * k),
+                lado, lado, 40f, 8f, 8, 8, 64, 64);
+
+        Red.Saldo saldo = EstadoCliente.saldo();
+        // Guiones mientras no ha llegado la respuesta: "no lo sé" y "tienes
+        // cero" no son lo mismo, y un cero falso en un saldo asusta.
+        String texto = saldo == null ? "- - -" : String.format("%,d", saldo.pokedolares());
+        ctx.drawTextWithShadow(textRenderer, Text.literal(texto),
+                x0 + Math.round(SALDO_X * k), y0 + Math.round(SALDO_Y * k),
+                0xFFFFE12E);
     }
 
     /**

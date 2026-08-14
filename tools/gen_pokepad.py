@@ -23,9 +23,9 @@ hasta que estan dentro del juego:
   fondo opaco   Alguna pieza llega con un rectangulo blanco detras en vez de
                 transparencia --a `gts` le paso--. Colado, en el juego se ve un
                 recuadro blanco alrededor del icono.
-  suavizado     Un icono de 25x25 con 400 colores, sobre 625 pixeles, no es
-                pixel art: es una ilustracion reducida. Minecraft amplia las
-                interfaces con vecino mas proximo, y eso ampliado se ve sucio.
+  bordes suaves Un borde medio transparente se ve como un halo sucio cuando
+                Minecraft amplia la interfaz. El alfa se vuelve binario: un
+                pixel esta o no esta, que es como funciona el pixel art.
 
 Las dos se arreglan aqui, asi que al generar arte no hay que acordarse de nada.
 
@@ -44,11 +44,6 @@ ARTE = RAIZ / "arte" / "pokepad"
 SALIDA = (RAIZ / "mod" / "src" / "client" / "resources" / "assets"
           / "lunaeternal" / "textures" / "gui" / "pokepad")
 MAQUETA = RAIZ / "build" / "pokepad"
-
-# Cuantos colores como maximo tiene cada pieza. Los numeros salen de medir el
-# Pad de referencia: su chasis tiene 21 colores y sus iconos entre 5 y 20.
-COLORES_FONDO = 24
-COLORES_PIEZA = 16
 
 # El azul de la pantalla, para localizarla dentro del chasis.
 AZUL = (135, 145, 207)
@@ -100,26 +95,29 @@ def quitar_fondo(im: Image.Image) -> Image.Image:
     return Image.fromarray(a, "RGBA")
 
 
-def pixelizar(im: Image.Image, colores: int) -> Image.Image:
-    """Convierte una ilustracion suavizada en pixel art de verdad.
+def alfa_duro(im: Image.Image) -> Image.Image:
+    """Vuelve el alfa binario: un pixel esta o no esta.
 
-    Dos cosas, y las dos importan:
+    Un borde medio transparente es lo que produce el halo sucio cuando
+    Minecraft amplia la interfaz. En pixel art no existen los medios pixeles.
 
-      el ALFA se vuelve binario   Un borde medio transparente es lo que produce
-        el halo sucio al ampliar. En pixel art un pixel esta o no esta.
-      el COLOR se reduce a paleta   Sin difuminado: el difuminado inventa
-        texturas de ruido que al ampliar x3 se ven como suciedad.
+    **Aqui habia tambien una cuantizacion a 16 colores y se quito**, porque
+    empeoraba. Se comparo icono a icono, ampliado x9: con el arte que llega hoy
+    --que ya nace como pixel art-- reducir la paleta no arreglaba nada visible
+    y en cambio se cargaba los colores. Los lomos de los libros del Wiki se
+    volvian barro y la Poke Ball del Pokedex se volvia marron.
+
+    La leccion, por si vuelve la tentacion: **cuantizar sirve cuando el origen
+    es una ilustracion suavizada**, no cuando ya es pixel art. Lo que arregla el
+    halo es esta funcion, no aquella.
     """
     a = np.array(im.convert("RGBA"))
-    duro = (a[..., 3] >= 128).astype(np.uint8) * 255
-    rgb = Image.fromarray(a[..., :3], "RGB").quantize(
-        colors=colores, method=Image.MEDIANCUT, dither=Image.Dither.NONE)
-    return Image.fromarray(
-        np.dstack([np.array(rgb.convert("RGB")), duro]), "RGBA")
+    a[..., 3] = (a[..., 3] >= 128) * 255
+    return Image.fromarray(a, "RGBA")
 
 
-def preparar(origen: Path, colores: int) -> Image.Image:
-    return pixelizar(quitar_fondo(Image.open(origen).convert("RGBA")), colores)
+def preparar(origen: Path) -> Image.Image:
+    return alfa_duro(quitar_fondo(Image.open(origen).convert("RGBA")))
 
 
 def medir_pantalla(chasis: Image.Image) -> tuple:
@@ -147,20 +145,20 @@ def main() -> None:
 
     print("POKEPAD")
     suave = Image.open(ARTE / "fondo_base.png").convert("RGBA")
-    pixelizar(suave, COLORES_FONDO).save(SALIDA / "pokepad.png")
+    alfa_duro(suave).save(SALIDA / "pokepad.png")
     x0, y0, x1, y1 = medir_pantalla(suave)
     print(f"  chasis    {suave.size[0]} x {suave.size[1]}")
     print(f"  pantalla  x {x0}-{x1}  y {y0}-{y1}   ({x1 - x0} x {y1 - y0})")
 
     iconos = sorted((ARTE / "icons").glob("*.png"))
     for p in iconos:
-        preparar(p, COLORES_PIEZA).save(SALIDA / f"{p.stem.replace('icon_', '')}.png")
+        preparar(p).save(SALIDA / f"{p.stem.replace('icon_', '')}.png")
     lado = Image.open(iconos[0]).size[0]
     print(f"  iconos    {len(iconos)} de {lado}x{lado}")
 
     botones = sorted((ARTE / "botones").glob("*.png"))
     for p in botones:
-        preparar(p, COLORES_PIEZA).save(SALIDA / f"boton_{p.stem}.png")
+        preparar(p).save(SALIDA / f"boton_{p.stem}.png")
     print(f"  botones   {len(botones)}")
 
     # La celda sale de la restriccion mas apretada de las dos, ancho o alto, y

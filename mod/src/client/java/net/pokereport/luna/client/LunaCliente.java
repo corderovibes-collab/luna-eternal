@@ -3,10 +3,13 @@ package net.pokereport.luna.client;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.pokereport.luna.client.pokepad.PokePadScreen;
+import net.pokereport.luna.net.Red;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -33,6 +36,14 @@ public class LunaCliente implements ClientModInitializer {
                 // teclas de movimiento sin pisar el inventario ni el chat.
                 GLFW.GLFW_KEY_B,
                 "key.categories.lunaeternal"));
+
+        // La respuesta del servidor con el saldo. Solo se guarda para dibujarla.
+        ClientPlayNetworking.registerGlobalReceiver(Red.Saldo.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
+        // Al salir del mundo se olvida: el saldo es de esa partida.
+        ClientPlayConnectionEvents.DISCONNECT.register(
+                (manejador, cliente) -> EstadoCliente.olvidar());
 
         ClientTickEvents.END_CLIENT_TICK.register(cliente -> {
             // `wasPressed` vacía la cola de pulsaciones: con un `if` simple, una

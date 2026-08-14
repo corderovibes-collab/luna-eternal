@@ -298,6 +298,22 @@ await test('reconoce un jar corrupto y ofrece reparar', () => {
   assert.equal(causa.accion, 'reparar');
 });
 
+await test('la línea normal de la GPU no dispara ninguna alarma', () => {
+  // Fallo real, visto en el launcher del usuario: saltaba
+  // "LA TARJETA GRÁFICA NO ARRANCA EL JUEGO" en cada arranque correcto porque
+  // el patrón llevaba `OpenGL 3.2` a secas, y esta línea de ÉXITO lo contiene.
+  const log = '[19:36:10] [Render thread/INFO]: GPU: Intel(R) UHD Graphics 620 '
+    + '(Supports OpenGL 3.2.0 - Build 31.0.101.2135)';
+  assert.equal(diagnosticar(0, log), null,
+    'un diagnostico que se equivoca siempre ensena a ignorar los avisos');
+});
+
+await test('sí reconoce una GPU que de verdad no llega', () => {
+  const causa = diagnosticar(1,
+    'GLFW error 65543: WGL: Driver does not support OpenGL version 3.2');
+  assert.ok(causa && /gráfica/i.test(causa.titulo), 'esto si es un fallo de verdad');
+});
+
 await test('reconoce quedarse sin memoria y manda a Ajustes', () => {
   assert.equal(diagnosticar(1, 'java.lang.OutOfMemoryError: Java heap space').accion, 'ram');
 });

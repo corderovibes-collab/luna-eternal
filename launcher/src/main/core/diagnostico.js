@@ -56,7 +56,15 @@ const CAUSAS = [
     accion: 'reparar',
   },
   {
-    patron: /Failed to create window|GLFW error|Pixel format not accelerated|OpenGL 3\.2|No OpenGL context/i,
+    // ⚠ `OpenGL 3\.2` a secas estaba aquí y saltaba en CADA arranque correcto.
+    // Minecraft escribe una línea de ÉXITO que lo contiene:
+    //
+    //   GPU: Intel(R) UHD Graphics 620 (Supports OpenGL 3.2.0 - Build 31.0…)
+    //
+    // Un diagnóstico que se equivoca siempre es peor que no tenerlo: enseña a
+    // la gente a ignorar los avisos, y el día que haya uno de verdad tampoco lo
+    // van a leer. Ahora solo casan frases que únicamente aparecen al fallar.
+    patron: /Failed to create window|GLFW error|Pixel format not accelerated|No OpenGL context|requires? OpenGL|OpenGL \d\.\d[^)]{0,24}(or (higher|later|newer)|required)|does ?n[o']?t support OpenGL/i,
     titulo: 'La tarjeta gráfica no arranca el juego',
     detalle: 'Actualiza el controlador de la gráfica desde la web de NVIDIA, AMD o '
       + 'Intel. Minecraft 1.21 necesita OpenGL 3.2 o superior.',

@@ -73,9 +73,9 @@ Luz de color  ⚠ LA LUZ DE MINECRAFT NO TIENE COLOR. El motor guarda
               el suelo. Complementary > Performance > COLORED_LIGHTING
               viene en 0. Hacen cosas distintas, no se estorban
               detalle en docs/world/neon.md §1
-Pokedex       revestida de azul luna · docs/ui/pokedex-luna.md
-              76 texturas (54 KB), ACTIVADO solo
-              python tools/gen_pokedex.py --comparativa
+Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md
+              323 texturas (211 KB), ACTIVADO solo
+              python tools/gen_interfaz.py --comparativa
               ⚠ el TEXTO lo pinta el codigo de Cobblemon: 0x606B6E
                 gris (16 usos) y 0x3A96B6 turquesa (3). Y el gris va
                 sobre los paneles CLAROS, asi que la pantalla puede
@@ -83,9 +83,14 @@ Pokedex       revestida de azul luna · docs/ui/pokedex-luna.md
                 ilegible, y un resource pack no lo alcanza
               va INCRUSTADO en el jar de lunaneon (resourcepacks/) y
               se registra con ALWAYS_ENABLED. En el log del arranque:
-              "Pokedex: revestido de luna activado"
-              solo se reviste la PANTALLA: la carcasa conserva el
-              color de cada Pokedex (hay 7 y las elige el jugador)
+              "Interfaz: revestido de luna activado"
+              alcance: Pokedex y su ITEM (cian->azul), y en gris
+              teñido: resumen, PC, combate, equipo, comercio,
+              interaccion y pastos. Dos transformaciones porque hay
+              dos familias: la Pokedex es cian y el resto es 100%
+              GRIS, sin un pixel de color que desplazar
+              la carcasa de la Pokedex NO se toca: hay 7 colores y
+              los elige el jugador
               ⚠ DOS intentos fallidos antes, los dos MUDOS:
                 1) .zip suelto + linea en config/yosbr/options.txt.
                    YOSBR copia esa plantilla solo si options.txt no

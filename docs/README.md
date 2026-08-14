@@ -34,7 +34,7 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`technical/launcher.md`](technical/launcher.md) | ✅ | **El launcher**: se autoactualiza él y el pack, perfiles, reparar, diagnóstico |
 | [`world/construccion.md`](world/construccion.md) | ✅ | Construir la ciudadela con Axiom, **entre varios a la vez** |
 | [`world/neon.md`](world/neon.md) | ✅ | **Los bloques de neón**: 96 piezas, brillo sin luz, y el orden del despliegue |
-| [`ui/pokedex-luna.md`](ui/pokedex-luna.md) | ✅ | **La Pokédex de azul luna**: qué se puede revestir y qué lo pinta el código |
+| [`ui/interfaz-luna.md`](ui/interfaz-luna.md) | ✅ | **La interfaz de azul luna**: 323 texturas, y qué lo pinta el código |
 
 ✅ escrito · 🟡 en curso · ⬜ pendiente
 

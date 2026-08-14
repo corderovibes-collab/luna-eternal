@@ -198,7 +198,8 @@ rectangular**. Es lo que se mide una vez y condiciona todo lo demás.
 
 ## 4. Prompt 2 — La celda, en sus tres estados
 
-La rejilla son celdas iguales repetidas. Hacen falta las tres.
+La rejilla son celdas iguales repetidas. Hacen falta las tres, **y van juntas
+en una fila a propósito**: ver el porqué justo debajo.
 
 ```
 [PEGA AQUÍ LA BIBLIA DE ESTILO]
@@ -206,20 +207,56 @@ La rejilla son celdas iguales repetidas. Hacen falta las tres.
 Subject: three UI button tiles for a pixel-art game menu, arranged in one
 horizontal row on a pure black background, evenly spaced, identical size
 and shape, square with slightly rounded corners.
+Canvas aspect ratio 16:9.
 
-All three are EMPTY containers - no icon inside, no text.
+All three are EMPTY containers - no icon inside, no symbol, no text.
+They look gently recessed, like empty sockets waiting for an icon.
 
-Tile 1 - RESTING: moon blue (#8B93D8) fill, #C8D2F0 top-left rim,
-  #6C78C8 bottom-right shadow. Calm, flat, slightly recessed.
-Tile 2 - HOVERED: same shape, brighter fill, a clean 1px neon cyan
-  (#16F2E6) border all around, and the tile looks slightly raised.
+Tile 1 - RESTING: moon blue (#8B93D8) fill, #C8D2F0 top and left inner
+  rim, #6C78C8 bottom and right inner shadow.
+Tile 2 - HOVERED: same shape, slightly brighter fill, and a clean 1 pixel
+  neon cyan (#16F2E6) border all around the outside.
 Tile 3 - LOCKED: same shape, desaturated graphite (#2A2E3A) fill, dimmer,
-  with a small closed padlock shape in the lower-right corner drawn in
-  #6C78C8. The padlock is the only content allowed.
+  with a small closed padlock in the lower-right corner drawn in #6C78C8.
+  The padlock is the only content allowed anywhere.
 
-The three tiles must be pixel-identical in silhouette and size. Only the
-color and the border change.
+CRITICAL: the three tiles must be pixel-identical in silhouette, size,
+corner rounding and bevel width. ONLY the fill color, the border and the
+padlock change between them.
 ```
+
+### Por qué en fila y no una imagen por celda
+
+**Porque los tres estados son el mismo botón.** Solo cambia el color y el
+borde; la forma tiene que ser idéntica píxel a píxel.
+
+Si generas tres imágenes por separado, cada una sale con las esquinas, el
+grosor del bisel y las proporciones un poco distintas. Como el juego cambia de
+una a otra **en el mismo sitio de la pantalla**, al pasar el ratón por encima
+el botón **daría un salto** — se estiraría o se movería un píxel. Es de esos
+defectos que no sabes nombrar pero se ven al instante.
+
+Generadas de una sola vez, salen de la misma «mano» y encajan.
+
+### Y la resolución no se resiente, que era la única pega
+
+Es la duda razonable: si tres celdas comparten lienzo, cada una se lleva un
+tercio. Pero los números salen holgados:
+
+```
+lienzo 1024 de ancho ÷ 3 celdas   ≈  340 px por celda
+tamaño final de una celda          =   32 px
+                                       ~10 veces más de lo necesario
+```
+
+A 32 píxeles finales sobra muchísimo. **Lo que de verdad arruina un botón no es
+la falta de detalle, es que baile.**
+
+> **Red de seguridad:** si aun así las tres vuelven desiguales, no hace falta
+> regenerar. Me quedo con la de reposo y **derivo las otras dos** —más clara
+> con borde cian, y desaturada con candado—, que es exactamente lo que ya se
+> hizo con los 96 bloques de neón y las 323 texturas de interfaz: una fuente,
+> variantes generadas.
 
 ---
 

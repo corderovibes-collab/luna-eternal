@@ -20,7 +20,6 @@ import net.pokereport.luna.net.Red;
 public class PokePadScreen extends Screen {
 
     private static final Identifier CHASIS = tex("pokepad");
-    private static final Identifier BOTON_MAS = tex("boton_mas");
     private static final Identifier BOTON_CERRAR = tex("boton_cerrar");
     // Las celdas NO son texturas: las dibuja el código.
     //
@@ -55,12 +54,19 @@ public class PokePadScreen extends Screen {
     /** La rejilla, en las mismas unidades. Ver §8 del documento. */
     // Los da `tools/gen_pokepad.py` al preparar el arte: los imprime al final.
     // No se escriben a ojo, se copian de ahi.
-    private static final int REJ_X = 118, REJ_Y = 49;
-    private static final int CELDA = 35, HUECO = 4, ICONO = 25;
+    private static final int REJ_X = 124, REJ_Y = 53;
+    private static final int CELDA = 31, HUECO = 6, ICONO = 25;
     private static final int COLS = 5;
 
-    /** Gris apagado para el icono de una celda bloqueada. */
-    private static final int APAGADO = 0xFF6A6A78;
+    // Una celda cerrada se apaga a si misma; el ICONO va siempre a todo color.
+    //
+    // Antes se apagaba el icono, y tenia sentido cuando la celda llevaba un
+    // candado encima: sin apagar, los dos se pisaban. Quitados los candados,
+    // apagar el icono solo conseguia que la pantalla entera pareciera muerta
+    // --y hoy las quince aplicaciones estan cerradas--. Es el fondo el que
+    // debe recular, no el dibujo.
+    private static final int CELDA_CERRADA = 0xFF6A72A8;
+    private static final int BORDE_CERRADA = 0xFF9AA3C8;
 
     // Las ranuras del panel izquierdo, MEDIDAS sobre el chasis y no puestas a
     // ojo. La primera version tenia la cara en 30,34 de 40 px y se salia del
@@ -71,9 +77,6 @@ public class PokePadScreen extends Screen {
     //   saldo     x 23-69   y 159-177   (46 x 18)
     private static final int CARA_X = 32, CARA_Y = 33, CARA_LADO = 44;
     private static final int SALDO_CX = 46, SALDO_Y = 164;
-
-    /** El cuadradito a la derecha del saldo: lleva a la tienda. */
-    private static final int MAS_X = 84, MAS_Y = 162, MAS_W = 14, MAS_H = 11;
 
     /** Cerrar, arriba a la derecha del chasis. */
     private static final int CERRAR_X = 316, CERRAR_Y = 5, CERRAR_W = 20, CERRAR_H = 16;
@@ -136,17 +139,15 @@ public class PokePadScreen extends Screen {
                 bajoElRaton = app;
             }
 
-            celda(ctx, cx, cy, celda,
-                    encima ? CELDA_ENCIMA : CELDA_FONDO,
-                    encima ? BORDE_ENCIMA : CELDA_BORDE);
+            int fondo = encima ? CELDA_ENCIMA
+                    : app.abierta() ? CELDA_FONDO : CELDA_CERRADA;
+            int borde = encima ? BORDE_ENCIMA
+                    : app.abierta() ? CELDA_BORDE : BORDE_CERRADA;
+            celda(ctx, cx, cy, celda, fondo, borde);
 
-            // El icono de una aplicación cerrada va apagado en vez de llevar un
-            // candado encima. Quince candados en una rejilla de quince es más
-            // ruido que información, y ademas tapan el propio icono.
             dibujar(ctx, app.icono(), cx + (celda - icono) / 2,
                     cy + (celda - icono) / 2, icono, icono,
-                    ICONO * ESCALA, ICONO * ESCALA,
-                    app.abierta() ? 0xFFFFFFFF : APAGADO);
+                    ICONO * ESCALA, ICONO * ESCALA, 0xFFFFFFFF);
         }
 
         panelLateral(ctx);
@@ -225,11 +226,14 @@ public class PokePadScreen extends Screen {
                 x0 + Math.round(SALDO_CX * k), y0 + Math.round(SALDO_Y * k),
                 0xFFFFE12E);
 
-        // El "+" de la tienda y el aspa de cerrar. No se dibujan atras,
-        // adelante, inicio ni ajustes: **todavia no hay a donde ir**, y un
-        // boton que no hace nada ensena a no pulsar los botones.
-        dibujar(ctx, BOTON_MAS, x0 + Math.round(MAS_X * k), y0 + Math.round(MAS_Y * k),
-                Math.round(MAS_W * k), Math.round(MAS_H * k), 30, 24, 0xFFFFFFFF);
+        // Solo se dibuja el aspa de cerrar, que es el unico boton que hoy hace
+        // algo. Ni atras, ni adelante, ni inicio, ni ajustes, ni el "+" de la
+        // tienda: **todavia no hay a donde ir**, y un boton que no responde
+        // ensena a no pulsar los botones. Eso se paga luego, en las pantallas
+        // que si funcionen.
+        //
+        // El "+" ademas no cabria: su ranura en el chasis tiene 9 pixeles de
+        // interior, y meter ahi una textura de 30x24 la deforma.
         dibujar(ctx, BOTON_CERRAR,
                 x0 + Math.round(CERRAR_X * k), y0 + Math.round(CERRAR_Y * k),
                 Math.round(CERRAR_W * k), Math.round(CERRAR_H * k), 30, 24, 0xFFFFFFFF);

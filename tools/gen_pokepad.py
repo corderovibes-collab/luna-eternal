@@ -48,8 +48,14 @@ MAQUETA = RAIZ / "build" / "pokepad"
 # El azul de la pantalla, para localizarla dentro del chasis.
 AZUL = (135, 145, 207)
 
-HUECO = 4
-MARGEN = 6
+# La celda se ajusta AL ICONO en vez de repartir el espacio disponible.
+#
+# Antes se calculaba con el hueco que hubiera --salia de 35 con un icono de
+# 25-- y el dibujo ocupaba la mitad de su celda: sobraba aire y los iconos se
+# veian pequenos y apagados. Agrandar el icono no es opcion: escalar 25 a 32 no
+# es un factor entero y lo emborrona. Asi que se aprieta la celda.
+AIRE = 3        # margen entre el icono y el borde de su celda
+HUECO = 6       # separacion entre celdas
 
 
 def quitar_fondo(im: Image.Image) -> Image.Image:
@@ -161,10 +167,10 @@ def main() -> None:
         preparar(p).save(SALIDA / f"boton_{p.stem}.png")
     print(f"  botones   {len(botones)}")
 
-    # La celda sale de la restriccion mas apretada de las dos, ancho o alto, y
-    # la rejilla se centra en el area azul.
-    celda = min(((x1 - x0) - MARGEN * 2 - HUECO * 4) // 5,
-                ((y1 - y0) - MARGEN * 2 - HUECO * 2) // 3)
+    celda = lado + AIRE * 2
+    if celda * 5 + HUECO * 4 > (x1 - x0) or celda * 3 + HUECO * 2 > (y1 - y0):
+        raise SystemExit("La rejilla no cabe en la pantalla azul. Baja AIRE o "
+                         "HUECO, o el icono es demasiado grande.")
     rej_w, rej_h = celda * 5 + HUECO * 4, celda * 3 + HUECO * 2
     rej_x = x0 + ((x1 - x0) - rej_w) // 2
     rej_y = y0 + ((y1 - y0) - rej_h) // 2

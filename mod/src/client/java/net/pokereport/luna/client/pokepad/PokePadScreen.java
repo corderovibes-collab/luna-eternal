@@ -17,9 +17,17 @@ import net.minecraft.util.Identifier;
 public class PokePadScreen extends Screen {
 
     private static final Identifier CHASIS = tex("pokepad");
-    private static final Identifier REPOSO = tex("reposo");
-    private static final Identifier ENCIMA = tex("encima");
-    private static final Identifier BLOQUEADA = tex("bloqueada");
+    // Las celdas NO son texturas: las dibuja el código.
+    //
+    // Lo eran, y era el motivo de que la pantalla se viera sucia: una celda con
+    // bisel en relieve, estampada quince veces, es mucho ruido para un hueco de
+    // 37 píxeles. El PokePad de referencia no tiene ni una textura de celda —su
+    // fondo llega con la pantalla VACÍA— y las pinta como rectángulos planos un
+    // tono más claros. Se ve limpio justo por eso.
+    private static final int CELDA_FONDO = 0xFF7A83C8;
+    private static final int CELDA_BORDE = 0xFFC8D2F0;
+    private static final int CELDA_ENCIMA = 0xFF9AA3E8;
+    private static final int BORDE_ENCIMA = 0xFF16F2E6;
 
     /** El chasis en las unidades en que están medidas las demás constantes. */
     private static final int ANCHO = 345, ALTO = 207;
@@ -100,12 +108,13 @@ public class PokePadScreen extends Screen {
                 bajoElRaton = app;
             }
 
-            dibujar(ctx, !app.abierta() ? BLOQUEADA : encima ? ENCIMA : REPOSO,
-                    cx, cy, celda, celda, CELDA * ESCALA, CELDA * ESCALA, 0xFFFFFFFF);
+            celda(ctx, cx, cy, celda,
+                    encima ? CELDA_ENCIMA : CELDA_FONDO,
+                    encima ? BORDE_ENCIMA : CELDA_BORDE);
 
-            // El icono de una celda bloqueada va apagado. No es estética: la
-            // celda bloqueada trae un candado en su esquina, y con el icono a
-            // todo color los dos se pisan y no se lee ninguno.
+            // El icono de una aplicación cerrada va apagado en vez de llevar un
+            // candado encima. Quince candados en una rejilla de quince es más
+            // ruido que información, y ademas tapan el propio icono.
             dibujar(ctx, app.icono(), cx + (celda - icono) / 2,
                     cy + (celda - icono) / 2, icono, icono,
                     ICONO * ESCALA, ICONO * ESCALA,
@@ -144,6 +153,24 @@ public class PokePadScreen extends Screen {
             }
         }
         return super.mouseClicked(ratonX, ratonY, boton);
+    }
+
+    /**
+     * Una celda: rectángulo plano con las esquinas mordidas.
+     *
+     * <p>Morder las cuatro esquinas es como se redondea en pixel art. Sin eso,
+     * quince rectángulos de esquina viva se ven como una hoja de cálculo.
+     */
+    private static void celda(DrawContext ctx, int x, int y, int lado,
+                              int fondo, int borde) {
+        ctx.fill(x, y, x + lado, y + lado, borde);
+        ctx.fill(x + 1, y + 1, x + lado - 1, y + lado - 1, fondo);
+        // Las cuatro esquinas, del color de la pantalla que hay debajo.
+        int p = 0x00000000;
+        ctx.fill(x, y, x + 1, y + 1, p);
+        ctx.fill(x + lado - 1, y, x + lado, y + 1, p);
+        ctx.fill(x, y + lado - 1, x + 1, y + lado, p);
+        ctx.fill(x + lado - 1, y + lado - 1, x + lado, y + lado, p);
     }
 
     /**

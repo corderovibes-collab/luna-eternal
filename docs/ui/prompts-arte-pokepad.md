@@ -366,30 +366,52 @@ icon.`
 | 14 | `gyms` | `a small grey stone badge with two white feathered wings spreading from its sides and a golden shine on top` |
 | 15 | `explorar` | `a Minecraft grass block turned into a small round planet, green grass on top and brown dirt below, with one small white cloud beside it` |
 
-## 6. Prompt 4 — Los botones pequeños
+## 6. Los botones
+
+Seis: atrás, adelante, ajustes, inicio, más y cerrar. Van en `24 × 17` como los
+del Pad de referencia —más anchos que altos, que es la forma natural de un
+botón— y con **5 o 6 colores**, que es lo que tienen los suyos.
+
+### 6.1 · En qué se diferencian de un icono
+
+| | Icono | Botón |
+|---|---|---|
+| Qué es | un objeto | un **marco** con un símbolo dentro |
+| Sombra | elipse debajo | **ninguna**: no está apoyado, está empotrado |
+| Colores | hasta 14 | **6**, y casi todo es el marco |
+| Silueta | llena el cuadro | el símbolo ocupa la mitad, el resto es marco |
+
+Si se les pide como a los iconos salen objetos con sombra flotando, no botones.
+
+### 6.2 · La plantilla
 
 ```
-[PEGA AQUÍ LA BIBLIA DE ESTILO]
-
-Subject: a set of 6 small square UI buttons for a pixel-art game menu, in
-one horizontal row on a pure black background, identical size and frame,
-evenly spaced.
-
-The frame of all six is identical: graphite (#2A2E3A) square with a
-#8B93D8 inner face and a #C8D2F0 top-left rim.
-
-The symbol inside each, drawn in #F2FAFF:
- 1. a left-pointing triangle arrow
- 2. a right-pointing triangle arrow
- 3. a gear / cog with six teeth
- 4. a simple house silhouette
- 5. a plus sign, thick and blocky
- 6. an X / close cross - this one and ONLY this one has a #FF2A3C face
-
-Symbols must be centered, chunky and readable at tiny size.
+A small pixel art user interface button, slightly wider than tall, drawn
+with chunky uniform square pixels and hard edges, no anti-aliasing and no
+gradients. A rectangular button frame with a dark outline (#1B1E26), a
+graphite face (#2A2E3A) and a lighter rim along its top and left side, and
+centered inside it a simple EL_SIMBOLO in pale blue (#C8D2F0). Only 6 flat
+colors in total. The symbol is chunky, centered and takes up about half the
+button. Plain solid black background. No text, no letters, no numbers, no
+labels, no watermark, no document, no color swatches.
 ```
 
----
+### 6.3 · Los seis símbolos
+
+Sustituyen a `EL_SIMBOLO`. Del segundo en adelante, añadir al final: `Same
+frame, size, palette and style as the previous button.`
+
+| Fichero | Símbolo |
+|---|---|
+| `atras` | `left-pointing solid triangle arrow` |
+| `adelante` | `right-pointing solid triangle arrow` |
+| `ajustes` | `six-toothed gear wheel` |
+| `inicio` | `simple house silhouette with a pointed roof` |
+| `mas` | `thick plus sign` |
+| `cerrar` | `thick X cross, and this one only has a red face (#FF2A3C) instead of graphite` |
+
+> **`cerrar` es el único en rojo**, y por eso lo lleva escrito en su propia
+> línea: si el rojo estuviera en la plantilla saldrían los seis rojos.
 
 ## 7. Qué hacer con lo que llegue
 

@@ -82,6 +82,16 @@ ORDEN = ["pokedex", "cosmeticos", "trabajos", "misiones", "warps",
 BORDE = 4
 MORDIDA = 4
 
+# El tamano al que se DIBUJAN los botones, que no es el que llega. Ver el
+# comentario largo donde se guardan. Si cambia, cambia tambien BOTON_W/H en
+# PokePadScreen: son el mismo numero en dos idiomas.
+BOTON_W, BOTON_H = 60, 48
+
+# Y donde va la barra. Mismos numeros que PokePadScreen, en el mismo orden.
+BOTONES = ["atras", "adelante", "inicio", "ajustes", "mas", "cerrar"]
+BOTON_SEP = 24
+BARRA_X, BARRA_Y = 610, 715
+
 
 def quitar_fondo(im: Image.Image) -> Image.Image:
     """Vuelve transparente el fondo opaco, si lo hay.
@@ -221,6 +231,24 @@ def preparar(origen: Path) -> Image.Image:
 MCMETA = '{\n  "texture": {\n    "blur": false,\n    "clamp": true\n  }\n}\n'
 
 
+def reducir(im: Image.Image, w: int, h: int) -> Image.Image:
+    """Encoge PREMULTIPLICANDO el alfa, que es la unica forma correcta.
+
+    Sin premultiplicar, al promediar pixeles el color de los invisibles entra
+    en la cuenta con el mismo peso que el de los visibles, y el borde se
+    ensucia con lo que hubiera detras --que despues de `sangrar_alfa` es el
+    color del vecino, pero antes era cualquier cosa--.
+    """
+    a = np.array(im.convert("RGBA")).astype(np.float32)
+    al = a[..., 3:4] / 255.0
+    pre = np.concatenate([a[..., :3] * al, a[..., 3:4]], -1)
+    chico = np.array(Image.fromarray(pre.astype(np.uint8), "RGBA")
+                     .resize((w, h), Image.LANCZOS)).astype(np.float32)
+    al2 = np.maximum(chico[..., 3:4] / 255.0, 1e-6)
+    out = np.concatenate([np.clip(chico[..., :3] / al2, 0, 255), chico[..., 3:4]], -1)
+    return Image.fromarray(out.astype(np.uint8), "RGBA")
+
+
 def guardar(im: Image.Image, destino: Path) -> None:
     im.save(destino)
     destino.with_suffix(".png.mcmeta").write_text(MCMETA, encoding="utf-8")
@@ -286,10 +314,22 @@ def main() -> None:
     lado = Image.open(iconos[0]).size[0]
     print(f"  iconos    {len(iconos)} de {lado}x{lado}")
 
+    # Los botones se guardan YA REDUCIDOS al tamano al que se dibujan.
+    #
+    # El arte llega a 120x96 y en el chasis no cabe: la unica franja libre --la
+    # de debajo de la pantalla-- tiene 58 px de alto. Se dibujan a 60x48, que es
+    # la mitad exacta y sigue siendo divisible entre 1,2,3,4 y 6.
+    #
+    # Se reduce AQUI y no en el juego para que la textura mida lo que ocupa y se
+    # dibuje 1:1 (regla 2 de docs/ui/dibujado.md). Dejar que lo encoja el juego
+    # significa vecino mas proximo, que tira una fila de cada dos.
     botones = sorted((ARTE / "botones").glob("*.png"))
     for p in botones:
-        guardar(preparar(p), SALIDA / f"boton_{p.stem}.png")
-    print(f"  botones   {len(botones)}")
+        guardar(reducir(preparar(p), BOTON_W, BOTON_H),
+                SALIDA / f"boton_{p.stem}.png")
+    print(f"  botones   {len(botones)} de {BOTON_W}x{BOTON_H} "
+          f"(el arte llega a {Image.open(botones[0]).size[0]}x"
+          f"{Image.open(botones[0]).size[1]})")
 
     celda = lado + AIRE * 2
     if celda * 5 + HUECO * 4 > (x1 - x0) or celda * 3 + HUECO * 2 > (y1 - y0):
@@ -336,6 +376,17 @@ def maqueta(chasis, iconos, rx, ry, celda, lado) -> None:
         ico = Image.open(SALIDA / f"{p.stem.replace('icon_', '')}.png")
         out.alpha_composite(ico, (cx + (celda - lado) // 2,
                                   cy + (celda - lado) // 2))
+    # La barra de botones, con los cinco sin destino apagados igual que en el
+    # juego. La maqueta existe para aprobar el diseno, asi que si no ensena lo
+    # mismo que se va a ver no sirve de nada.
+    for i, n in enumerate(BOTONES):
+        b = Image.open(SALIDA / f"boton_{n}.png").convert("RGBA")
+        if n != "cerrar":
+            a = np.array(b).astype(int)
+            a[..., :3] = a[..., :3] * 128 // 255      # el mismo tinte del codigo
+            b = Image.fromarray(a.astype(np.uint8), "RGBA")
+        out.alpha_composite(b, (BARRA_X + i * (BOTON_W + BOTON_SEP), BARRA_Y))
+
     # Sin ampliar. El chasis ya mide 1380x828, que es el tamano al que se va a
     # dibujar en pantalla: ampliarlo ensenaria algo que nadie va a ver. Antes se
     # multiplicaba por 3 porque el original media 346 y no se apreciaba nada.

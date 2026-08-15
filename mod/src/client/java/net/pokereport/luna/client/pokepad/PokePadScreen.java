@@ -20,7 +20,6 @@ import net.pokereport.luna.net.Red;
 public class PokePadScreen extends Screen {
 
     private static final Identifier CHASIS = tex("pokepad");
-    private static final Identifier BOTON_CERRAR = tex("boton_cerrar");
     // Las celdas NO son texturas: las dibuja el código.
     //
     // Lo eran, y era el motivo de que la pantalla se viera sucia: una celda con
@@ -84,16 +83,39 @@ public class PokePadScreen extends Screen {
     /** El centro de la placa de arriba, donde va el nombre de la aplicación. */
     private static final int PLACA_CY = 52;
 
-    // Cerrar. ⚠ PROVISIONAL: el chasis HD no trae ranura para el aspa --esa
-    // esquina la ocupan las lineas cian-- y el prompt del arte nunca pidio una.
-    // Se queda arriba a la derecha, encima del cuerpo, hasta que la fase de los
-    // botones decida el sitio de los seis. La textura es 120x96, asi que el
-    // hueco mantiene esa proporcion para no deformarla.
-    private static final int CERRAR_X = 1240, CERRAR_Y = 24;
-    private static final int CERRAR_W = 100, CERRAR_H = 80;
+    /**
+     * La barra de botones, en la franja de debajo de la pantalla.
+     *
+     * <p><b>Es el único sitio del chasis donde caben.</b> Medido: esa franja
+     * tiene 981 × 58, la de arriba 52 de alto y el hueco cuadrado del saldo
+     * 42 × 42. El arte de los botones llega a 120 × 96 y no entra en ninguna,
+     * así que se dibujan a la mitad exacta —60 × 48, que sigue siendo divisible
+     * entre 1, 2, 3, 4 y 6— y {@code gen_pokepad.py} los guarda ya reducidos
+     * para que se dibujen 1:1.
+     *
+     * <p>El chasis no trae ranuras para ellos porque el prompt de §3.1 nunca
+     * pidió una barra: pidió las tres ranuras de la izquierda, la placa y la
+     * pantalla. Si algún día se rehace el chasis, aquí es donde va.
+     */
+    private static final String[] BOTONES =
+            {"atras", "adelante", "inicio", "ajustes", "mas", "cerrar"};
+    private static final int BOTON_W = 60, BOTON_H = 48, BOTON_SEP = 24;
+    private static final int BARRA_X = 610, BARRA_Y = 715;
 
-    /** El tamaño real de las PNG de los botones. */
-    private static final int BOTON_NAT_W = 120, BOTON_NAT_H = 96;
+    /**
+     * Cuál de los seis lleva a algún sitio. Hoy solo cerrar.
+     *
+     * <p>Los otros cinco son navegación y <b>todavía no hay a dónde ir</b>: no
+     * existe ninguna sub-pantalla. Se dibujan igualmente, pero apagados y con
+     * el sonido de bloqueado — <b>exactamente como las quince celdas</b>, que
+     * también están todas cerradas y se entienden solas.
+     *
+     * <p>Esa es la diferencia que importa: un botón apagado que responde
+     * «todavía no» informa; uno de aspecto normal que no hace nada enseña a no
+     * pulsar los botones, y eso se paga después en las pantallas que sí
+     * funcionen.
+     */
+    private static final int CERRAR = 5;
 
     private int x0, y0, ancho, alto;
     private float k;
@@ -176,7 +198,9 @@ public class PokePadScreen extends Screen {
             return;
         }
         client.getTextureManager().getTexture(CHASIS).setFilter(suave, false);
-        client.getTextureManager().getTexture(BOTON_CERRAR).setFilter(suave, false);
+        for (String b : BOTONES) {
+            client.getTextureManager().getTexture(tex("boton_" + b)).setFilter(suave, false);
+        }
         for (App app : App.TODAS) {
             client.getTextureManager().getTexture(app.icono()).setFilter(suave, false);
         }
@@ -223,6 +247,7 @@ public class PokePadScreen extends Screen {
         }
 
         panelLateral(ctx);
+        barra(ctx, ratonX, ratonY);
 
         // La placa de arriba: el nombre de la app senalada, o el del Pad.
         // Centrado en su hueco: el texto se dibuja desde arriba, asi que se
@@ -240,10 +265,21 @@ public class PokePadScreen extends Screen {
     @Override
     public boolean mouseClicked(double ratonX, double ratonY, int boton) {
         int celda = Math.round(CELDA * k);
-        if (boton == 0 && dentroDe(ratonX, ratonY, CERRAR_X, CERRAR_Y,
-                                   CERRAR_W, CERRAR_H)) {
-            close();
-            return true;
+        if (boton == 0) {
+            int w = Math.round(BOTON_W * k), h = Math.round(BOTON_H * k);
+            int by = y0 + Math.round(BARRA_Y * k);
+            for (int i = 0; i < BOTONES.length; i++) {
+                int bx = botonX(i);
+                if (ratonX < bx || ratonX >= bx + w
+                        || ratonY < by || ratonY >= by + h) {
+                    continue;
+                }
+                sonar(i == CERRAR);
+                if (i == CERRAR) {
+                    close();
+                }
+                return true;
+            }
         }
         if (boton == 0) {
             for (int i = 0; i < App.TODAS.length; i++) {
@@ -252,18 +288,26 @@ public class PokePadScreen extends Screen {
                         || ratonY < cy || ratonY >= cy + celda) {
                     continue;
                 }
-                App app = App.TODAS[i];
-                // Una celda bloqueada suena distinto y no hace nada. Sin sonido,
-                // el jugador cree que el clic no se registró y repite.
-                if (client != null && client.player != null) {
-                    client.player.playSound(app.abierta()
-                            ? SoundEvents.UI_BUTTON_CLICK.value()
-                            : SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.6f, 1.0f);
-                }
+                sonar(App.TODAS[i].abierta());
                 return true;
             }
         }
         return super.mouseClicked(ratonX, ratonY, boton);
+    }
+
+    /**
+     * El clic suena, lleve a algún sitio o no.
+     *
+     * <p>Lo bloqueado suena <b>distinto</b>, no en silencio: sin sonido el
+     * jugador cree que el clic no se registró y repite. Lo usan las quince
+     * celdas y los seis botones, que están en la misma situación.
+     */
+    private void sonar(boolean lleva) {
+        if (client != null && client.player != null) {
+            client.player.playSound(lleva
+                    ? SoundEvents.UI_BUTTON_CLICK.value()
+                    : SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.6f, 1.0f);
+        }
     }
 
     /**
@@ -299,18 +343,28 @@ public class PokePadScreen extends Screen {
                 y0 + Math.round(SALDO_CY * k) - textRenderer.fontHeight / 2,
                 0xFFFFE12E);
 
-        // Solo se dibuja el aspa de cerrar, que es el unico boton que hoy hace
-        // algo. Ni atras, ni adelante, ni inicio, ni ajustes, ni el "+" de la
-        // tienda: **todavia no hay a donde ir**, y un boton que no responde
-        // ensena a no pulsar los botones. Eso se paga luego, en las pantallas
-        // que si funcionen.
-        //
-        // El "+" ya SI cabria --su ranura en el chasis HD tiene 42 px de
-        // interior, no 9-- pero sigue sin llevar a ningun sitio.
-        dibujar(ctx, BOTON_CERRAR,
-                x0 + Math.round(CERRAR_X * k), y0 + Math.round(CERRAR_Y * k),
-                Math.round(CERRAR_W * k), Math.round(CERRAR_H * k),
-                BOTON_NAT_W, BOTON_NAT_H, 0xFFFFFFFF);
+    }
+
+    /** La barra de botones de abajo. */
+    private void barra(DrawContext ctx, int ratonX, int ratonY) {
+        int w = Math.round(BOTON_W * k), h = Math.round(BOTON_H * k);
+        for (int i = 0; i < BOTONES.length; i++) {
+            int bx = botonX(i), by = y0 + Math.round(BARRA_Y * k);
+            boolean encima = ratonX >= bx && ratonX < bx + w
+                    && ratonY >= by && ratonY < by + h;
+            // Un boton sin destino se apaga; el senalado se aclara. El tinte
+            // MULTIPLICA, asi que 0xFF808080 es "a media luz" y no un gris.
+            int tinte = i == CERRAR
+                    ? (encima ? 0xFFFFFFFF : 0xFFE0E0E0)
+                    : (encima ? 0xFF9A9A9A : 0xFF808080);
+            dibujar(ctx, tex("boton_" + BOTONES[i]), bx, by, w, h,
+                    BOTON_W, BOTON_H, tinte);
+        }
+    }
+
+    /** La esquina izquierda de un botón, en unidades de interfaz. */
+    private int botonX(int i) {
+        return x0 + Math.round((BARRA_X + i * (BOTON_W + BOTON_SEP)) * k);
     }
 
     /**
@@ -376,13 +430,6 @@ public class PokePadScreen extends Screen {
         if (tenido) {
             ctx.setShaderColor(1f, 1f, 1f, 1f);
         }
-    }
-
-    /** ¿Cae el ratón dentro de un rectángulo dado en unidades del chasis? */
-    private boolean dentroDe(double rx, double ry, int cx, int cy, int cw, int ch) {
-        int x = x0 + Math.round(cx * k), y = y0 + Math.round(cy * k);
-        return rx >= x && rx < x + Math.round(cw * k)
-                && ry >= y && ry < y + Math.round(ch * k);
     }
 
     private int celdaX(int i) {

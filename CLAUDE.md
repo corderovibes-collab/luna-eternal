@@ -120,9 +120,14 @@ PokePad       LA PANTALLA PRINCIPAL EXISTE (2026-08-14). Tecla B
                  de cada icono, segun lo que el arte guarde debajo.
                  Parecen dos fallos y es uno. Y no esta en el arte:
                  se perdieron 3 diagnosticos buscandolo ahi
-              PENDIENTE: colocar los 6 botones, y con ellos decidir
-              donde va el aspa de cerrar --el chasis NO trae ranura
-              para ella, esa esquina la ocupan las lineas cian--
+              barra de 6 botones bajo la pantalla (2026-08-15)
+              60x48 --la mitad del arte-- porque el chasis NO tiene
+              sitio: la unica franja libre mide 981x58 y el boton 96
+              de alto. El prompt del chasis nunca pidio una barra
+              solo CERRAR hace algo; los otros 5 van apagados y
+              suenan a bloqueado, igual que las 15 celdas
+              PENDIENTE: regenerar `atras`, que llego con la elipse
+              de sombra de los iconos (616 px). Un boton va empotrado
               docs/ui/prompts-arte-pokepad.md tiene TODOS los prompts
               build/pokepad/prompts-*.txt los tiene ya montados
 Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md

@@ -292,9 +292,37 @@ placa     centrada en el chasis, a media altura y = 52
 > skin son 8 × 8 texeles y 168 es múltiplo de 8; con 173 cada texel caería en
 > 21,6 píxeles y saldría emborronada justo en lo único que es suyo.
 
-> ⚠️ **El chasis no trae ranura para el aspa de cerrar**, y el prompt de §3.1
-> nunca pidió una: esa esquina la ocupan las líneas cian. Está provisional
-> arriba a la derecha hasta que se coloquen los seis botones.
+Y la barra de botones, en la franja de debajo de la pantalla:
+
+```
+barra    x 610  y 715     botón 60 x 48, separados 24
+orden    atras · adelante · inicio · ajustes · mas · cerrar
+```
+
+> ⚠️ **El chasis no tiene sitio para los botones a su tamaño**, y el prompt de
+> §3.1 nunca pidió una barra: pidió las tres ranuras, la placa y la pantalla.
+> Medido, lo que hay libre es:
+>
+> ```
+> franja bajo la pantalla   981 x 58   ← la única grande
+> franja sobre la pantalla  ~900 x 52
+> hueco cuadrado del saldo    42 x 42
+> botón                      120 x 96  ← no entra en ninguna
+> ```
+>
+> Por eso se dibujan a **60 × 48**, la mitad exacta, que sigue siendo divisible
+> entre 1, 2, 3, 4 y 6. `gen_pokepad.py` los guarda **ya reducidos** para que se
+> dibujen 1:1 en vez de dejar que los encoja el juego. Si algún día se rehace
+> el chasis, ahí es donde debería ir la barra dibujada.
+
+> **Cinco de los seis se dibujan apagados**, porque son navegación y todavía no
+> hay a dónde ir. Suenan a bloqueado, igual que las quince celdas. Un botón
+> apagado que responde «todavía no» informa; uno de aspecto normal que no hace
+> nada enseña a no pulsar los botones.
+
+> ⚠️ **`atras` llegó con la elipse de sombra de los iconos** (616 px) y hay que
+> regenerarlo: un botón está empotrado, no apoyado. Al prompt de §6 hay que
+> añadirle `No shadow under the button.`
 
 ## Next Actions
 

@@ -138,6 +138,40 @@ public class PokePadScreen extends Screen {
         alto = Math.round(NAT_ALTO * k);
         x0 = (width - ancho) / 2;
         y0 = (height - alto) / 2;
+
+        // ¿Ha salido un texel por pixel, o ha habido que encoger?
+        //
+        // ⚠ ESTO NO ES COSMETICO. Minecraft dibuja las texturas con el vecino
+        // mas proximo, y encoger con vecino mas proximo NO suaviza: TIRA filas
+        // y columnas enteras. A 0,98 se pierde una de cada cincuenta, y eso se
+        // ve como rayas finas cruzando el chasis y como un cerco alrededor de
+        // cada icono --justo lo que se vio en el juego la primera vez--.
+        //
+        // Asi que cuando no cabe a tamano real se pasa a filtrado lineal, que
+        // reparte el error en vez de tirar lineas. Encoger arte suavizado con
+        // lineal se ve bien; a tamano exacto se deja el vecino mas proximo,
+        // que es lo que da el borde limpio.
+        boolean exacto = Math.round(ancho * gui) == NAT_ANCHO
+                && Math.round(alto * gui) == NAT_ALTO;
+        filtrar(!exacto);
+    }
+
+    /**
+     * Elige cómo se remuestrean nuestras texturas: lineal o vecino más próximo.
+     *
+     * <p>Se aplica a todas de una vez —chasis, iconos y botón— porque todas se
+     * dibujan con el mismo factor. Mezclar filtros dejaría el chasis suave y
+     * los iconos con cerco, que es peor que cualquiera de las dos.
+     */
+    private void filtrar(boolean suave) {
+        if (client == null) {
+            return;
+        }
+        client.getTextureManager().getTexture(CHASIS).setFilter(suave, false);
+        client.getTextureManager().getTexture(BOTON_CERRAR).setFilter(suave, false);
+        for (App app : App.TODAS) {
+            client.getTextureManager().getTexture(app.icono()).setFilter(suave, false);
+        }
     }
 
     /** El juego sigue corriendo detrás: es un menú, no una pausa. */

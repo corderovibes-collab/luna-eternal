@@ -87,6 +87,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             players.forget(player.getUuid());
             PlayerCache.forget(player);
             net.pokereport.luna.heal.HealService.olvidar(player);
+            net.pokereport.luna.pokedex.ScanListener.olvidar(player);
             Tablist.onLeave(server, player);
         });
 

@@ -286,6 +286,20 @@ public final class AutoTest {
             !net.pokereport.luna.pokedex.VozService.tieneVoz(null));
         check("hay al menos una voz",
             net.pokereport.luna.pokedex.VozService.cuantas() > 0);
+
+        // El cooldown, que es lo que se traga la rafaga de Cobblemon. Su
+        // cliente manda un "he terminado" POR TICK hasta que el servidor le
+        // confirma, y sin esto la voz se oye duplicada -- se oyo.
+        var cd = new net.pokereport.luna.pokedex.Cooldown(50_000);
+        check("la primera vez toca", cd.toca("x"));
+        check("la segunda seguida NO toca", !cd.toca("x"));
+        check("la tercera seguida tampoco", !cd.toca("x"));
+        check("otra clave no se ve afectada", cd.toca("y"));
+        cd.olvidar("x");
+        check("tras olvidar, vuelve a tocar", cd.toca("x"));
+
+        var rapido = new net.pokereport.luna.pokedex.Cooldown(0);
+        check("con espera cero siempre toca", rapido.toca("z") && rapido.toca("z"));
     }
 
     private void testCazas(long jugador) throws Exception {

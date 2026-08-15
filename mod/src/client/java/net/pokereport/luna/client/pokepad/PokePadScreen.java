@@ -129,9 +129,16 @@ public class PokePadScreen extends Screen {
         // Y no siempre cabe: 1380x828 pixeles REALES no entran en un portatil
         // de 1366x768. Antes de recortarlo se prefiere verlo entero y algo
         // reducido, que en arte suavizado se nota mucho menos que en pixel art.
+        //
+        // ⚠ SIN MARGEN, A PROPOSITO. Aqui habia un 0,98 "para que no pegue con
+        // el borde" y salia caro: con una ventana de 1382x825 --tres pixeles
+        // corta-- el Pad se encogia igualmente, y encoger es lo que rompe el
+        // dibujo. El margen convertia en borrosas todas las ventanas de entre
+        // 1380 y 1409 de ancho a cambio de un hueco que nadie mira. Se prefiere
+        // que toque el borde y se vea exacto.
         double cabe = client == null ? 1 : Math.min(
-                client.getWindow().getFramebufferWidth() * 0.98 / NAT_ANCHO,
-                client.getWindow().getFramebufferHeight() * 0.98 / NAT_ALTO);
+                client.getWindow().getFramebufferWidth() / (double) NAT_ANCHO,
+                client.getWindow().getFramebufferHeight() / (double) NAT_ALTO);
         k = (float) (Math.min(1.0, cabe) / gui);
 
         ancho = Math.round(NAT_ANCHO * k);

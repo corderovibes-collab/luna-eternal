@@ -153,6 +153,24 @@ def preparar(origen: Path) -> Image.Image:
     return quitar_fondo(Image.open(origen).convert("RGBA"))
 
 
+# Cada textura se guarda con su .mcmeta, y `clamp` es el que importa.
+#
+# Sin el, OpenGL repite la textura (GL_REPEAT) y al filtrarla el muestreo del
+# borde se mezcla con el borde CONTRARIO: el pixel de arriba con el de abajo y
+# el de la izquierda con el de la derecha. Eso dibuja un marco fino alrededor
+# de cada icono --el "borde con micropuntos"--, y solo aparece cuando el Pad no
+# cae a tamano exacto, que es justo cuando hace falta filtrar.
+#
+# `blur` va en false porque el filtro se decide en tiempo real desde
+# PokePadScreen: depende de si el Pad cabe o no, y eso el .mcmeta no lo sabe.
+MCMETA = '{\n  "texture": {\n    "blur": false,\n    "clamp": true\n  }\n}\n'
+
+
+def guardar(im: Image.Image, destino: Path) -> None:
+    im.save(destino)
+    destino.with_suffix(".png.mcmeta").write_text(MCMETA, encoding="utf-8")
+
+
 def medir_pantalla(chasis: Image.Image) -> tuple:
     """Donde cae el area azul.
 
@@ -191,12 +209,12 @@ def main() -> None:
     args = ap.parse_args()
 
     SALIDA.mkdir(parents=True, exist_ok=True)
-    for viejo in SALIDA.glob("*.png"):
+    for viejo in list(SALIDA.glob("*.png")) + list(SALIDA.glob("*.mcmeta")):
         viejo.unlink()
 
     print("POKEPAD")
     chasis = Image.open(ARTE / "fondo_base.png").convert("RGBA")
-    chasis.save(SALIDA / "pokepad.png")
+    guardar(chasis, SALIDA / "pokepad.png")
     x0, y0, x1, y1 = medir_pantalla(chasis)
     print(f"  chasis    {chasis.size[0]} x {chasis.size[1]}")
     print(f"  pantalla  x {x0}-{x1}  y {y0}-{y1}   ({x1 - x0} x {y1 - y0})")
@@ -208,13 +226,13 @@ def main() -> None:
     if faltan:
         raise SystemExit(f"Faltan iconos: {', '.join(faltan)}")
     for p in iconos:
-        preparar(p).save(SALIDA / f"{p.stem.replace('icon_', '')}.png")
+        guardar(preparar(p), SALIDA / f"{p.stem.replace('icon_', '')}.png")
     lado = Image.open(iconos[0]).size[0]
     print(f"  iconos    {len(iconos)} de {lado}x{lado}")
 
     botones = sorted((ARTE / "botones").glob("*.png"))
     for p in botones:
-        preparar(p).save(SALIDA / f"boton_{p.stem}.png")
+        guardar(preparar(p), SALIDA / f"boton_{p.stem}.png")
     print(f"  botones   {len(botones)}")
 
     celda = lado + AIRE * 2

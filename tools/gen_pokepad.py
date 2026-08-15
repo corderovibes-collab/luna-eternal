@@ -147,10 +147,65 @@ def alfa_duro(im: Image.Image) -> Image.Image:
     return Image.fromarray(a, "RGBA")
 
 
+def sangrar_alfa(im: Image.Image, visible: int = 24) -> Image.Image:
+    """Contagia el color de lo visible a lo invisible. NO toca el alfa.
+
+    EL PROBLEMA QUE RESUELVE, MEDIDO EN EL JUEGO
+
+    Un PNG guarda color y transparencia por separado, asi que un pixel puede
+    ser invisible y llevar un color dentro. El arte generado llega lleno de
+    eso: en `explorar` hay 383 pixeles con alfa entre 1 y 23 --invisibles a
+    todos los efectos-- y 22 de ellos guardan VERDE PURO, AZUL PURO o ROJO
+    PURO. Basura del generador, en teoria inofensiva.
+
+    En teoria. En la captura del juego aparecian exactamente 8 pixeles verde
+    puro, 6 azules, 5 rojos y 3 amarillos, que son EXACTAMENTE las cuentas del
+    arte. Se veian como motas de colores sobre el contorno de cada icono.
+
+    LA CURA
+
+    Es la estandar en cualquier motor: a lo que no se ve se le pone el color de
+    su vecino visible. El alfa no cambia, asi que la imagen compuesta es la
+    misma pixel a pixel --lo invisible sigue invisible--, pero ya no hay
+    colores raros escondidos que el dibujado pueda sacar a pasear.
+
+    Se propaga en varias pasadas para alcanzar tambien lo que esta lejos del
+    borde, que es donde viven las motas mas escandalosas.
+    """
+    a = np.array(im.convert("RGBA")).astype(np.int32)
+    fuente = a[..., 3] >= visible
+    rgb = a[..., :3].astype(np.float32)
+    # El tope es generoso a proposito: cada pasada avanza UN pixel, asi que una
+    # zona invisible ancha necesita tantas como su radio. Con 8 se quedaban 368
+    # motas dentro de `boton_atras`, que es el que mas hueco transparente tiene.
+    # El bucle sale solo en cuanto no queda nada que contagiar.
+    for _ in range(max(im.size)):
+        if fuente.all():
+            break
+        suma = np.zeros_like(rgb)
+        cuenta = np.zeros(a.shape[:2], np.float32)
+        p_rgb = np.pad(rgb, ((1, 1), (1, 1), (0, 0)), mode="edge")
+        p_src = np.pad(fuente, 1, mode="constant")
+        for dy in (0, 1, 2):
+            for dx in (0, 1, 2):
+                if dy == 1 and dx == 1:
+                    continue
+                m = p_src[dy:dy + a.shape[0], dx:dx + a.shape[1]]
+                suma += p_rgb[dy:dy + a.shape[0], dx:dx + a.shape[1]] * m[..., None]
+                cuenta += m
+        nuevo = (~fuente) & (cuenta > 0)
+        if not nuevo.any():
+            break
+        rgb[nuevo] = suma[nuevo] / cuenta[nuevo][..., None]
+        fuente = fuente | nuevo
+    a[..., :3] = np.round(rgb).astype(np.int32)
+    return Image.fromarray(a.astype(np.uint8), "RGBA")
+
+
 def preparar(origen: Path) -> Image.Image:
     # Sin `alfa_duro`: ver el aviso de la cabecera. El arte HD conserva su
     # borde suave a proposito.
-    return quitar_fondo(Image.open(origen).convert("RGBA"))
+    return sangrar_alfa(quitar_fondo(Image.open(origen).convert("RGBA")))
 
 
 # Cada textura se guarda con su .mcmeta, y `clamp` es el que importa.
@@ -214,7 +269,8 @@ def main() -> None:
 
     print("POKEPAD")
     chasis = Image.open(ARTE / "fondo_base.png").convert("RGBA")
-    guardar(chasis, SALIDA / "pokepad.png")
+    # El chasis tambien: tiene menos motas, pero es el mismo problema.
+    guardar(sangrar_alfa(chasis), SALIDA / "pokepad.png")
     x0, y0, x1, y1 = medir_pantalla(chasis)
     print(f"  chasis    {chasis.size[0]} x {chasis.size[1]}")
     print(f"  pantalla  x {x0}-{x1}  y {y0}-{y1}   ({x1 - x0} x {y1 - y0})")

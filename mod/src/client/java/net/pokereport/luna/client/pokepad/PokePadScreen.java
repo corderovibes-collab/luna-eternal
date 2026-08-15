@@ -1,5 +1,6 @@
 package net.pokereport.luna.client.pokepad;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -352,10 +353,26 @@ public class PokePadScreen extends Screen {
             ctx.setShaderColor(((tinte >> 16) & 0xFF) / 255f,
                     ((tinte >> 8) & 0xFF) / 255f, (tinte & 0xFF) / 255f, 1f);
         }
+        // ⚠ LA MEZCLA ALFA HAY QUE ENCENDERLA A MANO. Sin esto, el juego trata
+        // CUALQUIER alfa mayor que cero como opaco: un pixel con alfa 1 se
+        // dibuja a todo color.
+        //
+        // Medido sobre una captura del juego, icono a icono: con alfa 0 el
+        // dibujado era correcto, y de alfa 1 en adelante el pixel salia con su
+        // color CRUDO. Eso es lo que se veia primero como motas de colores
+        // --el arte guardaba verde y rojo puros en pixeles invisibles-- y
+        // despues, ya limpio el arte, como un cerco negro alrededor de cada
+        // icono: el mismo fallo pintando el color del contorno.
+        //
+        // El arte no tenia la culpa. Cobblemon hace esto mismo en cada dibujo
+        // de interfaz (api/gui/GuiUtils.kt), y por eso a ellos no les pasa.
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
         // `natW/natH` son el tamaño REAL de la PNG, y hay que pasarlos: con el
         // tamaño en pantalla, Minecraft tomaría solo esa esquina de la textura
         // en lugar de la textura entera.
         ctx.drawTexture(textura, x, y, ancho, alto, 0f, 0f, natW, natH, natW, natH);
+        RenderSystem.disableBlend();
         if (tenido) {
             ctx.setShaderColor(1f, 1f, 1f, 1f);
         }

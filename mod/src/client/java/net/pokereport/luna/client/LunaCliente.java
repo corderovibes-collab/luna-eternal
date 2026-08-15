@@ -41,9 +41,17 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(Red.Saldo.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
-        // Al salir del mundo se olvida: el saldo es de esa partida.
-        ClientPlayConnectionEvents.DISCONNECT.register(
-                (manejador, cliente) -> EstadoCliente.olvidar());
+        // La voz de la Pokédex. Llega solo a quien ha escaneado; aquí solo se
+        // reproduce, la decisión de a quién mandarla es del servidor.
+        ClientPlayNetworking.registerGlobalReceiver(Red.VozPokedex.ID,
+                (carga, ctx) -> VozPokedex.reproducir(carga.especie()));
+
+        // Al salir del mundo se olvida: el saldo es de esa partida. Y se calla
+        // la voz, que si no sigue sonando en la pantalla de servidores.
+        ClientPlayConnectionEvents.DISCONNECT.register((manejador, cliente) -> {
+            EstadoCliente.olvidar();
+            VozPokedex.callar();
+        });
 
         ClientTickEvents.END_CLIENT_TICK.register(cliente -> {
             // `wasPressed` vacía la cola de pulsaciones: con un `if` simple, una

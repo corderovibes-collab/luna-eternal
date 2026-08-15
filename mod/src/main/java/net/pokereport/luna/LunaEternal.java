@@ -60,6 +60,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             Tablist.setup(server);
             // Se suscribe cuando Cobblemon ya esta cargado del todo.
             net.pokereport.luna.pokedex.CaptureListener.register();
+            net.pokereport.luna.pokedex.ScanListener.register();
         });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {

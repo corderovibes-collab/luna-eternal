@@ -72,6 +72,7 @@ public final class AutoTest {
             testQuests(a);
             testTelemetria(a, b);
             testCazas(a);
+            testVozPokedex();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -257,6 +258,36 @@ public final class AutoTest {
      * premios. Es exactamente la clase de agujero que no se ve leyendo el
      * código.
      */
+    /**
+     * La voz de la Pokédex al escanear.
+     *
+     * <p>No se puede escanear desde aquí —hace falta un jugador con el objeto
+     * en la mano— así que lo que se comprueba es <b>el catálogo</b>, que es
+     * donde puede colarse el error: mandar al cliente a reproducir un sonido
+     * que no existe deja el escaneo mudo y sin decir por qué.
+     */
+    private void testVozPokedex() {
+        check("bulbasaur tiene voz",
+            net.pokereport.luna.pokedex.VozService.tieneVoz("bulbasaur"));
+        // Cobblemon da el nombre de varias formas segun de donde se lea.
+        check("el identificador con espacio de nombres se normaliza",
+            net.pokereport.luna.pokedex.VozService.tieneVoz("cobblemon:bulbasaur"));
+        check("las mayusculas se normalizan",
+            net.pokereport.luna.pokedex.VozService.tieneVoz("Bulbasaur"));
+        check("los espacios se normalizan",
+            net.pokereport.luna.pokedex.VozService.normalizar("Mr Mime")
+                .equals("mr_mime"));
+        // Y lo importante al reves: una especie sin grabar NO manda paquete.
+        check("una especie sin voz no suena",
+            !net.pokereport.luna.pokedex.VozService.tieneVoz("charizard"));
+        check("un nombre vacio no suena",
+            !net.pokereport.luna.pokedex.VozService.tieneVoz(""));
+        check("un nombre nulo no revienta",
+            !net.pokereport.luna.pokedex.VozService.tieneVoz(null));
+        check("hay al menos una voz",
+            net.pokereport.luna.pokedex.VozService.cuantas() > 0);
+    }
+
     private void testCazas(long jugador) throws Exception {
         var hunts = LunaEternal.hunts();
         check("el servicio de cazas está cargado", hunts != null);

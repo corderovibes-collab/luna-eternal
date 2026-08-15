@@ -61,10 +61,36 @@ public class Red implements ModInitializer {
         }
     }
 
+    /**
+     * La voz de la Pokédex: «reproduce la descripción de esta especie».
+     *
+     * <p>Viaja <b>solo al jugador que ha escaneado</b>, que es todo el diseño:
+     * el evento de Cobblemon trae su {@code ServerPlayer}, así que enviarlo por
+     * su conexión hace que nadie más lo oiga. Si dos personas escanean a la vez,
+     * cada una recibe el suyo y ninguna oye el de la otra.
+     *
+     * <p>Se manda el <b>nombre de la especie</b> y no una ruta de sonido: el
+     * cliente compone el identificador. Así el servidor no sabe nada de cómo se
+     * llaman los ficheros, y añadir voces nuevas no cambia el protocolo.
+     */
+    public record VozPokedex(String especie) implements CustomPayload {
+        public static final Id<VozPokedex> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "voz_pokedex"));
+        public static final PacketCodec<RegistryByteBuf, VozPokedex> CODEC =
+                PacketCodec.tuple(PacketCodecs.STRING, VozPokedex::especie,
+                        VozPokedex::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     @Override
     public void onInitialize() {
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
+        PayloadTypeRegistry.playS2C().register(VozPokedex.ID, VozPokedex.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
             var jugador = ctx.player();

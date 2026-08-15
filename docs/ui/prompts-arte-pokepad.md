@@ -180,10 +180,17 @@ Del segundo en adelante, añadir al final:
 Menos medieval que la tanda anterior: la tienda deja de ser un puesto de
 mercado y el clan deja de ser un estandarte de guerra.
 
+> **Los personajes se DESCRIBEN, no se nombran.** «a cute chubby yellow
+> electric mouse creature with long black-tipped ears» funciona mejor que
+> escribir el nombre: muchos generadores devuelven algo genérico —o se
+> niegan— ante una marca registrada, y describiendo se controla la pose, la
+> expresión y el encuadre, que es justo lo que hace falta para que los
+> quince parezcan una familia. Como efecto secundario, el dibujo es nuestro.
+
 | # | Fichero | Objeto |
 |---|---|---|
 | 1 | `pokedex` | `a sleek modern handheld Pokedex device seen from the front, dark grey body with rounded corners, a glowing screen and a big round red and white Poke Ball button` |
-| 2 | `cosmeticos` | `a cute round friendly creature wearing stylish sunglasses and a backwards cap, smiling, with one small sparkle beside it` |
+| 2 | `cosmeticos` | `a cute chubby yellow electric mouse creature with long black-tipped ears, round red cheeks and a lightning-bolt tail, wearing stylish sunglasses and a backwards cap, smiling and relaxed, with one small sparkle beside it` |
 | 3 | `trabajos` | `a shiny iron pickaxe and a fishing rod crossed in an X, wooden handles, a tiny Poke Ball hanging from the fishing line` |
 | 4 | `misiones` | `a modern clipboard with a checklist and one green check mark, and a small Poke Ball clipped to its top` |
 | 5 | `transportes` | `a glowing purple portal orb floating above a rounded location pin on a small map` |

@@ -80,6 +80,26 @@ Nada se dibuja a mano: si Cobblemon cambia sus texturas, se reejecuta.
 | **Solo el cian** | Se desplazan únicamente los píxeles con tono entre 165° y 205°. Así las plataformas de tipo —fuego naranja, planta verde— se quedan intactas **sin tener que listarlas**: no son cian, no se tocan |
 | **76 de 114** | Las otras 38 son los 7 cascos y las que no llevan ni un píxel cian (flechas, iconos). No se incluyen: solo pesarían |
 
+### ⚠️ Una textura animada se lleva su `.mcmeta`, o deja de estarlo
+
+**Minecraft busca el `.mcmeta` en el mismo pack que sirvió la textura**, no en el
+de debajo. Así que repintar una textura animada sin copiarle su metadato le
+quita la animación — y no falla ni avisa.
+
+Se destapó con **el objeto Pokédex en la mano**. Su `pokedex_screen.png` mide
+16 × 48, que son tres fotogramas de 16 × 16 apilados. Sin el metadato, el juego
+lo trata como **una sola imagen alta y estrecha**, y el modelo —que espera
+16 × 16— mapea todo al tercio de arriba:
+
+```
+lo que se veía   la pantalla diminuta, y caras del modelo con textura vacía
+la causa         2 ficheros .mcmeta que no se copiaban
+```
+
+`gen_interfaz.py` copia ahora el `.mcmeta` **siempre que exista**, sin lista ni
+comprobación a mano. Hoy son dos de 323; si Cobblemon anima otra mañana, se
+copia sola.
+
 ---
 
 ## 3. Cómo llega activado

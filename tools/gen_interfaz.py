@@ -219,6 +219,25 @@ def generar(comparativa: bool = False) -> Path:
             destino = DESTINO / n
             destino.parent.mkdir(parents=True, exist_ok=True)
             nueva.save(destino, "PNG")
+
+            # ⚠ Y SU .mcmeta AL LADO, SI LO TIENE.
+            #
+            # Minecraft busca el .mcmeta EN EL MISMO PACK que sirvio la
+            # textura, no en el de debajo. Repintar una textura animada sin
+            # copiarle su metadato le quita la animacion: la imagen deja de
+            # ser N fotogramas apilados y pasa a ser una sola, alta y estrecha.
+            #
+            # Se vio en el item de la Pokedex, que es lo que destapo esto. Su
+            # `pokedex_screen.png` mide 16x48 --tres fotogramas de 16x16-- y
+            # sin el metadato el modelo, que espera 16x16, mapeaba todo al
+            # tercio de arriba: la pantalla salia pequena y a las demas caras
+            # les tocaba textura vacia.
+            #
+            # Hoy son dos ficheros de los 323, pero esto no se comprueba a
+            # mano: se copia lo que haya y se acabo.
+            meta = n + ".mcmeta"
+            if meta in z.namelist():
+                (DESTINO / meta).write_bytes(z.read(meta))
             inc += 1
             px += tocados
             if corto in ("pokedex_screen.png", "summary_base.png"):

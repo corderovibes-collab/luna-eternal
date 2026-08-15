@@ -159,6 +159,15 @@ Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md
               GRIS, sin un pixel de color que desplazar
               la carcasa de la Pokedex NO se toca: hay 7 colores y
               los elige el jugador
+              ⚠ UNA TEXTURA ANIMADA SE LLEVA SU .mcmeta O DEJA DE
+                ESTARLO. Minecraft lo busca en el MISMO pack que
+                sirvio la textura, no en el de debajo. Sin el, una
+                imagen de N fotogramas apilados pasa a ser una sola
+                alta y estrecha. Se vio en el ITEM de la Pokedex:
+                su pantalla es 16x48 (3 de 16x16) y el modelo, que
+                espera 16x16, mapeaba todo al tercio de arriba --
+                pantalla diminuta y caras sin textura. Hoy son 2 de
+                323 y gen_interfaz.py los copia siempre que existan
               ⚠ DOS intentos fallidos antes, los dos MUDOS:
                 1) .zip suelto + linea en config/yosbr/options.txt.
                    YOSBR copia esa plantilla solo si options.txt no

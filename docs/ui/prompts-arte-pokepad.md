@@ -27,7 +27,7 @@ después (§3.3).
 |---|---|---|
 | **Chasis** | **1380 × 828** | 1 por pantalla |
 | **Iconos** | **100 × 100** | 1 cada uno, 15 en total |
-| **Botones** | **120 × 96** | 1 cada uno, 6 en total |
+| **Botones** | **128 × 96** | 1 cada uno, 6 en total |
 
 ### 1.1 · Por qué 1380 × 828 y no otro número
 
@@ -209,8 +209,12 @@ mercado y el clan deja de ser un estandarte de guerra.
 
 ## 6. Los botones
 
-Seis: atrás, adelante, ajustes, inicio, más y cerrar. **Un botón no es un icono
-pequeño**, y pedirlo igual da objetos con sombra flotando:
+Seis: atrás, adelante, ajustes, inicio, más y cerrar. Van en **128 × 96**, que
+es 4:3 exacto: uno de los pocos formatos que un generador ofrece de fábrica, así
+que salen sin recortar.
+
+**Un botón no es un icono pequeño**, y pedirlo igual da objetos con sombra
+flotando:
 
 | | Icono | Botón |
 |---|---|---|
@@ -254,7 +258,7 @@ No text, no letters, no numbers, no labels, no watermark, no document.
 
 1. El **chasis** a 1380 × 828 — es lo que bloquea el resto
 2. Con él medido, los **quince iconos** a 100 × 100, uno a uno
-3. Los **seis botones** a 120 × 96
+3. Los **seis botones** a 128 × 96
 
 ## Related Systems
 

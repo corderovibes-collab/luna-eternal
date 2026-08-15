@@ -109,6 +109,17 @@ PokePad       LA PANTALLA PRINCIPAL EXISTE (2026-08-14). Tecla B
                 pasar a HD la proporcion se corrigio a 5:3 exacto.
                 Las medidas viejas NO se escalan, se vuelven a medir
               composicion medida y congelada en §8 del documento
+              ⚠⚠ ANTES DE ESCRIBIR CUALQUIER PANTALLA NUEVA, LEE
+                 docs/ui/dibujado.md. Son 5 reglas y ninguna da error
+                 al compilar; se pagan en horas depurando en el juego
+                 La primera, la que costo una noche entera:
+                 HAY QUE ENCENDER RenderSystem.enableBlend() A MANO.
+                 Sin eso el juego trata CUALQUIER alfa > 0 como opaco
+                 --un pixel con alfa 1 sale a todo color-- y se ve
+                 como motas de colores o como cerco negro alrededor
+                 de cada icono, segun lo que el arte guarde debajo.
+                 Parecen dos fallos y es uno. Y no esta en el arte:
+                 se perdieron 3 diagnosticos buscandolo ahi
               PENDIENTE: colocar los 6 botones, y con ellos decidir
               donde va el aspa de cerrar --el chasis NO trae ranura
               para ella, esa esquina la ocupan las lineas cian--

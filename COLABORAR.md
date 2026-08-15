@@ -88,6 +88,13 @@ equivocado da `NoSuchMethodError` en ejecución.
 llamada, dibujar en pasadas y limpiar la profundidad. Con dos de las tres,
 parpadea. Ver [`docs/ui/interfaz-cliente.md`](docs/ui/interfaz-cliente.md) §5.
 
+**Antes de escribir una pantalla, lee [`docs/ui/dibujado.md`](docs/ui/dibujado.md).**
+Son cinco reglas y ninguna de ellas da error al compilar: se pagan depurando en
+el juego. La primera es que **hay que encender `RenderSystem.enableBlend()` a
+mano** — sin eso el juego trata cualquier alfa mayor que cero como opaco, y se
+ve como motas de colores o como un cerco negro alrededor de cada dibujo. Parecen
+dos fallos y es uno, y no está en el arte.
+
 **No implementes ninguna pantalla como menú de cofre.** Ni provisional. Se
 borraron todos el 2026-08-12 (D-026) y volver a meter uno «mientras tanto» es
 exactamente lo que se decidió no hacer: un provisional que funciona se queda, y

@@ -26,6 +26,7 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`trading/gts.md`](trading/gts.md) | ✅ | Mercado: acceso por progresión, comisiones, anti-abuso |
 | [`progression/progression-model.md`](progression/progression-model.md) | ✅ | 5 vías, desbloqueos de dos factores, sin nivel de jugador |
 | [`ui/interfaz-cliente.md`](ui/interfaz-cliente.md) | ✅ | **Cómo se hace la interfaz**, y por qué nunca como menú de cofre |
+| [`ui/dibujado.md`](ui/dibujado.md) | ✅ | ⚠️ **Las 5 reglas de dibujado que cumple toda pantalla.** Leer ANTES de escribir una nueva |
 | [`world/world-structure.md`](world/world-structure.md) | ✅ | Lobby · ciudadela · mundo, y el recorrido de entrada |
 | [`world/worlds.md`](world/worlds.md) | ✅ | Hogar permanente vs Salvaje que reinicia; lobby y modpack |
 | [`pokemon/generations.md`](pokemon/generations.md) | ✅ | Kanto + Johto primero, despliegue progresivo |

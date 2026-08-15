@@ -89,17 +89,28 @@ PokePad       LA PANTALLA PRINCIPAL EXISTE (2026-08-14). Tecla B
               `main`, el unico que corre en los dos lados
               celdas dibujadas por CODIGO, sin texturas (como ellos)
               medidas: tools/gen_pokepad.py las imprime al terminar
-              ⚠ DECISION ABIERTA, es lo primero al retomar:
-                los iconos de 25x25 se ven pobres. NO es la resolucion:
-                los suyos son 24x25 con 9-15 COLORES y contorno negro
-                duro; los nuestros 25x25 con 387-471 y sin contorno.
-                Una IA da una ILUSTRACION ENCOGIDA, no pixel art
-                A) prompt mucho mas duro (contorno negro, max 12
-                   colores, prohibido el degradado) y vale el tamano
-                B) irse a HD: iconos 96x96 y el Pad dibujado a
-                   PIXELES REALES, saltandose el GUI Scale
-                el usuario lleva pidiendo HD, asi que B
-              docs/ui/prompts-arte-pokepad.md tiene los prompts
+              ⚠ EL ARTE SE ESTA REHACIENDO EN HD. Es lo que bloquea
+                Se probo pixel art de 25x25 imitando al Pad de
+                referencia y NO FUNCIONO, por dos motivos medidos:
+                1) una IA no dibuja pixel art, entrega una
+                   ILUSTRACION ENCOGIDA. Con los mismos 625 pixeles
+                   los suyos tienen 9-15 colores y contorno negro
+                   duro; los nuestros 387-471 y sin contorno
+                2) no es la estetica que se quiere: el suyo es retro
+                   deliberado, este servidor se quiere limpio
+                TAMANOS NUEVOS, ya decididos:
+                   chasis  1380 x 828   iconos 100x100   botones 128x96
+                1380x828 no es arbitrario: divisible entre 1,2,3,4,6,
+                que son los GUI Scale posibles. Dibujando el Pad al
+                tamano REAL de pantalla, un texel cae en un pixel sea
+                cual sea el ajuste del jugador
+              PENDIENTE al retomar:
+                a) recibir el chasis 1380x828 y medirlo
+                b) cambiar el dibujado a pixeles reales (hoy dibuja a
+                   346 y deja que Minecraft multiplique)
+                c) los 15 iconos y los 6 botones
+              docs/ui/prompts-arte-pokepad.md tiene TODOS los prompts
+              build/pokepad/prompts-*.txt los tiene ya montados
 Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md
               323 texturas (211 KB), ACTIVADO solo
               python tools/gen_interfaz.py --comparativa

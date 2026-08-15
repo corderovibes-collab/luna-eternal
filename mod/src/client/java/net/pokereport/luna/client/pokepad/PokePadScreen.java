@@ -5,7 +5,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.pokereport.luna.client.EstadoCliente;
 import net.pokereport.luna.net.Red;
@@ -33,30 +32,28 @@ public class PokePadScreen extends Screen {
     private static final int CELDA_ENCIMA = 0xFF9AA3E8;
     private static final int BORDE_ENCIMA = 0xFF16F2E6;
 
-    /** El chasis en las unidades en que están medidas las demás constantes. */
-    private static final int ANCHO = 346, ALTO = 207;
-
     /**
-     * La textura mide lo mismo que el hueco donde se dibuja: 1×.
+     * El chasis en PIXELES DEL ARTE. Todo lo demás se mide en estas unidades.
      *
-     * <p>Se probó a 4× creyendo que más resolución daría más nitidez, y salió
-     * peor. La prueba está en el mod de referencia: su chasis es de 346×207 con
-     * <b>21 colores</b>, el nuestro era de 1380×828 con <b>18 905</b>.
-     *
-     * <p>Minecraft amplía las interfaces con vecino más próximo. A un dibujo de
-     * veintitantos colores eso le sienta de maravilla —sale nítido y con
-     * aspecto deliberado— y a una ilustración suavizada la deja sucia a
-     * cualquier tamaño. El arreglo no era subir la resolución sino
-     * <b>cuantizar</b>, que es lo que hace ahora {@code gen_pokepad.py}.
+     * <p>Los dos números son divisibles entre 1, 2, 3, 4 y 6, que son los
+     * valores que puede tomar el ajuste <i>GUI Scale</i>. Dibujado a su tamaño
+     * real, un texel cae en un píxel sea cual sea el ajuste del jugador.
      */
-    private static final int ESCALA = 1;
+    private static final int NAT_ANCHO = 1380, NAT_ALTO = 828;
 
-    /** La rejilla, en las mismas unidades. Ver §8 del documento. */
+    /** El azul de la pantalla, para morder las esquinas de las celdas. */
+    private static final int PANTALLA = 0xFF8A93D0;
+
+    /** La rejilla, en píxeles del arte. */
     // Los da `tools/gen_pokepad.py` al preparar el arte: los imprime al final.
     // No se escriben a ojo, se copian de ahi.
-    private static final int REJ_X = 124, REJ_Y = 53;
-    private static final int CELDA = 31, HUECO = 6, ICONO = 25;
+    private static final int REJ_X = 495, REJ_Y = 212;
+    private static final int CELDA = 124, HUECO = 24, ICONO = 100;
     private static final int COLS = 5;
+
+    // El borde de la celda y la esquina mordida, tambien en pixeles del arte.
+    // A 1 px sobre una celda de 124 no se ve ninguno de los dos.
+    private static final int BORDE_GROSOR = 4, MORDIDA = 4;
 
     // Una celda cerrada se apaga a si misma; el ICONO va siempre a todo color.
     //
@@ -68,18 +65,34 @@ public class PokePadScreen extends Screen {
     private static final int CELDA_CERRADA = 0xFF6A72A8;
     private static final int BORDE_CERRADA = 0xFF9AA3C8;
 
-    // Las ranuras del panel izquierdo, MEDIDAS sobre el chasis y no puestas a
-    // ojo. La primera version tenia la cara en 30,34 de 40 px y se salia del
-    // hueco por arriba y por la izquierda.
+    // Las ranuras del panel izquierdo, MEDIDAS sobre el chasis HD y no puestas
+    // a ojo, ni escaladas de las viejas: el chasis nuevo NO es el viejo por
+    // cuatro. El alto si (828/207 = 4) pero el ancho no (1380/346 = 3,9884),
+    // porque al pasar a HD la proporcion se corrigio a 5:3 exacto.
     //
-    //   avatar    x 30-77   y  31-80    (47 x 49)
-    //   tarjeta   x 23-86   y  93-145   (63 x 52)
-    //   saldo     x 23-69   y 159-177   (46 x 18)
-    private static final int CARA_X = 32, CARA_Y = 33, CARA_LADO = 44;
-    private static final int SALDO_CX = 46, SALDO_Y = 164;
+    //   avatar    x 136-308  y 139-318   (173 x 180)
+    //   tarjeta   x 108-342  y 388-580   (235 x 193)
+    //   saldo     x 108-273  y 652-705   (166 x  54)
+    //
+    // La cara va a 168 y no a 173, que es lo que cabe: la cabeza de la skin son
+    // 8x8 texeles, y 168 es multiplo de 8. Con 173 cada texel caeria en 21,6
+    // pixeles y saldria emborronada justo en lo unico que es del jugador.
+    private static final int CARA_X = 138, CARA_Y = 145, CARA_LADO = 168;
+    private static final int SALDO_CX = 191, SALDO_CY = 679;
 
-    /** Cerrar, arriba a la derecha del chasis. */
-    private static final int CERRAR_X = 316, CERRAR_Y = 5, CERRAR_W = 20, CERRAR_H = 16;
+    /** El centro de la placa de arriba, donde va el nombre de la aplicación. */
+    private static final int PLACA_CY = 52;
+
+    // Cerrar. ⚠ PROVISIONAL: el chasis HD no trae ranura para el aspa --esa
+    // esquina la ocupan las lineas cian-- y el prompt del arte nunca pidio una.
+    // Se queda arriba a la derecha, encima del cuerpo, hasta que la fase de los
+    // botones decida el sitio de los seis. La textura es 120x96, asi que el
+    // hueco mantiene esa proporcion para no deformarla.
+    private static final int CERRAR_X = 1240, CERRAR_Y = 24;
+    private static final int CERRAR_W = 100, CERRAR_H = 80;
+
+    /** El tamaño real de las PNG de los botones. */
+    private static final int BOTON_NAT_W = 120, BOTON_NAT_H = 96;
 
     private int x0, y0, ancho, alto;
     private float k;
@@ -93,12 +106,13 @@ public class PokePadScreen extends Screen {
     }
 
     /**
-     * Centra el Pad.
+     * Centra el Pad y decide a qué tamaño se dibuja.
      *
-     * <p>Se dibuja al tamaño de la textura y se deja que Minecraft lo amplíe
-     * por el ajuste <i>GUI Scale</i>, que es como funciona cualquier interfaz
-     * del juego —y como lo hace el Pad de referencia—. Con la textura ya
-     * cuantizada a pixel art, ampliar con vecino más próximo da bordes limpios.
+     * <p><b>El objetivo es un texel por píxel real de pantalla.</b> Antes se
+     * dibujaba a 346 y se dejaba que Minecraft lo multiplicara por el
+     * <i>GUI Scale</i>: eso es ampliar una imagen pequeña, y era exactamente lo
+     * que se veía borroso. Ahora el arte mide 1380×828 y se pide ese mismo
+     * tamaño en pantalla, así que no hay ampliación que emborrone.
      */
     @Override
     protected void init() {
@@ -107,9 +121,21 @@ public class PokePadScreen extends Screen {
         // fresco y un Pad cerrado no cuesta nada.
         ClientPlayNetworking.send(new Red.PedirSaldo());
 
-        ancho = ANCHO;
-        alto = ALTO;
-        k = 1f;
+        // `k` convierte un pixel del arte en unidades de interfaz, que es en lo
+        // que dibuja DrawContext. Dividir por el GUI Scale es lo que cancela la
+        // ampliacion del juego y deja el Pad a tamano real.
+        double gui = client != null ? client.getWindow().getScaleFactor() : 1;
+
+        // Y no siempre cabe: 1380x828 pixeles REALES no entran en un portatil
+        // de 1366x768. Antes de recortarlo se prefiere verlo entero y algo
+        // reducido, que en arte suavizado se nota mucho menos que en pixel art.
+        double cabe = client == null ? 1 : Math.min(
+                client.getWindow().getFramebufferWidth() * 0.98 / NAT_ANCHO,
+                client.getWindow().getFramebufferHeight() * 0.98 / NAT_ALTO);
+        k = (float) (Math.min(1.0, cabe) / gui);
+
+        ancho = Math.round(NAT_ANCHO * k);
+        alto = Math.round(NAT_ALTO * k);
         x0 = (width - ancho) / 2;
         y0 = (height - alto) / 2;
     }
@@ -124,10 +150,14 @@ public class PokePadScreen extends Screen {
     public void render(DrawContext ctx, int ratonX, int ratonY, float delta) {
         super.render(ctx, ratonX, ratonY, delta);
         dibujar(ctx, CHASIS, x0, y0, ancho, alto,
-                ANCHO * ESCALA, ALTO * ESCALA, 0xFFFFFFFF);
+                NAT_ANCHO, NAT_ALTO, 0xFFFFFFFF);
 
         int celda = Math.round(CELDA * k);
         int icono = Math.round(ICONO * k);
+        // Nunca por debajo de 1: a GUI Scale alto y ventana pequena, redondear
+        // a cero borraria el borde de todas las celdas.
+        int grosor = Math.max(1, Math.round(BORDE_GROSOR * k));
+        int mordida = Math.max(1, Math.round(MORDIDA * k));
 
         App bajoElRaton = null;
         for (int i = 0; i < App.TODAS.length; i++) {
@@ -143,24 +173,24 @@ public class PokePadScreen extends Screen {
                     : app.abierta() ? CELDA_FONDO : CELDA_CERRADA;
             int borde = encima ? BORDE_ENCIMA
                     : app.abierta() ? CELDA_BORDE : BORDE_CERRADA;
-            celda(ctx, cx, cy, celda, fondo, borde);
+            celda(ctx, cx, cy, celda, grosor, mordida, fondo, borde);
 
             dibujar(ctx, app.icono(), cx + (celda - icono) / 2,
                     cy + (celda - icono) / 2, icono, icono,
-                    ICONO * ESCALA, ICONO * ESCALA, 0xFFFFFFFF);
+                    ICONO, ICONO, 0xFFFFFFFF);
         }
 
         panelLateral(ctx);
 
         // La placa de arriba: el nombre de la app senalada, o el del Pad.
+        // Centrado en su hueco: el texto se dibuja desde arriba, asi que se
+        // sube media linea para que quede a media altura de la placa.
         Text placa = bajoElRaton != null ? bajoElRaton.nombre() : getTitle();
-        ctx.drawCenteredTextWithShadow(textRenderer, placa,
-                x0 + ancho / 2, y0 + Math.round(11 * k), 0xFFC8D2F0);
+        ctx.drawCenteredTextWithShadow(textRenderer, placa, x0 + ancho / 2,
+                y0 + Math.round(PLACA_CY * k) - textRenderer.fontHeight / 2,
+                0xFFC8D2F0);
 
         if (bajoElRaton != null) {
-            Text nombre = bajoElRaton.abierta()
-                    ? bajoElRaton.nombre()
-                    : bajoElRaton.nombre().copy().formatted(Formatting.GRAY);
             ctx.drawTooltip(textRenderer, bajoElRaton.descripcion(), ratonX, ratonY);
         }
     }
@@ -221,9 +251,10 @@ public class PokePadScreen extends Screen {
         // Guiones mientras no ha llegado la respuesta: "no lo sé" y "tienes
         // cero" no son lo mismo, y un cero falso en un saldo asusta.
         String texto = saldo == null ? "- - -" : String.format("%,d", saldo.pokedolares());
-        // Centrado en su ranura, no pegado al borde izquierdo.
+        // Centrado en su ranura, en los dos ejes.
         ctx.drawCenteredTextWithShadow(textRenderer, Text.literal(texto),
-                x0 + Math.round(SALDO_CX * k), y0 + Math.round(SALDO_Y * k),
+                x0 + Math.round(SALDO_CX * k),
+                y0 + Math.round(SALDO_CY * k) - textRenderer.fontHeight / 2,
                 0xFFFFE12E);
 
         // Solo se dibuja el aspa de cerrar, que es el unico boton que hoy hace
@@ -232,11 +263,12 @@ public class PokePadScreen extends Screen {
         // ensena a no pulsar los botones. Eso se paga luego, en las pantallas
         // que si funcionen.
         //
-        // El "+" ademas no cabria: su ranura en el chasis tiene 9 pixeles de
-        // interior, y meter ahi una textura de 30x24 la deforma.
+        // El "+" ya SI cabria --su ranura en el chasis HD tiene 42 px de
+        // interior, no 9-- pero sigue sin llevar a ningun sitio.
         dibujar(ctx, BOTON_CERRAR,
                 x0 + Math.round(CERRAR_X * k), y0 + Math.round(CERRAR_Y * k),
-                Math.round(CERRAR_W * k), Math.round(CERRAR_H * k), 30, 24, 0xFFFFFFFF);
+                Math.round(CERRAR_W * k), Math.round(CERRAR_H * k),
+                BOTON_NAT_W, BOTON_NAT_H, 0xFFFFFFFF);
     }
 
     /**
@@ -246,15 +278,21 @@ public class PokePadScreen extends Screen {
      * quince rectángulos de esquina viva se ven como una hoja de cálculo.
      */
     private static void celda(DrawContext ctx, int x, int y, int lado,
-                              int fondo, int borde) {
+                              int grosor, int mordida, int fondo, int borde) {
         ctx.fill(x, y, x + lado, y + lado, borde);
-        ctx.fill(x + 1, y + 1, x + lado - 1, y + lado - 1, fondo);
-        // Las cuatro esquinas, del color de la pantalla que hay debajo.
-        int p = 0x00000000;
-        ctx.fill(x, y, x + 1, y + 1, p);
-        ctx.fill(x + lado - 1, y, x + lado, y + 1, p);
-        ctx.fill(x, y + lado - 1, x + 1, y + lado, p);
-        ctx.fill(x + lado - 1, y + lado - 1, x + lado, y + lado, p);
+        ctx.fill(x + grosor, y + grosor, x + lado - grosor, y + lado - grosor, fondo);
+        // Las cuatro esquinas, PINTADAS DEL COLOR DE LA PANTALLA.
+        //
+        // Antes se rellenaban con 0x00000000 y no hacian nada: `fill` mezcla, y
+        // mezclar un color con alfa cero deja el pixel exactamente igual. La
+        // esquina no se mordia; solo lo parecia porque a 1 px no se distingue
+        // el efecto de su ausencia. A 4 px si se distingue, asi que hay que
+        // pintar de verdad --y del azul de la pantalla, que es lo que se veria
+        // si el rectangulo no estuviera.
+        ctx.fill(x, y, x + mordida, y + mordida, PANTALLA);
+        ctx.fill(x + lado - mordida, y, x + lado, y + mordida, PANTALLA);
+        ctx.fill(x, y + lado - mordida, x + mordida, y + lado, PANTALLA);
+        ctx.fill(x + lado - mordida, y + lado - mordida, x + lado, y + lado, PANTALLA);
     }
 
     /**

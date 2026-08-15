@@ -89,26 +89,29 @@ PokePad       LA PANTALLA PRINCIPAL EXISTE (2026-08-14). Tecla B
               `main`, el unico que corre en los dos lados
               celdas dibujadas por CODIGO, sin texturas (como ellos)
               medidas: tools/gen_pokepad.py las imprime al terminar
-              ⚠ EL ARTE SE ESTA REHACIENDO EN HD. Es lo que bloquea
-                Se probo pixel art de 25x25 imitando al Pad de
-                referencia y NO FUNCIONO, por dos motivos medidos:
+              EL ARTE HD YA ESTA ENTERO (2026-08-14). 22 piezas
+                 chasis 1380x828 · 15 iconos 100x100 · 6 botones 120x96
+              se descarto el pixel art de 25x25 por dos motivos medidos:
                 1) una IA no dibuja pixel art, entrega una
                    ILUSTRACION ENCOGIDA. Con los mismos 625 pixeles
                    los suyos tienen 9-15 colores y contorno negro
                    duro; los nuestros 387-471 y sin contorno
                 2) no es la estetica que se quiere: el suyo es retro
                    deliberado, este servidor se quiere limpio
-                TAMANOS NUEVOS, ya decididos:
-                   chasis  1380 x 828   iconos 100x100   botones 128x96
-                1380x828 no es arbitrario: divisible entre 1,2,3,4,6,
-                que son los GUI Scale posibles. Dibujando el Pad al
-                tamano REAL de pantalla, un texel cae en un pixel sea
-                cual sea el ajuste del jugador
-              PENDIENTE al retomar:
-                a) recibir el chasis 1380x828 y medirlo
-                b) cambiar el dibujado a pixeles reales (hoy dibuja a
-                   346 y deja que Minecraft multiplique)
-                c) los 15 iconos y los 6 botones
+              1380x828 no es arbitrario: divisible entre 1,2,3,4,6,
+              que son los GUI Scale posibles. Dibujando el Pad al
+              tamano REAL de pantalla, un texel cae en un pixel sea
+              cual sea el ajuste del jugador. Y los botones a 120x96
+              cumplen lo mismo, por eso se acepto ese tamano en vez
+              del 128x96 que decia el documento
+              ⚠ EL CHASIS HD NO ES EL VIEJO POR CUATRO. El alto si
+                (828/207=4) pero el ancho no (1380/346=3,9884): al
+                pasar a HD la proporcion se corrigio a 5:3 exacto.
+                Las medidas viejas NO se escalan, se vuelven a medir
+              composicion medida y congelada en §8 del documento
+              PENDIENTE: colocar los 6 botones, y con ellos decidir
+              donde va el aspa de cerrar --el chasis NO trae ranura
+              para ella, esa esquina la ocupan las lineas cian--
               docs/ui/prompts-arte-pokepad.md tiene TODOS los prompts
               build/pokepad/prompts-*.txt los tiene ya montados
 Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md

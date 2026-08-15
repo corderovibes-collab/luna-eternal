@@ -12,8 +12,10 @@ generan.
 
 ## Current Status
 
-`FASE 1` — la **pantalla principal**. Las pantallas de cada aplicación vienen
-después (§3.3).
+**La pantalla principal está terminada y verificada en el juego (2026-08-15):**
+chasis HD dibujado a píxeles reales, los quince iconos, la cara del jugador, el
+saldo y la barra de seis botones. Las pantallas de cada aplicación vienen
+después (§3.2).
 
 > **Este documento se ha reescrito dos veces**, y las dos por lo mismo: se
 > intentó imitar el estilo pixel art del Pad de referencia y no funcionó. La
@@ -320,17 +322,33 @@ orden    atras · adelante · inicio · ajustes · mas · cerrar
 > apagado que responde «todavía no» informa; uno de aspecto normal que no hace
 > nada enseña a no pulsar los botones.
 
-> ⚠️ **`atras` llegó con la elipse de sombra de los iconos** (616 px) y hay que
-> regenerarlo: un botón está empotrado, no apoyado. Al prompt de §6 hay que
-> añadirle `No shadow under the button.`
+> ⚠️ **`atras` llegó defectuoso y hoy sale de `adelante` volteado.** Traía un
+> **halo claro semitransparente** —se veía como un fondo blanco detrás del
+> botón— y la **elipse de sombra de los iconos** (616 px). Medido contra
+> `adelante`, que sí está limpio:
+>
+> ```
+>              alfa 1-23        alfa 24-60
+> atras        (112,129,130)    (183,191,204)   ← halo claro
+> adelante     (  1,  1,  1)    ( 13, 14, 18)
+> ```
+>
+> Las dos cosas las prohíbe §6: un botón es un marco empotrado, no un objeto
+> apoyado. Como `adelante` es literalmente el mismo botón con la flecha al otro
+> lado, se voltea y el estilo cuadra por construcción. Lo único que cambia es
+> que el brillo del bisel queda a la derecha, y a 60 × 48 no se aprecia.
+>
+> Si algún día se regenera de verdad, el prompt de §6 ya lleva añadida la línea
+> `No shadow under the button.`
 
 ## Next Actions
 
 1. ~~El **chasis** a 1380 × 828~~ ✅ recibido, medido y congelado (§8)
 2. ~~Los **quince iconos** a 100 × 100~~ ✅ los quince
-3. ~~Los **seis botones** a 120 × 96~~ ✅ los seis
-4. **Colocar los seis botones** en el chasis — incluido el sitio definitivo del
-   aspa de cerrar
+3. ~~Los **seis botones**~~ ✅ los seis, colocados en la barra de abajo
+4. **La primera sub-pantalla.** Necesita su fondo, que se pide con el prompt de
+   §3.2 partiendo del chasis base — y es ahí donde se encienden los botones de
+   navegación, que hoy van apagados por no tener destino
 
 ## Related Systems
 

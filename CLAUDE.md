@@ -80,10 +80,12 @@ Luz de color  ⚠ LA LUZ DE MINECRAFT NO TIENE COLOR. El motor guarda
               el suelo. Complementary > Performance > COLORED_LIGHTING
               viene en 0. Hacen cosas distintas, no se estorban
               detalle en docs/world/neon.md §1
-PokePad       LA PANTALLA PRINCIPAL EXISTE (2026-08-14). Tecla B
+PokePad       LA PANTALLA PRINCIPAL ESTA TERMINADA (2026-08-15)
+              verificada en el juego por el usuario. Tecla B
               mod/src/client/ · lunaeternal vuelve a tener cliente
               (D-025) y su jar YA SE REPARTE a los jugadores
-              chasis + rejilla 5x3 + 15 iconos + cara + saldo + cerrar
+              chasis HD a pixeles reales + rejilla 5x3 + 15 iconos
+              + cara + saldo + barra de 6 botones
               el saldo se PIDE al abrir, no se empuja: primer trozo de
               protocolo. Los tipos de paquete van en el entrypoint
               `main`, el unico que corre en los dos lados
@@ -126,8 +128,17 @@ PokePad       LA PANTALLA PRINCIPAL EXISTE (2026-08-14). Tecla B
               de alto. El prompt del chasis nunca pidio una barra
               solo CERRAR hace algo; los otros 5 van apagados y
               suenan a bloqueado, igual que las 15 celdas
-              PENDIENTE: regenerar `atras`, que llego con la elipse
-              de sombra de los iconos (616 px). Un boton va empotrado
+              `atras` llego con un halo claro semitransparente y con
+              la elipse de sombra de los iconos: las dos las prohibe
+              §6. Se saca de `adelante` VOLTEADO, que es el mismo
+              boton con la flecha al otro lado. Opcional regenerarlo
+              algun dia con el prompt de §6, que ya lleva la linea
+              `No shadow under the button`
+              LO SIGUIENTE: la PRIMERA SUB-PANTALLA. Ahi se encienden
+              los botones de navegacion (cambiar `CERRAR` por la
+              lista de los que ya llevan a algun sitio) y hace falta
+              un fondo por pantalla, que se pide con el prompt de
+              §3.2 partiendo del chasis base
               docs/ui/prompts-arte-pokepad.md tiene TODOS los prompts
               build/pokepad/prompts-*.txt los tiene ya montados
 Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md

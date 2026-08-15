@@ -27,7 +27,7 @@ después (§3.3).
 |---|---|---|
 | **Chasis** | **1380 × 828** | 1 por pantalla |
 | **Iconos** | **100 × 100** | 1 cada uno, 15 en total |
-| **Botones** | **128 × 96** | 1 cada uno, 6 en total |
+| **Botones** | **120 × 96** | 1 cada uno, 6 en total |
 
 ### 1.1 · Por qué 1380 × 828 y no otro número
 
@@ -209,9 +209,15 @@ mercado y el clan deja de ser un estandarte de guerra.
 
 ## 6. Los botones
 
-Seis: atrás, adelante, ajustes, inicio, más y cerrar. Van en **128 × 96**, que
-es 4:3 exacto: uno de los pocos formatos que un generador ofrece de fábrica, así
-que salen sin recortar.
+Seis: atrás, adelante, ajustes, inicio, más y cerrar. Van en **120 × 96**.
+
+> **Aquí decía 128 × 96 y se cambió al recibirlos.** El motivo del 128 era que
+> 4:3 es un formato que los generadores ofrecen de fábrica; el generador
+> entregó los seis en **120 × 96**, que es 5:4, así que ese argumento se cayó
+> solo. Y el número que de verdad importa se cumple igual: **120 y 96 son
+> divisibles entre 1, 2, 3, 4 y 6**, los valores del *GUI Scale*, así que a
+> tamaño real un texel sigue cayendo en un píxel. Cambiar el número salía más
+> barato que regenerar seis imágenes correctas.
 
 **Un botón no es un icono pequeño**, y pedirlo igual da objetos con sombra
 flotando:
@@ -254,11 +260,49 @@ No text, no letters, no numbers, no labels, no watermark, no document.
    alfa, **mide la composición** y monta una maqueta para mirarla.
 4. Copiar a `PokePadScreen` las medidas que imprime.
 
+---
+
+## 8. La composición, medida
+
+Los números que congelan la pantalla principal. **No se escriben a ojo**: los
+imprime `tools/gen_pokepad.py` al preparar el arte y se copian a
+`PokePadScreen`. Están en **píxeles del arte**, sobre el chasis de 1380 × 828.
+
+```
+pantalla azul   x 454-1252   y 152-693    (798 x 541)
+REJ_X = 495     REJ_Y = 212
+CELDA = 124     HUECO = 24    ICONO = 100
+```
+
+Y las tres ranuras del panel izquierdo, para lo que dibuja el código encima:
+
+```
+avatar    x 136-308   y 139-318   (173 x 180)
+tarjeta   x 108-342   y 388-580   (235 x 193)
+saldo     x 108-273   y 652-705   (166 x  54)
+placa     centrada en el chasis, a media altura y = 52
+```
+
+> ⚠️ **El chasis HD no es el viejo multiplicado por cuatro.** El alto sí
+> (828 / 207 = 4) pero el ancho no (1380 / 346 = 3,9884): al pasar a HD la
+> proporción se corrigió a 5:3 exacto. Las medidas viejas no se escalan, se
+> vuelven a medir.
+
+> **La cara del jugador va a 168, no a los 173 que caben.** La cabeza de la
+> skin son 8 × 8 texeles y 168 es múltiplo de 8; con 173 cada texel caería en
+> 21,6 píxeles y saldría emborronada justo en lo único que es suyo.
+
+> ⚠️ **El chasis no trae ranura para el aspa de cerrar**, y el prompt de §3.1
+> nunca pidió una: esa esquina la ocupan las líneas cian. Está provisional
+> arriba a la derecha hasta que se coloquen los seis botones.
+
 ## Next Actions
 
-1. El **chasis** a 1380 × 828 — es lo que bloquea el resto
-2. Con él medido, los **quince iconos** a 100 × 100, uno a uno
-3. Los **seis botones** a 128 × 96
+1. ~~El **chasis** a 1380 × 828~~ ✅ recibido, medido y congelado (§8)
+2. ~~Los **quince iconos** a 100 × 100~~ ✅ los quince
+3. ~~Los **seis botones** a 120 × 96~~ ✅ los seis
+4. **Colocar los seis botones** en el chasis — incluido el sitio definitivo del
+   aspa de cerrar
 
 ## Related Systems
 

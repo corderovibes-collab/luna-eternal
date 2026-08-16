@@ -64,8 +64,17 @@ public class PokePadScreen extends Screen {
      * justo lo que costó una noche arreglar en el chasis.
      */
     private static final int TEXTO_ALTO = 18, TEXTO_AIRE = 5;
-    private static final int TEXTO_COLOR = 0xFFE8ECFF;
-    private static final int TEXTO_CERRADO = 0xFF9AA3C8;
+    // ⚠ LOS DOS EN BLANCO, Y CASI IGUALES.
+    //
+    // Antes el cerrado era gris azulado, y como HOY LAS QUINCE APLICACIONES
+    // ESTAN CERRADAS, los quince nombres salian grises sobre celdas azul claro
+    // y no se leia ninguno. Apagar el nombre solo tiene sentido si hay alguno
+    // encendido al lado con el que comparar.
+    //
+    // Lo que distingue una celda cerrada es su FONDO, que ya recula. El nombre
+    // solo tiene un trabajo: leerse.
+    private static final int TEXTO_COLOR = 0xFFFFFFFF;
+    private static final int TEXTO_CERRADO = 0xFFE0E6F8;
 
     // El borde de la celda y la esquina mordida, tambien en pixeles del arte.
     // A 1 px sobre una celda de 124 no se ve ninguno de los dos.
@@ -485,10 +494,32 @@ public class PokePadScreen extends Screen {
         m.push();
         m.translate(x0, y0, 0);
         m.scale(escala, escala, 1f);
+
         // Ya dentro de la matriz escalada, las coordenadas van divididas por
         // ella: lo que se pide en pixeles del arte acaba cayendo donde toca.
-        ctx.drawCenteredTextWithShadow(textRenderer, linea,
-                Math.round(cx * k / escala), Math.round(arriba * k / escala), color);
+        // Y el centrado se hace a mano porque la version "conSombra" no deja
+        // apagar la sombra, y aqui hace falta contorno en vez de sombra.
+        int px = Math.round(cx * k / escala) - textRenderer.getWidth(linea) / 2;
+        int py = Math.round(arriba * k / escala);
+
+        // ⚠ CONTORNO, NO SOMBRA.
+        //
+        // La sombra de Minecraft es una copia desplazada en diagonal: sobre un
+        // fondo oscuro se lee, pero estas celdas son AZUL CLARO y el nombre
+        // quedaba gris sobre claro, ilegible.
+        //
+        // Un contorno negro por los ocho lados funciona sobre CUALQUIER fondo,
+        // que es la unica garantia que sirve aqui: la celda cambia de color al
+        // pasar el raton, y encima cada aplicacion tendra el suyo algun dia.
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx != 0 || dy != 0) {
+                    ctx.drawText(textRenderer, linea, px + dx, py + dy,
+                                 0xFF000000, false);
+                }
+            }
+        }
+        ctx.drawText(textRenderer, linea, px, py, color, false);
         m.pop();
     }
 

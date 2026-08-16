@@ -70,14 +70,18 @@ public class PokePadScreen extends Screen {
     // cuatro. El alto si (828/207 = 4) pero el ancho no (1380/346 = 3,9884),
     // porque al pasar a HD la proporcion se corrigio a 5:3 exacto.
     //
-    //   avatar    x 136-308  y 139-318   (173 x 180)
+    //   avatar    x 141-308  y 141-311   (168 x 171)
     //   tarjeta   x 108-342  y 388-580   (235 x 193)
     //   saldo     x 108-273  y 652-705   (166 x  54)
     //
-    // La cara va a 168 y no a 173, que es lo que cabe: la cabeza de la skin son
-    // 8x8 texeles, y 168 es multiplo de 8. Con 173 cada texel caeria en 21,6
-    // pixeles y saldria emborronada justo en lo unico que es del jugador.
-    private static final int CARA_X = 138, CARA_Y = 145, CARA_LADO = 168;
+    // La cara va a 168 porque la cabeza de la skin son 8x8 texeles y 168 es
+    // multiplo de 8: cada texel cae en 21 pixeles clavados. Con un lado que no
+    // lo fuera saldria emborronada justo en lo unico que es del jugador.
+    //
+    // En el chasis v2 el hueco mide 168 de ancho EXACTO, que es la medida a la
+    // que ya dibujabamos: el disenador lo ajusto a ella. Antes eran 173x180 y
+    // la cara quedaba descuadrada dentro.
+    private static final int CARA_X = 141, CARA_Y = 142, CARA_LADO = 168;
     private static final int SALDO_CX = 191, SALDO_CY = 679;
 
     /** El centro de la placa de arriba, donde va el nombre de la aplicación. */

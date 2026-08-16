@@ -93,6 +93,11 @@ BOTONES = ["atras", "adelante", "inicio", "ajustes", "mas", "cerrar"]
 BOTON_SEP = 24
 BARRA_X, BARRA_Y = 610, 715
 
+# La cabeza del jugador. Mismos numeros que PokePadScreen. La maqueta la pinta
+# como un cuadrado macizo: no es la skin de nadie, pero es EL ENCUADRE, que es
+# lo unico que hay que poder juzgar antes de entrar al juego.
+CARA_X, CARA_Y, CARA_LADO = 141, 142, 168
+
 
 def quitar_fondo(im: Image.Image) -> Image.Image:
     """Vuelve transparente el fondo opaco, si lo hay.
@@ -419,6 +424,10 @@ def maqueta(chasis, iconos, rx, ry, celda, lado) -> None:
             a[..., :3] = a[..., :3] * 128 // 255      # el mismo tinte del codigo
             b = Image.fromarray(a.astype(np.uint8), "RGBA")
         out.alpha_composite(b, (BARRA_X + i * (BOTON_W + BOTON_SEP), BARRA_Y))
+
+    # El hueco de la cabeza, para ver si cuadra dentro de su ranura.
+    d.rectangle([CARA_X, CARA_Y, CARA_X + CARA_LADO - 1, CARA_Y + CARA_LADO - 1],
+                fill=(150, 110, 90, 255), outline=(210, 170, 150, 255), width=2)
 
     # Sin ampliar. El chasis ya mide 1380x828, que es el tamano al que se va a
     # dibujar en pantalla: ampliarlo ensenaria algo que nadie va a ver. Antes se

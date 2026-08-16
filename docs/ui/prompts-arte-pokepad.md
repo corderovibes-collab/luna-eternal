@@ -279,7 +279,7 @@ CELDA = 124     HUECO = 24    ICONO = 100
 Y las tres ranuras del panel izquierdo, para lo que dibuja el código encima:
 
 ```
-avatar    x 136-308   y 139-318   (173 x 180)
+avatar    x 141-308   y 141-311   (168 x 171)   ← chasis v2
 tarjeta   x 108-342   y 388-580   (235 x 193)
 saldo     x 108-273   y 652-705   (166 x  54)
 placa     centrada en el chasis, a media altura y = 52
@@ -290,9 +290,15 @@ placa     centrada en el chasis, a media altura y = 52
 > proporción se corrigió a 5:3 exacto. Las medidas viejas no se escalan, se
 > vuelven a medir.
 
-> **La cara del jugador va a 168, no a los 173 que caben.** La cabeza de la
-> skin son 8 × 8 texeles y 168 es múltiplo de 8; con 173 cada texel caería en
-> 21,6 píxeles y saldría emborronada justo en lo único que es suyo.
+> **La cara del jugador va a 168 × 168.** La cabeza de la skin son 8 × 8
+> texeles y 168 es múltiplo de 8, así que cada texel cae en 21 píxeles
+> clavados; con un lado que no lo fuera saldría emborronada justo en lo único
+> que es suyo.
+>
+> En el **chasis v2** el hueco mide 168 de ancho **exacto** — el diseñador lo
+> ajustó a esa medida. En el v1 eran 173 × 180 y la cara quedaba descuadrada
+> dentro. Es el único cambio del v2: pantalla y las otras dos ranuras están
+> igual al píxel.
 
 Y la barra de botones, en la franja de debajo de la pantalla:
 

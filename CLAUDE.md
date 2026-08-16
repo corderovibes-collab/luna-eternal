@@ -84,13 +84,48 @@ PokePad       LA PANTALLA PRINCIPAL ESTA TERMINADA (2026-08-15)
               verificada en el juego por el usuario. Tecla B
               mod/src/client/ · lunaeternal vuelve a tener cliente
               (D-025) y su jar YA SE REPARTE a los jugadores
+              CHASIS v4 (2026-08-16): la pantalla paso de AZUL OSCURO
+              a CASI BLANCA, y la disposicion entera cambio
               chasis HD a pixeles reales + rejilla 5x3 + 15 iconos
-              + cara + saldo + barra de 6 botones
+              + cara + saldo + teclado de 6 botones 2x3
               el saldo se PIDE al abrir, no se empuja: primer trozo de
               protocolo. Los tipos de paquete van en el entrypoint
               `main`, el unico que corre en los dos lados
               celdas dibujadas por CODIGO, sin texturas (como ellos)
+              ⚠⚠ EL v4 DA LA VUELTA A TODO LO DE DENTRO. No es un
+                 retoque de tono, cada decision de contraste apuntaba
+                 al reves:
+                   celdas  eran MAS CLARAS que el fondo -> MAS OSCURAS
+                   nombres eran BLANCOS con contorno negro -> OSCUROS
+                           con contorno claro. Es la MISMA decision del
+                           usuario ("que se lean") sobre un fondo que
+                           se ha invertido: blanco sobre blanco no se
+                           lee con contorno ni sin el
+                   resalte  del ambar del chasis al NARANJA FUERTE
+                            (F35C0C), el unico acento con contraste
+                 por eso el color del texto y el de su contorno son DOS
+                 CONSTANTES: cambiaron de golpe, y el negro escrito a
+                 mano dentro de la funcion se habria quedado
+              LOS BOTONES DEJAN DE SER UNA BARRA. En el v3 iban en la
+              unica franja libre (981x58) y a 60x48 porque no cabia
+              mas; el v4 no tiene esa franja --ahi estan la boca y los
+              bigotes de Rotom-- pero trae TRES RANURAS de verdad:
+                cara     181x182   la cabeza del jugador, a 168
+                botones  249x208   teclado 2x3 de 80x64 (2/3 del arte,
+                                   UN TERCIO MAS GRANDES que antes)
+                saldo    180x68
+              queda LIBRE un cuadradito de 48x48 en 302,651
+              ⚠ LAS MEDIDAS SE MIDEN, NO SE ESCRIBEN NI SE ESCALAN.
+                medir_pantalla() busca la mancha clara grande de la
+                derecha (antes buscaba "azul de verdad": sobre el v4 no
+                encontraba NADA) y medir_cajas() el gris de la moldura
+                de cada ranura. El chasis ya ha cambiado de estructura
+                CUATRO veces, y cada vez las medidas a mano se quedaron
+                mintiendo EN SILENCIO: el codigo dibujaba la cara donde
+                estaba en la version anterior sin que nada fallara
               medidas: tools/gen_pokepad.py las imprime al terminar
+              la maqueta ensena UNA celda con el raton encima, que es
+              el unico estado que no se puede juzgar de otra forma
               EL ARTE HD YA ESTA ENTERO (2026-08-14). 22 piezas
                  chasis 1380x828 · 15 iconos 100x100 · 6 botones 120x96
               se descarto el pixel art de 25x25 por dos motivos medidos:
@@ -103,14 +138,7 @@ PokePad       LA PANTALLA PRINCIPAL ESTA TERMINADA (2026-08-15)
               1380x828 no es arbitrario: divisible entre 1,2,3,4,6,
               que son los GUI Scale posibles. Dibujando el Pad al
               tamano REAL de pantalla, un texel cae en un pixel sea
-              cual sea el ajuste del jugador. Y los botones a 120x96
-              cumplen lo mismo, por eso se acepto ese tamano en vez
-              del 128x96 que decia el documento
-              ⚠ EL CHASIS HD NO ES EL VIEJO POR CUATRO. El alto si
-                (828/207=4) pero el ancho no (1380/346=3,9884): al
-                pasar a HD la proporcion se corrigio a 5:3 exacto.
-                Las medidas viejas NO se escalan, se vuelven a medir
-              composicion medida y congelada en §8 del documento
+              cual sea el ajuste del jugador
               ⚠⚠ ANTES DE ESCRIBIR CUALQUIER PANTALLA NUEVA, LEE
                  docs/ui/dibujado.md. Son 5 reglas y ninguna da error
                  al compilar; se pagan en horas depurando en el juego

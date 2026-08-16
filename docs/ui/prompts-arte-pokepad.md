@@ -271,57 +271,69 @@ imprime `tools/gen_pokepad.py` al preparar el arte y se copian a
 `PokePadScreen`. Están en **píxeles del arte**, sobre el chasis de 1380 × 828.
 
 ```
-pantalla azul   x 454-1252   y 152-693    (798 x 541)
-REJ_X = 495     REJ_Y = 212
-CELDA = 124     HUECO = 24    ICONO = 100
+pantalla clara  x 460-1260   y 204-698    (800 x 494)
+REJ_X = 502     REJ_Y = 236
+CELDA = 124     HUECO_X = 24   HUECO_Y = 19   ICONO = 100
 ```
 
 Y las tres ranuras del panel izquierdo, para lo que dibuja el código encima:
 
 ```
-avatar    x 141-308   y 141-309   (168 x 169)   ← chasis v3
-tarjeta   x 108-342   y 388-580   (235 x 193)
-saldo     x 108-273   y 652-705   (166 x  54)
+cara      x 114-322   y 115-324   hueco util 181 x 182   ← chasis v4
+botones   x  80-356   y 360-595   hueco util 249 x 208
+saldo     x  80-287   y 624-719   hueco util 180 x  68
 placa     LLEVA EL LOGO. No se escribe nada encima (ver aviso)
+cuadrito  x 302-349   y 651-698   (48 x 48)   LIBRE, no aloja nada
 ```
 
-> ⚠️ **El chasis HD no es el viejo multiplicado por cuatro.** El alto sí
-> (828 / 207 = 4) pero el ancho no (1380 / 346 = 3,9884): al pasar a HD la
-> proporción se corrigió a 5:3 exacto. Las medidas viejas no se escalan, se
-> vuelven a medir.
-
-> **La cara del jugador va a 168 × 168.** La cabeza de la skin son 8 × 8
-> texeles y 168 es múltiplo de 8, así que cada texel cae en 21 píxeles
-> clavados; con un lado que no lo fuera saldría emborronada justo en lo único
-> que es suyo.
->
-> En el **chasis v2** el hueco mide 168 de ancho **exacto** — el diseñador lo
-> ajustó a esa medida. En el v1 eran 173 × 180 y la cara quedaba descuadrada
-> dentro. Es el único cambio del v2: pantalla y las otras dos ranuras están
-> igual al píxel.
-
-Y la barra de botones, en la franja de debajo de la pantalla:
-
 ```
-barra    x 610  y 715     botón 60 x 48, separados 24
-orden    atras · adelante · inicio · ajustes · mas · cerrar
+CARA_X = 134   CARA_Y = 136   CARA_LADO = 168
+BARRA_X = 126  BARRA_Y = 378  boton 80 x 64, 2 columnas, sep 24 / 4
+SALDO_CX = 184 SALDO_CY = 672
+orden     atras · adelante · inicio · ajustes · mas · cerrar
 ```
 
-> ⚠️ **El chasis no tiene sitio para los botones a su tamaño**, y el prompt de
-> §3.1 nunca pidió una barra: pidió las tres ranuras, la placa y la pantalla.
-> Medido, lo que hay libre es:
->
-> ```
-> franja bajo la pantalla   981 x 58   ← la única grande
-> franja sobre la pantalla  ~900 x 52
-> hueco cuadrado del saldo    42 x 42
-> botón                      120 x 96  ← no entra en ninguna
-> ```
->
-> Por eso se dibujan a **60 × 48**, la mitad exacta, que sigue siendo divisible
-> entre 1, 2, 3, 4 y 6. `gen_pokepad.py` los guarda **ya reducidos** para que se
-> dibujen 1:1 en vez de dejar que los encoja el juego. Si algún día se rehace
-> el chasis, ahí es donde debería ir la barra dibujada.
+> ⚠️ **Estas medidas no se escriben ni se escalan: se MIDEN.** `medir_pantalla()`
+> busca la mancha clara grande de la derecha y `medir_cajas()` el gris de la
+> moldura de cada ranura; `gen_pokepad.py` imprime los números al terminar y de
+> ahí se copian. Es lo único que caduca solo — el chasis ya ha cambiado de
+> estructura cuatro veces, y cada vez las medidas escritas a mano se quedaron
+> mintiendo **en silencio**: el código seguía dibujando la cara donde estaba en
+> la versión anterior sin que nada fallara.
+
+### 8.1 · ⚠️ El v4 invierte la pantalla, y con ella todo lo de dentro
+
+La pantalla pasó de **azul oscuro a casi blanca** (`226,235,253`). No es un
+retoque de tono: cada decisión de contraste apuntaba al revés.
+
+| | v3 (pantalla azul) | v4 (pantalla clara) |
+|---|---|---|
+| Celdas | más **claras** que el fondo | más **oscuras** |
+| Nombres | **blancos** con contorno negro | **oscuros** con contorno claro |
+| Resalte del ratón | el ámbar del chasis `F3B146` | el **naranja fuerte** `F35C0C` |
+
+> **Los nombres oscuros no contradicen la decisión del usuario, la cumplen.** Lo
+> que pidió fue *«que se lean»*, y blanco sobre blanco no se lee con contorno ni
+> sin él. Por eso el color y su contorno son **dos constantes**: cambiaron de
+> golpe al llegar el v4, y si el negro estuviera escrito a mano dentro de la
+> función se habría quedado ahí.
+
+### 8.2 · Los botones dejan de ser una barra
+
+En el v3 iban en la única franja libre que quedaba —981 × 58 debajo de la
+pantalla— y a 60 × 48 porque no cabía más. Era un apaño, y se decía aquí mismo.
+
+**El v4 no tiene esa franja**: debajo de la pantalla están la boca y los bigotes
+de Rotom. A cambio trae tres ranuras de verdad, y la mediana mide 249 × 208 de
+hueco útil — sitio para los seis a **80 × 64**, dos tercios exactos del arte y
+**un tercio más grandes que antes**, en un teclado de 2 × 3.
+
+Los 4 px de separación vertical no son un descuido: tres filas de 64 llenan la
+ranura de arriba abajo, y eso es lo que hace que se lea como *«esta ranura es el
+teclado»* en vez de como seis botones flotando en una caja.
+
+> `gen_pokepad.py` los guarda **ya reducidos** para que se dibujen 1:1 en vez de
+> dejar que los encoja el juego (regla 2 de [dibujado.md](dibujado.md)).
 
 > **Cinco de los seis se dibujan apagados**, porque son navegación y todavía no
 > hay a dónde ir. Suenan a bloqueado, igual que las quince celdas. Un botón

@@ -50,8 +50,33 @@ SALIDA = (RAIZ / "mod" / "src" / "client" / "resources" / "assets"
           / "lunaeternal" / "textures" / "gui" / "pokepad")
 MAQUETA = RAIZ / "build" / "pokepad"
 
-# El azul de la pantalla, para localizarla dentro del chasis.
-AZUL = (135, 145, 207)
+# LA PALETA DE LA PANTALLA. Los mismos numeros que PokePadScreen, y por el mismo
+# motivo que las medidas: si la maqueta no ensena los colores del juego, no
+# sirve para aprobar nada.
+#
+# ⚠ EN EL CHASIS v4 LA PANTALLA PASO DE AZUL OSCURO A CASI BLANCA (226,235,253),
+# y eso da la vuelta a TODO lo de dentro:
+#
+#   las celdas   eran mas CLARAS que el fondo; ahora tienen que ser mas OSCURAS
+#   el texto     era BLANCO con contorno negro; ahora es NEGRO con contorno
+#                claro. No es cambiar de opinion: es la misma decision del
+#                usuario --"que se lea"-- aplicada a un fondo que se ha
+#                invertido. Blanco sobre blanco no se lee.
+#   el resalte   pasa del ambar del chasis al NARANJA FUERTE, que es el unico
+#                acento del v4 con contraste suficiente sobre claro
+PANTALLA = (226, 235, 253, 255)
+CELDA_FONDO = (191, 203, 232, 255)      # aplicacion abierta
+CELDA_BORDE = (124, 137, 180, 255)
+CELDA_CERRADA = (208, 216, 236, 255)    # cerrada: recula hacia el fondo
+BORDE_CERRADA = (160, 170, 198, 255)
+CELDA_ENCIMA = (255, 255, 255, 255)
+BORDE_ENCIMA = (243, 92, 12, 255)       # muestreado del bisel naranja del v4
+TEXTO_COLOR = (22, 32, 58, 255)
+TEXTO_CONTORNO = (242, 246, 255, 255)
+
+# Que celda ensena la maqueta con el raton encima. La de en medio, para poder
+# compararla con sus ocho vecinas de una sola mirada.
+RESALTADA = 7
 
 # La celda se ajusta AL ICONO en vez de repartir el espacio disponible.
 #
@@ -107,21 +132,35 @@ NOMBRES = {
     "mochila": "Mochila",   "gyms": "Gimnasios",        "explorar": "Explorar",
 }
 
-# El tamano al que se DIBUJAN los botones, que no es el que llega. Ver el
-# comentario largo donde se guardan. Si cambia, cambia tambien BOTON_W/H en
-# PokePadScreen: son el mismo numero en dos idiomas.
+# El tamano al que se DIBUJAN los botones, que no es el que llega.
+#
+# ⚠ EN EL CHASIS v4 LOS BOTONES DEJAN DE SER UNA BARRA Y PASAN A SER UN TECLADO
+# de 2 columnas x 3 filas dentro de la ranura mediana del panel izquierdo.
+#
+# En el v3 iban en la unica franja libre que quedaba —981 x 58 debajo de la
+# pantalla— y a 60x48 porque no cabia mas. El v4 no tiene esa franja: debajo de
+# la pantalla estan la boca y los bigotes de Rotom. Pero a cambio trae tres
+# ranuras de verdad, y la mediana mide 249 x 208 de hueco util, que da para seis
+# botones a 80x64 — DOS TERCIOS EXACTOS del arte, y un tercio mas grandes que
+# antes.
+#
+# Los 4 px de separacion vertical no son un descuido: tres filas de 64 llenan la
+# ranura de arriba abajo, y eso es lo que hace que se lea como "esta ranura ES
+# el teclado" en vez de como seis botones flotando en una caja.
 ICONO = 100
-BOTON_W, BOTON_H = 60, 48
+BOTON_W, BOTON_H = 80, 64
 
-# Y donde va la barra. Mismos numeros que PokePadScreen, en el mismo orden.
+# El orden es el de lectura: dos por fila, de izquierda a derecha.
 BOTONES = ["atras", "adelante", "inicio", "ajustes", "mas", "cerrar"]
-BOTON_SEP = 24
-BARRA_X, BARRA_Y = 610, 715
+BOTON_COLS = 2
+BOTON_SEP_X, BOTON_SEP_Y = 24, 4
 
-# La cabeza del jugador. Mismos numeros que PokePadScreen. La maqueta la pinta
-# como un cuadrado macizo: no es la skin de nadie, pero es EL ENCUADRE, que es
-# lo unico que hay que poder juzgar antes de entrar al juego.
-CARA_X, CARA_Y, CARA_LADO = 141, 141, 168
+# El lado de la cabeza del jugador. La POSICION se mide (va centrada en la
+# ranura de arriba); el lado se fija aqui porque tiene que ser multiplo de 8:
+# la cabeza de una skin son 8x8 texeles y 168 los reparte en 21 pixeles
+# clavados. Con un lado que no lo fuera saldria emborronada justo en lo unico
+# que es del jugador.
+CARA_LADO = 168
 
 
 def quitar_fondo(im: Image.Image) -> Image.Image:
@@ -309,34 +348,118 @@ def guardar(im: Image.Image, destino: Path) -> None:
 
 
 def medir_pantalla(chasis: Image.Image) -> tuple:
-    """Donde cae el area azul.
+    """Donde cae la pantalla, la zona CLARA de la derecha.
 
     Se detecta por color en vez de escribirlo a mano para que siga siendo
-    cierto si el chasis se regenera. Y se mide sobre el original SIN cuantizar:
-    con la paleta ya reducida, la deteccion se come tambien el marco claro.
+    cierto cuando el chasis cambie — y ya ha cambiado cuatro veces.
+
+    ⚠ EN EL v4 LA PANTALLA DEJO DE SER AZUL Y PASO A SER CASI BLANCA. La
+    deteccion anterior buscaba `b - r > 40`, o sea "azul de verdad", y sobre un
+    (226,235,253) da 27: no encontraba NADA. Un detector afinado a un color
+    concreto es un detector que caduca con el arte, asi que ahora se busca lo
+    unico que va a seguir siendo cierto en cualquier version — que la pantalla
+    es la mancha CLARA y GRANDE del chasis.
     """
     a = np.array(chasis.convert("RGBA")).astype(int)
-    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    lum = 0.2126 * a[..., 0] + 0.7152 * a[..., 1] + 0.0722 * a[..., 2]
+    m = (a[..., 3] > 200) & (lum > 190)
 
-    # Parecido al azul, PERO ademas azul de verdad. La distancia sola no
-    # distingue un azul saturado de un gris de la misma luminancia, y el chasis
-    # HD esta lleno de grises: con solo la distancia entraban reflejos del
-    # cuerpo (132,134,138) y el borde suavizado de la linea cian (135,197,195).
-    #   b > r   descarta los grises, donde los tres canales van juntos
-    #   b > g   descarta el cian, que tiene el verde por las nubes
-    m = ((a[..., 3] > 128)
-         & (np.abs(a[..., :3] - np.array(AZUL)).sum(axis=2) < 90)
-         & (b - r > 40) & (b > g))
+    # Fuera el tercio izquierdo: ahi vive el panel del jugador, y sus molduras
+    # claras no son pantalla.
+    m[:, :a.shape[1] // 3] = False
 
-    # Y la caja se saca por MAYORIA de fila y columna, no por el minimo y el
+    # La caja se saca por MAYORIA de fila y columna, no por el minimo y el
     # maximo. Un puñado de pixeles sueltos en una esquina no cambia el recuento
     # de su fila, pero si arrastraba el extremo: con el chasis HD, 9.000 px
     # perdidos de 415.000 estiraban la pantalla de 825x568 a 1297x788, y el
     # numero salia mal sin que nada fallara.
+    #
+    # Aqui ademas hace un trabajo nuevo: las OREJAS de Rotom que asoman por
+    # arriba tambien son claras, y por minimo/maximo estirarian la pantalla
+    # setenta pixeles hacia arriba.
     filas, cols = m.sum(1), m.sum(0)
-    ys = np.where(filas >= filas.max() * 0.5)[0]
-    xs = np.where(cols >= cols.max() * 0.5)[0]
+    ys = np.where(filas >= filas.max() * 0.6)[0]
+    xs = np.where(cols >= cols.max() * 0.6)[0]
     return int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1
+
+
+# El gris de la moldura de las ranuras del panel izquierdo. Es el unico tono
+# claro de esa zona, asi que sirve de marcador.
+MOLDURA = (69, 74, 91)
+
+
+def medir_cajas(chasis: Image.Image) -> list:
+    """Las ranuras del panel izquierdo, por el gris de su moldura.
+
+    Devuelve `[(x0, y0, x1, y1), ...]` de arriba abajo, con las coordenadas de
+    la moldura incluida.
+
+    POR QUE SE MIDEN Y NO SE ESCRIBEN
+
+    Porque ya han cambiado de sitio y de numero cuatro veces, y cada vez las
+    medidas escritas a mano se quedaron mintiendo en silencio: el codigo seguia
+    dibujando la cara donde estaba en el chasis anterior, sin que nada fallara.
+    Medir es lo unico que caduca solo.
+    """
+    a = np.array(chasis.convert("RGBA")).astype(int)
+    h, w = a.shape[:2]
+    m = (np.abs(a[..., :3] - np.array(MOLDURA)).max(axis=2) < 17) & (a[..., 3] > 200)
+
+    # Solo el panel izquierdo, y sin los bordes del chasis: su marco exterior es
+    # de este mismo gris y se colaria como si fuera una ranura mas.
+    zona = np.zeros((h, w), bool)
+    zona[int(h * 0.11):int(h * 0.91), int(w * 0.05):int(w * 0.29)] = True
+    m &= zona
+
+    def tramos(v, minimo):
+        salida, ini = [], None
+        for i, hay in enumerate(v):
+            if hay and ini is None:
+                ini = i
+            elif not hay and ini is not None:
+                if i - ini >= minimo:
+                    salida.append((ini, i - 1))
+                ini = None
+        if ini is not None and len(v) - ini >= minimo:
+            salida.append((ini, len(v) - 1))
+        return salida
+
+    # Las tapas: filas con mucha moldura. Van de dos en dos — la de arriba y la
+    # de abajo de cada ranura.
+    tapas = tramos(m.sum(1) > w * 0.05, 5)
+    cajas = []
+    for i in range(0, len(tapas) - 1, 2):
+        (ta0, ta1), (tb0, tb1) = tapas[i], tapas[i + 1]
+        laterales = tramos(m[(ta1 + tb0) // 2], 3)
+        # Los laterales de una ranura ancha son dos tramos; los de una estrecha
+        # se tocan y salen como uno solo. Se distinguen por el ancho.
+        j = 0
+        while j < len(laterales):
+            if j + 1 < len(laterales) and laterales[j][1] - laterales[j][0] < 25:
+                cajas.append((laterales[j][0], ta0, laterales[j + 1][1], tb1))
+                j += 2
+            else:
+                cajas.append((laterales[j][0], ta0, laterales[j][1], tb1))
+                j += 1
+    # Fuera lo que no es una ranura: la linea divisoria vertical del panel (6 px
+    # de ancho) y el cuadradito de 48x48 de abajo a la derecha, cuyas tapas son
+    # demasiado cortas para que este metodo las vea como banda propia. Ninguno
+    # de los dos aloja nada hoy.
+    return sorted((c for c in cajas
+                   if c[2] - c[0] >= 60 and c[3] - c[1] >= 60),
+                  key=lambda c: (c[1], c[0]))
+
+
+# Grosor de la moldura de una ranura. Medido: entre 13 y 14 px en las tres.
+MOLDURA_GROSOR = 14
+
+
+def interior(caja: tuple) -> tuple:
+    """El hueco util de una ranura, sin su moldura. (x0, y0, ancho, alto)."""
+    x0, y0, x1, y1 = caja
+    return (x0 + MOLDURA_GROSOR, y0 + MOLDURA_GROSOR,
+            (x1 - x0 + 1) - MOLDURA_GROSOR * 2,
+            (y1 - y0 + 1) - MOLDURA_GROSOR * 2)
 
 
 def main() -> None:
@@ -354,8 +477,18 @@ def main() -> None:
     # El chasis tambien: tiene menos motas, pero es el mismo problema.
     guardar(sangrar_alfa(chasis), SALIDA / "pokepad.png")
     x0, y0, x1, y1 = medir_pantalla(chasis)
+    cajas = medir_cajas(chasis)
     print(f"  chasis    {chasis.size[0]} x {chasis.size[1]}")
     print(f"  pantalla  x {x0}-{x1}  y {y0}-{y1}   ({x1 - x0} x {y1 - y0})")
+    if len(cajas) != 3:
+        raise SystemExit(
+            f"Se esperaban 3 ranuras en el panel izquierdo y se han medido "
+            f"{len(cajas)}: {cajas}.\nEl chasis ha cambiado de estructura; hay "
+            f"que decidir que va en cada ranura antes de generar nada.")
+    for nombre, c in zip(("cara", "botones", "saldo"), cajas):
+        ix, iy, iw, ih = interior(c)
+        print(f"  ranura    {nombre:<8} x {c[0]}-{c[2]}  y {c[1]}-{c[3]}"
+              f"   hueco util {iw} x {ih} en {ix},{iy}")
 
     # En el orden de la rejilla, no en el del alfabeto. Y se falla aqui si
     # falta uno: un hueco en la pantalla principal es peor que no generar.
@@ -409,20 +542,49 @@ def main() -> None:
             f"{x1 - x0}x{y1 - y0}. Baja AIRE, HUECO o TEXTO_ALTO.")
     rej_x = x0 + ((x1 - x0) - rej_w) // 2
     rej_y = y0 + ((y1 - y0) - rej_h) // 2
+
+    # La cara, centrada en la ranura de arriba.
+    cx, cy, cw, chh = interior(cajas[0])
+    cara_x, cara_y = cx + (cw - CARA_LADO) // 2, cy + (chh - CARA_LADO) // 2
+    if CARA_LADO > cw or CARA_LADO > chh:
+        raise SystemExit(f"La cara ({CARA_LADO}) no cabe en {cw}x{chh}")
+
+    # El teclado, centrado en la ranura de en medio.
+    bx, by, bw, bh = interior(cajas[1])
+    filas_b = -(-len(BOTONES) // BOTON_COLS)
+    teclado_w = BOTON_COLS * BOTON_W + (BOTON_COLS - 1) * BOTON_SEP_X
+    teclado_h = filas_b * BOTON_H + (filas_b - 1) * BOTON_SEP_Y
+    if teclado_w > bw or teclado_h > bh:
+        raise SystemExit(
+            f"El teclado no cabe: hace falta {teclado_w}x{teclado_h} y la "
+            f"ranura mide {bw}x{bh}. Baja BOTON_W/H o BOTON_SEP_*.")
+    barra_x, barra_y = bx + (bw - teclado_w) // 2, by + (bh - teclado_h) // 2
+
+    # El saldo, centrado en la ranura de abajo.
+    sx, sy, sw, sh = interior(cajas[2])
+    saldo_cx, saldo_cy = sx + sw // 2, sy + sh // 2
+
     print(f"\n  PARA PokePadScreen:")
     print(f"    REJ_X = {rej_x}, REJ_Y = {rej_y}")
     print(f"    CELDA = {celda}, HUECO_X = {HUECO}, HUECO_Y = {hueco_y}, "
           f"ICONO = {lado}")
     print(f"    TEXTO_ALTO = {TEXTO_ALTO}, TEXTO_SOLAPE = {TEXTO_SOLAPE}")
+    print(f"    CARA_X = {cara_x}, CARA_Y = {cara_y}, CARA_LADO = {CARA_LADO}")
+    print(f"    BARRA_X = {barra_x}, BARRA_Y = {barra_y}, BOTON_COLS = {BOTON_COLS}")
+    print(f"    BOTON_W = {BOTON_W}, BOTON_H = {BOTON_H}, "
+          f"BOTON_SEP_X = {BOTON_SEP_X}, BOTON_SEP_Y = {BOTON_SEP_Y}")
+    print(f"    SALDO_CX = {saldo_cx}, SALDO_CY = {saldo_cy}")
     print(f"    (rejilla {rej_w}x{rej_h} en una pantalla de "
-          f"{x1 - x0}x{y1 - y0})")
+          f"{x1 - x0}x{y1 - y0}; teclado {teclado_w}x{teclado_h} en {bw}x{bh})")
 
     if args.maqueta:
         maqueta(Image.open(SALIDA / "pokepad.png"), iconos,
-                rej_x, rej_y, celda, lado, hueco_y)
+                rej_x, rej_y, celda, lado, hueco_y,
+                (cara_x, cara_y), (barra_x, barra_y), (saldo_cx, saldo_cy))
 
 
-def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y) -> None:
+def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
+            cara, barra, saldo) -> None:
     """Monta la pantalla principal con las celdas dibujadas como las dibuja el
     juego: rectangulos planos. Ver docs/ui/prompts-arte-pokepad.md §4."""
     # Copia explicita: `chasis` se sigue usando abajo para restaurar las
@@ -433,8 +595,17 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y) -> None:
     for i, p in enumerate(iconos):
         cx = rx + (i % 5) * (celda + HUECO)
         cy = ry + (i // 5) * (celda + hueco_y)
+        # Las quince estan CERRADAS hoy, asi que la maqueta las pinta cerradas:
+        # ensenar la version abierta seria ensenar una pantalla que nadie ve.
+        #
+        # Menos UNA, la de en medio, que va con el raton encima. Es el unico
+        # estado que no se puede juzgar de otra forma —solo aparece al pasar el
+        # raton— y es justo donde vive la pregunta abierta: si el naranja del
+        # resalte pega con el bisel del chasis o se pelea con el.
+        encima = i == RESALTADA
         d.rectangle([cx, cy, cx + celda - 1, cy + celda - 1],
-                    fill=(122, 131, 200, 255), outline=(200, 210, 240, 255),
+                    fill=CELDA_ENCIMA if encima else CELDA_CERRADA,
+                    outline=BORDE_ENCIMA if encima else BORDE_CERRADA,
                     width=BORDE)
         # La esquina mordida tambien crece: a 1 px sobre una celda de 124 no se
         # ve, y la rejilla vuelve a parecer una hoja de calculo.
@@ -462,22 +633,30 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y) -> None:
                 fuente = ImageFont.load_default()
             ancho = d.textlength(nombre, font=fuente)
             d.text((cx + celda / 2 - ancho / 2, cy + celda - TEXTO_SOLAPE),
-                   nombre, font=fuente, fill=(255, 255, 255, 255),
-                   stroke_width=1, stroke_fill=(0, 0, 0, 255))
-    # La barra de botones, con los cinco sin destino apagados igual que en el
-    # juego. La maqueta existe para aprobar el diseno, asi que si no ensena lo
-    # mismo que se va a ver no sirve de nada.
+                   nombre, font=fuente, fill=TEXTO_COLOR,
+                   stroke_width=1, stroke_fill=TEXTO_CONTORNO)
+    # El teclado, con los cinco sin destino apagados igual que en el juego. La
+    # maqueta existe para aprobar el diseno, asi que si no ensena lo mismo que se
+    # va a ver no sirve de nada.
     for i, n in enumerate(BOTONES):
         b = Image.open(SALIDA / f"boton_{n}.png").convert("RGBA")
         if n != "cerrar":
             a = np.array(b).astype(int)
             a[..., :3] = a[..., :3] * 128 // 255      # el mismo tinte del codigo
             b = Image.fromarray(a.astype(np.uint8), "RGBA")
-        out.alpha_composite(b, (BARRA_X + i * (BOTON_W + BOTON_SEP), BARRA_Y))
+        out.alpha_composite(b, (barra[0] + (i % BOTON_COLS) * (BOTON_W + BOTON_SEP_X),
+                                barra[1] + (i // BOTON_COLS) * (BOTON_H + BOTON_SEP_Y)))
 
     # El hueco de la cabeza, para ver si cuadra dentro de su ranura.
-    d.rectangle([CARA_X, CARA_Y, CARA_X + CARA_LADO - 1, CARA_Y + CARA_LADO - 1],
+    d.rectangle([cara[0], cara[1], cara[0] + CARA_LADO - 1, cara[1] + CARA_LADO - 1],
                 fill=(150, 110, 90, 255), outline=(210, 170, 150, 255), width=2)
+
+    # Y el saldo, con el mismo amarillo y el mismo centrado que el codigo.
+    try:
+        fuente = ImageFont.truetype("arial.ttf", 30)
+    except OSError:
+        fuente = ImageFont.load_default()
+    d.text(saldo, "12,345", font=fuente, fill=(255, 225, 46, 255), anchor="mm")
 
     # Sin ampliar. El chasis ya mide 1380x828, que es el tamano al que se va a
     # dibujar en pantalla: ampliarlo ensenaria algo que nadie va a ver. Antes se

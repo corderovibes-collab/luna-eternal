@@ -27,20 +27,22 @@ public class PokePadScreen extends Screen {
     // 37 píxeles. El PokePad de referencia no tiene ni una textura de celda —su
     // fondo llega con la pantalla VACÍA— y las pinta como rectángulos planos un
     // tono más claros. Se ve limpio justo por eso.
-    private static final int CELDA_FONDO = 0xFF7A83C8;
-    private static final int CELDA_BORDE = 0xFFC8D2F0;
-    private static final int CELDA_ENCIMA = 0xFF9AA3E8;
-
-    // ⚠ EL BORDE DE "RATON ENCIMA" SIGUE AL ACENTO DEL CHASIS.
     //
-    // Era cian, y lo era porque el chasis lo era. En el v3 el acento pasa a
-    // naranja --a juego con el logo-- y no queda NI UN PIXEL cian en toda la
-    // pantalla: un resalte cian se quedaba huerfano, como de otra interfaz.
+    // ⚠⚠ EN EL CHASIS v4 LA PANTALLA PASO DE AZUL OSCURO A CASI BLANCA, Y ESO
+    // DA LA VUELTA A TODO LO DE DENTRO. No es un retoque de tono: es que cada
+    // decision de contraste apuntaba al reves.
     //
-    // El valor esta MUESTREADO del propio arte, no elegido a ojo: es el naranja
-    // mas frecuente de sus lineas de acento. Si el chasis vuelve a cambiar de
-    // color, este numero se saca igual y se cambia aqui.
-    private static final int BORDE_ENCIMA = 0xFFF3B146;
+    //   las celdas  eran mas CLARAS que el fondo -> ahora mas OSCURAS
+    //   el texto    era BLANCO con contorno negro -> ahora NEGRO con contorno
+    //               claro
+    //   el resalte  era el ambar del chasis -> ahora el NARANJA FUERTE, el
+    //               unico acento del v4 que contrasta sobre claro
+    //
+    // Todos los valores estan MUESTREADOS del propio arte, no elegidos a ojo.
+    private static final int CELDA_FONDO = 0xFFBFCBE8;
+    private static final int CELDA_BORDE = 0xFF7C89B4;
+    private static final int CELDA_ENCIMA = 0xFFFFFFFF;
+    private static final int BORDE_ENCIMA = 0xFFF35C0C;
 
     /**
      * El chasis en PIXELES DEL ARTE. Todo lo demás se mide en estas unidades.
@@ -51,13 +53,13 @@ public class PokePadScreen extends Screen {
      */
     private static final int NAT_ANCHO = 1380, NAT_ALTO = 828;
 
-    /** El azul de la pantalla, para morder las esquinas de las celdas. */
-    private static final int PANTALLA = 0xFF8A93D0;
+    /** El color de la pantalla, para morder las esquinas de las celdas. */
+    private static final int PANTALLA = 0xFFE2EBFD;
 
     /** La rejilla, en píxeles del arte. */
     // Los da `tools/gen_pokepad.py` al preparar el arte: los imprime al final.
     // No se escriben a ojo, se copian de ahi.
-    private static final int REJ_X = 495, REJ_Y = 208;
+    private static final int REJ_X = 502, REJ_Y = 236;
     private static final int CELDA = 124, HUECO_X = 24, HUECO_Y = 19, ICONO = 100;
     private static final int COLS = 5;
 
@@ -83,18 +85,24 @@ public class PokePadScreen extends Screen {
      * su icono: suelto en medio de dos filas, el ojo duda de a cuál pertenece.
      */
     private static final int TEXTO_SOLAPE = TEXTO_ALTO / 2;
-    // ⚠ BLANCO SIEMPRE, ESTE ABIERTA O CERRADA. Decision del usuario, y es la
-    // correcta: el nombre tiene UN trabajo, que es leerse.
+
+    // ⚠ EL NOMBRE SE INVIERTE CON EL CHASIS v4: OSCURO CON CONTORNO CLARO.
     //
-    // Hubo un color apagado para las cerradas y salio mal por un motivo que no
-    // se ve al escribirlo: HOY LAS QUINCE ESTAN CERRADAS, asi que los quince
-    // nombres salian grises sobre celdas azul claro y no se leia ninguno.
-    // Atenuar algo solo comunica si hay al lado un hermano encendido con el que
-    // compararlo; si estan todos atenuados, no es una senal, es un defecto.
+    // Era blanco con contorno negro, y sigue siendo la misma decision del
+    // usuario --"que se lea"-- solo que aplicada a un fondo que se ha dado la
+    // vuelta: la pantalla del v4 es casi blanca, y blanco sobre blanco no es
+    // legible con contorno ni sin el.
+    //
+    // Lo que NO cambia es que el color es el mismo este la aplicacion abierta o
+    // cerrada. Hubo un tono apagado para las cerradas y salio mal por un motivo
+    // que no se ve al escribirlo: HOY LAS QUINCE ESTAN CERRADAS, asi que los
+    // quince nombres salian atenuados y no se leia ninguno. Atenuar algo solo
+    // comunica si hay al lado un hermano encendido con el que compararlo.
     //
     // Lo que distingue una celda cerrada sigue siendo su FONDO, que ya recula
     // por su cuenta.
-    private static final int TEXTO_COLOR = 0xFFFFFFFF;
+    private static final int TEXTO_COLOR = 0xFF16203A;
+    private static final int TEXTO_CONTORNO = 0xFFF2F6FF;
 
     // El borde de la celda y la esquina mordida, tambien en pixeles del arte.
     // A 1 px sobre una celda de 124 no se ve ninguno de los dos.
@@ -107,46 +115,47 @@ public class PokePadScreen extends Screen {
     // apagar el icono solo conseguia que la pantalla entera pareciera muerta
     // --y hoy las quince aplicaciones estan cerradas--. Es el fondo el que
     // debe recular, no el dibujo.
-    private static final int CELDA_CERRADA = 0xFF6A72A8;
-    private static final int BORDE_CERRADA = 0xFF9AA3C8;
+    private static final int CELDA_CERRADA = 0xFFD0D8EC;
+    private static final int BORDE_CERRADA = 0xFFA0AAC6;
 
-    // Las ranuras del panel izquierdo, MEDIDAS sobre el chasis HD y no puestas
-    // a ojo, ni escaladas de las viejas: el chasis nuevo NO es el viejo por
-    // cuatro. El alto si (828/207 = 4) pero el ancho no (1380/346 = 3,9884),
-    // porque al pasar a HD la proporcion se corrigio a 5:3 exacto.
+    // Las tres ranuras del panel izquierdo, MEDIDAS sobre el chasis y no
+    // puestas a ojo. Las mide `medir_cajas()` de gen_pokepad.py buscando el gris
+    // de su moldura, y el script imprime estos números al terminar.
     //
-    //   avatar    x 141-308  y 141-309   (168 x 169)   ← chasis v2
-    //   tarjeta   x 108-342  y 388-580   (235 x 193)
-    //   saldo     x 108-273  y 652-705   (166 x  54)
+    //   cara     x 114-322  y 115-324   hueco útil 181 x 182
+    //   botones  x  80-356  y 360-595   hueco útil 249 x 208
+    //   saldo    x  80-287  y 624-719   hueco útil 180 x  68
     //
     // La cara va a 168 porque la cabeza de la skin son 8x8 texeles y 168 es
-    // multiplo de 8: cada texel cae en 21 pixeles clavados. Con un lado que no
-    // lo fuera saldria emborronada justo en lo unico que es del jugador.
-    //
-    // En el chasis v2 el hueco mide 168 de ancho EXACTO, que es la medida a la
-    // que ya dibujabamos: el disenador lo ajusto a ella. Antes eran 173x180 y
-    // la cara quedaba descuadrada dentro.
-    private static final int CARA_X = 141, CARA_Y = 141, CARA_LADO = 168;
-    private static final int SALDO_CX = 191, SALDO_CY = 679;
+    // múltiplo de 8: cada texel cae en 21 píxeles clavados. Con un lado que no
+    // lo fuera saldría emborronada justo en lo único que es del jugador.
+    private static final int CARA_X = 134, CARA_Y = 136, CARA_LADO = 168;
+    private static final int SALDO_CX = 184, SALDO_CY = 672;
 
     /**
-     * La barra de botones, en la franja de debajo de la pantalla.
+     * Los seis botones, ahora un teclado de 2 × 3 dentro de la ranura mediana.
      *
-     * <p><b>Es el único sitio del chasis donde caben.</b> Medido: esa franja
-     * tiene 981 × 58, la de arriba 52 de alto y el hueco cuadrado del saldo
-     * 42 × 42. El arte de los botones llega a 120 × 96 y no entra en ninguna,
-     * así que se dibujan a la mitad exacta —60 × 48, que sigue siendo divisible
-     * entre 1, 2, 3, 4 y 6— y {@code gen_pokepad.py} los guarda ya reducidos
-     * para que se dibujen 1:1.
+     * <p><b>En el chasis v4 dejan de ser una barra.</b> En el v3 iban en la
+     * única franja libre que quedaba —981 × 58 debajo de la pantalla— y a
+     * 60 × 48 porque no cabía más; era un apaño, y se decía en este mismo
+     * comentario. El v4 no tiene esa franja: debajo de la pantalla están la boca
+     * y los bigotes de Rotom.
      *
-     * <p>El chasis no trae ranuras para ellos porque el prompt de §3.1 nunca
-     * pidió una barra: pidió las tres ranuras de la izquierda, la placa y la
-     * pantalla. Si algún día se rehace el chasis, aquí es donde va.
+     * <p>A cambio trae tres ranuras de verdad, y la mediana mide 249 × 208 de
+     * hueco útil — sitio para los seis a <b>80 × 64</b>, dos tercios exactos del
+     * arte y un tercio más grandes que antes. {@code gen_pokepad.py} los guarda
+     * ya reducidos para que se dibujen 1:1.
+     *
+     * <p>Los 4 px de separación vertical no son un descuido: tres filas de 64
+     * llenan la ranura de arriba abajo, y eso es lo que hace que se lea como
+     * «esta ranura <i>es</i> el teclado» en vez de como seis botones flotando
+     * en una caja.
      */
     private static final String[] BOTONES =
             {"atras", "adelante", "inicio", "ajustes", "mas", "cerrar"};
-    private static final int BOTON_W = 60, BOTON_H = 48, BOTON_SEP = 24;
-    private static final int BARRA_X = 610, BARRA_Y = 715;
+    private static final int BOTON_W = 80, BOTON_H = 64;
+    private static final int BOTON_COLS = 2, BOTON_SEP_X = 24, BOTON_SEP_Y = 4;
+    private static final int BARRA_X = 126, BARRA_Y = 378;
 
     /**
      * Cuál de los seis lleva a algún sitio. Hoy solo cerrar.
@@ -326,9 +335,8 @@ public class PokePadScreen extends Screen {
         int celda = Math.round(CELDA * k);
         if (boton == 0) {
             int w = Math.round(BOTON_W * k), h = Math.round(BOTON_H * k);
-            int by = y0 + Math.round(BARRA_Y * k);
             for (int i = 0; i < BOTONES.length; i++) {
-                int bx = botonX(i);
+                int bx = botonX(i), by = botonY(i);
                 if (ratonX < bx || ratonX >= bx + w
                         || ratonY < by || ratonY >= by + h) {
                     continue;
@@ -404,11 +412,11 @@ public class PokePadScreen extends Screen {
 
     }
 
-    /** La barra de botones de abajo. */
+    /** El teclado de la ranura mediana. */
     private void barra(DrawContext ctx, int ratonX, int ratonY) {
         int w = Math.round(BOTON_W * k), h = Math.round(BOTON_H * k);
         for (int i = 0; i < BOTONES.length; i++) {
-            int bx = botonX(i), by = y0 + Math.round(BARRA_Y * k);
+            int bx = botonX(i), by = botonY(i);
             boolean encima = ratonX >= bx && ratonX < bx + w
                     && ratonY >= by && ratonY < by + h;
             // Un boton sin destino se apaga; el senalado se aclara. El tinte
@@ -421,9 +429,15 @@ public class PokePadScreen extends Screen {
         }
     }
 
-    /** La esquina izquierda de un botón, en unidades de interfaz. */
+    /** La esquina de un botón dentro del teclado, en unidades de interfaz. */
     private int botonX(int i) {
-        return x0 + Math.round((BARRA_X + i * (BOTON_W + BOTON_SEP)) * k);
+        return x0 + Math.round(
+                (BARRA_X + (i % BOTON_COLS) * (BOTON_W + BOTON_SEP_X)) * k);
+    }
+
+    private int botonY(int i) {
+        return y0 + Math.round(
+                (BARRA_Y + (i / BOTON_COLS) * (BOTON_H + BOTON_SEP_Y)) * k);
     }
 
     /**
@@ -524,20 +538,24 @@ public class PokePadScreen extends Screen {
         // ⚠ CONTORNO, NO SOMBRA.
         //
         // La sombra de Minecraft es una copia desplazada en diagonal: sobre un
-        // fondo oscuro se lee, pero estas celdas son AZUL CLARO y el nombre
-        // quedaba gris sobre claro, ilegible.
+        // fondo oscuro se lee, pero estas celdas son CLARAS y el nombre quedaba
+        // gris sobre claro, ilegible.
         //
-        // Un contorno negro funciona sobre CUALQUIER fondo, que es la unica
+        // Un contorno cierra la letra sobre CUALQUIER fondo, que es la unica
         // garantia que sirve aqui: la celda cambia de color al pasar el raton, y
         // encima cada aplicacion tendra el suyo algun dia.
+        //
+        // El color del contorno es el CONTRARIO del texto, y por eso los dos son
+        // constantes: en el chasis v4 pasaron de negro/blanco a claro/oscuro de
+        // golpe, y si el negro estuviera escrito aqui a mano se habria quedado.
         //
         // EN CRUZ Y NO EN LAS OCHO DIRECCIONES. Con las diagonales el contorno
         // sale grueso y el nombre se emborrona; en cruz cierra igual la letra y
         // pesa la mitad.
-        ctx.drawText(textRenderer, linea, px - 1, py, 0xFF000000, false);
-        ctx.drawText(textRenderer, linea, px + 1, py, 0xFF000000, false);
-        ctx.drawText(textRenderer, linea, px, py - 1, 0xFF000000, false);
-        ctx.drawText(textRenderer, linea, px, py + 1, 0xFF000000, false);
+        ctx.drawText(textRenderer, linea, px - 1, py, TEXTO_CONTORNO, false);
+        ctx.drawText(textRenderer, linea, px + 1, py, TEXTO_CONTORNO, false);
+        ctx.drawText(textRenderer, linea, px, py - 1, TEXTO_CONTORNO, false);
+        ctx.drawText(textRenderer, linea, px, py + 1, TEXTO_CONTORNO, false);
         ctx.drawText(textRenderer, linea, px, py, color, false);
         m.pop();
     }

@@ -70,7 +70,7 @@ public class PokePadScreen extends Screen {
     // cuatro. El alto si (828/207 = 4) pero el ancho no (1380/346 = 3,9884),
     // porque al pasar a HD la proporcion se corrigio a 5:3 exacto.
     //
-    //   avatar    x 141-308  y 141-311   (168 x 171)
+    //   avatar    x 141-308  y 141-309   (168 x 169)   ← chasis v2
     //   tarjeta   x 108-342  y 388-580   (235 x 193)
     //   saldo     x 108-273  y 652-705   (166 x  54)
     //
@@ -81,11 +81,8 @@ public class PokePadScreen extends Screen {
     // En el chasis v2 el hueco mide 168 de ancho EXACTO, que es la medida a la
     // que ya dibujabamos: el disenador lo ajusto a ella. Antes eran 173x180 y
     // la cara quedaba descuadrada dentro.
-    private static final int CARA_X = 141, CARA_Y = 142, CARA_LADO = 168;
+    private static final int CARA_X = 141, CARA_Y = 141, CARA_LADO = 168;
     private static final int SALDO_CX = 191, SALDO_CY = 679;
-
-    /** El centro de la placa de arriba, donde va el nombre de la aplicación. */
-    private static final int PLACA_CY = 52;
 
     /**
      * La barra de botones, en la franja de debajo de la pantalla.
@@ -253,13 +250,15 @@ public class PokePadScreen extends Screen {
         panelLateral(ctx);
         barra(ctx, ratonX, ratonY);
 
-        // La placa de arriba: el nombre de la app senalada, o el del Pad.
-        // Centrado en su hueco: el texto se dibuja desde arriba, asi que se
-        // sube media linea para que quede a media altura de la placa.
-        Text placa = bajoElRaton != null ? bajoElRaton.nombre() : getTitle();
-        ctx.drawCenteredTextWithShadow(textRenderer, placa, x0 + ancho / 2,
-                y0 + Math.round(PLACA_CY * k) - textRenderer.fontHeight / 2,
-                0xFFC8D2F0);
+        // ⚠ LA PLACA DE ARRIBA YA NO LLEVA TEXTO, Y ES A PROPOSITO.
+        //
+        // Ahi se escribia el nombre de la aplicacion senalada. En el chasis v2
+        // el disenador metio el LOGO del servidor en esa placa, asi que el
+        // texto le caeria encima -- dos cosas peleandose por el mismo hueco.
+        //
+        // El nombre no se pierde: sigue en el tooltip al pasar el raton, que
+        // es donde ya estaba la descripcion. Queda pendiente decidir donde va
+        // de forma fija; hasta entonces, mejor nada que algo pisando el logo.
 
         if (bajoElRaton != null) {
             ctx.drawTooltip(textRenderer, bajoElRaton.descripcion(), ratonX, ratonY);

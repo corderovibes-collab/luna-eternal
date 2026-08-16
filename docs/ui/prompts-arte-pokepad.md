@@ -279,10 +279,10 @@ CELDA = 124     HUECO = 24    ICONO = 100
 Y las tres ranuras del panel izquierdo, para lo que dibuja el código encima:
 
 ```
-avatar    x 141-308   y 141-311   (168 x 171)   ← chasis v2
+avatar    x 141-308   y 141-309   (168 x 169)   ← chasis v3
 tarjeta   x 108-342   y 388-580   (235 x 193)
 saldo     x 108-273   y 652-705   (166 x  54)
-placa     centrada en el chasis, a media altura y = 52
+placa     LLEVA EL LOGO. No se escribe nada encima (ver aviso)
 ```
 
 > ⚠️ **El chasis HD no es el viejo multiplicado por cuatro.** El alto sí

@@ -85,6 +85,7 @@ MORDIDA = 4
 # El tamano al que se DIBUJAN los botones, que no es el que llega. Ver el
 # comentario largo donde se guardan. Si cambia, cambia tambien BOTON_W/H en
 # PokePadScreen: son el mismo numero en dos idiomas.
+ICONO = 100
 BOTON_W, BOTON_H = 60, 48
 
 # Y donde va la barra. Mismos numeros que PokePadScreen, en el mismo orden.
@@ -212,6 +213,29 @@ def sangrar_alfa(im: Image.Image, visible: int = 24) -> Image.Image:
     return Image.fromarray(a.astype(np.uint8), "RGBA")
 
 
+def a_tamano(im: Image.Image, lado: int) -> Image.Image:
+    """Lleva un icono a `lado` x `lado`, y solo si el factor es EXACTO.
+
+    Existe para que el arte en pixel art pueda entrar tal cual. Un icono de
+    25x25 es 100/25 = 4 veces mas pequeno, factor entero, asi que se amplia con
+    VECINO MAS PROXIMO: cada pixel del dibujo se convierte en un bloque de 4x4 y
+    el resultado es exactamente lo que dibujo el artista, sin inventar medios
+    tonos ni redondear bordes.
+
+    Si el factor NO fuera entero se aborta en vez de escalar: un 1,7 emborrona
+    el pixel art y ademas mueve las lineas de sitio, y es mejor enterarse aqui
+    que en el juego.
+    """
+    if im.size == (lado, lado):
+        return im
+    ancho, alto = im.size
+    if ancho != alto or lado % ancho != 0:
+        raise SystemExit(f"Un icono mide {ancho}x{alto} y no cabe en {lado}x{lado} "
+                         f"por un factor entero. Reexportalo a {lado} o a un "
+                         f"divisor suyo (25, 50, 100).")
+    return im.resize((lado, lado), Image.NEAREST)
+
+
 def preparar(origen: Path) -> Image.Image:
     # Sin `alfa_duro`: ver el aviso de la cabecera. El arte HD conserva su
     # borde suave a proposito.
@@ -309,10 +333,19 @@ def main() -> None:
     faltan = [p.name for p in iconos if not p.exists()]
     if faltan:
         raise SystemExit(f"Faltan iconos: {', '.join(faltan)}")
+    # El lado lo manda la CELDA, no el primer fichero que haya: asi un icono
+    # en pixel art de 25x25 se amplia por 4 y entra igual que los demas.
+    lado = ICONO
+    ampliados = []
     for p in iconos:
-        guardar(preparar(p), SALIDA / f"{p.stem.replace('icon_', '')}.png")
-    lado = Image.open(iconos[0]).size[0]
+        original = Image.open(p)
+        if original.size != (lado, lado):
+            ampliados.append(f"{p.stem.replace('icon_','')} {original.size[0]}px")
+        guardar(a_tamano(preparar(p), lado),
+                SALIDA / f"{p.stem.replace('icon_', '')}.png")
     print(f"  iconos    {len(iconos)} de {lado}x{lado}")
+    if ampliados:
+        print(f"            ampliados por factor entero: {', '.join(ampliados)}")
 
     # Los botones se guardan YA REDUCIDOS al tamano al que se dibujan.
     #

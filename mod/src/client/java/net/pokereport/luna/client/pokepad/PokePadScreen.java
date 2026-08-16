@@ -30,7 +30,17 @@ public class PokePadScreen extends Screen {
     private static final int CELDA_FONDO = 0xFF7A83C8;
     private static final int CELDA_BORDE = 0xFFC8D2F0;
     private static final int CELDA_ENCIMA = 0xFF9AA3E8;
-    private static final int BORDE_ENCIMA = 0xFF16F2E6;
+
+    // ⚠ EL BORDE DE "RATON ENCIMA" SIGUE AL ACENTO DEL CHASIS.
+    //
+    // Era cian, y lo era porque el chasis lo era. En el v3 el acento pasa a
+    // naranja --a juego con el logo-- y no queda NI UN PIXEL cian en toda la
+    // pantalla: un resalte cian se quedaba huerfano, como de otra interfaz.
+    //
+    // El valor esta MUESTREADO del propio arte, no elegido a ojo: es el naranja
+    // mas frecuente de sus lineas de acento. Si el chasis vuelve a cambiar de
+    // color, este numero se saca igual y se cambia aqui.
+    private static final int BORDE_ENCIMA = 0xFFF3B146;
 
     /**
      * El chasis en PIXELES DEL ARTE. Todo lo demás se mide en estas unidades.

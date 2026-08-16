@@ -32,5 +32,7 @@
   "pokepad.lunaeternal.app.gyms.desc": "Badges and where each leader is",
   "pokepad.lunaeternal.app.explorar": "Explore",
   "pokepad.lunaeternal.app.explorar.desc": "The world, its zones and what spawns where",
-  "subtitles.lunaeternal.pokedex.voz": "Pokédex description"
+  "subtitles.lunaeternal.pokedex.voz": "Pokédex description",
+  "pokepad.lunaeternal.voz.oir": "Play description",
+  "pokepad.lunaeternal.voz.sin": "No recording yet"
 }

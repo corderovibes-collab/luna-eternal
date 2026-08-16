@@ -66,6 +66,8 @@ public final class ScanListener {
                     // esa es justamente la gracia del escáner.
                     String especie = event.getScannedPokemonEntityData()
                             .getPokemon().getSpecies().getName();
+                    LunaEternal.LOG.info("Voz: evento de escaneo recibido, especie cruda «{}»",
+                            especie);
                     hablar(event.getPlayer(), especie);
                 } catch (Throwable t) {
                     // Un escaneo que no suena es un fastidio; uno que revienta
@@ -80,23 +82,40 @@ public final class ScanListener {
         }
     }
 
-    /** Manda la voz, si esa especie tiene y si toca. */
+    /**
+     * Manda la voz, si esa especie tiene y si toca.
+     *
+     * <p>Deja rastro en el log de <b>por qué</b> no ha sonado, que es lo único
+     * que distingue «el evento no llegó» de «llegó y lo paró un freno». Sin eso
+     * no hay forma de depurarlo desde fuera del juego: el jugador solo puede
+     * decir «no suena», que es compatible con las dos cosas.
+     */
     static void hablar(ServerPlayerEntity jugador, String especie) {
         if (jugador == null) {
             return;
         }
         String id = VozService.normalizar(especie);
-        if (!VozService.tieneVoz(id)) {
-            return;       // sin voz grabada: el escaneo funciona igual, mudo
-        }
         String quien = jugador.getUuidAsString();
+        String nombre = jugador.getName().getString();
+
+        if (!VozService.tieneVoz(id)) {
+            // Sin voz grabada: el escaneo funciona igual, mudo.
+            LunaEternal.LOG.info("Voz: {} escaneo {} — sin grabar", nombre, id);
+            return;
+        }
         // La ráfaga se mide por jugador Y especie; el freno solo por jugador.
         // Así dos especies distintas seguidas las para el freno --que es lo que
         // se quiere-- pero la ráfaga de la misma no se confunde con un
         // reescaneo legítimo de otra.
-        if (!RAFAGA.toca(quien + "|" + id) || !FRENO.toca(quien)) {
+        if (!RAFAGA.toca(quien + "|" + id)) {
+            LunaEternal.LOG.info("Voz: {} escaneo {} — repetido (rafaga)", nombre, id);
             return;
         }
+        if (!FRENO.toca(quien)) {
+            LunaEternal.LOG.info("Voz: {} escaneo {} — muy seguido (freno)", nombre, id);
+            return;
+        }
+        LunaEternal.LOG.info("Voz: {} escaneo {} — enviada", nombre, id);
         ServerPlayNetworking.send(jugador, new Red.VozPokedex(id));
     }
 

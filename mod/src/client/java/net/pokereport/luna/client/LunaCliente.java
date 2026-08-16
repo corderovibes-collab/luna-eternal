@@ -46,6 +46,9 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(Red.VozPokedex.ID,
                 (carga, ctx) -> VozPokedex.reproducir(carga.especie()));
 
+        // El boton de voz dentro de la Pokedex de Cobblemon.
+        BotonVoz.register();
+
         // Al salir del mundo se olvida: el saldo es de esa partida. Y se calla
         // la voz, que si no sigue sonando en la pantalla de servidores.
         ClientPlayConnectionEvents.DISCONNECT.register((manejador, cliente) -> {

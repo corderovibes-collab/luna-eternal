@@ -17,7 +17,7 @@ rejilla, vidrio y pavimento. Qué hay, por qué existe y cómo se regenera.
 
 ## Current Status
 
-**Generado y compilado el 2026-08-16. Sin verificar dentro del juego todavía.**
+**Desplegado el 2026-08-16. Falta mirarlo dentro del juego.**
 
 ```
 mod        lunaneon 0.1.0 · neon/ · cliente Y servidor · 1,63 MB
@@ -28,14 +28,22 @@ recursos   230 texturas · 1 540 modelos · 602 blockstates · 602 botines
 generado   python tools/gen_bloques.py      (nada de esto se escribe a mano)
 verificado python tools/gen_bloques.py --verificar  ->  correcto
 maqueta    python tools/gen_bloques.py --maqueta -> build/bloques/*.png
+pack       publicado · lunaneon-0.1.0-54aee8036a.jar
+servidor   "Obra: 506 bloques en 126 materiales, 4 pestanas" · Done (7,5 s)
+en el juego 12 de 12 piezas colocadas con setblock y sus estados, una por
+           familia y por forma — incluidos los tres que más se rompen:
+           la escalera en esquina interior, el muro con un lado alto y
+           otro bajo, y el panel conectado a dos lados
+muestra    ciudadela, de -6 a 5 en x, y=64, z=22. Se quita con //set air
+sin romper el neón sigue byte a byte como estaba
 ```
 
-> ⚠️ **Lo que falta es mirarlo dentro del juego.** Las láminas de contacto
-> dicen que las texturas encajan consigo mismas y la verificación dice que
-> ningún modelo apunta a la nada, pero ninguna de las dos cosas prueba que una
-> escalera de hormigón se vea bien en una esquina interior a las tres de la
-> madrugada de la ciudadela. Es una vuelta de diez minutos con una pila de cada
-> familia.
+> ⚠️ **Lo que falta es mirarlo.** Que un bloque se coloque no dice nada de cómo
+> se ve: el servidor no dibuja. Las láminas de contacto dicen que las texturas
+> encajan consigo mismas y la verificación dice que ningún modelo apunta a la
+> nada, pero ninguna de las dos cosas prueba que una escalera de hormigón se
+> vea bien en una esquina interior a las tres de la madrugada de la ciudadela.
+> Es una vuelta de diez minutos con una pila de cada familia.
 
 ---
 

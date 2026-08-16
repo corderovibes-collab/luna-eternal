@@ -42,7 +42,7 @@ import argparse
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 RAIZ = Path(__file__).resolve().parent.parent
 ARTE = RAIZ / "arte" / "pokepad"
@@ -65,7 +65,15 @@ AZUL = (135, 145, 207)
 # estaba ajustada a ojo contra el arte y funcionaba; lo que no valia era el
 # valor absoluto, que sobre 100 px es invisible.
 AIRE = 12       # margen entre el icono y el borde de su celda
-HUECO = 24      # separacion entre celdas
+HUECO = 24      # separacion HORIZONTAL entre celdas
+
+# El nombre de cada aplicacion, debajo de su icono.
+#
+# El alto es en pixeles del arte: la fuente de Minecraft mide 9, asi que 18 es
+# exactamente el doble y cae en pixeles enteros. Cualquier otro numero la
+# emborrona, que es justo lo que se lleva media noche arreglado en el chasis.
+TEXTO_ALTO = 18
+TEXTO_AIRE = 5      # entre el borde de la celda y la linea de texto
 
 # El orden de la rejilla lo manda `App.TODAS` (App.java), no el alfabeto.
 #
@@ -82,6 +90,16 @@ ORDEN = ["pokedex", "cosmeticos", "trabajos", "misiones", "warps",
 BORDE = 4
 MORDIDA = 4
 
+# Solo para la maqueta: en el juego los nombres salen de las traducciones, que
+# es lo correcto -- un jugador en ingles no puede ver "Cazas" pintado a fuego.
+NOMBRES = {
+    "pokedex": "Pokedex",   "cosmeticos": "Cosmeticos", "trabajos": "Trabajos",
+    "misiones": "Misiones", "warps": "Viajes",          "clan": "Clan",
+    "gts": "GTS",           "tienda": "Tienda",         "tesoros": "Tesoros",
+    "wiki": "Wiki",         "cazas": "Cazas",           "kits": "Kits",
+    "mochila": "Mochila",   "gyms": "Gimnasios",        "explorar": "Explorar",
+}
+
 # El tamano al que se DIBUJAN los botones, que no es el que llega. Ver el
 # comentario largo donde se guardan. Si cambia, cambia tambien BOTON_W/H en
 # PokePadScreen: son el mismo numero en dos idiomas.
@@ -96,7 +114,7 @@ BARRA_X, BARRA_Y = 610, 715
 # La cabeza del jugador. Mismos numeros que PokePadScreen. La maqueta la pinta
 # como un cuadrado macizo: no es la skin de nadie, pero es EL ENCUADRE, que es
 # lo unico que hay que poder juzgar antes de entrar al juego.
-CARA_X, CARA_Y, CARA_LADO = 141, 142, 168
+CARA_X, CARA_Y, CARA_LADO = 141, 141, 168
 
 
 def quitar_fondo(im: Image.Image) -> Image.Image:
@@ -370,22 +388,34 @@ def main() -> None:
           f"{Image.open(botones[0]).size[1]})")
 
     celda = lado + AIRE * 2
-    if celda * 5 + HUECO * 4 > (x1 - x0) or celda * 3 + HUECO * 2 > (y1 - y0):
-        raise SystemExit("La rejilla no cabe en la pantalla azul. Baja AIRE o "
-                         "HUECO, o el icono es demasiado grande.")
-    rej_w, rej_h = celda * 5 + HUECO * 4, celda * 3 + HUECO * 2
+    # La separacion VERTICAL no es la horizontal: tiene que dar cabida al
+    # nombre debajo de cada icono. Se DEDUCE en vez de escribirse a mano, para
+    # que cambiar el tamano del texto recoloque la rejilla sola.
+    hueco_y = TEXTO_AIRE + TEXTO_ALTO + TEXTO_AIRE
+    rej_w = celda * 5 + HUECO * 4
+    # Tres filas de celda, y TRES huecos: los dos de en medio mas el de abajo,
+    # porque la ultima fila tambien lleva su nombre debajo.
+    rej_h = celda * 3 + hueco_y * 3
+    if rej_w > (x1 - x0) or rej_h > (y1 - y0):
+        raise SystemExit(
+            f"La rejilla no cabe: hace falta {rej_w}x{rej_h} y la pantalla mide "
+            f"{x1 - x0}x{y1 - y0}. Baja AIRE, HUECO o TEXTO_ALTO.")
     rej_x = x0 + ((x1 - x0) - rej_w) // 2
     rej_y = y0 + ((y1 - y0) - rej_h) // 2
     print(f"\n  PARA PokePadScreen:")
     print(f"    REJ_X = {rej_x}, REJ_Y = {rej_y}")
-    print(f"    CELDA = {celda}, HUECO = {HUECO}, ICONO = {lado}")
+    print(f"    CELDA = {celda}, HUECO_X = {HUECO}, HUECO_Y = {hueco_y}, "
+          f"ICONO = {lado}")
+    print(f"    TEXTO_ALTO = {TEXTO_ALTO}, TEXTO_AIRE = {TEXTO_AIRE}")
+    print(f"    (rejilla {rej_w}x{rej_h} en una pantalla de "
+          f"{x1 - x0}x{y1 - y0})")
 
     if args.maqueta:
         maqueta(Image.open(SALIDA / "pokepad.png"), iconos,
-                rej_x, rej_y, celda, lado)
+                rej_x, rej_y, celda, lado, hueco_y)
 
 
-def maqueta(chasis, iconos, rx, ry, celda, lado) -> None:
+def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y) -> None:
     """Monta la pantalla principal con las celdas dibujadas como las dibuja el
     juego: rectangulos planos. Ver docs/ui/prompts-arte-pokepad.md §4."""
     # Copia explicita: `chasis` se sigue usando abajo para restaurar las
@@ -395,7 +425,7 @@ def maqueta(chasis, iconos, rx, ry, celda, lado) -> None:
     d = ImageDraw.Draw(out)
     for i, p in enumerate(iconos):
         cx = rx + (i % 5) * (celda + HUECO)
-        cy = ry + (i // 5) * (celda + HUECO)
+        cy = ry + (i // 5) * (celda + hueco_y)
         d.rectangle([cx, cy, cx + celda - 1, cy + celda - 1],
                     fill=(122, 131, 200, 255), outline=(200, 210, 240, 255),
                     width=BORDE)
@@ -414,6 +444,18 @@ def maqueta(chasis, iconos, rx, ry, celda, lado) -> None:
         ico = Image.open(SALIDA / f"{p.stem.replace('icon_', '')}.png")
         out.alpha_composite(ico, (cx + (celda - lado) // 2,
                                   cy + (celda - lado) // 2))
+        # El nombre debajo. En el juego lo pinta la fuente de Minecraft; aqui
+        # basta con una cualquiera del sistema para juzgar el ENCAJE, que es lo
+        # unico que la maqueta tiene que responder.
+        nombre = NOMBRES.get(p.stem.replace("icon_", ""), "")
+        if nombre:
+            try:
+                fuente = ImageFont.truetype("arial.ttf", TEXTO_ALTO)
+            except OSError:
+                fuente = ImageFont.load_default()
+            ancho = d.textlength(nombre, font=fuente)
+            d.text((cx + celda / 2 - ancho / 2, cy + celda + TEXTO_AIRE),
+                   nombre, font=fuente, fill=(232, 236, 255, 255))
     # La barra de botones, con los cinco sin destino apagados igual que en el
     # juego. La maqueta existe para aprobar el diseno, asi que si no ensena lo
     # mismo que se va a ver no sirve de nada.

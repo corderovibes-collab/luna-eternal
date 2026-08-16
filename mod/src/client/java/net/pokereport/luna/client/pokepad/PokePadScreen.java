@@ -47,9 +47,25 @@ public class PokePadScreen extends Screen {
     /** La rejilla, en píxeles del arte. */
     // Los da `tools/gen_pokepad.py` al preparar el arte: los imprime al final.
     // No se escriben a ojo, se copian de ahi.
-    private static final int REJ_X = 495, REJ_Y = 212;
-    private static final int CELDA = 124, HUECO = 24, ICONO = 100;
+    private static final int REJ_X = 495, REJ_Y = 194;
+    private static final int CELDA = 124, HUECO_X = 24, HUECO_Y = 28, ICONO = 100;
     private static final int COLS = 5;
+
+    /**
+     * El nombre de cada aplicación, debajo de su icono.
+     *
+     * <p><b>El alto va en píxeles del arte, no en unidades de interfaz.</b> Es
+     * la diferencia entre un texto que mide siempre lo mismo respecto al Pad y
+     * uno que cambia de tamaño según el <i>GUI Scale</i> de cada jugador — con
+     * lo segundo, a escala 4 el nombre se sale de su celda.
+     *
+     * <p>18 es el doble exacto de los 9 que mide la fuente de Minecraft, así
+     * que cae en píxeles enteros. Cualquier otro número la emborrona, que es
+     * justo lo que costó una noche arreglar en el chasis.
+     */
+    private static final int TEXTO_ALTO = 18, TEXTO_AIRE = 5;
+    private static final int TEXTO_COLOR = 0xFFE8ECFF;
+    private static final int TEXTO_CERRADO = 0xFF9AA3C8;
 
     // El borde de la celda y la esquina mordida, tambien en pixeles del arte.
     // A 1 px sobre una celda de 124 no se ve ninguno de los dos.
@@ -245,6 +261,18 @@ public class PokePadScreen extends Screen {
             dibujar(ctx, app.icono(), cx + (celda - icono) / 2,
                     cy + (celda - icono) / 2, icono, icono,
                     ICONO, ICONO, 0xFFFFFFFF);
+
+            // El nombre, debajo de su icono.
+            //
+            // Se pide en pixeles del ARTE --no en unidades de interfaz-- para
+            // que mida siempre lo mismo respecto al Pad. Y apagado si la
+            // aplicacion esta cerrada, igual que su celda: si el nombre fuera
+            // a todo color, la celda apagada parecerian dos cosas distintas
+            // discutiendo.
+            int artX = REJ_X + (i % COLS) * (CELDA + HUECO_X) + CELDA / 2;
+            int artY = REJ_Y + (i / COLS) * (CELDA + HUECO_Y) + CELDA + TEXTO_AIRE;
+            texto(ctx, app.nombre(), artX, artY, TEXTO_ALTO,
+                  app.abierta() ? TEXTO_COLOR : TEXTO_CERRADO);
         }
 
         panelLateral(ctx);
@@ -435,11 +463,40 @@ public class PokePadScreen extends Screen {
         }
     }
 
+    /**
+     * Escribe una línea centrada, medida en PIXELES DEL ARTE.
+     *
+     * <p>La fuente de Minecraft mide 9 y se dibuja en unidades de interfaz, así
+     * que sin esto un mismo texto sale de un tamaño distinto para cada jugador
+     * según su <i>GUI Scale</i>. Aquí se escala la matriz para que el texto
+     * ocupe siempre {@code alto} píxeles del arte, que es lo que hace que
+     * encaje bajo la celda pase lo que pase.
+     *
+     * @param cx    centro horizontal, en píxeles del arte
+     * @param arriba borde superior del texto, en píxeles del arte
+     */
+    private void texto(DrawContext ctx, net.minecraft.text.Text linea,
+                       int cx, int arriba, int alto, int color) {
+        float escala = alto * k / textRenderer.fontHeight;
+        if (escala <= 0) {
+            return;
+        }
+        var m = ctx.getMatrices();
+        m.push();
+        m.translate(x0, y0, 0);
+        m.scale(escala, escala, 1f);
+        // Ya dentro de la matriz escalada, las coordenadas van divididas por
+        // ella: lo que se pide en pixeles del arte acaba cayendo donde toca.
+        ctx.drawCenteredTextWithShadow(textRenderer, linea,
+                Math.round(cx * k / escala), Math.round(arriba * k / escala), color);
+        m.pop();
+    }
+
     private int celdaX(int i) {
-        return x0 + Math.round((REJ_X + (i % COLS) * (CELDA + HUECO)) * k);
+        return x0 + Math.round((REJ_X + (i % COLS) * (CELDA + HUECO_X)) * k);
     }
 
     private int celdaY(int i) {
-        return y0 + Math.round((REJ_Y + (i / COLS) * (CELDA + HUECO)) * k);
+        return y0 + Math.round((REJ_Y + (i / COLS) * (CELDA + HUECO_Y)) * k);
     }
 }

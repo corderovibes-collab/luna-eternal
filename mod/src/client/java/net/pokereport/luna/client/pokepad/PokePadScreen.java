@@ -47,8 +47,8 @@ public class PokePadScreen extends Screen {
     /** La rejilla, en píxeles del arte. */
     // Los da `tools/gen_pokepad.py` al preparar el arte: los imprime al final.
     // No se escriben a ojo, se copian de ahi.
-    private static final int REJ_X = 495, REJ_Y = 194;
-    private static final int CELDA = 124, HUECO_X = 24, HUECO_Y = 28, ICONO = 100;
+    private static final int REJ_X = 495, REJ_Y = 208;
+    private static final int CELDA = 124, HUECO_X = 24, HUECO_Y = 19, ICONO = 100;
     private static final int COLS = 5;
 
     /**
@@ -63,7 +63,16 @@ public class PokePadScreen extends Screen {
      * que cae en píxeles enteros. Cualquier otro número la emborrona, que es
      * justo lo que costó una noche arreglar en el chasis.
      */
-    private static final int TEXTO_ALTO = 18, TEXTO_AIRE = 5;
+    private static final int TEXTO_ALTO = 18;
+
+    /**
+     * Cuánto SUBE el nombre dentro de su celda.
+     *
+     * <p>A la mitad de su alto, así que queda montado a caballo sobre la línea
+     * de abajo de la celda en vez de colgando en el hueco. Es lo que lo ata a
+     * su icono: suelto en medio de dos filas, el ojo duda de a cuál pertenece.
+     */
+    private static final int TEXTO_SOLAPE = TEXTO_ALTO / 2;
     // ⚠ BLANCO SIEMPRE, ESTE ABIERTA O CERRADA. Decision del usuario, y es la
     // correcta: el nombre tiene UN trabajo, que es leerse.
     //
@@ -280,7 +289,7 @@ public class PokePadScreen extends Screen {
             // a todo color, la celda apagada parecerian dos cosas distintas
             // discutiendo.
             int artX = REJ_X + (i % COLS) * (CELDA + HUECO_X) + CELDA / 2;
-            int artY = REJ_Y + (i / COLS) * (CELDA + HUECO_Y) + CELDA + TEXTO_AIRE;
+            int artY = REJ_Y + (i / COLS) * (CELDA + HUECO_Y) + CELDA - TEXTO_SOLAPE;
             texto(ctx, app.nombre(), artX, artY, TEXTO_ALTO, TEXTO_COLOR);
         }
 
@@ -508,17 +517,17 @@ public class PokePadScreen extends Screen {
         // fondo oscuro se lee, pero estas celdas son AZUL CLARO y el nombre
         // quedaba gris sobre claro, ilegible.
         //
-        // Un contorno negro por los ocho lados funciona sobre CUALQUIER fondo,
-        // que es la unica garantia que sirve aqui: la celda cambia de color al
-        // pasar el raton, y encima cada aplicacion tendra el suyo algun dia.
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
-                if (dx != 0 || dy != 0) {
-                    ctx.drawText(textRenderer, linea, px + dx, py + dy,
-                                 0xFF000000, false);
-                }
-            }
-        }
+        // Un contorno negro funciona sobre CUALQUIER fondo, que es la unica
+        // garantia que sirve aqui: la celda cambia de color al pasar el raton, y
+        // encima cada aplicacion tendra el suyo algun dia.
+        //
+        // EN CRUZ Y NO EN LAS OCHO DIRECCIONES. Con las diagonales el contorno
+        // sale grueso y el nombre se emborrona; en cruz cierra igual la letra y
+        // pesa la mitad.
+        ctx.drawText(textRenderer, linea, px - 1, py, 0xFF000000, false);
+        ctx.drawText(textRenderer, linea, px + 1, py, 0xFF000000, false);
+        ctx.drawText(textRenderer, linea, px, py - 1, 0xFF000000, false);
+        ctx.drawText(textRenderer, linea, px, py + 1, 0xFF000000, false);
         ctx.drawText(textRenderer, linea, px, py, color, false);
         m.pop();
     }

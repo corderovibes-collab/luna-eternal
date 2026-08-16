@@ -73,7 +73,14 @@ HUECO = 24      # separacion HORIZONTAL entre celdas
 # exactamente el doble y cae en pixeles enteros. Cualquier otro numero la
 # emborrona, que es justo lo que se lleva media noche arreglado en el chasis.
 TEXTO_ALTO = 18
-TEXTO_AIRE = 5      # entre el borde de la celda y la linea de texto
+TEXTO_AIRE = 5      # aire por debajo del texto, antes de la celda siguiente
+
+# Cuanto SUBE el texto dentro de su celda.
+#
+# A la mitad de su alto, asi que queda montado a caballo sobre la linea de
+# abajo de la celda en vez de colgando en el hueco. Es lo que lo ata a su icono:
+# suelto en medio de dos filas, el ojo duda de a cual pertenece.
+TEXTO_SOLAPE = TEXTO_ALTO // 2
 
 # El orden de la rejilla lo manda `App.TODAS` (App.java), no el alfabeto.
 #
@@ -391,7 +398,7 @@ def main() -> None:
     # La separacion VERTICAL no es la horizontal: tiene que dar cabida al
     # nombre debajo de cada icono. Se DEDUCE en vez de escribirse a mano, para
     # que cambiar el tamano del texto recoloque la rejilla sola.
-    hueco_y = TEXTO_AIRE + TEXTO_ALTO + TEXTO_AIRE
+    hueco_y = (TEXTO_ALTO - TEXTO_SOLAPE) + TEXTO_AIRE * 2
     rej_w = celda * 5 + HUECO * 4
     # Tres filas de celda, y TRES huecos: los dos de en medio mas el de abajo,
     # porque la ultima fila tambien lleva su nombre debajo.
@@ -406,7 +413,7 @@ def main() -> None:
     print(f"    REJ_X = {rej_x}, REJ_Y = {rej_y}")
     print(f"    CELDA = {celda}, HUECO_X = {HUECO}, HUECO_Y = {hueco_y}, "
           f"ICONO = {lado}")
-    print(f"    TEXTO_ALTO = {TEXTO_ALTO}, TEXTO_AIRE = {TEXTO_AIRE}")
+    print(f"    TEXTO_ALTO = {TEXTO_ALTO}, TEXTO_SOLAPE = {TEXTO_SOLAPE}")
     print(f"    (rejilla {rej_w}x{rej_h} en una pantalla de "
           f"{x1 - x0}x{y1 - y0})")
 
@@ -454,8 +461,9 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y) -> None:
             except OSError:
                 fuente = ImageFont.load_default()
             ancho = d.textlength(nombre, font=fuente)
-            d.text((cx + celda / 2 - ancho / 2, cy + celda + TEXTO_AIRE),
-                   nombre, font=fuente, fill=(232, 236, 255, 255))
+            d.text((cx + celda / 2 - ancho / 2, cy + celda - TEXTO_SOLAPE),
+                   nombre, font=fuente, fill=(255, 255, 255, 255),
+                   stroke_width=1, stroke_fill=(0, 0, 0, 255))
     # La barra de botones, con los cinco sin destino apagados igual que en el
     # juego. La maqueta existe para aprobar el diseno, asi que si no ensena lo
     # mismo que se va a ver no sirve de nada.

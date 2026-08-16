@@ -277,9 +277,26 @@ public final class AutoTest {
         check("los espacios se normalizan",
             net.pokereport.luna.pokedex.VozService.normalizar("Mr Mime")
                 .equals("mr_mime"));
+        check("Nidoran-F se normaliza como su fichero",
+            net.pokereport.luna.pokedex.VozService.normalizar("Nidoran-F")
+                .equals("nidoran_f"));
+        // Las formas regionales NO son especies aparte en Cobblemon.
+        check("la forma regional tiene su propia voz",
+            net.pokereport.luna.pokedex.VozService.clave("Rattata", "Alola")
+                .equals("rattata_alola"));
+        check("una forma sin grabar cae en la especie base",
+            net.pokereport.luna.pokedex.VozService.clave("Pikachu", "Gigantamax")
+                .equals("pikachu"));
+        check("sin forma se usa la especie",
+            net.pokereport.luna.pokedex.VozService.clave("Ekans", "")
+                .equals("ekans"));
+        check("una especie sin grabar no da clave",
+            net.pokereport.luna.pokedex.VozService.clave("Mewtwo", "").isEmpty());
+        check("hay las 39 voces del catalogo",
+            net.pokereport.luna.pokedex.VozService.cuantas() == 39);
         // Y lo importante al reves: una especie sin grabar NO manda paquete.
-        check("una especie sin voz no suena",
-            !net.pokereport.luna.pokedex.VozService.tieneVoz("charizard"));
+        check("una especie sin grabar no suena",
+            !net.pokereport.luna.pokedex.VozService.tieneVoz("mewtwo"));
         check("un nombre vacio no suena",
             !net.pokereport.luna.pokedex.VozService.tieneVoz(""));
         check("un nombre nulo no revienta",

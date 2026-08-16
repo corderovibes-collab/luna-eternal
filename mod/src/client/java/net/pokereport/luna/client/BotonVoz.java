@@ -42,7 +42,9 @@ public final class BotonVoz {
      * hace que se entienda sin explicarlo. Nuestro pack además ya la repinta de
      * azul luna, así que encaja con el resto de la interfaz.
      */
-    private static final Identifier TEXTURA =
+    private static final Identifier TEX_BASE =
+            Identifier.of("cobblemon", "textures/gui/pokedex/button_sound.png");
+    private static final Identifier TEX_FLECHA =
             Identifier.of("cobblemon", "textures/gui/pokedex/button_sound_arrow.png");
 
     // El chasis de su Pokédex mide 345x207 y va centrado, igual que lo calcula
@@ -60,11 +62,24 @@ public final class BotonVoz {
      * <p>Antes estaba en la esquina del panel de descripción y quedaba fuera de
      * sitio: allí no hay nada de sonido y parecía pegado.
      */
-    private static final int BOTON_X = 295, BOTON_Y = 97;
-    private static final int BOTON_W = 12, BOTON_H = 12;
+    // Son DOS piezas, igual que el suyo: el panel con la onda y la flecha
+    // encima. Dibujar solo la flecha --que es lo que se hizo primero-- da un
+    // triangulo suelto al doble de tamano que no se parece en nada al de abajo.
+    //
+    //   base    blitk(button_sound,  pX+114, pY+81, 44x20, escala 0,5) -> 22x10
+    //   flecha  ScaledButton(pX+115, pY+83, 12x12,        escala 0,5) ->  6x6
+    //
+    // Con el widget en (x+180, y+28) eso cae en (x+294, y+109) y (x+295,
+    // y+111). El nuestro va 14 pixeles mas arriba: el alto del panel mas un
+    // respiro.
+    private static final int BASE_X = 294, BASE_Y = 95;
+    private static final int BASE_W = 22, BASE_H = 10;
+    private static final int FLECHA_X = 295, FLECHA_Y = 97;
+    private static final int FLECHA_W = 6, FLECHA_H = 6;
 
-    /** La textura trae dos estados apilados: normal arriba, pulsado abajo. */
-    private static final int TEX_W = 12, TEX_H = 24;
+    /** Tamaños reales de las PNG. La flecha trae dos estados apilados. */
+    private static final int TEX_BASE_W = 44, TEX_BASE_H = 20;
+    private static final int TEX_FLECHA_W = 12, TEX_FLECHA_H = 24;
 
     private static Field campoEntrada;
     private static boolean avisado;
@@ -131,9 +146,9 @@ public final class BotonVoz {
         if (especie == null) {
             return;       // sin especie legible: mejor ningún botón que uno roto
         }
-        int x = origenX(p) + BOTON_X, y = origenY(p) + BOTON_Y;
-        boolean encima = ratonX >= x && ratonX < x + BOTON_W
-                && ratonY >= y && ratonY < y + BOTON_H;
+        int bx = origenX(p) + BASE_X, by = origenY(p) + BASE_Y;
+        boolean encima = ratonX >= bx && ratonX < bx + BASE_W
+                && ratonY >= by && ratonY < by + BASE_H;
         boolean hayVoz = net.pokereport.luna.pokedex.VozService.tieneVoz(especie);
 
         // ⚠ La mezcla alfa a mano, siempre. Ver docs/ui/dibujado.md §1.
@@ -144,10 +159,13 @@ public final class BotonVoz {
         if (!hayVoz) {
             ctx.setShaderColor(1f, 1f, 1f, 0.35f);
         }
-        // La mitad de abajo de la textura es el estado pulsado.
-        int v = encima && hayVoz ? TEX_H / 2 : 0;
-        ctx.drawTexture(TEXTURA, x, y, BOTON_W, BOTON_H,
-                0f, v, TEX_W, TEX_H / 2, TEX_W, TEX_H);
+        ctx.drawTexture(TEX_BASE, bx, by, BASE_W, BASE_H,
+                0f, 0f, TEX_BASE_W, TEX_BASE_H, TEX_BASE_W, TEX_BASE_H);
+        // La mitad de abajo de la flecha es el estado pulsado.
+        int v = encima && hayVoz ? TEX_FLECHA_H / 2 : 0;
+        ctx.drawTexture(TEX_FLECHA,
+                origenX(p) + FLECHA_X, origenY(p) + FLECHA_Y, FLECHA_W, FLECHA_H,
+                0f, v, TEX_FLECHA_W, TEX_FLECHA_H / 2, TEX_FLECHA_W, TEX_FLECHA_H);
         if (!hayVoz) {
             ctx.setShaderColor(1f, 1f, 1f, 1f);
         }
@@ -171,8 +189,8 @@ public final class BotonVoz {
         if (especie == null || !net.pokereport.luna.pokedex.VozService.tieneVoz(especie)) {
             return false;
         }
-        int x = origenX(p) + BOTON_X, y = origenY(p) + BOTON_Y;
-        if (ratonX < x || ratonX >= x + BOTON_W || ratonY < y || ratonY >= y + BOTON_H) {
+        int x = origenX(p) + BASE_X, y = origenY(p) + BASE_Y;
+        if (ratonX < x || ratonX >= x + BASE_W || ratonY < y || ratonY >= y + BASE_H) {
             return false;
         }
         if (VozPokedex.reproducir(especie)) {

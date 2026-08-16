@@ -64,11 +64,17 @@ public final class ScanListener {
                     // El nombre sale de la ficha del Pokémon escaneado, no de la
                     // entidad: un Ditto disfrazado se escanea como lo que ES, y
                     // esa es justamente la gracia del escáner.
-                    String especie = event.getScannedPokemonEntityData()
-                            .getPokemon().getSpecies().getName();
-                    LunaEternal.LOG.info("Voz: evento de escaneo recibido, especie cruda «{}»",
-                            especie);
-                    hablar(event.getPlayer(), especie);
+                    var pokemon = event.getScannedPokemonEntityData().getPokemon();
+                    // La FORMA importa: un Rattata de Alola no es otra especie
+                    // en Cobblemon, es la misma con otra forma, y tiene su
+                    // propia descripcion grabada.
+                    String forma = "";
+                    try {
+                        forma = pokemon.getForm().getName();
+                    } catch (Throwable ignorado) {
+                        // Sin forma legible se usa la especie a secas.
+                    }
+                    hablar(event.getPlayer(), pokemon.getSpecies().getName(), forma);
                 } catch (Throwable t) {
                     // Un escaneo que no suena es un fastidio; uno que revienta
                     // le rompe la Pokédex al jugador. Se traga.
@@ -90,17 +96,21 @@ public final class ScanListener {
      * no hay forma de depurarlo desde fuera del juego: el jugador solo puede
      * decir «no suena», que es compatible con las dos cosas.
      */
-    static void hablar(ServerPlayerEntity jugador, String especie) {
+    static void hablar(ServerPlayerEntity jugador, String especie, String forma) {
         if (jugador == null) {
             return;
         }
-        String id = VozService.normalizar(especie);
+        // La clave prefiere la forma si esa forma tiene grabacion propia, y si
+        // no cae en la especie base -- que describe al mismo bicho y es mejor
+        // que el silencio.
+        String id = VozService.clave(especie, forma);
         String quien = jugador.getUuidAsString();
         String nombre = jugador.getName().getString();
 
-        if (!VozService.tieneVoz(id)) {
+        if (id.isEmpty()) {
             // Sin voz grabada: el escaneo funciona igual, mudo.
-            LunaEternal.LOG.info("Voz: {} escaneo {} — sin grabar", nombre, id);
+            LunaEternal.LOG.info("Voz: {} escaneo {} — sin grabar",
+                    nombre, VozService.normalizar(especie));
             return;
         }
         // La ráfaga se mide por jugador Y especie; el freno solo por jugador.

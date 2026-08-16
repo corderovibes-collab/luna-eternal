@@ -34,18 +34,37 @@ public final class BotonVoz {
     private static final String CLASE_POKEDEX =
             "com.cobblemon.mod.common.client.gui.pokedex.PokedexGUI";
 
-    /** Su textura de botón de sonido, que nuestro pack ya repinta de azul luna. */
+    /**
+     * La MISMA textura que usa su botón de grito, y a propósito.
+     *
+     * <p>El usuario lo pidió así: «igual a ese pero con la voz». Los dos hacen
+     * lo mismo —soltar un sonido de ese Pokémon— y que se parezcan es lo que
+     * hace que se entienda sin explicarlo. Nuestro pack además ya la repinta de
+     * azul luna, así que encaja con el resto de la interfaz.
+     */
     private static final Identifier TEXTURA =
-            Identifier.of("cobblemon", "textures/gui/pokedex/button_sound.png");
+            Identifier.of("cobblemon", "textures/gui/pokedex/button_sound_arrow.png");
 
     // El chasis de su Pokédex mide 345x207 y va centrado, igual que lo calcula
     // ella misma: (width - 345) / 2. La posición es relativa a esa esquina.
     private static final int BASE_ANCHO = 345, BASE_ALTO = 207;
-    private static final int BOTON_X = 296, BOTON_Y = 135;
-    private static final int BOTON_W = 22, BOTON_H = 10;
+
+    /**
+     * Justo ENCIMA de su botón de grito.
+     *
+     * <p>No es a ojo: su {@code PokemonInfoWidget} se monta en
+     * {@code (x + 180, y + 28)} y dentro coloca el grito en
+     * {@code (pX + 115, pY + 83)}, o sea {@code (x + 295, y + 111)}. El nuestro
+     * va 14 píxeles más arriba, que es su alto más un respiro.
+     *
+     * <p>Antes estaba en la esquina del panel de descripción y quedaba fuera de
+     * sitio: allí no hay nada de sonido y parecía pegado.
+     */
+    private static final int BOTON_X = 295, BOTON_Y = 97;
+    private static final int BOTON_W = 12, BOTON_H = 12;
 
     /** La textura trae dos estados apilados: normal arriba, pulsado abajo. */
-    private static final int TEX_W = 44, TEX_H = 20;
+    private static final int TEX_W = 12, TEX_H = 24;
 
     private static Field campoEntrada;
     private static boolean avisado;
@@ -61,7 +80,38 @@ public final class BotonVoz {
                     (p, ctx, ratonX, ratonY, delta) -> dibujar(p, ctx, ratonX, ratonY));
             ScreenMouseEvents.allowMouseClick(pantalla).register(
                     (p, ratonX, ratonY, boton) -> !pulsado(p, ratonX, ratonY, boton));
+            alAbrirDesdeElEscaner(pantalla);
         });
+    }
+
+    /**
+     * Si la Pokédex la ha abierto el escáner, suelta la voz sola.
+     *
+     * <p><b>Es lo que cierra el agujero de los ya registrados.</b> Cobblemon no
+     * deja reescanear lo que ya tienes, pero sí deja <b>mantener pulsado</b>
+     * sobre él para abrir la Pokédex por ese Pokémon — y ahí es donde el
+     * jugador espera volver a oírlo.
+     *
+     * <p>Se distingue de abrirla a mano por {@code initSpecies}: su
+     * {@code PokedexUsageContext} llama a {@code open(dex, tipos, speciesId)}
+     * con la especie, y el objeto Pokédex la abre sin ella. Así abrir la
+     * Pokédex normalmente <b>no</b> dispara ninguna voz, que sería un susto.
+     */
+    private static void alAbrirDesdeElEscaner(Screen pantalla) {
+        try {
+            Object id = pantalla.getClass().getMethod("getInitSpecies").invoke(pantalla);
+            if (id != null) {
+                VozPokedex.reproducir(
+                        net.pokereport.luna.pokedex.VozService.normalizar(String.valueOf(id)));
+            }
+        } catch (Throwable t) {
+            // Sin esto solo se pierde la reproducción automática; el botón sigue.
+            if (!avisado) {
+                avisado = true;
+                net.pokereport.luna.LunaEternal.LOG.warn(
+                        "Pokédex: no se puede saber si la abrió el escáner ({})", t.toString());
+            }
+        }
     }
 
     private static boolean esPokedex(Screen pantalla) {

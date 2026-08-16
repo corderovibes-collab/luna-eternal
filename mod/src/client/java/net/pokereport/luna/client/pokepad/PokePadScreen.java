@@ -64,17 +64,18 @@ public class PokePadScreen extends Screen {
      * justo lo que costó una noche arreglar en el chasis.
      */
     private static final int TEXTO_ALTO = 18, TEXTO_AIRE = 5;
-    // ⚠ LOS DOS EN BLANCO, Y CASI IGUALES.
+    // ⚠ BLANCO SIEMPRE, ESTE ABIERTA O CERRADA. Decision del usuario, y es la
+    // correcta: el nombre tiene UN trabajo, que es leerse.
     //
-    // Antes el cerrado era gris azulado, y como HOY LAS QUINCE APLICACIONES
-    // ESTAN CERRADAS, los quince nombres salian grises sobre celdas azul claro
-    // y no se leia ninguno. Apagar el nombre solo tiene sentido si hay alguno
-    // encendido al lado con el que comparar.
+    // Hubo un color apagado para las cerradas y salio mal por un motivo que no
+    // se ve al escribirlo: HOY LAS QUINCE ESTAN CERRADAS, asi que los quince
+    // nombres salian grises sobre celdas azul claro y no se leia ninguno.
+    // Atenuar algo solo comunica si hay al lado un hermano encendido con el que
+    // compararlo; si estan todos atenuados, no es una senal, es un defecto.
     //
-    // Lo que distingue una celda cerrada es su FONDO, que ya recula. El nombre
-    // solo tiene un trabajo: leerse.
+    // Lo que distingue una celda cerrada sigue siendo su FONDO, que ya recula
+    // por su cuenta.
     private static final int TEXTO_COLOR = 0xFFFFFFFF;
-    private static final int TEXTO_CERRADO = 0xFFE0E6F8;
 
     // El borde de la celda y la esquina mordida, tambien en pixeles del arte.
     // A 1 px sobre una celda de 124 no se ve ninguno de los dos.
@@ -280,8 +281,7 @@ public class PokePadScreen extends Screen {
             // discutiendo.
             int artX = REJ_X + (i % COLS) * (CELDA + HUECO_X) + CELDA / 2;
             int artY = REJ_Y + (i / COLS) * (CELDA + HUECO_Y) + CELDA + TEXTO_AIRE;
-            texto(ctx, app.nombre(), artX, artY, TEXTO_ALTO,
-                  app.abierta() ? TEXTO_COLOR : TEXTO_CERRADO);
+            texto(ctx, app.nombre(), artX, artY, TEXTO_ALTO, TEXTO_COLOR);
         }
 
         panelLateral(ctx);

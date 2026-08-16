@@ -1,0 +1,48 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "lunaneon:block/metal_aluminio_estriado_valla_poste"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/metal_aluminio_estriado_valla_lado",
+        "uvlock": true
+      },
+      "when": {
+        "north": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/metal_aluminio_estriado_valla_lado",
+        "uvlock": true,
+        "y": 90
+      },
+      "when": {
+        "east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/metal_aluminio_estriado_valla_lado",
+        "uvlock": true,
+        "y": 180
+      },
+      "when": {
+        "south": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/metal_aluminio_estriado_valla_lado",
+        "uvlock": true,
+        "y": 270
+      },
+      "when": {
+        "west": "true"
+      }
+    }
+  ]
+}

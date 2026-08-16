@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_glass_pane_noside_alt",
+  "textures": {
+    "pane": "lunaneon:block/vidrio_polarizado_amarillo",
+    "edge": "lunaneon:block/vidrio_polarizado_amarillo_canto"
+  }
+}

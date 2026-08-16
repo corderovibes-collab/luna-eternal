@@ -260,11 +260,51 @@ Neon          mod lunaneon 0.1.0 · neon/ · DESPLEGADO 2026-08-13
               bloque · losa · escalera · pilar · panel · tubo
               brillan SIEMPRE a tope; la luz que sueltan es 0/7/15
               y se cambia con clic derecho o [luz=N]
-              se genera entero: python tools/gen_neon.py
-              se verifica:      python tools/gen_neon.py --verificar
               ⚠ va en el CLIENTE tambien, y el cliente va PRIMERO:
                 Fabric sincroniza el registro y a quien le falte el
                 mod no le deja entrar. Orden en docs/world/neon.md §7
+Obra          506 bloques mas en el MISMO mod (2026-08-16, D-032)
+              compila y verifica; SIN MIRAR EN EL JUEGO todavia
+              hormigon  3 acabados x 16 colores x 5 formas = 240
+                        pulido · rayado (nervado) · panel prefabricado
+                        lleva MURO: un parapeto de azotea es hormigon
+              metal     8 aleaciones x 4 acabados x 5 formas = 160
+                        acero, acero oscuro, aluminio, titanio, cromo,
+                        cobre, laton, grafito
+                        liso · cepillado · estriado · remachado
+                        lleva PILAR: una viga es metal
+              rejilla   8 aleaciones x 3 formas = 24 (huecos de verdad)
+              vidrio    2 acabados x 16 colores x 2 formas = 64
+              pavimento asfalto, terrazo, losa grande, adoquin = 18
+              vanilla NO TIENE ni una escalera, ni una losa, ni un muro
+              ni una valla de hormigon: tiene el cubo y se acaba ahi.
+              Es el agujero mas grande para construir moderno
+              LAS TEXTURAS SE DIBUJAN, no se bajan (D-008): el arte de
+              bloques que circula es ARR o CC-BY-NC, y el NC es la
+              misma clausula que descarto CobbleVerse (D-006)
+              y sale ganando: los 16 colores del hormigon y del vidrio
+              son LOS MISMOS 16 del neon rebajados por formula, asi que
+              un neon cian pega con un hormigon cian por construccion
+              5 pestanas nuevas en el creativo; 602 en una sola no es
+              una paleta, es un listin
+              ⚠ 29.330 ESTADOS de bloque, casi el doble que vanilla.
+                19.776 son del hormigon y casi todos de sus 48 MUROS
+                (324 estados cada uno). Si algun dia hay que recortar,
+                el sitio es ese — no el numero de colores
+              jar de 248 KB a 1,63 MB. Sobre 185 MB no mueve la aguja
+Bloques       UN SOLO generador para las SEIS familias:
+              python tools/gen_bloques.py             (regenera 3.911)
+              python tools/gen_bloques.py --verificar (602 bloques ok)
+              python tools/gen_bloques.py --maqueta   (laminas 2x2)
+              tools/bloques/  comun.py · neon.py · ciudad.py
+              ⚠ tools/gen_neon.py YA NO GENERA NADA: delega y avisa.
+                Empezaba borrando assets/lunaneon ENTERO, asi que hoy
+                dejaria el mod con 96 bloques y 506 huecos
+              ⚠ Catalogo.java y Paleta.java SE GENERAN. A mano se pisan
+              la maqueta dibuja cada textura REPETIDA 2x2 a proposito:
+              es la unica forma de ver si encaja consigo misma, y una
+              que no encaja no se nota en el editor sino en la fachada
+              detalle en docs/world/bloques.md
 Servidor      allow-flight=true (lo exige Axiom; revertir al abrir)
               enforce-secure-profile=false · require-resource-pack=false
 ```
@@ -644,6 +684,7 @@ documentación · migración · rollback.
 | D-028 | 2026-08-12 | **Los constructores llevan OP de nivel 2, no 4**, y no se instala ningún mod de permisos | Verificado leyendo los dos jars: Axiom concede todo con `hasPermissionLevel(2)` y WorldEdit con `isOperator()`. LuckPerms sería un mod más para no ganar nada (P5). El nivel importa: con `/op` a secas (nivel 4) un constructor puede apagar el servidor o quitarle el OP al dueño **sin querer** |
 | D-031 | 2026-08-13 | **El pack parte del MODPACK OFICIAL de Cobblemon, y se personaliza quitando.** Revoca D-024 | **Decisión del usuario**, con el precedente de Diosesmon: coger el pack oficial y editarlo encima. D-024 decía «se cosechan mods sueltos» y la lista se quedó en 7; el oficial trae 76 probados juntos, con Cobblemon 1.7.3 y MC 1.21.1 — **exactamente nuestras versiones**. La lista **no se mantiene a mano**: `gen_modpack.py` baja su `.mrpack` y lee el índice, así que actualizar es reejecutar. Se quitan dos: **`stendhal`** (CC-BY-NC-ND: el NC prohíbe el uso comercial y el plan incluye venta de paquetes, D-007 — es la cláusula que ya descartó CobbleVerse) y **`bisect-mod`** (publicidad de un hosting que no es el nuestro). Y no se copia su mundo tutorial —97 MB de un jugador— ni su menú de FancyMenu, que lleva la marca de Cobblemon. **P10 se relaja a conciencia**: 143 → 185 MB de descarga |
 | D-030 | 2026-08-13 | **Los shaders se reparten por su canal oficial y con su nombre real; no se copian de CobbleVerse ni se renombran a «PokeReport - Shaders»** | **Corrección a una petición del usuario, y las licencias venían dentro de la propia carpeta.** Los packs de CobbleVerse son **Complementary Unbound r5.8.1 + Euphoria Patches renombrados**. Complementary §1.3.d exige que un pack renombrado *«se vea claramente distinto del original, al margen de cambios de ajustes»* —renombrar no lo hace—; §1.2.d prohíbe servirlo por «direct file upload»; y Euphoria §2.1 solo permite obtenerlo **ejecutando su mod Patcher**. Conservar el fichero de licencia dentro es *una* condición, no un salvoconducto. **El resultado para el jugador es idéntico**: el mismo shader, el mismo aspecto, instalado solo y apagado — Complementary por URL de Modrinth y Euphoria como parcheador que se ejecuta en su PC. Pesa más aquí que en un servidor cualquiera porque el plan incluye venta de paquetes (D-007) |
+| D-032 | 2026-08-16 | **Los 506 bloques de obra van DENTRO de `lunaneon`, no en un mod nuevo, y sus texturas se dibujan por script en vez de bajarse** | **Petición del usuario** (concreto, escaleras de concreto, vallas, metalizado, «más de 500 si hace falta»). Dos decisiones dentro de una. **Dentro de `lunaneon`** porque un mod más es un jar más que sincronizar y una forma más de dejar a alguien fuera con `Registry remapping failed`; el jar que se reparte sigue teniendo *solo bloques*, que es lo que D-029 pedía. **Dibujadas** porque casi todo el arte de bloques de GitHub y CurseForge es ARR o CC-BY-NC, y el **NC** es exactamente la cláusula que descartó CobbleVerse (D-006) y que choca con la venta de paquetes (D-007) — D-008 dice que la licencia se mira *antes* que la funcionalidad. Efecto lateral bueno y no obvio: los 16 colores del hormigón y del vidrio salen de los 16 del neón por fórmula, así que **pegan por construcción** y no porque alguien los haya emparejado a ojo |
 | D-029 | 2026-08-13 | **Los bloques de neón son un mod propio, `lunaneon`, aparte del grande y sí instalado en el cliente** | La ciudadela es de noche permanente y va llena de neón, y **vanilla no tiene ni una escalera ni una losa que emita luz**. Un datapack no puede cambiar la luz de un bloque (está en el código, no en los datos) y un resource pack solo repinta los ocho que ya existen. Adoptar un mod de neón ajeno choca con D-008: los que hay no declaran licencia comercial clara. **Polymer** mantendría el cliente limpio pero **Axiom no vería los bloques** —es de cliente—, o sea que no se podría construir con la herramienta con la que se construye. Va **separado** de `lunaeternal` para que el jar que se reparte solo tenga bloques: ni economía, ni base de datos. **No toca D-026 ni P9-bis**: aquello va de pantallas, y un bloque no es una pantalla |
 
 ## 6. Decisiones PENDIENTES (bloqueantes)

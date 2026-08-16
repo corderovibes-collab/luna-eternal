@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "lunaneon:block/hormigon_rayado_blanco"
+  }
+}

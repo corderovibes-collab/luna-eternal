@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_glass_pane_post",
+  "textures": {
+    "pane": "lunaneon:block/vidrio_polarizado_cian",
+    "edge": "lunaneon:block/vidrio_polarizado_cian_canto"
+  }
+}

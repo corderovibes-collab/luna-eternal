@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/fence_post",
+  "textures": {
+    "texture": "lunaneon:block/hormigon_panel_negro"
+  }
+}

@@ -1,7 +1,9 @@
 package net.pokereport.neon;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
@@ -9,6 +11,13 @@ import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Block;
+import net.minecraft.block.FenceBlock;
+import net.minecraft.block.PaneBlock;
+import net.minecraft.block.PillarBlock;
+import net.minecraft.block.SlabBlock;
+import net.minecraft.block.StairsBlock;
+import net.minecraft.block.TransparentBlock;
+import net.minecraft.block.WallBlock;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -53,6 +62,41 @@ public class LunaNeon implements ModInitializer {
      */
     private static final List<Item> ORDEN = new ArrayList<>();
 
+    /**
+     * Lo mismo para la obra, una lista por pestaña.
+     *
+     * <p>Seiscientos bloques en una sola pestaña no son una paleta, son un
+     * listín. Van cuatro: hormigón, metal (con la rejilla dentro, que es el
+     * mismo material), vidrio y pavimento.
+     */
+    private static final Map<String, List<Item>> ORDEN_CIUDAD = new LinkedHashMap<>();
+
+    /** El icono de cada pestaña. Un material que se reconozca de un vistazo. */
+    private static final Map<String, String> ICONOS = Map.of(
+            "hormigon", "hormigon_pulido_cian",
+            "metal", "metal_acero_cepillado",
+            "vidrio", "vidrio_claro_cian",
+            "pavimento", "pavimento_terrazo_claro");
+
+    /**
+     * Los bloques que el cliente tiene que dibujar en una capa especial.
+     *
+     * <p>Se llenan aquí porque aquí es donde se sabe de qué familia es cada
+     * uno, y los lee {@link LunaNeonCliente}. Un bloque con transparencia
+     * dibujado en la capa sólida se ve NEGRO, no transparente, y es un fallo
+     * que el servidor no puede detectar porque el servidor no dibuja.
+     */
+    private static final List<Block> TRASLUCIDOS = new ArrayList<>();
+    private static final List<Block> RECORTADOS = new ArrayList<>();
+
+    public static List<Block> traslucidos() {
+        return TRASLUCIDOS;
+    }
+
+    public static List<Block> recortados() {
+        return RECORTADOS;
+    }
+
     @Override
     public void onInitialize() {
         for (Paleta color : Paleta.COLORES) {
@@ -81,17 +125,77 @@ public class LunaNeon implements ModInitializer {
                     Neon.ajustes(color.mapa(), BlockSoundGroup.GLASS, false)));
         }
 
-        Registry.register(Registries.ITEM_GROUP, Identifier.of(MOD_ID, "neon"),
-                FabricItemGroup.builder()
-                        .icon(() -> new ItemStack(
-                                Registries.ITEM.get(Identifier.of(MOD_ID, "neon_cian"))))
-                        .displayName(Text.translatable("itemGroup." + MOD_ID + ".neon"))
-                        .entries((contexto, entradas) -> ORDEN.forEach(entradas::add))
-                        .build());
+        registrarObra();
+
+        grupo("neon", "neon_cian", ORDEN);
+        for (Map.Entry<String, List<Item>> pestana : ORDEN_CIUDAD.entrySet()) {
+            grupo(pestana.getKey(), ICONOS.get(pestana.getKey()), pestana.getValue());
+        }
 
         LOG.info("Neon: {} bloques en {} colores", ORDEN.size(), Paleta.COLORES.length);
+        LOG.info("Obra: {} bloques en {} materiales, {} pestanas",
+                ORDEN_CIUDAD.values().stream().mapToInt(List::size).sum(),
+                Catalogo.MATERIALES.length, ORDEN_CIUDAD.size());
 
         registrarInterfazLuna();
+    }
+
+    /**
+     * Da de alta los 506 bloques de obra.
+     *
+     * <p>El bucle es corto porque no hay nada que decidir: la tabla dice qué
+     * formas lleva cada material y cada forma es una clase de vanilla. Lo único
+     * con truco es el orden — <b>el cubo entero se registra primero</b> porque
+     * la escalera necesita su estado, del que hereda el sonido, la dureza y la
+     * herramienta correcta.
+     */
+    private static void registrarObra() {
+        for (Catalogo material : Catalogo.MATERIALES) {
+            Block entero = null;
+            for (String forma : material.formas()) {
+                var ajustes = Ciudad.ajustes(material.familia(), material.mapa());
+                Block bloque = switch (forma) {
+                    case "" -> material.familia() == Ciudad.Familia.VIDRIO
+                            // El vidrio va con TransparentBlock y no con Block:
+                            // es lo que hace que dos cristales pegados no
+                            // dibujen la cara que tienen en medio. Sin eso, una
+                            // torre acristalada son mil caras invisibles que la
+                            // tarjeta gráfica pinta igualmente.
+                            ? new TransparentBlock(ajustes)
+                            : new Block(ajustes);
+                    case "_losa" -> new SlabBlock(ajustes);
+                    case "_escalera" -> new StairsBlock(Ciudad.base(entero), ajustes);
+                    case "_muro" -> new WallBlock(ajustes);
+                    case "_valla" -> new FenceBlock(ajustes);
+                    case "_pilar" -> new PillarBlock(ajustes);
+                    case "_panel" -> new PaneBlock(ajustes);
+                    default -> throw new IllegalStateException(
+                            "forma desconocida en Catalogo: " + forma);
+                };
+
+                Block puesto = registrar(material.id() + forma, bloque,
+                        ORDEN_CIUDAD.computeIfAbsent(material.familia().grupo(),
+                                clave -> new ArrayList<>()));
+                if (forma.isEmpty()) {
+                    entero = puesto;
+                }
+                switch (material.familia()) {
+                    case VIDRIO -> TRASLUCIDOS.add(puesto);
+                    case REJILLA -> RECORTADOS.add(puesto);
+                    default -> { }
+                }
+            }
+        }
+    }
+
+    private static void grupo(String id, String icono, List<Item> objetos) {
+        Registry.register(Registries.ITEM_GROUP, Identifier.of(MOD_ID, id),
+                FabricItemGroup.builder()
+                        .icon(() -> new ItemStack(
+                                Registries.ITEM.get(Identifier.of(MOD_ID, icono))))
+                        .displayName(Text.translatable("itemGroup." + MOD_ID + "." + id))
+                        .entries((contexto, entradas) -> objetos.forEach(entradas::add))
+                        .build());
     }
 
     /**
@@ -139,9 +243,14 @@ public class LunaNeon implements ModInitializer {
     }
 
     private static <T extends Block> T registrar(String nombre, T bloque) {
+        return registrar(nombre, bloque, ORDEN);
+    }
+
+    private static <T extends Block> T registrar(String nombre, T bloque,
+                                                 List<Item> pestana) {
         Identifier id = Identifier.of(MOD_ID, nombre);
         Registry.register(Registries.BLOCK, id, bloque);
-        ORDEN.add(Registry.register(Registries.ITEM, id,
+        pestana.add(Registry.register(Registries.ITEM, id,
                 new BlockItem(bloque, new Item.Settings())));
         return bloque;
     }

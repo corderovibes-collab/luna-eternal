@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/outer_stairs",
+  "textures": {
+    "bottom": "lunaneon:block/hormigon_panel_lima",
+    "top": "lunaneon:block/hormigon_panel_lima",
+    "side": "lunaneon:block/hormigon_panel_lima"
+  }
+}

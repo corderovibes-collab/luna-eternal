@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/stairs",
+  "textures": {
+    "bottom": "lunaneon:block/hormigon_pulido_rosa",
+    "top": "lunaneon:block/hormigon_pulido_rosa",
+    "side": "lunaneon:block/hormigon_pulido_rosa"
+  }
+}

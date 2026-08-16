@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "lunaneon:block/pavimento_asfalto_losa"
+    },
+    "type=top": {
+      "model": "lunaneon:block/pavimento_asfalto_losa_arriba"
+    },
+    "type=double": {
+      "model": "lunaneon:block/pavimento_asfalto"
+    }
+  }
+}

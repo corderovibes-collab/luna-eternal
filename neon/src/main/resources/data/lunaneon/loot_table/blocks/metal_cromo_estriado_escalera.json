@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:block",
+  "random_sequence": "lunaneon:blocks/metal_cromo_estriado_escalera",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "lunaneon:metal_cromo_estriado_escalera",
+          "functions": [
+            {
+              "function": "minecraft:explosion_decay"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

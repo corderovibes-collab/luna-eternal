@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/stairs",
+  "textures": {
+    "bottom": "lunaneon:block/metal_cromo_liso",
+    "top": "lunaneon:block/metal_cromo_liso",
+    "side": "lunaneon:block/metal_cromo_liso"
+  }
+}

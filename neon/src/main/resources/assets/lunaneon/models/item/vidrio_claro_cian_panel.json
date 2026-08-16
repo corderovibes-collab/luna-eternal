@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "lunaneon:block/vidrio_claro_cian"
+  }
+}

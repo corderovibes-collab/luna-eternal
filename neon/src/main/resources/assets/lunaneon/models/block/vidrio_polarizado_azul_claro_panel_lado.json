@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_glass_pane_side",
+  "textures": {
+    "pane": "lunaneon:block/vidrio_polarizado_azul_claro",
+    "edge": "lunaneon:block/vidrio_polarizado_azul_claro_canto"
+  }
+}

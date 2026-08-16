@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:block",
+  "random_sequence": "lunaneon:blocks/rejilla_titanio",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "lunaneon:rejilla_titanio",
+          "functions": [
+            {
+              "function": "minecraft:explosion_decay"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

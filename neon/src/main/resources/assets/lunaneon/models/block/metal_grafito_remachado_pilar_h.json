@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column_horizontal",
+  "textures": {
+    "end": "lunaneon:block/metal_grafito_remachado",
+    "side": "lunaneon:block/metal_grafito_remachado"
+  }
+}

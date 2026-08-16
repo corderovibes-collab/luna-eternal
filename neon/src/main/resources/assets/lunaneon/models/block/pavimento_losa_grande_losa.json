@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab",
+  "textures": {
+    "bottom": "lunaneon:block/pavimento_losa_grande",
+    "top": "lunaneon:block/pavimento_losa_grande",
+    "side": "lunaneon:block/pavimento_losa_grande"
+  }
+}

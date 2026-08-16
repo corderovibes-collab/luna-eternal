@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab",
+  "textures": {
+    "bottom": "lunaneon:block/rejilla_laton",
+    "top": "lunaneon:block/rejilla_laton",
+    "side": "lunaneon:block/rejilla_laton"
+  }
+}

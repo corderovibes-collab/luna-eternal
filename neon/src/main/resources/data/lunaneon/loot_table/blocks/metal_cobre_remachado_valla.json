@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:block",
+  "random_sequence": "lunaneon:blocks/metal_cobre_remachado_valla",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "lunaneon:metal_cobre_remachado_valla",
+          "functions": [
+            {
+              "function": "minecraft:explosion_decay"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

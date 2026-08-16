@@ -1,0 +1,77 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "lunaneon:block/vidrio_claro_azul_claro_panel_poste"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/vidrio_claro_azul_claro_panel_lado"
+      },
+      "when": {
+        "north": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/vidrio_claro_azul_claro_panel_lado",
+        "y": 90
+      },
+      "when": {
+        "east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/vidrio_claro_azul_claro_panel_lado_alt"
+      },
+      "when": {
+        "south": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/vidrio_claro_azul_claro_panel_lado_alt",
+        "y": 90
+      },
+      "when": {
+        "west": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/vidrio_claro_azul_claro_panel_suelto"
+      },
+      "when": {
+        "north": "false"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/vidrio_claro_azul_claro_panel_suelto_alt"
+      },
+      "when": {
+        "east": "false"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/vidrio_claro_azul_claro_panel_suelto_alt",
+        "y": 90
+      },
+      "when": {
+        "south": "false"
+      }
+    },
+    {
+      "apply": {
+        "model": "lunaneon:block/vidrio_claro_azul_claro_panel_suelto",
+        "y": 270
+      },
+      "when": {
+        "west": "false"
+      }
+    }
+  ]
+}

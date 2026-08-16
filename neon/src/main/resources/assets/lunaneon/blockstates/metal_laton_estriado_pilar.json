@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=y": {
+      "model": "lunaneon:block/metal_laton_estriado_pilar"
+    },
+    "axis=z": {
+      "model": "lunaneon:block/metal_laton_estriado_pilar_h",
+      "x": 90
+    },
+    "axis=x": {
+      "model": "lunaneon:block/metal_laton_estriado_pilar_h",
+      "x": 90,
+      "y": 90
+    }
+  }
+}

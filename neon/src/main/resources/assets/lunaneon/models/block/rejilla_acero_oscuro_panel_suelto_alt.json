@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_glass_pane_noside_alt",
+  "textures": {
+    "pane": "lunaneon:block/rejilla_acero_oscuro",
+    "edge": "lunaneon:block/rejilla_acero_oscuro_canto"
+  }
+}

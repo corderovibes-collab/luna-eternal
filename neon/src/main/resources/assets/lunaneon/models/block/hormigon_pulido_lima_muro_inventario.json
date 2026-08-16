@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/wall_inventory",
+  "textures": {
+    "wall": "lunaneon:block/hormigon_pulido_lima"
+  }
+}

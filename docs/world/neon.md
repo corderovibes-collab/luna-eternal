@@ -18,8 +18,8 @@ por qué existen como mod propio.
 mod        lunaneon 0.1.0 · neon/ · cliente Y servidor · 248 KB
 bloques    16 colores × 6 formas = 96
 recursos   64 texturas · 272 modelos · 96 blockstates · 96 botines
-generados  tools/gen_neon.py  (nada de esto se escribe a mano)
-recursos   python tools/gen_neon.py --verificar  ->  correcto
+generados  tools/gen_bloques.py  (nada de esto se escribe a mano)
+recursos   python tools/gen_bloques.py --verificar  ->  correcto
 servidor   "Neon: 96 bloques en 16 colores" · Done (5,3 s)
 en el juego las 6 formas colocadas y leídas con setblock, con sus
            estados (luz, axis, facing, half, type). Las 7 correctas
@@ -203,15 +203,23 @@ ni base de datos, ni una línea de lógica de juego que valga la pena decompilar
 ## 6. Cómo se regenera
 
 **Nada de esto se escribe a mano.** La lista de colores vive en un solo sitio:
-la constante `PALETA` de `tools/gen_neon.py`. De ahí salen las texturas, los
-modelos, los blockstates, los botines, los idiomas **y `Paleta.java`**, que es
-la lista tal y como la ve el mod.
+la constante `PALETA` de `tools/bloques/neon.py`. De ahí salen las texturas,
+los modelos, los blockstates, los botines, los idiomas **y `Paleta.java`**, que
+es la lista tal y como la ve el mod.
 
 ```
-python tools/gen_neon.py             # regenera los ~600 ficheros
-python tools/gen_neon.py --verificar # cruza bloques, modelos y texturas
-cd neon && bash build.sh             # compila
+python tools/gen_bloques.py             # regenera el mod entero
+python tools/gen_bloques.py --verificar # cruza bloques, modelos y texturas
+cd neon && bash build.sh                # compila
 ```
+
+> ⚠️ **El generador cambió de sitio el 2026-08-16.** El neón es ahora una de
+> las **seis** familias del mod (ver [`bloques.md`](bloques.md)), y las seis
+> escriben en el mismo árbol de recursos. `tools/gen_neon.py` empezaba borrando
+> `assets/lunaneon` **entero**, así que ejecutarlo hoy dejaría el mod con 96
+> bloques y 506 huecos: ese fichero ya no genera nada, delega en el nuevo y
+> avisa. El traslado no tocó un píxel del neón — la prueba es que `git status`
+> no marcó ni uno de sus ficheros como modificado.
 
 > **Por qué se genera también el Java:** si la lista estuviera en dos sitios,
 > antes o después existiría un color registrado en el código cuya textura no

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "lunaneon:block/metal_cromo_remachado",
+    "side": "lunaneon:block/metal_cromo_remachado"
+  }
+}

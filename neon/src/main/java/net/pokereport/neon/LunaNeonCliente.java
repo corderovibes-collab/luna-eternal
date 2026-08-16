@@ -3,7 +3,9 @@ package net.pokereport.neon;
 import java.lang.reflect.Field;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.minecraft.client.render.RenderLayer;
 import org.joml.Vector4f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +13,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Los retoques que solo tienen sentido en la pantalla del jugador.
  *
- * <p>Hoy solo uno: <b>el haz de la Poké Ball deja de ser rojo</b>.
+ * <p>Dos: <b>la capa de dibujado del vidrio y de la rejilla</b>, y <b>el haz de
+ * la Poké Ball, que deja de ser rojo</b>.
  */
 public class LunaNeonCliente implements ClientModInitializer {
 
@@ -35,12 +38,46 @@ public class LunaNeonCliente implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        capasDeDibujado();
+
         // Se espera a que el cliente esté arrancado del todo. Tocarlo durante la
         // inicialización obligaría a cargar la clase del renderizador antes de
         // tiempo, y esa clase toca texturas y estilos que aún no están listos.
         // El haz no se dibuja hasta que alguien saca un Pokémon, así que llegamos
         // de sobra.
         ClientLifecycleEvents.CLIENT_STARTED.register(cliente -> tenirHaz());
+    }
+
+    /**
+     * Dice cómo hay que dibujar los bloques que no son opacos.
+     *
+     * <p><b>Sin esto se ven NEGROS, no transparentes</b>, y es un fallo que
+     * ningún test del servidor puede cazar porque el servidor no dibuja: el
+     * mundo carga, el bloque existe, se puede romper y colocar — y en la
+     * pantalla es un cubo negro. Por defecto Minecraft dibuja todo en la capa
+     * sólida, que ignora el canal alfa.
+     *
+     * <p>Y son dos capas distintas, no una:
+     *
+     * <pre>
+     *   translucent  el VIDRIO   alfa a medias (46 o 168 de 255), se ordena
+     *                            de atrás adelante para que se vea a través
+     *   cutout       la REJILLA  alfa de 0 o de 255 y nada en medio: el hueco
+     *                            o está o no está. Es más barata y no necesita
+     *                            ordenar nada
+     * </pre>
+     *
+     * <p>La rejilla en {@code translucent} funcionaría, pero pagaría el coste
+     * de ordenar mil caras por nada; el vidrio en {@code cutout} perdería la
+     * transparencia parcial y se vería como un cristal opaco con agujeros.
+     */
+    private static void capasDeDibujado() {
+        LunaNeon.traslucidos().forEach(bloque ->
+                BlockRenderLayerMap.INSTANCE.putBlock(bloque, RenderLayer.getTranslucent()));
+        LunaNeon.recortados().forEach(bloque ->
+                BlockRenderLayerMap.INSTANCE.putBlock(bloque, RenderLayer.getCutout()));
+        LOG.info("Obra: {} vidrios traslucidos y {} rejillas recortadas",
+                LunaNeon.traslucidos().size(), LunaNeon.recortados().size());
     }
 
     /**

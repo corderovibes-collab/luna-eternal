@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/fence_side",
+  "textures": {
+    "texture": "lunaneon:block/hormigon_panel_verde"
+  }
+}

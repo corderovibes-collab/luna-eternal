@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "lunaneon:block/pavimento_adoquin_fino_losa"
+    },
+    "type=top": {
+      "model": "lunaneon:block/pavimento_adoquin_fino_losa_arriba"
+    },
+    "type=double": {
+      "model": "lunaneon:block/pavimento_adoquin_fino"
+    }
+  }
+}

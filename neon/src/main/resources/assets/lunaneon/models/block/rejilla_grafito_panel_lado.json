@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_glass_pane_side",
+  "textures": {
+    "pane": "lunaneon:block/rejilla_grafito",
+    "edge": "lunaneon:block/rejilla_grafito_canto"
+  }
+}

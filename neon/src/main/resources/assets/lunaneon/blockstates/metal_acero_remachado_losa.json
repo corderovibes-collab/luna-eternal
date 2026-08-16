@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "lunaneon:block/metal_acero_remachado_losa"
+    },
+    "type=top": {
+      "model": "lunaneon:block/metal_acero_remachado_losa_arriba"
+    },
+    "type=double": {
+      "model": "lunaneon:block/metal_acero_remachado"
+    }
+  }
+}

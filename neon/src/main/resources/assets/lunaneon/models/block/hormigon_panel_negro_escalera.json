@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/stairs",
+  "textures": {
+    "bottom": "lunaneon:block/hormigon_panel_negro",
+    "top": "lunaneon:block/hormigon_panel_negro",
+    "side": "lunaneon:block/hormigon_panel_negro"
+  }
+}

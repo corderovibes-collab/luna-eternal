@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab_top",
+  "textures": {
+    "bottom": "lunaneon:block/hormigon_panel_verde",
+    "top": "lunaneon:block/hormigon_panel_verde",
+    "side": "lunaneon:block/hormigon_panel_verde"
+  }
+}

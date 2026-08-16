@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/template_wall_side_tall",
+  "textures": {
+    "wall": "lunaneon:block/hormigon_rayado_cian"
+  }
+}

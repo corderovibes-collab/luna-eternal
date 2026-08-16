@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab",
+  "textures": {
+    "bottom": "lunaneon:block/rejilla_acero_oscuro",
+    "top": "lunaneon:block/rejilla_acero_oscuro",
+    "side": "lunaneon:block/rejilla_acero_oscuro"
+  }
+}

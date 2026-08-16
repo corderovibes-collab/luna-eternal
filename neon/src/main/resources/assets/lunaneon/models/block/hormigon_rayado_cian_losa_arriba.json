@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab_top",
+  "textures": {
+    "bottom": "lunaneon:block/hormigon_rayado_cian",
+    "top": "lunaneon:block/hormigon_rayado_cian",
+    "side": "lunaneon:block/hormigon_rayado_cian"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/fence_inventory",
+  "textures": {
+    "texture": "lunaneon:block/metal_aluminio_cepillado"
+  }
+}

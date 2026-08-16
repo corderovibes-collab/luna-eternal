@@ -1,0 +1,35 @@
+{
+  "type": "minecraft:block",
+  "random_sequence": "lunaneon:blocks/hormigon_panel_gris_claro_losa",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "lunaneon:hormigon_panel_gris_claro_losa",
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "add": false,
+              "count": 2.0,
+              "conditions": [
+                {
+                  "condition": "minecraft:block_state_property",
+                  "block": "lunaneon:hormigon_panel_gris_claro_losa",
+                  "properties": {
+                    "type": "double"
+                  }
+                }
+              ]
+            },
+            {
+              "function": "minecraft:explosion_decay"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

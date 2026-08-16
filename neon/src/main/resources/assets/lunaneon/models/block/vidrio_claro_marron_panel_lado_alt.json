@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_glass_pane_side_alt",
+  "textures": {
+    "pane": "lunaneon:block/vidrio_claro_marron",
+    "edge": "lunaneon:block/vidrio_claro_marron_canto"
+  }
+}

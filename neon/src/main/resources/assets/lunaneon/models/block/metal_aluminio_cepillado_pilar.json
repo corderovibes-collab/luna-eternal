@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "lunaneon:block/metal_aluminio_cepillado",
+    "side": "lunaneon:block/metal_aluminio_cepillado"
+  }
+}

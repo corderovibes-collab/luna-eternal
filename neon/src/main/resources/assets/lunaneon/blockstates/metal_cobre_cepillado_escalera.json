@@ -1,0 +1,209 @@
+{
+  "variants": {
+    "facing=east,half=bottom,shape=straight": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera"
+    },
+    "facing=west,half=bottom,shape=straight": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera",
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=south,half=bottom,shape=straight": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera",
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=north,half=bottom,shape=straight": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera",
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=east,half=top,shape=straight": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera",
+      "x": 180,
+      "uvlock": true
+    },
+    "facing=west,half=top,shape=straight": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera",
+      "x": 180,
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=south,half=top,shape=straight": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera",
+      "x": 180,
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=north,half=top,shape=straight": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera",
+      "x": 180,
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=east,half=bottom,shape=outer_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior"
+    },
+    "facing=west,half=bottom,shape=outer_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=south,half=bottom,shape=outer_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=north,half=bottom,shape=outer_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=east,half=bottom,shape=outer_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=west,half=bottom,shape=outer_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=south,half=bottom,shape=outer_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior"
+    },
+    "facing=north,half=bottom,shape=outer_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=east,half=top,shape=outer_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "x": 180,
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=west,half=top,shape=outer_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "x": 180,
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=south,half=top,shape=outer_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "x": 180,
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=north,half=top,shape=outer_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "x": 180,
+      "uvlock": true
+    },
+    "facing=east,half=top,shape=outer_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "x": 180,
+      "uvlock": true
+    },
+    "facing=west,half=top,shape=outer_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "x": 180,
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=south,half=top,shape=outer_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "x": 180,
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=north,half=top,shape=outer_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_exterior",
+      "x": 180,
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=east,half=bottom,shape=inner_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior"
+    },
+    "facing=west,half=bottom,shape=inner_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=south,half=bottom,shape=inner_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=north,half=bottom,shape=inner_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=east,half=bottom,shape=inner_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=west,half=bottom,shape=inner_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=south,half=bottom,shape=inner_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior"
+    },
+    "facing=north,half=bottom,shape=inner_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=east,half=top,shape=inner_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "x": 180,
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=west,half=top,shape=inner_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "x": 180,
+      "y": 270,
+      "uvlock": true
+    },
+    "facing=south,half=top,shape=inner_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "x": 180,
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=north,half=top,shape=inner_right": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "x": 180,
+      "uvlock": true
+    },
+    "facing=east,half=top,shape=inner_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "x": 180,
+      "uvlock": true
+    },
+    "facing=west,half=top,shape=inner_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "x": 180,
+      "y": 180,
+      "uvlock": true
+    },
+    "facing=south,half=top,shape=inner_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "x": 180,
+      "y": 90,
+      "uvlock": true
+    },
+    "facing=north,half=top,shape=inner_left": {
+      "model": "lunaneon:block/metal_cobre_cepillado_escalera_interior",
+      "x": 180,
+      "y": 270,
+      "uvlock": true
+    }
+  }
+}

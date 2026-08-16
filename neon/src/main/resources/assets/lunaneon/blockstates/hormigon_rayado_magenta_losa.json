@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "lunaneon:block/hormigon_rayado_magenta_losa"
+    },
+    "type=top": {
+      "model": "lunaneon:block/hormigon_rayado_magenta_losa_arriba"
+    },
+    "type=double": {
+      "model": "lunaneon:block/hormigon_rayado_magenta"
+    }
+  }
+}

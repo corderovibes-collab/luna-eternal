@@ -150,10 +150,36 @@ NOMBRES = {
 ICONO = 100
 BOTON_W, BOTON_H = 80, 64
 
-# El orden es el de lectura: dos por fila, de izquierda a derecha.
+# ⚠ LOS SEIS BOTONES YA NO VIVEN JUNTOS. Decision del usuario sobre el v4:
+#
+#   atras / adelante  en el BISEL NARANJA de abajo, uno en cada mitad
+#   cerrar            arriba a la derecha, en el panel oscuro junto al logo
+#   inicio / ajustes / mas   en la ranura mediana del panel izquierdo
+#
+# Los tres sitios se MIDEN sobre el chasis; aqui solo se dice quien va en cual.
+# El orden de la lista es el orden de los indices en PokePadScreen, asi que no
+# se toca sin cambiarlo alli.
 BOTONES = ["atras", "adelante", "inicio", "ajustes", "mas", "cerrar"]
-BOTON_COLS = 2
-BOTON_SEP_X, BOTON_SEP_Y = 24, 4
+SITIOS = {
+    "atras":    ("banda", 0),
+    "adelante": ("banda", 1),
+    "inicio":   ("ranura", 0),
+    "ajustes":  ("ranura", 1),
+    "mas":      ("ranura", 2),
+    "cerrar":   ("panel", 0),
+}
+
+# Dos tamanos, y cada uno lo manda su sitio:
+#
+#   ranura y panel  80x64, dos tercios exactos del arte
+#   banda           45x36, tres octavos. El bisel de abajo mide 37 px de alto
+#                   MEDIDOS, asi que es lo que cabe dentro sin invadir ni la
+#                   pantalla ni el chasis. Es del tamano de la carita verde que
+#                   habia ahi (48 px con su halo), o sea que la escala ya estaba
+#                   propuesta por el propio arte
+BOTON_GRANDE = (80, 64)
+BOTON_BANDA = (45, 36)
+BOTON_SEP_Y = 6
 
 # El lado de la cabeza del jugador. La POSICION se mide (va centrada en la
 # ranura de arriba); el lado se fija aqui porque tiene que ser multiplo de 8:
@@ -387,6 +413,69 @@ def medir_pantalla(chasis: Image.Image) -> tuple:
 # claro de esa zona, asi que sirve de marcador.
 MOLDURA = (69, 74, 91)
 
+# La franja de la que se copia el color al borrar la carita. Elegida MIDIENDO
+# donde estan los bigotes: ocupan x 722-778 y 932-987, asi que de 1020 a 1240 el
+# bisel de abajo esta limpio de punta a punta.
+DONANTE = (1020, 1240)
+
+
+def quitar_carita(im: Image.Image) -> Image.Image:
+    """Borra la carita verde de la boca de Rotom. Decision del usuario.
+
+    SE HACE AQUI Y NO PIDIENDO OTRO CHASIS, y merece la pena decir por que: es
+    un parche de sesenta pixeles sobre una banda que es HORIZONTALMENTE
+    UNIFORME. El bisel naranja de abajo tiene la misma seccion en toda su
+    longitud, asi que se copia el trozo de al lado y no queda ni rastro — no hay
+    que inventarse ni un pixel, que es lo que convierte un retoque en un parche
+    que se nota.
+
+    Y es idempotente: si algun dia llega un chasis que ya no la trae, esta
+    funcion no encuentra verde y devuelve la imagen tal cual.
+    """
+    a = np.array(im.convert("RGBA"))
+    r, g, b, al = (a[..., i].astype(int) for i in range(4))
+    verde = (g > 120) & (g - r > 50) & (g - b > 40) & (al > 200)
+    # Solo en la mitad de abajo: los ojos de Rotom son azules, pero cualquier
+    # verde de arriba seria otra cosa y no hay que tocarlo.
+    verde[:a.shape[0] // 2] = False
+    if not verde.any():
+        return im
+
+    ys, xs = np.where(verde)
+
+    # SE RECONSTRUYE POR FILAS, no se copia un bloque de al lado.
+    #
+    # Copiar un bloque fue el primer intento y salio mal de una forma
+    # instructiva: a los lados de la carita estan los BIGOTES de Rotom, asi que
+    # el trozo donante los traia consigo y donde habia una cara aparecian dos
+    # bigotes de mas. La banda es uniforme en HORIZONTAL, no en vertical: lo que
+    # se puede copiar es el color de la fila, no un rectangulo.
+    donante = a[:, DONANTE[0]:DONANTE[1], :].astype(int)
+    # Mediana y no media: inmune a que se cuele algo raro en la franja donante.
+    fila = np.median(donante, axis=1)
+
+    # Y la caja no se estima: se busca. Todo lo que en esta ventana no se
+    # parezca a la mediana de su fila es la cara o su halo blanco --que no es
+    # verde y por eso no sale en la deteccion de arriba--, porque los bigotes
+    # mas cercanos quedan fuera de la ventana.
+    vx0, vx1 = max(0, xs.min() - 40), min(a.shape[1], xs.max() + 41)
+    vy0, vy1 = max(0, ys.min() - 40), min(a.shape[0], ys.max() + 41)
+    ventana = a[vy0:vy1, vx0:vx1, :3].astype(int)
+    intruso = np.abs(ventana - fila[vy0:vy1, None, :3]).sum(2) > 60
+    fy, fx = np.where(intruso)
+    y0, y1 = vy0 + fy.min() - 3, vy0 + fy.max() + 4
+    x0, x1 = vx0 + fx.min() - 3, vx0 + fx.max() + 4
+
+    # Y el color con el que se rellena NO es el del donante lejano: es el
+    # promedio de las cuatro columnas limpias que quedan a cada lado del parche,
+    # fila a fila. Con la mediana lejana quedaba una costura de 23 niveles en el
+    # filo inferior del bisel --poco, pero una linea vertical de 40 px de alto se
+    # ve--. Cogiendo el color de al lado, la costura es CERO por construccion.
+    izq = a[y0:y1, x0 - 6:x0 - 2, :].astype(int).mean(1)
+    der = a[y0:y1, x1 + 2:x1 + 6, :].astype(int).mean(1)
+    a[y0:y1, x0:x1] = np.round((izq + der) / 2)[:, None, :].astype(a.dtype)
+    return Image.fromarray(a, "RGBA")
+
 
 def medir_cajas(chasis: Image.Image) -> list:
     """Las ranuras del panel izquierdo, por el gris de su moldura.
@@ -454,6 +543,42 @@ def medir_cajas(chasis: Image.Image) -> list:
 MOLDURA_GROSOR = 14
 
 
+def medir_banda(chasis: Image.Image, pantalla: tuple) -> tuple:
+    """El bisel NARANJA de debajo de la pantalla. (x0, y0, ancho, alto).
+
+    Se filtra por verde bajo (`g < 135`) y no solo por "rojizo": el chasis tiene
+    ademas una linea AMBAR (243,176,65) que cruza todo el ancho, y con un filtro
+    de rojo a secas la banda salia de 78 px de alto en vez de 37.
+    """
+    a = np.array(chasis.convert("RGBA")).astype(int)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    m = (r > 190) & (g > 55) & (g < 135) & (b < 85) & (a[..., 3] > 200)
+    m[:pantalla[3]] = False                      # solo lo que hay bajo la pantalla
+    filas = np.where(m.sum(1) > 300)[0]
+    cols = np.where(m[(filas.min() + filas.max()) // 2])[0]
+    return (int(cols.min()), int(filas.min()),
+            int(cols.max() - cols.min() + 1), int(filas.max() - filas.min() + 1))
+
+
+def medir_panel_superior(chasis: Image.Image) -> tuple:
+    """El hueco oscuro y liso de arriba a la derecha, junto a la placa del logo.
+
+    Es el unico rectangulo grande del chasis que no aloja nada, y por eso es
+    donde cabe `cerrar` a tamano completo.
+    """
+    a = np.array(chasis.convert("RGBA")).astype(int)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    liso = ((np.abs(r - 31) < 8) & (np.abs(g - 33) < 8) & (np.abs(b - 43) < 8)
+            & (a[..., 3] > 200))
+    h, w = liso.shape
+    cols = np.where(liso[int(h * 0.10):int(h * 0.20),
+                         int(w * 0.65):].mean(0) > 0.92)[0] + int(w * 0.65)
+    filas = np.where(liso[:, cols.min():cols.max()].mean(1) > 0.92)[0]
+    filas = filas[(filas > h * 0.05) & (filas < h * 0.25)]
+    return (int(cols.min()), int(filas.min()),
+            int(cols.max() - cols.min() + 1), int(filas.max() - filas.min() + 1))
+
+
 def interior(caja: tuple) -> tuple:
     """El hueco util de una ranura, sin su moldura. (x0, y0, ancho, alto)."""
     x0, y0, x1, y1 = caja
@@ -473,7 +598,7 @@ def main() -> None:
         viejo.unlink()
 
     print("POKEPAD")
-    chasis = Image.open(ARTE / "fondo_base.png").convert("RGBA")
+    chasis = quitar_carita(Image.open(ARTE / "fondo_base.png").convert("RGBA"))
     # El chasis tambien: tiene menos motas, pero es el mismo problema.
     guardar(sangrar_alfa(chasis), SALIDA / "pokepad.png")
     x0, y0, x1, y1 = medir_pantalla(chasis)
@@ -512,20 +637,15 @@ def main() -> None:
 
     # Los botones se guardan YA REDUCIDOS al tamano al que se dibujan.
     #
-    # El arte llega a 120x96 y en el chasis no cabe: la unica franja libre --la
-    # de debajo de la pantalla-- tiene 58 px de alto. Se dibujan a 60x48, que es
-    # la mitad exacta y sigue siendo divisible entre 1,2,3,4 y 6.
-    #
     # Se reduce AQUI y no en el juego para que la textura mida lo que ocupa y se
     # dibuje 1:1 (regla 2 de docs/ui/dibujado.md). Dejar que lo encoja el juego
     # significa vecino mas proximo, que tira una fila de cada dos.
-    botones = sorted((ARTE / "botones").glob("*.png"))
-    for p in botones:
-        guardar(reducir(preparar(p), BOTON_W, BOTON_H),
-                SALIDA / f"boton_{p.stem}.png")
-    print(f"  botones   {len(botones)} de {BOTON_W}x{BOTON_H} "
-          f"(el arte llega a {Image.open(botones[0]).size[0]}x"
-          f"{Image.open(botones[0]).size[1]})")
+    sitios = colocar_botones(chasis, cajas)
+    for nombre, (bx, by, bw, bh) in sitios.items():
+        guardar(reducir(preparar(ARTE / "botones" / f"{nombre}.png"), bw, bh),
+                SALIDA / f"boton_{nombre}.png")
+    print(f"  botones   {len(sitios)} en tres sitios "
+          f"(el arte llega a 120x96)")
 
     celda = lado + AIRE * 2
     # La separacion VERTICAL no es la horizontal: tiene que dar cabida al
@@ -549,17 +669,6 @@ def main() -> None:
     if CARA_LADO > cw or CARA_LADO > chh:
         raise SystemExit(f"La cara ({CARA_LADO}) no cabe en {cw}x{chh}")
 
-    # El teclado, centrado en la ranura de en medio.
-    bx, by, bw, bh = interior(cajas[1])
-    filas_b = -(-len(BOTONES) // BOTON_COLS)
-    teclado_w = BOTON_COLS * BOTON_W + (BOTON_COLS - 1) * BOTON_SEP_X
-    teclado_h = filas_b * BOTON_H + (filas_b - 1) * BOTON_SEP_Y
-    if teclado_w > bw or teclado_h > bh:
-        raise SystemExit(
-            f"El teclado no cabe: hace falta {teclado_w}x{teclado_h} y la "
-            f"ranura mide {bw}x{bh}. Baja BOTON_W/H o BOTON_SEP_*.")
-    barra_x, barra_y = bx + (bw - teclado_w) // 2, by + (bh - teclado_h) // 2
-
     # El saldo, centrado en la ranura de abajo.
     sx, sy, sw, sh = interior(cajas[2])
     saldo_cx, saldo_cy = sx + sw // 2, sy + sh // 2
@@ -570,21 +679,64 @@ def main() -> None:
           f"ICONO = {lado}")
     print(f"    TEXTO_ALTO = {TEXTO_ALTO}, TEXTO_SOLAPE = {TEXTO_SOLAPE}")
     print(f"    CARA_X = {cara_x}, CARA_Y = {cara_y}, CARA_LADO = {CARA_LADO}")
-    print(f"    BARRA_X = {barra_x}, BARRA_Y = {barra_y}, BOTON_COLS = {BOTON_COLS}")
-    print(f"    BOTON_W = {BOTON_W}, BOTON_H = {BOTON_H}, "
-          f"BOTON_SEP_X = {BOTON_SEP_X}, BOTON_SEP_Y = {BOTON_SEP_Y}")
     print(f"    SALDO_CX = {saldo_cx}, SALDO_CY = {saldo_cy}")
-    print(f"    (rejilla {rej_w}x{rej_h} en una pantalla de "
-          f"{x1 - x0}x{y1 - y0}; teclado {teclado_w}x{teclado_h} en {bw}x{bh})")
+    print(f"    BOTON = {{      // x, y, ancho, alto — en el orden de BOTONES")
+    for nombre in BOTONES:
+        bx, by, bw, bh = sitios[nombre]
+        print(f"        {{{bx:>4}, {by:>3}, {bw:>2}, {bh:>2}}},   // {nombre}")
+    print(f"    }};")
+    print(f"    (rejilla {rej_w}x{rej_h} en una pantalla de {x1 - x0}x{y1 - y0})")
 
     if args.maqueta:
         maqueta(Image.open(SALIDA / "pokepad.png"), iconos,
                 rej_x, rej_y, celda, lado, hueco_y,
-                (cara_x, cara_y), (barra_x, barra_y), (saldo_cx, saldo_cy))
+                (cara_x, cara_y), sitios, (saldo_cx, saldo_cy))
+
+
+def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
+    """Donde va cada boton y de que tamano. `{nombre: (x, y, ancho, alto)}`.
+
+    Los tres sitios se miden sobre el chasis, asi que si el arte cambia los
+    botones se recolocan solos — que es lo que no pasaba antes, cuando la barra
+    estaba escrita a mano y se quedaba donde estuvo en la version anterior.
+    """
+    pantalla = medir_pantalla(chasis)
+    bx, by, bw, bh = medir_banda(chasis, pantalla)
+    px, py, pw, ph = medir_panel_superior(chasis)
+    rx, ry, rw, rh = interior(cajas[1])
+
+    sitios = {}
+    ancho_b, alto_b = BOTON_BANDA
+    ancho_g, alto_g = BOTON_GRANDE
+    if alto_b > bh:
+        raise SystemExit(f"El boton de la banda ({alto_b}) no cabe en {bh} px")
+
+    en_ranura = [n for n in BOTONES if SITIOS[n][0] == "ranura"]
+    pila = len(en_ranura) * alto_g + (len(en_ranura) - 1) * BOTON_SEP_Y
+    if pila > rh or ancho_g > rw:
+        raise SystemExit(f"Los {len(en_ranura)} de la ranura no caben: "
+                         f"{ancho_g}x{pila} en {rw}x{rh}")
+
+    for nombre in BOTONES:
+        sitio, i = SITIOS[nombre]
+        if sitio == "banda":
+            # Centrado en su mitad de la banda, y centrado en su alto.
+            centro = bx + bw * (2 * i + 1) // 4
+            sitios[nombre] = (centro - ancho_b // 2,
+                              by + (bh - alto_b) // 2, ancho_b, alto_b)
+        elif sitio == "ranura":
+            sitios[nombre] = (rx + (rw - ancho_g) // 2,
+                              ry + (rh - pila) // 2 + i * (alto_g + BOTON_SEP_Y),
+                              ancho_g, alto_g)
+        else:
+            # Pegado a la derecha del panel, que es lo que se pidio.
+            sitios[nombre] = (px + pw - ancho_g - 20,
+                              py + (ph - alto_g) // 2, ancho_g, alto_g)
+    return sitios
 
 
 def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
-            cara, barra, saldo) -> None:
+            cara, sitios, saldo) -> None:
     """Monta la pantalla principal con las celdas dibujadas como las dibuja el
     juego: rectangulos planos. Ver docs/ui/prompts-arte-pokepad.md §4."""
     # Copia explicita: `chasis` se sigue usando abajo para restaurar las
@@ -635,17 +787,16 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
             d.text((cx + celda / 2 - ancho / 2, cy + celda - TEXTO_SOLAPE),
                    nombre, font=fuente, fill=TEXTO_COLOR,
                    stroke_width=1, stroke_fill=TEXTO_CONTORNO)
-    # El teclado, con los cinco sin destino apagados igual que en el juego. La
-    # maqueta existe para aprobar el diseno, asi que si no ensena lo mismo que se
-    # va a ver no sirve de nada.
-    for i, n in enumerate(BOTONES):
+    # Los botones, cada uno en su sitio, y los cinco sin destino apagados igual
+    # que en el juego. La maqueta existe para aprobar el diseno, asi que si no
+    # ensena lo mismo que se va a ver no sirve de nada.
+    for n in BOTONES:
         b = Image.open(SALIDA / f"boton_{n}.png").convert("RGBA")
         if n != "cerrar":
             a = np.array(b).astype(int)
             a[..., :3] = a[..., :3] * 128 // 255      # el mismo tinte del codigo
             b = Image.fromarray(a.astype(np.uint8), "RGBA")
-        out.alpha_composite(b, (barra[0] + (i % BOTON_COLS) * (BOTON_W + BOTON_SEP_X),
-                                barra[1] + (i // BOTON_COLS) * (BOTON_H + BOTON_SEP_Y)))
+        out.alpha_composite(b, sitios[n][:2])
 
     # El hueco de la cabeza, para ver si cuadra dentro de su ranura.
     d.rectangle([cara[0], cara[1], cara[0] + CARA_LADO - 1, cara[1] + CARA_LADO - 1],

@@ -53,6 +53,29 @@ public class PokePadScreen extends Screen {
      */
     private static final int NAT_ANCHO = 1380, NAT_ALTO = 828;
 
+    /**
+     * Cuánto puede DESBORDAR el Pad la ventana sin perder nada visible.
+     *
+     * <p>Medido sobre el chasis: sus 12 columnas de cada lado y sus 4 filas de
+     * arriba son <b>enteramente transparentes</b> — la esquina redondeada. Lo
+     * que caiga fuera dentro de ese margen no se ve porque no hay nada.
+     *
+     * <p><b>Y esto es lo que arregla el bisel naranja «de baja calidad».</b> El
+     * problema no estaba en el arte: el v4 tiene el doble de colores que el v3 y
+     * los bordes más suaves. Estaba en que una ventana de 1373 de ancho —siete
+     * píxeles corta— obligaba a encoger el Pad un 0,5 %, y encoger enciende el
+     * filtrado lineal, que mezcla cada píxel con su vecino. Sobre el bisel del
+     * v4, que es una banda naranja enorme con esquinas achaflanadas duras, esa
+     * mezcla se ve como escalones sucios; sobre el v3, cuyo acento eran líneas
+     * finas, apenas se notaba.
+     *
+     * <p>Así que cuando lo que falta cabe en el margen transparente, <b>no se
+     * encoge</b>: se dibuja a tamaño real y sobresale. Perder tres píxeles de
+     * una esquina que ya era transparente no se ve; emborronar el Pad entero,
+     * sí.
+     */
+    private static final int MARGEN_X = 12, MARGEN_Y = 4;
+
     /** El color de la pantalla, para morder las esquinas de las celdas. */
     private static final int PANTALLA = 0xFFE2EBFD;
 
@@ -133,29 +156,38 @@ public class PokePadScreen extends Screen {
     private static final int SALDO_CX = 184, SALDO_CY = 672;
 
     /**
-     * Los seis botones, ahora un teclado de 2 × 3 dentro de la ranura mediana.
+     * Los seis botones, cada uno en su sitio. <b>Ya no viven juntos</b>, y es
+     * decisión del usuario sobre el chasis v4:
      *
-     * <p><b>En el chasis v4 dejan de ser una barra.</b> En el v3 iban en la
-     * única franja libre que quedaba —981 × 58 debajo de la pantalla— y a
-     * 60 × 48 porque no cabía más; era un apaño, y se decía en este mismo
-     * comentario. El v4 no tiene esa franja: debajo de la pantalla están la boca
-     * y los bigotes de Rotom.
+     * <pre>
+     *   atras / adelante        en el BISEL NARANJA de abajo, uno por mitad
+     *   cerrar                  arriba a la derecha, junto al logo
+     *   inicio / ajustes / mas  apilados en la ranura mediana
+     * </pre>
      *
-     * <p>A cambio trae tres ranuras de verdad, y la mediana mide 249 × 208 de
-     * hueco útil — sitio para los seis a <b>80 × 64</b>, dos tercios exactos del
-     * arte y un tercio más grandes que antes. {@code gen_pokepad.py} los guarda
-     * ya reducidos para que se dibujen 1:1.
+     * <p>Los tres sitios los <b>mide</b> {@code gen_pokepad.py} sobre el chasis
+     * y de ahí sale esta tabla; no se escriben a ojo. Y son de dos tamaños
+     * porque los manda el sitio: 80 × 64 —dos tercios del arte— en la ranura y
+     * en el panel, y <b>45 × 36 en la banda</b>, que mide 37 px de alto medidos
+     * y es lo que cabe sin invadir ni la pantalla ni el chasis. Esa escala ya la
+     * proponía el propio arte: es el tamaño que tenía la carita verde que había
+     * justo ahí.
      *
-     * <p>Los 4 px de separación vertical no son un descuido: tres filas de 64
-     * llenan la ranura de arriba abajo, y eso es lo que hace que se lea como
-     * «esta ranura <i>es</i> el teclado» en vez de como seis botones flotando
-     * en una caja.
+     * <p>{@code gen_pokepad.py} guarda cada uno <b>ya reducido</b> a su tamaño
+     * para que se dibuje 1:1 (regla 2 de {@code docs/ui/dibujado.md}).
      */
     private static final String[] BOTONES =
             {"atras", "adelante", "inicio", "ajustes", "mas", "cerrar"};
-    private static final int BOTON_W = 80, BOTON_H = 64;
-    private static final int BOTON_COLS = 2, BOTON_SEP_X = 24, BOTON_SEP_Y = 4;
-    private static final int BARRA_X = 126, BARRA_Y = 378;
+
+    /** x, y, ancho, alto — en píxeles del arte, en el orden de {@link #BOTONES}. */
+    private static final int[][] BOTON = {
+            { 618, 698, 45, 36},   // atras
+            {1048, 698, 45, 36},   // adelante
+            { 178, 376, 80, 64},   // inicio
+            { 178, 446, 80, 64},   // ajustes
+            { 178, 516, 80, 64},   // mas
+            {1207,  85, 80, 64},   // cerrar
+    };
 
     /**
      * Cuál de los seis lleva a algún sitio. Hoy solo cerrar.
@@ -214,10 +246,17 @@ public class PokePadScreen extends Screen {
         // dibujo. El margen convertia en borrosas todas las ventanas de entre
         // 1380 y 1409 de ancho a cambio de un hueco que nadie mira. Se prefiere
         // que toque el borde y se vea exacto.
-        double cabe = client == null ? 1 : Math.min(
-                client.getWindow().getFramebufferWidth() / (double) NAT_ANCHO,
-                client.getWindow().getFramebufferHeight() / (double) NAT_ALTO);
-        k = (float) (Math.min(1.0, cabe) / gui);
+        int ventanaW = client == null ? NAT_ANCHO : client.getWindow().getFramebufferWidth();
+        int ventanaH = client == null ? NAT_ALTO : client.getWindow().getFramebufferHeight();
+
+        // Lo que falta para que quepa a tamaño real, y si ese sobrante entra en
+        // el margen transparente del chasis. Ver MARGEN_X/MARGEN_Y: es lo que
+        // evita encoger un 0,5 % y emborronarlo todo por siete píxeles.
+        boolean desborda = (NAT_ANCHO - ventanaW) <= MARGEN_X * 2
+                && (NAT_ALTO - ventanaH) <= MARGEN_Y * 2;
+        double cabe = Math.min(ventanaW / (double) NAT_ANCHO,
+                ventanaH / (double) NAT_ALTO);
+        k = (float) ((desborda ? 1.0 : Math.min(1.0, cabe)) / gui);
 
         ancho = Math.round(NAT_ANCHO * k);
         alto = Math.round(NAT_ALTO * k);
@@ -334,9 +373,9 @@ public class PokePadScreen extends Screen {
     public boolean mouseClicked(double ratonX, double ratonY, int boton) {
         int celda = Math.round(CELDA * k);
         if (boton == 0) {
-            int w = Math.round(BOTON_W * k), h = Math.round(BOTON_H * k);
             for (int i = 0; i < BOTONES.length; i++) {
                 int bx = botonX(i), by = botonY(i);
+                int w = Math.round(BOTON[i][2] * k), h = Math.round(BOTON[i][3] * k);
                 if (ratonX < bx || ratonX >= bx + w
                         || ratonY < by || ratonY >= by + h) {
                     continue;
@@ -412,11 +451,11 @@ public class PokePadScreen extends Screen {
 
     }
 
-    /** El teclado de la ranura mediana. */
+    /** Los seis botones, cada uno donde le toca. */
     private void barra(DrawContext ctx, int ratonX, int ratonY) {
-        int w = Math.round(BOTON_W * k), h = Math.round(BOTON_H * k);
         for (int i = 0; i < BOTONES.length; i++) {
             int bx = botonX(i), by = botonY(i);
+            int w = Math.round(BOTON[i][2] * k), h = Math.round(BOTON[i][3] * k);
             boolean encima = ratonX >= bx && ratonX < bx + w
                     && ratonY >= by && ratonY < by + h;
             // Un boton sin destino se apaga; el senalado se aclara. El tinte
@@ -425,19 +464,17 @@ public class PokePadScreen extends Screen {
                     ? (encima ? 0xFFFFFFFF : 0xFFE0E0E0)
                     : (encima ? 0xFF9A9A9A : 0xFF808080);
             dibujar(ctx, tex("boton_" + BOTONES[i]), bx, by, w, h,
-                    BOTON_W, BOTON_H, tinte);
+                    BOTON[i][2], BOTON[i][3], tinte);
         }
     }
 
-    /** La esquina de un botón dentro del teclado, en unidades de interfaz. */
+    /** La esquina de un botón, en unidades de interfaz. */
     private int botonX(int i) {
-        return x0 + Math.round(
-                (BARRA_X + (i % BOTON_COLS) * (BOTON_W + BOTON_SEP_X)) * k);
+        return x0 + Math.round(BOTON[i][0] * k);
     }
 
     private int botonY(int i) {
-        return y0 + Math.round(
-                (BARRA_Y + (i / BOTON_COLS) * (BOTON_H + BOTON_SEP_Y)) * k);
+        return y0 + Math.round(BOTON[i][1] * k);
     }
 
     /**

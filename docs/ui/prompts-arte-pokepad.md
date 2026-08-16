@@ -288,18 +288,16 @@ cuadrito  x 302-349   y 651-698   (48 x 48)   LIBRE, no aloja nada
 
 ```
 CARA_X = 134   CARA_Y = 136   CARA_LADO = 168
-BARRA_X = 126  BARRA_Y = 378  boton 80 x 64, 2 columnas, sep 24 / 4
 SALDO_CX = 184 SALDO_CY = 672
-orden     atras · adelante · inicio · ajustes · mas · cerrar
+BOTON = {       x, y, ancho, alto — en el orden de BOTONES
+    { 618, 698, 45, 36},   atras      mitad izquierda del bisel de abajo
+    {1048, 698, 45, 36},   adelante   mitad derecha
+    { 178, 376, 80, 64},   inicio     apilados en la ranura mediana
+    { 178, 446, 80, 64},   ajustes
+    { 178, 516, 80, 64},   mas
+    {1207,  85, 80, 64},   cerrar     arriba a la derecha, junto al logo
+}
 ```
-
-> ⚠️ **Estas medidas no se escriben ni se escalan: se MIDEN.** `medir_pantalla()`
-> busca la mancha clara grande de la derecha y `medir_cajas()` el gris de la
-> moldura de cada ranura; `gen_pokepad.py` imprime los números al terminar y de
-> ahí se copian. Es lo único que caduca solo — el chasis ya ha cambiado de
-> estructura cuatro veces, y cada vez las medidas escritas a mano se quedaron
-> mintiendo **en silencio**: el código seguía dibujando la cara donde estaba en
-> la versión anterior sin que nada fallara.
 
 ### 8.1 · ⚠️ El v4 invierte la pantalla, y con ella todo lo de dentro
 
@@ -318,19 +316,47 @@ retoque de tono: cada decisión de contraste apuntaba al revés.
 > golpe al llegar el v4, y si el negro estuviera escrito a mano dentro de la
 > función se habría quedado ahí.
 
-### 8.2 · Los botones dejan de ser una barra
+### 8.2 · Los botones dejan de ser una barra, y de vivir juntos
 
-En el v3 iban en la única franja libre que quedaba —981 × 58 debajo de la
-pantalla— y a 60 × 48 porque no cabía más. Era un apaño, y se decía aquí mismo.
+En el v3 iban los seis en fila, en la única franja libre que quedaba —981 × 58
+debajo de la pantalla— y a 60 × 48 porque no cabía más. Era un apaño, y se
+decía aquí mismo.
 
-**El v4 no tiene esa franja**: debajo de la pantalla están la boca y los bigotes
-de Rotom. A cambio trae tres ranuras de verdad, y la mediana mide 249 × 208 de
-hueco útil — sitio para los seis a **80 × 64**, dos tercios exactos del arte y
-**un tercio más grandes que antes**, en un teclado de 2 × 3.
+**El v4 no tiene esa franja** y en cambio tiene tres sitios buenos, así que
+—decisión del usuario— se reparten:
 
-Los 4 px de separación vertical no son un descuido: tres filas de 64 llenan la
-ranura de arriba abajo, y eso es lo que hace que se lea como *«esta ranura es el
-teclado»* en vez de como seis botones flotando en una caja.
+| | Dónde | Tamaño | Por qué ese tamaño |
+|---|---|---|---|
+| `atras` · `adelante` | en el **bisel naranja de abajo**, uno en cada mitad | 45 × 36 | La banda mide **37 px de alto medidos**. Es lo que cabe sin invadir ni la pantalla ni el chasis |
+| `cerrar` | **arriba a la derecha**, en el panel oscuro junto al logo | 80 × 64 | Ese hueco mide 360 × 93; sobra sitio |
+| `inicio` · `ajustes` · `mas` | apilados en la **ranura mediana** | 80 × 64 | Tres de 64 y dos huecos de 6 llenan sus 208 de alto |
+
+> **La escala de la banda ya la proponía el arte.** 45 × 36 es casi exactamente
+> lo que medía la carita verde que había justo ahí (48 px con su halo), así que
+> los botones ocupan el sitio que el diseñador ya había reservado visualmente.
+
+> **Las posiciones evitan los bigotes sin que nadie lo pida.** Están medidos en
+> `x 722-778` y `x 932-987`; centrar cada botón en su mitad de la banda los deja
+> en 618 y 1048, fuera de los dos. Si el chasis cambia, se vuelve a medir y se
+> vuelven a colocar solos.
+
+### 8.3 · La carita verde se borra en el generador
+
+Decisión del usuario. `quitar_carita()` lo hace en `gen_pokepad.py`, y merece la
+pena decir por qué ahí y no pidiendo otro fondo al diseñador: es un parche de
+sesenta píxeles sobre una banda **horizontalmente uniforme**, así que se rellena
+con el color de las columnas limpias de al lado, fila a fila. No hay que
+inventarse ni un píxel — que es lo que convierte un retoque en un parche que se
+nota.
+
+> **El primer intento copiaba un bloque de al lado y salió mal de forma
+> instructiva:** a los lados de la carita están los **bigotes**, así que el
+> trozo donante los traía consigo y donde había una cara aparecían dos bigotes
+> de más. La banda es uniforme *en horizontal*, no en vertical: lo que se puede
+> copiar es el color de la fila, no un rectángulo.
+
+> Y es **idempotente**: si algún día llega un chasis que ya no la trae, la
+> función no encuentra verde y devuelve la imagen tal cual.
 
 > `gen_pokepad.py` los guarda **ya reducidos** para que se dibujen 1:1 en vez de
 > dejar que los encoja el juego (regla 2 de [dibujado.md](dibujado.md)).

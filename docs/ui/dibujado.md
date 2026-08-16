@@ -192,3 +192,38 @@ Ninguna. Estas reglas se aplican al construir cada pantalla nueva.
 
 - [La interfaz de cliente](interfaz-cliente.md) · [El arte del PokePad](prompts-arte-pokepad.md)
 - [El catálogo de pantallas](interfaces-catalog.md)
+
+---
+
+## 6. Encoger un 0,5 % cuesta tanto como encogerlo mucho
+
+**Síntoma:** el bisel naranja del chasis v4 «se veía de baja calidad», con
+escalones sucios, mientras que el mismo Pad con el chasis v3 se veía limpio.
+
+**No era el arte.** Medido: el v4 tiene **26 128 colores** frente a los 13 509
+del v3 y los bordes *más* suaves (29,8 % de saltos duros frente al 37,1 %). Lo
+que cambió fue la superficie: el acento naranja pasó de 35 460 a **97 370
+píxeles**, casi el triple.
+
+**La causa:** una ventana de **1373** de ancho — siete píxeles corta para un Pad
+de 1380. Eso obliga a encoger un 0,5 %, y encoger enciende el filtrado lineal,
+que mezcla cada píxel de salida con su vecino. Sobre líneas finas apenas se
+nota; sobre una banda naranja enorme con esquinas achaflanadas duras, se ve como
+escalones sucios.
+
+**La regla:** cuando lo que falta cabe en el margen **transparente** del arte,
+no se encoge — se dibuja a tamaño real y se deja sobresalir.
+
+```
+chasis 1380 x 828
+margen transparente medido:  12 columnas a cada lado
+                              4 filas arriba
+-> se dibuja nativo hasta una ventana de 1356 x 820
+```
+
+Perder tres píxeles de una esquina que ya era transparente no se ve. Emborronar
+el Pad entero, sí.
+
+> Es la misma familia que la regla 2 (*una textura se dibuja al tamaño al que se
+> guardó*), vista desde el otro lado: **ahí** se evita que el juego encoja una
+> textura; **aquí**, que la encoja la pantalla.

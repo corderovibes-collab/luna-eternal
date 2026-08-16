@@ -115,6 +115,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         // marcador, no el diseño.
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
+            // Va ANTES del corte de 20 ticks: lleva su propio ritmo, y
+            // encadenarlo al de aqui lo ataria a un numero que no es suyo.
+            net.pokereport.luna.world.ConstructorBuffs.tick(server);
+
             if (server.getTicks() % 20 != 0) return;
             // El contador de conectados cambia con cada entrada y salida;
             // recalcularlo aquí evita tener que engancharlo a cada evento.

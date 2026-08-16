@@ -340,8 +340,31 @@ def publicar() -> None:
         nombre = publicado(jar, hashlib.sha1(datos).hexdigest())
         (mods / nombre).write_bytes(datos)
         vigentes.add(nombre)
+    # ⚠ EL JAR ANTERIOR NO SE BORRA. SE JUBILA UNA PUBLICACION DESPUES.
+    #
+    # Borrarlo a la vez que se publica el nuevo daba HTTP 404 en el launcher, y
+    # el motivo tardo en verse: `raw.githubusercontent` cachea el manifiesto
+    # unos tres minutos POR RUTA. Durante esa ventana el cliente sigue leyendo
+    # el manifiesto VIEJO --que apunta al jar viejo-- y ese jar ya no existe.
+    #
+    # Se noto al publicar dos veces seguidas en pocos minutos, que es justo lo
+    # que pasa cuando se esta iterando con alguien delante.
+    #
+    # Guardando una generacion, el manifiesto cacheado siempre encuentra su
+    # fichero. Cuestan unos megas en un repositorio que ya pesa cientos, y a
+    # cambio el jugador nunca se queda tirado a mitad de actualizacion.
+    conservar = set(vigentes)
+    for entrada in PROPIOS:
+        anteriores = sorted(
+            (p for p in mods.glob(f"{entrada['prefijo']}-*.jar")
+             if p.name not in vigentes),
+            key=lambda p: p.stat().st_mtime, reverse=True)
+        for p in anteriores[:1]:
+            conservar.add(p.name)
+            print(f"  se conserva {p.name} (por el cache de ~3 min)")
+
     for viejo in mods.glob("*.jar"):
-        if viejo.name not in vigentes:
+        if viejo.name not in conservar:
             viejo.unlink()
             print(f"  retirado {viejo.name}")
 

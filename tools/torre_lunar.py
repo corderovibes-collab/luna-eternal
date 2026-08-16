@@ -10,16 +10,19 @@ creciente gigante arriba y una cinta de luz que envuelve la torre en espiral --
 pero construida con bloques MODERNOS: pizarra profunda pulida, piedra negra,
 cobre y los 96 neones propios (D-029).
 
-POR QUE UN .schem Y NO UN SCRIPT DE AXIOM
+DOS CAMINOS, Y LOS DOS VALEN
 
-Axiom SI tiene Lua, pero es para MASCARAS: decide que bloque va en cada
-posicion de una seleccion que ya has hecho. No hay documentacion publica de su
-contrato de entrada y no se puede verificar desde fuera del juego.
+Existe tambien `axiom/torre_lunar.lua`, la MISMA torre como script de Lua para
+el Lua Script Brush de Axiom. Se construye de un clic dentro del juego, que es
+lo comodo para iterar con el disenador delante.
 
-Un .schem, en cambio, es formato abierto (Sponge Schematic v2), lo carga el
-WorldEdit 7.3.8 que ya esta instalado, **y Axiom tambien lo importa**. Ademas se
-puede comprobar aqui: este script se relee a si mismo al terminar y cuenta lo
-que ha escrito. Y al ser un fichero, la torre entra en git y se puede rehacer.
+Este de aqui escribe un .schem (Sponge Schematic v2), y sirve para lo que el
+otro no puede: se COMPRUEBA sin entrar al juego --se relee el fichero entero al
+terminar-- y se pega igual con WorldEdit que con Axiom.
+
+Cuando cambie el diseno hay que tocar LOS DOS. Estan hechos con la misma
+geometria a proposito, funcion por funcion, para que comparar sea leerlos en
+paralelo.
 
     //schem load torre_lunar
     //paste -a          (-a ignora el aire: no borra lo que ya haya alrededor)

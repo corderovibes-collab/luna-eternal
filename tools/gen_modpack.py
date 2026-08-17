@@ -31,7 +31,7 @@ launcher los baja de Modrinth. Por eso las licencias restrictivas de Sodium,
 EntityCulling o Xaero's no son un problema — se descargan de su canal oficial.
 Lo unico incrustado son NUESTROS jars.
 """
-import io, json, os, re, struct, urllib.parse, urllib.request, zipfile
+import io, json, os, re, struct, urllib.error, urllib.parse, urllib.request, zipfile
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -161,6 +161,66 @@ def loader_estable():
     return v
 
 
+# ---------------------------------------------------------------------------
+# PROYECTOS QUE YA NO ESTAN EN MODRINTH
+#
+# `shine` desaparecio del catalogo el 2026-08-16: 404 por slug Y por id
+# (`uQgWIE6A`), o sea que no es un renombrado. Su jar, en cambio, SIGUE
+# sirviendose desde el CDN, byte a byte el mismo que ya tienen instalado todos
+# los jugadores.
+#
+# Se conserva fijado en vez de quitarlo por una razon concreta: ese mod es lo
+# que da halo de color a los neones, y quitarlo cambiaria el aspecto de la
+# ciudadela a todo el mundo de golpe. Pero es una dependencia SIN AGUAS ARRIBA,
+# asi que:
+#
+#   1. la URL se comprueba en cada publicacion (ver `fijado()`), porque un
+#      manifiesto que apunta a un 404 deja tirado a TODO el que actualice — ya
+#      paso una vez con nuestro propio jar
+#   2. no se puede saber si su licencia sigue permitiendo esto: la pagina del
+#      proyecto ya no existe. Queda anotado como decision pendiente
+# ---------------------------------------------------------------------------
+FIJADOS = {
+    "shine": {
+        "version_number": "1.0.0+1.21.1",
+        "version_type": "release",
+        "files": [{
+            "filename": "shine-1.0.0+1.21.1.jar",
+            "hashes": {"sha1": "36273e2f20035740a42beb16dd9d57f408ac7631"},
+            "size": 138107,
+            "url": "https://cdn.modrinth.com/data/uQgWIE6A/versions/"
+                   "S3s0aITt/shine-1.0.0%2B1.21.1.jar",
+        }],
+    },
+}
+
+
+def fijado(slug):
+    """La copia guardada de un proyecto que ya no esta, si su URL responde."""
+    v = FIJADOS.get(slug)
+    if not v:
+        return None
+    url = v["files"][0]["url"]
+    try:
+        r = urllib.request.urlopen(
+            urllib.request.Request(url, method="HEAD", headers=UA))
+    except urllib.error.HTTPError as e:
+        raise SystemExit(
+            f"{slug} ya no esta en Modrinth y su jar fijado tampoco responde "
+            f"({e.code}).\n{url}\nHay que quitarlo de EXTRA_JUGADOR o alojarlo "
+            f"nosotros. NO se publica un manifiesto con un enlace roto: deja "
+            f"tirado a todo el que actualice.")
+    largo = int(r.headers.get("Content-Length", 0))
+    if largo != v["files"][0]["size"]:
+        raise SystemExit(f"{slug}: el jar fijado mide {largo} y se esperaban "
+                         f"{v['files'][0]['size']}. Alguien lo ha cambiado.")
+    # Sin simbolos raros: la consola de Windows va en cp1252 y un caracter
+    # fuera de esa tabla revienta el print — y con el, la publicacion entera.
+    print(f"  FIJADO {slug:<26} {v['version_number']:<22} ya no esta en "
+          f"Modrinth, se sirve la copia que ya tienen los jugadores")
+    return v
+
+
 def version_de(slug, loader="fabric"):
     """La ultima version de un proyecto para nuestro Minecraft.
 
@@ -174,7 +234,14 @@ def version_de(slug, loader="fabric"):
          f"?game_versions=%5B%22{MC}%22%5D")
     if loader:
         q += f"&loaders=%5B%22{loader}%22%5D"
-    d = api(q)
+    try:
+        d = api(q)
+    except urllib.error.HTTPError as e:
+        # Un 404 aqui no es un fallo de red: es que el proyecto ya no existe.
+        # Cualquier otro codigo si es un fallo y hay que verlo.
+        if e.code != 404:
+            raise
+        return fijado(slug)
     # 'release' antes que beta: el cliente de un servidor no es sitio para
     # probar versiones inestables.
     return ([v for v in d if v.get("version_type") == "release"] or d or [None])[0]

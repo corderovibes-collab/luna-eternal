@@ -204,7 +204,7 @@ mercado y el clan deja de ser un estandarte de guerra.
 | 11 | `cazas` | `a small orange fox-like creature with pointed ears, big friendly eyes and a thick curled bushy tail, crouching alert in a tuft of tall green grass, framed inside a glowing round targeting reticle with four short crosshair marks around its rim` **(v2)** |
 | 12 | `kits` | `a bright gift box with a wide ribbon and bow, and a small golden crown resting on the lid` |
 | 13 | `mochila` | `a modern rounded backpack seen from the front with padded straps and a red and white Poke Ball as the front clasp` |
-| 14 | `gyms` | `a shiny enamel gym badge shaped like a bold eight-pointed star, thick gold rim, deep crimson and orange enamel facets and a small bright cyan gem at its center, two small white feathered wings spread at its sides, floating just above two smaller badges stacked beneath it` **(v2)** |
+| 14 | `gyms` | `an open hinged gym badge case seen at a slight three-quarter angle, filling the frame, rounded red and white shell with a thick gold rim and clasp, the lid raised behind, the inside lined with dark blue velvet holding six shiny enamel badges in shaped slots in two rows of three — star, teardrop, flame, leaf, gear, crescent — each a different bold color with a gold edge` **(v2)** |
 | 15 | `explorar` | `a small floating island made from a Minecraft grass block, green grass on top, brown dirt below and a winding stone path across it, with a tiny red and white creature-catching ball on the path and a small green leaf-tailed creature peeking over the edge, one white cloud beside it` **(v2)** |
 
 
@@ -245,6 +245,17 @@ mercado y el clan deja de ser un estandarte de guerra.
 > ⚠️ **Y hay que poner el formato en 1:1 antes de generar.** El intento 3 salió a
 > 1024 × 559, apaisado. La plantilla dice «fills almost the entire square» pero
 > eso no cambia el ajuste de proporción del generador.
+
+> **`gyms` pasó de una medalla suelta al ESTUCHE de medallas abierto**, y es
+> mejor por una razón que no es de gusto: **el estuche es un objeto con silueta
+> propia**. Una medalla es un disco, y un disco a 100 × 100 compite con la
+> Poké Ball, con el emblema del Clan y con la diana de Cazas — cuatro cosas
+> redondas en la misma pantalla. El estuche abierto no se parece a nada más de
+> la rejilla, y las medallas de dentro cuentan solas de qué va.
+>
+> **Seis medallas y no ocho.** A 100 × 100 cada una queda en unos 20 px: seis en
+> dos filas de tres se leen como formas de colores distintas; ocho se convierten
+> en papilla.
 
 > Prompts montados y listos para pegar en
 > [`build/pokepad/prompts-iconos-v2.txt`](../../build/pokepad/prompts-iconos-v2.txt).

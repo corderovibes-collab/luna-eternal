@@ -80,17 +80,14 @@ TEXTO_CONTORNO = (242, 246, 255, 255)
 # existe un "nivel de jugador": cinco reputaciones independientes hacen que el
 # progreso sea un PERFIL y no una cifra. Eso es lo que enseña este panel, y
 # hasta ahora no se veia en ninguna pantalla.
-VIAS = [
-    ("Explorador",    (85, 255, 85, 255)),
-    ("Entrenador",    (255, 85, 85, 255)),
-    ("Coleccionista", (85, 255, 255, 255)),
-    ("Comerciante",   (255, 170, 0, 255)),
-    ("Criador",       (255, 123, 224, 255)),
-]
+# TODAS EN BLANCO, no cada Via en su color: cinco colores en cinco lineas
+# seguidas compiten entre si y convierten una tabla en un semaforo. Lo que
+# separa una fila de otra es su nombre y cuantas estrellas lleva.
+VIAS = ["Explorador", "Entrenador", "Coleccionista", "Comerciante", "Criador"]
 TARJ_X, TARJ_Y, TARJ_FILA = 100, 383, 38
 TARJ_DER = 336
-PUNTO, PUNTO_SEP = 10, 4
-PUNTO_VACIO = (70, 76, 96, 255)
+TARJ_COLOR = (255, 255, 255, 255)
+ESTRELLA_SEP = 4
 # Solo para la maqueta: unos niveles de ejemplo. En el juego los manda el
 # servidor.
 NIVELES_MAQUETA = [3, 2, 1, 4, 0]
@@ -190,7 +187,7 @@ BOTON_W, BOTON_H = 80, 64
 #
 # El arte de los dos se conserva en arte/pokepad/botones/: lo que se quita es su
 # hueco, no el fichero.
-BOTONES = ["atras", "adelante", "ajustes", "cerrar", "mas"]
+BOTONES = ["atras", "adelante", "ajustes", "cerrar"]
 SITIOS = {
     "atras":    ("banda", 0),
     "adelante": ("banda", 1),
@@ -198,10 +195,11 @@ SITIOS = {
     # de la ventana, no del contenido, y juntos se leen como tales.
     "ajustes":  ("panel", 0),
     "cerrar":   ("panel", 1),
-    # ⚠ `mas` VUELVE, y ahora tiene trabajo: es el "+" que lleva a comprar
-    # LunaCoins. Va en el cuadradito de 48x48 que quedaba libre al lado del
-    # saldo, que es justo donde se busca un "+" -- pegado al numero que sube.
-    "mas":      ("cuadro", 0),
+    # ⚠ EL "+" DE COMPRAR LUNACOINS NO ES UN BOTON CON TEXTURA. El chasis ya
+    # trae su zocalo dibujado --el cuadradito de 48x48 al lado del saldo-- asi
+    # que meterle dentro un boton con SU PROPIO marco serian dos marcos, uno
+    # dentro de otro. Lo que hace falta ahi es solo la cruz, y esa la dibuja
+    # PokePadScreen con dos rectangulos.
 }
 
 # Dos tamanos, y cada uno lo manda su sitio:
@@ -489,6 +487,53 @@ def reducir(im: Image.Image, w: int, h: int) -> Image.Image:
 def guardar(im: Image.Image, destino: Path) -> None:
     im.save(destino)
     destino.with_suffix(".png.mcmeta").write_text(MCMETA, encoding="utf-8")
+
+
+
+# ---------------------------------------------------------------------------
+# LAS ESTRELLAS DE LA TARJETA DE ENTRENADOR
+#
+# Cinco por Via, llenas hasta el nivel que tengas. Una estrella dice "nivel 3 de
+# 5" sin leer nada; un cuadrado no dice nada, hay que aprenderselo.
+#
+# Se DIBUJAN, y a cuatro veces su tamano antes de reducir: una estrella de cinco
+# puntas a 15 px trazada directamente sale con las puntas dentadas. Reducida
+# desde 60 con Lanczos, los bordes salen suaves y se lee como una estrella y no
+# como una mancha.
+# ---------------------------------------------------------------------------
+ESTRELLA = 15          # el lado al que se dibuja en el Pad
+ESTRELLA_LLENA = (255, 200, 60, 255)
+ESTRELLA_BORDE = (140, 96, 16, 255)
+ESTRELLA_VACIA = (58, 64, 82, 255)
+ESTRELLA_VACIA_BORDE = (86, 94, 116, 255)
+
+
+def _puntas(lado: int, radio: float, hundido: float) -> list:
+    """Los diez vertices de una estrella de cinco puntas."""
+    import math
+    centro = lado / 2.0
+    puntos = []
+    for i in range(10):
+        # Se empieza en -90 grados para que la punta mire ARRIBA. Sin eso la
+        # estrella sale girada 18 grados y parece torcida sin saber por que.
+        ang = math.radians(-90 + i * 36)
+        r = radio if i % 2 == 0 else radio * hundido
+        puntos.append((centro + r * math.cos(ang), centro + r * math.sin(ang)))
+    return puntos
+
+
+def estrella(llena: bool, lado: int = ESTRELLA) -> Image.Image:
+    grande = lado * 4
+    img = Image.new("RGBA", (grande, grande), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    # 0,42 es la proporcion clasica entre el radio interior y el exterior. Con
+    # mas, la estrella se hincha y parece una flor; con menos, se afila y a este
+    # tamano las puntas desaparecen al reducir.
+    d.polygon(_puntas(grande, grande * 0.46, 0.42),
+              fill=ESTRELLA_LLENA if llena else ESTRELLA_VACIA,
+              outline=ESTRELLA_BORDE if llena else ESTRELLA_VACIA_BORDE,
+              width=max(2, grande // 20))
+    return reducir(img, lado, lado)
 
 
 def medir_pantalla(chasis: Image.Image) -> tuple:
@@ -780,6 +825,10 @@ def main() -> None:
     # El candado de la segunda pagina. Si el arte no ha llegado, se dibuja uno
     # provisional en vez de abortar: asi la pagina se puede montar y desplegar
     # hoy, y el dia que llegue el PNG lo sustituye sin tocar una linea de codigo.
+    guardar(estrella(True), SALIDA / "estrella.png")
+    guardar(estrella(False), SALIDA / "estrella_vacia.png")
+    print(f"  estrellas dos de {ESTRELLA}x{ESTRELLA}, dibujadas a 4x y reducidas")
+
     arte_candado = ARTE / "icons" / f"icon_{CANDADO}.png"
     if arte_candado.exists():
         guardar(a_tamano(abrir_hueco(preparar(arte_candado)), lado),
@@ -1011,20 +1060,27 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
         gorda = ImageFont.truetype("arial.ttf", 22)
     except OSError:
         fuente = gorda = ImageFont.load_default()
-    for i, (nombre, color) in enumerate(VIAS):
+    llena = Image.open(SALIDA / "estrella.png").convert("RGBA")
+    vacia = Image.open(SALIDA / "estrella_vacia.png").convert("RGBA")
+    for i, nombre in enumerate(VIAS):
         y = TARJ_Y + i * TARJ_FILA
-        d.text((TARJ_X, y), nombre, font=fuente, fill=color)
-        for pnt in range(5):
-            px = TARJ_DER - (5 - pnt) * (PUNTO + PUNTO_SEP)
-            py = y + 4
-            lleno = pnt < NIVELES_MAQUETA[i]
-            d.rectangle([px, py, px + PUNTO - 1, py + PUNTO - 1],
-                        fill=color if lleno else PUNTO_VACIO)
+        d.text((TARJ_X, y), nombre, font=fuente, fill=TARJ_COLOR)
+        for e in range(5):
+            px = TARJ_DER - (5 - e) * (ESTRELLA + ESTRELLA_SEP)
+            out.alpha_composite(llena if e < NIVELES_MAQUETA[i] else vacia,
+                                (px, y + 2))
 
     # SOLO LunaCoins: es la unica moneda que se compra, y por eso la unica
     # que necesita el "+" de al lado.
-    d.text((saldo[0], saldo[1] - 9), "48", font=gorda,
+    d.text((saldo[0], saldo[1]), "48", font=ImageFont.truetype("arial.ttf", 34)
+           if fuente is not gorda else gorda,
            fill=(159, 200, 255, 255), anchor="mm")
+
+    # La cruz del "+", dibujada como la dibuja el codigo: dos rectangulos
+    # dentro del zocalo que ya trae el chasis.
+    cx, cy = 302 + 24, 651 + 24
+    d.rectangle([cx - 11, cy - 3, cx + 10, cy + 2], fill=(90, 100, 128, 255))
+    d.rectangle([cx - 3, cy - 11, cx + 2, cy + 10], fill=(90, 100, 128, 255))
 
     # Sin ampliar. El chasis ya mide 1380x828, que es el tamano al que se va a
     # dibujar en pantalla: ampliarlo ensenaria algo que nadie va a ver. Antes se

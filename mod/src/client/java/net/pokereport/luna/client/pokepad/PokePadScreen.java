@@ -186,7 +186,7 @@ public class PokePadScreen extends Screen {
      * para que se dibuje 1:1 (regla 2 de {@code docs/ui/dibujado.md}).
      */
     private static final String[] BOTONES =
-            {"atras", "adelante", "ajustes", "cerrar", "mas"};
+            {"atras", "adelante", "ajustes", "cerrar"};
 
     /** x, y, ancho, alto — en píxeles del arte, en el orden de {@link #BOTONES}. */
     private static final int[][] BOTON = {
@@ -194,11 +194,19 @@ public class PokePadScreen extends Screen {
             {1040, 692, 60, 48},   // adelante
             {1107,  85, 80, 64},   // ajustes
             {1207,  85, 80, 64},   // cerrar
-            { 306, 659, 40, 32},   // mas — el "+" de comprar LunaCoins
     };
 
-    private static final int ATRAS = 0, ADELANTE = 1, AJUSTES = 2, CERRAR = 3,
-            MAS = 4;
+    private static final int ATRAS = 0, ADELANTE = 1, AJUSTES = 2, CERRAR = 3;
+
+    /**
+     * El zócalo del «+», medido sobre el chasis: 48 × 48 en 302,651.
+     *
+     * <p><b>La cruz se DIBUJA, no es un botón con textura.</b> El chasis ya trae
+     * ese zócalo, así que meterle dentro un botón con su propio marco serían dos
+     * marcos, uno metido en otro. Lo único que falta ahí es la cruz.
+     */
+    private static final int CUADRO_X = 302, CUADRO_Y = 651, CUADRO = 48;
+    private static final int CRUZ_LARGO = 22, CRUZ_GRUESO = 6;
 
     /**
      * A dónde lleva el «+» de las LunaCoins.
@@ -402,7 +410,7 @@ public class PokePadScreen extends Screen {
                     artX, artY, TEXTO_ALTO, TEXTO_COLOR);
         }
 
-        panelLateral(ctx);
+        panelLateral(ctx, ratonX, ratonY);
         barra(ctx, ratonX, ratonY);
 
         // ⚠ LA PLACA DE ARRIBA YA NO LLEVA TEXTO, Y ES A PROPOSITO.
@@ -444,7 +452,6 @@ public class PokePadScreen extends Screen {
             // Ordenar solo tiene sentido donde hay iconos que ordenar.
             case AJUSTES -> pagina == 0;
             case CERRAR -> true;
-            case MAS -> !TIENDA.isEmpty();
             default -> false;
         };
     }
@@ -477,11 +484,15 @@ public class PokePadScreen extends Screen {
                             OrdenPad.guardar(orden);
                         }
                     }
-                    case MAS -> abrirTienda();
                     default -> { }
                 }
                 return true;
             }
+        }
+        if (boton == 0 && enCuadro(ratonX, ratonY)) {
+            sonar(!TIENDA.isEmpty());
+            abrirTienda();
+            return true;
         }
         if (boton == 0) {
             for (int i = 0; i < orden.length; i++) {
@@ -561,7 +572,7 @@ public class PokePadScreen extends Screen {
      * <p>Las tres ranuras ya vienen dibujadas en el chasis; aquí solo se rellena
      * lo que cambia.
      */
-    private void panelLateral(DrawContext ctx) {
+    private void panelLateral(DrawContext ctx, int ratonX, int ratonY) {
         if (client == null || client.player == null) {
             return;
         }
@@ -579,6 +590,7 @@ public class PokePadScreen extends Screen {
                 lado, lado, 40f, 8f, 8, 8, 64, 64);
 
         tarjeta(ctx);
+        cruz(ctx, ratonX, ratonY);
 
         Red.Saldo saldo = EstadoCliente.saldo();
         // Guiones mientras no ha llegado la respuesta: "no lo sé" y "tienes
@@ -588,39 +600,53 @@ public class PokePadScreen extends Screen {
         // sentido: es la única moneda que se compra, así que es la única que
         // necesita un «+» al lado. Los PokéDólares se ganan jugando y no hay
         // nada que pulsar para tener más.
+        // 27 y no 18: es TRES veces los 9 que mide la fuente de Minecraft, así
+        // que sigue cayendo en píxeles enteros y no se emborrona. Es el único
+        // número de la pantalla y a 18 se perdía dentro de su ranura.
         texto(ctx, Text.literal(saldo == null ? "- - -"
                         : String.format("%,d", saldo.reportcoins())),
-                SALDO_CX, SALDO_CY - 9, TEXTO_ALTO, LUNA, true, false);
+                SALDO_CX, SALDO_CY - 14, 27, LUNA, true, false);
     }
 
-    /** El amarillo de los PokéDólares y el azul luna de los LunaCoins. */
-    private static final int ORO = 0xFFFFE12E;
+    /** El azul luna de los LunaCoins, el único saldo que se enseña abajo. */
     private static final int LUNA = 0xFF9FC8FF;
 
-    /** La tarjeta: dónde empieza, cuánto mide una fila y cómo son los puntos. */
+    /**
+     * La tarjeta, en píxeles del arte.
+     *
+     * <p><b>Los nombres van todos en BLANCO</b>, no cada Vía en su color. Cinco
+     * colores distintos en cinco líneas seguidas compiten entre sí y convierten
+     * una tabla en un semáforo: el color deja de significar algo justo porque
+     * todo lo tiene. Lo que separa una fila de otra es su nombre y cuántas
+     * estrellas lleva, que es lo que hay que leer.
+     */
     private static final int TARJ_X = 100, TARJ_Y = 383, TARJ_FILA = 38;
     private static final int TARJ_DER = 336;
-    private static final int PUNTO = 10, PUNTO_SEP = 4;
-    private static final int PUNTO_VACIO = 0xFF464C60;
-
-    /** Los cinco colores de las Vías, en el orden de {@code Path.values()}. */
-    private static final int[] VIA_COLOR = {
-            0xFF55FF55,   // Explorador     verde
-            0xFFFF5555,   // Entrenador     rojo
-            0xFF55FFFF,   // Coleccionista  cian
-            0xFFFFAA00,   // Comerciante    dorado
-            0xFFFF7BE0,   // Criador        rosa
-    };
+    private static final int TARJ_COLOR = 0xFFFFFFFF;
 
     /**
-     * La tarjeta de entrenador: las cinco Vías con su nivel.
+     * Las estrellas de nivel.
      *
-     * <p><b>Va aquí y no en un número único porque no hay número único.</b> El
+     * <p><b>Estrellas y no cuadrados.</b> Una estrella dice «tres de cinco» sin
+     * leer nada —es lo que usa cualquier juego para un nivel—; un cuadrado hay
+     * que aprendérselo. Las dibuja {@code gen_pokepad.py} a cuatro veces su
+     * tamaño y las reduce: una estrella de cinco puntas trazada directamente a
+     * 15 px sale con las puntas dentadas.
+     */
+    private static final Identifier ESTRELLA = tex("estrella");
+    private static final Identifier ESTRELLA_VACIA = tex("estrella_vacia");
+    private static final int ESTRELLA_LADO = 15, ESTRELLA_SEP = 4;
+    private static final int VIAS = 5;
+
+    /**
+     * La tarjeta de entrenador: las cinco Vías con su nivel en estrellas.
+     *
+     * <p><b>Va aquí y no un número único porque no hay número único.</b> El
      * proyecto decidió a propósito que no existe un «nivel de jugador»: cinco
      * reputaciones independientes hacen que el progreso sea un <i>perfil</i> y
-     * no una cifra, y que dos jugadores con el mismo tiempo jugado sean
-     * personas distintas. Eso es lo que este panel enseña, y hasta ahora no se
-     * veía en ninguna pantalla.
+     * no una cifra, y que dos jugadores con el mismo tiempo jugado sean personas
+     * distintas. Eso es lo que este panel enseña, y hasta ahora no se veía en
+     * ninguna pantalla.
      *
      * <p>Debajo de la cara a propósito: la cara dice quién eres, la tarjeta qué
      * has hecho y el saldo qué tienes. Los tres huecos del panel se leen de
@@ -628,28 +654,54 @@ public class PokePadScreen extends Screen {
      */
     private void tarjeta(DrawContext ctx) {
         Red.Ficha ficha = EstadoCliente.ficha();
-        int lado = Math.max(1, Math.round(PUNTO * k));
-        int paso = Math.round((PUNTO + PUNTO_SEP) * k);
+        int lado = Math.max(1, Math.round(ESTRELLA_LADO * k));
+        int paso = Math.round((ESTRELLA_LADO + ESTRELLA_SEP) * k);
 
-        for (int i = 0; i < VIA_COLOR.length; i++) {
+        for (int i = 0; i < VIAS; i++) {
             int artY = TARJ_Y + i * TARJ_FILA;
             texto(ctx, Text.translatable("pokepad.lunaeternal.via." + i),
-                    TARJ_X, artY, TEXTO_ALTO, VIA_COLOR[i], false, false);
+                    TARJ_X, artY, TEXTO_ALTO, TARJ_COLOR, false, false);
 
-            // Mientras no llegue la ficha, los cinco puntos salen vacíos. Es lo
-            // mismo que hacen los guiones del saldo: no se inventa un cero.
+            // Mientras no llegue la ficha, las cinco salen vacías. Es lo mismo
+            // que hacen los guiones del saldo: no se inventa un cero.
             int nivel = ficha == null || i >= ficha.vias().size()
                     ? 0 : ficha.vias().get(i);
-            for (int p = 0; p < 5; p++) {
-                // Alineados por la DERECHA: así los cinco puntos de las cinco
-                // filas caen en la misma columna aunque los nombres midan
-                // distinto, que es lo que deja leerlos como una tabla.
-                int px = x0 + Math.round(TARJ_DER * k) - (5 - p) * paso;
-                int py = y0 + Math.round((artY + 4) * k);
-                ctx.fill(px, py, px + lado, py + lado,
-                        p < nivel ? VIA_COLOR[i] : PUNTO_VACIO);
+            for (int e = 0; e < VIAS; e++) {
+                // Alineadas por la DERECHA: así las cinco columnas caen en el
+                // mismo sitio aunque los nombres midan distinto, que es lo que
+                // deja leerlas como una tabla y no como cinco líneas sueltas.
+                int px = x0 + Math.round(TARJ_DER * k) - (VIAS - e) * paso;
+                int py = y0 + Math.round((artY + 2) * k);
+                dibujar(ctx, e < nivel ? ESTRELLA : ESTRELLA_VACIA,
+                        px, py, lado, lado,
+                        ESTRELLA_LADO, ESTRELLA_LADO, 0xFFFFFFFF);
             }
         }
+    }
+
+    /**
+     * La cruz del «+», dentro del zócalo que ya trae el chasis.
+     *
+     * <p>Dos rectángulos y nada más: el marco lo pone el arte. Se aclara al
+     * pasar el ratón y va apagada mientras no haya tienda a la que ir, igual
+     * que las quince celdas.
+     */
+    private void cruz(DrawContext ctx, int ratonX, int ratonY) {
+        boolean encima = enCuadro(ratonX, ratonY);
+        int color = TIENDA.isEmpty() ? 0xFF5A6480 : (encima ? 0xFFFFFFFF : LUNA);
+        int cx = x0 + Math.round((CUADRO_X + CUADRO / 2) * k);
+        int cy = y0 + Math.round((CUADRO_Y + CUADRO / 2) * k);
+        int largo = Math.max(2, Math.round(CRUZ_LARGO * k)) / 2;
+        int grueso = Math.max(1, Math.round(CRUZ_GRUESO * k)) / 2;
+        ctx.fill(cx - largo, cy - grueso, cx + largo, cy + grueso, color);
+        ctx.fill(cx - grueso, cy - largo, cx + grueso, cy + largo, color);
+    }
+
+    private boolean enCuadro(double ratonX, double ratonY) {
+        int px = x0 + Math.round(CUADRO_X * k), py = y0 + Math.round(CUADRO_Y * k);
+        int lado = Math.round(CUADRO * k);
+        return ratonX >= px && ratonX < px + lado
+                && ratonY >= py && ratonY < py + lado;
     }
 
     /** Los seis botones, cada uno donde le toca. */

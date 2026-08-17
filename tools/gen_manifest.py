@@ -53,7 +53,9 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -378,7 +380,57 @@ def publicar() -> None:
                     f"Pack {VERSION_PACK}: base en el modpack oficial de Cobblemon"],
                    check=True)
     subprocess.run(["git", "-C", str(clon), "push", "--quiet"], check=True)
+    esperar_al_cdn(SALIDA / "manifest.json")
     print(f"  publicado en {BASE_RAW}/manifest.json")
+
+
+def esperar_al_cdn(local: Path, limite: int = 300) -> None:
+    """No dice «publicado» hasta que el CDN sirve de verdad lo que se ha subido.
+
+    POR QUE ESTO EXISTE
+
+    `raw.githubusercontent` cachea unos tres minutos POR RUTA. Empujar al
+    repositorio no es publicar: durante esa ventana el mundo sigue viendo el
+    manifiesto anterior. Ya ha mordido dos veces, y la segunda de la forma mas
+    tonta posible — el launcher del usuario se ejecuto 2 min 51 s despues de
+    empujar, leyo el manifiesto cacheado, dio por bueno el jar que ya tenia y le
+    dejo el juego sin los iconos nuevos. Todo correcto en el repositorio, y en su
+    pantalla no habia cambiado nada.
+
+    Decir «publicado» cuando aun no lo esta es peor que tardar tres minutos: hace
+    que la siguiente comprobacion sea "y entonces por que no lo veo".
+    """
+    # ⚠ SE COMPARA EL JSON, NO LOS BYTES, y no es un detalle.
+    #
+    # El primer intento comparaba sha1 de bytes y no acertaba NUNCA: git
+    # normaliza los finales de linea al hacer commit, asi que el fichero local
+    # (CRLF, 60.169 B en Windows) y el que sirve el CDN (LF, 58.833 B) no
+    # coinciden byte a byte aunque digan exactamente lo mismo. La primera
+    # ejecucion se paso los cinco minutos de espera y aviso de un problema que
+    # no existia: el manifiesto llevaba rato publicado.
+    esperado = json.loads(local.read_text(encoding="utf-8"))
+    url = f"{BASE_RAW}/manifest.json"
+    print("  esperando a que el CDN lo sirva", end="", flush=True)
+    arranque = time.time()
+    while time.time() - arranque < limite:
+        try:
+            # `Cache-Control: no-cache` NO salta el cache de raw: el CDN sirve lo
+            # que tiene. Se comprueba a las bravas, releyendo cada pocos
+            # segundos hasta que el contenido coincide.
+            datos = urllib.request.urlopen(
+                urllib.request.Request(url, headers={"User-Agent": "luna-eternal"})
+            ).read()
+            servido = json.loads(datos.decode("utf-8"))
+        except (OSError, ValueError):
+            servido = None
+        if servido == esperado:
+            print(f"  listo ({int(time.time() - arranque)} s)")
+            return
+        print(".", end="", flush=True)
+        time.sleep(10)
+    print(f"\n  AVISO: {int(limite)} s y el CDN sigue sirviendo el manifiesto "
+          f"anterior.\n  Lo subido es correcto; solo hay que esperar antes de "
+          f"abrir el launcher.")
 
 
 def main() -> None:

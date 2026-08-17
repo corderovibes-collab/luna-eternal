@@ -106,6 +106,66 @@ labels, no watermark, no user interface elements, no document.
 
 > **La pantalla va vacía a propósito.** Las celdas las dibuja el código (§4).
 
+### 3.1-bis · El fondo base v5 — 1848 × 780
+
+**La resolución sale de tres cosas, no del gusto:**
+
+| | |
+|---|---|
+| **2,37 : 1** | Es la proporción de la referencia (1038 × 439 = 2,364) |
+| **Divisible entre 1, 2, 3, 4 y 6** | Los valores posibles de *GUI Scale*. Dibujado a tamaño real, un texel cae en un píxel sea cual sea el ajuste del jugador |
+| **Cabe en 1920 × 1017** | Que es la ventana real medida en las capturas F2. Sobran 72 × 237, así que se dibuja **a tamaño nativo y nítido** |
+
+> ⚠️ **Por qué no más ancho.** 1872 dejaría solo 48 px de margen, y por debajo de
+> la ventana el Pad tiene que encogerse — y encoger enciende el filtrado lineal,
+> que es exactamente lo que hizo que el bisel naranja del v4 se viera «de baja
+> calidad». Ver [dibujado.md](dibujado.md) §6.
+
+**Lo que cambia respecto al v4:** aparece una **franja de cabecera arriba a la
+derecha** con los dos saldos y los dos botones de ventana, y el cuerpo se
+ensancha. La pantalla y las tres ranuras de la izquierda siguen, con más sitio.
+
+```
+A polished modern handheld gaming device UI frame seen straight on, filling the
+whole canvas, wide landscape aspect ratio 2.37:1. Dark graphite body with
+rounded corners and soft bevels, and thin glowing amber accent lines inset along
+its edges.
+
+On the left fifth, three empty recessed slots stacked vertically: a square one
+on top, a taller rectangular one in the middle, and a wide short one at the
+bottom with a small square button recess beside it; all of them completely
+empty, just the recess and its inner shadow.
+
+Across the top right, a long raised header bar holding, from left to right: a
+small round recess, a wide empty readout recess beside it, a small square button
+recess, then again a small round recess, a wide empty readout recess and a small
+square button recess, and finally two more square button recesses at the very
+end. All of these are completely empty.
+
+The rest of the body is one single large recessed screen of flat soft off-white,
+COMPLETELY EMPTY and perfectly rectangular, with no grid, no cells and no icons
+inside it, framed by a thick bright orange bezel with chamfered corners.
+
+Centered at the top left of the header, an empty raised nameplate. Clean smooth
+shading, no visible pixels. No text, no letters, no numbers, no labels, no
+watermark, no user interface elements, no document, no icons.
+```
+
+> **Todo va VACÍO.** Las celdas, los saldos, las estrellas y la cruz del «+» los
+> dibuja el código (§4). El chasis solo pone los huecos y sus sombras — si el
+> generador mete números o iconos dentro, el dibujo del juego cae encima y se ven
+> los dos.
+
+> **El acento pasa a ÁMBAR y el bisel se queda NARANJA**, que es lo que ya trae
+> el v4 y funciona. Pedir cian aquí traería de vuelta el problema del v3: un
+> resalte que no pega con nada de lo que hay dentro.
+
+> **Después de generarlo:** `python tools/gen_pokepad.py --maqueta`. Las medidas
+> —pantalla, ranuras, franja, huecos de los saldos— **se miden solas**; lo único
+> que hay que hacer es mirar la lámina y comprobar que las encontró todas.
+
+---
+
 ### 3.2 · Un fondo por aplicación
 
 Copiado del Pad de referencia: ellos tienen **doce fondos completos**, uno por

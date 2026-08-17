@@ -84,10 +84,12 @@ TEXTO_CONTORNO = (242, 246, 255, 255)
 # seguidas compiten entre si y convierten una tabla en un semaforo. Lo que
 # separa una fila de otra es su nombre y cuantas estrellas lleva.
 VIAS = ["Explorador", "Entrenador", "Coleccionista", "Comerciante", "Criador"]
-TARJ_X, TARJ_Y, TARJ_FILA = 100, 383, 38
-TARJ_DER = 336
+# El aire entre la tarjeta y el bisel de su ranura. Se MIDE de donde empieza el
+# fondo liso, no se cuenta desde el borde: ver `interior_util`.
+TARJ_AIRE = 6
+TARJ_FILA = 38
 TARJ_COLOR = (255, 255, 255, 255)
-ESTRELLA_SEP = 4
+ESTRELLA_SEP = 3
 # Solo para la maqueta: unos niveles de ejemplo. En el juego los manda el
 # servidor.
 NIVELES_MAQUETA = [3, 2, 1, 4, 0]
@@ -501,7 +503,7 @@ def guardar(im: Image.Image, destino: Path) -> None:
 # desde 60 con Lanczos, los bordes salen suaves y se lee como una estrella y no
 # como una mancha.
 # ---------------------------------------------------------------------------
-ESTRELLA = 15          # el lado al que se dibuja en el Pad
+ESTRELLA = 14          # el lado al que se dibuja en el Pad
 ESTRELLA_LLENA = (255, 200, 60, 255)
 ESTRELLA_BORDE = (140, 96, 16, 255)
 ESTRELLA_VACIA = (58, 64, 82, 255)
@@ -764,6 +766,36 @@ def medir_panel_superior(chasis: Image.Image) -> tuple:
             int(cols.max() - cols.min() + 1), int(filas.max() - filas.min() + 1))
 
 
+# El gris liso del fondo de una ranura, ya pasados la moldura y el bisel.
+FONDO_RANURA = (41, 43, 54)
+
+
+def interior_util(chasis: Image.Image, caja: tuple) -> tuple:
+    """El hueco REALMENTE util de una ranura. (x0, y0, ancho, alto).
+
+    `interior()` descuenta la moldura y ya, pero eso no basta: dentro de la
+    moldura hay ademas un BISEL OSCURO de otros 14 px, arriba y a la izquierda,
+    que es la sombra interior del hueco. El texto de la tarjeta caia justo
+    encima y se leia sucio -- lo vio el usuario antes que yo.
+
+    Asi que no se descuenta un numero: se busca donde empieza de verdad el gris
+    liso del fondo. Si el chasis cambia el grosor del bisel, esto lo sigue.
+    """
+    a = np.array(chasis.convert("RGBA")).astype(int)
+    x0, y0, x1, y1 = caja
+    liso = ((np.abs(a[..., :3] - np.array(FONDO_RANURA)).max(axis=2) < 10)
+            & (a[..., 3] > 200))
+    dentro = liso[y0:y1 + 1, x0:x1 + 1]
+    # Por mayoria de fila y de columna: dentro hay dibujos y sombras sueltas, y
+    # un minimo/maximo se iria detras del primer pixel perdido.
+    cols = np.where(dentro.mean(0) > 0.55)[0]
+    filas = np.where(dentro.mean(1) > 0.55)[0]
+    if not len(cols) or not len(filas):
+        raise SystemExit(f"No se encuentra el fondo liso de la ranura {caja}")
+    return (x0 + cols.min(), y0 + filas.min(),
+            cols.max() - cols.min() + 1, filas.max() - filas.min() + 1)
+
+
 def interior(caja: tuple) -> tuple:
     """El hueco util de una ranura, sin su moldura. (x0, y0, ancho, alto)."""
     x0, y0, x1, y1 = caja
@@ -873,6 +905,19 @@ def main() -> None:
     if CARA_LADO > cw or CARA_LADO > chh:
         raise SystemExit(f"La cara ({CARA_LADO}) no cabe en {cw}x{chh}")
 
+    # La tarjeta, dentro del hueco UTIL de la ranura de en medio: no basta con
+    # descontar la moldura, hay un bisel oscuro de otros 14 px encima.
+    tx, ty, tw, th = interior_util(chasis, cajas[1])
+    tarj_x = tx + TARJ_AIRE
+    tarj_der = tx + tw - TARJ_AIRE
+    alto_tarj = (len(VIAS) - 1) * TARJ_FILA + TEXTO_ALTO
+    if alto_tarj > th:
+        raise SystemExit(f"La tarjeta no cabe: {alto_tarj} en {th}")
+    tarj_y = ty + (th - alto_tarj) // 2
+    estrellas_w = len(VIAS) * ESTRELLA + (len(VIAS) - 1) * ESTRELLA_SEP
+    print(f"  tarjeta   hueco util {tw}x{th} en {tx},{ty}"
+          f"   estrellas {estrellas_w} px, nombre {tarj_der - tarj_x - estrellas_w - 8} px")
+
     # El saldo, centrado en la ranura de abajo.
     sx, sy, sw, sh = interior(cajas[2])
     saldo_cx, saldo_cy = sx + sw // 2, sy + sh // 2
@@ -884,6 +929,8 @@ def main() -> None:
     print(f"    TEXTO_ALTO = {TEXTO_ALTO}, TEXTO_SOLAPE = {TEXTO_SOLAPE}")
     print(f"    CARA_X = {cara_x}, CARA_Y = {cara_y}, CARA_LADO = {CARA_LADO}")
     print(f"    SALDO_CX = {saldo_cx}, SALDO_CY = {saldo_cy}")
+    print(f"    TARJ_X = {tarj_x}, TARJ_Y = {tarj_y}, TARJ_FILA = {TARJ_FILA}, "
+          f"TARJ_DER = {tarj_der}")
     print(f"    BOTON = {{      // x, y, ancho, alto — en el orden de BOTONES")
     for nombre in BOTONES:
         bx, by, bw, bh = sitios[nombre]
@@ -895,7 +942,8 @@ def main() -> None:
         for pag in range(2):
             maqueta(Image.open(SALIDA / "pokepad.png"), iconos,
                     rej_x, rej_y, celda, lado, hueco_y,
-                    (cara_x, cara_y), sitios, (saldo_cx, saldo_cy), pag)
+                    (cara_x, cara_y), sitios, (saldo_cx, saldo_cy),
+                    (tarj_x, tarj_y, tarj_der), pag)
 
 
 def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
@@ -977,7 +1025,7 @@ def candado_provisional(lado: int) -> Image.Image:
 
 
 def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
-            cara, sitios, saldo, pagina=0) -> None:
+            cara, sitios, saldo, tarj, pagina=0) -> None:
     """Monta una pantalla con las celdas dibujadas como las dibuja el juego:
     rectangulos planos. Ver docs/ui/prompts-arte-pokepad.md §4.
 
@@ -1063,10 +1111,10 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
     llena = Image.open(SALIDA / "estrella.png").convert("RGBA")
     vacia = Image.open(SALIDA / "estrella_vacia.png").convert("RGBA")
     for i, nombre in enumerate(VIAS):
-        y = TARJ_Y + i * TARJ_FILA
-        d.text((TARJ_X, y), nombre, font=fuente, fill=TARJ_COLOR)
+        y = tarj[1] + i * TARJ_FILA
+        d.text((tarj[0], y), nombre, font=fuente, fill=TARJ_COLOR)
         for e in range(5):
-            px = TARJ_DER - (5 - e) * (ESTRELLA + ESTRELLA_SEP)
+            px = tarj[2] - (5 - e) * (ESTRELLA + ESTRELLA_SEP)
             out.alpha_composite(llena if e < NIVELES_MAQUETA[i] else vacia,
                                 (px, y + 2))
 

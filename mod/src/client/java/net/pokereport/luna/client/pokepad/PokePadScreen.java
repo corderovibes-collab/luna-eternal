@@ -614,14 +614,22 @@ public class PokePadScreen extends Screen {
     /**
      * La tarjeta, en píxeles del arte.
      *
+     * <p><b>La posición sale del hueco ÚTIL, no del interior a secas.</b> La
+     * ranura tiene, además de su moldura, un bisel oscuro de otros 14 px arriba
+     * y a la izquierda —la sombra interior del hueco—, y los nombres caían justo
+     * encima y se leían sucios. {@code interior_util()} de
+     * {@code gen_pokepad.py} busca dónde empieza de verdad el gris liso del
+     * fondo en vez de descontar un número, así que si el chasis cambia el grosor
+     * del bisel, esto lo sigue.
+     *
      * <p><b>Los nombres van todos en BLANCO</b>, no cada Vía en su color. Cinco
      * colores distintos en cinco líneas seguidas compiten entre sí y convierten
      * una tabla en un semáforo: el color deja de significar algo justo porque
      * todo lo tiene. Lo que separa una fila de otra es su nombre y cuántas
      * estrellas lleva, que es lo que hay que leer.
      */
-    private static final int TARJ_X = 100, TARJ_Y = 383, TARJ_FILA = 38;
-    private static final int TARJ_DER = 336;
+    private static final int TARJ_X = 114, TARJ_Y = 400, TARJ_FILA = 38;
+    private static final int TARJ_DER = 338;
     private static final int TARJ_COLOR = 0xFFFFFFFF;
 
     /**
@@ -635,7 +643,7 @@ public class PokePadScreen extends Screen {
      */
     private static final Identifier ESTRELLA = tex("estrella");
     private static final Identifier ESTRELLA_VACIA = tex("estrella_vacia");
-    private static final int ESTRELLA_LADO = 15, ESTRELLA_SEP = 4;
+    private static final int ESTRELLA_LADO = 14, ESTRELLA_SEP = 3;
     private static final int VIAS = 5;
 
     /**

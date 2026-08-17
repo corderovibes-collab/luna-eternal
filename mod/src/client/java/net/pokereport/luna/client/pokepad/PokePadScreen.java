@@ -515,8 +515,14 @@ public class PokePadScreen extends Screen {
                 }
                 if (ordenando && pagina == 0) {
                     intercambiar(i);
+                } else if (pagina == 0) {
+                    // El sonido lo decide si LLEGÓ a abrirse, no si la
+                    // aplicación se declara abierta: si Cobblemon cambia y la
+                    // Pokédex no abre, el clic tiene que sonar a bloqueado en
+                    // vez de mentir con el sonido de "hecho".
+                    sonar(Apps.abrir(orden[i]));
                 } else {
-                    sonar(pagina == 0 && orden[i].abierta());
+                    sonar(false);
                 }
                 return true;
             }

@@ -99,6 +99,10 @@ MONEDA_AIRE = 10
 # servidor.
 NIVELES_MAQUETA = [3, 2, 1, 4, 0]
 
+# Que aplicaciones estan ABIERTAS. Mismo dato que App.java: la maqueta existe
+# para aprobar el diseno, y una celda abierta no se ve igual que una cerrada.
+ABIERTAS = {"pokedex"}
+
 # Que celda ensena la maqueta con el raton encima. La de en medio, para poder
 # compararla con sus ocho vecinas de una sola mirada.
 RESALTADA = 7
@@ -1071,9 +1075,12 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
         # raton— y es justo donde vive la pregunta abierta: si el naranja del
         # resalte pega con el bisel del chasis o se pelea con el.
         encima = i == RESALTADA
+        abierta = not pagina and p.stem.replace("icon_", "") in ABIERTAS
         d.rectangle([cx, cy, cx + celda - 1, cy + celda - 1],
-                    fill=CELDA_ENCIMA if encima else CELDA_CERRADA,
-                    outline=BORDE_ENCIMA if encima else BORDE_CERRADA,
+                    fill=CELDA_ENCIMA if encima else
+                         (CELDA_FONDO if abierta else CELDA_CERRADA),
+                    outline=BORDE_ENCIMA if encima else
+                            (CELDA_BORDE if abierta else BORDE_CERRADA),
                     width=BORDE)
         # La esquina mordida tambien crece: a 1 px sobre una celda de 124 no se
         # ve, y la rejilla vuelve a parecer una hoja de calculo.

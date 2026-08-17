@@ -162,7 +162,18 @@ public class PokePadScreen extends Screen {
     // múltiplo de 8: cada texel cae en 21 píxeles clavados. Con un lado que no
     // lo fuera saldría emborronada justo en lo único que es del jugador.
     private static final int CARA_X = 134, CARA_Y = 136, CARA_LADO = 168;
-    private static final int SALDO_CX = 184, SALDO_CY = 672;
+    private static final int SALDO_CX = 221, SALDO_CY = 678;
+
+    /**
+     * La moneda de los LunaCoins, a la izquierda de su saldo.
+     *
+     * <p>40 × 40 porque la ranura tiene <b>55 de alto útil medidos</b>. Y el
+     * número no se centra en la ranura entera sino <b>en lo que sobra a la
+     * derecha de la moneda</b>: centrado en toda la ranura quedaría descolocado
+     * respecto a su propia moneda, que es lo primero que mira el ojo.
+     */
+    private static final Identifier MONEDA = tex("lunacoin");
+    private static final int MONEDA_X = 118, MONEDA_Y = 658, MONEDA_LADO = 40;
 
     /**
      * Los seis botones, cada uno en su sitio. <b>Ya no viven juntos</b>, y es
@@ -354,6 +365,7 @@ public class PokePadScreen extends Screen {
             client.getTextureManager().getTexture(app.icono()).setFilter(suave, false);
         }
         client.getTextureManager().getTexture(CANDADO).setFilter(suave, false);
+        client.getTextureManager().getTexture(MONEDA).setFilter(suave, false);
     }
 
     /** El juego sigue corriendo detrás: es un menú, no una pausa. */
@@ -603,6 +615,11 @@ public class PokePadScreen extends Screen {
         // 27 y no 18: es TRES veces los 9 que mide la fuente de Minecraft, así
         // que sigue cayendo en píxeles enteros y no se emborrona. Es el único
         // número de la pantalla y a 18 se perdía dentro de su ranura.
+        int moneda = Math.round(MONEDA_LADO * k);
+        dibujar(ctx, MONEDA, x0 + Math.round(MONEDA_X * k),
+                y0 + Math.round(MONEDA_Y * k), moneda, moneda,
+                MONEDA_LADO, MONEDA_LADO, 0xFFFFFFFF);
+
         texto(ctx, Text.literal(saldo == null ? "- - -"
                         : String.format("%,d", saldo.reportcoins())),
                 SALDO_CX, SALDO_CY - 14, 27, LUNA, true, false);

@@ -90,6 +90,11 @@ TARJ_AIRE = 6
 TARJ_FILA = 38
 TARJ_COLOR = (255, 255, 255, 255)
 ESTRELLA_SEP = 3
+
+# LA MONEDA DE LOS LUNACOINS, al lado de su saldo. 40x40 porque la ranura tiene
+# 55 de alto util MEDIDOS, y el aire que la separa del numero.
+MONEDA = 40
+MONEDA_AIRE = 10
 # Solo para la maqueta: unos niveles de ejemplo. En el juego los manda el
 # servidor.
 NIVELES_MAQUETA = [3, 2, 1, 4, 0]
@@ -857,6 +862,13 @@ def main() -> None:
     # El candado de la segunda pagina. Si el arte no ha llegado, se dibuja uno
     # provisional en vez de abortar: asi la pagina se puede montar y desplegar
     # hoy, y el dia que llegue el PNG lo sustituye sin tocar una linea de codigo.
+    moneda = ARTE / "lunacoin.png"
+    if moneda.exists():
+        guardar(a_tamano(preparar(moneda), MONEDA), SALIDA / "lunacoin.png")
+        print(f"  moneda    lunacoin.png a {MONEDA}x{MONEDA}")
+    else:
+        print(f"  moneda    FALTA {moneda.relative_to(RAIZ)}")
+
     guardar(estrella(True), SALIDA / "estrella.png")
     guardar(estrella(False), SALIDA / "estrella_vacia.png")
     print(f"  estrellas dos de {ESTRELLA}x{ESTRELLA}, dibujadas a 4x y reducidas")
@@ -918,9 +930,15 @@ def main() -> None:
     print(f"  tarjeta   hueco util {tw}x{th} en {tx},{ty}"
           f"   estrellas {estrellas_w} px, nombre {tarj_der - tarj_x - estrellas_w - 8} px")
 
-    # El saldo, centrado en la ranura de abajo.
-    sx, sy, sw, sh = interior(cajas[2])
-    saldo_cx, saldo_cy = sx + sw // 2, sy + sh // 2
+    # El saldo: la moneda pegada a la izquierda del hueco UTIL, y el numero
+    # centrado en lo que sobra. Centrar el numero en la ranura ENTERA lo dejaria
+    # descolocado respecto a su moneda.
+    sx, sy, sw, sh = interior_util(chasis, cajas[2])
+    moneda_x = sx + MONEDA_AIRE
+    moneda_y = sy + (sh - MONEDA) // 2
+    resto = sx + MONEDA_AIRE + MONEDA + MONEDA_AIRE
+    saldo_cx = (resto + sx + sw) // 2
+    saldo_cy = sy + sh // 2
 
     print(f"\n  PARA PokePadScreen:")
     print(f"    REJ_X = {rej_x}, REJ_Y = {rej_y}")
@@ -929,6 +947,7 @@ def main() -> None:
     print(f"    TEXTO_ALTO = {TEXTO_ALTO}, TEXTO_SOLAPE = {TEXTO_SOLAPE}")
     print(f"    CARA_X = {cara_x}, CARA_Y = {cara_y}, CARA_LADO = {CARA_LADO}")
     print(f"    SALDO_CX = {saldo_cx}, SALDO_CY = {saldo_cy}")
+    print(f"    MONEDA_X = {moneda_x}, MONEDA_Y = {moneda_y}, MONEDA = {MONEDA}")
     print(f"    TARJ_X = {tarj_x}, TARJ_Y = {tarj_y}, TARJ_FILA = {TARJ_FILA}, "
           f"TARJ_DER = {tarj_der}")
     print(f"    BOTON = {{      // x, y, ancho, alto — en el orden de BOTONES")
@@ -943,7 +962,7 @@ def main() -> None:
             maqueta(Image.open(SALIDA / "pokepad.png"), iconos,
                     rej_x, rej_y, celda, lado, hueco_y,
                     (cara_x, cara_y), sitios, (saldo_cx, saldo_cy),
-                    (tarj_x, tarj_y, tarj_der), pag)
+                    (tarj_x, tarj_y, tarj_der), (moneda_x, moneda_y), pag)
 
 
 def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
@@ -1025,7 +1044,7 @@ def candado_provisional(lado: int) -> Image.Image:
 
 
 def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
-            cara, sitios, saldo, tarj, pagina=0) -> None:
+            cara, sitios, saldo, tarj, moneda, pagina=0) -> None:
     """Monta una pantalla con las celdas dibujadas como las dibuja el juego:
     rectangulos planos. Ver docs/ui/prompts-arte-pokepad.md §4.
 
@@ -1120,6 +1139,9 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
 
     # SOLO LunaCoins: es la unica moneda que se compra, y por eso la unica
     # que necesita el "+" de al lado.
+    if (SALIDA / "lunacoin.png").exists():
+        out.alpha_composite(Image.open(SALIDA / "lunacoin.png").convert("RGBA"),
+                            (moneda[0], moneda[1]))
     d.text((saldo[0], saldo[1]), "48", font=ImageFont.truetype("arial.ttf", 34)
            if fuente is not gorda else gorda,
            fill=(159, 200, 255, 255), anchor="mm")

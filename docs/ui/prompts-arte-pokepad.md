@@ -108,61 +108,67 @@ labels, no watermark, no user interface elements, no document.
 
 ### 3.1-bis · El fondo base v5 — 1848 × 780
 
+⚠️ **NO SE GENERA DE CERO: SE EDITA EL v4.** El primer intento pidió un chasis
+nuevo con un prompt de texto y salió lo previsible — **otro estilo**, texto
+metido dentro de los huecos y el panel de saldos flotando **encima** de la
+pantalla. Y era evitable: el v4 ya está aprobado y funciona, así que lo que hay
+que pedir es *ensancharlo*, no rehacerlo.
+
+> Se adjunta `arte/pokepad/fondo_base.png` (el v4) como imagen de referencia y
+> se usa el modo de **edición** del generador, no el de generación.
+
 **La resolución sale de tres cosas, no del gusto:**
 
 | | |
 |---|---|
 | **2,37 : 1** | Es la proporción de la referencia (1038 × 439 = 2,364) |
-| **Divisible entre 1, 2, 3, 4 y 6** | Los valores posibles de *GUI Scale*. Dibujado a tamaño real, un texel cae en un píxel sea cual sea el ajuste del jugador |
-| **Cabe en 1920 × 1017** | Que es la ventana real medida en las capturas F2. Sobran 72 × 237, así que se dibuja **a tamaño nativo y nítido** |
-
-> ⚠️ **Por qué no más ancho.** 1872 dejaría solo 48 px de margen, y por debajo de
-> la ventana el Pad tiene que encogerse — y encoger enciende el filtrado lineal,
-> que es exactamente lo que hizo que el bisel naranja del v4 se viera «de baja
-> calidad». Ver [dibujado.md](dibujado.md) §6.
-
-**Lo que cambia respecto al v4:** aparece una **franja de cabecera arriba a la
-derecha** con los dos saldos y los dos botones de ventana, y el cuerpo se
-ensancha. La pantalla y las tres ranuras de la izquierda siguen, con más sitio.
+| **Divisible entre 1, 2, 3, 4 y 6** | Los valores posibles de *GUI Scale*. A tamaño real, un texel cae en un píxel |
+| **Cabe en 1920 × 1017** | La ventana real, medida en las capturas F2. Sobran 72 × 237 |
 
 ```
-A polished modern handheld gaming device UI frame seen straight on, filling the
-whole canvas, wide landscape aspect ratio 2.37:1. Dark graphite body with
-rounded corners and soft bevels, and thin glowing amber accent lines inset along
-its edges.
-
-On the left fifth, three empty recessed slots stacked vertically: a square one
-on top, a taller rectangular one in the middle, and a wide short one at the
-bottom with a small square button recess beside it; all of them completely
-empty, just the recess and its inner shadow.
-
-Across the top right, a long raised header bar holding, from left to right: a
-small round recess, a wide empty readout recess beside it, a small square button
-recess, then again a small round recess, a wide empty readout recess and a small
-square button recess, and finally two more square button recesses at the very
-end. All of these are completely empty.
-
-The rest of the body is one single large recessed screen of flat soft off-white,
-COMPLETELY EMPTY and perfectly rectangular, with no grid, no cells and no icons
-inside it, framed by a thick bright orange bezel with chamfered corners.
-
-Centered at the top left of the header, an empty raised nameplate. Clean smooth
-shading, no visible pixels. No text, no letters, no numbers, no labels, no
-watermark, no user interface elements, no document, no icons.
+1380 x 828  ->  1848 x 780
+o sea: +468 px de ancho, TODOS a la derecha, y 48 menos de alto
 ```
 
-> **Todo va VACÍO.** Las celdas, los saldos, las estrellas y la cruz del «+» los
-> dibuja el código (§4). El chasis solo pone los huecos y sus sombras — si el
-> generador mete números o iconos dentro, el dibujo del juego cae encima y se ven
-> los dos.
+> ⚠️ **Por qué no más ancho.** 1872 dejaría solo 48 px de margen, y en cuanto el
+> Pad no cabe tiene que encogerse — y encoger enciende el filtrado lineal, que es
+> lo que hizo que el bisel naranja del v4 se viera «de baja calidad».
+> Ver [dibujado.md](dibujado.md) §6.
 
-> **El acento pasa a ÁMBAR y el bisel se queda NARANJA**, que es lo que ya trae
-> el v4 y funciona. Pedir cian aquí traería de vuelta el problema del v3: un
-> resalte que no pega con nada de lo que hay dentro.
+```
+Using the attached image as the base, keep EXACTLY the same art style, the same
+dark graphite body, the same amber accent lines, the same orange screen bezel
+with its chamfered corners and the same Rotom ears and whiskers. Do not redraw
+them, do not restyle them.
+
+Widen the canvas to a 2.37:1 landscape ratio by adding new body on the RIGHT
+side only. Keep the left column of three recessed slots and the big empty
+off-white screen exactly as they are in the base image.
+
+In the new empty space at the top right, add a raised panel that matches the
+body, holding two rows and one bottom row:
+  - first row: a small round empty recess, a wide empty readout recess beside
+    it, and a small square button recess at its right
+  - second row: exactly the same three recesses again
+  - bottom row: two square button recesses side by side
+
+This panel must sit entirely on the body, to the RIGHT of the screen, never
+overlapping the screen or its orange bezel.
+
+EVERYTHING IS EMPTY. Every recess is just a hollow with its inner shadow: no
+text, no letters, no numbers, no labels, no words, no icons, no symbols, no
+coins, no gears, no crosses, nothing drawn inside any of them. Clean smooth
+shading, no visible pixels, no watermark.
+```
+
+> ⚠️ **Lo de «todo vacío» hay que repetirlo, y aun así se cuela.** El intento
+> anterior metió «SESIÓN», «LUNACOINS:», «PLATA:» y hasta los números dentro de
+> los huecos. Los saldos, las monedas, la cruz y los iconos de los botones los
+> dibuja el código encima (§4): si vienen ya pintados, se ven **los dos**.
 
 > **Después de generarlo:** `python tools/gen_pokepad.py --maqueta`. Las medidas
-> —pantalla, ranuras, franja, huecos de los saldos— **se miden solas**; lo único
-> que hay que hacer es mirar la lámina y comprobar que las encontró todas.
+> —pantalla, ranuras, panel, huecos— se miden solas; lo único que hay que hacer
+> es mirar la lámina y comprobar que las encontró todas.
 
 ---
 

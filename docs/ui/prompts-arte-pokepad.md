@@ -195,7 +195,7 @@ mercado y el clan deja de ser un estandarte de guerra.
 | 2 | `cosmeticos` | `a cute chubby yellow electric mouse creature with long black-tipped ears, round red cheeks and a lightning-bolt tail, wearing stylish sunglasses and a backwards cap, smiling and relaxed, with one small sparkle beside it` |
 | 3 | `trabajos` | `a shiny iron pickaxe and a fishing rod crossed in an X, wooden handles, a tiny Poke Ball hanging from the fishing line` |
 | 4 | `misiones` | `a modern clipboard with a checklist and one green check mark, and a small Poke Ball clipped to its top` |
-| 5 | `warps` | `a glowing circular teleport pad seen at a slight angle from above, its raised rim a bright neon cyan ring with a red and white creature-catching ball emblem inlaid flat at its center, a soft wide column of pale blue light rising from it, and two smaller dimmer pads floating behind it at different heights` **(v2)** |
+| 5 | `warps` | `a single glowing circular teleport platform seen at a slight three-quarter angle from above, filling the frame, chunky faceted pedestal of pale stone and metal blocks, raised rim a bright neon cyan ring, a red and white creature-catching ball emblem inlaid flat at the center, a low soft cyan glow spilling from the rim. Only one platform, no beam` **(v2)** |
 | 6 | `clan` | `a rounded shield emblem with a Poke Ball in the center and two small wings at its sides, friendly and modern, not warlike` |
 | 7 | `gts` | `two Poke Balls facing each other with a bright green emerald floating between them and a smooth circular exchange arrow around all three` |
 | 8 | `tienda` | `a small friendly shop building with a bright blue tiled roof and a red and white striped awning over its open counter, a big round red and white creature-catching ball sign hanging above the doorway, and a small stack of gold coins resting on the counter` **(v2)** |
@@ -222,20 +222,29 @@ mercado y el clan deja de ser un estandarte de guerra.
 > criatura voladora sobrevolando el mapa; y el bloque de hierba gana un
 > caminito, una bola y una criatura asomándose.
 >
-> **`warps` costó tres intentos, y el error fue el mismo las dos veces: dibujar
-> el VIAJE en vez del SITIO.** Primero una criatura épica sobre un mapa, después
-> un taxi volador con su cesta. Los dos contaban un desplazamiento largo, y esa
-> aplicación no es eso: en la ciudadela va a haber **varios puntos a los que te
-> teletransportas**, así que lo que hay que dibujar es la **plataforma** a la que
-> te subes — y dos más detrás, para que se lea que son varias.
+> **`warps` costó cuatro intentos y cada uno enseña algo distinto.**
 >
-> La lección, para el siguiente icono que se atasque: **un icono de menú nombra
-> un sitio, no una acción.** Cuando cuesta dos intentos, casi siempre es que se
-> está ilustrando el verbo en vez del sustantivo.
+> | Intento | Qué se pidió | Por qué no valía |
+> |---|---|---|
+> | 1 | criatura épica sobre un mapa | contaba un **viaje largo**; esto son TP dentro de la ciudad |
+> | 2 | taxi volador con cesta | lo mismo: un **vehículo**, no un sitio |
+> | 3 | plataforma + haz alto + dos pads de fondo | el dibujo estaba bien y **la composición lo mataba**: entre el haz y los pads flotantes, la plataforma buena se quedaba en el tercio de abajo y diminuta |
+> | 4 | **una sola plataforma llenando el cuadro** | ✅ |
 >
-> El anillo de neón cian no es decoración: ata el icono a *nuestra* ciudadela
-> —de noche permanente y llena de neón (D-029)— en vez de servir para cualquier
-> servidor Cobblemon. Es el test del §1 de CLAUDE.md aplicado a un icono.
+> Dos lecciones, y la segunda es la que se repite más:
+>
+> **Un icono de menú nombra un SITIO, no una acción.** Cuando cuesta dos
+> intentos, casi siempre es que se está ilustrando el verbo en vez del
+> sustantivo.
+>
+> **Cada elemento que se añade a un prompt le quita tamaño al principal.** El
+> zócalo facetado y el anillo cian del intento 3 estaban perfectos; lo único que
+> sobraba era todo lo demás. A 100 × 100 no hay sitio para una escena — hay
+> sitio para **un objeto**.
+>
+> ⚠️ **Y hay que poner el formato en 1:1 antes de generar.** El intento 3 salió a
+> 1024 × 559, apaisado. La plantilla dice «fills almost the entire square» pero
+> eso no cambia el ajuste de proporción del generador.
 
 > Prompts montados y listos para pegar en
 > [`build/pokepad/prompts-iconos-v2.txt`](../../build/pokepad/prompts-iconos-v2.txt).

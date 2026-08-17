@@ -195,7 +195,7 @@ mercado y el clan deja de ser un estandarte de guerra.
 | 2 | `cosmeticos` | `a cute chubby yellow electric mouse creature with long black-tipped ears, round red cheeks and a lightning-bolt tail, wearing stylish sunglasses and a backwards cap, smiling and relaxed, with one small sparkle beside it` |
 | 3 | `trabajos` | `a shiny iron pickaxe and a fishing rod crossed in an X, wooden handles, a tiny Poke Ball hanging from the fishing line` |
 | 4 | `misiones` | `a modern clipboard with a checklist and one green check mark, and a small Poke Ball clipped to its top` |
-| 5 | `warps` | `a majestic blue and white bird-like creature with a long flowing ribbon tail and wide spread feathered wings, seen in flight from the side, soaring above a small rounded floating map fragment with a glowing red location pin on it` **(v2)** |
+| 5 | `warps` | `a large friendly raven-like creature with glossy steel-blue armored feathers and a small crest, hovering with wings spread and carrying a round woven passenger basket in its talons, flying just above two small rounded city rooftops with tiny glowing cyan and magenta neon signs` **(v2)** |
 | 6 | `clan` | `a rounded shield emblem with a Poke Ball in the center and two small wings at its sides, friendly and modern, not warlike` |
 | 7 | `gts` | `two Poke Balls facing each other with a bright green emerald floating between them and a smooth circular exchange arrow around all three` |
 | 8 | `tienda` | `a small friendly shop building with a bright blue tiled roof and a red and white striped awning over its open counter, a big round red and white creature-catching ball sign hanging above the doorway, and a small stack of gold coins resting on the counter` **(v2)** |
@@ -222,6 +222,15 @@ mercado y el clan deja de ser un estandarte de guerra.
 > criatura voladora sobrevolando el mapa; y el bloque de hierba gana un
 > caminito, una bola y una criatura asomándose.
 >
+> **`warps` se corrigió dos veces, y la segunda es la que importa.** El primer
+> intento era una criatura voladora épica sobrevolando un mapa — bonito, y
+> equivocado: **esa aplicación no son viajes largos, son los teletransportes
+> DENTRO de la ciudadela**. Un taxi, no una travesía. Corregido a un taxi
+> volador con su cesta de pasajeros sobre tejados con rótulos de neón, que
+> además ata el icono a *nuestra* ciudad —de noche permanente y llena de neón—
+> en vez de servir para cualquier servidor Cobblemon. Es literalmente el test
+> del §1 de CLAUDE.md aplicado a un icono.
+
 > Prompts montados y listos para pegar en
 > [`build/pokepad/prompts-iconos-v2.txt`](../../build/pokepad/prompts-iconos-v2.txt).
 

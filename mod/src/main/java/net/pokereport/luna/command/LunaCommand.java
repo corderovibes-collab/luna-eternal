@@ -206,7 +206,12 @@ public final class LunaCommand {
                 long marks   = LunaEternal.economy().balance(id, Currency.MARK);
                 // Volver al hilo del servidor para hablar con el jugador.
                 p.getServer().execute(() -> p.sendMessage(Text.literal(
-                    "§6PokeDolares: §f" + dollars + "  §b| Marcas: §f" + marks), false));
+                    // El nombre sale del enum, no escrito aqui: cambiarlo en
+                    // dos sitios es como se acaba con una pantalla que dice
+                    // "Plata" y un comando que sigue diciendo otra cosa.
+                    Currency.POKEDOLLAR.color + Currency.POKEDOLLAR.displayName
+                    + ": §f" + dollars + "  " + Currency.MARK.color
+                    + Currency.MARK.displayName + ": §f" + marks), false));
             } catch (Exception e) {
                 reply(p, "§cError al consultar el saldo: " + e.getMessage());
             }
@@ -263,7 +268,8 @@ public final class LunaCommand {
                     .auditDiscrepancy(id, Currency.MARK);
                 String msg = (dd == 0 && dm == 0)
                     ? "§aSaldo y libro de asientos cuadran."
-                    : "§c¡DESCUADRE! PokeDolares: " + dd + "  Marcas: " + dm;
+                    : "§c¡DESCUADRE! " + Currency.POKEDOLLAR.displayName + ": " + dd
+                      + "  " + Currency.MARK.displayName + ": " + dm;
                 reply(p, msg);
             } catch (Exception e) {
                 reply(p, "§cError al auditar: " + e.getMessage());

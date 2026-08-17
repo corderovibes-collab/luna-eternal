@@ -18,8 +18,19 @@ package net.pokereport.luna.economy;
  */
 public enum Currency {
 
-    /** Transferible. La economía real: se gana jugando y se comercia. */
-    POKEDOLLAR("PokéDólares", "§6", true, false),
+    /**
+     * Transferible. La economía real: se gana jugando y se comercia.
+     *
+     * <p><b>Se llama «Plata» desde el 2026-08-17</b> (decisión del usuario).
+     * El identificador interno sigue siendo {@code POKEDOLLAR} y no se toca:
+     * está en la base de datos, y separar el nombre visible del interno es
+     * justo lo que convierte esto en una línea en vez de una migración (D-018).
+     *
+     * <p>El color pasa de dorado a blanco por lo mismo que el saldo del
+     * PokePad: el dorado es ahora de las LunaCoins, y dos monedas del mismo
+     * color dejan de distinguirse de un vistazo.
+     */
+    POKEDOLLAR("Plata", "§f", true, false),
 
     /**
      * Vinculada al jugador. Se gana con logros y descubrimientos; paga
@@ -32,7 +43,7 @@ public enum Currency {
      * Premium. Se compra con dinero real y solo paga identidad y comodidad.
      *
      * <p><b>No es transferible a propósito.</b> Si lo fuera, los jugadores lo
-     * venderían por PokéDólares y habríamos creado la conversión prohibida por
+     * venderían por Plata y habríamos creado la conversión prohibida por
      * la puerta de atrás, sin decidirlo nadie.
      */
     REPORTCOIN("LunaCoins", "§e", false, true);
@@ -47,7 +58,7 @@ public enum Currency {
      * esa decisión en esta línea en vez de una migración de esquema (D-018), que
      * era exactamente para lo que se separó.
      *
-     * <p><b>Y en el PokePad solo se enseñan DOS monedas</b>, PokéDólares y
+     * <p><b>Y en el PokePad solo se enseñan DOS monedas</b>, Plata y
      * LunaCoins. Las Marcas siguen existiendo —son lo que impide que la
      * progresión se compre— pero no salen en la pantalla principal.
      */

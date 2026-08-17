@@ -616,7 +616,7 @@ public class PokePadScreen extends Screen {
         //
         // AQUÍ ABAJO SOLO VAN LAS LUNACOINS. Decisión del usuario, y tiene
         // sentido: es la única moneda que se compra, así que es la única que
-        // necesita un «+» al lado. Los PokéDólares se ganan jugando y no hay
+        // necesita un «+» al lado. La Plata se gana jugando y no hay
         // nada que pulsar para tener más.
         // 27 y no 18: es TRES veces los 9 que mide la fuente de Minecraft, así
         // que sigue cayendo en píxeles enteros y no se emborrona. Es el único

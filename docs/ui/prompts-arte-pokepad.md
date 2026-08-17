@@ -207,6 +207,7 @@ mercado y el clan deja de ser un estandarte de guerra.
 | 14 | `gyms` | `an open hinged gym badge case seen at a slight three-quarter angle, filling the frame, rounded red and white shell with a thick gold rim and clasp, the lid raised behind, the inside lined with dark blue velvet holding six shiny enamel badges in shaped slots in two rows of three — star, teardrop, flame, leaf, gear, crescent — each a different bold color with a gold edge` **(v2)** |
 | 15 | `explorar` | `a tall ancient stone gateway arch filling the frame, chunky weathered stone blocks with moss and glowing violet runes carved along its sides, a red and white creature-catching ball emblem as the keystone, the archway filled with a swirling violet and magenta energy vortex and a faint glimpse of distant green hills through it` **(v2)** |
 
+| — | `candado` | `a padlock whose body is a red and white creature-catching ball, upper half glossy red, lower half clean white, a bold dark band across the middle and the round center button shaped as a small keyhole with a thin gold rim, a thick polished steel shackle arcing up out of the top, closed, two faint cyan sparks near the shackle` **(2.ª página)** |
 
 > **Seis se rehicieron el 2026-08-16** (marcados **v2**): viajes, tienda, wiki,
 > cazas, gimnasios y explorar. El motivo lo dio el usuario: *no se parecían al
@@ -273,6 +274,18 @@ mercado y el clan deja de ser un estandarte de guerra.
 > | Color | neón **cian** | vórtice **violeta** |
 >
 > Dos portales cianes en la misma pantalla serían el mismo botón dos veces.
+
+> **El candado de la segunda página es una Poké Ball**, y esa es toda la idea:
+> no una Poké Ball *con* un candado al lado ni un candado *con* una pegatina —
+> **el cuerpo del candado es la bola, y su botón central es el ojo de la
+> cerradura**. Se lee a la vez «cerrado» y «Pokémon» sin meter dos objetos en un
+> cuadro de 100 × 100, que es el error que ya costó cuatro intentos en `warps`.
+>
+> Las chispas cian y el filo dorado no son adorno: son lo que separa este
+> candado de uno de «prohibido». Tiene que decir **pronto**, no **no puedes**.
+>
+> Va **uno repetido quince veces**. Quince dibujos distintos dirían que hay
+> quince cosas distintas esperando, y no es verdad: lo que hay es sitio libre.
 
 > Prompts montados y listos para pegar en
 > [`build/pokepad/prompts-iconos-v2.txt`](../../build/pokepad/prompts-iconos-v2.txt).

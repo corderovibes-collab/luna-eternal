@@ -6,11 +6,35 @@ import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 
 const UA = 'PokeReportLauncher/1.2';
-const RETRIES = 4;
+const RETRIES = 8;
+
+/**
+ * Cuanto se espera a que el servidor CONTESTE antes de darlo por colgado.
+ *
+ * ⚠ SIN ESTO EL LAUNCHER SE QUEDA EN "COMPROBANDO ACTUALIZACIONES" PARA
+ * SIEMPRE. El `fetch` de Node NO TIENE TIEMPO LIMITE POR DEFECTO: si la
+ * conexion se queda a medias --y `raw.githubusercontent` contesta
+ * `503 Backend.max_conn reached`, o directamente no contesta, cuando le llegan
+ * muchas conexiones-- la promesa no se resuelve ni se rechaza NUNCA. El jugador
+ * ve el mensaje ahi clavado: sin error, sin barra y sin forma de salir.
+ *
+ * Es justo lo que hacia que a unos les funcionara y a otros no. Quien ya tiene
+ * el pack bajado no vuelve a pedir casi nada; quien instala de cero se quedaba
+ * colgado en la primera peticion, que ademas es la del manifiesto.
+ *
+ * Cubre solo la ESPERA A LA CABECERA, no la descarga: el reloj se para en
+ * cuanto el servidor empieza a contestar, asi que un fichero de 130 MB no se
+ * corta por tardar en bajar.
+ */
+const TIEMPO_LIMITE = 30_000;
+
+/** Tope de la espera entre reintentos. */
+const ESPERA_MAX = 30_000;
+
 
 /** Espera con retroceso exponencial y algo de jitter para no sincronizar reintentos. */
 const backoff = (attempt) =>
-  new Promise((r) => setTimeout(r, Math.min(500 * 2 ** attempt, 8000) + Math.random() * 250));
+  new Promise((r) => setTimeout(r, Math.min(500 * 2 ** attempt, ESPERA_MAX) + Math.random() * 250));
 
 /**
  * Ejecuta `worker` sobre cada elemento con como máximo `limit` en vuelo.
@@ -33,9 +57,15 @@ export async function pool(items, limit, worker) {
 }
 
 async function request(url, init = {}, attempt = 0) {
+  // El reloj se para en cuanto llega la cabecera: `clearTimeout` corre al salir
+  // de esta funcion, y el cuerpo se lee DESPUES. Asi un fichero grande puede
+  // tardar lo que haga falta en bajar sin que nadie lo aborte.
+  const corte = new AbortController();
+  const reloj = setTimeout(() => corte.abort(), TIEMPO_LIMITE);
   try {
     const res = await fetch(url, {
       ...init,
+      signal: corte.signal,
       headers: { 'User-Agent': UA, ...(init.headers ?? {}) },
     });
     // 4xx (salvo 408/429) son definitivos: reintentar solo gasta tiempo.
@@ -45,9 +75,19 @@ async function request(url, init = {}, attempt = 0) {
     if (!res.ok) throw new Error(`HTTP ${res.status} en ${url}`);
     return res;
   } catch (err) {
-    if (err.fatal || attempt >= RETRIES) throw err;
+    if (err.fatal || attempt >= RETRIES) {
+      // Un aborto es un cuelgue, y "This operation was aborted" no le dice nada
+      // a nadie. Se cambia por lo que de verdad ha pasado.
+      if (err?.name === 'AbortError' || err?.name === 'TimeoutError') {
+        throw new Error(`El servidor no contesta (${url}). `
+          + 'Vuelve a darle a Jugar en un minuto.');
+      }
+      throw err;
+    }
     await backoff(attempt);
     return request(url, init, attempt + 1);
+  } finally {
+    clearTimeout(reloj);
   }
 }
 

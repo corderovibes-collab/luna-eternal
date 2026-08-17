@@ -314,6 +314,24 @@ def publicar() -> None:
         subprocess.run(["gh", "repo", "clone", REPO_PUBLICO, str(clon)], check=True)
     subprocess.run(["git", "-C", str(clon), "pull", "--quiet"], check=True)
 
+    # ⚠ SIN ESTO GIT CAMBIA LOS FINALES DE LINEA Y EL MANIFIESTO MIENTE.
+    #
+    # El repositorio del pack es un ALMACEN DE FICHEROS, no codigo fuente: lo
+    # que se sube tiene que llegar al jugador byte a byte. Sin `-text`, git
+    # convierte CRLF a LF al hacer commit en cualquier fichero que le parezca
+    # texto, y entonces:
+    #
+    #   el manifiesto anuncia el tamano y el sha1 del fichero LOCAL (con CRLF)
+    #   el CDN sirve el fichero NORMALIZADO (con LF), mas corto
+    #
+    # Medido: `config/yosbr/options.txt` son 8.150 B aqui y 7.921 alli --229 de
+    # diferencia, que son sus 229 lineas-- y el sha1 no coincide. Eran 24
+    # ficheros de configuracion, y el launcher los daba por corruptos y volvia a
+    # bajarlos EN CADA ARRANQUE, para siempre.
+    (clon / ".gitattributes").write_text(
+        "# El pack es un almacen de ficheros: nada de tocar finales de linea.\n"
+        "* -text\n", encoding="utf-8")
+
     for nombre in ("manifest.json", "servers.dat", "iris.properties"):
         (clon / nombre).write_bytes((SALIDA / nombre).read_bytes())
 
@@ -370,6 +388,17 @@ def publicar() -> None:
             viejo.unlink()
             print(f"  retirado {viejo.name}")
 
+    # Se vuelve a registrar TODO bajo las reglas de `.gitattributes`.
+    #
+    # Poner el fichero no basta: los blobs que git ya tenia guardados siguen
+    # normalizados, y git no los reescribe porque, para el, el contenido no ha
+    # cambiado. `rm --cached` los saca del indice sin tocar el disco y el `add`
+    # siguiente los vuelve a leer, ahora sin convertir nada.
+    #
+    # Es idempotente y sale barato: una vez arreglado, el `add` no encuentra
+    # diferencias y el commit sale vacio.
+    subprocess.run(["git", "-C", str(clon), "rm", "--cached", "-r", "-q", "."],
+                   check=True)
     subprocess.run(["git", "-C", str(clon), "add", "-A"], check=True)
     hay_cambios = subprocess.run(
         ["git", "-C", str(clon), "diff", "--cached", "--quiet"]).returncode != 0

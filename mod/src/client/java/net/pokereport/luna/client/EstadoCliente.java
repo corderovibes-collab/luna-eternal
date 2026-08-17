@@ -17,11 +17,21 @@ import net.pokereport.luna.net.Red;
 public final class EstadoCliente {
 
     private static Red.Saldo saldo;
+    private static Red.Ficha ficha;
 
     private EstadoCliente() {}
 
     public static void guardar(Red.Saldo nuevo) {
         saldo = nuevo;
+    }
+
+    public static void guardar(Red.Ficha nueva) {
+        ficha = nueva;
+    }
+
+    /** {@code null} mientras no haya llegado nada del servidor. */
+    public static Red.Ficha ficha() {
+        return ficha;
     }
 
     /** {@code null} mientras no haya llegado nada del servidor. */
@@ -32,5 +42,6 @@ public final class EstadoCliente {
     /** Al salir del mundo se olvida: el saldo es de esa partida, no del cliente. */
     public static void olvidar() {
         saldo = null;
+        ficha = null;
     }
 }

@@ -74,6 +74,27 @@ BORDE_ENCIMA = (243, 92, 12, 255)       # muestreado del bisel naranja del v4
 TEXTO_COLOR = (22, 32, 58, 255)
 TEXTO_CONTORNO = (242, 246, 255, 255)
 
+# LA TARJETA DE ENTRENADOR. Mismos numeros que PokePadScreen.
+#
+# Las cinco Vias (PROG-001) con su nivel. El proyecto decidio a proposito que NO
+# existe un "nivel de jugador": cinco reputaciones independientes hacen que el
+# progreso sea un PERFIL y no una cifra. Eso es lo que enseña este panel, y
+# hasta ahora no se veia en ninguna pantalla.
+VIAS = [
+    ("Explorador",    (85, 255, 85, 255)),
+    ("Entrenador",    (255, 85, 85, 255)),
+    ("Coleccionista", (85, 255, 255, 255)),
+    ("Comerciante",   (255, 170, 0, 255)),
+    ("Criador",       (255, 123, 224, 255)),
+]
+TARJ_X, TARJ_Y, TARJ_FILA = 100, 383, 38
+TARJ_DER = 336
+PUNTO, PUNTO_SEP = 10, 4
+PUNTO_VACIO = (70, 76, 96, 255)
+# Solo para la maqueta: unos niveles de ejemplo. En el juego los manda el
+# servidor.
+NIVELES_MAQUETA = [3, 2, 1, 4, 0]
+
 # Que celda ensena la maqueta con el raton encima. La de en medio, para poder
 # compararla con sus ocho vecinas de una sola mirada.
 RESALTADA = 7
@@ -949,12 +970,28 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
     d.rectangle([cara[0], cara[1], cara[0] + CARA_LADO - 1, cara[1] + CARA_LADO - 1],
                 fill=(150, 110, 90, 255), outline=(210, 170, 150, 255), width=2)
 
-    # Y el saldo, con el mismo amarillo y el mismo centrado que el codigo.
+    # LA TARJETA DE ENTRENADOR. Mismos numeros que PokePadScreen: si la
+    # maqueta no ensena lo que se va a ver, no sirve para aprobar nada.
     try:
-        fuente = ImageFont.truetype("arial.ttf", 30)
+        fuente = ImageFont.truetype("arial.ttf", TEXTO_ALTO)
+        gorda = ImageFont.truetype("arial.ttf", 22)
     except OSError:
-        fuente = ImageFont.load_default()
-    d.text(saldo, "12,345", font=fuente, fill=(255, 225, 46, 255), anchor="mm")
+        fuente = gorda = ImageFont.load_default()
+    for i, (nombre, color) in enumerate(VIAS):
+        y = TARJ_Y + i * TARJ_FILA
+        d.text((TARJ_X, y), nombre, font=fuente, fill=color)
+        for pnt in range(5):
+            px = TARJ_DER - (5 - pnt) * (PUNTO + PUNTO_SEP)
+            py = y + 4
+            lleno = pnt < NIVELES_MAQUETA[i]
+            d.rectangle([px, py, px + PUNTO - 1, py + PUNTO - 1],
+                        fill=color if lleno else PUNTO_VACIO)
+
+    # Las DOS monedas. Ni tres: el jugador ve PokeDolares y LunaCoins.
+    d.text((saldo[0], saldo[1] - 22), "12,345", font=gorda,
+           fill=(255, 225, 46, 255), anchor="mm")
+    d.text((saldo[0], saldo[1] + 4), "48", font=gorda,
+           fill=(159, 200, 255, 255), anchor="mm")
 
     # Sin ampliar. El chasis ya mide 1380x828, que es el tamano al que se va a
     # dibujar en pantalla: ampliarlo ensenaria algo que nadie va a ver. Antes se

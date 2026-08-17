@@ -543,16 +543,80 @@ public class PokePadScreen extends Screen {
                 x0 + Math.round(CARA_X * k), y0 + Math.round(CARA_Y * k),
                 lado, lado, 40f, 8f, 8, 8, 64, 64);
 
+        tarjeta(ctx);
+
         Red.Saldo saldo = EstadoCliente.saldo();
         // Guiones mientras no ha llegado la respuesta: "no lo sé" y "tienes
         // cero" no son lo mismo, y un cero falso en un saldo asusta.
-        String texto = saldo == null ? "- - -" : String.format("%,d", saldo.pokedolares());
-        // Centrado en su ranura, en los dos ejes.
-        ctx.drawCenteredTextWithShadow(textRenderer, Text.literal(texto),
-                x0 + Math.round(SALDO_CX * k),
-                y0 + Math.round(SALDO_CY * k) - textRenderer.fontHeight / 2,
-                0xFFFFE12E);
+        //
+        // DOS MONEDAS Y NO TRES. Decisión del usuario: el jugador ve
+        // PokéDólares y LunaCoins. Las Marcas siguen existiendo —son lo que
+        // impide que la progresión se compre— pero no salen aquí.
+        texto(ctx, Text.literal(saldo == null ? "- - -"
+                        : String.format("%,d", saldo.pokedolares())),
+                SALDO_CX, SALDO_CY - 22, TEXTO_ALTO, ORO, true, false);
+        texto(ctx, Text.literal(saldo == null ? "- - -"
+                        : String.format("%,d", saldo.reportcoins())),
+                SALDO_CX, SALDO_CY + 4, TEXTO_ALTO, LUNA, true, false);
+    }
 
+    /** El amarillo de los PokéDólares y el azul luna de los LunaCoins. */
+    private static final int ORO = 0xFFFFE12E;
+    private static final int LUNA = 0xFF9FC8FF;
+
+    /** La tarjeta: dónde empieza, cuánto mide una fila y cómo son los puntos. */
+    private static final int TARJ_X = 100, TARJ_Y = 383, TARJ_FILA = 38;
+    private static final int TARJ_DER = 336;
+    private static final int PUNTO = 10, PUNTO_SEP = 4;
+    private static final int PUNTO_VACIO = 0xFF464C60;
+
+    /** Los cinco colores de las Vías, en el orden de {@code Path.values()}. */
+    private static final int[] VIA_COLOR = {
+            0xFF55FF55,   // Explorador     verde
+            0xFFFF5555,   // Entrenador     rojo
+            0xFF55FFFF,   // Coleccionista  cian
+            0xFFFFAA00,   // Comerciante    dorado
+            0xFFFF7BE0,   // Criador        rosa
+    };
+
+    /**
+     * La tarjeta de entrenador: las cinco Vías con su nivel.
+     *
+     * <p><b>Va aquí y no en un número único porque no hay número único.</b> El
+     * proyecto decidió a propósito que no existe un «nivel de jugador»: cinco
+     * reputaciones independientes hacen que el progreso sea un <i>perfil</i> y
+     * no una cifra, y que dos jugadores con el mismo tiempo jugado sean
+     * personas distintas. Eso es lo que este panel enseña, y hasta ahora no se
+     * veía en ninguna pantalla.
+     *
+     * <p>Debajo de la cara a propósito: la cara dice quién eres, la tarjeta qué
+     * has hecho y el saldo qué tienes. Los tres huecos del panel se leen de
+     * arriba abajo como una sola cosa.
+     */
+    private void tarjeta(DrawContext ctx) {
+        Red.Ficha ficha = EstadoCliente.ficha();
+        int lado = Math.max(1, Math.round(PUNTO * k));
+        int paso = Math.round((PUNTO + PUNTO_SEP) * k);
+
+        for (int i = 0; i < VIA_COLOR.length; i++) {
+            int artY = TARJ_Y + i * TARJ_FILA;
+            texto(ctx, Text.translatable("pokepad.lunaeternal.via." + i),
+                    TARJ_X, artY, TEXTO_ALTO, VIA_COLOR[i], false, false);
+
+            // Mientras no llegue la ficha, los cinco puntos salen vacíos. Es lo
+            // mismo que hacen los guiones del saldo: no se inventa un cero.
+            int nivel = ficha == null || i >= ficha.vias().size()
+                    ? 0 : ficha.vias().get(i);
+            for (int p = 0; p < 5; p++) {
+                // Alineados por la DERECHA: así los cinco puntos de las cinco
+                // filas caen en la misma columna aunque los nombres midan
+                // distinto, que es lo que deja leerlos como una tabla.
+                int px = x0 + Math.round(TARJ_DER * k) - (5 - p) * paso;
+                int py = y0 + Math.round((artY + 4) * k);
+                ctx.fill(px, py, px + lado, py + lado,
+                        p < nivel ? VIA_COLOR[i] : PUNTO_VACIO);
+            }
+        }
     }
 
     /** Los seis botones, cada uno donde le toca. */
@@ -665,6 +729,17 @@ public class PokePadScreen extends Screen {
      */
     private void texto(DrawContext ctx, net.minecraft.text.Text linea,
                        int cx, int arriba, int alto, int color) {
+        texto(ctx, linea, cx, arriba, alto, color, true, true);
+    }
+
+    /**
+     * @param centrado {@code false} para alinear por la izquierda desde {@code cx}
+     * @param contorno {@code false} sobre fondo oscuro, donde no hace falta y
+     *                 además engorda la letra
+     */
+    private void texto(DrawContext ctx, net.minecraft.text.Text linea,
+                       int cx, int arriba, int alto, int color,
+                       boolean centrado, boolean contorno) {
         float escala = alto * k / textRenderer.fontHeight;
         if (escala <= 0) {
             return;
@@ -678,7 +753,8 @@ public class PokePadScreen extends Screen {
         // ella: lo que se pide en pixeles del arte acaba cayendo donde toca.
         // Y el centrado se hace a mano porque la version "conSombra" no deja
         // apagar la sombra, y aqui hace falta contorno en vez de sombra.
-        int px = Math.round(cx * k / escala) - textRenderer.getWidth(linea) / 2;
+        int px = Math.round(cx * k / escala)
+                - (centrado ? textRenderer.getWidth(linea) / 2 : 0);
         int py = Math.round(arriba * k / escala);
 
         // ⚠ CONTORNO, NO SOMBRA.
@@ -698,10 +774,12 @@ public class PokePadScreen extends Screen {
         // EN CRUZ Y NO EN LAS OCHO DIRECCIONES. Con las diagonales el contorno
         // sale grueso y el nombre se emborrona; en cruz cierra igual la letra y
         // pesa la mitad.
-        ctx.drawText(textRenderer, linea, px - 1, py, TEXTO_CONTORNO, false);
-        ctx.drawText(textRenderer, linea, px + 1, py, TEXTO_CONTORNO, false);
-        ctx.drawText(textRenderer, linea, px, py - 1, TEXTO_CONTORNO, false);
-        ctx.drawText(textRenderer, linea, px, py + 1, TEXTO_CONTORNO, false);
+        if (contorno) {
+            ctx.drawText(textRenderer, linea, px - 1, py, TEXTO_CONTORNO, false);
+            ctx.drawText(textRenderer, linea, px + 1, py, TEXTO_CONTORNO, false);
+            ctx.drawText(textRenderer, linea, px, py - 1, TEXTO_CONTORNO, false);
+            ctx.drawText(textRenderer, linea, px, py + 1, TEXTO_CONTORNO, false);
+        }
         ctx.drawText(textRenderer, linea, px, py, color, false);
         m.pop();
     }

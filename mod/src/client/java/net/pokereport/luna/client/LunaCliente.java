@@ -40,6 +40,8 @@ public class LunaCliente implements ClientModInitializer {
         // La respuesta del servidor con el saldo. Solo se guarda para dibujarla.
         ClientPlayNetworking.registerGlobalReceiver(Red.Saldo.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
+        ClientPlayNetworking.registerGlobalReceiver(Red.Ficha.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
 
         // La voz de la Pokédex. Llega solo a quien ha escaneado; aquí solo se
         // reproduce, la decisión de a quién mandarla es del servidor.

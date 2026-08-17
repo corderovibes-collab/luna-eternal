@@ -35,16 +35,21 @@ public enum Currency {
      * venderían por PokéDólares y habríamos creado la conversión prohibida por
      * la puerta de atrás, sin decidirlo nadie.
      */
-    REPORTCOIN("ReportCoins", "§e", false, true);
+    REPORTCOIN("LunaCoins", "§e", false, true);
 
     /**
      * Nombre que ve el jugador. <b>No es final a propósito:</b> se puede
      * cambiar desde la configuración sin tocar la base de datos.
      *
-     * <p>El nombre de la moneda premium está sin decidir ("ReportCoins" o
-     * "LunaCoins"). Separar el identificador interno del nombre visible
-     * convierte esa decisión en una línea de configuración en vez de una
-     * migración de esquema (D-018).
+     * <p><b>Decidido el 2026-08-16: la moneda premium se llama «LunaCoins».</b>
+     * El identificador interno sigue siendo {@code REPORTCOIN} y no se toca —
+     * está en la base de datos. Separar el nombre visible del interno convirtió
+     * esa decisión en esta línea en vez de una migración de esquema (D-018), que
+     * era exactamente para lo que se separó.
+     *
+     * <p><b>Y en el PokePad solo se enseñan DOS monedas</b>, PokéDólares y
+     * LunaCoins. Las Marcas siguen existiendo —son lo que impide que la
+     * progresión se compre— pero no salen en la pantalla principal.
      */
     public String displayName;
     /** Color de chat, para que cada moneda se reconozca de un vistazo. */

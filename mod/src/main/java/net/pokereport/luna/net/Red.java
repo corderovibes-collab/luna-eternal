@@ -1,5 +1,8 @@
 package net.pokereport.luna.net;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -10,6 +13,7 @@ import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.util.Identifier;
 import net.pokereport.luna.LunaEternal;
 import net.pokereport.luna.economy.Currency;
+import net.pokereport.luna.progression.Path;
 
 /**
  * Lo que viaja entre el servidor y el PokePad.
@@ -62,6 +66,33 @@ public class Red implements ModInitializer {
     }
 
     /**
+     * La tarjeta de entrenador: el nivel de cada una de las cinco Vías.
+     *
+     * <p><b>Va como lista y no como cinco campos con nombre</b>, en el orden de
+     * {@code Path.values()}. Añadir una Vía sexta sería entonces cambiar el
+     * enum y ya; con cinco campos fijos habría que tocar el paquete, el códec,
+     * la caché del cliente y el dibujado, y bastaría olvidarse de uno para que
+     * la nueva no apareciera sin que nada fallara.
+     *
+     * <p>Solo el nivel, no la experiencia: la tarjeta enseña <i>en qué punto
+     * estás</i>, y una barra de progreso dentro de cada nivel a este tamaño
+     * sería tres píxeles moviéndose.
+     */
+    public record Ficha(List<Integer> vias) implements CustomPayload {
+        public static final Id<Ficha> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "ficha"));
+        public static final PacketCodec<RegistryByteBuf, Ficha> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_INT.collect(PacketCodecs.toList()),
+                        Ficha::vias, Ficha::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
      * La voz de la Pokédex: «reproduce la descripción de esta especie».
      *
      * <p>Viaja <b>solo al jugador que ha escaneado</b>, que es todo el diseño:
@@ -90,6 +121,7 @@ public class Red implements ModInitializer {
     public void onInitialize() {
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
+        PayloadTypeRegistry.playS2C().register(Ficha.ID, Ficha.CODEC);
         PayloadTypeRegistry.playS2C().register(VozPokedex.ID, VozPokedex.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
@@ -105,14 +137,27 @@ public class Red implements ModInitializer {
                             eco.balance(id, Currency.POKEDOLLAR),
                             eco.balance(id, Currency.MARK),
                             eco.balance(id, Currency.REPORTCOIN));
+                    // La tarjeta viaja en la MISMA peticion. Podria ser otro
+                    // paquete con su propio viaje, pero se abren juntos y se
+                    // dibujan juntos: dos idas y vueltas para pintar un mismo
+                    // panel son dos formas de que llegue medio.
+                    var niveles = LunaEternal.progression().all(id);
+                    List<Integer> vias = new ArrayList<>(Path.values().length);
+                    for (Path via : Path.values()) {
+                        var estado = niveles.get(via);
+                        vias.add(estado == null ? 0 : estado.level());
+                    }
+                    var ficha = new Ficha(vias);
                     // Volver al hilo del servidor para enviar: la red no es
                     // segura desde un hilo cualquiera.
-                    jugador.getServer().execute(() ->
-                            ServerPlayNetworking.send(jugador, saldo));
+                    jugador.getServer().execute(() -> {
+                        ServerPlayNetworking.send(jugador, saldo);
+                        ServerPlayNetworking.send(jugador, ficha);
+                    });
                 } catch (Exception e) {
                     // Que no se pueda leer el saldo no es motivo para echar a
                     // nadie: el Pad se queda con guiones donde iría el número.
-                    LunaEternal.LOG.warn("No se pudo leer el saldo de {}: {}",
+                    LunaEternal.LOG.warn("No se pudo leer la ficha de {}: {}",
                             jugador.getName().getString(), e.toString());
                 }
             });

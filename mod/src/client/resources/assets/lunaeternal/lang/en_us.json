@@ -37,5 +37,10 @@
   "pokepad.lunaeternal.voz.sin": "No recording yet",
   "pokepad.lunaeternal.proximamente": "Coming soon",
   "pokepad.lunaeternal.ordenar.coge": "Pick an icon to move it",
-  "pokepad.lunaeternal.ordenar.suelta": "Pick where to put it"
+  "pokepad.lunaeternal.ordenar.suelta": "Pick where to put it",
+  "pokepad.lunaeternal.via.0": "Explorer",
+  "pokepad.lunaeternal.via.1": "Trainer",
+  "pokepad.lunaeternal.via.2": "Collector",
+  "pokepad.lunaeternal.via.3": "Trader",
+  "pokepad.lunaeternal.via.4": "Breeder"
 }

@@ -205,15 +205,43 @@ Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md
                    only data packs can". Se registraba y se quedaba
                    apagado — y no se veia porque yo IGNORABA el
                    booleano que devuelve registerBuiltinResourcePack
-Publicar      ⚠ nuestros jars se publican con la HUELLA en el nombre
-              (lunaneon-0.1.0-3598884202.jar). raw.githubusercontent
-              cachea ~3 min POR RUTA y no hay parametro que lo salte:
-              con nombre fijo, el manifiesto anunciaba una huella que
-              el CDN aun no servia. Contenido nuevo = URL nueva. En
-              el cliente el fichero conserva su nombre de siempre
-              una ruta NUEVA tarda ~36 s en responder (da 404 antes),
-              pero el manifiesto tarda ~3 min en salir de cache: para
-              cuando el cliente lo ve, el jar lleva rato disponible
+Publicar      ⚠⚠ EL PACK NO SE SIRVE DESDE raw.githubusercontent.
+              raw NO es un CDN de distribucion: LIMITA POR PETICIONES y
+              contesta 429 y 503. Con 117 de las 199 entradas ahi, quien
+              instalaba de cero se llevaba "HTTP 429 en manifest.json"
+              ANTES DE EMPEZAR -- y a quien ya lo tenia bajado no le
+              pasaba nada, porque no pedia nada. De ahi el "a mi me
+              funciona y a ellos no", que costo media manana
+              lo nuestro va a una RELEASE (CDN de descargas, sin limite):
+                110 plantillas de YOSBR -> UN zip de 56 KB
+                nuestros dos jars       -> activos de la release
+                entradas  199 -> 90     peticiones a raw  117 -> 5
+              se pueden empaquetar porque las plantillas NO son la
+              configuracion del jugador: son de las que YOSBR copia
+              cuando el fichero de verdad no existe. iris.properties y
+              openloader se quedan sueltos y `once`, que esos si son
+              configuracion viva
+              ⚠ LA RELEASE VA COMO PRERELEASE. El autoactualizador mira
+                "la ultima release" y una normal le haria creer que hay
+                launcher nuevo; allowPrerelease solo se enciende en
+                alpha/beta/rc
+              ⚠ EL REPO DEL PACK LLEVA .gitattributes CON `* -text`.
+                Sin el, git convierte CRLF a LF al hacer commit y el
+                manifiesto MIENTE: anuncia el tamano y el sha1 del
+                fichero local y el CDN sirve otro mas corto. Eran 24
+                configs (options.txt: 8.150 aqui, 7.921 alli) que el
+                launcher rebajaba EN CADA ARRANQUE. El CRLF viene del
+                pack de Cobblemon, no lo metemos nosotros
+                poner el fichero NO BASTA: los blobs ya guardados siguen
+                normalizados, hay que `git rm --cached -r .` para que se
+                relean. Lo hace gen_manifest.py en cada publicacion
+              ⚠ nuestros jars llevan la HUELLA en el nombre
+              (lunaneon-0.1.0-3598884202.jar). Contenido nuevo = URL
+              nueva, que nunca ha estado en cache
+              ⚠ --publicar NO dice "publicado" hasta que el CDN sirve de
+                verdad lo subido: empujar al repo no es publicar. Compara
+                el JSON y NO los bytes -- git normaliza finales de linea
+                y una comparacion byte a byte no acierta jamas
 Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
               Iris + EuphoriaPatcher + Complementary Unbound r5.8.1
               + MakeUp Ultra Fast (el tier ligero)
@@ -227,18 +255,30 @@ Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
                 para 1.21.1 exige 0.6.x y se niega a arrancar fuera
                 de rango. El numero NO esta escrito a mano: se lee
                 del jar de Iris. §2-quinquies
-Launcher      launcher/ · Electron 43 · 32/32 pruebas (npm test)
+Launcher      launcher/ · Electron 43 · 1.0.2 · 32/32 (npm test)
+              ⚠⚠ EL FETCH DE NODE NO TIENE TIEMPO LIMITE POR DEFECTO.
+                 Si la conexion se queda a medias, la promesa no se
+                 resuelve NI SE RECHAZA: el jugador ve "Comprobando
+                 actualizaciones" clavado, sin error y sin salida. Y esa
+                 es la PRIMERA peticion del arranque. Hay 30 s de corte
+                 que cubren solo la espera a la cabecera --el reloj se
+                 para en cuanto contesta, asi que un fichero de 130 MB no
+                 se corta por tardar en bajar
+              ⚠ y se rendia demasiado pronto ante un 503: eran 4
+                reintentos con tope de 8 s (~7 s en total). Ahora 8 con
+                tope de 30 s, mas de dos minutos de margen
               ⚠ una prueba baja el manifiesto EN VIVO y exige que
-                nada bajo config/ shaderpacks/ resourcepacks/ pise
-                lo del jugador: va marcado `once` o falla. Ya cazo
-                un fallo real. Ojo: el CDN de GitHub cachea unos
-                minutos, asi que tras publicar puede dar rojo falso
+              nada bajo config/ shaderpacks/ resourcepacks/ pise
+              lo del jugador: va marcada `once` o falla. Ya cazo
+              un fallo real. Ojo: si GitHub esta estrangulando, esa
+              prueba da rojo por 429/503 y NO es culpa del codigo
               PUBLICADO: .../luna-eternal-pack/releases/latest
               se autoactualiza SOLO (electron-updater) y el pack tambien
               dos perfiles en un solo .exe: Jugador · Constructor
               reparar instalacion + diagnostico de por que se cerro
-              ⚠ NO publicar otras releases en ese repo: el actualizador
-                mira "la ultima release" y se perderia
+              ⚠ NO publicar otras releases NORMALES en ese repo: el
+                actualizador mira "la ultima release" y se perderia. Las
+                del pack van como PRERELEASE justo por eso
               ⚠ SU NUCLEO ESTUVO 100% FUERA DE GIT hasta 2026-08-13:
                 .gitignore tenia `core` a secas (por los volcados de
                 la JVM) y se tragaba launcher/src/main/core/ entero,

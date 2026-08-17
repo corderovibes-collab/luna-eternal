@@ -177,35 +177,54 @@ public class PokePadScreen extends Screen {
      * para que se dibuje 1:1 (regla 2 de {@code docs/ui/dibujado.md}).
      */
     private static final String[] BOTONES =
-            {"atras", "adelante", "inicio", "ajustes", "mas", "cerrar"};
+            {"atras", "adelante", "ajustes", "cerrar"};
 
     /** x, y, ancho, alto — en píxeles del arte, en el orden de {@link #BOTONES}. */
     private static final int[][] BOTON = {
-            { 618, 698, 45, 36},   // atras
-            {1048, 698, 45, 36},   // adelante
-            { 178, 376, 80, 64},   // inicio
-            { 178, 446, 80, 64},   // ajustes
-            { 178, 516, 80, 64},   // mas
+            { 610, 692, 60, 48},   // atras
+            {1040, 692, 60, 48},   // adelante
+            {1107,  85, 80, 64},   // ajustes
             {1207,  85, 80, 64},   // cerrar
     };
 
+    private static final int ATRAS = 0, ADELANTE = 1, AJUSTES = 2, CERRAR = 3;
+
     /**
-     * Cuál de los seis lleva a algún sitio. Hoy solo cerrar.
+     * Cuántas páginas tiene la rejilla.
      *
-     * <p>Los otros cinco son navegación y <b>todavía no hay a dónde ir</b>: no
-     * existe ninguna sub-pantalla. Se dibujan igualmente, pero apagados y con
-     * el sonido de bloqueado — <b>exactamente como las quince celdas</b>, que
-     * también están todas cerradas y se entienden solas.
-     *
-     * <p>Esa es la diferencia que importa: un botón apagado que responde
-     * «todavía no» informa; uno de aspecto normal que no hace nada enseña a no
-     * pulsar los botones, y eso se paga después en las pantallas que sí
-     * funcionen.
+     * <p>La segunda está entera bloqueada: quince candados y «Próximamente».
+     * <b>Enseñar que hay más sitio es información</b>; no enseñar nada haría
+     * creer que el Pad se acaba en quince.
      */
-    private static final int CERRAR = 5;
+    private static final int PAGINAS = 2;
+
+    /** Un solo candado repetido, no quince distintos: lo que dice es «aquí no
+     *  hay nada todavía», y quince dibujos distintos dirían que hay quince
+     *  cosas distintas esperando. */
+    private static final Identifier CANDADO = tex("candado");
 
     private int x0, y0, ancho, alto;
     private float k;
+
+    /** Qué página se está viendo. 0 = las aplicaciones, 1 = «Próximamente». */
+    private int pagina;
+
+    /** El orden del jugador, que puede no ser el de fábrica. */
+    private App[] orden = App.TODAS.clone();
+
+    /**
+     * El modo de ordenar, que es para lo que sirve el botón de ajustes.
+     *
+     * <p>Funciona a dos clics —coges una y la sueltas sobre otra, y se
+     * intercambian— y no arrastrando. No es por comodidad de programación: <b>a
+     * dos clics no hay forma de soltar un icono fuera de la rejilla</b> y
+     * perderlo, ni de que un tirón del ratón deshaga el orden entero sin
+     * querer. Y sigue siendo todo clics (D-012).
+     */
+    private boolean ordenando;
+
+    /** Qué celda está cogida, o -1. */
+    private int cogida = -1;
 
     public PokePadScreen() {
         super(Text.translatable("pokepad.lunaeternal.titulo"));
@@ -230,6 +249,7 @@ public class PokePadScreen extends Screen {
         // empuje en cada movimiento de la economia: asi el numero siempre esta
         // fresco y un Pad cerrado no cuesta nada.
         ClientPlayNetworking.send(new Red.PedirSaldo());
+        orden = OrdenPad.leer();
 
         // `k` convierte un pixel del arte en unidades de interfaz, que es en lo
         // que dibuja DrawContext. Dividir por el GUI Scale es lo que cancela la
@@ -298,6 +318,7 @@ public class PokePadScreen extends Screen {
         for (App app : App.TODAS) {
             client.getTextureManager().getTexture(app.icono()).setFilter(suave, false);
         }
+        client.getTextureManager().getTexture(CANDADO).setFilter(suave, false);
     }
 
     /** El juego sigue corriendo detrás: es un menú, no una pausa. */
@@ -320,35 +341,38 @@ public class PokePadScreen extends Screen {
         int mordida = Math.max(1, Math.round(MORDIDA * k));
 
         App bajoElRaton = null;
-        for (int i = 0; i < App.TODAS.length; i++) {
-            App app = App.TODAS[i];
+        for (int i = 0; i < orden.length; i++) {
+            boolean apps = pagina == 0;
+            App app = apps ? orden[i] : null;
             int cx = celdaX(i), cy = celdaY(i);
             boolean encima = ratonX >= cx && ratonX < cx + celda
                     && ratonY >= cy && ratonY < cy + celda;
-            if (encima) {
+            if (encima && apps) {
                 bajoElRaton = app;
             }
 
-            int fondo = encima ? CELDA_ENCIMA
-                    : app.abierta() ? CELDA_FONDO : CELDA_CERRADA;
-            int borde = encima ? BORDE_ENCIMA
-                    : app.abierta() ? CELDA_BORDE : BORDE_CERRADA;
+            // La celda cogida se queda resaltada aunque el ratón se haya ido:
+            // es la que estás moviendo, y perderla de vista al apartar el ratón
+            // haría dudar de si el clic contó.
+            boolean marcada = encima || (ordenando && i == cogida);
+            int fondo = marcada ? CELDA_ENCIMA
+                    : app != null && app.abierta() ? CELDA_FONDO : CELDA_CERRADA;
+            int borde = marcada ? BORDE_ENCIMA
+                    : app != null && app.abierta() ? CELDA_BORDE : BORDE_CERRADA;
             celda(ctx, cx, cy, celda, grosor, mordida, fondo, borde);
 
-            dibujar(ctx, app.icono(), cx + (celda - icono) / 2,
-                    cy + (celda - icono) / 2, icono, icono,
-                    ICONO, ICONO, 0xFFFFFFFF);
+            dibujar(ctx, apps ? app.icono() : CANDADO,
+                    cx + (celda - icono) / 2, cy + (celda - icono) / 2,
+                    icono, icono, ICONO, ICONO, 0xFFFFFFFF);
 
             // El nombre, debajo de su icono.
             //
             // Se pide en pixeles del ARTE --no en unidades de interfaz-- para
-            // que mida siempre lo mismo respecto al Pad. Y apagado si la
-            // aplicacion esta cerrada, igual que su celda: si el nombre fuera
-            // a todo color, la celda apagada parecerian dos cosas distintas
-            // discutiendo.
+            // que mida siempre lo mismo respecto al Pad.
             int artX = REJ_X + (i % COLS) * (CELDA + HUECO_X) + CELDA / 2;
             int artY = REJ_Y + (i / COLS) * (CELDA + HUECO_Y) + CELDA - TEXTO_SOLAPE;
-            texto(ctx, app.nombre(), artX, artY, TEXTO_ALTO, TEXTO_COLOR);
+            texto(ctx, apps ? app.nombre() : PROXIMAMENTE,
+                    artX, artY, TEXTO_ALTO, TEXTO_COLOR);
         }
 
         panelLateral(ctx);
@@ -364,9 +388,37 @@ public class PokePadScreen extends Screen {
         // es donde ya estaba la descripcion. Queda pendiente decidir donde va
         // de forma fija; hasta entonces, mejor nada que algo pisando el logo.
 
-        if (bajoElRaton != null) {
+        // En modo de ordenar, la ayuda dice qué hacer en vez de qué es cada
+        // aplicación: ahí no vas a abrir nada, vas a moverlo.
+        if (ordenando) {
+            ctx.drawTooltip(textRenderer,
+                    Text.translatable(cogida < 0 ? "pokepad.lunaeternal.ordenar.coge"
+                                                 : "pokepad.lunaeternal.ordenar.suelta"),
+                    ratonX, ratonY);
+        } else if (bajoElRaton != null) {
             ctx.drawTooltip(textRenderer, bajoElRaton.descripcion(), ratonX, ratonY);
         }
+    }
+
+    private static final Text PROXIMAMENTE =
+            Text.translatable("pokepad.lunaeternal.proximamente");
+
+    /**
+     * Si un botón lleva a algún sitio ahora mismo.
+     *
+     * <p>Un botón apagado que responde «todavía no» informa; uno de aspecto
+     * normal que no hace nada enseña a no pulsar los botones, y eso se paga
+     * después en las pantallas que sí funcionen.
+     */
+    private boolean activo(int i) {
+        return switch (i) {
+            case ATRAS -> pagina > 0;
+            case ADELANTE -> pagina < PAGINAS - 1;
+            // Ordenar solo tiene sentido donde hay iconos que ordenar.
+            case AJUSTES -> pagina == 0;
+            case CERRAR -> true;
+            default -> false;
+        };
     }
 
     @Override
@@ -380,25 +432,70 @@ public class PokePadScreen extends Screen {
                         || ratonY < by || ratonY >= by + h) {
                     continue;
                 }
-                sonar(i == CERRAR);
-                if (i == CERRAR) {
-                    close();
+                sonar(activo(i));
+                if (!activo(i)) {
+                    return true;
+                }
+                switch (i) {
+                    case CERRAR -> close();
+                    // Cambiar de pagina suelta lo que estuvieras moviendo: si
+                    // no, cogerias en una pagina y soltarias en otra.
+                    case ATRAS -> { pagina--; cogida = -1; }
+                    case ADELANTE -> { pagina++; cogida = -1; }
+                    case AJUSTES -> {
+                        ordenando = !ordenando;
+                        cogida = -1;
+                        if (!ordenando) {
+                            OrdenPad.guardar(orden);
+                        }
+                    }
+                    default -> { }
                 }
                 return true;
             }
         }
         if (boton == 0) {
-            for (int i = 0; i < App.TODAS.length; i++) {
+            for (int i = 0; i < orden.length; i++) {
                 int cx = celdaX(i), cy = celdaY(i);
                 if (ratonX < cx || ratonX >= cx + celda
                         || ratonY < cy || ratonY >= cy + celda) {
                     continue;
                 }
-                sonar(App.TODAS[i].abierta());
+                if (ordenando && pagina == 0) {
+                    intercambiar(i);
+                } else {
+                    sonar(pagina == 0 && orden[i].abierta());
+                }
                 return true;
             }
         }
         return super.mouseClicked(ratonX, ratonY, boton);
+    }
+
+    /**
+     * Coge una celda, o la suelta sobre otra intercambiándolas.
+     *
+     * <p>Volver a pulsar la que ya está cogida la <b>suelta</b> en vez de
+     * intercambiarla consigo misma: es la forma de arrepentirse sin tener que
+     * salir del modo.
+     */
+    private void intercambiar(int i) {
+        if (cogida < 0) {
+            cogida = i;
+            sonar(true);
+            return;
+        }
+        if (cogida != i) {
+            App tmp = orden[cogida];
+            orden[cogida] = orden[i];
+            orden[i] = tmp;
+            // Se guarda en cada movimiento, no al salir del modo: si el juego
+            // se cierra a lo bruto, el orden que el jugador ya veía en pantalla
+            // es el que se encuentra al volver.
+            OrdenPad.guardar(orden);
+        }
+        cogida = -1;
+        sonar(true);
     }
 
     /**
@@ -460,8 +557,13 @@ public class PokePadScreen extends Screen {
                     && ratonY >= by && ratonY < by + h;
             // Un boton sin destino se apaga; el senalado se aclara. El tinte
             // MULTIPLICA, asi que 0xFF808080 es "a media luz" y no un gris.
-            int tinte = i == CERRAR
-                    ? (encima ? 0xFFFFFFFF : 0xFFE0E0E0)
+            //
+            // Y `ajustes` se queda ENCENDIDO mientras dura el modo de ordenar,
+            // aunque no tengas el raton encima: es lo unico que dice que estas
+            // dentro de un modo y que hay que volver a pulsarlo para salir.
+            boolean vivo = activo(i) || (i == AJUSTES && ordenando);
+            int tinte = vivo
+                    ? (encima || (i == AJUSTES && ordenando) ? 0xFFFFFFFF : 0xFFE0E0E0)
                     : (encima ? 0xFF9A9A9A : 0xFF808080);
             dibujar(ctx, tex("boton_" + BOTONES[i]), bx, by, w, h,
                     BOTON[i][2], BOTON[i][3], tinte);

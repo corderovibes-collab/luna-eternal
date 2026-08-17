@@ -159,27 +159,37 @@ BOTON_W, BOTON_H = 80, 64
 # Los tres sitios se MIDEN sobre el chasis; aqui solo se dice quien va en cual.
 # El orden de la lista es el orden de los indices en PokePadScreen, asi que no
 # se toca sin cambiarlo alli.
-BOTONES = ["atras", "adelante", "inicio", "ajustes", "mas", "cerrar"]
+# ⚠ EN LA PANTALLA PRINCIPAL SOLO HAY CUATRO BOTONES. Decision del usuario, y
+# las dos ausencias tienen motivo:
+#
+#   `mas`     no se usa aqui
+#   `inicio`  no tiene sentido en la pantalla de inicio. Es el boton de VOLVER
+#             a ella, asi que su sitio es dentro de cada sub-pantalla — el dia
+#             que Cosmeticos tenga la suya, ahi si va
+#
+# El arte de los dos se conserva en arte/pokepad/botones/: lo que se quita es su
+# hueco, no el fichero.
+BOTONES = ["atras", "adelante", "ajustes", "cerrar"]
 SITIOS = {
     "atras":    ("banda", 0),
     "adelante": ("banda", 1),
-    "inicio":   ("ranura", 0),
-    "ajustes":  ("ranura", 1),
-    "mas":      ("ranura", 2),
-    "cerrar":   ("panel", 0),
+    # `ajustes` va PEGADO a `cerrar` arriba a la derecha: los dos son controles
+    # de la ventana, no del contenido, y juntos se leen como tales.
+    "ajustes":  ("panel", 0),
+    "cerrar":   ("panel", 1),
 }
 
 # Dos tamanos, y cada uno lo manda su sitio:
 #
-#   ranura y panel  80x64, dos tercios exactos del arte
-#   banda           45x36, tres octavos. El bisel de abajo mide 37 px de alto
-#                   MEDIDOS, asi que es lo que cabe dentro sin invadir ni la
-#                   pantalla ni el chasis. Es del tamano de la carita verde que
-#                   habia ahi (48 px con su halo), o sea que la escala ya estaba
-#                   propuesta por el propio arte
-BOTON_GRANDE = (80, 64)
-BOTON_BANDA = (45, 36)
-BOTON_SEP_Y = 6
+#   panel   80x64, dos tercios del arte. Dos de esos mas su hueco caben de
+#           sobra en los 360x93 del panel de arriba
+#   banda   60x48, la mitad exacta. Se pidieron mas grandes que los 45x36 con
+#           los que empezaron; a 48 de alto sobresalen 5 px por arriba y 5 por
+#           abajo del bisel, que mide 37. No estorba: la carita verde que
+#           estaba ahi ocupaba 38 con su halo y se salia igual
+BOTON_PANEL = (80, 64)
+BOTON_BANDA = (60, 48)
+BOTON_SEP_X = 20
 
 # El lado de la cabeza del jugador. La POSICION se mide (va centrada en la
 # ranura de arriba); el lado se fija aqui porque tiene que ser multiplo de 8:
@@ -645,6 +655,18 @@ def main() -> None:
     if ampliados:
         print(f"            ampliados por factor entero: {', '.join(ampliados)}")
 
+    # El candado de la segunda pagina. Si el arte no ha llegado, se dibuja uno
+    # provisional en vez de abortar: asi la pagina se puede montar y desplegar
+    # hoy, y el dia que llegue el PNG lo sustituye sin tocar una linea de codigo.
+    arte_candado = ARTE / "icons" / f"icon_{CANDADO}.png"
+    if arte_candado.exists():
+        guardar(a_tamano(preparar(arte_candado), lado), SALIDA / f"{CANDADO}.png")
+        print(f"  candado   {CANDADO}.png del arte")
+    else:
+        guardar(candado_provisional(lado), SALIDA / f"{CANDADO}.png")
+        print(f"  candado   PROVISIONAL dibujado por codigo "
+              f"(falta {arte_candado.relative_to(RAIZ)})")
+
     # Los botones se guardan YA REDUCIDOS al tamano al que se dibujan.
     #
     # Se reduce AQUI y no en el juego para que la textura mida lo que ocupa y se
@@ -698,9 +720,10 @@ def main() -> None:
     print(f"    (rejilla {rej_w}x{rej_h} en una pantalla de {x1 - x0}x{y1 - y0})")
 
     if args.maqueta:
-        maqueta(Image.open(SALIDA / "pokepad.png"), iconos,
-                rej_x, rej_y, celda, lado, hueco_y,
-                (cara_x, cara_y), sitios, (saldo_cx, saldo_cy))
+        for pag in range(2):
+            maqueta(Image.open(SALIDA / "pokepad.png"), iconos,
+                    rej_x, rej_y, celda, lado, hueco_y,
+                    (cara_x, cara_y), sitios, (saldo_cx, saldo_cy), pag)
 
 
 def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
@@ -717,38 +740,78 @@ def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
 
     sitios = {}
     ancho_b, alto_b = BOTON_BANDA
-    ancho_g, alto_g = BOTON_GRANDE
-    if alto_b > bh:
-        raise SystemExit(f"El boton de la banda ({alto_b}) no cabe en {bh} px")
+    ancho_p, alto_p = BOTON_PANEL
 
-    en_ranura = [n for n in BOTONES if SITIOS[n][0] == "ranura"]
-    pila = len(en_ranura) * alto_g + (len(en_ranura) - 1) * BOTON_SEP_Y
-    if pila > rh or ancho_g > rw:
-        raise SystemExit(f"Los {len(en_ranura)} de la ranura no caben: "
-                         f"{ancho_g}x{pila} en {rw}x{rh}")
+    # Los del panel van en fila, PEGADOS A LA DERECHA. El indice manda el orden
+    # de izquierda a derecha, asi que `cerrar` --que es el ultimo-- queda en el
+    # extremo, que es donde lo busca todo el mundo.
+    en_panel = sorted((n for n in BOTONES if SITIOS[n][0] == "panel"),
+                      key=lambda n: SITIOS[n][1])
+    fila = len(en_panel) * ancho_p + (len(en_panel) - 1) * BOTON_SEP_X
+    if fila > pw - 40:
+        raise SystemExit(f"Los {len(en_panel)} del panel no caben: {fila} en {pw}")
+    fila_x = px + pw - 20 - fila
 
     for nombre in BOTONES:
         sitio, i = SITIOS[nombre]
         if sitio == "banda":
-            # Centrado en su mitad de la banda, y centrado en su alto.
+            # Centrado en su mitad de la banda, y centrado en su alto. Se
+            # permite que sobresalga: la banda mide 37 y el boton 48.
             centro = bx + bw * (2 * i + 1) // 4
             sitios[nombre] = (centro - ancho_b // 2,
                               by + (bh - alto_b) // 2, ancho_b, alto_b)
-        elif sitio == "ranura":
-            sitios[nombre] = (rx + (rw - ancho_g) // 2,
-                              ry + (rh - pila) // 2 + i * (alto_g + BOTON_SEP_Y),
-                              ancho_g, alto_g)
         else:
-            # Pegado a la derecha del panel, que es lo que se pidio.
-            sitios[nombre] = (px + pw - ancho_g - 20,
-                              py + (ph - alto_g) // 2, ancho_g, alto_g)
+            sitios[nombre] = (fila_x + i * (ancho_p + BOTON_SEP_X),
+                              py + (ph - alto_p) // 2, ancho_p, alto_p)
     return sitios
 
 
+# La segunda pagina: quince celdas con un candado y "Proximamente".
+#
+# El icono es UNO solo repetido quince veces, no quince distintos: lo que
+# comunica es "aqui no hay nada todavia", y quince candados distintos dirian que
+# hay quince cosas distintas bloqueadas, que no es verdad.
+CANDADO = "candado"
+
+
+def candado_provisional(lado: int) -> Image.Image:
+    """Un candado dibujado por codigo, para mientras no llegue el arte.
+
+    Existe para que la segunda pagina se pueda montar, ver y desplegar HOY sin
+    esperar al diseno. Es deliberadamente plano y sin sombra: tiene que cantar
+    que es provisional, no colarse como definitivo.
+    """
+    img = Image.new("RGBA", (lado, lado))
+    d = ImageDraw.Draw(img)
+    u = lado / 100.0
+    cuerpo = (int(24 * u), int(46 * u), int(76 * u), int(88 * u))
+    gris, claro = (122, 132, 158, 255), (168, 178, 202, 255)
+    # El arco, dos trazos para que tenga grosor sin usar el ancho de linea (que
+    # a estos tamanos redondea distinto en cada version de Pillow).
+    for r in (int(9 * u), int(10 * u), int(11 * u)):
+        d.arc([50 * u - r, 34 * u - r, 50 * u + r, 34 * u + r],
+              180, 360, fill=gris)
+        d.line([(50 * u - r, 34 * u), (50 * u - r, 47 * u)], fill=gris)
+        d.line([(50 * u + r, 34 * u), (50 * u + r, 47 * u)], fill=gris)
+    d.rounded_rectangle(cuerpo, radius=int(8 * u), fill=claro, outline=gris,
+                        width=max(1, int(3 * u)))
+    d.ellipse([46 * u, 61 * u, 54 * u, 69 * u], fill=gris)
+    d.line([(50 * u, 66 * u), (50 * u, 76 * u)], fill=gris, width=max(1, int(3 * u)))
+    return img
+
+
 def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
-            cara, sitios, saldo) -> None:
-    """Monta la pantalla principal con las celdas dibujadas como las dibuja el
-    juego: rectangulos planos. Ver docs/ui/prompts-arte-pokepad.md §4."""
+            cara, sitios, saldo, pagina=0) -> None:
+    """Monta una pantalla con las celdas dibujadas como las dibuja el juego:
+    rectangulos planos. Ver docs/ui/prompts-arte-pokepad.md §4.
+
+    :param pagina: 0 las aplicaciones, 1 la de «Proximamente»
+    """
+    if pagina:
+        # La segunda pagina es la misma rejilla con el mismo candado quince
+        # veces. Se monta con los mismos numeros a proposito: si se dibujara
+        # aparte, dejaria de comprobar que las dos encajan igual.
+        iconos = [SALIDA / f"{CANDADO}.png"] * 15
     # Copia explicita: `chasis` se sigue usando abajo para restaurar las
     # esquinas mordidas, asi que no puede ser el mismo objeto que se pinta.
     chasis = chasis.convert("RGBA")
@@ -781,13 +844,15 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
                        (cx + celda - MORDIDA, cy + celda - MORDIDA)):
             caja = (ex, ey, ex + MORDIDA, ey + MORDIDA)
             out.paste(chasis.crop(caja), caja)
-        ico = Image.open(SALIDA / f"{p.stem.replace('icon_', '')}.png")
+        ico = Image.open(p if pagina else
+                         SALIDA / f"{p.stem.replace('icon_', '')}.png")
         out.alpha_composite(ico, (cx + (celda - lado) // 2,
                                   cy + (celda - lado) // 2))
         # El nombre debajo. En el juego lo pinta la fuente de Minecraft; aqui
         # basta con una cualquiera del sistema para juzgar el ENCAJE, que es lo
         # unico que la maqueta tiene que responder.
-        nombre = NOMBRES.get(p.stem.replace("icon_", ""), "")
+        nombre = "Proximamente" if pagina else NOMBRES.get(
+            p.stem.replace("icon_", ""), "")
         if nombre:
             try:
                 fuente = ImageFont.truetype("arial.ttf", TEXTO_ALTO)
@@ -825,8 +890,10 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
     f = Image.new("RGBA", out.size, (14, 14, 20, 255))
     f.alpha_composite(out)
     MAQUETA.mkdir(parents=True, exist_ok=True)
-    f.convert("RGB").save(MAQUETA / "maqueta.png")
-    print(f"  -> {(MAQUETA / 'maqueta.png').relative_to(RAIZ)}")
+    salida = MAQUETA / ("maqueta.png" if not pagina
+                        else f"maqueta-pagina{pagina + 1}.png")
+    f.convert("RGB").save(salida)
+    print(f"  -> {salida.relative_to(RAIZ)}")
 
 
 if __name__ == "__main__":

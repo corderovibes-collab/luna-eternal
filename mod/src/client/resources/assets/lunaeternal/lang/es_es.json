@@ -34,5 +34,8 @@
   "pokepad.lunaeternal.app.explorar.desc": "El mundo, sus zonas y qué aparece en cada una",
   "subtitles.lunaeternal.pokedex.voz": "Descripción de la Pokédex",
   "pokepad.lunaeternal.voz.oir": "Oír la descripción",
-  "pokepad.lunaeternal.voz.sin": "Sin descripción grabada"
+  "pokepad.lunaeternal.voz.sin": "Sin descripción grabada",
+  "pokepad.lunaeternal.proximamente": "Próximamente",
+  "pokepad.lunaeternal.ordenar.coge": "Elige un icono para moverlo",
+  "pokepad.lunaeternal.ordenar.suelta": "Elige dónde ponerlo"
 }

@@ -372,14 +372,27 @@ cuadrito  x 302-349   y 651-698   (48 x 48)   LIBRE, no aloja nada
 CARA_X = 134   CARA_Y = 136   CARA_LADO = 168
 SALDO_CX = 184 SALDO_CY = 672
 BOTON = {       x, y, ancho, alto — en el orden de BOTONES
-    { 618, 698, 45, 36},   atras      mitad izquierda del bisel de abajo
-    {1048, 698, 45, 36},   adelante   mitad derecha
-    { 178, 376, 80, 64},   inicio     apilados en la ranura mediana
-    { 178, 446, 80, 64},   ajustes
-    { 178, 516, 80, 64},   mas
-    {1207,  85, 80, 64},   cerrar     arriba a la derecha, junto al logo
+    { 610, 692, 60, 48},   atras      mitad izquierda del bisel de abajo
+    {1040, 692, 60, 48},   adelante   mitad derecha
+    {1107,  85, 80, 64},   ajustes    arriba a la derecha, junto a cerrar
+    {1207,  85, 80, 64},   cerrar     en el extremo
 }
 ```
+
+> ⚠️ **En la pantalla principal solo hay CUATRO botones**, y las dos ausencias
+> tienen motivo:
+>
+> | | |
+> |---|---|
+> | `mas` | no se usa aquí |
+> | `inicio` | **no tiene sentido en la pantalla de inicio.** Es el botón de *volver* a ella, así que su sitio es dentro de cada sub-pantalla — el día que Cosméticos tenga la suya, ahí sí va |
+>
+> El arte de los dos se conserva en `arte/pokepad/botones/`: lo que se quita es
+> su hueco, no el fichero. Y eso deja **la ranura mediana vacía** — es sitio
+> disponible, no un olvido.
+
+> **`ajustes` va pegado a `cerrar`** porque los dos son controles de la ventana,
+> no del contenido, y juntos se leen como tales.
 
 ### 8.1 · ⚠️ El v4 invierte la pantalla, y con ella todo lo de dentro
 

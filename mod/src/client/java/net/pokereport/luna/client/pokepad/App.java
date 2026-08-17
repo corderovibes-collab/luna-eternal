@@ -38,6 +38,16 @@ public record App(String id, boolean abierta) {
         new App("explorar",   false),
     };
 
+    /** La aplicación con ese identificador, o {@code null} si no existe. */
+    public static App de(String id) {
+        for (App app : TODAS) {
+            if (app.id().equals(id)) {
+                return app;
+            }
+        }
+        return null;
+    }
+
     public Identifier icono() {
         return Identifier.of("lunaeternal", "textures/gui/pokepad/" + id + ".png");
     }

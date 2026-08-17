@@ -95,6 +95,12 @@ ESTRELLA_SEP = 3
 # 55 de alto util MEDIDOS, y el aire que la separa del numero.
 MONEDA = 40
 MONEDA_AIRE = 10
+
+# LA PLATA, la moneda normal. Va arriba a la izquierda del panel de cabecera --
+# el mismo donde estan `ajustes` y `cerrar`, pegados a la derecha--, que es el
+# unico hueco grande que quedaba libre y deja el saldo principal SIEMPRE a la
+# vista. Abajo se queda solo la LunaCoin con su "+", que fue lo que se pidio.
+PLATA_AIRE = 14
 # Solo para la maqueta: unos niveles de ejemplo. En el juego los manda el
 # servidor.
 NIVELES_MAQUETA = [3, 2, 1, 4, 0]
@@ -881,6 +887,13 @@ def main() -> None:
     else:
         print(f"  moneda    FALTA {moneda.relative_to(RAIZ)}")
 
+    plata = ARTE / "icon_plata.png"
+    if not plata.exists():
+        plata = ARTE / "icons" / "icon_plata.png"
+    if plata.exists():
+        guardar(a_tamano(preparar(plata), MONEDA), SALIDA / "plata.png")
+        print(f"  plata     {plata.name} a {MONEDA}x{MONEDA}")
+
     guardar(estrella(True), SALIDA / "estrella.png")
     guardar(estrella(False), SALIDA / "estrella_vacia.png")
     print(f"  estrellas dos de {ESTRELLA}x{ESTRELLA}, dibujadas a 4x y reducidas")
@@ -942,6 +955,16 @@ def main() -> None:
     print(f"  tarjeta   hueco util {tw}x{th} en {tx},{ty}"
           f"   estrellas {estrellas_w} px, nombre {tarj_der - tarj_x - estrellas_w - 8} px")
 
+    # La Plata, en el panel de arriba y pegada a la izquierda. Los botones estan
+    # a la derecha, asi que el numero se centra en lo que sobra entre las dos
+    # cosas -- no en el panel entero, o caeria debajo de `ajustes`.
+    ppx, ppy, ppw, pph = medir_panel_superior(chasis)
+    plata_x = ppx + PLATA_AIRE
+    plata_y = ppy + (pph - MONEDA) // 2
+    hueco_botones = min(v[0] for k, v in sitios.items() if SITIOS[k][0] == "panel")
+    plata_cx = (plata_x + MONEDA + MONEDA_AIRE + hueco_botones - MONEDA_AIRE) // 2
+    plata_cy = ppy + pph // 2
+
     # El saldo: la moneda pegada a la izquierda del hueco UTIL, y el numero
     # centrado en lo que sobra. Centrar el numero en la ranura ENTERA lo dejaria
     # descolocado respecto a su moneda.
@@ -960,6 +983,8 @@ def main() -> None:
     print(f"    CARA_X = {cara_x}, CARA_Y = {cara_y}, CARA_LADO = {CARA_LADO}")
     print(f"    SALDO_CX = {saldo_cx}, SALDO_CY = {saldo_cy}")
     print(f"    MONEDA_X = {moneda_x}, MONEDA_Y = {moneda_y}, MONEDA = {MONEDA}")
+    print(f"    PLATA_X = {plata_x}, PLATA_Y = {plata_y}, "
+          f"PLATA_CX = {plata_cx}, PLATA_CY = {plata_cy}")
     print(f"    TARJ_X = {tarj_x}, TARJ_Y = {tarj_y}, TARJ_FILA = {TARJ_FILA}, "
           f"TARJ_DER = {tarj_der}")
     print(f"    BOTON = {{      // x, y, ancho, alto — en el orden de BOTONES")
@@ -974,7 +999,8 @@ def main() -> None:
             maqueta(Image.open(SALIDA / "pokepad.png"), iconos,
                     rej_x, rej_y, celda, lado, hueco_y,
                     (cara_x, cara_y), sitios, (saldo_cx, saldo_cy),
-                    (tarj_x, tarj_y, tarj_der), (moneda_x, moneda_y), pag)
+                    (tarj_x, tarj_y, tarj_der), (moneda_x, moneda_y),
+                    (plata_x, plata_y, plata_cx, plata_cy), pag)
 
 
 def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
@@ -1056,7 +1082,7 @@ def candado_provisional(lado: int) -> Image.Image:
 
 
 def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
-            cara, sitios, saldo, tarj, moneda, pagina=0) -> None:
+            cara, sitios, saldo, tarj, moneda, plata, pagina=0) -> None:
     """Monta una pantalla con las celdas dibujadas como las dibuja el juego:
     rectangulos planos. Ver docs/ui/prompts-arte-pokepad.md §4.
 
@@ -1154,6 +1180,11 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
 
     # SOLO LunaCoins: es la unica moneda que se compra, y por eso la unica
     # que necesita el "+" de al lado.
+    if (SALIDA / "plata.png").exists():
+        out.alpha_composite(Image.open(SALIDA / "plata.png").convert("RGBA"),
+                            (plata[0], plata[1]))
+        d.text((plata[2], plata[3]), "12,345", font=gorda,
+               fill=(226, 232, 242, 255), anchor="mm")
     if (SALIDA / "lunacoin.png").exists():
         out.alpha_composite(Image.open(SALIDA / "lunacoin.png").convert("RGBA"),
                             (moneda[0], moneda[1]))

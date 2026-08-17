@@ -176,6 +176,25 @@ public class PokePadScreen extends Screen {
     private static final int MONEDA_X = 118, MONEDA_Y = 658, MONEDA_LADO = 40;
 
     /**
+     * La Plata, en el panel de cabecera y pegada a la izquierda.
+     *
+     * <p><b>Arriba y no abajo con la LunaCoin, y es deliberado.</b> Abajo se
+     * pidió que quedara solo la LunaCoin con su «+», y tiene sentido: es la
+     * única que se compra, así que es la única que necesita un botón al lado.
+     * Pero la Plata es la moneda que se gana jugando —la que se mira
+     * constantemente—, y no enseñarla en ningún sitio no era una opción.
+     *
+     * <p>El panel de cabecera era el único hueco grande que quedaba libre, y
+     * además es donde se busca: dinero a la izquierda, controles de ventana a
+     * la derecha. El número se centra entre la moneda y el primer botón, no en
+     * el panel entero, o caería debajo de «ajustes».
+     */
+    private static final Identifier PLATA = tex("plata");
+    private static final int PLATA_X = 954, PLATA_Y = 97;
+    private static final int PLATA_CX = 1050, PLATA_CY = 117;
+    private static final int COLOR_PLATA = 0xFFE2E8F2;
+
+    /**
      * Los seis botones, cada uno en su sitio. <b>Ya no viven juntos</b>, y es
      * decisión del usuario sobre el chasis v4:
      *
@@ -366,6 +385,7 @@ public class PokePadScreen extends Screen {
         }
         client.getTextureManager().getTexture(CANDADO).setFilter(suave, false);
         client.getTextureManager().getTexture(MONEDA).setFilter(suave, false);
+        client.getTextureManager().getTexture(PLATA).setFilter(suave, false);
     }
 
     /** El juego sigue corriendo detrás: es un menú, no una pausa. */
@@ -621,6 +641,15 @@ public class PokePadScreen extends Screen {
         // 27 y no 18: es TRES veces los 9 que mide la fuente de Minecraft, así
         // que sigue cayendo en píxeles enteros y no se emborrona. Es el único
         // número de la pantalla y a 18 se perdía dentro de su ranura.
+        // La Plata, arriba. Va con el saldo del mismo paquete que la LunaCoin.
+        int plata = Math.round(MONEDA_LADO * k);
+        dibujar(ctx, PLATA, x0 + Math.round(PLATA_X * k),
+                y0 + Math.round(PLATA_Y * k), plata, plata,
+                MONEDA_LADO, MONEDA_LADO, 0xFFFFFFFF);
+        texto(ctx, Text.literal(saldo == null ? "- - -"
+                        : String.format("%,d", saldo.pokedolares())),
+                PLATA_CX, PLATA_CY - 14, 27, COLOR_PLATA, true, false);
+
         int moneda = Math.round(MONEDA_LADO * k);
         dibujar(ctx, MONEDA, x0 + Math.round(MONEDA_X * k),
                 y0 + Math.round(MONEDA_Y * k), moneda, moneda,

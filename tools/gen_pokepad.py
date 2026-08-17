@@ -866,10 +866,18 @@ def main() -> None:
     # El candado de la segunda pagina. Si el arte no ha llegado, se dibuja uno
     # provisional en vez de abortar: asi la pagina se puede montar y desplegar
     # hoy, y el dia que llegue el PNG lo sustituye sin tocar una linea de codigo.
-    moneda = ARTE / "lunacoin.png"
+    # Se busca por varios nombres: el arte llega a veces a `icons/` y con el
+    # nombre que le puso el disenador. Fallar por eso seria pedantesco.
+    # De las que haya, LA MAS RECIENTE. El arte llega a veces a `icons/` y con
+    # el nombre que le puso el disenador, y la version anterior se queda al
+    # lado: elegir por orden de lista significaria seguir usando la vieja.
+    candidatas = [c for c in (ARTE / "lunacoin.png",
+                              *sorted((ARTE / "icons").glob("icon_lunacoin*.png")))
+                  if c.exists()]
+    moneda = max(candidatas, key=lambda c: c.stat().st_mtime, default=ARTE / "lunacoin.png")
     if moneda.exists():
         guardar(a_tamano(preparar(moneda), MONEDA), SALIDA / "lunacoin.png")
-        print(f"  moneda    lunacoin.png a {MONEDA}x{MONEDA}")
+        print(f"  moneda    {moneda.name} a {MONEDA}x{MONEDA}")
     else:
         print(f"  moneda    FALTA {moneda.relative_to(RAIZ)}")
 
@@ -1151,7 +1159,7 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
                             (moneda[0], moneda[1]))
     d.text((saldo[0], saldo[1]), "48", font=ImageFont.truetype("arial.ttf", 34)
            if fuente is not gorda else gorda,
-           fill=(159, 200, 255, 255), anchor="mm")
+           fill=(255, 211, 74, 255), anchor="mm")
 
     # La cruz del "+", dibujada como la dibuja el codigo: dos rectangulos
     # dentro del zocalo que ya trae el chasis.

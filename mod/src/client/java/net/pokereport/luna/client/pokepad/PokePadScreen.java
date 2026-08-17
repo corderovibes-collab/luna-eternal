@@ -631,8 +631,15 @@ public class PokePadScreen extends Screen {
                 SALDO_CX, SALDO_CY - 14, 27, LUNA, true, false);
     }
 
-    /** El azul luna de los LunaCoins, el único saldo que se enseña abajo. */
-    private static final int LUNA = 0xFF9FC8FF;
+    /**
+     * El color del saldo de LunaCoins, el único que se enseña abajo.
+     *
+     * <p><b>Dorado desde que la moneda es dorada.</b> Era azul luna, y con la
+     * moneda nueva quedaban dos cosas del mismo dato discutiendo: la moneda
+     * decía «oro» y el número al lado decía «luna». El color de un saldo tiene
+     * que ser el de su moneda, o deja de leerse como el mismo dato.
+     */
+    private static final int LUNA = 0xFFFFD34A;
 
     /**
      * La tarjeta, en píxeles del arte.

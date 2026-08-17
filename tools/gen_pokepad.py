@@ -318,6 +318,75 @@ def sangrar_alfa(im: Image.Image, visible: int = 24) -> Image.Image:
     return Image.fromarray(a.astype(np.uint8), "RGBA")
 
 
+def abrir_hueco(im: Image.Image) -> Image.Image:
+    """Vacia el hueco de dentro del arco del candado.
+
+    EL PROBLEMA
+
+    El arte llega con ese hueco RELLENO DE BLANCO OPACO en vez de vacio. Sobre
+    la celda clara se ve como una mancha blanca dentro del arco — el usuario lo
+    describio como "deberia verse la celda ahi" y tenia razon: es un agujero,
+    hay que ver a traves.
+
+    `quitar_fondo` no lo pilla porque solo borra lo CONECTADO AL BORDE, y este
+    hueco esta encerrado por el propio arco.
+
+    POR QUE NO SE BORRA "TODO EL BLANCO PURO"
+
+    Porque se midio y no cuela: `misiones` tiene 656 px de blanco puro (el papel
+    del portapapeles) y `warps` 446 (el resplandor de la plataforma). Una regla
+    de color se los llevaria por delante. Asi que se busca por TOPOLOGIA, que es
+    lo que de verdad distingue un agujero de una superficie blanca:
+
+      1. se baja por la columna central hasta cruzar el trazo oscuro del arco
+      2. el primer blanco que hay DESPUES es el hueco
+      3. se inunda desde ahi, y solo por ahi
+
+    Un dibujo sin agujero no tiene ese blanco encerrado detras de un trazo
+    oscuro, asi que la funcion no encuentra semilla y no toca nada.
+    """
+    a = np.array(im.convert("RGBA")).astype(int)
+    h, w = a.shape[:2]
+    r, g, b, al = (a[..., i] for i in range(4))
+    claro = ((al > 200) & (r >= 238) & (g >= 238) & (b >= 238)
+             & (np.max(a[..., :3], axis=2) - np.min(a[..., :3], axis=2) <= 8))
+    oscuro = (al > 200) & (np.max(a[..., :3], axis=2) < 110)
+
+    # La semilla: bajando por el centro, el primer claro tras un oscuro.
+    cx = w // 2
+    visto_oscuro, semilla = False, None
+    for y in range(h // 2):
+        if oscuro[y, cx]:
+            visto_oscuro = True
+        elif visto_oscuro and claro[y, cx]:
+            semilla = y
+            break
+    if semilla is None:
+        return im
+
+    marca = np.zeros((h, w), bool)
+    marca[semilla, cx] = True
+    while True:
+        antes = marca.sum()
+        crece = marca.copy()
+        crece[1:, :] |= marca[:-1, :]
+        crece[:-1, :] |= marca[1:, :]
+        crece[:, 1:] |= marca[:, :-1]
+        crece[:, :-1] |= marca[:, 1:]
+        marca = crece & claro
+        if marca.sum() == antes:
+            break
+    # Si la mancha llega al borde no era un hueco: era el fondo. Se deja.
+    if marca[0, :].any() or marca[-1, :].any() or marca[:, 0].any() or marca[:, -1].any():
+        return im
+    # Y un minimo de tamano. Sin el, en `misiones` se comia 1 px y en `warps` 3:
+    # inofensivo, pero es ruido, y un agujero de tres pixeles no es un agujero.
+    if marca.sum() < 40:
+        return im
+    a[marca, 3] = 0
+    return Image.fromarray(a.astype(np.uint8), "RGBA")
+
+
 def a_tamano(im: Image.Image, lado: int) -> Image.Image:
     """Lleva un icono a `lado` x `lado`. Las dos direcciones, con su filtro.
 
@@ -649,7 +718,9 @@ def main() -> None:
         original = Image.open(p)
         if original.size != (lado, lado):
             ampliados.append(f"{p.stem.replace('icon_','')} {original.size[0]}px")
-        guardar(a_tamano(preparar(p), lado),
+        # `abrir_hueco` solo actua donde hay un agujero relleno; en los
+        # demas iconos no encuentra semilla y devuelve la imagen tal cual.
+        guardar(a_tamano(abrir_hueco(preparar(p)), lado),
                 SALIDA / f"{p.stem.replace('icon_', '')}.png")
     print(f"  iconos    {len(iconos)} de {lado}x{lado}")
     if ampliados:
@@ -660,7 +731,8 @@ def main() -> None:
     # hoy, y el dia que llegue el PNG lo sustituye sin tocar una linea de codigo.
     arte_candado = ARTE / "icons" / f"icon_{CANDADO}.png"
     if arte_candado.exists():
-        guardar(a_tamano(preparar(arte_candado), lado), SALIDA / f"{CANDADO}.png")
+        guardar(a_tamano(abrir_hueco(preparar(arte_candado)), lado),
+                SALIDA / f"{CANDADO}.png")
         print(f"  candado   {CANDADO}.png del arte")
     else:
         guardar(candado_provisional(lado), SALIDA / f"{CANDADO}.png")

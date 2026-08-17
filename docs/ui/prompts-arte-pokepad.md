@@ -304,6 +304,48 @@ mercado y el clan deja de ser un estandarte de guerra.
 
 ---
 
+## 5-bis · La moneda LunaCoin
+
+Va al lado de su saldo, y **se dibuja a 40 × 40**. Ese número no es una
+preferencia: la ranura del saldo tiene **166 × 55 de hueco útil**, medido. Y a
+40 px el tamaño manda sobre todo lo demás:
+
+| Decisión | Por qué |
+|---|---|
+| **De frente y plana** | Una moneda en tres cuartos a 40 px es un óvalo borroso. De frente se lee como moneda al instante |
+| **Un solo símbolo grande** | La luna creciente y nada más. A ese tamaño unas estrellitas o un grabado fino desaparecen y solo dejan suciedad |
+| **Ni un gramo de oro** | Es lo único que la separa de los PokéDólares de un vistazo |
+| **Borde en relieve con muescas** | Es lo que dice «moneda» en vez de «medalla» |
+
+> ⚠️ **Va en `arte/pokepad/lunacoin.png`, NO en `icons/`.** No es un icono de
+> aplicación, y el generador recorre `icons/` por la lista `ORDEN`: ahí dentro se
+> quedaría sin usar.
+
+```
+A polished modern game menu icon of a single round coin seen straight from the
+front, filling the frame. The coin is struck in pale moonlit silver with a cool
+blue sheen, never gold. Its raised outer rim is notched all the way around like
+a milled coin edge, and a bold crescent moon stands out in high relief at the
+very center of the face, catching a bright highlight along one edge. A soft
+cyan-white glow spills gently outward from behind the coin. Only the coin,
+nothing else in the scene, no stars, no sparkles, no engraved lettering. Clean
+and colorful, with smooth soft shading, rounded friendly shapes and a bold dark
+outline around the silhouette. Semi-realistic stylized look, like a high quality
+mobile game icon. Subtle Minecraft influence: some forms are built from soft
+cubes and slabs with visible flat facets, but it is NOT pixel art and NOT made
+of visible pixels; edges are smooth. Bright, cheerful, family friendly,
+inviting. The coin fills almost the entire square and nearly touches the edges,
+lit from the top left. Square 1:1 composition, centered. Plain solid black
+background. No text, no letters, no numbers, no labels, no watermark, no border,
+no user interface, no document, no color swatches.
+```
+
+> **Sin elipse de sombra**, al revés que los quince iconos. Aquellos se apoyan
+> sobre una celda; esta flota dentro de una ranura oscura y una sombra debajo la
+> haría parecer despegada de su sitio.
+
+---
+
 ## 6. Los botones
 
 Seis: atrás, adelante, ajustes, inicio, más y cerrar. Van en **120 × 96**.

@@ -346,6 +346,55 @@ no user interface, no document, no color swatches.
 
 ---
 
+## 5-ter · La moneda Plata
+
+La moneda **normal** del servidor: la que se gana jugando. Va a **40 × 40**, el
+mismo hueco y las mismas reglas que la LunaCoin (§5-bis).
+
+**Lo único que importa es que no se confundan.** Van a verse en el mismo sitio,
+así que se separan en las dos cosas que se distinguen a 40 px:
+
+| | LunaCoin | Plata |
+|---|---|---|
+| Metal | **oro** cálido | **plata** fría |
+| Símbolo | luna creciente | **Poké Ball en relieve** |
+
+> **La Poké Ball no es un adorno: es lo que la marca como «el dinero del
+> juego».** La LunaCoin lleva una luna porque se compra aparte; esta lleva la
+> bola porque se gana jugando.
+
+```
+A polished modern game menu icon of a single round silver coin seen straight
+from the front, filling the frame. The coin is struck in bright polished silver
+with a cool grey sheen, never gold and never yellow. Its raised outer rim is
+notched all the way around like a milled coin edge, and a classic round
+creature-catching ball emblem stands out in high relief at the very center of
+the face: a top half, a bold horizontal band across the middle and a small
+round button in the center, all rendered as raised silver relief rather than
+painted color, catching a bright highlight along one edge. A soft white glow
+spills gently outward from behind the coin. Only the coin, nothing else in the
+scene, no stars, no sparkles, no engraved lettering. Clean and colorful, with
+smooth soft shading, rounded friendly shapes and a bold dark outline around the
+silhouette. Semi-realistic stylized look, like a high quality mobile game icon.
+Subtle Minecraft influence: some forms are built from soft cubes and slabs with
+visible flat facets, but it is NOT pixel art and NOT made of visible pixels;
+edges are smooth. Bright, cheerful, family friendly, inviting. The coin fills
+almost the entire square and nearly touches the edges, lit from the top left.
+Square 1:1 composition, centered. Plain solid black background. No text, no
+letters, no numbers, no labels, no watermark, no border, no user interface, no
+document, no color swatches.
+```
+
+> ⚠️ **`raised silver relief rather than painted color` es la línea que más
+> trabaja.** Sin ella el generador devuelve una Poké Ball **roja y blanca**
+> pegada sobre la moneda, y entonces ya no es una moneda de plata: es una
+> chapa con una pegatina. Acuñada en relieve, la bola es del mismo metal.
+
+Guardar en `arte/pokepad/icons/icon_plata.png`. El generador coge **la más
+reciente** de las que encuentre, así que dejar la anterior al lado no estorba.
+
+---
+
 ## 6. Los botones
 
 Seis: atrás, adelante, ajustes, inicio, más y cerrar. Van en **120 × 96**.

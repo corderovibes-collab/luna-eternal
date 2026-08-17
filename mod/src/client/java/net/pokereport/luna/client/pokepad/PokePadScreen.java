@@ -3,10 +3,12 @@ package net.pokereport.luna.client.pokepad;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Util;
 import net.pokereport.luna.client.EstadoCliente;
 import net.pokereport.luna.net.Red;
 
@@ -184,7 +186,7 @@ public class PokePadScreen extends Screen {
      * para que se dibuje 1:1 (regla 2 de {@code docs/ui/dibujado.md}).
      */
     private static final String[] BOTONES =
-            {"atras", "adelante", "ajustes", "cerrar"};
+            {"atras", "adelante", "ajustes", "cerrar", "mas"};
 
     /** x, y, ancho, alto — en píxeles del arte, en el orden de {@link #BOTONES}. */
     private static final int[][] BOTON = {
@@ -192,9 +194,27 @@ public class PokePadScreen extends Screen {
             {1040, 692, 60, 48},   // adelante
             {1107,  85, 80, 64},   // ajustes
             {1207,  85, 80, 64},   // cerrar
+            { 306, 659, 40, 32},   // mas — el "+" de comprar LunaCoins
     };
 
-    private static final int ATRAS = 0, ADELANTE = 1, AJUSTES = 2, CERRAR = 3;
+    private static final int ATRAS = 0, ADELANTE = 1, AJUSTES = 2, CERRAR = 3,
+            MAS = 4;
+
+    /**
+     * A dónde lleva el «+» de las LunaCoins.
+     *
+     * <p><b>Vacío hasta que exista la tienda.</b> Mientras lo esté, el botón se
+     * dibuja apagado y responde «todavía no» — igual que las quince celdas y que
+     * la segunda página. Un «+» de aspecto normal que no hace nada enseña a no
+     * pulsar los botones, y eso se paga en las pantallas que sí funcionen.
+     *
+     * <p>Cuando la haya, se pone aquí la dirección y ya está: el botón abre
+     * <b>la pantalla de confirmación de Minecraft</b>, no el navegador
+     * directamente. Es la que avisa de que se va a salir del juego y deja copiar
+     * el enlace, y saltársela para «ahorrar un clic» es justo lo que enseña a la
+     * gente a confiar en enlaces que aparecen solos.
+     */
+    private static final String TIENDA = "";
 
     /**
      * Cuántas páginas tiene la rejilla.
@@ -424,6 +444,7 @@ public class PokePadScreen extends Screen {
             // Ordenar solo tiene sentido donde hay iconos que ordenar.
             case AJUSTES -> pagina == 0;
             case CERRAR -> true;
+            case MAS -> !TIENDA.isEmpty();
             default -> false;
         };
     }
@@ -456,6 +477,7 @@ public class PokePadScreen extends Screen {
                             OrdenPad.guardar(orden);
                         }
                     }
+                    case MAS -> abrirTienda();
                     default -> { }
                 }
                 return true;
@@ -477,6 +499,19 @@ public class PokePadScreen extends Screen {
             }
         }
         return super.mouseClicked(ratonX, ratonY, boton);
+    }
+
+    /** Abre la tienda de LunaCoins, pasando por el aviso de Minecraft. */
+    private void abrirTienda() {
+        if (client == null || TIENDA.isEmpty()) {
+            return;
+        }
+        client.setScreen(new ConfirmLinkScreen(abrir -> {
+            if (abrir) {
+                Util.getOperatingSystem().open(TIENDA);
+            }
+            client.setScreen(this);
+        }, TIENDA, false));
     }
 
     /**
@@ -549,15 +584,13 @@ public class PokePadScreen extends Screen {
         // Guiones mientras no ha llegado la respuesta: "no lo sé" y "tienes
         // cero" no son lo mismo, y un cero falso en un saldo asusta.
         //
-        // DOS MONEDAS Y NO TRES. Decisión del usuario: el jugador ve
-        // PokéDólares y LunaCoins. Las Marcas siguen existiendo —son lo que
-        // impide que la progresión se compre— pero no salen aquí.
-        texto(ctx, Text.literal(saldo == null ? "- - -"
-                        : String.format("%,d", saldo.pokedolares())),
-                SALDO_CX, SALDO_CY - 22, TEXTO_ALTO, ORO, true, false);
+        // AQUÍ ABAJO SOLO VAN LAS LUNACOINS. Decisión del usuario, y tiene
+        // sentido: es la única moneda que se compra, así que es la única que
+        // necesita un «+» al lado. Los PokéDólares se ganan jugando y no hay
+        // nada que pulsar para tener más.
         texto(ctx, Text.literal(saldo == null ? "- - -"
                         : String.format("%,d", saldo.reportcoins())),
-                SALDO_CX, SALDO_CY + 4, TEXTO_ALTO, LUNA, true, false);
+                SALDO_CX, SALDO_CY - 9, TEXTO_ALTO, LUNA, true, false);
     }
 
     /** El amarillo de los PokéDólares y el azul luna de los LunaCoins. */

@@ -190,7 +190,7 @@ BOTON_W, BOTON_H = 80, 64
 #
 # El arte de los dos se conserva en arte/pokepad/botones/: lo que se quita es su
 # hueco, no el fichero.
-BOTONES = ["atras", "adelante", "ajustes", "cerrar"]
+BOTONES = ["atras", "adelante", "ajustes", "cerrar", "mas"]
 SITIOS = {
     "atras":    ("banda", 0),
     "adelante": ("banda", 1),
@@ -198,6 +198,10 @@ SITIOS = {
     # de la ventana, no del contenido, y juntos se leen como tales.
     "ajustes":  ("panel", 0),
     "cerrar":   ("panel", 1),
+    # ⚠ `mas` VUELVE, y ahora tiene trabajo: es el "+" que lleva a comprar
+    # LunaCoins. Va en el cuadradito de 48x48 que quedaba libre al lado del
+    # saldo, que es justo donde se busca un "+" -- pegado al numero que sube.
+    "mas":      ("cuadro", 0),
 }
 
 # Dos tamanos, y cada uno lo manda su sitio:
@@ -209,6 +213,10 @@ SITIOS = {
 #           abajo del bisel, que mide 37. No estorba: la carita verde que
 #           estaba ahi ocupaba 38 con su halo y se salia igual
 BOTON_PANEL = (80, 64)
+# El cuadradito mide 48x48 MEDIDOS. El boton va a 40x32 y se apoya un poco
+# sobre su moldura: dentro del hueco util (33x33) tendria que bajar a 30x24 y
+# un '+' de 24 px de alto es un adorno, no un boton que invita a pulsarlo.
+BOTON_CUADRO = (40, 32)
 BOTON_BANDA = (60, 48)
 BOTON_SEP_X = 20
 
@@ -670,6 +678,28 @@ def medir_banda(chasis: Image.Image, pantalla: tuple) -> tuple:
             int(cols.max() - cols.min() + 1), int(filas.max() - filas.min() + 1))
 
 
+def medir_cuadro(chasis: Image.Image, saldo: tuple) -> tuple:
+    """El cuadradito de al lado del saldo. (x0, y0, ancho, alto).
+
+    Se busca a la derecha de la ranura del saldo y se descartan las columnas
+    cuya moldura ocupa TODA la altura: esa es la linea divisoria vertical del
+    panel, que es del mismo gris y estaria pegada al cuadro.
+    """
+    a = np.array(chasis.convert("RGBA")).astype(int)
+    m = ((np.abs(a[..., :3] - np.array(MOLDURA)).max(axis=2) < 17)
+         & (a[..., 3] > 200))
+    y0, y1 = saldo[1] + 6, saldo[3] - 4
+    x0, x1 = saldo[2] + 8, saldo[2] + 90
+    sub = m[y0:y1, x0:x1]
+    alto = sub.sum(0)
+    cols = [c for c in np.where(alto > 3)[0] if alto[c] < (y1 - y0) * 0.7]
+    filas = np.where(sub[:, cols].sum(1) > 3)[0]
+    if not cols or not len(filas):
+        raise SystemExit("No se encuentra el cuadradito al lado del saldo")
+    return (x0 + min(cols), y0 + filas.min(),
+            max(cols) - min(cols) + 1, filas.max() - filas.min() + 1)
+
+
 def medir_panel_superior(chasis: Image.Image) -> tuple:
     """El hueco oscuro y liso de arriba a la derecha, junto a la placa del logo.
 
@@ -829,11 +859,12 @@ def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
     pantalla = medir_pantalla(chasis)
     bx, by, bw, bh = medir_banda(chasis, pantalla)
     px, py, pw, ph = medir_panel_superior(chasis)
-    rx, ry, rw, rh = interior(cajas[1])
+    qx, qy, qw, qh = medir_cuadro(chasis, cajas[2])
 
     sitios = {}
     ancho_b, alto_b = BOTON_BANDA
     ancho_p, alto_p = BOTON_PANEL
+    ancho_c, alto_c = BOTON_CUADRO
 
     # Los del panel van en fila, PEGADOS A LA DERECHA. El indice manda el orden
     # de izquierda a derecha, asi que `cerrar` --que es el ultimo-- queda en el
@@ -853,6 +884,9 @@ def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
             centro = bx + bw * (2 * i + 1) // 4
             sitios[nombre] = (centro - ancho_b // 2,
                               by + (bh - alto_b) // 2, ancho_b, alto_b)
+        elif sitio == "cuadro":
+            sitios[nombre] = (qx + (qw - ancho_c) // 2,
+                              qy + (qh - alto_c) // 2, ancho_c, alto_c)
         else:
             sitios[nombre] = (fila_x + i * (ancho_p + BOTON_SEP_X),
                               py + (ph - alto_p) // 2, ancho_p, alto_p)
@@ -987,10 +1021,9 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
             d.rectangle([px, py, px + PUNTO - 1, py + PUNTO - 1],
                         fill=color if lleno else PUNTO_VACIO)
 
-    # Las DOS monedas. Ni tres: el jugador ve PokeDolares y LunaCoins.
-    d.text((saldo[0], saldo[1] - 22), "12,345", font=gorda,
-           fill=(255, 225, 46, 255), anchor="mm")
-    d.text((saldo[0], saldo[1] + 4), "48", font=gorda,
+    # SOLO LunaCoins: es la unica moneda que se compra, y por eso la unica
+    # que necesita el "+" de al lado.
+    d.text((saldo[0], saldo[1] - 9), "48", font=gorda,
            fill=(159, 200, 255, 255), anchor="mm")
 
     # Sin ampliar. El chasis ya mide 1380x828, que es el tamano al que se va a

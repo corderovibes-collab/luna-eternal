@@ -124,8 +124,16 @@ RESALTADA = 7
 # el icono (25 -> 100). Se escalan en vez de reelegirse porque la proporcion ya
 # estaba ajustada a ojo contra el arte y funcionaba; lo que no valia era el
 # valor absoluto, que sobre 100 px es invisible.
-AIRE = 12       # margen entre el icono y el borde de su celda
-HUECO = 24      # separacion HORIZONTAL entre celdas
+# ⚠ CRECIERON CON EL CHASIS v5, Y NO POR GUSTO. Al ensanchar la pantalla de 800
+# a 956 la rejilla se quedo en 716 y sobraban 120 px de blanco a cada lado: la
+# pantalla se veia vacia y la rejilla, perdida en medio.
+#
+# Lo que crece es LA CELDA, no el icono. Ampliar un icono de 100 a 140 es un
+# factor de 1,4 y ablanda el dibujo; darle aire dentro de una celda mayor lo
+# deja intacto y llena la pantalla igual. Y es lo que hace la referencia: sus
+# iconos tambien tienen margen dentro de su celda.
+AIRE = 18       # margen entre el icono y el borde de su celda
+HUECO = 34      # separacion HORIZONTAL entre celdas
 
 # El nombre de cada aplicacion, debajo de su icono.
 #

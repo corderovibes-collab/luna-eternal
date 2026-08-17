@@ -91,8 +91,8 @@ public class PokePadScreen extends Screen {
     /** La rejilla, en píxeles del arte. */
     // Los da `tools/gen_pokepad.py` al preparar el arte: los imprime al final.
     // No se escriben a ojo, se copian de ahi.
-    private static final int REJ_X = 736, REJ_Y = 236;
-    private static final int CELDA = 124, HUECO_X = 24, HUECO_Y = 19, ICONO = 100;
+    private static final int REJ_X = 686, REJ_Y = 218;
+    private static final int CELDA = 136, HUECO_X = 34, HUECO_Y = 19, ICONO = 100;
     private static final int COLS = 5;
 
     /**

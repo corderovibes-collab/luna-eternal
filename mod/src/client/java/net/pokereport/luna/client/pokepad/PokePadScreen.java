@@ -41,7 +41,14 @@ public class PokePadScreen extends Screen {
     // Todos los valores estan MUESTREADOS del propio arte, no elegidos a ojo.
     private static final int CELDA_FONDO = 0xFFBFCBE8;
     private static final int CELDA_BORDE = 0xFF7C89B4;
-    private static final int CELDA_ENCIMA = 0xFFFFFFFF;
+    // ⚠ EL RESALTE NO ES BLANCO PURO, Y ES POR UN MOTIVO MEDIDO.
+    //
+    // Lo fue, y sobre el candado se veia el fallo: su arco es blanco puro
+    // (255,255,255), asi que sobre una celda blanca DESAPARECIA. Un tinte
+    // calido --a juego con el naranja del bisel, que ya es el acento del
+    // resalte-- baja la celda a luma 241 y deja que cualquier dibujo con
+    // blancos siga leyendose encima.
+    private static final int CELDA_ENCIMA = 0xFFFFF0DC;
     private static final int BORDE_ENCIMA = 0xFFF35C0C;
 
     /**
@@ -138,8 +145,8 @@ public class PokePadScreen extends Screen {
     // apagar el icono solo conseguia que la pantalla entera pareciera muerta
     // --y hoy las quince aplicaciones estan cerradas--. Es el fondo el que
     // debe recular, no el dibujo.
-    private static final int CELDA_CERRADA = 0xFFD0D8EC;
-    private static final int BORDE_CERRADA = 0xFFA0AAC6;
+    private static final int CELDA_CERRADA = 0xFFC2CCE4;
+    private static final int BORDE_CERRADA = 0xFF96A1C0;
 
     // Las tres ranuras del panel izquierdo, MEDIDAS sobre el chasis y no
     // puestas a ojo. Las mide `medir_cajas()` de gen_pokepad.py buscando el gris

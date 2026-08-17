@@ -195,17 +195,47 @@ mercado y el clan deja de ser un estandarte de guerra.
 | 2 | `cosmeticos` | `a cute chubby yellow electric mouse creature with long black-tipped ears, round red cheeks and a lightning-bolt tail, wearing stylish sunglasses and a backwards cap, smiling and relaxed, with one small sparkle beside it` |
 | 3 | `trabajos` | `a shiny iron pickaxe and a fishing rod crossed in an X, wooden handles, a tiny Poke Ball hanging from the fishing line` |
 | 4 | `misiones` | `a modern clipboard with a checklist and one green check mark, and a small Poke Ball clipped to its top` |
-| 5 | `transportes` | `a glowing purple portal orb floating above a rounded location pin on a small map` |
+| 5 | `warps` | `a majestic blue and white bird-like creature with a long flowing ribbon tail and wide spread feathered wings, seen in flight from the side, soaring above a small rounded floating map fragment with a glowing red location pin on it` **(v2)** |
 | 6 | `clan` | `a rounded shield emblem with a Poke Ball in the center and two small wings at its sides, friendly and modern, not warlike` |
 | 7 | `gts` | `two Poke Balls facing each other with a bright green emerald floating between them and a smooth circular exchange arrow around all three` |
-| 8 | `tienda` | `a modern shopping bag with rounded handles and a Poke Ball printed on it, next to one small stack of gold coins` |
+| 8 | `tienda` | `a small friendly shop building with a bright blue tiled roof and a red and white striped awning over its open counter, a big round red and white creature-catching ball sign hanging above the doorway, and a small stack of gold coins resting on the counter` **(v2)** |
 | 9 | `tesoros` | `an open wooden treasure chest with golden fittings and a glowing golden Poke Ball rising out of it with two sparkles` |
-| 10 | `wiki` | `a modern bookshelf cube full of colorful books, with a big friendly rounded question mark floating in front of it` |
-| 11 | `cazas` | `a smooth round targeting reticle with a soft blue paw print centered inside it` |
-| 12 | `lotes` | `a bright gift box with a wide ribbon and bow, and a small golden crown resting on the lid` |
+| 10 | `wiki` | `a big open illustrated field guide book with thick rounded covers and gilded page edges, the left page showing a small drawn portrait of a round friendly creature and the right page a simple sketched map, a red and white creature-catching ball resting on the spine as a bookmark. The pages contain only drawings, never any writing` **(v2)** |
+| 11 | `cazas` | `a small orange fox-like creature with pointed ears, big friendly eyes and a thick curled bushy tail, crouching alert in a tuft of tall green grass, framed inside a glowing round targeting reticle with four short crosshair marks around its rim` **(v2)** |
+| 12 | `kits` | `a bright gift box with a wide ribbon and bow, and a small golden crown resting on the lid` |
 | 13 | `mochila` | `a modern rounded backpack seen from the front with padded straps and a red and white Poke Ball as the front clasp` |
-| 14 | `gimnasios` | `a shiny rounded medal badge with two small white wings and a golden star, hanging from a short ribbon` |
-| 15 | `explorar` | `a Minecraft grass block turned into a small round planet, green grass on top and brown dirt below, with one small white cloud beside it` |
+| 14 | `gyms` | `a shiny enamel gym badge shaped like a bold eight-pointed star, thick gold rim, deep crimson and orange enamel facets and a small bright cyan gem at its center, two small white feathered wings spread at its sides, floating just above two smaller badges stacked beneath it` **(v2)** |
+| 15 | `explorar` | `a small floating island made from a Minecraft grass block, green grass on top, brown dirt below and a winding stone path across it, with a tiny red and white creature-catching ball on the path and a small green leaf-tailed creature peeking over the edge, one white cloud beside it` **(v2)** |
+
+
+> **Seis se rehicieron el 2026-08-16** (marcados **v2**): viajes, tienda, wiki,
+> cazas, gimnasios y explorar. El motivo lo dio el usuario: *no se parecían al
+> estilo Pokémon*. Y tenía razón — eran objetos correctos pero **genéricos**: un
+> pin de mapa, una bolsa de la compra, una estantería, una diana, una medalla y
+> un bloque de hierba. Ninguno traía una criatura ni un guiño al mundo.
+>
+> Lo que cambia en los seis es lo mismo: **entra el mundo Pokémon en el propio
+> objeto**. La diana pasa a tener una criatura agazapada dentro; la estantería
+> pasa a ser una guía de campo abierta con la ficha de una criatura; la bolsa
+> pasa a ser una tienda con su toldo y su bola colgada; la medalla pasa a ser
+> una **medalla de gimnasio** de ocho puntas con alas; el pin pasa a ser una
+> criatura voladora sobrevolando el mapa; y el bloque de hierba gana un
+> caminito, una bola y una criatura asomándose.
+>
+> Prompts montados y listos para pegar en
+> [`build/pokepad/prompts-iconos-v2.txt`](../../build/pokepad/prompts-iconos-v2.txt).
+
+> ⚠️ **Los nombres de fichero de esta tabla son los REALES**, y tres no son los
+> obvios: `warps` (no «transportes»), `gyms` (no «gimnasios») y `kits` (no
+> «lotes»). El generador los busca por ese nombre exacto y **aborta si falta
+> uno** — un hueco en la pantalla principal es peor que no generar.
+
+> **El tamaño ya da igual mientras sea cuadrado.** `a_tamano()` reduce desde
+> cualquier resolución con Lanczos sobre alfa premultiplicado, así que el arte
+> puede entrar tal y como salga del generador (1024 × 1024 normalmente). Antes
+> había que reescalarlo a 100 a mano, y ese paso manual es justo donde se cuela
+> un icono a 1023 o reescalado con el filtro equivocado. Ampliar sigue exigiendo
+> factor entero: eso es para el pixel art, que sí tiene rejilla que respetar.
 
 ---
 

@@ -309,25 +309,35 @@ def sangrar_alfa(im: Image.Image, visible: int = 24) -> Image.Image:
 
 
 def a_tamano(im: Image.Image, lado: int) -> Image.Image:
-    """Lleva un icono a `lado` x `lado`, y solo si el factor es EXACTO.
+    """Lleva un icono a `lado` x `lado`. Las dos direcciones, con su filtro.
 
-    Existe para que el arte en pixel art pueda entrar tal cual. Un icono de
-    25x25 es 100/25 = 4 veces mas pequeno, factor entero, asi que se amplia con
-    VECINO MAS PROXIMO: cada pixel del dibujo se convierte en un bloque de 4x4 y
-    el resultado es exactamente lo que dibujo el artista, sin inventar medios
-    tonos ni redondear bordes.
+    AMPLIAR solo por factor ENTERO, y con vecino mas proximo. Existe para que el
+    arte en pixel art pueda entrar tal cual: un icono de 25x25 es 100/25 = 4
+    veces mas pequeno, asi que cada pixel se convierte en un bloque de 4x4 y el
+    resultado es exactamente lo que dibujo el artista, sin inventar medios tonos
+    ni redondear bordes. Si el factor no fuera entero se aborta: un 1,7
+    emborrona el pixel art y ademas mueve las lineas de sitio.
 
-    Si el factor NO fuera entero se aborta en vez de escalar: un 1,7 emborrona
-    el pixel art y ademas mueve las lineas de sitio, y es mejor enterarse aqui
-    que en el juego.
+    REDUCIR, en cambio, vale desde cualquier tamano — con `reducir()`, que
+    promedia con Lanczos sobre alfa premultiplicado. **Esto es lo que permite
+    que el arte llegue como salga del generador**, que es a 1024x1024: antes
+    habia que reescalarlo a mano a 100 antes de meterlo en la carpeta, y ese
+    paso manual es donde se cuela un icono a 1023 o reescalado con el filtro
+    equivocado. Reducir una ilustracion suavizada no tiene el problema de
+    ampliar pixel art: no hay rejilla que respetar.
     """
     if im.size == (lado, lado):
         return im
     ancho, alto = im.size
-    if ancho != alto or lado % ancho != 0:
-        raise SystemExit(f"Un icono mide {ancho}x{alto} y no cabe en {lado}x{lado} "
-                         f"por un factor entero. Reexportalo a {lado} o a un "
-                         f"divisor suyo (25, 50, 100).")
+    if ancho != alto:
+        raise SystemExit(f"Un icono mide {ancho}x{alto} y no es cuadrado. "
+                         f"Reexportalo cuadrado.")
+    if ancho > lado:
+        return reducir(im, lado, lado)
+    if lado % ancho != 0:
+        raise SystemExit(f"Un icono mide {ancho}x{alto} y no se amplia a "
+                         f"{lado}x{lado} por un factor entero. Reexportalo a "
+                         f"{lado} o a un divisor suyo (25, 50, 100).")
     return im.resize((lado, lado), Image.NEAREST)
 
 

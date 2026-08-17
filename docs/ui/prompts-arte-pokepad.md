@@ -205,7 +205,7 @@ mercado y el clan deja de ser un estandarte de guerra.
 | 12 | `kits` | `a bright gift box with a wide ribbon and bow, and a small golden crown resting on the lid` |
 | 13 | `mochila` | `a modern rounded backpack seen from the front with padded straps and a red and white Poke Ball as the front clasp` |
 | 14 | `gyms` | `an open hinged gym badge case seen at a slight three-quarter angle, filling the frame, rounded red and white shell with a thick gold rim and clasp, the lid raised behind, the inside lined with dark blue velvet holding six shiny enamel badges in shaped slots in two rows of three — star, teardrop, flame, leaf, gear, crescent — each a different bold color with a gold edge` **(v2)** |
-| 15 | `explorar` | `a small floating island made from a Minecraft grass block, green grass on top, brown dirt below and a winding stone path across it, with a tiny red and white creature-catching ball on the path and a small green leaf-tailed creature peeking over the edge, one white cloud beside it` **(v2)** |
+| 15 | `explorar` | `a tall ancient stone gateway arch filling the frame, chunky weathered stone blocks with moss and glowing violet runes carved along its sides, a red and white creature-catching ball emblem as the keystone, the archway filled with a swirling violet and magenta energy vortex and a faint glimpse of distant green hills through it` **(v2)** |
 
 
 > **Seis se rehicieron el 2026-08-16** (marcados **v2**): viajes, tienda, wiki,
@@ -256,6 +256,23 @@ mercado y el clan deja de ser un estandarte de guerra.
 > **Seis medallas y no ocho.** A 100 × 100 cada una queda en unos 20 px: seis en
 > dos filas de tres se leen como formas de colores distintas; ocho se convierten
 > en papilla.
+
+> **`explorar` pasó del bloque de hierba a un PORTAL.** El bloque con el caminito,
+> la bola y la criatura asomándose salió abarrotado y sin decir nada: tres
+> objetos pequeños peleándose por el cuadro. Es otra vez la misma lección — a
+> 100 × 100 hay sitio para **un objeto**, no para una escena.
+>
+> ⚠️ **Y tiene que distinguirse de `warps` a primera vista**, porque los dos son
+> «ir a otro sitio» y caen en la misma rejilla. El prompt lo fuerza en las tres
+> cosas que se ven de lejos:
+>
+> | | `warps` | `explorar` |
+> |---|---|---|
+> | Forma | plataforma **baja y horizontal** | arco **alto y vertical** |
+> | Material | metal y tecnología | piedra antigua con musgo |
+> | Color | neón **cian** | vórtice **violeta** |
+>
+> Dos portales cianes en la misma pantalla serían el mismo botón dos veces.
 
 > Prompts montados y listos para pegar en
 > [`build/pokepad/prompts-iconos-v2.txt`](../../build/pokepad/prompts-iconos-v2.txt).

@@ -228,6 +228,18 @@ SITIOS = {
 #           abajo del bisel, que mide 37. No estorba: la carita verde que
 #           estaba ahi ocupaba 38 con su halo y se salia igual
 BOTON_PANEL = (80, 64)
+
+# LA BARRA DE SESION, en la banda de cabecera. De izquierda a derecha:
+#
+#   [moneda Plata][numero][+]   [moneda Luna][numero][+]   [ajustes][cerrar]
+#
+# Los dos saldos arriba y juntos: son el mismo tipo de dato y se comparan de un
+# vistazo. Abajo a la izquierda ya no hay saldo -- esa ranura queda libre.
+BARRA_NUM = 130          # el hueco reservado al numero
+BARRA_MAS = (50, 40)     # el "+" de cada saldo
+BARRA_AIRE = 10          # entre moneda, numero y "+"
+BARRA_HUECO = 34         # entre un saldo y el siguiente
+BARRA_MARGEN = 26        # aire hasta el borde derecho de la banda
 # El cuadradito mide 48x48 MEDIDOS. El boton va a 40x32 y se apoya un poco
 # sobre su moldura: dentro del hueco util (33x33) tendria que bajar a 30x24 y
 # un '+' de 24 px de alto es un adorno, no un boton que invita a pulsarlo.
@@ -657,7 +669,7 @@ def quitar_carita(im: Image.Image) -> Image.Image:
     return Image.fromarray(a, "RGBA")
 
 
-def medir_cajas(chasis: Image.Image) -> list:
+def medir_cajas(chasis: Image.Image, hasta_x: int = None) -> list:
     """Las ranuras del panel izquierdo, por el gris de su moldura.
 
     Devuelve `[(x0, y0, x1, y1), ...]` de arriba abajo, con las coordenadas de
@@ -676,8 +688,21 @@ def medir_cajas(chasis: Image.Image) -> list:
 
     # Solo el panel izquierdo, y sin los bordes del chasis: su marco exterior es
     # de este mismo gris y se colaria como si fuera una ranura mas.
+    #
+    # ⚠ EL LIMITE DERECHO ES LA PANTALLA, NO UN PORCENTAJE DEL ANCHO. Estaba en
+    # `w * 0.29` y funcionaba con el chasis de 1380; al ensancharlo a 1848 ese
+    # 5 % de la izquierda paso de 69 a 92 px y dejo FUERA el borde izquierdo de
+    # la ranura mediana, que empieza en 80. El script dijo "se esperaban 3
+    # ranuras y se han medido 2", que es lo correcto, pero la culpa era de la
+    # zona y no del arte.
+    tope = hasta_x if hasta_x else int(w * 0.29)
     zona = np.zeros((h, w), bool)
-    zona[int(h * 0.11):int(h * 0.91), int(w * 0.05):int(w * 0.29)] = True
+    # El limite izquierdo es fijo y no un porcentaje: el marco exterior del
+    # chasis esta SIEMPRE en x 12..24 --ensanchar inserta cuerpo por el medio, no
+    # por el borde-- y es del mismo gris que las molduras. Con un porcentaje del
+    # ancho se colaba dentro y anadia una banda falsa que desparejaba las tapas:
+    # el script encontraba las seis y no acertaba ni una ranura.
+    zona[int(h * 0.11):int(h * 0.91), 60:tope] = True
     m &= zona
 
     def tramos(v, minimo):
@@ -695,7 +720,13 @@ def medir_cajas(chasis: Image.Image) -> list:
 
     # Las tapas: filas con mucha moldura. Van de dos en dos — la de arriba y la
     # de abajo de cada ranura.
-    tapas = tramos(m.sum(1) > w * 0.05, 5)
+    # ⚠ SE DESCARTA LO QUE TOCA EL BORDE DE LA ZONA. Una banda que empieza en la
+    # primera fila de la ventana de busqueda no es una moldura: es algo mas
+    # grande que la ventana ha cortado. Colada, desparejaba las tapas de dos en
+    # dos y el script no acertaba NI UNA ranura pese a encontrarlas todas.
+    y_ini, y_fin = int(h * 0.11), int(h * 0.91)
+    tapas = [t for t in tramos(m.sum(1) > w * 0.05, 5)
+             if t[0] > y_ini and t[1] < y_fin - 1]
     cajas = []
     for i in range(0, len(tapas) - 1, 2):
         (ta0, ta1), (tb0, tb1) = tapas[i], tapas[i + 1]
@@ -762,27 +793,46 @@ def medir_cuadro(chasis: Image.Image, saldo: tuple) -> tuple:
             max(cols) - min(cols) + 1, filas.max() - filas.min() + 1)
 
 
-def medir_panel_superior(chasis: Image.Image) -> tuple:
-    """El hueco oscuro y liso de arriba a la derecha, junto a la placa del logo.
-
-    Es el unico rectangulo grande del chasis que no aloja nada, y por eso es
-    donde cabe `cerrar` a tamano completo.
-    """
-    a = np.array(chasis.convert("RGBA")).astype(int)
-    r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    liso = ((np.abs(r - 31) < 8) & (np.abs(g - 33) < 8) & (np.abs(b - 43) < 8)
-            & (a[..., 3] > 200))
-    h, w = liso.shape
-    cols = np.where(liso[int(h * 0.10):int(h * 0.20),
-                         int(w * 0.65):].mean(0) > 0.92)[0] + int(w * 0.65)
-    filas = np.where(liso[:, cols.min():cols.max()].mean(1) > 0.92)[0]
-    filas = filas[(filas > h * 0.05) & (filas < h * 0.25)]
-    return (int(cols.min()), int(filas.min()),
-            int(cols.max() - cols.min() + 1), int(filas.max() - filas.min() + 1))
-
-
 # El gris liso del fondo de una ranura, ya pasados la moldura y el bisel.
 FONDO_RANURA = (41, 43, 54)
+# Y el de la banda de cabecera, un punto mas oscuro.
+FONDO_CABECERA = (31, 33, 43)
+
+
+def medir_panel_superior(chasis: Image.Image) -> tuple:
+    """La banda lisa de la cabecera, a la DERECHA de la placa del logo.
+
+    Es donde va la barra de sesion: los dos saldos con sus «+» y los botones de
+    ajustes y cerrar.
+
+    ⚠ SE BUSCA EL TRAMO LISO MAS ANCHO, no una ventana fija en porcentajes del
+    ancho. Estaba en `w * 0.65` y con el chasis de 1380 caia justo despues de la
+    placa; al ensanchar a 1848 ese 65 % se fue a x 1201 y la banda salia de 418
+    px en vez de los 857 que tiene de verdad -- o sea, la mitad del sitio
+    disponible desaparecia sin que nada fallara.
+    """
+    a = np.array(chasis.convert("RGBA")).astype(int)
+    h, w = a.shape[:2]
+    liso = ((np.abs(a[..., :3] - np.array(FONDO_CABECERA)).max(axis=2) < 8)
+            & (a[..., 3] > 200))
+    # A media altura de la banda, el tramo liso mas largo.
+    cy = int(h * 0.14)
+    xs = np.where(liso[cy])[0]
+    if not len(xs):
+        raise SystemExit("No se encuentra la banda de la cabecera")
+    tramos_x, ini_t, ant = [], None, -9
+    for x in xs:
+        if x != ant + 1:
+            if ini_t is not None:
+                tramos_x.append((ini_t, ant))
+            ini_t = x
+        ant = x
+    tramos_x.append((ini_t, ant))
+    x0, x1 = max(tramos_x, key=lambda t: t[1] - t[0])
+    # Y su alto, por la columna del medio.
+    col = liso[:, (x0 + x1) // 2]
+    ys = [y for y in range(int(h * 0.05), int(h * 0.25)) if col[y]]
+    return (int(x0), min(ys), int(x1 - x0 + 1), max(ys) - min(ys) + 1)
 
 
 def interior_util(chasis: Image.Image, caja: tuple) -> tuple:
@@ -834,7 +884,7 @@ def main() -> None:
     # El chasis tambien: tiene menos motas, pero es el mismo problema.
     guardar(sangrar_alfa(chasis), SALIDA / "pokepad.png")
     x0, y0, x1, y1 = medir_pantalla(chasis)
-    cajas = medir_cajas(chasis)
+    cajas = medir_cajas(chasis, hasta_x=x0 - 20)
     print(f"  chasis    {chasis.size[0]} x {chasis.size[1]}")
     print(f"  pantalla  x {x0}-{x1}  y {y0}-{y1}   ({x1 - x0} x {y1 - y0})")
     if len(cajas) != 3:
@@ -914,6 +964,10 @@ def main() -> None:
     # dibuje 1:1 (regla 2 de docs/ui/dibujado.md). Dejar que lo encoja el juego
     # significa vecino mas proximo, que tira una fila de cada dos.
     sitios = colocar_botones(chasis, cajas)
+    # `mas` no esta en BOTONES --no tiene sitio propio en el chasis-- pero hacen
+    # falta DOS, uno por saldo, asi que se prepara aparte y a su tamano.
+    guardar(reducir(preparar(ARTE / "botones" / "mas.png"), *BARRA_MAS),
+            SALIDA / "boton_mas.png")
     for nombre, (bx, by, bw, bh) in sitios.items():
         guardar(reducir(preparar(ARTE / "botones" / f"{nombre}.png"), bw, bh),
                 SALIDA / f"boton_{nombre}.png")
@@ -955,15 +1009,25 @@ def main() -> None:
     print(f"  tarjeta   hueco util {tw}x{th} en {tx},{ty}"
           f"   estrellas {estrellas_w} px, nombre {tarj_der - tarj_x - estrellas_w - 8} px")
 
-    # La Plata, en el panel de arriba y pegada a la izquierda. Los botones estan
-    # a la derecha, asi que el numero se centra en lo que sobra entre las dos
-    # cosas -- no en el panel entero, o caeria debajo de `ajustes`.
+    # LOS DOS SALDOS DE LA BARRA. Se recomponen con los MISMOS numeros que usa
+    # `colocar_botones`, para que las dos mitades de la barra no se separen.
     ppx, ppy, ppw, pph = medir_panel_superior(chasis)
-    plata_x = ppx + PLATA_AIRE
-    plata_y = ppy + (pph - MONEDA) // 2
-    hueco_botones = min(v[0] for k, v in sitios.items() if SITIOS[k][0] == "panel")
-    plata_cx = (plata_x + MONEDA + MONEDA_AIRE + hueco_botones - MONEDA_AIRE) // 2
-    plata_cy = ppy + pph // 2
+    mas_w, mas_h = BARRA_MAS
+    grupo = MONEDA + BARRA_AIRE + BARRA_NUM + BARRA_AIRE + mas_w
+    en_panel = [n for n in BOTONES if SITIOS[n][0] == "panel"]
+    botones_w = (len(en_panel) * BOTON_PANEL[0]
+                 + (len(en_panel) - 1) * BOTON_SEP_X)
+    barra_x = ppx + ppw - BARRA_MARGEN - (2 * grupo + 2 * BARRA_HUECO + botones_w)
+    cy_barra = ppy + pph // 2
+    saldos = []
+    for i in range(2):
+        gx = barra_x + i * (grupo + BARRA_HUECO)
+        saldos.append({
+            "moneda": (gx, cy_barra - MONEDA // 2),
+            "centro": (gx + MONEDA + BARRA_AIRE + BARRA_NUM // 2, cy_barra),
+            "mas": (gx + MONEDA + BARRA_AIRE + BARRA_NUM + BARRA_AIRE,
+                    cy_barra - mas_h // 2),
+        })
 
     # El saldo: la moneda pegada a la izquierda del hueco UTIL, y el numero
     # centrado en lo que sobra. Centrar el numero en la ranura ENTERA lo dejaria
@@ -983,8 +1047,11 @@ def main() -> None:
     print(f"    CARA_X = {cara_x}, CARA_Y = {cara_y}, CARA_LADO = {CARA_LADO}")
     print(f"    SALDO_CX = {saldo_cx}, SALDO_CY = {saldo_cy}")
     print(f"    MONEDA_X = {moneda_x}, MONEDA_Y = {moneda_y}, MONEDA = {MONEDA}")
-    print(f"    PLATA_X = {plata_x}, PLATA_Y = {plata_y}, "
-          f"PLATA_CX = {plata_cx}, PLATA_CY = {plata_cy}")
+    for nombre, s in zip(("PLATA", "LUNA"), saldos):
+        print(f"    {nombre}_X = {s['moneda'][0]}, {nombre}_Y = {s['moneda'][1]}, "
+              f"{nombre}_CX = {s['centro'][0]}, {nombre}_CY = {s['centro'][1]}, "
+              f"{nombre}_MAS_X = {s['mas'][0]}, {nombre}_MAS_Y = {s['mas'][1]}")
+    print(f"    BARRA_MAS_W = {BARRA_MAS[0]}, BARRA_MAS_H = {BARRA_MAS[1]}")
     print(f"    TARJ_X = {tarj_x}, TARJ_Y = {tarj_y}, TARJ_FILA = {TARJ_FILA}, "
           f"TARJ_DER = {tarj_der}")
     print(f"    BOTON = {{      // x, y, ancho, alto — en el orden de BOTONES")
@@ -1000,7 +1067,7 @@ def main() -> None:
                     rej_x, rej_y, celda, lado, hueco_y,
                     (cara_x, cara_y), sitios, (saldo_cx, saldo_cy),
                     (tarj_x, tarj_y, tarj_der), (moneda_x, moneda_y),
-                    (plata_x, plata_y, plata_cx, plata_cy), pag)
+                    saldos, pag)
 
 
 def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
@@ -1020,15 +1087,19 @@ def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
     ancho_p, alto_p = BOTON_PANEL
     ancho_c, alto_c = BOTON_CUADRO
 
-    # Los del panel van en fila, PEGADOS A LA DERECHA. El indice manda el orden
-    # de izquierda a derecha, asi que `cerrar` --que es el ultimo-- queda en el
-    # extremo, que es donde lo busca todo el mundo.
+    # LA BARRA ENTERA, pegada a la derecha de la banda. Se compone de izquierda
+    # a derecha y se ancla por el final: asi `cerrar` queda en el extremo, que es
+    # donde lo busca todo el mundo, y todo lo demas se acomoda solo.
+    mas_w, mas_h = BARRA_MAS
+    grupo = MONEDA + BARRA_AIRE + BARRA_NUM + BARRA_AIRE + mas_w
     en_panel = sorted((n for n in BOTONES if SITIOS[n][0] == "panel"),
                       key=lambda n: SITIOS[n][1])
-    fila = len(en_panel) * ancho_p + (len(en_panel) - 1) * BOTON_SEP_X
-    if fila > pw - 40:
-        raise SystemExit(f"Los {len(en_panel)} del panel no caben: {fila} en {pw}")
-    fila_x = px + pw - 20 - fila
+    botones_w = len(en_panel) * ancho_p + (len(en_panel) - 1) * BOTON_SEP_X
+    total = 2 * grupo + 2 * BARRA_HUECO + botones_w
+    if total > pw - BARRA_MARGEN:
+        raise SystemExit(f"La barra de sesion no cabe: {total} en {pw}")
+    barra_x = px + pw - BARRA_MARGEN - total
+    fila_x = barra_x + 2 * grupo + 2 * BARRA_HUECO
 
     for nombre in BOTONES:
         sitio, i = SITIOS[nombre]
@@ -1178,25 +1249,22 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
             out.alpha_composite(llena if e < NIVELES_MAQUETA[i] else vacia,
                                 (px, y + 2))
 
-    # SOLO LunaCoins: es la unica moneda que se compra, y por eso la unica
-    # que necesita el "+" de al lado.
-    if (SALIDA / "plata.png").exists():
-        out.alpha_composite(Image.open(SALIDA / "plata.png").convert("RGBA"),
-                            (plata[0], plata[1]))
-        d.text((plata[2], plata[3]), "12,345", font=gorda,
-               fill=(226, 232, 242, 255), anchor="mm")
-    if (SALIDA / "lunacoin.png").exists():
-        out.alpha_composite(Image.open(SALIDA / "lunacoin.png").convert("RGBA"),
-                            (moneda[0], moneda[1]))
-    d.text((saldo[0], saldo[1]), "48", font=ImageFont.truetype("arial.ttf", 34)
-           if fuente is not gorda else gorda,
-           fill=(255, 211, 74, 255), anchor="mm")
-
-    # La cruz del "+", dibujada como la dibuja el codigo: dos rectangulos
-    # dentro del zocalo que ya trae el chasis.
-    cx, cy = 302 + 24, 651 + 24
-    d.rectangle([cx - 11, cy - 3, cx + 10, cy + 2], fill=(90, 100, 128, 255))
-    d.rectangle([cx - 3, cy - 11, cx + 2, cy + 10], fill=(90, 100, 128, 255))
+    # LA BARRA DE SESION: los dos saldos, cada uno con su moneda y su "+".
+    #
+    # Los dos arriba y juntos: son el mismo tipo de dato y asi se comparan de
+    # una mirada. La ranura de abajo a la izquierda queda LIBRE.
+    boton_mas = (Image.open(SALIDA / "boton_mas.png").convert("RGBA")
+                 .resize(BARRA_MAS, Image.LANCZOS)
+                 if (SALIDA / "boton_mas.png").exists() else None)
+    for s, arte, valor, color in (
+            (plata[0], "plata.png", "12,345", (226, 232, 242, 255)),
+            (plata[1], "lunacoin.png", "48", (255, 211, 74, 255))):
+        if (SALIDA / arte).exists():
+            out.alpha_composite(Image.open(SALIDA / arte).convert("RGBA"),
+                                tuple(s["moneda"]))
+        d.text(tuple(s["centro"]), valor, font=gorda, fill=color, anchor="mm")
+        if boton_mas:
+            out.alpha_composite(boton_mas, tuple(s["mas"]))
 
     # Sin ampliar. El chasis ya mide 1380x828, que es el tamano al que se va a
     # dibujar en pantalla: ampliarlo ensenaria algo que nadie va a ver. Antes se

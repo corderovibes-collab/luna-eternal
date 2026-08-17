@@ -60,7 +60,7 @@ public class PokePadScreen extends Screen {
      * valores que puede tomar el ajuste <i>GUI Scale</i>. Dibujado a su tamaño
      * real, un texel cae en un píxel sea cual sea el ajuste del jugador.
      */
-    private static final int NAT_ANCHO = 1380, NAT_ALTO = 828;
+    private static final int NAT_ANCHO = 1848, NAT_ALTO = 828;
 
     /**
      * Cuánto puede DESBORDAR el Pad la ventana sin perder nada visible.
@@ -91,7 +91,7 @@ public class PokePadScreen extends Screen {
     /** La rejilla, en píxeles del arte. */
     // Los da `tools/gen_pokepad.py` al preparar el arte: los imprime al final.
     // No se escriben a ojo, se copian de ahi.
-    private static final int REJ_X = 502, REJ_Y = 236;
+    private static final int REJ_X = 736, REJ_Y = 236;
     private static final int CELDA = 124, HUECO_X = 24, HUECO_Y = 19, ICONO = 100;
     private static final int COLS = 5;
 
@@ -162,7 +162,6 @@ public class PokePadScreen extends Screen {
     // múltiplo de 8: cada texel cae en 21 píxeles clavados. Con un lado que no
     // lo fuera saldría emborronada justo en lo único que es del jugador.
     private static final int CARA_X = 134, CARA_Y = 136, CARA_LADO = 168;
-    private static final int SALDO_CX = 221, SALDO_CY = 678;
 
     /**
      * La moneda de los LunaCoins, a la izquierda de su saldo.
@@ -220,23 +219,35 @@ public class PokePadScreen extends Screen {
 
     /** x, y, ancho, alto — en píxeles del arte, en el orden de {@link #BOTONES}. */
     private static final int[][] BOTON = {
-            { 610, 692, 60, 48},   // atras
-            {1040, 692, 60, 48},   // adelante
-            {1107,  85, 80, 64},   // ajustes
-            {1207,  85, 80, 64},   // cerrar
+            { 688, 692, 60, 48},   // atras
+            {1274, 692, 60, 48},   // adelante
+            {1578,  85, 80, 64},   // ajustes
+            {1678,  85, 80, 64},   // cerrar
     };
 
     private static final int ATRAS = 0, ADELANTE = 1, AJUSTES = 2, CERRAR = 3;
 
     /**
-     * El zócalo del «+», medido sobre el chasis: 48 × 48 en 302,651.
+     * La barra de sesión, arriba a la derecha. Medida sobre el chasis v5.
      *
-     * <p><b>La cruz se DIBUJA, no es un botón con textura.</b> El chasis ya trae
-     * ese zócalo, así que meterle dentro un botón con su propio marco serían dos
-     * marcos, uno metido en otro. Lo único que falta ahí es la cruz.
+     * <pre>
+     *   [moneda Plata][12,345][+]   [moneda Luna][48][+]   [ajustes][cerrar]
+     * </pre>
+     *
+     * <p><b>Los dos saldos juntos y arriba.</b> Son el mismo tipo de dato y así
+     * se comparan de una mirada; repartidos —uno arriba y otro abajo— obligaban
+     * a buscar el segundo. La ranura de abajo a la izquierda queda <b>libre</b>.
+     *
+     * <p>Cada uno lleva su «+»: el de LunaCoins llevará a la tienda, y el de
+     * Plata a donde se decida. Los dos van apagados mientras no haya destino.
      */
-    private static final int CUADRO_X = 302, CUADRO_Y = 651, CUADRO = 48;
-    private static final int CRUZ_LARGO = 22, CRUZ_GRUESO = 6;
+    private static final Identifier MAS = tex("boton_mas");
+    private static final int BARRA_MAS_W = 50, BARRA_MAS_H = 40;
+
+    /** x de la moneda, x del centro del número, x del «+» — y la y común. */
+    private static final int[] PLATA_BARRA = {1030, 1145, 1220};
+    private static final int[] LUNA_BARRA = {1304, 1419, 1494};
+    private static final int BARRA_Y = 97, BARRA_CY = 117;
 
     /**
      * A dónde lleva el «+» de las LunaCoins.
@@ -386,6 +397,7 @@ public class PokePadScreen extends Screen {
         client.getTextureManager().getTexture(CANDADO).setFilter(suave, false);
         client.getTextureManager().getTexture(MONEDA).setFilter(suave, false);
         client.getTextureManager().getTexture(PLATA).setFilter(suave, false);
+        client.getTextureManager().getTexture(MAS).setFilter(suave, false);
     }
 
     /** El juego sigue corriendo detrás: es un menú, no una pausa. */
@@ -521,7 +533,7 @@ public class PokePadScreen extends Screen {
                 return true;
             }
         }
-        if (boton == 0 && enCuadro(ratonX, ratonY)) {
+        if (boton == 0 && enMas(ratonX, ratonY)) {
             sonar(!TIENDA.isEmpty());
             abrirTienda();
             return true;
@@ -628,36 +640,45 @@ public class PokePadScreen extends Screen {
                 lado, lado, 40f, 8f, 8, 8, 64, 64);
 
         tarjeta(ctx);
-        cruz(ctx, ratonX, ratonY);
+        barraSesion(ctx, ratonX, ratonY);
+    }
 
+    /**
+     * La barra de sesión: los dos saldos con su moneda y su «+».
+     *
+     * <p>Guiones mientras no ha llegado la respuesta del servidor: <b>«no lo sé»
+     * y «tienes cero» no son lo mismo</b>, y un cero falso en un saldo asusta.
+     *
+     * <p>Los números van a 27 y no a 18: es <b>tres veces exactas</b> los 9 que
+     * mide la fuente de Minecraft, así que siguen cayendo en píxeles enteros y
+     * no se emborronan.
+     */
+    private void barraSesion(DrawContext ctx, int ratonX, int ratonY) {
         Red.Saldo saldo = EstadoCliente.saldo();
-        // Guiones mientras no ha llegado la respuesta: "no lo sé" y "tienes
-        // cero" no son lo mismo, y un cero falso en un saldo asusta.
-        //
-        // AQUÍ ABAJO SOLO VAN LAS LUNACOINS. Decisión del usuario, y tiene
-        // sentido: es la única moneda que se compra, así que es la única que
-        // necesita un «+» al lado. La Plata se gana jugando y no hay
-        // nada que pulsar para tener más.
-        // 27 y no 18: es TRES veces los 9 que mide la fuente de Minecraft, así
-        // que sigue cayendo en píxeles enteros y no se emborrona. Es el único
-        // número de la pantalla y a 18 se perdía dentro de su ranura.
-        // La Plata, arriba. Va con el saldo del mismo paquete que la LunaCoin.
-        int plata = Math.round(MONEDA_LADO * k);
-        dibujar(ctx, PLATA, x0 + Math.round(PLATA_X * k),
-                y0 + Math.round(PLATA_Y * k), plata, plata,
-                MONEDA_LADO, MONEDA_LADO, 0xFFFFFFFF);
-        texto(ctx, Text.literal(saldo == null ? "- - -"
-                        : String.format("%,d", saldo.pokedolares())),
-                PLATA_CX, PLATA_CY - 14, 27, COLOR_PLATA, true, false);
+        int lado = Math.round(MONEDA_LADO * k);
+        int mw = Math.round(BARRA_MAS_W * k), mh = Math.round(BARRA_MAS_H * k);
 
-        int moneda = Math.round(MONEDA_LADO * k);
-        dibujar(ctx, MONEDA, x0 + Math.round(MONEDA_X * k),
-                y0 + Math.round(MONEDA_Y * k), moneda, moneda,
-                MONEDA_LADO, MONEDA_LADO, 0xFFFFFFFF);
+        for (int i = 0; i < 2; i++) {
+            int[] sitio = i == 0 ? PLATA_BARRA : LUNA_BARRA;
+            dibujar(ctx, i == 0 ? PLATA : MONEDA,
+                    x0 + Math.round(sitio[0] * k), y0 + Math.round(BARRA_Y * k),
+                    lado, lado, MONEDA_LADO, MONEDA_LADO, 0xFFFFFFFF);
+            long valor = saldo == null ? 0
+                    : (i == 0 ? saldo.pokedolares() : saldo.reportcoins());
+            texto(ctx, Text.literal(saldo == null ? "- - -" : String.format("%,d", valor)),
+                    sitio[1], BARRA_CY - 14, 27, i == 0 ? COLOR_PLATA : LUNA,
+                    true, false);
 
-        texto(ctx, Text.literal(saldo == null ? "- - -"
-                        : String.format("%,d", saldo.reportcoins())),
-                SALDO_CX, SALDO_CY - 14, 27, LUNA, true, false);
+            // El «+» va apagado mientras no haya a dónde ir, igual que las
+            // quince celdas. Cuando exista la tienda, se enciende solo.
+            int bx = x0 + Math.round(sitio[2] * k), by = y0 + Math.round(BARRA_Y * k);
+            boolean encima = ratonX >= bx && ratonX < bx + mw
+                    && ratonY >= by && ratonY < by + mh;
+            int tinte = TIENDA.isEmpty()
+                    ? (encima ? 0xFF9A9A9A : 0xFF808080)
+                    : (encima ? 0xFFFFFFFF : 0xFFE0E0E0);
+            dibujar(ctx, MAS, bx, by, mw, mh, BARRA_MAS_W, BARRA_MAS_H, tinte);
+        }
     }
 
     /**
@@ -746,29 +767,18 @@ public class PokePadScreen extends Screen {
         }
     }
 
-    /**
-     * La cruz del «+», dentro del zócalo que ya trae el chasis.
-     *
-     * <p>Dos rectángulos y nada más: el marco lo pone el arte. Se aclara al
-     * pasar el ratón y va apagada mientras no haya tienda a la que ir, igual
-     * que las quince celdas.
-     */
-    private void cruz(DrawContext ctx, int ratonX, int ratonY) {
-        boolean encima = enCuadro(ratonX, ratonY);
-        int color = TIENDA.isEmpty() ? 0xFF5A6480 : (encima ? 0xFFFFFFFF : LUNA);
-        int cx = x0 + Math.round((CUADRO_X + CUADRO / 2) * k);
-        int cy = y0 + Math.round((CUADRO_Y + CUADRO / 2) * k);
-        int largo = Math.max(2, Math.round(CRUZ_LARGO * k)) / 2;
-        int grueso = Math.max(1, Math.round(CRUZ_GRUESO * k)) / 2;
-        ctx.fill(cx - largo, cy - grueso, cx + largo, cy + grueso, color);
-        ctx.fill(cx - grueso, cy - largo, cx + grueso, cy + largo, color);
-    }
-
-    private boolean enCuadro(double ratonX, double ratonY) {
-        int px = x0 + Math.round(CUADRO_X * k), py = y0 + Math.round(CUADRO_Y * k);
-        int lado = Math.round(CUADRO * k);
-        return ratonX >= px && ratonX < px + lado
-                && ratonY >= py && ratonY < py + lado;
+    /** ¿El ratón está sobre alguno de los dos «+» de la barra? */
+    private boolean enMas(double ratonX, double ratonY) {
+        int mw = Math.round(BARRA_MAS_W * k), mh = Math.round(BARRA_MAS_H * k);
+        int by = y0 + Math.round(BARRA_Y * k);
+        for (int[] sitio : new int[][]{PLATA_BARRA, LUNA_BARRA}) {
+            int bx = x0 + Math.round(sitio[2] * k);
+            if (ratonX >= bx && ratonX < bx + mw
+                    && ratonY >= by && ratonY < by + mh) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Los seis botones, cada uno donde le toca. */

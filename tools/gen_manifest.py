@@ -71,6 +71,69 @@ SALIDA = RAIZ / "build" / "pack"
 # credenciales, y contra uno privado recibiria un 404 en casa de cada jugador.
 REPO_PUBLICO = "corderovibes-collab/luna-eternal-pack"
 
+# ---------------------------------------------------------------------------
+# LOS FICHEROS PESADOS NO SE SIRVEN DESDE `raw`
+#
+# `raw.githubusercontent` NO es un CDN de distribucion: limita por peticiones y
+# contesta 429 y 503 cuando le llegan muchas. Con 117 de las 199 entradas
+# apuntando ahi, un jugador que instalaba de cero se llevaba un
+# "HTTP 429 en .../manifest.json" y no podia jugar -- mientras que a quien ya lo
+# tenia todo bajado no le pasaba nada, porque no pedia nada.
+#
+# Los ficheros de los que somos duenos pasan a una RELEASE, que GitHub sirve por
+# su CDN de descargas y sin ese limite.
+#
+# ⚠ VA MARCADA COMO PRERELEASE, y no es un detalle: el autoactualizador del
+# launcher mira "la ultima release", y una release normal aqui le haria creer
+# que hay un launcher nuevo. `autoUpdater.allowPrerelease` solo se enciende en
+# versiones alpha/beta/rc, asi que una prerelease le resulta invisible.
+TAG_ACTIVOS = "pack-assets"
+BASE_ACTIVOS = f"https://github.com/{REPO_PUBLICO}/releases/download/{TAG_ACTIVOS}"
+
+
+def zip_plantillas(entradas: list) -> bytes:
+    """Empaqueta las plantillas de YOSBR en un zip, con rutas relativas a ellas.
+
+    DETERMINISTA A PROPOSITO: fecha fija, orden fijo y sin compresion variable.
+    Si el zip cambiara de huella en cada ejecucion, el launcher se lo bajaria
+    entero en cada actualizacion del pack aunque no hubiera cambiado ni un byte.
+    """
+    import io
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+        for rel, datos in sorted(entradas):
+            dentro = rel[len("config/yosbr/"):]
+            info = zipfile.ZipInfo(dentro, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            z.writestr(info, datos)
+    return buf.getvalue()
+
+
+def subir_activos(rutas: list) -> None:
+    """Sube a la release de activos, creandola si no existe.
+
+    `--clobber` porque los nombres llevan la huella dentro: si ya esta subido
+    ese mismo fichero, volver a subirlo no cambia nada, y si es uno nuevo se
+    anade. La release acumula, y eso es DELIBERADO: un manifiesto viejo que
+    alguien tenga cacheado sigue encontrando sus ficheros.
+    """
+    existe = subprocess.run(
+        ["gh", "release", "view", TAG_ACTIVOS, "--repo", REPO_PUBLICO],
+        capture_output=True, text=True).returncode == 0
+    if not existe:
+        subprocess.run(
+            ["gh", "release", "create", TAG_ACTIVOS, "--repo", REPO_PUBLICO,
+             "--prerelease", "--title", "Ficheros del pack",
+             "--notes", "Ficheros que sirve el launcher. NO es una version del "
+                        "launcher: va marcada como prerelease justo para que el "
+                        "autoactualizador la ignore."],
+            check=True)
+    subprocess.run(["gh", "release", "upload", TAG_ACTIVOS, *map(str, rutas),
+                    "--repo", REPO_PUBLICO, "--clobber"], check=True)
+    print(f"  activos         {len(rutas)} subidos a la release {TAG_ACTIVOS}")
+
 
 def rama_por_defecto() -> str:
     """La rama del repositorio publico, CONSULTADA.
@@ -235,7 +298,7 @@ def construir() -> dict:
             "path": f"mods/{jar.name}",
             "sha1": sha1,
             "size": len(datos),
-            "url": f"{BASE_RAW}/mods/{publicado(jar, sha1)}",
+            "url": f"{BASE_ACTIVOS}/{publicado(jar, sha1)}",
         })
         print(f"  {entrada['prefijo']:<15} {publicado(jar, sha1):<26} nuestro")
 
@@ -246,12 +309,37 @@ def construir() -> dict:
     dir_cfg = SALIDA / "overrides"
     if dir_cfg.exists():
         shutil.rmtree(dir_cfg)
+    plantillas, sueltos = [], []
     for n in overrides:
         rel = n[len("overrides/"):]
         datos = z.read(n)
         destino = dir_cfg / rel
         destino.parent.mkdir(parents=True, exist_ok=True)
         destino.write_bytes(datos)
+        # Las plantillas de YOSBR van en un zip; el resto, sueltas.
+        (plantillas if rel.startswith("config/yosbr/") else sueltos).append(
+            (rel, datos))
+
+    # LAS 110 PLANTILLAS DE YOSBR VIAJAN COMO UN SOLO ZIP.
+    #
+    # Se puede porque NO son la configuracion del jugador: son las plantillas de
+    # las que YOSBR copia cuando el fichero de verdad no existe. Sobrescribirlas
+    # no le toca a nadie sus ajustes, asi que no necesitan `once` y se pueden
+    # extraer encima.
+    #
+    # `config/iris.properties` y los dos de `openloader` se quedan SUELTOS y con
+    # `once`: esos si son configuracion viva.
+    zip_datos = zip_plantillas(plantillas)
+    sha_zip = hashlib.sha1(zip_datos).hexdigest()
+    (SALIDA / "yosbr.zip").write_bytes(zip_datos)
+    ficheros.append({
+        "path": "config/yosbr",
+        "sha1": sha_zip,
+        "size": len(zip_datos),
+        "url": f"{BASE_ACTIVOS}/yosbr-{sha_zip[:10]}.zip",
+        "archive": True,
+    })
+    for rel, datos in sueltos:
         ficheros.append({
             "path": rel,
             "sha1": hashlib.sha1(datos).hexdigest(),
@@ -259,7 +347,8 @@ def construir() -> dict:
             "url": f"{BASE_RAW}/overrides/{urllib.parse.quote(rel)}",
             "once": True,
         })
-    print(f"  configuracion   {len(overrides)} ficheros del pack oficial")
+    print(f"  configuracion   {len(plantillas)} plantillas en 1 zip "
+          f"({len(zip_datos) // 1024} KB) + {len(sueltos)} sueltas")
 
     # 6. Ficheros nuestros que se escriben una vez y no se vuelven a tocar.
     #
@@ -397,6 +486,22 @@ def publicar() -> None:
     #
     # Es idempotente y sale barato: una vez arreglado, el `add` no encuentra
     # diferencias y el commit sale vacio.
+    # Los activos van a la release, no al repositorio: ver TAG_ACTIVOS.
+    activos = [SALIDA / "yosbr.zip"]
+    import json as _json
+    manifiesto = _json.loads((SALIDA / "manifest.json").read_text(encoding="utf-8"))
+    nombre_zip = next(f["url"].rsplit("/", 1)[-1] for f in manifiesto["files"]
+                      if f.get("archive"))
+    (SALIDA / nombre_zip).write_bytes((SALIDA / "yosbr.zip").read_bytes())
+    activos = [SALIDA / nombre_zip]
+    for entrada in PROPIOS:
+        jar = jar_propio(entrada["carpeta"], entrada["prefijo"])
+        datos = jar.read_bytes()
+        nombre = publicado(jar, hashlib.sha1(datos).hexdigest())
+        (SALIDA / nombre).write_bytes(datos)
+        activos.append(SALIDA / nombre)
+    subir_activos(activos)
+
     subprocess.run(["git", "-C", str(clon), "rm", "--cached", "-r", "-q", "."],
                    check=True)
     subprocess.run(["git", "-C", str(clon), "add", "-A"], check=True)

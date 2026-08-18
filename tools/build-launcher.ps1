@@ -4,6 +4,10 @@
 #   git-ignorado, y el JDK global (Java 8 de Red Hat) NO se usa ni se cambia:
 #   el launcher se descarga su propio Java en tiempo de ejecucion
 #   (`Launcher_ENABLE_JAVA_DOWNLOADER=ON`).
+param(
+  # Compilacion de PUBLICACION: con LTO. Lenta a proposito.
+  [switch]$Publicar
+)
 $ErrorActionPreference = 'Stop'
 
 $TC   = 'D:\pokereportversionmejorada\.toolchain'
@@ -41,7 +45,25 @@ if ($vivos.Count -gt 0) {
 
 Push-Location $SRC
 try {
-  cmake --preset windows_msvc
+  # ⚠ EL LTO SE APAGA PARA DESARROLLAR, Y NO ES UN ATAJO SUCIO.
+  #
+  # El preset trae ENABLE_LTO=ON: optimiza el binario ENTERO de una pieza en vez
+  # de fichero a fichero. Sale un ejecutable mas rapido y mas pequeño, y cuesta
+  # ~9 MINUTOS Y 2 GB DE RAM en cada enlazado.
+  #
+  # Para publicar, merece la pena. Para cambiar tres lineas y ver si compila, es
+  # tirar el tiempo: se paga el precio completo por un cambio que no lo
+  # necesita.
+  #
+  #   .uild-launcher.ps1              rapido, sin LTO      <- desarrollar
+  #   .uild-launcher.ps1 -Publicar    con LTO              <- publicar
+  #
+  # ⚠ Lo que se REPARTE tiene que salir de `-Publicar`. Un binario sin LTO
+  #   funciona igual, pero es mas grande y algo mas lento, y no es lo que
+  #   queremos en la maquina de un jugador.
+  $lto = if ($Publicar) { 'ON' } else { 'OFF' }
+  Write-Host "LTO: $lto$(if (-not $Publicar) { '  (usa -Publicar para el binario que se reparte)' })"
+  cmake --preset windows_msvc -DENABLE_LTO=$lto
   if ($LASTEXITCODE -ne 0) { throw "cmake configure fallo ($LASTEXITCODE)" }
   cmake --build --preset windows_msvc --config Release
   if ($LASTEXITCODE -ne 0) { throw "cmake build fallo ($LASTEXITCODE)" }

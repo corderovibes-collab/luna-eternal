@@ -309,26 +309,67 @@ que cambia es que en la lista salen con su nombre real.
 
 ---
 
-## 2-quinquies. ⚠️ Sodium bajó de 0.8.12 a 0.6.13, y no es un error
+## 2-quinquies. ⚠️ Sodium NO baja a 0.6.13 — y Shine se retiró por eso
 
-**Iris y Sodium no se pueden elegir por separado.** Iris se niega a arrancar con
-un Sodium fuera de su rango, y la última **estable** de Iris para 1.21.1
-(`1.8.8`) declara `sodium: 0.6.x`. Existe `1.8.14-beta.1`, que sí acepta
-`0.8.x`, pero el criterio de este script es explícito: *«release antes que
-beta: el cliente de un servidor no es sitio para probar versiones inestables»*.
+> **Corregido el 2026-08-17.** Lo que decía antes esta sección —que
+> `gen_modpack.py` bajaba Sodium a 0.6.13 leyendo la dependencia del jar de
+> Iris— **describía una lógica que no existe en el script**, ni en el código
+> confirmado. Se comprobó en git: nunca estuvo. Un documento que miente sobre lo
+> que hace el código es peor que no tenerlo.
 
-Así que Sodium baja. **Pero el número no está escrito a mano en ningún sitio**:
-`gen_modpack.py` descarga el jar de Iris, lee la dependencia que declara en su
-`fabric.mod.json` y elige el Sodium más nuevo que encaje. El día que Iris saque
-una estable con `0.8.x`, regenerar el pack sube Sodium **solo**.
+**Iris y Sodium vienen del modpack oficial de Cobblemon** (D-031), y sus
+versiones las manda él:
 
-> Es la lección de la versión del cargador, aplicada antes de que costara nada:
-> todo número escrito a mano caduca en silencio. Y si algún día Iris declarara
-> su dependencia en un formato que el script no sabe leer, **falla y no
-> publica** en vez de emparejar mal — un Iris y un Sodium incompatibles dejan
-> el juego sin arrancar, y el error no menciona ni a uno ni a otro.
+```
+iris    1.8.14-beta.1+mc1.21.1
+sodium  0.8.12+mc1.21.1
+```
 
----
+### Lo que costó: el cliente crasheaba al renderizar
+
+```
+java.lang.IllegalStateException: Shine could not locate the expected
+Sodium 0.6.13 opaque vertex shader patch points.
+    at com.bloom.client.shader.BloomShaderInjection.patchSodiumVertex
+```
+
+**Shine 1.0.0 lleva los puntos de parcheo de Sodium 0.6.13 escritos a fuego.**
+Con 0.8.12 no los encuentra y tira el juego. No hay versión que lo arregle: el
+proyecto **desapareció de Modrinth** el 2026-08-16 (404 por slug *y* por id).
+
+### ⚠️ Por qué la verificación de dependencias no podía cazarlo
+
+**Shine no declara ninguna dependencia de Sodium en su `fabric.mod.json`.**
+
+```json
+"depends": { "fabricloader": ">=0.18.4", "minecraft": "~1.21.1",
+             "java": ">=21", "fabric-api": ">=0.116.9+1.21.1",
+             "yet_another_config_lib_v3": ">=3.8.2+1.21.1-fabric" }
+```
+
+`verificar_dependencias()` lee lo **declarado**, y aquí no había nada que leer.
+El choque vivía en el código, no en los metadatos. Es una clase de fallo que esa
+herramienta **estructuralmente no ve**, y conviene tenerlo presente antes de
+confiarle un «todas satisfechas».
+
+### Se quitó sin pena, y este es el motivo
+
+Shine **no estaba haciendo nada**. Su halo solo se aplica a bloques declarados
+como emisores, y los 96 neones **nunca se declararon** — está escrito en el
+propio CLAUDE.md. O sea que el cliente se caía por una función que no estaba
+activa.
+
+Súmese que era un proyecto muerto, fijado a una copia que los jugadores tienen
+por casualidad, y que **ya había provocado una caída entera** antes: exigía
+`fabric-api >= 0.116.9` y el pack oficial fijaba `0.116.8`, así que el juego ni
+arrancaba con *«Incompatible mods found»*.
+
+La luz de color de verdad la dan los **shaders**, que van instalados.
+
+> El bloque `FIJADOS` de `gen_modpack.py` **se conserva vacío a propósito**: es
+> la única forma de servir un mod cuyo proyecto desaparece de Modrinth, y
+> comprueba la URL en cada publicación porque un manifiesto que apunta a un 404
+> deja tirado a todo el que actualice.
 
 ## 3. Cómo se instala
 

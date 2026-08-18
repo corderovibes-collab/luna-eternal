@@ -56,7 +56,16 @@ export async function pool(items, limit, worker) {
   return results;
 }
 
-async function request(url, init = {}, attempt = 0) {
+/**
+ * @param tope Cuantas veces reintentar ESTE origen antes de rendirse.
+ *
+ * Por defecto los 8 de siempre. `download` lo baja a 1 cuando el fichero tiene
+ * espejos: con 8 reintentos y retroceso hasta 30 s, un origen caido se come mas
+ * de dos minutos ANTES de que al espejo le llegue el turno, y para entonces el
+ * jugador ya ha cerrado el launcher. Un espejo al que se llega tarde no sirve
+ * de nada.
+ */
+async function request(url, init = {}, attempt = 0, tope = RETRIES) {
   // El reloj se para en cuanto llega la cabecera: `clearTimeout` corre al salir
   // de esta funcion, y el cuerpo se lee DESPUES. Asi un fichero grande puede
   // tardar lo que haga falta en bajar sin que nadie lo aborte.
@@ -75,7 +84,7 @@ async function request(url, init = {}, attempt = 0) {
     if (!res.ok) throw new Error(`HTTP ${res.status} en ${url}`);
     return res;
   } catch (err) {
-    if (err.fatal || attempt >= RETRIES) {
+    if (err.fatal || attempt >= tope) {
       // Un aborto es un cuelgue, y "This operation was aborted" no le dice nada
       // a nadie. Se cambia por lo que de verdad ha pasado.
       if (err?.name === 'AbortError' || err?.name === 'TimeoutError') {
@@ -85,18 +94,43 @@ async function request(url, init = {}, attempt = 0) {
       throw err;
     }
     await backoff(attempt);
-    return request(url, init, attempt + 1);
+    return request(url, init, attempt + 1, tope);
   } finally {
     clearTimeout(reloj);
   }
 }
 
-export async function getJson(url, init) {
-  return (await request(url, init)).json();
+/**
+ * Pide un recurso probando varios origenes en orden.
+ *
+ * El manifiesto es LA PRIMERA peticion del arranque y durante mucho tiempo fue
+ * la unica sin red de seguridad: si fallaba, el launcher no tenia nada que
+ * hacer salvo enseñar un error, y eso fue exactamente lo que paso cuando `raw`
+ * empezo a contestar 429. Ahora hay puntero y respaldo.
+ *
+ * Con un solo origen se comporta igual que antes: los 8 reintentos de siempre.
+ * Con varios, cada uno tiene UN intento antes de pasar al siguiente — un origen
+ * caido no puede quedarse dos minutos con el turno.
+ */
+async function pedir(origen, init) {
+  const urls = Array.isArray(origen) ? origen.filter(Boolean) : [origen];
+  let ultimo;
+  for (const url of urls) {
+    try {
+      return await request(url, init, 0, urls.length > 1 ? 1 : RETRIES);
+    } catch (err) {
+      ultimo = err;
+    }
+  }
+  throw ultimo;
 }
 
-export async function getText(url, init) {
-  return (await request(url, init)).text();
+export async function getJson(origen, init) {
+  return (await pedir(origen, init)).json();
+}
+
+export async function getText(origen, init) {
+  return (await pedir(origen, init)).text();
 }
 
 export async function postJson(url, body, headers = {}) {
@@ -191,7 +225,14 @@ export async function isIntact(dest, { sha1, sha256, size } = {}) {
  * renombra al final, así una descarga cortada nunca deja un fichero a medias que
  * parezca válido.
  */
-export async function download(url, dest, { sha1, sha256, size, onChunk } = {}) {
+export async function download(origen, dest, { sha1, sha256, size, onChunk } = {}) {
+  // Acepta una url o una lista. El manifiesto trae `urls` desde el pack 0.3.0;
+  // se sigue admitiendo la cadena suelta porque `java.js` y `minecraft.js`
+  // descargan de Adoptium y de Mojang, que tienen un solo origen y no necesitan
+  // ninguna lista.
+  const urls = Array.isArray(origen) ? origen.filter(Boolean) : [origen];
+  if (!urls.length) throw new Error(`Sin origen del que descargar ${path.basename(dest)}`);
+
   const spec = digestSpec({ sha1, sha256 });
   if (await isIntact(dest, { sha1, sha256, size })) return { skipped: true, bytes: 0 };
 
@@ -199,10 +240,14 @@ export async function download(url, dest, { sha1, sha256, size, onChunk } = {}) 
   const tmp = `${dest}.part`;
 
   for (let attempt = 0; ; attempt++) {
+    // Se va rotando: intento 0 al primario, 1 al espejo, 2 otra vez al
+    // primario... Asi un corte pasajero del principal no obliga a quedarse en
+    // el espejo para siempre, y una caida larga tampoco bloquea a nadie.
+    const url = urls[attempt % urls.length];
     const hash = spec ? createHash(spec.algorithm) : null;
     let bytes = 0;
     try {
-      const res = await request(url);
+      const res = await request(url, {}, 0, urls.length > 1 ? 1 : RETRIES);
       const out = createWriteStream(tmp);
       const body = Readable.fromWeb(res.body);
       body.on('data', (c) => {
@@ -223,7 +268,13 @@ export async function download(url, dest, { sha1, sha256, size, onChunk } = {}) 
     } catch (err) {
       await unlink(tmp).catch(() => {});
       onChunk?.(-bytes); // devolver lo contado para que el progreso no se dispare
-      if (err.fatal || attempt >= RETRIES) throw err;
+      // ⚠ UN 4xx ES DEFINITIVO PARA ESE ORIGEN, NO PARA EL FICHERO.
+      //   Con `err.fatal` a secas, un 404 en el primario se llevaba por delante
+      //   la descarga entera sin llegar a preguntarle al espejo — que es
+      //   exactamente el caso para el que existe el espejo. Solo se rinde
+      //   cuando en esta vuelta ya se han probado todos.
+      const sinProbar = attempt % urls.length !== urls.length - 1;
+      if ((err.fatal && !sinProbar) || attempt >= RETRIES) throw err;
       await backoff(attempt);
     }
   }

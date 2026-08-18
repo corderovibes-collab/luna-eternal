@@ -59,6 +59,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import gen_modpack  # noqa: E402
 from gen_modpack import (EXTRA_CONSTRUCTOR, EXTRA_JUGADOR,  # noqa: E402
                          IRIS_PROPERTIES, MC, SERVIDOR, SHADERS, base,
                          loader_estable, servers_dat, verificar_dependencias,
@@ -90,9 +91,35 @@ REPO_PUBLICO = "corderovibes-collab/luna-eternal-pack"
 TAG_ACTIVOS = "pack-assets"
 BASE_ACTIVOS = f"https://github.com/{REPO_PUBLICO}/releases/download/{TAG_ACTIVOS}"
 
+# ---------------------------------------------------------------------------
+# EL PUNTERO: LO QUE HACE POSIBLE VOLVER ATRAS
+#
+# `manifest.json` se sobrescribia en cada publicacion. Eso significa que una
+# publicacion mala rompe a TODO EL MUNDO A LA VEZ y no hay marcha atras: hay que
+# regenerar y volver a publicar los 185 MB, con el pack roto mientras tanto.
+#
+# Ahora el manifiesto se publica CON SU HUELLA EN EL NOMBRE y no se toca jamas
+# (`manifest-a1b2c3d4e5.json`), y lo que el launcher lee primero es un puntero
+# de ~250 bytes que dice cual es el bueno.
+#
+#   volver atras = subir un fichero de 250 bytes    (`--volver-a <huella>`)
+#   en vez de    = regenerar y republicar 185 MB
+#
+# Va en una release SUYA y no junto a los activos porque son dos cosas
+# opuestas: `pack-assets` ACUMULA y nada se borra nunca; `pack-manifest` tiene
+# un solo fichero que se reescribe. Mezclarlas hace que `--clobber` sobre la
+# release de activos sea rutina, y ahi es justo donde no debe serlo.
+#
+# ⚠ TAMBIEN VA COMO PRERELEASE. El autoactualizador del launcher mira "la
+#   ultima release" del repositorio, y una release normal aqui le haria creer
+#   que hay un launcher nuevo.
+TAG_PUNTERO = "pack-manifest"
+BASE_PUNTERO = f"https://github.com/{REPO_PUBLICO}/releases/download/{TAG_PUNTERO}"
+URL_PUNTERO = f"{BASE_PUNTERO}/latest.json"
 
-def zip_plantillas(entradas: list) -> bytes:
-    """Empaqueta las plantillas de YOSBR en un zip, con rutas relativas a ellas.
+
+def zip_carpeta(entradas: list, prefijo: str) -> bytes:
+    """Empaqueta una carpeta de overrides en un zip, con rutas relativas a ella.
 
     DETERMINISTA A PROPOSITO: fecha fija, orden fijo y sin compresion variable.
     Si el zip cambiara de huella en cada ejecucion, el launcher se lo bajaria
@@ -103,8 +130,8 @@ def zip_plantillas(entradas: list) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for rel, datos in sorted(entradas):
-            dentro = rel[len("config/yosbr/"):]
-            info = zipfile.ZipInfo(dentro, date_time=(1980, 1, 1, 0, 0, 0))
+            info = zipfile.ZipInfo(rel[len(prefijo):],
+                                   date_time=(1980, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o644 << 16
             z.writestr(info, datos)
@@ -133,6 +160,94 @@ def subir_activos(rutas: list) -> None:
     subprocess.run(["gh", "release", "upload", TAG_ACTIVOS, *map(str, rutas),
                     "--repo", REPO_PUBLICO, "--clobber"], check=True)
     print(f"  activos         {len(rutas)} subidos a la release {TAG_ACTIVOS}")
+
+
+def _release(tag: str, titulo: str, notas: str) -> None:
+    """Se asegura de que exista la release, sin tocarla si ya esta."""
+    existe = subprocess.run(["gh", "release", "view", tag, "--repo", REPO_PUBLICO],
+                            capture_output=True, text=True).returncode == 0
+    if not existe:
+        subprocess.run(["gh", "release", "create", tag, "--repo", REPO_PUBLICO,
+                        "--prerelease", "--title", titulo, "--notes", notas],
+                       check=True)
+
+
+def publicar_puntero(manifiesto: dict) -> str:
+    """Publica el manifiesto con su huella y hace que `latest.json` lo señale.
+
+    ⚠ SE LLAMA DESPUES DE SUBIR LOS ACTIVOS, Y EL ORDEN NO ES NEGOCIABLE.
+      El puntero es lo unico que el launcher lee para saber que instalar. Si se
+      actualizara antes que los ficheros que anuncia, habria una ventana --la
+      que tarde la subida de 185 MB-- en la que cualquiera que le diera a Jugar
+      se llevaria un 404 a mitad de descarga. Al reves no hay ventana: un activo
+      que ya esta subido y que todavia nadie referencia no le hace daño a nadie.
+
+    Devuelve la huella, que es lo que hace falta para `--volver-a`.
+    """
+    crudo = json.dumps(manifiesto, indent=2, ensure_ascii=False).encode("utf-8")
+    huella = hashlib.sha1(crudo).hexdigest()
+    nombre = f"manifest-{huella[:10]}.json"
+    (SALIDA / nombre).write_bytes(crudo)
+
+    # El manifiesto va con los activos: es inmutable igual que ellos, y asi
+    # comparte la regla de que nada se borra nunca.
+    subprocess.run(["gh", "release", "upload", TAG_ACTIVOS, str(SALIDA / nombre),
+                    "--repo", REPO_PUBLICO, "--clobber"], check=True)
+
+    _apuntar_a(huella[:10], len(crudo), huella)
+    return huella[:10]
+
+
+def _apuntar_a(corta: str, tamano: int, sha1: str) -> None:
+    """Reescribe `latest.json`. Es lo unico mutable de toda la publicacion."""
+    puntero = {
+        "packVersion": VERSION_PACK,
+        "manifest": f"{BASE_ACTIVOS}/manifest-{corta}.json",
+        # El launcher comprueba la huella del manifiesto ANTES de fiarse de el.
+        # Sin esto, quien pueda inyectarle un JSON le elige las URL de descarga
+        # de los 185 MB, y con ellas lo que se ejecuta en su maquina.
+        "sha1": sha1,
+        "size": tamano,
+        "publicado": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    ruta = SALIDA / "latest.json"
+    ruta.write_text(json.dumps(puntero, indent=2), encoding="utf-8")
+    _release(TAG_PUNTERO, "Puntero del pack",
+             "Un solo fichero: `latest.json`, que dice cual es el manifiesto "
+             "vigente. Volver atras es reescribirlo. Prerelease para que el "
+             "autoactualizador del launcher lo ignore.")
+    subprocess.run(["gh", "release", "upload", TAG_PUNTERO, str(ruta),
+                    "--repo", REPO_PUBLICO, "--clobber"], check=True)
+    print(f"  puntero         latest.json -> manifest-{corta}.json")
+
+
+def volver_a(corta: str) -> None:
+    """Vuelve el pack a un manifiesto anterior. Sube 250 bytes y ya esta.
+
+    Esto es lo que antes no existia: una publicacion mala rompia a todo el mundo
+    a la vez y la unica salida era regenerar y republicar los 185 MB, con el
+    pack roto mientras tanto. Los manifiestos viejos siguen todos en la release
+    de activos, asi que volver es senalar a otro.
+
+        gh release view pack-assets --repo <repo>   # ver las huellas que hay
+        python tools/gen_manifest.py --volver-a a1b2c3d4e5
+    """
+    url = f"{BASE_ACTIVOS}/manifest-{corta}.json"
+    print(f"VOLVER A  ·  {url}")
+    try:
+        crudo = urllib.request.urlopen(
+            urllib.request.Request(url, headers={"User-Agent": "luna-eternal"})).read()
+    except OSError as e:
+        raise SystemExit(f"  ese manifiesto no existe en la release ({e}).\n"
+                         f"    gh release view {TAG_ACTIVOS} --repo {REPO_PUBLICO}")
+    # Se comprueba que sea un manifiesto de verdad antes de apuntar a el: hacer
+    # que todo el mundo lea un fichero roto es exactamente lo que se intenta
+    # arreglar.
+    datos = json.loads(crudo.decode("utf-8"))
+    if not isinstance(datos.get("files"), list) or not datos["files"]:
+        raise SystemExit("  ese fichero no trae lista de ficheros: no se apunta ahi.")
+    _apuntar_a(corta, len(crudo), hashlib.sha1(crudo).hexdigest())
+    print(f"  hecho: {len(datos['files'])} ficheros, pack {datos.get('packVersion')}")
 
 
 def rama_por_defecto() -> str:
@@ -220,6 +335,43 @@ def marcar(entrada: dict) -> dict:
     return entrada
 
 
+# ---------------------------------------------------------------------------
+# NINGUN FICHERO DEPENDE DE UN SOLO ORIGEN
+#
+# Cada entrada llevaba UNA url. Si ese origen cae, cae el pack entero y no hay
+# nada que hacer salvo esperar. Ahora lleva `urls`, en orden de preferencia, y
+# el launcher va probando hasta que uno conteste.
+#
+# ⚠ `url` (singular) SE MANTIENE, y no es redundante: los launchers ya
+#   instalados leen ese campo. Quitarlo dejaria sin pack a todo el que no se
+#   haya actualizado todavia, que es justo quien no puede actualizarse porque
+#   el pack no le baja. Se retira cuando no quede nadie en 1.0.x.
+#
+# Hoy la lista tiene un solo origen real para los activos porque no hay segundo
+# CDN gratuito que sirva ficheros de 129 MB. El dia que se abra un bucket
+# (Cloudflare R2 da 10 GB y egreso a coste cero; Bunny cobra ~0,01 $/GB), es
+# ANADIR UNA CADENA AQUI y republicar — el launcher ya sabe recorrer la lista.
+ESPEJOS_ACTIVOS: list = []
+
+
+def con_espejos(entrada: dict) -> dict:
+    """Convierte `url` en `urls`, con los espejos que haya para ese origen."""
+    urls = [entrada["url"]]
+    # `espejo` es de uso interno del generador: se consume aqui y no viaja al
+    # manifiesto, donde solo tiene sentido la lista ya montada.
+    suyo = entrada.pop("espejo", None)
+    if suyo:
+        urls.append(suyo)
+    # Solo se espejan LOS FICHEROS NUESTROS. Los de Modrinth y Mojang ya salen
+    # de sus propios CDN y copiarlos ni es nuestro trabajo ni esta permitido por
+    # todas sus licencias (D-030 y el caso de los shaders).
+    if entrada["url"].startswith(BASE_ACTIVOS):
+        urls += [entrada["url"].replace(BASE_ACTIVOS, base.rstrip("/"))
+                 for base in ESPEJOS_ACTIVOS]
+    entrada["urls"] = urls
+    return entrada
+
+
 def publicado(jar: Path, sha1: str) -> str:
     """El nombre con el que un jar NUESTRO se publica: lleva su huella dentro.
 
@@ -302,53 +454,64 @@ def construir() -> dict:
         })
         print(f"  {entrada['prefijo']:<15} {publicado(jar, sha1):<26} nuestro")
 
-    # 5. La configuracion del pack oficial. Son 113 ficheros de texto, 143 KB
-    #    en total, que afinan los mods. Van marcados `once`: se escriben si
-    #    faltan y no se pisan nunca, para que si un jugador ajusta algo no se lo
-    #    revertamos en la siguiente actualizacion.
+    # 5. Los OVERRIDES del pack base: su configuracion y sus resource packs.
+    #
+    # ⚠⚠ VIAJAN COMO UN ZIP POR CARPETA, Y NO SUELTOS. Sueltos eran 176
+    #    peticiones a raw.githubusercontent, que NO es un CDN de distribucion y
+    #    contesta 429 — el mismo fallo que dejo a los jugadores fuera el
+    #    2026-08-16 y que costo media manana encontrar. Con el pack oficial de
+    #    Cobblemon eran 3 ficheros sueltos y no se notaba; CobbleVerse trae 155
+    #    de configuracion, y ahi el limite salta seguro.
+    #
+    #    Cada zip va marcado `keepExisting`: se extrae SIN PISAR lo que ya
+    #    exista. Eso da exactamente la semantica que tenia `once` fichero a
+    #    fichero --si el jugador ajusta algo, no se lo revertimos-- y ademas
+    #    arregla lo que `once` hacia mal: un fichero de configuracion NUEVO en
+    #    una version posterior del pack SI llega, porque no existe todavia.
     dir_cfg = SALIDA / "overrides"
     if dir_cfg.exists():
         shutil.rmtree(dir_cfg)
-    plantillas, sueltos = [], []
+    carpetas = {}
     for n in overrides:
         rel = n[len("overrides/"):]
-        datos = z.read(n)
+        datos = gen_modpack.contenido(z, n)
         destino = dir_cfg / rel
         destino.parent.mkdir(parents=True, exist_ok=True)
         destino.write_bytes(datos)
-        # Las plantillas de YOSBR van en un zip; el resto, sueltas.
-        (plantillas if rel.startswith("config/yosbr/") else sueltos).append(
-            (rel, datos))
+        raiz = rel.split("/")[0]
+        if "/" not in rel:          # servers.dat y demas sueltos de la raiz
+            continue                 # los generamos nosotros; ver el paso 6
+        carpetas.setdefault(raiz, []).append((rel, datos))
 
-    # LAS 110 PLANTILLAS DE YOSBR VIAJAN COMO UN SOLO ZIP.
-    #
-    # Se puede porque NO son la configuracion del jugador: son las plantillas de
-    # las que YOSBR copia cuando el fichero de verdad no existe. Sobrescribirlas
-    # no le toca a nadie sus ajustes, asi que no necesitan `once` y se pueden
-    # extraer encima.
-    #
-    # `config/iris.properties` y los dos de `openloader` se quedan SUELTOS y con
-    # `once`: esos si son configuracion viva.
-    zip_datos = zip_plantillas(plantillas)
-    sha_zip = hashlib.sha1(zip_datos).hexdigest()
-    (SALIDA / "yosbr.zip").write_bytes(zip_datos)
-    ficheros.append({
-        "path": "config/yosbr",
-        "sha1": sha_zip,
-        "size": len(zip_datos),
-        "url": f"{BASE_ACTIVOS}/yosbr-{sha_zip[:10]}.zip",
-        "archive": True,
-    })
-    for rel, datos in sueltos:
+    # `mods/` NUNCA se sirve como carpeta extraible, aunque venga en los
+    # overrides. Una entrada `archive` de nombre `mods` se borraria ENTERA el
+    # dia que ese override desaparezca --`applySync` limpia lo que ya no esta
+    # en el manifiesto con `rm -r`-- y ahi dentro viven los 400 MB de mods.
+    # Los jars sueltos van uno a uno, como los nuestros.
+    for rel, datos in carpetas.pop("mods", []):
+        sha = hashlib.sha1(datos).hexdigest()
+        nombre = f"{Path(rel).stem}-{sha[:10]}.jar"
+        (SALIDA / nombre).write_bytes(datos)
+        ficheros.append({"path": rel, "sha1": sha, "size": len(datos),
+                         "url": f"{BASE_ACTIVOS}/{nombre}"})
+        print(f"  override        {Path(rel).name:<40} suelto")
+
+    resumen = []
+    for raiz, entradas in sorted(carpetas.items()):
+        datos_zip = zip_carpeta(entradas, raiz + "/")
+        sha_zip = hashlib.sha1(datos_zip).hexdigest()
+        (SALIDA / f"{raiz}.zip").write_bytes(datos_zip)
         ficheros.append({
-            "path": rel,
-            "sha1": hashlib.sha1(datos).hexdigest(),
-            "size": len(datos),
-            "url": f"{BASE_RAW}/overrides/{urllib.parse.quote(rel)}",
-            "once": True,
+            "path": raiz,
+            "sha1": sha_zip,
+            "size": len(datos_zip),
+            "url": f"{BASE_ACTIVOS}/{raiz}-{sha_zip[:10]}.zip",
+            "archive": True,
+            "keepExisting": True,
         })
-    print(f"  configuracion   {len(plantillas)} plantillas en 1 zip "
-          f"({len(zip_datos) // 1024} KB) + {len(sueltos)} sueltas")
+        resumen.append(f"{raiz} {len(entradas)} ficheros "
+                       f"({len(datos_zip) // 1024} KB)")
+    print("  overrides       " + " · ".join(resumen))
 
     # 6. Ficheros nuestros que se escriben una vez y no se vuelven a tocar.
     #
@@ -356,16 +519,30 @@ def construir() -> dict:
     #    arranque, borrariamos los servidores que el jugador haya anadido por su
     #    cuenta. Y los shaders llegan APAGADOS: en cuanto active uno, su
     #    eleccion sobrevive a todas las actualizaciones siguientes.
+    #
+    #    ⚠ VAN A LA RELEASE, NO A `raw`. Eran los dos ultimos ficheros del pack
+    #    que se pedian a `raw.githubusercontent`, que limita por peticiones y
+    #    contesta 429. Con la huella en el nombre valen las mismas dos reglas
+    #    que ya rigen para nuestros jars: contenido nuevo = URL nueva, que nunca
+    #    ha estado en cache, y el fichero viejo sigue existiendo para quien
+    #    tenga un manifiesto anterior. `path` y `url` son campos distintos, asi
+    #    que el jugador sigue recibiendolo con su nombre de siempre.
     for nombre, ruta, datos in (
             ("servers.dat", "servers.dat", servers_dat(*SERVIDOR)),
             ("iris.properties", "config/iris.properties",
              IRIS_PROPERTIES.encode("utf-8"))):
         (SALIDA / nombre).write_bytes(datos)
+        sha = hashlib.sha1(datos).hexdigest()
+        tallo, punto, ext = nombre.partition(".")
+        (SALIDA / f"{tallo}-{sha[:10]}{punto}{ext}").write_bytes(datos)
         ficheros.append({
             "path": ruta,
-            "sha1": hashlib.sha1(datos).hexdigest(),
+            "sha1": sha,
             "size": len(datos),
-            "url": f"{BASE_RAW}/{nombre}",
+            "url": f"{BASE_ACTIVOS}/{tallo}-{sha[:10]}{punto}{ext}",
+            # `raw` se queda de ESPEJO, no de origen: si la release fallara, el
+            # launcher tiene a donde ir. Ver `con_espejos()`.
+            "espejo": f"{BASE_RAW}/{nombre}",
             "once": True,
         })
 
@@ -380,6 +557,10 @@ def construir() -> dict:
                                 or perfil == "constructor"])
 
     host, puerto = SERVIDOR[1].split(":")
+    # Se montan los espejos AQUI y no en cada sitio que crea una entrada: son
+    # ocho sitios distintos y la regla es una sola. Ponerla en cada uno es la
+    # forma segura de que el noveno se olvide.
+    ficheros = [con_espejos(f) for f in ficheros]
     return {
         "packVersion": VERSION_PACK,
         "minecraft": MC,
@@ -487,20 +668,40 @@ def publicar() -> None:
     # Es idempotente y sale barato: una vez arreglado, el `add` no encuentra
     # diferencias y el commit sale vacio.
     # Los activos van a la release, no al repositorio: ver TAG_ACTIVOS.
-    activos = [SALIDA / "yosbr.zip"]
     import json as _json
     manifiesto = _json.loads((SALIDA / "manifest.json").read_text(encoding="utf-8"))
-    nombre_zip = next(f["url"].rsplit("/", 1)[-1] for f in manifiesto["files"]
-                      if f.get("archive"))
-    (SALIDA / nombre_zip).write_bytes((SALIDA / "yosbr.zip").read_bytes())
-    activos = [SALIDA / nombre_zip]
+    activos = []
+    for f in manifiesto["files"]:
+        if not f.get("archive"):
+            continue
+        # El zip se genero como `<carpeta>.zip`; en la release lleva la huella
+        # en el nombre, que es lo que garantiza que nunca se sirva de cache un
+        # contenido viejo con la URL nueva.
+        nombre = f["url"].rsplit("/", 1)[-1]
+        (SALIDA / nombre).write_bytes((SALIDA / f"{f['path']}.zip").read_bytes())
+        activos.append(SALIDA / nombre)
+    for f in manifiesto["files"]:
+        # Los jars sueltos que salen de los overrides ya estan escritos en
+        # build/ con su nombre con huella; solo hay que subirlos.
+        if f["url"].startswith(BASE_ACTIVOS) and not f.get("archive"):
+            suelto = SALIDA / f["url"].rsplit("/", 1)[-1]
+            if suelto.exists() and suelto not in activos:
+                activos.append(suelto)
     for entrada in PROPIOS:
         jar = jar_propio(entrada["carpeta"], entrada["prefijo"])
         datos = jar.read_bytes()
         nombre = publicado(jar, hashlib.sha1(datos).hexdigest())
         (SALIDA / nombre).write_bytes(datos)
         activos.append(SALIDA / nombre)
-    subir_activos(activos)
+    # Sin duplicados: nuestros jars los alcanzan los DOS bucles --el de los
+    # sueltos de overrides y el de PROPIOS-- y `gh release upload` falla en seco
+    # si le llega dos veces la misma ruta.
+    subir_activos(list(dict.fromkeys(activos)))
+
+    # EL PUNTERO SE MUEVE AQUI: con todos los activos ya arriba y antes del
+    # push al repositorio, que a partir de ahora es solo la copia de respaldo
+    # para los launchers 1.0.x. Ver `publicar_puntero()`.
+    corta = publicar_puntero(manifiesto)
 
     subprocess.run(["git", "-C", str(clon), "rm", "--cached", "-r", "-q", "."],
                    check=True)
@@ -514,8 +715,16 @@ def publicar() -> None:
                     f"Pack {VERSION_PACK}: base en el modpack oficial de Cobblemon"],
                    check=True)
     subprocess.run(["git", "-C", str(clon), "push", "--quiet"], check=True)
+    # El respaldo en `raw` sigue teniendo su ventana de cache de 3 minutos, pero
+    # ya NO es el camino normal: el launcher nuevo lee el puntero, que sale del
+    # CDN de descargas y no cachea por ruta. Se sigue esperando porque mientras
+    # queden launchers 1.0.x ese fichero es el suyo.
     esperar_al_cdn(SALIDA / "manifest.json")
-    print(f"  publicado en {BASE_RAW}/manifest.json")
+    print(f"\n  vigente     {URL_PUNTERO}")
+    print(f"  manifiesto  manifest-{corta}.json")
+    print(f"  respaldo    {BASE_RAW}/manifest.json  (launchers 1.0.x)")
+    print(f"\n  Para volver a esta version:  "
+          f"python tools/gen_manifest.py --volver-a {corta}")
 
 
 def esperar_al_cdn(local: Path, limite: int = 300) -> None:
@@ -571,7 +780,16 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--publicar", action="store_true",
                     help="ademas de generarlo, subirlo al repositorio publico")
+    ap.add_argument("--volver-a", metavar="HUELLA", dest="volver_a",
+                    help="devolver el pack a un manifiesto anterior (10 caracteres). "
+                         "No regenera nada: solo reescribe el puntero")
     args = ap.parse_args()
+
+    # Volver atras no genera nada: si el pack esta roto, lo ultimo que se quiere
+    # es reconstruirlo con las mismas fuentes que lo rompieron.
+    if args.volver_a:
+        volver_a(args.volver_a)
+        return
 
     print(f"MANIFIESTO DEL PACK  ·  Minecraft {MC}")
     manifiesto = construir()

@@ -49,7 +49,20 @@ LOADER_MINIMO = (0, 17, 2)
 # ---------------------------------------------------------------------------
 # LA BASE (D-031, sustituye a D-024)
 # ---------------------------------------------------------------------------
-PACK_BASE = "cobblemon-fabric"          # "Cobblemon Official Modpack [Fabric]"
+# ⚠ 2026-08-17: LA BASE PASA A SER COBBLEVERSE. Decision del usuario, tomada
+# despues de que le enseñara las licencias:
+#
+#   cobbleverse           modpack   All Rights Reserved
+#   cobbleverse-badges    mod       CC-BY-NC-ND-4.0
+#
+# Queda dicho aqui porque D-006 lo habia descartado justo por eso, y quien lea
+# esto dentro de seis meses tiene que ver las dos cosas: el dato y la decision.
+#
+# Lo que SI se hace bien: el manifiesto guarda URL y hash, nunca el jar, asi que
+# cada mod se descarga del CDN de Modrinth igual que hoy. No redistribuimos
+# nada. Y de la base se quitan sus DATAPACKS y sus SHADERPACKS --contenido
+# propio suyo-- ademas de la generacion de estructuras, que el usuario no quiere.
+PACK_BASE = "cobbleverse"
 
 # Lo que se quita de la base. La clave es el slug de Modrinth; el valor es el
 # motivo, y esta escrito para que dentro de seis meses nadie lo vuelva a anadir
@@ -63,7 +76,41 @@ EXCLUIDOS = {
     "bisect-mod":
         "Es el mod de integracion de BisectHosting: publicidad de un hosting "
         "que no es el nuestro. Nuestro servidor esta en TaroHosting",
+    # --- generacion de mundo y estructuras: NO se quiere (peticion del usuario)
+    "legendary-monuments":
+        "Genera monumentos por el mundo. El usuario no quiere generacion de "
+        "construcciones: la ciudadela se construye a mano",
+    "repurposed-structures-fabric":
+        "Genera estructuras nuevas por todo el mundo. Mismo motivo. OJO con el "
+        "slug: el jar se llama repurposed_structures pero en Modrinth el "
+        "proyecto es -fabric, y sin el sufijo la exclusion NO SURTE EFECTO y "
+        "no avisa de nada",
+    "biome-replacer":
+        "Reemplaza biomas enteros. Cambia la generacion del mundo, que es lo "
+        "que se quiere dejar quieto",
+    "huge-structure-blocks":
+        "Solo existe para colocar las estructuras gigantes de Legendary "
+        "Monuments. Sin ellas no pinta nada",
+
+    # --- musica: 421 MB, mas del doble de todo el pack de hoy --------------
+    # No es un juicio sobre la musica: es que multiplicaba por cinco la
+    # descarga de un jugador nuevo (P10). Se pueden volver a meter el dia que
+    # el manifiesto sepa ofrecer extras opcionales.
+    "puffradio":
+        "124 MB de emisora de radio. Ver el bloque de musica",
+    "cobblemon-original-pokemon-battle-music":
+        "93 MB de musica de combate. Ver el bloque de musica",
+    "pokediscs":
+        "25 MB de discos. Ver el bloque de musica",
 }
+
+# Los packs que CobbleVerse manda DESACTIVADOS. Se llaman, literalmente,
+# "z DO NOT ENABLE z [... - Credits Only]": son la copia original de cada pack
+# de modelos, incluida solo para dar credito a su autor. La version que el
+# juego ENCIENDE es la suya fusionada, que viene en los overrides — se
+# comprueba en `resourcePacks:[...]` de su options.txt, donde ninguno de estos
+# aparece. Son 44 MB que nadie llega a cargar nunca.
+MARCA_DESACTIVADO = "z DO NOT ENABLE z"
 
 # Versiones donde la del pack oficial NO nos sirve, y por que. Se sustituyen
 # por la ultima estable de Modrinth.
@@ -76,7 +123,11 @@ SUBIR = {
         "el juego ni arrancaba: 'Incompatible mods found'. Fabric API es "
         "aditiva y compatible hacia atras dentro de una misma version de "
         "Minecraft, asi que subirla es seguro. La alternativa era quitar Shine "
-        "y quedarnos sin luz de color en los neones",
+        "y quedarnos sin luz de color en los neones. "
+        "⚠ 2026-08-17: SHINE SE QUITO, asi que este motivo YA NO EXISTE. Se "
+        "mantiene la subida porque Fabric API es aditiva y quitarla en la misma "
+        "publicacion que arregla un crasheo es cambiar dos cosas a la vez. "
+        "Se puede volver a la 0.116.8 del pack oficial cuando haya calma",
 }
 
 # Overrides de la base que NO se copian.
@@ -88,6 +139,18 @@ OVERRIDES_FUERA = (
     # Cobblemon. Este pack se llama PokeReport.
     "config/fancymenu/",
     "instance.png", "icon.png",
+    # --- lo propio de CobbleVerse -------------------------------------------
+    # 1.234 ficheros: son Complementary + Euphoria RENOMBRADOS, y su licencia
+    # prohibe justo eso (D-030). Nosotros ya los repartimos por su canal
+    # oficial, con su nombre real y como parcheador.
+    "shaderpacks/",
+    # Su contenido propio: entrenadores, progresion y ajustes de su aventura.
+    "datapacks/",
+    # Sus ficheros de licencia y su PDF: son suyos, no nuestros.
+    "licenses/", "COBBLEVERSE - Third-Party Licenses.pdf",
+    # 179 MB de banda sonora propia, y ademas dentro de nuestro repositorio:
+    # es justo lo que D-030 no hace con los shaders. Ver el bloque de musica.
+    "resourcepacks/COBBLEVERSE Soundtrack.zip",
 )
 
 # ---------------------------------------------------------------------------
@@ -100,9 +163,53 @@ EXTRA_JUGADOR = [
     # Es la unica via que permite su licencia (§2.1, §2.2.a) — ver
     # docs/technical/client-pack.md §2-quater.
     "euphoria-patches",
-    # Luz de color sin shaders. La luz de Minecraft no tiene color (guarda un
-    # numero 0-15), asi que un neon cian iluminaria en blanco sin esto.
-    "shine",
+    # ⚠ SHINE SE RETIRO EL 2026-08-17. NO VOLVER A METERLO SIN LEER ESTO.
+    #
+    # CRASHEABA EL CLIENTE AL RENDERIZAR:
+    #   IllegalStateException: Shine could not locate the expected
+    #   Sodium 0.6.13 opaque vertex shader patch points
+    #
+    # Lleva los puntos de parcheo de Sodium 0.6.13 escritos a fuego y el pack
+    # oficial sirve 0.8.12. No hay version que lo arregle: el proyecto
+    # DESAPARECIO de Modrinth el 2026-08-16 (404 por slug y por id).
+    #
+    # ⚠ Y NUESTRA VERIFICACION NO PODIA CAZARLO: Shine no declara ninguna
+    #   dependencia de Sodium en su fabric.mod.json. `verificar_dependencias()`
+    #   lee lo declarado, y aqui no habia nada que leer. El choque vivia en el
+    #   codigo, no en los metadatos.
+    #
+    # Se quita sin pena porque NO ESTABA HACIENDO NADA: su halo solo se aplica
+    # a bloques declarados como emisores, y los 96 neones nunca se declararon.
+    # Se crasheaba por una funcion que no estaba activa. La luz de color de
+    # verdad la dan los shaders, que van instalados.
+
+    # ⚠ ESTOS DOS ESTAN AQUI PARA QUE PUEDAN ESTAR EN EL SERVIDOR.
+    #
+    # El pack oficial de Cobblemon los traia y CobbleVerse no. Son de servidor
+    # --juntan las bolas de experiencia y hacen que los mobs desaparezcan como
+    # deberian-- pero el servidor tiene que ser SUBCONJUNTO del cliente o Fabric
+    # echa a la gente con "Registry remapping failed", asi que van tambien aqui.
+    #
+    # Y quitarlos del servidor no era opcion: CobbleVerse mete entrenadores por
+    # el mundo e incursiones, o sea que la presion de entidades SUBE. Justo
+    # cuando mas falta hacen.
+    "clumps",
+    # Dependencia declarada de `lmd`, y va ANTES a proposito (mismo criterio
+    # que malilib con litematica). LGPL-3.0-only: uso comercial permitido, la
+    # misma familia de licencia que el conector de MariaDB que ya empaquetamos.
+    #
+    # Es de SERVIDOR (`client_side: unsupported`) y aun asi va al cliente, por
+    # lo mismo que clumps y lmd: el servidor tiene que ser SUBCONJUNTO del
+    # cliente o Fabric echa a la gente con "Registry remapping failed".
+    "almanac",
+    # ⚠ EL SLUG ES `lmd`, PERO EL JAR SIGUE LLAMANDOSE `letmedespawn-*.jar`.
+    #   Modrinth renombro el proyecto y el antiguo devuelve 404, asi que el
+    #   manifiesto dejo de generarse entero -- correctamente, porque publicar
+    #   un pack con un mod menos deja a todo el mundo sin poder conectarse.
+    #   Aqui va el slug (con el que se PREGUNTA a Modrinth); en
+    #   `mods_servidor.py` va el nombre del fichero, que no ha cambiado. Son
+    #   dos cosas distintas y por eso solo hace falta tocar una.
+    "lmd",
 ]
 
 EXTRA_CONSTRUCTOR = [
@@ -180,19 +287,11 @@ def loader_estable():
 #   2. no se puede saber si su licencia sigue permitiendo esto: la pagina del
 #      proyecto ya no existe. Queda anotado como decision pendiente
 # ---------------------------------------------------------------------------
-FIJADOS = {
-    "shine": {
-        "version_number": "1.0.0+1.21.1",
-        "version_type": "release",
-        "files": [{
-            "filename": "shine-1.0.0+1.21.1.jar",
-            "hashes": {"sha1": "36273e2f20035740a42beb16dd9d57f408ac7631"},
-            "size": 138107,
-            "url": "https://cdn.modrinth.com/data/uQgWIE6A/versions/"
-                   "S3s0aITt/shine-1.0.0%2B1.21.1.jar",
-        }],
-    },
-}
+# Vacio desde que se retiro `shine` (2026-08-17). La maquinaria SE QUEDA: es
+# la unica forma de servir un mod cuyo proyecto desaparece de Modrinth, y
+# `fijado()` comprueba la URL en cada publicacion porque un manifiesto que
+# apunta a un 404 deja tirado a todo el que actualice.
+FIJADOS = {}
 
 
 def fijado(slug):
@@ -291,6 +390,8 @@ def base():
     ficheros = []
     for f in idx["files"]:
         slug = f.get("slug")
+        if MARCA_DESACTIVADO in f["path"]:
+            continue
         motivo = EXCLUIDOS.get(slug)
         if motivo:
             print(f"  FUERA  {slug:<22} {motivo[:64]}...")
@@ -311,7 +412,42 @@ def base():
     overrides = [n for n in z.namelist()
                  if n.startswith("overrides/") and not n.endswith("/")
                  and not any(n[10:].startswith(x) for x in OVERRIDES_FUERA)]
+
+    # Que resource packs SOBREVIVEN, para poder limpiar la lista de activos de
+    # su options.txt (ver `contenido`). Salen de los dos sitios: los que baja
+    # el launcher de Modrinth y los que vienen dentro de los overrides.
+    _PACKS_VIVOS.clear()
+    _PACKS_VIVOS.update(
+        n.split("/")[-1] for n in
+        [f["path"] for f in ficheros] + [o[len("overrides/"):] for o in overrides]
+        if n.startswith("resourcepacks/"))
     return ficheros, overrides, z
+
+
+# Nombres de fichero de los resource packs que quedan en el pack.
+_PACKS_VIVOS: set = set()
+
+
+def contenido(z, nombre: str) -> bytes:
+    """Lee un override del pack base, parcheando lo que haga falta.
+
+    Hoy solo una cosa, y no es cosmetica: su `options.txt` trae la lista de
+    resource packs ACTIVOS, y ahi siguen nombrados los que hemos quitado (la
+    musica, la banda sonora). Minecraft ignora los que no encuentra, asi que no
+    rompe nada — pero deja al jugador una lista con fantasmas, y a quien mire
+    el fichero dentro de un ano le hara creer que esos packs deberian estar.
+    """
+    datos = z.read(nombre)
+    if not nombre.endswith("options.txt"):
+        return datos
+    texto = datos.decode("utf-8", "replace")
+
+    def limpiar(m):
+        vivos = [e for e in json.loads(m.group(1))
+                 if not e.startswith("file/") or e[5:] in _PACKS_VIVOS]
+        return "resourcePacks:" + json.dumps(vivos, ensure_ascii=False)
+
+    return re.sub(r"resourcePacks:(\[.*?\])", limpiar, texto).encode("utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -562,7 +698,7 @@ def construir(nombre_pack, extra, sufijo, resumen):
 
 
 def main():
-    print(f"BASE: modpack oficial de Cobblemon ({PACK_BASE})")
+    print(f"BASE: {PACK_BASE}")
     print("\nPACK DE JUGADOR")
     construir("PokeReport: Luna Eternal", EXTRA_JUGADOR, "",
               "Cliente oficial, sobre el modpack oficial de Cobblemon.")

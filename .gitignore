@@ -60,3 +60,10 @@ desktop.ini
 # Arte de origen: pesa mucho y se reimporta con tools/importar_arte.py
 arte-origen/
 !arte-origen/LEEME.txt
+
+# Rastro que deja `aqt` al instalar Qt. No es del proyecto.
+aqtinstall.log
+
+# Toolchain local del launcher Qt (Qt 6.10.2 + vcpkg, ~4 GB).
+# Se recupera con: python tools/toolchain.py
+.toolchain/

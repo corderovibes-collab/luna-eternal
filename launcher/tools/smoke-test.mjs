@@ -164,6 +164,38 @@ await test('extrae un jar real y descomprime bien', async () => {
   assert.ok(entries.length > 0);
 });
 
+await test('un fichero OCULTO no tumba la extraccion (Windows)', async () => {
+  // ⚠ ESTA PRUEBA FIJA UN FALLO QUE YA LLEGO A UN JUGADOR.
+  //
+  //   `EPERM: operation not permitted, open '.../euphoria_patcher/.data.json'`
+  //
+  // En Windows, `writeFile` sobre un fichero con el atributo HIDDEN falla con
+  // EPERM: `CreateFile` con CREATE_ALWAYS se niega si el que ya esta ahi esta
+  // oculto. No es un permiso del usuario ni un antivirus, y el mensaje no dice
+  // en ningun momento que el problema sea que el fichero esta oculto -- por eso
+  // costo llegar hasta la causa.
+  //
+  // El pack trae ese fichero y el mod EuphoriaPatcher lo vuelve a crear OCULTO
+  // en el PC del jugador, asi que toda actualizacion moria al 99 %.
+  const out = path.join(tmp, 'oculto');
+  await extractZip(jar, out, { filter: (n) => n.endsWith('.class'), strip: 1 });
+
+  const dentro = (await readdir(out, { recursive: true, withFileTypes: true }))
+    .filter((d) => d.isFile());
+  if (!dentro.length) return; // el jar de prueba no dejo ningun fichero suelto
+
+  const victima = path.join(dentro[0].parentPath ?? dentro[0].path, dentro[0].name);
+  if (process.platform === 'win32') {
+    const { execFile } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    await promisify(execFile)('attrib', ['+h', victima]);
+  }
+
+  // Sin el arreglo, esto lanza EPERM en Windows y aqui se ve como un fallo.
+  await extractZip(jar, out, { filter: (n) => n.endsWith('.class'), strip: 1 });
+  assert.ok((await stat(victima)).size >= 0);
+});
+
 await test('el filtro y `strip` funcionan', async () => {
   const out = path.join(tmp, 'filtrado');
   const count = await extractZip(jar, out, { filter: (n) => n.endsWith('.class'), strip: 1 });
@@ -256,10 +288,18 @@ await test('ningún fichero del manifiesto pisa los ajustes del jugador', async 
     const esDelJugador = AJUSTES_DEL_JUGADOR.some(
       (p) => f.path === p || f.path.startsWith(p));
     if (!esDelJugador) continue;
-    // Se puede declarar, pero SOLO como `once`: se escribe si falta y no se
-    // vuelve a tocar jamás.
-    assert.equal(f.once, true,
-      `"${f.path}" es un ajuste del jugador y NO está marcado once: `
+    // Se puede declarar, pero SOLO con una de las dos garantías:
+    //
+    //   `once`         fichero suelto: se escribe si falta y no se toca más
+    //   `keepExisting` carpeta en un zip: se extrae SIN pisar lo que ya exista
+    //
+    // La segunda apareció al pasar la base a CobbleVerse: su configuración son
+    // 155 ficheros, y sueltos eran 155 peticiones a raw.githubusercontent, que
+    // contesta 429. Da la MISMA garantía fichero a fichero — y además arregla
+    // lo que `once` hacía mal: un fichero de configuración NUEVO en una versión
+    // posterior sí llega, porque todavía no existe.
+    assert.equal(f.once === true || f.keepExisting === true, true,
+      `"${f.path}" es un ajuste del jugador y no está protegido: `
       + 'actualizar el pack se lo borraría');
   }
 });
@@ -328,6 +368,96 @@ await test('un cierre desconocido explica que no se sabe, en vez de callar', () 
   const causa = diagnosticar(99, 'nada reconocible');
   assert.ok(causa.titulo.includes('99'));
   assert.equal(causa.accion, 'ninguna');
+});
+
+// ---------------------------------------------------------------------------
+// Distribucion: espejos y puntero
+//
+// Todo esto se prueba contra un servidor LOCAL y no contra GitHub. No es por
+// velocidad: es que los casos que importan son "el origen contesta 404" y "el
+// manifiesto llega manipulado", y esos no se pueden provocar a voluntad contra
+// un CDN de verdad. Un fallo aqui tiene que significar que el codigo esta mal,
+// nunca que GitHub tenia un mal dia.
+console.log('\n== Distribucion: espejos y puntero ==');
+
+const { createServer } = await import('node:http');
+const { createHash } = await import('node:crypto');
+
+/** Servidor de usar y tirar. `rutas` es {ruta: string | {status, cuerpo}}. */
+async function servidor(rutas) {
+  const pedidas = [];
+  const srv = createServer((req, res) => {
+    pedidas.push(req.url);
+    const r = rutas[req.url];
+    if (r === undefined) { res.writeHead(404); res.end('no'); return; }
+    const { status = 200, cuerpo = r } = typeof r === 'object' ? r : {};
+    res.writeHead(status, { 'Content-Type': 'application/json' });
+    res.end(typeof r === 'string' ? r : cuerpo);
+  });
+  await new Promise((ok) => srv.listen(0, '127.0.0.1', ok));
+  return { base: `http://127.0.0.1:${srv.address().port}`, pedidas,
+           cerrar: () => new Promise((ok) => srv.close(ok)) };
+}
+
+const MINI = { packVersion: '9.9.9', files: [{ path: 'mods/x.jar', sha1: 'aa', size: 1, url: 'http://x/y' }] };
+const MINI_TXT = JSON.stringify(MINI);
+const MINI_SHA = createHash('sha1').update(MINI_TXT).digest('hex');
+
+await test('un 404 en el primario NO tumba la descarga: tira del espejo', async () => {
+  const s = await servidor({ '/bueno.txt': 'contenido' });
+  try {
+    const destino = path.join(tmp, 'espejo.txt');
+    // El primario ni siquiera existe como ruta: 404 duro, que antes era `fatal`
+    // y abortaba sin llegar a preguntarle al segundo origen.
+    await download([`${s.base}/no-existe.txt`, `${s.base}/bueno.txt`], destino);
+    assert.equal((await stat(destino)).size, 'contenido'.length);
+  } finally { await s.cerrar(); }
+});
+
+await test('sin espejo, un 404 sigue fallando en seco', async () => {
+  const s = await servidor({});
+  try {
+    await assert.rejects(() => download(`${s.base}/nada`, path.join(tmp, 'nada.txt')));
+  } finally { await s.cerrar(); }
+});
+
+const { fetchManifest } = await import('../src/main/core/pack.js');
+
+await test('el puntero lleva al manifiesto vigente', async () => {
+  const s = await servidor({ '/latest.json': null, '/m.json': MINI_TXT });
+  s.pedidas.length = 0;
+  const s2 = await servidor({
+    '/latest.json': JSON.stringify({ manifest: `${s.base}/m.json`, sha1: MINI_SHA }),
+  });
+  try {
+    const m = await fetchManifest(`${s2.base}/latest.json`);
+    assert.equal(m.packVersion, '9.9.9');
+    assert.equal(m.files.length, 1);
+  } finally { await s.cerrar(); await s2.cerrar(); }
+});
+
+await test('un manifiesto que no cuadra con su huella SE RECHAZA', async () => {
+  // ⚠ ESTA ES LA PRUEBA QUE IMPORTA DE LAS CUATRO.
+  //   El manifiesto elige de que URL salen los 185 MB que se instalan, o sea lo
+  //   que acaba EJECUTANDOSE en la maquina del jugador. Sin la comprobacion de
+  //   huella, cualquiera que pueda colocarle un JSON --un DNS envenenado, el
+  //   proxy de un wifi publico-- le elige los mods.
+  const s = await servidor({ '/m.json': JSON.stringify({ ...MINI, packVersion: 'manipulado' }) });
+  const s2 = await servidor({
+    '/latest.json': JSON.stringify({ manifest: `${s.base}/m.json`, sha1: MINI_SHA }),
+  });
+  try {
+    await assert.rejects(() => fetchManifest(`${s2.base}/latest.json`), /huella/i);
+  } finally { await s.cerrar(); await s2.cerrar(); }
+});
+
+await test('un manifiesto directo sigue valiendo (launchers 1.0.x)', async () => {
+  // Compatibilidad hacia atras: quien tenga la URL vieja guardada en su
+  // configuracion recibe el manifiesto entero, sin puntero de por medio.
+  const s = await servidor({ '/manifest.json': MINI_TXT });
+  try {
+    assert.equal((await fetchManifest(`${s.base}/manifest.json`)).packVersion, '9.9.9');
+  } finally { await s.cerrar(); }
 });
 
 await rm(tmp, { recursive: true, force: true });

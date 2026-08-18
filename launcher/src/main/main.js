@@ -25,12 +25,31 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
  * credenciales, así que el repositorio privado del proyecto no puede ser el que
  * lo sirva. Es el mismo sitio del que salen las actualizaciones del launcher.
  */
+// ⚠ SE PIDE EL PUNTERO, NO EL MANIFIESTO.
+//
+// `latest.json` son 250 bytes que dicen cuál es el manifiesto vigente, y sale
+// de la RELEASE —el CDN de descargas de GitHub, sin límite por peticiones—, no
+// de `raw.githubusercontent`. Esto es lo que arregla dos cosas a la vez:
+//
+//   el 429 de la primera petición  ·  `raw` limita, la release no
+//   la vuelta atrás                ·  publicar mal deja de ser irreversible:
+//                                     se reescriben 250 bytes y listo
+//
+// `fetchManifest` distingue puntero de manifiesto POR EL CONTENIDO, así que la
+// URL de abajo sigue valiendo tal cual y no hay que migrar a nadie.
+//
+// El respaldo en `raw` se queda de segundo: mientras exista un solo launcher
+// 1.0.x por ahí, ese fichero se sigue publicando.
+//
 // OJO con la rama: ese repositorio usa `master`, no `main`. Escribir `main`
 // por costumbre deja a TODO el mundo con un 404 y sin pack, y el launcher no
 // puede adivinarlo. Se cambia aquí solo si cambia la rama del repositorio.
+const PACK_REPO = 'corderovibes-collab/luna-eternal-pack';
 const MANIFIESTO_POR_DEFECTO =
   process.env.LUNA_MANIFEST
-  ?? 'https://raw.githubusercontent.com/corderovibes-collab/luna-eternal-pack/master/manifest.json';
+  ?? `https://github.com/${PACK_REPO}/releases/download/pack-manifest/latest.json`;
+const MANIFIESTO_RESPALDO =
+  `https://raw.githubusercontent.com/${PACK_REPO}/master/manifest.json`;
 
 let win = null;
 let gameProcess = null;
@@ -91,6 +110,9 @@ handle('config:get', async () => {
   const installed = await loadInstalled();
   return {
     ...cfg,
+    // ⚠ AQUI VA LA URL SOLA, NO LA LISTA. Esto alimenta el campo de texto de
+    //   Ajustes: una lista se pinta como "url1,url2" y `config:set` guardaria
+    //   esa cadena con la coma dentro como si fuera una direccion.
     manifestUrl: cfg.manifestUrl ?? MANIFIESTO_POR_DEFECTO,
     installedVersion: installed.version,
   };
@@ -127,7 +149,7 @@ handle('accounts:microsoft', async () => {
 /** Prepara e instala. `forzar` es el botón de reparar: comprueba fichero a fichero. */
 async function preparar({ forzar = false } = {}) {
   const cfg = await loadConfig();
-  return prepare(cfg.manifestUrl ?? MANIFIESTO_POR_DEFECTO, (p) => send('progress', p), { forzar });
+  return prepare([cfg.manifestUrl ?? MANIFIESTO_POR_DEFECTO, MANIFIESTO_RESPALDO], (p) => send('progress', p), { forzar });
 }
 
 handle('game:play', async () => {
@@ -256,7 +278,7 @@ handle('server:ping', async () => {
   const cfg = await loadConfig();
   // El host sale del manifiesto para que cambiar de servidor no obligue a
   // publicar un launcher nuevo.
-  const manifest = await fetchManifest(cfg.manifestUrl ?? MANIFIESTO_POR_DEFECTO);
+  const manifest = await fetchManifest([cfg.manifestUrl ?? MANIFIESTO_POR_DEFECTO, MANIFIESTO_RESPALDO]);
   return { ...(await pingServer(manifest.server)), ...manifest.server };
 });
 

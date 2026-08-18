@@ -1,4 +1,4 @@
-import { open, mkdir, writeFile } from 'node:fs/promises';
+import { open, mkdir, writeFile, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { inflateRaw } from 'node:zlib';
 import { promisify } from 'node:util';
@@ -109,7 +109,38 @@ async function readEntry(fh, entry) {
  * @param {(name:string)=>boolean} [opts.filter] qué entradas extraer
  * @param {number} [opts.strip] niveles de directorio a quitar del principio
  */
-export async function extractZip(zipPath, destDir, { filter, strip = 0 } = {}) {
+/**
+ * Escribe un fichero aunque el que ya esté ahí sea OCULTO.
+ *
+ * ⚠ EN WINDOWS, `writeFile` SOBRE UN FICHERO OCULTO FALLA CON `EPERM`.
+ *
+ * No es un permiso del usuario ni un antivirus: `CreateFile` con
+ * `CREATE_ALWAYS` se niega si el fichero existente tiene el atributo
+ * `HIDDEN` y la llamada no lo repite. Node abre con `'w'`, que es
+ * exactamente ese caso, así que el error sale con el disco sano, la carpeta
+ * escribible y el usuario siendo administrador — y el mensaje no menciona en
+ * ningún momento que el problema sea que el fichero está oculto.
+ *
+ * Ocurrió de verdad, y costó llegar hasta aquí: el pack trae
+ * `config/euphoria_patcher/.data.json`, y el mod EuphoriaPatcher lo vuelve a
+ * crear OCULTO en el PC del jugador. A partir de ahí, toda actualización que
+ * reextrajera `config/` moría al 99 % con
+ * `EPERM: operation not permitted, open '…/.data.json'`.
+ *
+ * Se borra y se vuelve a escribir. `unlink` sí funciona sobre un fichero
+ * oculto, y el contenido acaba siendo el mismo que si se hubiera pisado.
+ */
+async function escribirPisando(target, datos) {
+  try {
+    await writeFile(target, datos);
+  } catch (err) {
+    if (err?.code !== 'EPERM') throw err;
+    await unlink(target).catch(() => {});
+    await writeFile(target, datos);
+  }
+}
+
+export async function extractZip(zipPath, destDir, { filter, strip = 0, keepExisting = false } = {}) {
   const fh = await open(zipPath, 'r');
   try {
     const { size } = await fh.stat();
@@ -128,8 +159,14 @@ export async function extractZip(zipPath, destDir, { filter, strip = 0 } = {}) {
       const rel = path.relative(destDir, target);
       if (rel.startsWith('..') || path.isAbsolute(rel)) continue;
 
+      // `keepExisting`: extraer SIN pisar. Es como se sirve la configuración
+      // del pack — llega en un zip por carpeta, y lo que el jugador ya haya
+      // ajustado se respeta. Lo que sí llega es un fichero NUEVO, porque ese
+      // todavía no existe.
+      if (keepExisting && (await stat(target).catch(() => null))) continue;
+
       await mkdir(path.dirname(target), { recursive: true });
-      await writeFile(target, await readEntry(fh, entry));
+      await escribirPisando(target, await readEntry(fh, entry));
       written++;
     }
     return written;

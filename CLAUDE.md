@@ -205,7 +205,27 @@ Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md
                    only data packs can". Se registraba y se quedaba
                    apagado — y no se veia porque yo IGNORABA el
                    booleano que devuelve registerBuiltinResourcePack
-Publicar      ⚠⚠ EL PACK NO SE SIRVE DESDE raw.githubusercontent.
+Publicar      YA NO QUEDA NI UN FICHERO SIRVIENDOSE DESDE raw (D-036)
+              eran 5, y el manifiesto era uno de ellos: LA PRIMERA
+              peticion del arranque, en el peor sitio posible
+              hoy el launcher pide un PUNTERO de 250 bytes
+                releases/pack-manifest/latest.json   <- lo unico mutable
+                    -> manifest-<huella>.json        <- inmutable, no se toca
+              VOLVER ATRAS = SUBIR 250 BYTES:
+                python tools/gen_manifest.py --volver-a <huella>
+              antes era regenerar y republicar 185 MB con el pack roto
+              cada fichero lleva `urls[]` y no una url suelta: un 4xx
+              es definitivo para ESE ORIGEN, no para el fichero
+              ⚠ el launcher VERIFICA el sha1 del manifiesto antes de
+                fiarse. Ese fichero elige de que URL salen los 185 MB
+                que se ejecutan en la maquina del jugador
+              ⚠ `url` singular SE MANTIENE ademas de `urls`: los
+                launchers 1.0.x leen ese campo, y quitarlo dejaria sin
+                pack a quien no puede actualizarse porque el pack no le
+                baja. Se retira cuando no quede nadie en 1.0.x
+              detalle en docs/technical/distribucion.md
+              ---- historico, sigue siendo cierto -------------------
+              ⚠⚠ EL PACK NO SE SIRVE DESDE raw.githubusercontent.
               raw NO es un CDN de distribucion: LIMITA POR PETICIONES y
               contesta 429 y 503. Con 117 de las 199 entradas ahi, quien
               instalaba de cero se llevaba "HTTP 429 en manifest.json"
@@ -255,7 +275,67 @@ Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
                 para 1.21.1 exige 0.6.x y se niega a arrancar fuera
                 de rango. El numero NO esta escrito a mano: se lee
                 del jar de Iris. §2-quinquies
-Launcher      launcher/ · Electron 43 · 1.0.2 · 32/32 (npm test)
+Launcher      SE REHACE COMO FORK DE FreesmLauncher (D-035)
+              decision del usuario, contra mi recomendacion, que queda
+              escrita en D-035 junto con las dos consecuencias que NO
+              son opcionales: GPL-3.0 obliga a PUBLICAR EL FUENTE, y
+              hay que renombrar la marca
+              C++/Qt6 · GPL-3.0 · fork de Prism Launcher 11.0.3
+              fuente en D:\luna-launcher  ·  toolchain en .toolchain/
+              Qt 6.10.2 + vcpkg + MSVC 14.51, NADA instalado en global
+              compilar: powershell tools/build-launcher.ps1
+              COMPILA Y ARRANCA (2026-08-17): 673/673 objetos, BUILD OK,
+              freesmlauncher.exe 14,7 MB responde a --version
+              o sea: la via del fork ESTA PROBADA en esta maquina
+              ⚠ el .exe NO era autonomo: el build deja las 10 DLL de
+                vcpkg pero NINGUNA de Qt, y en el PC de un jugador eso es
+                un doble clic que no hace NADA -- sin ventana y sin
+                mensaje, porque Windows no encuentra Qt6Core.dll y se
+                rinde en silencio. RESUELTO: build-launcher.ps1 pasa
+                `windeployqt` al terminar, que ademas copia los PLUGINS
+                (plataforma, estilos, imagenes) que se cargan en tiempo
+                de ejecucion y que ningun analisis del .exe encuentra
+              MARCA RENOMBRADA A LUNA ETERNAL (2026-08-17)
+              lo exige la GPL §7 y Prism se lo pide a sus forks
+                binario     freesmlauncher.exe -> lunaeternal.exe
+                AppID       org.freesmlauncher.FreesmLauncher
+                            -> net.pokereport.LunaEternal (la misma
+                               convencion que el paquete del mod)
+                10 URL que apuntaban a la infraestructura de Freesm
+                (noticias, discord, reddit, telegram, actualizador,
+                traducciones): las suyas se VACIAN, y una URL vacia
+                OCULTA su entrada de menu --setVisible(!isEmpty())--
+                en vez de dejar un boton que lleva a otra comunidad
+              ⚠ EL ARTE NO SE HEREDA, SE SUSTITUYE. Los logos de Freesm
+                llevan CC BY-SA 4.0 y acreditan a sus autores POR NOMBRE:
+                renombrar el fichero no los hace nuestros. Es la misma
+                trampa que descarto CobbleVerse (D-006) y la que obligo a
+                repartir los shaders por su canal (D-030)
+                iconos: python program_info/genicons-luna.py
+                        (ico + icns + png256 + svg desde UNA imagen)
+              ⚠ EL COPYRIGHT DE LOS ANTERIORES SE CONSERVA ENTERO y el
+                nuestro se anade ENCIMA. Borrar las lineas de Freesm,
+                Prism, PolyMC y MultiMC seria incumplir la GPL §5a
+              ⚠ QUEDA UNO SIN SUSTITUIR: program_info/LunaEternal.icon
+                es el bundle de icono de macOS 26 y sigue siendo arte de
+                Freesm. Solo se usa al compilar para Mac, que hoy no se
+                hace -- pero hay que rehacerlo ANTES de publicar un
+                binario de Mac
+              ⚠ `Launcher_META_URL` SIGUE APUNTANDO A meta.freesmlauncher
+                .org, y es deliberado: de ahi salen los metadatos de
+                Minecraft y Fabric, o sea que CADA jugador nuestro
+                dependeria de una maquina que no controlamos. No se toca
+                en un pase de marca porque es funcional, no cosmetico.
+                Prism sirve los MISMOS 13 paquetes que usamos; los 3 de
+                diferencia son inyeccion de auth (ely.by, authlib-
+                injector, loki) que no usamos. Lo que toca algun dia es
+                levantar el nuestro: el generador es libre
+              instalador suyo 28,8 MB frente a nuestros 95
+              ⚠ lo que el fork NO arregla: distribucion, identidad,
+                firma, observabilidad, vuelta atras. Los cinco riesgos
+                que rompen al crecer siguen siendo nuestros
+              ---- el de Electron sigue siendo el que se reparte -----
+              launcher/ · Electron 43 · 1.0.2 · 37/37 (npm test)
               ⚠⚠ EL FETCH DE NODE NO TIENE TIEMPO LIMITE POR DEFECTO.
                  Si la conexion se queda a medias, la promesa no se
                  resuelve NI SE RECHAZA: el jugador ve "Comprobando
@@ -589,6 +669,8 @@ Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 | | |
 |---|---|
 | **`WLD-006`** | ⏰ **Pedir la whitelist de SERVIDOR de Axiom** en `#whitelist-request` de su Discord. **Fecha límite ~2026-09-10.** Lo que funciona hoy es una cortesía automática de 30 días — ver [construccion.md §3-bis](docs/world/construccion.md) |
+| `LNC-003` | **Certificado de firma de codigo — DIFERIDO a proposito (decision del usuario, 2026-08-17).** No tiene NADA que ver con las cuentas no premium: eso ya funciona y es gratis (`online-mode=false` + cuentas offline). Lo que arregla es que Windows deje de acusar al INSTALADOR de ser un virus — la pantalla azul de «Windows protegio su PC» que sale en cada instalacion limpia y que una parte de la gente no se atreve a saltar. **No rompe nada no tenerlo**: el launcher se reparte sin firmar desde siempre. Lo unico que se pierde es la autoactualizacion en macOS, que sin firma no puede aplicarse (en Windows si funciona). ~120 $/año que con 20 personas no compensan; se revisa cuando explicar donde hay que pulsar cueste mas que el certificado. Ver [distribucion.md §6](docs/technical/distribucion.md) |
+| **`GPL-001`** | ⏰ **Crear el repositorio PUBLICO del launcher Qt.** No es opcional: GPL-3.0 obliga a publicar el fuente completo del fork al distribuir el binario (D-035) |
 | **`LNC-002`** | Crear el token `PACK_TOKEN` para que el launcher publique sus releases — ver [launcher.md §2](docs/technical/launcher.md) |
 | **`ART-002`** | Enviar el arte de la interfaz nueva: fondos, botones, iconos (D-026) |
 | `SEC-001` | **Rotar la API key de Pterodactyl.** Ha vuelto a circular en texto plano el 2026-08-12. Está en `.env` (git-ignorado) y funciona; conviene regenerarla en el panel cuando se cierre la fase de construcción |
@@ -738,6 +820,8 @@ documentación · migración · rollback.
 | D-015 | 2026-08-11 | **Tres espacios: lobby · ciudadela · mundo** | Cada uno con una sola función. Los gimnasios van **repartidos por el mundo**, no en una sala: concentrarlos contradice el pilar de exploración |
 | D-016 | 2026-08-11 | **Dos mundos: Hogar (permanente) y Salvaje (se reinicia)** | Un solo mundo no puede ser permanente y fresco a la vez. El reinicio renueva la exploración sin producir contenido, y nada importante vive en el terreno: todo está en la base de datos |
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
+| D-035 | 2026-08-17 | **El launcher se rehace como fork de FreesmLauncher** (C++/Qt6, GPL-3.0), en repositorio propio y publico | **Decision del usuario, tomada tras leer el analisis en contra.** Mi recomendacion fue reestructurar el Electron actual: de los cinco riesgos que rompen al crecer —distribucion, identidad, firma, observabilidad, vuelta atras— el fork **no arregla ninguno**, y su funcionalidad estrella (jugar sin cuenta de Microsoft) ya la tenia el nuestro en 25 lineas. El usuario decidio el fork igualmente. **Dos consecuencias que no son opcionales y quedan escritas aqui para que nadie las descubra tarde:** (1) **GPL-3.0 obliga a publicar el codigo fuente completo** del fork, incluido cualquier anti-abuso o capa de identidad que se le añada encima — con tienda de pago (D-007), eso no es gratis; (2) hay que renombrar la marca (GPL §7.c/e, y Prism lo exige a sus forks). Ganancia real medida: instalador de **28,8 MB frente a 95**. Coste: rehacer perfiles, diagnostico, reparar e interfaz en español, y una cadena Qt6+CMake+MSVC+vcpkg en vez de `npm run dist`. Toolchain ya montado en `.toolchain/` (git-ignorado), fork clonado en `D:\luna-launcher` |
+| D-036 | 2026-08-17 | **El manifiesto del pack deja de servirse desde `raw` y se resuelve por un PUNTERO inmutable, y cada fichero admite varios origenes** | Tres fallos que solo se ven con gente dentro. `raw.githubusercontent` limita por peticiones y era **la primera peticion del arranque**: ya costo media mañana de «a mi me funciona y a ellos no». `manifest.json` se sobrescribia, asi que una publicacion mala rompia a todo el mundo a la vez y arreglarlo era republicar 185 MB **con el pack roto mientras tanto**. Y cada fichero tenia una sola URL: si el origen cae, no hay a donde ir. Ahora `latest.json` son 250 bytes servidos por el CDN de descargas y **es lo unico mutable de la cadena**; los manifiestos llevan la huella en el nombre y no se tocan jamas. **Volver atras = subir 250 bytes** (`--volver-a <huella>`). El launcher **verifica el sha1 del manifiesto** antes de fiarse: ese fichero elige de que URL salen los 185 MB que se ejecutan en la maquina del jugador. Ficheros que dependian de `raw`: **5 → 0**. Detalle en [distribucion.md](docs/technical/distribucion.md) |
 | D-034 | 2026-08-17 | **La moneda normal se llama «Plata»** | **Decisión del usuario.** Mismo mecanismo que D-033: el identificador interno sigue siendo `POKEDOLLAR` —está en la base de datos— y solo cambia el nombre visible. Su color de chat pasa de dorado a **blanco** por lo mismo que el saldo del PokePad: el dorado es ahora de las LunaCoins, y dos monedas del mismo color dejan de distinguirse. De paso, los dos comandos que tenían el nombre escrito a mano pasan a leerlo del enum — si no, habría quedado una pantalla diciendo «Plata» y un `/luna saldo` diciendo otra cosa |
 | D-033 | 2026-08-16 | **La moneda premium se llama «LunaCoins», y en el PokePad solo se enseñan DOS monedas** | **Decisión del usuario.** D-018 dejó el nombre sin decidir a propósito y separó el identificador interno (`REPORTCOIN`, que está en la base de datos) del nombre visible, precisamente para que esto fuera *una línea* en vez de una migración de esquema. Lo ha sido. Y en la pantalla principal se ven **PokéDólares y LunaCoins**: las **Marcas** siguen existiendo —son lo que impide que la progresión se compre— pero no salen ahí |
 | D-018 | 2026-08-11 | **Una sola moneda premium**, con nombre visible configurable | Dos monedas de pago obligan a elegir *cuál* comprar antes de *qué* comprar. El enum es `REPORTCOIN`; "ReportCoins" o "LunaCoins" es una línea de configuración |

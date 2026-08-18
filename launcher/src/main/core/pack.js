@@ -1,6 +1,7 @@
+import { createHash } from 'node:crypto';
 import { rm, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { download, getJson, isIntact, pool } from './net.js';
+import { download, getJson, getText, isIntact, pool } from './net.js';
 import { paths } from './paths.js';
 import { loadInstalled, saveInstalled } from './store.js';
 import { extractZip } from './zip.js';
@@ -12,6 +13,15 @@ const MANAGED = ['mods', 'config', 'resourcepacks', 'shaderpacks', 'datapacks'];
 
 const isManaged = (rel) => MANAGED.some((dir) => rel === dir || rel.startsWith(`${dir}/`));
 
+/**
+ * De donde se puede bajar este fichero, en orden de preferencia.
+ *
+ * `urls` llega desde el pack 0.3.0; `url` es lo que traen los manifiestos
+ * anteriores. Se admiten los dos porque el launcher se actualiza solo pero no
+ * a la vez que el pack, y durante un rato conviven.
+ */
+const origenes = (file) => (Array.isArray(file.urls) && file.urls.length ? file.urls : [file.url]);
+
 /** Bloquea rutas que se escapen de la instancia (`../`, absolutas, unidades). */
 function safeJoin(rel) {
   const target = path.join(paths.instance, rel);
@@ -22,8 +32,60 @@ function safeJoin(rel) {
   return target;
 }
 
+/**
+ * El manifiesto vigente, resuelto a traves del puntero.
+ *
+ * POR QUE HAY UN PUNTERO EN MEDIO
+ *
+ * Antes esto pedia `manifest.json`, que se sobrescribia en cada publicacion.
+ * Eso tenia dos problemas y los dos son de los que solo se ven cuando ya hay
+ * gente dentro:
+ *
+ *   1. VIVIA EN `raw.githubusercontent`, que limita por peticiones y cachea
+ *      tres minutos por ruta. Era LA PRIMERA peticion del arranque, o sea el
+ *      peor sitio posible para un 429.
+ *   2. NO HABIA VUELTA ATRAS. Una publicacion mala rompia a todo el mundo a la
+ *      vez, y arreglarlo era regenerar y republicar 185 MB con el pack roto
+ *      mientras tanto.
+ *
+ * Ahora `latest.json` --250 bytes servidos por el CDN de descargas-- dice cual
+ * es el manifiesto bueno, y cada manifiesto lleva su huella en el nombre y no
+ * se toca jamas. Volver atras es reescribir el puntero.
+ *
+ * ⚠ SE ADMITEN LOS DOS FORMATOS, y hace falta: el launcher se actualiza solo
+ *   pero no a la vez que el pack, y un launcher ya instalado tiene la URL
+ *   vieja guardada en su configuracion. Se distinguen POR EL CONTENIDO y no por
+ *   la URL, que es lo unico que no depende de que nadie haya migrado nada.
+ */
 export async function fetchManifest(url) {
-  const manifest = await getJson(url, { headers: { 'Cache-Control': 'no-cache' } });
+  const crudo = await getText(url, { headers: { 'Cache-Control': 'no-cache' } });
+  const primero = JSON.parse(crudo);
+
+  if (!Array.isArray(primero.files) && typeof primero.manifest === 'string') {
+    return seguirPuntero(primero);
+  }
+  if (!Array.isArray(primero.files)) throw new Error('El manifiesto no trae lista de ficheros');
+  return primero;
+}
+
+async function seguirPuntero(puntero) {
+  const texto = await getText([puntero.manifest, ...(puntero.espejos ?? [])]);
+
+  // ⚠ SE COMPRUEBA LA HUELLA ANTES DE FIARSE DEL CONTENIDO.
+  //   El manifiesto elige de que URL salen los 185 MB que se instalan, y con
+  //   ellas lo que acaba ejecutandose en la maquina del jugador. Sin esta
+  //   comprobacion, quien pudiera colocarle un JSON --un DNS envenenado, un
+  //   proxy de una red publica-- le elegiria los mods. Es la unica parte de la
+  //   cadena donde una firma sale gratis: el puntero ya trae el sha1.
+  if (puntero.sha1) {
+    const suyo = createHash('sha1').update(texto).digest('hex');
+    if (suyo !== puntero.sha1.toLowerCase()) {
+      throw new Error('El manifiesto no coincide con su huella. '
+        + 'Vuelve a darle a Jugar; si sigue pasando, avisa en Discord.');
+    }
+  }
+
+  const manifest = JSON.parse(texto);
   if (!Array.isArray(manifest.files)) throw new Error('El manifiesto no trae lista de ficheros');
   return manifest;
 }
@@ -156,12 +218,15 @@ export async function applySync(plan, onProgress) {
       // como un zip: una petición en vez de mil, y se extrae encima de lo que haya
       // para no borrar la config que generan los mods al ejecutarse.
       const cached = path.join(paths.cache, `${file.sha1}.zip`);
-      await download(file.url, cached, { sha1: file.sha1, size: file.size, onChunk: track });
+      await download(origenes(file), cached, { sha1: file.sha1, size: file.size, onChunk: track });
       await mkdir(dest, { recursive: true });
-      await extractZip(cached, dest, { strip: file.strip ?? 0 });
+      await extractZip(cached, dest, {
+        strip: file.strip ?? 0,
+        keepExisting: file.keepExisting === true,
+      });
       await rm(cached, { force: true });
     } else {
-      await download(file.url, dest, {
+      await download(origenes(file), dest, {
         sha1: file.once ? undefined : file.sha1,
         size: file.size,
         onChunk: track,

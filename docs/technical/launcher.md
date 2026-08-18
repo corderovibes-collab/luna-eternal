@@ -11,8 +11,36 @@ actualizaciones —del pack y del propio launcher— sin que nadie le mande nada
 
 ## Current Status
 
-Código completo en [`launcher/`](../../launcher). **25/25 pruebas del núcleo en
+> ⚠️ **2026-08-17 — EL LAUNCHER SE REHACE COMO FORK DE FreesmLauncher** (D-035).
+> Decisión del usuario, tomada tras leer el análisis en contra. Este documento
+> describe el launcher de **Electron, que es el que se reparte hoy** y lo seguirá
+> siendo mientras se construye el fork.
+>
+> | | |
+> |---|---|
+> | Fuente del fork | `D:\luna-launcher` · C++/Qt6 · **GPL-3.0** |
+> | Toolchain | `.toolchain/` (git-ignorado): Qt 6.10.2 + vcpkg + MSVC 14.51 |
+> | Compilar | `powershell tools/build-launcher.ps1` |
+> | Instalador | 28,8 MB frente a los 95 del de Electron |
+>
+> **Dos cosas que no son opcionales y conviene no descubrir tarde:** GPL-3.0
+> **obliga a publicar el código fuente completo** del fork —incluido cualquier
+> anti-abuso que se le añada— y hay que **renombrar la marca** (GPL §7.c/e; Prism
+> lo exige a sus forks, y Freesm ya lo hizo una vez).
+>
+> **Y lo que el fork NO arregla:** distribución, identidad, firma,
+> observabilidad y vuelta atrás. Los cinco riesgos que rompen al crecer siguen
+> siendo nuestros, y dos de ellos se cerraron el mismo día por otra vía — ver
+> [distribucion.md](distribucion.md).
+
+Código completo en [`launcher/`](../../launcher). **37/37 pruebas del núcleo en
 verde**, incluidas descargas y metadatos reales de Mojang y Fabric.
+
+> ⚠️ **El manifiesto ya no se pide a `raw`.** Se resuelve por un puntero
+> inmutable de 250 bytes servido por el CDN de descargas, y cada fichero admite
+> varios orígenes. Volver atrás cuesta 250 bytes en vez de 185 MB. Todo el
+> detalle y el porqué, en [distribucion.md](distribucion.md) — **eso sustituye a
+> lo que este documento dice en §2 sobre cómo se actualiza el pack**.
 
 | | |
 |---|---|

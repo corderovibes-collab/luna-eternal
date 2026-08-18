@@ -24,6 +24,21 @@ $env:ARTIFACT_NAME    = 'luna-launcher-win-x64'
 $env:BUILD_PLATFORM   = 'windows-msvc'
 $env:PATH             = "$TC\Qt\6.10.2\msvc2022_64\bin;$VS\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;$VS\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja;$env:PATH"
 
+# ⚠ NO LANZAR DOS COMPILACIONES A LA VEZ.
+#
+# Ninja mantiene abiertos `.ninja_deps` y `.ninja_log`, y una segunda ejecucion
+# muere en la CONFIGURACION con:
+#
+#     ninja: error: failed recompaction: Permission denied
+#
+# que no menciona por ningun lado que el problema sea que ya hay otra corriendo.
+# El enlazado final con LTO tarda ~8 minutos, asi que es facil creer que la
+# anterior ya acabo cuando aun le quedan objetivos.
+$vivos = @(Get-Process ninja, link, cl -ErrorAction SilentlyContinue)
+if ($vivos.Count -gt 0) {
+  throw "Ya hay una compilacion en marcha ($($vivos.Count) procesos). Espera a que termine."
+}
+
 Push-Location $SRC
 try {
   cmake --preset windows_msvc

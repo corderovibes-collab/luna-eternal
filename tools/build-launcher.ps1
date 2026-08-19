@@ -63,7 +63,21 @@ try {
   #   queremos en la maquina de un jugador.
   $lto = if ($Publicar) { 'ON' } else { 'OFF' }
   Write-Host "LTO: $lto$(if (-not $Publicar) { '  (usa -Publicar para el binario que se reparte)' })"
-  cmake --preset windows_msvc -DENABLE_LTO=$lto
+  # ⚠ EL ARGUMENTO SE MONTA ANTES, Y NO ES UN CAPRICHO DE ESTILO.
+  #
+  # PowerShell 5.1 NO EXPANDE variables en un argumento suelto que empieza por
+  # `-` y lleva `=`:
+  #
+  #     cmake -DENABLE_LTO=$lto     ->  llega literalmente "-DENABLE_LTO=$lto"
+  #     $arg = "-DENABLE_LTO=$lto"  ->  llega "-DENABLE_LTO=ON"
+  #
+  # Y se disfraza de que funciona: el Write-Host de arriba SI expande --esta
+  # entre comillas-- asi que el script decia "LTO: ON" mientras a CMake le
+  # llegaba basura. CMake tomaba esa cadena por falsa y apagaba el LTO, o sea
+  # que `-Publicar` habria producido EN SILENCIO un binario de publicacion sin
+  # optimizar.
+  $argLto = "-DENABLE_LTO=$lto"
+  cmake --preset windows_msvc $argLto
   if ($LASTEXITCODE -ne 0) { throw "cmake configure fallo ($LASTEXITCODE)" }
   cmake --build --preset windows_msvc --config Release
   if ($LASTEXITCODE -ne 0) { throw "cmake build fallo ($LASTEXITCODE)" }

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { rm, mkdir } from 'node:fs/promises';
+import { rm, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { download, getJson, getText, isIntact, pool } from './net.js';
 import { paths } from './paths.js';
@@ -178,6 +178,39 @@ export async function syncPack(manifest, {
   // Lo que estaba instalado y ya no está en el manifiesto (mod retirado o renombrado).
   const stale = Object.keys(installed.files ?? {})
     .filter((rel) => !nextState[rel] && isManaged(rel));
+
+  // ⚠⚠ Y ADEMÁS SE BARRE `mods/` DE VERDAD, NO SOLO LO ANOTADO.
+  //
+  // La limpieza de arriba solo alcanza lo que `installed.json` recuerda. Un jar
+  // que llegó por otra vía —una instalación anterior, una versión del launcher
+  // que aún no lo apuntaba, o el propio jugador— sobrevive a TODAS las
+  // actualizaciones, para siempre.
+  //
+  // Eso dejó a jugadores fuera del servidor el 2026-08-19. Arrastraban
+  // `trinkets` y `accessories-compat-layer` de un pack anterior; el servidor ya
+  // no los tenía, y el puente exportaba unas ranuras que el servidor no sabía
+  // leer:
+  //
+  //     Failed to decode packet 'clientbound/custom_payload'
+  //     Caused by: StructFieldException: [Field: exported_slots]
+  //
+  // El mensaje no nombra ni Accessories ni Trinkets. Y quien tenía la
+  // instalación bien anotada NO lo sufría, así que parecía cosa de máquinas
+  // concretas.
+  //
+  // Solo se barre `mods/`: es 100 % del pack. `config/`, `resourcepacks/` y
+  // `shaderpacks/` llevan cosas del jugador y ahí no se toca nada que no
+  // estuviera anotado.
+  const modsEsperados = new Set(
+    Object.keys(nextState).filter((rel) => rel.startsWith('mods/')),
+  );
+  try {
+    for (const nombre of await readdir(path.join(paths.instance, 'mods'))) {
+      if (!nombre.toLowerCase().endsWith('.jar')) continue;
+      const rel = `mods/${nombre}`;
+      if (!modsEsperados.has(rel) && !stale.includes(rel)) stale.push(rel);
+    }
+  } catch { /* aún no hay carpeta mods: instalación desde cero */ }
 
   return {
     manifest,

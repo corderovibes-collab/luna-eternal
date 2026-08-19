@@ -265,6 +265,34 @@ await test('el atajo se fía de installed.json; reparar no', async () => {
   }
 });
 
+await test('un jar HUERFANO en mods/ se retira aunque nadie lo anotara', async () => {
+  // ⚠ ESTA PRUEBA FIJA EL FALLO QUE DEJO A JUGADORES FUERA EL 2026-08-19.
+  //
+  // Arrastraban `trinkets` y `accessories-compat-layer` de un pack anterior.
+  // El servidor ya no los tenia, y el puente exportaba unas ranuras que el
+  // servidor no sabia leer:
+  //
+  //     Failed to decode packet 'clientbound/custom_payload'
+  //     Caused by: StructFieldException: [Field: exported_slots]
+  //
+  // La limpieza solo miraba `installed.json`, asi que un jar que llego por
+  // otra via sobrevivia a TODAS las actualizaciones. Y quien tenia la
+  // instalacion bien anotada no lo sufria: parecia cosa de maquinas concretas.
+  const mods = path.join(paths.instance, 'mods');
+  await mkdir(mods, { recursive: true });
+  await writeFile(path.join(mods, 'trinkets-3.10.0.jar'), 'huerfano');
+  await writeFile(path.join(mods, 'cobblemon.jar'), 'del pack');
+
+  // `installed.json` NO menciona el huerfano: es justo el caso.
+  const plan = await syncPack(MANIFIESTO, { perfil: 'jugador' });
+  assert.ok(plan.stale.includes('mods/trinkets-3.10.0.jar'),
+    'el jar huerfano tiene que retirarse');
+  assert.ok(!plan.stale.includes('mods/cobblemon.jar'),
+    'lo que SI esta en el manifiesto no se toca');
+
+  await rm(mods, { recursive: true, force: true });
+});
+
 console.log('\n== Los ajustes del jugador son SUYOS ==');
 
 /**

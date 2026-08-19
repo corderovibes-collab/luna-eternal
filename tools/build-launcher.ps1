@@ -18,7 +18,7 @@ param(
   #   .uild-launcher.ps1                    todo, minutos
   #
   # Objetivos utiles: LunaManifest, LunaInstance, LunaSync, LunaDownload,
-  # LunaApply, LunaConfig, lunaeternal (el ejecutable).
+  # LunaApply, LunaConfig, LunaEternal (el ejecutable; ojo a las mayusculas).
   [string]$Solo = ''
 )
 $ErrorActionPreference = 'Stop'
@@ -90,7 +90,17 @@ try {
   # que `-Publicar` habria producido EN SILENCIO un binario de publicacion sin
   # optimizar.
   $argLto = "-DENABLE_LTO=$lto"
-  cmake --preset windows_msvc $argLto
+
+  # ⚠ LAS VARIABLES `CACHE` DE CMAKE NO SE PISAN DESDE EL CMakeLists.
+  #
+  # Cambiar un `set(... CACHE ...)` en el fichero NO cambia nada si ya hay valor
+  # guardado: CMake conserva el de la cache. Se descubrio con
+  # `Launcher_UPDATER_GITHUB_REPO`, que se dejo vacio en el fuente y seguia
+  # apuntando al repositorio viejo -- compilaba "bien" y el comportamiento no
+  # cambiaba.
+  #
+  # Las que tienen que mandar desde el fuente se repiten aqui.
+  cmake --preset windows_msvc $argLto "-DLauncher_UPDATER_GITHUB_REPO="
   if ($LASTEXITCODE -ne 0) { throw "cmake configure fallo ($LASTEXITCODE)" }
   if ($Solo) {
     cmake --build --preset windows_msvc --config Release --target $Solo

@@ -40,7 +40,41 @@ Autotest      /luna autotest -> 112/112 correctos (2026-08-12, en vivo)
               eran 125: los 13 de fondos se fueron con el resource pack
 Telemetría    /luna economia · informe automático al log cada hora
               tablist con rangos (la barra lateral se borro, D-026)
-Pack base     EL MODPACK OFICIAL DE COBBLEMON (D-031, revoca D-024)
+Pack base     COBBLEVERSE 1.7.42 (D-037, revoca D-031) — ORDEN DEL
+              USUARIO, dada despues de leerle las licencias:
+                cobbleverse         modpack  All Rights Reserved
+                cobbleverse-badges  mod      CC-BY-NC-ND-4.0
+              queda escrito porque D-006 lo descarto por eso mismo
+              NO redistribuimos nada: el manifiesto guarda URL y hash,
+              y cada mod se baja del CDN de Modrinth
+              147 ficheros suyos + 8 nuestros · 434 MB (eran 185)
+              FUERA: generacion de estructuras (legendary-monuments,
+                     repurposed-structures-fabric, biome-replacer,
+                     huge-structure-blocks) porque el usuario NO quiere
+                     construcciones generadas
+                     musica: 421 MB entre su banda sonora y tres packs
+                     de radio, mas del doble de todo el pack de antes
+                     los 15 packs que ellos marcan "z DO NOT ENABLE z"
+              ⚠ EL SLUG NO ES EL NOMBRE DEL JAR. repurposed_structures
+                es `repurposed-structures-fabric` en Modrinth, y sin el
+                sufijo la exclusion NO SURTE EFECTO Y NO AVISA
+              ⚠ SU CONFIGURACION SON 155 FICHEROS, y sueltos eran 155
+                peticiones a raw = el 429 otra vez. Van en UN ZIP POR
+                CARPETA desde la release, extraido SIN PISAR lo del
+                jugador (`keepExisting`, nuevo en el launcher). Da la
+                misma garantia que `once` fichero a fichero, y ademas
+                un fichero de config NUEVO si llega
+              ⚠⚠ `continuity:default` SE APAGA A PROPOSITO. Son texturas
+                 conectadas y afectan a 42 bloques: los 16 cristales de
+                 color, sus 16 paneles, cristal, tintado, libreria y la
+                 familia de la arenisca. El usuario lo reporto en vivo
+                 ("mi construccion cambio de textura"). Se queda su
+                 `glass_pane_culling_fix`, que no repinta nada
+              ⚠ `letmedespawn` ya no existe en Modrinth (404). Va en
+                FIJADOS con la URL y el sha1 del pack de Cobblemon,
+                comprobados contra el CDN
+              ---- historico ---------------------------------------
+              EL MODPACK OFICIAL DE COBBLEMON (D-031, revoca D-024)
               cobblemon-fabric 1.7.3 · 76 ficheros · MC 1.21.1
               la lista NO se mantiene a mano: gen_modpack.py baja su
               .mrpack, lee el indice y usa SUS versiones probadas
@@ -60,7 +94,64 @@ Pack base     EL MODPACK OFICIAL DE COBBLEMON (D-031, revoca D-024)
                 se queda con la version MAS ALTA de cada modulo, que
                 es lo que hace Fabric. Sin esas tres cosas salen 19
                 falsos positivos y la comprobacion no sirve
-Mods          servidor 14 jars · cliente 79 · NO tienen que coincidir
+Mods          servidor 29 jars · cliente 155 · NO tienen que coincidir
+              subieron de 14 a 29 con CobbleVerse: los de REGLAS DE
+              JUEGO tienen que estar en el servidor o no hacen nada
+                CobbleverseBadges · rctmod + rctapi · cobblemonraiddens
+                mega_showdown · fightorflight · y sus dependencias
+              ⚠⚠⚠ LOS BLOQUES VIAJAN COMO UN NUMERO, NO COMO UN NOMBRE.
+                 El servidor dice "bloque 4721" y el cliente lo busca en
+                 SU tabla. Las dos tablas se construyen registrando
+                 mods, asi que un mod de bloques que este solo en el
+                 cliente las descuadra y SE DIBUJA OTRA COSA
+                 El usuario coloco un neon blanco y le salio
+                 `lumymon:mesprit_altar`; preguntado el servidor por esa
+                 coordenada, contesto AIRE. No era textura ni ID
+                 duplicado: eran dos tablas distintas
+                 medido: 5.687 bloques de desfase en 18 mods
+                 con el pack de Cobblemon NO pasaba, y por eso el diseño
+                 de mods_servidor.py aguanto tanto: alli los extras del
+                 cliente eran HUD, mapas y tooltips, que no registran
+                 nada. CobbleVerse trae DIECIOCHO mods de bloques
+                 comprobacion: ningun mod con blockstates y
+                 `environment != client` puede faltar en el servidor
+              ⚠ VanillaBackport SE ESCAPO del primer analisis: registra
+                sus 72 bloques como `minecraft:`, asi que buscando
+                "blockstates de namespace propio" parecia inofensivo
+              ⚠ `aporta()` MIRA DENTRO DE LOS JARS ANIDADOS (JiJ). Sin
+                eso el resolutor abortaba por dependencias que viajan
+                DENTRO del propio jar: `trinkets` lleva
+                cardinal-components y `sophisticatedcore` lleva
+                team_reborn_energy. Dos abortos por el mismo punto ciego
+              ⚠⚠ UN MOD QUE REGISTRE ALGO QUE SE SINCRONIZA TIENE QUE
+                 ESTAR EN LOS DOS LADOS, SEA O NO DEPENDENCIA DE NADIE.
+                 `trinkets` + `accessories-compat-layer` estaban solo
+                 en el cliente y NADIE ENTRABA AL SERVIDOR:
+                   Failed to decode packet 'clientbound/custom_payload'
+                   Caused by: StructFieldException: [exported_slots]
+                 que no nombra ni Accessories ni Trinkets. La causa
+                 sale del log del CLIENTE, no del servidor
+                 `con_dependencias()` no lo caza y no puede: un PUENTE
+                 no es dependencia de nadie, por definicion
+                 se resolvio QUITANDOLOS DEL CLIENTE --se comprobo que
+                 de `accessories-compat-layer` no depende ni un mod de
+                 los 147-- en vez de subirlos al servidor
+              ⚠ TRES DE ELLOS NO SE ELIGIERON, LOS PIDIO EL LOG:
+                tmcraft, LumyMon y Only Bottle Caps. Sin ellos, 55
+                tablas de botin de los entrenadores no parseaban
+                ("Unknown registry key ... tmcraft:tm_bulkup") = 55
+                entrenadores que no sueltan nada al ganarles
+              ⚠⚠ RAM: 4.447 MB DE UN LIMITE DE 4.096. B-003 YA NO ES UNA
+                 PREGUNTA: el servidor corre POR ENCIMA de su limite,
+                 con swap=0 y el OOM-killer armado. 158 mods, Cobblemon
+                 y 1.714 entrenadores no caben en 4 GB
+                 (era 1,9 GB con 14 mods esta misma manana)
+              datapack: COBBLEVERSE-RCT-DP-v20 en world/datapacks
+                154 entrenadores curados con dialogo. 1559 -> 1714
+                se comprueba POR DENTRO que no lleva worldgen antes
+                de subirlo; sus otros datapacks SI lo llevan mezclado
+              ---- historico ---------------------------------------
+              servidor 14 jars · cliente 79 · NO tienen que coincidir
               ⚠ EL SERVIDOR TIENE QUE SER SUBCONJUNTO DEL CLIENTE.
                 Al reves echa a la gente con "Registry remapping
                 failed". Por eso mods_servidor.py lee las versiones
@@ -330,6 +421,25 @@ Launcher      SE REHACE COMO FORK DE FreesmLauncher (D-035)
                 diferencia son inyeccion de auth (ely.by, authlib-
                 injector, loki) que no usamos. Lo que toca algun dia es
                 levantar el nuestro: el generador es libre
+              MOTOR ESCRITO Y PROBADO (2026-08-18): 7 piezas en
+              launcher/luna/ con 64 pruebas propias en verde
+                LunaConfig   donde vive el pack, un solo sitio
+                LunaFetch    puntero -> manifiesto -> huella verificada
+                LunaManifest lo interpreta y valida
+                LunaInstance crea la instancia con SUS versiones
+                LunaSync     decide que bajar, borrar y respetar
+                LunaDownload descarga con espejos, huella por origen
+                LunaApply    escribe, extrae, borra
+                LunaUpdate   el orquestador
+              ⚠ NADA ESTA ENCHUFADO A LA INTERFAZ TODAVIA. Si lo abres
+                ves un Prism con nuestro logo: gestor de instancias,
+                navegador de mods y en ingles. El motor vive al lado
+              ⚠ EL LTO SE APAGA PARA DESARROLLAR: cuesta ~9 min y 2 GB
+                por enlazado. `-Publicar` lo enciende, y lo que se
+                reparte TIENE que salir de ahi
+              ⚠⚠ TODO EL DETALLE ESTA EN docs/technical/launcher-qt.md
+                 -- decisiones, trampas de la cadena de herramientas y
+                 por donde seguir. LEERLO ANTES DE TOCAR EL FORK
               instalador suyo 28,8 MB frente a nuestros 95
               ⚠ lo que el fork NO arregla: distribucion, identidad,
                 firma, observabilidad, vuelta atras. Los cinco riesgos
@@ -670,6 +780,7 @@ Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 |---|---|
 | **`WLD-006`** | ⏰ **Pedir la whitelist de SERVIDOR de Axiom** en `#whitelist-request` de su Discord. **Fecha límite ~2026-09-10.** Lo que funciona hoy es una cortesía automática de 30 días — ver [construccion.md §3-bis](docs/world/construccion.md) |
 | `LNC-003` | **Certificado de firma de codigo — DIFERIDO a proposito (decision del usuario, 2026-08-17).** No tiene NADA que ver con las cuentas no premium: eso ya funciona y es gratis (`online-mode=false` + cuentas offline). Lo que arregla es que Windows deje de acusar al INSTALADOR de ser un virus — la pantalla azul de «Windows protegio su PC» que sale en cada instalacion limpia y que una parte de la gente no se atreve a saltar. **No rompe nada no tenerlo**: el launcher se reparte sin firmar desde siempre. Lo unico que se pierde es la autoactualizacion en macOS, que sin firma no puede aplicarse (en Windows si funciona). ~120 $/año que con 20 personas no compensan; se revisa cuando explicar donde hay que pulsar cueste mas que el certificado. Ver [distribucion.md §6](docs/technical/distribucion.md) |
+| **`INF-008`** | ⏰ **El servidor esta DESFASADO respecto al cliente, y la regla dice «mismo fichero byte a byte».** Medido por la API del panel el 2026-08-17: `fabric-api` 0.116.14 en el servidor contra 0.116.15 en el cliente, `lithium` 0.15.1 contra 0.15.4, y `lunaeternal` con 141 KB de diferencia. `lunaneon` SI coincide byte a byte. No esta rompiendo nada hoy, pero es exactamente el desajuste que echa a alguien con «Registry remapping failed» — el fallo que §0 avisa en mayusculas. Se arregla con `python tools/mods_servidor.py --aplicar` |
 | **`GPL-001`** | ⏰ **Crear el repositorio PUBLICO del launcher Qt.** No es opcional: GPL-3.0 obliga a publicar el fuente completo del fork al distribuir el binario (D-035) |
 | **`LNC-002`** | Crear el token `PACK_TOKEN` para que el launcher publique sus releases — ver [launcher.md §2](docs/technical/launcher.md) |
 | **`ART-002`** | Enviar el arte de la interfaz nueva: fondos, botones, iconos (D-026) |
@@ -820,6 +931,8 @@ documentación · migración · rollback.
 | D-015 | 2026-08-11 | **Tres espacios: lobby · ciudadela · mundo** | Cada uno con una sola función. Los gimnasios van **repartidos por el mundo**, no en una sala: concentrarlos contradice el pilar de exploración |
 | D-016 | 2026-08-11 | **Dos mundos: Hogar (permanente) y Salvaje (se reinicia)** | Un solo mundo no puede ser permanente y fresco a la vez. El reinicio renueva la exploración sin producir contenido, y nada importante vive en el terreno: todo está en la base de datos |
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
+| D-037 | 2026-08-17 | **La base del pack pasa a ser COBBLEVERSE, quitandole la generacion de estructuras y la musica.** Revoca D-031 | **Orden del usuario, dada despues de que le enseñara las licencias** — `cobbleverse` es All Rights Reserved y `cobbleverse-badges` es CC-BY-NC-ND-4.0, que es la clausula por la que D-006 lo habia descartado. Queda escrito aqui para que quien lo lea dentro de seis meses vea **el dato y la decision**, no solo la decision. **Lo que si se hace bien:** el manifiesto guarda URL y hash y nunca el jar, asi que cada mod se descarga del CDN de Modrinth — no redistribuimos nada suyo, igual que con los shaders (D-030). Se les quita lo que el usuario no queria: **generacion de estructuras** (4 mods) y **421 MB de musica**, que multiplicaba por cinco la descarga de un jugador nuevo (P10). El pack pasa de 185 a **434 MB**. Tres cosas que solo se ven haciendolo: **el slug de Modrinth no es el nombre del jar** y una exclusion mal escrita no surte efecto *sin avisar*; **su configuracion son 155 ficheros** y sueltos eran 155 peticiones a `raw`, o sea el 429 de D-036 otra vez (van en un zip por carpeta con `keepExisting`); y **`continuity:default` cambia 42 bloques de construir** — lo reporto el usuario en vivo con la ciudadela ya empezada, y se apaga |
+| D-038 | 2026-08-17 | **El PokePad enseña datos de sesion —Plata, LunaCoins, Clan, Trabajo, Division y Medallas— en vez de la tarjeta de entrenador** | **Decision del usuario.** La tarjeta enseñaba el nivel de las cinco Vias en estrellas; lo que el queria bajo la cara es lo que se mira a diario. Dos cosas quedan escritas porque no son obvias: **las 16 medallas se referencian por identificador al mod de CobbleVerse y NO se copian sus texturas** — el mod va instalado en el cliente, asi que apuntarlas cuesta cero bytes, no redistribuye nada de un CC-BY-NC-ND y el dibujo lo sigue mandando su autor; y **clan, trabajo y division viajan en el paquete aunque no exista el sistema**, mandando cadena vacia para que el Pad pinte un guion. Un «Sin clan» diria «ya funciona y no tienes ninguno», que no es verdad; y tenerlos ya en el protocolo hace que encenderlos sea rellenar tres lineas en vez de tocar paquete, codec, cache y dibujado |
 | D-035 | 2026-08-17 | **El launcher se rehace como fork de FreesmLauncher** (C++/Qt6, GPL-3.0), en repositorio propio y publico | **Decision del usuario, tomada tras leer el analisis en contra.** Mi recomendacion fue reestructurar el Electron actual: de los cinco riesgos que rompen al crecer —distribucion, identidad, firma, observabilidad, vuelta atras— el fork **no arregla ninguno**, y su funcionalidad estrella (jugar sin cuenta de Microsoft) ya la tenia el nuestro en 25 lineas. El usuario decidio el fork igualmente. **Dos consecuencias que no son opcionales y quedan escritas aqui para que nadie las descubra tarde:** (1) **GPL-3.0 obliga a publicar el codigo fuente completo** del fork, incluido cualquier anti-abuso o capa de identidad que se le añada encima — con tienda de pago (D-007), eso no es gratis; (2) hay que renombrar la marca (GPL §7.c/e, y Prism lo exige a sus forks). Ganancia real medida: instalador de **28,8 MB frente a 95**. Coste: rehacer perfiles, diagnostico, reparar e interfaz en español, y una cadena Qt6+CMake+MSVC+vcpkg en vez de `npm run dist`. Toolchain ya montado en `.toolchain/` (git-ignorado), fork clonado en `D:\luna-launcher` |
 | D-036 | 2026-08-17 | **El manifiesto del pack deja de servirse desde `raw` y se resuelve por un PUNTERO inmutable, y cada fichero admite varios origenes** | Tres fallos que solo se ven con gente dentro. `raw.githubusercontent` limita por peticiones y era **la primera peticion del arranque**: ya costo media mañana de «a mi me funciona y a ellos no». `manifest.json` se sobrescribia, asi que una publicacion mala rompia a todo el mundo a la vez y arreglarlo era republicar 185 MB **con el pack roto mientras tanto**. Y cada fichero tenia una sola URL: si el origen cae, no hay a donde ir. Ahora `latest.json` son 250 bytes servidos por el CDN de descargas y **es lo unico mutable de la cadena**; los manifiestos llevan la huella en el nombre y no se tocan jamas. **Volver atras = subir 250 bytes** (`--volver-a <huella>`). El launcher **verifica el sha1 del manifiesto** antes de fiarse: ese fichero elige de que URL salen los 185 MB que se ejecutan en la maquina del jugador. Ficheros que dependian de `raw`: **5 → 0**. Detalle en [distribucion.md](docs/technical/distribucion.md) |
 | D-034 | 2026-08-17 | **La moneda normal se llama «Plata»** | **Decisión del usuario.** Mismo mecanismo que D-033: el identificador interno sigue siendo `POKEDOLLAR` —está en la base de datos— y solo cambia el nombre visible. Su color de chat pasa de dorado a **blanco** por lo mismo que el saldo del PokePad: el dorado es ahora de las LunaCoins, y dos monedas del mismo color dejan de distinguirse. De paso, los dos comandos que tenían el nombre escrito a mano pasan a leerlo del enum — si no, habría quedado una pantalla diciendo «Plata» y un `/luna saldo` diciendo otra cosa |

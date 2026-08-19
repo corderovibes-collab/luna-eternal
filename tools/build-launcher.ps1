@@ -6,7 +6,20 @@
 #   (`Launcher_ENABLE_JAVA_DOWNLOADER=ON`).
 param(
   # Compilacion de PUBLICACION: con LTO. Lenta a proposito.
-  [switch]$Publicar
+  [switch]$Publicar,
+
+  # ⚠ COMPILAR SOLO UN OBJETIVO. Es lo que quita las esperas al desarrollar.
+  #
+  # Cualquier cambio en `launcher/luna/` obliga a reenlazar los ~20 ejecutables
+  # de prueba que trae Prism MAS el .exe de 15 MB. De todos esos, mientras se
+  # escribe motor, interesa UNO.
+  #
+  #   .uild-launcher.ps1 -Solo LunaSync     una prueba, segundos
+  #   .uild-launcher.ps1                    todo, minutos
+  #
+  # Objetivos utiles: LunaManifest, LunaInstance, LunaSync, LunaDownload,
+  # LunaApply, LunaConfig, lunaeternal (el ejecutable).
+  [string]$Solo = ''
 )
 $ErrorActionPreference = 'Stop'
 
@@ -79,6 +92,16 @@ try {
   $argLto = "-DENABLE_LTO=$lto"
   cmake --preset windows_msvc $argLto
   if ($LASTEXITCODE -ne 0) { throw "cmake configure fallo ($LASTEXITCODE)" }
+  if ($Solo) {
+    cmake --build --preset windows_msvc --config Release --target $Solo
+    if ($LASTEXITCODE -ne 0) { throw "cmake build de '$Solo' fallo ($LASTEXITCODE)" }
+    "BUILD OK  ·  solo $Solo"
+    # Sin ejecutable principal no hay nada que empaquetar, y empaquetar es lo
+    # segundo mas lento de todo esto.
+    Pop-Location
+    return
+  }
+
   cmake --build --preset windows_msvc --config Release
   if ($LASTEXITCODE -ne 0) { throw "cmake build fallo ($LASTEXITCODE)" }
   'BUILD OK'

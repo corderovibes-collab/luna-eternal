@@ -290,6 +290,71 @@ GPL §5a.
 - **`GPL-001`**: crear el repositorio público. Obligatorio **el día que se
   reparta el binario**, no antes
 
+---
+
+## 7. Al cerrar el 2026-08-19
+
+**Verificado en vivo, desde una carpeta de datos borrada:**
+
+```
+mods          135 ficheros
+config        109
+shaderpacks     2
+servers.dat   102 bytes    ← el servidor aparece solo en la lista
+estado        pack 0.2.0 · 155 ficheros anotados
+huérfanos       0
+```
+
+La cadena entera funciona: puntero → manifiesto → huella → instancia → plan →
+descarga con espejos → zips → estado.
+
+### ⚠️ El fallo que casi lo arruina, y que hay que recordar
+
+Antes de arreglarlo, **la cadena del puntero se rompía** y el manifiesto llegaba
+vacío. `UpdateTask` reportaba éxito habiendo hecho nada. Y lo grave:
+
+> Un manifiesto vacío produce un plan **sin nada que bajar y con todos los mods
+> como huérfanos**. El barrido los retira y la tarea dice que todo fue bien.
+
+Se salvó porque la instancia estaba recién creada. **Con las 135 anteriores, las
+habría borrado todas.**
+
+Hay dos frenos ahora —el manifiesto tiene que ser válido, y se para si el plan
+quiere retirar más de diez ficheros sin instalar ninguno—, pero la lección es
+más general:
+
+**El barrido de huérfanos que arregló un incidente es el mismo que convierte
+«manifiesto a medias» en «instalación destruida».** Una función que limpia bien
+es una función que borra bien.
+
+### Lo que falta para poder repartirlo
+
+| | Esfuerzo |
+|---|---|
+| **Perfiles** jugador/constructor | Sin ellos, los constructores no reciben Axiom |
+| **Aviso de migrar datos de Prism** | Un jugador no debe verlo |
+| **Navegador de mods** | Idem |
+| **Error 404 del actualizador** | Apunta a `luna-eternal-launcher`, que no existe (`GPL-001`). Debe fallar callando |
+| **Instalador NSIS + CI** | Hoy habría que copiar una carpeta a mano |
+| Icono de la instancia · imagen de Prism | Cosmético |
+
+**Unos días**, no semanas: el riesgo grande —que el motor funcionara— está
+despejado.
+
+### Cómo retomar
+
+```powershell
+# compilar solo lo que toca (segundos, no minutos)
+powershell tools/build-launcher.ps1 -Solo LunaEternal
+powershell tools/build-launcher.ps1 -Solo LunaSync      # una prueba
+
+# prueba de arranque limpio: borrar y abrir
+#   %APPDATA%\LunaEternal
+```
+
+> ⚠️ **El enlazado falla con `LNK1104` si el launcher está abierto.** Ciérralo
+> antes de compilar.
+
 ## Last Decision
 
 **2026-08-18** — motor completo y probado (64 pruebas, 7 piezas). Nada

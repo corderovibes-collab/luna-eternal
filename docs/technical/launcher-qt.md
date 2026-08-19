@@ -115,6 +115,38 @@ incompleto que el launcher cree completo. No da error y no se arregla solo.
 sustituto en la misma publicación los deja conviviendo un rato. Con mods de
 bloques eso es `Registry remapping failed` en la cara del jugador.
 
+### `mods/` se barre de verdad, no solo lo anotado
+
+`DiskProbe::modJars()` lista lo que hay **realmente** en la carpeta, y el
+planificador retira todo `.jar` que el manifiesto no mencione.
+
+Sin eso, la limpieza solo alcanza lo que el estado guardado recuerda. Un jar que
+llegó por otra vía —una instalación anterior, o una versión del launcher que aún
+no lo apuntaba— sobrevive a **todas** las actualizaciones.
+
+**Eso dejó a jugadores fuera del servidor el 2026-08-19.** Arrastraban
+`trinkets` y `accessories-compat-layer` de un pack anterior; el servidor ya no
+los tenía, y ese puente le mandaba unas ranuras que no sabía leer:
+
+```
+Failed to decode packet 'clientbound/minecraft:custom_payload'
+Caused by: StructFieldException: [Field: exported_slots]
+```
+
+Al dueño **no le pasaba** —su instalación estaba bien anotada— así que parecía
+cosa de máquinas concretas. Se perdieron varios diagnósticos comparando servidor
+y cliente (jars, versiones de mods, perfiles) cuando la diferencia estaba en el
+registro del propio launcher.
+
+> ⚠️ **Consecuencia asumida:** un mod que el jugador añada a mano a `mods/`
+> desaparece en la siguiente actualización. Es lo correcto aquí —la regla del
+> proyecto es que el servidor sea *subconjunto* del cliente, y un mod extra que
+> registre algo sincronizado es justo lo que echa a la gente—, pero es un cambio
+> de comportamiento.
+>
+> **Solo `mods/`.** `config/`, `resourcepacks/` y `shaderpacks/` llevan cosas del
+> jugador y ahí no se toca nada sin anotar.
+
 ### Tres cerraduras contra `../`
 
 El manifiesto viene de la red, y los zips también.

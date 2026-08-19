@@ -15,17 +15,37 @@ si algo aquí no coincide con el código, gana el código y se corrige esto.
 
 ## Current Status
 
-**2026-08-18 · el motor está escrito y probado; nada está enchufado a la
-interfaz todavía.**
+**2026-08-19 · el motor funciona de punta a punta contra el servidor real.**
 
-Si abres `lunaeternal.exe` hoy verás **un Prism Launcher con el logo de Luna
-Eternal**: gestor de instancias, navegador de mods, en inglés, y sin saber nada
-del servidor. El motor vive al lado, compilado y con pruebas, sin que nadie lo
-llame.
+Verificado en vivo: el launcher trae el puntero, sigue al manifiesto, comprueba
+su huella, **crea la instancia** con la versión que dice el manifiesto y
+**descarga el pack entero**.
 
-> ⚠️ **Esto NO se reparte.** El launcher oficial sigue siendo el de Electron
-> (1.1.0, publicado y autoactualizable). El fork está en 0.1.0 precisamente
-> para que nadie lo confunda con algo terminado.
+```
+mods          135 ficheros
+config        109
+shaderpacks     2
+estado        pack 0.2.0 · 155 ficheros anotados
+```
+
+Y **Jugar sincroniza antes de arrancar**, que es el comportamiento esencial del
+quiosco.
+
+> ⚠️ **Aun así NO se reparte todavía.** Faltan las pantallas de Prism que un
+> jugador no debe ver, los perfiles, el diagnóstico y la cadena de publicación.
+> El launcher oficial sigue siendo el de Electron (**1.1.1**, publicado y
+> autoactualizable).
+
+### Lo que ya hace
+
+| | |
+|---|---|
+| Instancia única | La busca por nombre y la crea si falta |
+| Jugar | Pone el pack al día y **solo entonces** arranca |
+| Gestión de instancias | Fuera de las dos barras |
+| Asistente de configuración | Desactivado: idioma, Java y CurseForge decididos |
+| Panel de noticias | Oculto |
+| Traducción | Español al 99,8 % de serie |
 
 ---
 

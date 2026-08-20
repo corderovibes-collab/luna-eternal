@@ -327,6 +327,37 @@ más general:
 «manifiesto a medias» en «instalación destruida».** Una función que limpia bien
 es una función que borra bien.
 
+### ⏰ PENDIENTE: el servidor pasa a llamarse **PokeReport Network**
+
+**Decisión del usuario, 2026-08-20.** «Luna Eternal» deja de ser el nombre del
+servidor. Está anotado aquí y **no aplicado a propósito**: recompilar el fork
+entero cuesta mucho, y no se hace de madrugada justo antes de repartir la
+primera versión.
+
+Cuando toque, hay que mirar **todos** estos sitios — es la lección de esta
+sesión: la marca vive en más lugares de los que uno recuerda.
+
+| Dónde | Qué |
+|---|---|
+| `program_info/CMakeLists.txt` | `Launcher_CommonName`, `Launcher_DisplayName`, `Launcher_AppID`, `Launcher_Domain`, `Launcher_Authors` |
+| `CMakeLists.txt` (raíz) | `Launcher_APP_BINARY_NAME` |
+| `program_info/*` | 18 ficheros con el nombre dentro (`lunaeternal.*`, `net.pokereport.LunaEternal.*`) |
+| `launcher/luna/LunaInstance.cpp` | `instanceName()` — el nombre de la instancia |
+| `launcher/main.cpp` | `Q_INIT_RESOURCE(lunaeternal)` |
+| `tests/LunaInstance_test.cpp` | fija el nombre de la instancia |
+| `luna-release.yml` | nada, usa `${{ github.repository }}` |
+
+> ⚠️ **Cambiar `Launcher_AppID` mueve la carpeta de datos.** Quien ya tenga el
+> launcher instalado se encontraría con una instalación «vacía» y volvería a
+> bajar los 450 MB. Si hay gente usándolo, hay que migrar o avisar.
+
+> ⚠️ **Y el nombre de la instancia es cómo `findInstance()` la encuentra.**
+> Cambiarlo sin más crea una segunda instancia al lado en vez de renombrar la
+> existente.
+
+Afecta también, fuera del fork: el nombre visible del servidor en `servers.dat`
+(lo genera `gen_modpack.py`), el launcher de Electron, y el propio mod.
+
 ### Lo que falta para poder repartirlo
 
 | | Esfuerzo |

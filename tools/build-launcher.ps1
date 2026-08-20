@@ -100,7 +100,7 @@ try {
   # cambiaba.
   #
   # Las que tienen que mandar desde el fuente se repiten aqui.
-  cmake --preset windows_msvc $argLto "-DLauncher_UPDATER_GITHUB_REPO="
+  cmake --preset windows_msvc $argLto "-DLauncher_UPDATER_GITHUB_REPO=https://github.com/corderovibes-collab/luna-eternal-launcher"
   if ($LASTEXITCODE -ne 0) { throw "cmake configure fallo ($LASTEXITCODE)" }
   if ($Solo) {
     cmake --build --preset windows_msvc --config Release --target $Solo

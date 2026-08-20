@@ -366,84 +366,41 @@ Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
                 para 1.21.1 exige 0.6.x y se niega a arrancar fuera
                 de rango. El numero NO esta escrito a mano: se lee
                 del jar de Iris. §2-quinquies
-Launcher      SE REHACE COMO FORK DE FreesmLauncher (D-035)
-              decision del usuario, contra mi recomendacion, que queda
-              escrita en D-035 junto con las dos consecuencias que NO
-              son opcionales: GPL-3.0 obliga a PUBLICAR EL FUENTE, y
-              hay que renombrar la marca
-              C++/Qt6 · GPL-3.0 · fork de Prism Launcher 11.0.3
-              fuente en D:\luna-launcher  ·  toolchain en .toolchain/
-              Qt 6.10.2 + vcpkg + MSVC 14.51, NADA instalado en global
-              compilar: powershell tools/build-launcher.ps1
-              COMPILA Y ARRANCA (2026-08-17): 673/673 objetos, BUILD OK,
-              freesmlauncher.exe 14,7 MB responde a --version
-              o sea: la via del fork ESTA PROBADA en esta maquina
-              ⚠ el .exe NO era autonomo: el build deja las 10 DLL de
-                vcpkg pero NINGUNA de Qt, y en el PC de un jugador eso es
-                un doble clic que no hace NADA -- sin ventana y sin
-                mensaje, porque Windows no encuentra Qt6Core.dll y se
-                rinde en silencio. RESUELTO: build-launcher.ps1 pasa
-                `windeployqt` al terminar, que ademas copia los PLUGINS
-                (plataforma, estilos, imagenes) que se cargan en tiempo
-                de ejecucion y que ningun analisis del .exe encuentra
-              MARCA RENOMBRADA A LUNA ETERNAL (2026-08-17)
-              lo exige la GPL §7 y Prism se lo pide a sus forks
-                binario     freesmlauncher.exe -> lunaeternal.exe
-                AppID       org.freesmlauncher.FreesmLauncher
-                            -> net.pokereport.LunaEternal (la misma
-                               convencion que el paquete del mod)
-                10 URL que apuntaban a la infraestructura de Freesm
-                (noticias, discord, reddit, telegram, actualizador,
-                traducciones): las suyas se VACIAN, y una URL vacia
-                OCULTA su entrada de menu --setVisible(!isEmpty())--
-                en vez de dejar un boton que lleva a otra comunidad
-              ⚠ EL ARTE NO SE HEREDA, SE SUSTITUYE. Los logos de Freesm
-                llevan CC BY-SA 4.0 y acreditan a sus autores POR NOMBRE:
-                renombrar el fichero no los hace nuestros. Es la misma
-                trampa que descarto CobbleVerse (D-006) y la que obligo a
-                repartir los shaders por su canal (D-030)
-                iconos: python program_info/genicons-luna.py
-                        (ico + icns + png256 + svg desde UNA imagen)
-              ⚠ EL COPYRIGHT DE LOS ANTERIORES SE CONSERVA ENTERO y el
-                nuestro se anade ENCIMA. Borrar las lineas de Freesm,
-                Prism, PolyMC y MultiMC seria incumplir la GPL §5a
-              ⚠ QUEDA UNO SIN SUSTITUIR: program_info/LunaEternal.icon
-                es el bundle de icono de macOS 26 y sigue siendo arte de
-                Freesm. Solo se usa al compilar para Mac, que hoy no se
-                hace -- pero hay que rehacerlo ANTES de publicar un
-                binario de Mac
-              ⚠ `Launcher_META_URL` SIGUE APUNTANDO A meta.freesmlauncher
-                .org, y es deliberado: de ahi salen los metadatos de
-                Minecraft y Fabric, o sea que CADA jugador nuestro
-                dependeria de una maquina que no controlamos. No se toca
-                en un pase de marca porque es funcional, no cosmetico.
-                Prism sirve los MISMOS 13 paquetes que usamos; los 3 de
-                diferencia son inyeccion de auth (ely.by, authlib-
-                injector, loki) que no usamos. Lo que toca algun dia es
-                levantar el nuestro: el generador es libre
-              MOTOR ESCRITO Y PROBADO (2026-08-18): 7 piezas en
-              launcher/luna/ con 64 pruebas propias en verde
-                LunaConfig   donde vive el pack, un solo sitio
-                LunaFetch    puntero -> manifiesto -> huella verificada
-                LunaManifest lo interpreta y valida
-                LunaInstance crea la instancia con SUS versiones
-                LunaSync     decide que bajar, borrar y respetar
-                LunaDownload descarga con espejos, huella por origen
-                LunaApply    escribe, extrae, borra
-                LunaUpdate   el orquestador
-              ⚠ NADA ESTA ENCHUFADO A LA INTERFAZ TODAVIA. Si lo abres
-                ves un Prism con nuestro logo: gestor de instancias,
-                navegador de mods y en ingles. El motor vive al lado
-              ⚠ EL LTO SE APAGA PARA DESARROLLAR: cuesta ~9 min y 2 GB
-                por enlazado. `-Publicar` lo enciende, y lo que se
-                reparte TIENE que salir de ahi
-              ⚠⚠ TODO EL DETALLE ESTA EN docs/technical/launcher-qt.md
-                 -- decisiones, trampas de la cadena de herramientas y
-                 por donde seguir. LEERLO ANTES DE TOCAR EL FORK
-              instalador suyo 28,8 MB frente a nuestros 95
-              ⚠ lo que el fork NO arregla: distribucion, identidad,
-                firma, observabilidad, vuelta atras. Los cinco riesgos
-                que rompen al crecer siguen siendo nuestros
+Launcher      DOS LAUNCHERS VIVOS. NO CONFUNDIRLOS
+              ---------------------------------------------------------
+              EL QUE USA LA GENTE HOY:  Electron 1.1.1
+                launcher/ · 39 pruebas · datos en %APPDATA%\.lunaeternal
+                                                            ^ CON PUNTO
+              EL FORK NUEVO:            Qt 0.1.0 "Ciudadela"
+                D:\luna-launcher · rama `luna` · 28 commits
+                repo PUBLICO github.com/corderovibes-collab/luna-eternal-launcher
+                datos en %APPDATA%\LunaEternal  <- SIN PUNTO
+              ⚠⚠ BORRAR LA CARPETA EQUIVOCADA CUESTA 450 MB DE DESCARGA.
+                 Se diferencian SOLO en un punto
+              ---------------------------------------------------------
+              EL FORK YA FUNCIONA DE PUNTA A PUNTA (2026-08-20)
+              verificado desde cero: pide el nombre -> crea la instancia
+              -> baja 135 mods, 109 configs, servers.dat -> arranca
+              instalador 26 MB (el de Electron son 96)
+              CI en verde: `git tag v0.2.0 && git push origin v0.2.0`
+              compila y cuelga el instalador de la release
+              motor en launcher/luna/ · 7 piezas · 65 pruebas propias
+                LunaConfig · LunaFetch · LunaManifest · LunaInstance
+                LunaSync · LunaDownload · LunaApply · LunaUpdate
+              compilar SOLO lo que toca (34 s en vez de minutos):
+                powershell tools/build-launcher.ps1 -Solo LunaEternal
+                powershell tools/build-launcher.ps1 -Instalador
+              ⚠ el enlazado falla con LNK1104 si el launcher esta ABIERTO
+              ⚠ QtTest en Windows NO escribe por la tuberia: hace falta
+                `-o fichero,txt`. Un `exit 0` mudo NO significa que no
+                haya corrido nada
+              ⚠⚠ TODO EL DETALLE EN docs/technical/launcher-qt.md
+                 -- decisiones, siete trampas de la cadena de
+                 herramientas, y por donde seguir. LEERLO ANTES DE TOCAR
+              ⚠ PENDIENTE MARCA-001: el servidor pasa a llamarse
+                PokeReport Network. Alcance completo en launcher-qt.md
+              lo que el fork NO tiene todavia: diagnostico de cierres
+              ni boton de reparar, que el de Electron SI tiene
               ---- el de Electron sigue siendo el que se reparte -----
               launcher/ · Electron 43 · 1.0.2 · 37/37 (npm test)
               ⚠⚠ EL FETCH DE NODE NO TIENE TIEMPO LIMITE POR DEFECTO.

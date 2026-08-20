@@ -8,6 +8,9 @@ param(
   # Compilacion de PUBLICACION: con LTO. Lenta a proposito.
   [switch]$Publicar,
 
+  # Genera ademas el instalador NSIS. Implica compilacion completa.
+  [switch]$Instalador,
+
   # ⚠ COMPILAR SOLO UN OBJETIVO. Es lo que quita las esperas al desarrollar.
   #
   # Cualquier cambio en `launcher/luna/` obliga a reenlazar los ~20 ejecutables
@@ -136,4 +139,40 @@ try {
 
   $n = (Get-ChildItem (Split-Path $exe) -Filter *.dll).Count
   "EMPAQUETADO OK  ·  $n DLL junto al ejecutable"
+
+  if ($Instalador) {
+    # ⚠ `cmake --install` PRIMERO, y no se empaqueta build/Release directamente.
+    #
+    # Esa carpeta tiene ademas los ~20 ejecutables de prueba de Prism, los .lib
+    # y los .pdb. `--install` copia SOLO lo que hay que repartir, siguiendo las
+    # reglas del propio CMakeLists.
+    $inst = Join-Path $SRC 'install'
+    if (Test-Path $inst) { Remove-Item $inst -Recurse -Force }
+    cmake --install (Join-Path $SRC 'build') --prefix $inst --config Release
+    if ($LASTEXITCODE -ne 0) { throw "cmake --install fallo ($LASTEXITCODE)" }
+
+    $mk = @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe") |
+          Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $mk) { throw "Falta NSIS. Instalalo con: winget install --id NSIS.NSIS" }
+
+    # ⚠ HAY QUE ESTAR DENTRO de la carpeta de instalacion: el .nsi coge los
+    #   ficheros por ruta RELATIVA, y `-NOCD` le dice a makensis que no se mueva
+    #   al directorio del script. Lanzandolo desde otro sitio, el instalador
+    #   sale vacio SIN dar error.
+    Push-Location $inst
+    try {
+      & $mk -NOCD (Join-Path $SRC 'build\program_info\win_install.nsi')
+      if ($LASTEXITCODE -ne 0) { throw "makensis fallo ($LASTEXITCODE)" }
+    } finally { Pop-Location }
+
+    # ⚠ EL INSTALADOR NO SALE EN LA CARPETA DE INSTALACION.
+    #
+    # El `.nsi` lo escribe en la RAIZ del proyecto ($SRC), no donde estan los
+    # ficheros que empaqueta. Buscarlo en `install/` daba "makensis termino
+    # pero no dejo instalador" con el instalador ya creado a 27 MB -- un error
+    # que decia justo lo contrario de lo que pasaba.
+    $setup = Get-ChildItem $SRC -Filter "*Setup*.exe" -File | Select-Object -First 1
+    if ($setup) { "INSTALADOR OK  ·  $($setup.Name)  $([math]::Round($setup.Length/1MB,1)) MB" }
+    else { throw "makensis termino pero no dejo instalador" }
+  }
 } finally { Pop-Location }

@@ -102,6 +102,55 @@ EXCLUIDOS = {
         "93 MB de musica de combate. Ver el bloque de musica",
     "pokediscs":
         "25 MB de discos. Ver el bloque de musica",
+
+    # ⚠⚠ ESTOS DOS ECHABAN A LA GENTE DEL SERVIDOR. Reportado en vivo el
+    #    2026-08-17: "Failed to decode packet 'clientbound/custom_payload'",
+    #    y en el log del cliente, la causa de verdad:
+    #        StructFieldException: [Field: exported_slots]  (owo-lib / endec)
+    #
+    # `exported_slots` es de Accessories, que viene con mega_showdown. El
+    # puente Trinkets<->Accessories REGISTRA RANURAS, y las ranuras se
+    # sincronizan al entrar: con el puente en el cliente y no en el servidor,
+    # las dos listas no cuadran y la conexion se cae en la puerta.
+    #
+    # Se quitan del CLIENTE en vez de anadirse al servidor porque se comprobo
+    # quien los usa: `accessories-compat-layer` depende de `trinkets`, y de
+    # `accessories-compat-layer` NO DEPENDE NADIE en los 147 mods. Es un puente
+    # que no cruza nadie — esta ahi por si alguien mete un mod de Trinkets.
+    # Quitarlos iguala los dos lados sin gastar RAM del servidor.
+    #
+    # ⚠ Si algun dia entra un mod que use Trinkets, hay que volver a meter los
+    #   dos Y ademas ponerlos en el servidor. Nunca solo en un lado.
+    "trinkets":
+        "Registra ranuras de Accessories y solo estaba en el cliente: la "
+        "conexion se caia con 'exported_slots'. No lo usa ningun mod del pack",
+    "accessories-compat-layer":
+        "El puente Trinkets<->Accessories. Mismo motivo, y de el no depende "
+        "nadie",
+
+    # ⚠ SE QUITA EL MOD, Y ANTES SE INTENTO SOLO APAGAR SU PACK.
+    #
+    # Continuity son TEXTURAS CONECTADAS: 42 bloques medidos, y son los de
+    # construir (los 16 cristales de color, sus 16 paneles, cristal, tintado,
+    # libreria y la familia de la arenisca). Una fachada de cristal deja de
+    # tener rejilla y pasa a ser una lamina: el usuario lo describio como "no
+    # estan los bloques que habia colocado".
+    #
+    # Primero se quito `continuity:default` de la lista de packs que repartimos.
+    # NO BASTO, y por un motivo que conviene recordar: esa lista es una
+    # PLANTILLA, y solo la copia `defaultoptions` cuando el jugador todavia no
+    # tiene `options.txt`. A quien ya jugo no le llega nunca — su fichero es
+    # suyo y no se pisa. Asi que el pack se veia arreglado desde aqui y el
+    # jugador seguia viendolo mal.
+    #
+    # Quitar el JAR si le llega a todo el mundo: el launcher borra los mods que
+    # ya no estan en el manifiesto, y una linea de `options.txt` que nombra un
+    # pack inexistente Minecraft la ignora sin quejarse. De Continuity no
+    # depende ningun mod de los 145, asi que no arrastra nada.
+    "continuity":
+        "Texturas conectadas en 42 bloques de construir. Cambiaba fachadas ya "
+        "construidas. Apagar su pack no bastaba: la lista de packs es una "
+        "plantilla y no alcanza a quien ya tiene options.txt",
 }
 
 # Los packs que CobbleVerse manda DESACTIVADOS. Se llaman, literalmente,
@@ -148,6 +197,14 @@ OVERRIDES_FUERA = (
     "datapacks/",
     # Sus ficheros de licencia y su PDF: son suyos, no nuestros.
     "licenses/", "COBBLEVERSE - Third-Party Licenses.pdf",
+    # ⚠ ESTADO LOCAL DEL PARCHEADOR, NO CONFIGURACION.
+    #
+    # `config/euphoria_patcher/.data.json` anota que shader parcheo Euphoria EN
+    # ESA MAQUINA. Repartirlo es contarle a un PC lo que hizo otro, y ademas
+    # rompio el launcher de verdad: el fichero va con atributo OCULTO en
+    # Windows, y Node lanza EPERM al escribir encima de uno oculto. El usuario
+    # se lo comio al pulsar JUGAR el 2026-08-17.
+    "config/euphoria_patcher/",
     # 179 MB de banda sonora propia, y ademas dentro de nuestro repositorio:
     # es justo lo que D-030 no hace con los shaders. Ver el bloque de musica.
     "resourcepacks/COBBLEVERSE Soundtrack.zip",
@@ -427,6 +484,27 @@ def base():
 # Nombres de fichero de los resource packs que quedan en el pack.
 _PACKS_VIVOS: set = set()
 
+# ---------------------------------------------------------------------------
+# PACKS QUE VIENEN ACTIVADOS EN SU options.txt Y QUE NOSOTROS APAGAMOS
+# ---------------------------------------------------------------------------
+# ⚠ 2026-08-17. Lo reporto el usuario: "desde que instalamos cobbleverse
+#   algunos bloques de mi construccion se cambiaron de textura, ahora son otra
+#   cosa". No era imaginacion suya y no era el arte: es UN pack concreto.
+#
+# `continuity:default` son TEXTURAS CONECTADAS, y se midio a que afecta: 42
+# bloques, y son justo los de construir --los 16 cristales de color, sus 16
+# paneles, el cristal normal, el tintado, la libreria y la familia entera de la
+# arenisca--. Una fachada de cristal deja de ser una cuadricula y pasa a ser una
+# lamina continua: el bloque es el mismo, pero la fachada NO ES LA MISMA.
+#
+# Se apaga SOLO ese. `continuity:glass_pane_culling_fix` se queda: ese no
+# repinta nada, arregla que se vea el canto de los paneles de cristal.
+#
+# Y se apaga el PACK, no se quita el mod: Continuity sin sus texturas es un
+# motor sin nada que dibujar, no molesta a nadie, y quien lo quiera lo enciende
+# en Opciones > Paquetes de recursos.
+PACKS_APAGADOS = ()   # continuity se quita entero, ver EXCLUIDOS
+
 
 def contenido(z, nombre: str) -> bytes:
     """Lee un override del pack base, parcheando lo que haga falta.
@@ -444,7 +522,8 @@ def contenido(z, nombre: str) -> bytes:
 
     def limpiar(m):
         vivos = [e for e in json.loads(m.group(1))
-                 if not e.startswith("file/") or e[5:] in _PACKS_VIVOS]
+                 if e not in PACKS_APAGADOS
+                 and (not e.startswith("file/") or e[5:] in _PACKS_VIVOS)]
         return "resourcePacks:" + json.dumps(vivos, ensure_ascii=False)
 
     return re.sub(r"resourcePacks:(\[.*?\])", limpiar, texto).encode("utf-8")

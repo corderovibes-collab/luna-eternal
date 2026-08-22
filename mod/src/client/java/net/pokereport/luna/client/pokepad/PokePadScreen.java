@@ -60,7 +60,7 @@ public class PokePadScreen extends Screen {
      * valores que puede tomar el ajuste <i>GUI Scale</i>. Dibujado a su tamaño
      * real, un texel cae en un píxel sea cual sea el ajuste del jugador.
      */
-    private static final int NAT_ANCHO = 1848, NAT_ALTO = 828;
+    private static final int NAT_ANCHO = 1380, NAT_ALTO = 828;
 
     /**
      * Cuánto puede DESBORDAR el Pad la ventana sin perder nada visible.
@@ -91,8 +91,8 @@ public class PokePadScreen extends Screen {
     /** La rejilla, en píxeles del arte. */
     // Los da `tools/gen_pokepad.py` al preparar el arte: los imprime al final.
     // No se escriben a ojo, se copian de ahi.
-    private static final int REJ_X = 686, REJ_Y = 218;
-    private static final int CELDA = 136, HUECO_X = 34, HUECO_Y = 19, ICONO = 100;
+    private static final int REJ_X = 488, REJ_Y = 230;
+    private static final int CELDA = 128, HUECO_X = 26, HUECO_Y = 19, ICONO = 100;
     private static final int COLS = 5;
 
     /**
@@ -194,6 +194,16 @@ public class PokePadScreen extends Screen {
     private static final int COLOR_PLATA = 0xFFE2E8F2;
 
     /**
+     * El color del saldo de LunaCoins.
+     *
+     * <p><b>Dorado desde que la moneda es dorada.</b> Era azul luna, y con la
+     * moneda nueva quedaban dos cosas del mismo dato discutiendo: la moneda
+     * decia "oro" y el numero al lado decia "luna". El color de un saldo tiene
+     * que ser el de su moneda, o deja de leerse como el mismo dato.
+     */
+    private static final int LUNA = 0xFFFFD34A;
+
+    /**
      * Los seis botones, cada uno en su sitio. <b>Ya no viven juntos</b>, y es
      * decisión del usuario sobre el chasis v4:
      *
@@ -219,10 +229,10 @@ public class PokePadScreen extends Screen {
 
     /** x, y, ancho, alto — en píxeles del arte, en el orden de {@link #BOTONES}. */
     private static final int[][] BOTON = {
-            { 688, 692, 60, 48},   // atras
-            {1274, 692, 60, 48},   // adelante
-            {1578,  85, 80, 64},   // ajustes
-            {1678,  85, 80, 64},   // cerrar
+            { 610, 692, 60, 48},   // atras
+            {1040, 692, 60, 48},   // adelante
+            {1110,  85, 80, 64},   // ajustes
+            {1210,  85, 80, 64},   // cerrar
     };
 
     private static final int ATRAS = 0, ADELANTE = 1, AJUSTES = 2, CERRAR = 3;
@@ -241,13 +251,89 @@ public class PokePadScreen extends Screen {
      * <p>Cada uno lleva su «+»: el de LunaCoins llevará a la tienda, y el de
      * Plata a donde se decida. Los dos van apagados mientras no haya destino.
      */
-    private static final Identifier MAS = tex("boton_mas");
-    private static final int BARRA_MAS_W = 50, BARRA_MAS_H = 40;
+    /**
+     * EL FONDO DEL PANEL IZQUIERDO, MEDIDO SOBRE EL CHASIS.
+     *
+     * <p>#222529, luma 37: es casi negro. Hace falta como color para las
+     * esquinas mordidas de las celdas de sesion --lo que se veria si la celda
+     * no estuviera-- igual que {@link #PANTALLA} lo es para las de la rejilla.
+     */
+    private static final int PANEL = 0xFF222529;
 
-    /** x de la moneda, x del centro del número, x del «+» — y la y común. */
-    private static final int[] PLATA_BARRA = {1030, 1145, 1220};
-    private static final int[] LUNA_BARRA = {1304, 1419, 1494};
-    private static final int BARRA_Y = 97, BARRA_CY = 117;
+    /**
+     * Las celdas del panel de sesion. <b>Mas CLARAS que su fondo</b>, al reves
+     * que las de la rejilla, y no es una incoherencia: es la misma regla.
+     *
+     * <p>La regla no es "la celda va oscura", es "la celda tiene que separarse
+     * de su fondo". En la pantalla, que es casi blanca, eso significa bajar; en
+     * este panel, que es casi negro, significa subir. Se conserva el SALTO, que
+     * es lo que se ve: la rejilla usa 29 de luma entre fondo y celda y 65 mas
+     * hasta el borde, y aqui son 22 y 41 -- menos, porque sobre oscuro el mismo
+     * salto numerico se percibe mas grande.
+     */
+    private static final int FILA_FONDO = 0xFF343B4D;
+    private static final int FILA_BORDE = 0xFF59647F;
+
+    /**
+     * El "+" de las LunaCoins, <b>dibujado por codigo y no con una textura</b>.
+     *
+     * <p>Decision del usuario: el boton de arte "se veia sobrepuesto". Y tenia
+     * razon por un motivo concreto: era la unica pieza del panel con luz,
+     * volumen y bisel propios, encima de cinco filas planas. Dos lenguajes
+     * distintos a dos centimetros uno de otro.
+     *
+     * <p>Dibujado sale plano como todo lo demas, hereda el color de la celda
+     * que lo rodea y, de paso, deja de haber una textura que mantener.
+     */
+    private static final int MAS_LADO = 34, MAS_GROSOR = 6, MAS_BRAZO = 18;
+
+    /**
+     * EL PANEL DE SESION, bajo la cara. Todo en pixeles del arte y todo
+     * <b>medido</b> por {@code gen_pokepad.py}, que lo imprime al terminar.
+     *
+     * <p><b>Sustituye a la tarjeta de entrenador</b> (decision del usuario,
+     * 2026-08-17). Lo que se ensena ya no es el progreso en cinco Vias sino los
+     * datos que se miran a diario, y en el orden que el pidio: lo que tienes
+     * (Plata, LunaCoins), a quien perteneces (Clan, Trabajo, Division) y lo que
+     * has ganado (Medallas).
+     */
+    private static final int FICHA_X0 = 95, FICHA_X1 = 360, FICHA_Y = 364;
+    private static final int FILA_ALTO = 52, FILA_ICONO = 36;
+
+    /** Alto de la CELDA dentro de la fila, y margen interior a los lados. Los
+     *  6 px que sobran son el aire entre una celda y la siguiente. */
+    private static final int FILA_CELDA = FILA_ALTO - 6, FILA_PAD = 10;
+
+    /** Las tres filas con icono propio, en el orden en que se dibujan. */
+    private static final String[] FILAS = {"clan", "trabajo", "division"};
+
+    /**
+     * Las medallas: ocho de Kanto y ocho de Johto, en <b>orden de gimnasio</b>
+     * y no alfabetico, que es como se consiguen y como se recuerdan.
+     *
+     * <p><b>Las texturas son las del mod de medallas, referenciadas por
+     * identificador y NO copiadas.</b> El mod va instalado en el cliente, asi
+     * que sus texturas ya estan cargadas: apuntarlas cuesta cero bytes en
+     * nuestro jar, no redistribuye nada suyo, y el dia que el cambie el dibujo
+     * de una medalla el Pad ensena el nuevo sin que nadie regenere nada.
+     *
+     * <p>Se ensenan <b>siempre las dieciseis</b>, apagadas las que no se tienen:
+     * un hueco vacio no dice cuantas faltan, y saber cuantas faltan es justo lo
+     * que hace que alguien vaya a por la siguiente.
+     */
+    private static final String[] MEDALLAS = {
+            "kanto_boulder", "kanto_cascade", "kanto_thunder", "kanto_rainbow",
+            "kanto_soul", "kanto_marsh", "kanto_volcano", "kanto_earth",
+            "johto_zephyr", "johto_hive", "johto_plain", "johto_fog",
+            "johto_storm", "johto_mineral", "johto_glacier", "johto_rising",
+    };
+    private static final int MEDALLAS_X = 97, MEDALLAS_Y = 662;
+    private static final int MEDALLA = 30, MEDALLA_SEP = 3;
+    private static final int MEDALLA_COLS = 8;
+
+    /** El tinte de una medalla que no se tiene: oscura, pero se ve que es. */
+    private static final int MEDALLA_APAGADA = 0xFF3C4258;
+
 
     /**
      * A dónde lleva el «+» de las LunaCoins.
@@ -397,7 +483,6 @@ public class PokePadScreen extends Screen {
         client.getTextureManager().getTexture(CANDADO).setFilter(suave, false);
         client.getTextureManager().getTexture(MONEDA).setFilter(suave, false);
         client.getTextureManager().getTexture(PLATA).setFilter(suave, false);
-        client.getTextureManager().getTexture(MAS).setFilter(suave, false);
     }
 
     /** El juego sigue corriendo detrás: es un menú, no una pausa. */
@@ -639,8 +724,7 @@ public class PokePadScreen extends Screen {
                 x0 + Math.round(CARA_X * k), y0 + Math.round(CARA_Y * k),
                 lado, lado, 40f, 8f, 8, 8, 64, 64);
 
-        tarjeta(ctx);
-        barraSesion(ctx, ratonX, ratonY);
+        panelSesion(ctx, ratonX, ratonY);
     }
 
     /**
@@ -653,132 +737,182 @@ public class PokePadScreen extends Screen {
      * mide la fuente de Minecraft, así que siguen cayendo en píxeles enteros y
      * no se emborronan.
      */
-    private void barraSesion(DrawContext ctx, int ratonX, int ratonY) {
+    private void panelSesion(DrawContext ctx, int ratonX, int ratonY) {
         Red.Saldo saldo = EstadoCliente.saldo();
-        int lado = Math.round(MONEDA_LADO * k);
-        int mw = Math.round(BARRA_MAS_W * k), mh = Math.round(BARRA_MAS_H * k);
-
-        for (int i = 0; i < 2; i++) {
-            int[] sitio = i == 0 ? PLATA_BARRA : LUNA_BARRA;
-            dibujar(ctx, i == 0 ? PLATA : MONEDA,
-                    x0 + Math.round(sitio[0] * k), y0 + Math.round(BARRA_Y * k),
-                    lado, lado, MONEDA_LADO, MONEDA_LADO, 0xFFFFFFFF);
-            long valor = saldo == null ? 0
-                    : (i == 0 ? saldo.pokedolares() : saldo.reportcoins());
-            texto(ctx, Text.literal(saldo == null ? "- - -" : String.format("%,d", valor)),
-                    sitio[1], BARRA_CY - 14, 27, i == 0 ? COLOR_PLATA : LUNA,
-                    true, false);
-
-            // El «+» va apagado mientras no haya a dónde ir, igual que las
-            // quince celdas. Cuando exista la tienda, se enciende solo.
-            int bx = x0 + Math.round(sitio[2] * k), by = y0 + Math.round(BARRA_Y * k);
-            boolean encima = ratonX >= bx && ratonX < bx + mw
-                    && ratonY >= by && ratonY < by + mh;
-            int tinte = TIENDA.isEmpty()
-                    ? (encima ? 0xFF9A9A9A : 0xFF808080)
-                    : (encima ? 0xFFFFFFFF : 0xFFE0E0E0);
-            dibujar(ctx, MAS, bx, by, mw, mh, BARRA_MAS_W, BARRA_MAS_H, tinte);
-        }
-    }
-
-    /**
-     * El color del saldo de LunaCoins, el único que se enseña abajo.
-     *
-     * <p><b>Dorado desde que la moneda es dorada.</b> Era azul luna, y con la
-     * moneda nueva quedaban dos cosas del mismo dato discutiendo: la moneda
-     * decía «oro» y el número al lado decía «luna». El color de un saldo tiene
-     * que ser el de su moneda, o deja de leerse como el mismo dato.
-     */
-    private static final int LUNA = 0xFFFFD34A;
-
-    /**
-     * La tarjeta, en píxeles del arte.
-     *
-     * <p><b>La posición sale del hueco ÚTIL, no del interior a secas.</b> La
-     * ranura tiene, además de su moldura, un bisel oscuro de otros 14 px arriba
-     * y a la izquierda —la sombra interior del hueco—, y los nombres caían justo
-     * encima y se leían sucios. {@code interior_util()} de
-     * {@code gen_pokepad.py} busca dónde empieza de verdad el gris liso del
-     * fondo en vez de descontar un número, así que si el chasis cambia el grosor
-     * del bisel, esto lo sigue.
-     *
-     * <p><b>Los nombres van todos en BLANCO</b>, no cada Vía en su color. Cinco
-     * colores distintos en cinco líneas seguidas compiten entre sí y convierten
-     * una tabla en un semáforo: el color deja de significar algo justo porque
-     * todo lo tiene. Lo que separa una fila de otra es su nombre y cuántas
-     * estrellas lleva, que es lo que hay que leer.
-     */
-    private static final int TARJ_X = 114, TARJ_Y = 400, TARJ_FILA = 38;
-    private static final int TARJ_DER = 338;
-    private static final int TARJ_COLOR = 0xFFFFFFFF;
-
-    /**
-     * Las estrellas de nivel.
-     *
-     * <p><b>Estrellas y no cuadrados.</b> Una estrella dice «tres de cinco» sin
-     * leer nada —es lo que usa cualquier juego para un nivel—; un cuadrado hay
-     * que aprendérselo. Las dibuja {@code gen_pokepad.py} a cuatro veces su
-     * tamaño y las reduce: una estrella de cinco puntas trazada directamente a
-     * 15 px sale con las puntas dentadas.
-     */
-    private static final Identifier ESTRELLA = tex("estrella");
-    private static final Identifier ESTRELLA_VACIA = tex("estrella_vacia");
-    private static final int ESTRELLA_LADO = 14, ESTRELLA_SEP = 3;
-    private static final int VIAS = 5;
-
-    /**
-     * La tarjeta de entrenador: las cinco Vías con su nivel en estrellas.
-     *
-     * <p><b>Va aquí y no un número único porque no hay número único.</b> El
-     * proyecto decidió a propósito que no existe un «nivel de jugador»: cinco
-     * reputaciones independientes hacen que el progreso sea un <i>perfil</i> y
-     * no una cifra, y que dos jugadores con el mismo tiempo jugado sean personas
-     * distintas. Eso es lo que este panel enseña, y hasta ahora no se veía en
-     * ninguna pantalla.
-     *
-     * <p>Debajo de la cara a propósito: la cara dice quién eres, la tarjeta qué
-     * has hecho y el saldo qué tienes. Los tres huecos del panel se leen de
-     * arriba abajo como una sola cosa.
-     */
-    private void tarjeta(DrawContext ctx) {
         Red.Ficha ficha = EstadoCliente.ficha();
-        int lado = Math.max(1, Math.round(ESTRELLA_LADO * k));
-        int paso = Math.round((ESTRELLA_LADO + ESTRELLA_SEP) * k);
 
-        for (int i = 0; i < VIAS; i++) {
-            int artY = TARJ_Y + i * TARJ_FILA;
-            texto(ctx, Text.translatable("pokepad.lunaeternal.via." + i),
-                    TARJ_X, artY, TEXTO_ALTO, TARJ_COLOR, false, false);
+        int y = FICHA_Y;
+        // Las dos monedas. Guiones mientras no ha llegado la respuesta del
+        // servidor: "no lo se" y "tienes cero" no son lo mismo, y un cero falso
+        // en un saldo asusta.
+        y = moneda(ctx, PLATA, y, saldo == null ? null : saldo.pokedolares(),
+                   COLOR_PLATA, false, ratonX, ratonY);
+        y = moneda(ctx, MONEDA, y, saldo == null ? null : saldo.reportcoins(),
+                   LUNA, true, ratonX, ratonY);
 
-            // Mientras no llegue la ficha, las cinco salen vacías. Es lo mismo
-            // que hacen los guiones del saldo: no se inventa un cero.
-            int nivel = ficha == null || i >= ficha.vias().size()
-                    ? 0 : ficha.vias().get(i);
-            for (int e = 0; e < VIAS; e++) {
-                // Alineadas por la DERECHA: así las cinco columnas caen en el
-                // mismo sitio aunque los nombres midan distinto, que es lo que
-                // deja leerlas como una tabla y no como cinco líneas sueltas.
-                int px = x0 + Math.round(TARJ_DER * k) - (VIAS - e) * paso;
-                int py = y0 + Math.round((artY + 2) * k);
-                dibujar(ctx, e < nivel ? ESTRELLA : ESTRELLA_VACIA,
-                        px, py, lado, lado,
-                        ESTRELLA_LADO, ESTRELLA_LADO, 0xFFFFFFFF);
-            }
+        // Clan, trabajo y division. Todavia no tienen sistema detras, asi que
+        // llegan vacios y se dibuja un guion — ver Red.Ficha.
+        for (int i = 0; i < FILAS.length; i++) {
+            String valor = ficha == null ? "" : switch (i) {
+                case 0 -> ficha.clan();
+                case 1 -> ficha.trabajo();
+                default -> ficha.division();
+            };
+            fila(ctx, tex("fila_" + FILAS[i]), y,
+                 Text.translatable("pokepad.lunaeternal.fila." + FILAS[i]),
+                 valor == null || valor.isBlank() ? "-" : valor, FILA_COLOR);
+            y += FILA_ALTO;
+        }
+
+        medallas(ctx, ficha);
+    }
+
+    /** El color de las etiquetas del panel: mas apagado que su valor, para que
+     *  lo que se lea primero sea el dato y no como se llama. */
+    private static final int FILA_COLOR = 0xFFFFFFFF;
+    private static final int FILA_ETIQUETA = 0xFF9FB0D4;
+
+    /**
+     * Una fila de saldo: moneda, cifra y —solo las LunaCoins— su boton «+».
+     *
+     * <p>La cifra va a 27 y no a 18 porque es <b>tres veces exactas</b> los 9
+     * que mide la fuente de Minecraft, asi que sigue cayendo en pixeles enteros
+     * y no se emborrona.
+     *
+     * @return la y de la fila siguiente
+     */
+    private int moneda(DrawContext ctx, Identifier icono, int y, Long valor,
+                       int color, boolean conMas, int ratonX, int ratonY) {
+        fondoFila(ctx, y);
+
+        int lado = Math.round(MONEDA_LADO * k);
+        dibujar(ctx, icono, x0 + Math.round((FICHA_X0 + FILA_PAD) * k),
+                y0 + Math.round((y + (FILA_CELDA - MONEDA_LADO) / 2) * k),
+                lado, lado, MONEDA_LADO, MONEDA_LADO, 0xFFFFFFFF);
+
+        texto(ctx, Text.literal(valor == null ? "- - -" : String.format("%,d", valor)),
+              FICHA_X0 + FILA_PAD + MONEDA_LADO + 12,
+              y + (FILA_CELDA - 27) / 2, 27, color, false, false);
+
+        if (conMas) {
+            // El «+» va apagado mientras no haya a donde ir, igual que las
+            // quince celdas. Cuando exista la tienda, se enciende solo.
+            int[] c = cajaMas(y);
+            boolean encima = ratonX >= c[0] && ratonX < c[0] + c[2]
+                    && ratonY >= c[1] && ratonY < c[1] + c[3];
+            mas(ctx, c, !TIENDA.isEmpty(), encima);
+        }
+        return y + FILA_ALTO;
+    }
+
+    /** La celda de una fila, del ancho util del panel. */
+    private void fondoFila(DrawContext ctx, int y) {
+        celda(ctx, x0 + Math.round(FICHA_X0 * k), y0 + Math.round(y * k),
+              Math.round((FICHA_X1 - FICHA_X0) * k), Math.round(FILA_CELDA * k),
+              Math.max(1, Math.round(BORDE_GROSOR * k)),
+              Math.max(1, Math.round(MORDIDA * k)),
+              FILA_FONDO, FILA_BORDE, PANEL);
+    }
+
+    /** {x, y, ancho, alto} del "+", ya en pixeles de pantalla. */
+    private int[] cajaMas(int y) {
+        int lado = Math.round(MAS_LADO * k);
+        return new int[]{
+                x0 + Math.round((FICHA_X1 - FILA_PAD - MAS_LADO) * k),
+                y0 + Math.round((y + (FILA_CELDA - MAS_LADO) / 2) * k),
+                lado, lado};
+    }
+
+    /**
+     * El "+", dibujado: su celda y dos barras cruzadas.
+     *
+     * <p>Las barras se centran <b>sobre la caja ya escalada</b>, no con numeros
+     * aparte: a GUI Scale 1 la celda mide 34 px y a escala 4 mide 136, y un
+     * grosor escrito a mano se descentraria en una de las dos.
+     */
+    private void mas(DrawContext ctx, int[] c, boolean vivo, boolean encima) {
+        celda(ctx, c[0], c[1], c[2], c[3],
+              Math.max(1, Math.round(BORDE_GROSOR * k)),
+              Math.max(1, Math.round(MORDIDA * k)),
+              vivo && encima ? CELDA_ENCIMA : FILA_FONDO,
+              vivo ? (encima ? BORDE_ENCIMA : FILA_BORDE) : BORDE_CERRADA,
+              FILA_FONDO);
+
+        int g = Math.max(1, Math.round(MAS_GROSOR * k));
+        int b = Math.round(MAS_BRAZO * k);
+        int cx = c[0] + c[2] / 2, cy = c[1] + c[3] / 2;
+        int tinta = vivo ? (encima ? BORDE_ENCIMA : 0xFFE8EDF8) : 0xFF7C859B;
+        ctx.fill(cx - b / 2, cy - g / 2, cx + b / 2, cy + g / 2, tinta);
+        ctx.fill(cx - g / 2, cy - b / 2, cx + g / 2, cy + b / 2, tinta);
+    }
+
+    /**
+     * Una fila de dato: icono, etiqueta a la izquierda y valor a la DERECHA.
+     *
+     * <p>El valor alineado a la derecha y no pegado a su etiqueta: asi las tres
+     * cifras caen en la misma columna y se leen como una tabla, aunque «Clan» y
+     * «Division» midan distinto.
+     */
+    private void fila(DrawContext ctx, Identifier icono, int y,
+                      Text etiqueta, String valor, int color) {
+        fondoFila(ctx, y);
+
+        int lado = Math.round(FILA_ICONO * k);
+        dibujar(ctx, icono, x0 + Math.round((FICHA_X0 + FILA_PAD) * k),
+                y0 + Math.round((y + (FILA_CELDA - FILA_ICONO) / 2) * k),
+                lado, lado, FILA_ICONO, FILA_ICONO, 0xFFFFFFFF);
+
+        int alto = TEXTO_ALTO;
+        int arriba = y + (FILA_CELDA - alto) / 2;
+        texto(ctx, etiqueta, FICHA_X0 + FILA_PAD + FILA_ICONO + 12, arriba, alto,
+              FILA_ETIQUETA, false, false);
+        texto(ctx, Text.literal(valor), FICHA_X1 - FILA_PAD, arriba, alto, color,
+              false, false, true);
+    }
+
+    /**
+     * Las dieciseis medallas, ocho por fila.
+     *
+     * <p>Las que no se tienen se dibujan <b>oscurecidas, no ocultas</b>: se ve
+     * cual es cada una y cuantas faltan. El tinte MULTIPLICA, asi que basta un
+     * gris azulado para apagarlas sin repintar nada.
+     */
+    private void medallas(DrawContext ctx, Red.Ficha ficha) {
+        texto(ctx, Text.translatable("pokepad.lunaeternal.medallas"),
+              FICHA_X0, MEDALLAS_Y - TEXTO_ALTO - 6, TEXTO_ALTO, FILA_ETIQUETA,
+              false, false);
+
+        int lado = Math.round(MEDALLA * k);
+        int paso = MEDALLA + MEDALLA_SEP;
+        for (int i = 0; i < MEDALLAS.length; i++) {
+            int artX = MEDALLAS_X + (i % MEDALLA_COLS) * paso;
+            int artY = MEDALLAS_Y + (i / MEDALLA_COLS) * paso;
+            boolean tiene = ficha != null && (ficha.medallas() & (1 << i)) != 0;
+            dibujar(ctx, MEDALLA_TEX[i],
+                    x0 + Math.round(artX * k), y0 + Math.round(artY * k),
+                    lado, lado, 16, 16,
+                    tiene ? 0xFFFFFFFF : MEDALLA_APAGADA);
         }
     }
 
-    /** ¿El ratón está sobre alguno de los dos «+» de la barra? */
-    private boolean enMas(double ratonX, double ratonY) {
-        int mw = Math.round(BARRA_MAS_W * k), mh = Math.round(BARRA_MAS_H * k);
-        int by = y0 + Math.round(BARRA_Y * k);
-        for (int[] sitio : new int[][]{PLATA_BARRA, LUNA_BARRA}) {
-            int bx = x0 + Math.round(sitio[2] * k);
-            if (ratonX >= bx && ratonX < bx + mw
-                    && ratonY >= by && ratonY < by + mh) {
-                return true;
-            }
+    /** Los identificadores, resueltos una sola vez. */
+    private static final Identifier[] MEDALLA_TEX = new Identifier[MEDALLAS.length];
+
+    static {
+        for (int i = 0; i < MEDALLAS.length; i++) {
+            MEDALLA_TEX[i] = Identifier.of(
+                    "cobbleversebadges", "textures/item/" + MEDALLAS[i] + "_badge.png");
         }
-        return false;
+    }
+
+    /** Esta el raton sobre el «+» de las LunaCoins? */
+    private boolean enMas(double ratonX, double ratonY) {
+        // La SEGUNDA fila es la de LunaCoins, y su caja se pide con la misma
+        // funcion que la dibuja: asi el sitio donde se pulsa y el sitio donde
+        // se ve no pueden separarse nunca.
+        int[] c = cajaMas(FICHA_Y + FILA_ALTO);
+        return ratonX >= c[0] && ratonX < c[0] + c[2]
+                && ratonY >= c[1] && ratonY < c[1] + c[3];
     }
 
     /** Los seis botones, cada uno donde le toca. */
@@ -820,21 +954,36 @@ public class PokePadScreen extends Screen {
      */
     private static void celda(DrawContext ctx, int x, int y, int lado,
                               int grosor, int mordida, int fondo, int borde) {
-        ctx.fill(x, y, x + lado, y + lado, borde);
-        ctx.fill(x + grosor, y + grosor, x + lado - grosor, y + lado - grosor, fondo);
-        // Las cuatro esquinas, PINTADAS DEL COLOR DE LA PANTALLA.
+        celda(ctx, x, y, lado, lado, grosor, mordida, fondo, borde, PANTALLA);
+    }
+
+    /**
+     * La misma celda, pero RECTANGULAR y sobre el fondo que se le diga.
+     *
+     * <p>Las dos cosas hacen falta para el panel de sesion: sus filas son
+     * anchas y bajas, y no viven sobre la pantalla clara sino sobre el panel
+     * oscuro del chasis. El color de las esquinas mordidas tiene que ser
+     * <b>el del fondo que hay debajo</b> — es lo que se veria si la celda no
+     * estuviera— y en el panel ese fondo no es {@link #PANTALLA}.
+     */
+    private static void celda(DrawContext ctx, int x, int y, int w, int h,
+                              int grosor, int mordida, int fondo, int borde,
+                              int fuera) {
+        ctx.fill(x, y, x + w, y + h, borde);
+        ctx.fill(x + grosor, y + grosor, x + w - grosor, y + h - grosor, fondo);
+        // Las cuatro esquinas, PINTADAS DEL COLOR DEL FONDO DE DEBAJO.
         //
         // Antes se rellenaban con 0x00000000 y no hacian nada: `fill` mezcla, y
         // mezclar un color con alfa cero deja el pixel exactamente igual. La
         // esquina no se mordia; solo lo parecia porque a 1 px no se distingue
         // el efecto de su ausencia. A 4 px si se distingue, asi que hay que
-        // pintar de verdad --y del azul de la pantalla, que es lo que se veria
-        // si el rectangulo no estuviera.
-        ctx.fill(x, y, x + mordida, y + mordida, PANTALLA);
-        ctx.fill(x + lado - mordida, y, x + lado, y + mordida, PANTALLA);
-        ctx.fill(x, y + lado - mordida, x + mordida, y + lado, PANTALLA);
-        ctx.fill(x + lado - mordida, y + lado - mordida, x + lado, y + lado, PANTALLA);
+        // pintar de verdad.
+        ctx.fill(x, y, x + mordida, y + mordida, fuera);
+        ctx.fill(x + w - mordida, y, x + w, y + mordida, fuera);
+        ctx.fill(x, y + h - mordida, x + mordida, y + h, fuera);
+        ctx.fill(x + w - mordida, y + h - mordida, x + w, y + h, fuera);
     }
+
 
     /**
      * Dibuja una textura entera en el hueco indicado.
@@ -902,6 +1051,17 @@ public class PokePadScreen extends Screen {
     private void texto(DrawContext ctx, net.minecraft.text.Text linea,
                        int cx, int arriba, int alto, int color,
                        boolean centrado, boolean contorno) {
+        texto(ctx, linea, cx, arriba, alto, color, centrado, contorno, false);
+    }
+
+    /**
+     * @param derecha {@code true} para que {@code cx} sea el borde DERECHO del
+     *                texto. Es lo que alinea los valores del panel de sesion en
+     *                una columna, midan lo que midan las etiquetas.
+     */
+    private void texto(DrawContext ctx, net.minecraft.text.Text linea,
+                       int cx, int arriba, int alto, int color,
+                       boolean centrado, boolean contorno, boolean derecha) {
         float escala = alto * k / textRenderer.fontHeight;
         if (escala <= 0) {
             return;
@@ -915,8 +1075,9 @@ public class PokePadScreen extends Screen {
         // ella: lo que se pide en pixeles del arte acaba cayendo donde toca.
         // Y el centrado se hace a mano porque la version "conSombra" no deja
         // apagar la sombra, y aqui hace falta contorno en vez de sombra.
+        int ancho = textRenderer.getWidth(linea);
         int px = Math.round(cx * k / escala)
-                - (centrado ? textRenderer.getWidth(linea) / 2 : 0);
+                - (centrado ? ancho / 2 : derecha ? ancho : 0);
         int py = Math.round(arriba * k / escala);
 
         // ⚠ CONTORNO, NO SOMBRA.

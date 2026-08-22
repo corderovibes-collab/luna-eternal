@@ -36,6 +36,7 @@ import hashlib
 import json
 import sys
 import urllib.request
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -60,12 +61,129 @@ QUEREMOS = {
                     "menos lag en cuanto haya varias personas peleando",
     "letmedespawn": "Los mobs desaparecen como deberian. Sin esto se acumulan "
                     "y se comen el limite de entidades",
+
+    # --- lo que llega con CobbleVerse (2026-08-17) -------------------------
+    # Estos NO son optimizaciones: son REGLAS DE JUEGO. Un mod de reglas que
+    # solo esta en el cliente no hace nada --el servidor es quien decide
+    # (P6)-- asi que o van aqui o el jugador ve la interfaz de algo que no
+    # existe.
+    "CobbleverseBadges":
+        "LAS MEDALLAS. Es lo que el usuario pidio, y sin el en el servidor no "
+        "hay nada que ganar: quien las guarda es el servidor",
+    "rctapi":
+        "Dependencia de rctmod y donde vive la logica de los entrenadores",
+    "rctmod":
+        "Los entrenadores que aparecen por el mundo y con los que se pelea. "
+        "Sin el en el servidor no aparece ninguno",
+    "cobblemonraiddens":
+        "Las incursiones. Las genera y las arbitra el servidor",
+    "mega_showdown":
+        "Megaevoluciones y formas. Cambia el combate, que es de servidor",
+    "fightorflight":
+        "Los Pokemon salvajes atacan en vez de quedarse mirando. Es IA de "
+        "entidad: solo corre en el servidor",
+
+    # ⚠ ESTOS TRES NO SE ELIGIERON: LOS PIDIO EL LOG.
+    #
+    # Al cargar el datapack de entrenadores de CobbleVerse, 55 tablas de botin
+    # se negaron a parsear con "Unknown registry key ... tmcraft:tm_bulkup" y
+    # parecidos: sus recompensas son objetos de estos mods, y sin ellos EN EL
+    # SERVIDOR esas 55 tablas no existen — o sea, 55 entrenadores que no sueltan
+    # nada al ganarles. El cliente los tiene; el servidor es quien reparte.
+    "tmcraft":
+        "Las MT que sueltan los entrenadores. 34 tablas de botin sin el",
+    "LumyMon":
+        "Objetos de recompensa de los entrenadores. 19 tablas de botin sin el",
+    "Only Bottle Caps":
+        "Las chapas del entrenamiento de IVs. 2 tablas de botin sin el",
+    "cobblenav":
+        "La cana-navegador. Una tabla de botin la nombra "
+        "(`cobblenav:fishingnav_item`) y sin el mod ese objeto no existe",
+
+    # ⚠⚠ ESTOS DOS ECHAN A LA GENTE DEL SERVIDOR SI FALTAN, Y NINGUN
+    #    RESOLUTOR DE DEPENDENCIAS LOS ENCUENTRA.
+    #
+    # `accessories_compat_layer` es un PUENTE entre Trinkets y Accessories, y
+    # nada declara depender de un puente: no es dependencia de nadie, asi que
+    # `con_dependencias()` no lo trae. Pero registra RANURAS, y las ranuras se
+    # sincronizan: con el puente solo en el cliente, el servidor manda su lista
+    # y el cliente no sabe leerla. Se cae al ENTRAR, con
+    #
+    #   DecoderException: Failed to decode packet 'clientbound/custom_payload'
+    #   Caused by: StructFieldException: [Field: exported_slots]
+    #
+    # que no menciona ni Accessories ni Trinkets por ningun lado.
+    #
+    # Regla que sale de aqui: un mod que registre algo que se SINCRONIZA tiene
+    # que estar en los dos lados, sea o no dependencia de alguien.
+    # (aqui estuvieron `accessories_compat_layer` y `trinkets`. Se resolvio al
+    #  reves: se QUITARON DEL CLIENTE, porque de ese puente no dependia ningun
+    #  mod del pack. Ver EXCLUIDOS en gen_modpack.py)
 }
+
+# ---------------------------------------------------------------------------
+# MODS DE CONTENIDO: LOS QUE REGISTRAN BLOQUES
+# ---------------------------------------------------------------------------
+# ⚠⚠ ESTO NO ES UNA LISTA DE DESEOS, ES UNA OBLIGACION TECNICA.
+#
+# Los bloques se mandan por la red como un NUMERO, no por su nombre: el
+# servidor dice "bloque 4721" y el cliente lo busca en su tabla. Las dos tablas
+# se construyen registrando mods, asi que si el cliente tiene mods de bloques
+# que el servidor no tiene, LAS TABLAS NO COINCIDEN y el cliente dibuja otra
+# cosa. Medido el 2026-08-17: 5.687 bloques de diferencia.
+#
+# Sintoma real, y no se parece nada a la causa: el usuario coloco un neon
+# blanco y le salio `lumymon:mesprit_altar`. Preguntado el servidor por esa
+# coordenada, contesto AIRE. No era textura ni ID duplicado: eran dos tablas
+# distintas.
+#
+# Con el pack de Cobblemon no pasaba y por eso el diseño de este script
+# aguanto: alli los mods extra del cliente eran HUD, mapas y tooltips, que no
+# registran nada. CobbleVerse trae DIECIOCHO mods de bloques.
+#
+# ⚠ LA LISTA A MANO ES DEUDA. Lo correcto es DEDUCIRLA del manifiesto —un mod
+#   con blockstates propios y `environment != client` va al servidor, punto— y
+#   esta escrita asi solo porque habia un servidor roto que arreglar. Cuando se
+#   deduzca, este bloque desaparece entero.
+CONTENIDO = {
+    "rechiseled":        "3.627 bloques de sillar",
+    "handcrafted":       "muebles",
+    "Luckys-Cozyhome":   "muebles",
+    "Carved Wood":       "madera tallada",
+    "CobbleFurnies":     "muebles de Cobblemon",
+    "toms_storage":      "almacenamiento",
+    "cobblemon-additions": "bloques de Cobblemon",
+    "sophisticatedstorage": "almacenamiento",
+    "pokeblocks":        "bloques decorativos",
+    "waystones":         "piedras de viaje",
+    "sophisticatedbackpacks": "mochilas",
+    "comforts":          "sacos de dormir y hamacas",
+    "beautify":          "decoracion",
+    "moar-concrete":     "160 bloques de hormigon",
+    "cobblecuisine":     "cocina",
+    "Cobbreeding":       "crianza",
+    "cobblemon-battle-positions": "posiciones de combate",
+    # ⚠ ESTE SE ESCAPO DEL PRIMER ANALISIS. Registra sus 72 bloques en el
+    #   namespace `minecraft` --backportea bloques de 1.21.2+-- asi que
+    #   buscando "blockstates de namespace propio" parecia que no añadia nada.
+    "VanillaBackport":   "72 bloques nuevos, y los registra como `minecraft:`",
+}
+QUEREMOS.update({k: f"Registra bloques ({v}). Si esta solo en el cliente, las "
+                    f"tablas de bloques no coinciden y se dibuja otra cosa"
+                 for k, v in CONTENIDO.items()})
 
 # Lo que NO se toca aunque no este en QUEREMOS: es nuestro o es infraestructura.
 # Sin esta lista, `--aplicar` borraria el mod del servidor entero.
 INTOCABLES = ("lunaeternal", "lunaneon", "fabric-api", "Cobblemon",
-              "EasyAuth", "worldedit", "Axiom")
+              "EasyAuth", "worldedit", "Axiom",
+              # ⚠ LIBRERIAS YA INSTALADAS: NO SE BORRAN AUNQUE PAREZCAN SOBRAR.
+              #
+              # Desde que `aporta()` mira dentro de los jars anidados, estas dos
+              # salen como sobrantes: alguien las lleva incrustadas. Puede que
+              # sea verdad y puede que no, y la diferencia entre las dos cosas
+              # es un servidor que no arranca. Borrar una libreria para ahorrar
+              # 800 KB no compensa ni de lejos.
+              "cloth-config", "owo-lib")
 
 
 # Lo que aporta el propio entorno: no hay jar que buscar para esto.
@@ -83,6 +201,54 @@ def metadatos(url: str) -> dict:
     z = zipfile.ZipFile(io.BytesIO(urllib.request.urlopen(
         urllib.request.Request(url, headers=UA)).read()))
     return json.loads(z.read("fabric.mod.json"), strict=False)
+
+
+_CACHE_APORTA: dict = {}
+
+
+def aporta(url: str) -> set:
+    """Todos los IDs de mod que un jar mete en el juego al cargarse.
+
+    Son TRES cosas, y mirar solo la primera es lo que hacia abortar por nada:
+
+      1. su propio `id`
+      2. sus `provides` — alias con los que otros lo nombran
+      3. **LOS JARS ANIDADOS** (`META-INF/jars/`, lo que Fabric llama JiJ), que
+         se cargan como mods de pleno derecho
+
+    Sin el punto 3, `sophisticatedcore` "necesitaba" `team_reborn_energy` y el
+    script se negaba a aplicar nada — cuando ese mod viaja DENTRO de el, en
+    `META-INF/jars/energy-4.1.0.jar`. Lo mismo con `trinkets` y
+    `cardinal-components`. Dos abortos seguidos por el mismo punto ciego, y los
+    dos con el servidor esperando un arreglo.
+
+    Se recorre en profundidad porque un jar anidado puede anidar otro.
+    """
+    if url in _CACHE_APORTA:
+        return _CACHE_APORTA[url]
+    import io
+    import zipfile
+
+    def hurgar(z, acc):
+        try:
+            m = json.loads(z.read("fabric.mod.json"), strict=False)
+        except Exception:                                        # noqa: BLE001
+            return
+        acc.add(m.get("id", ""))
+        acc.update(m.get("provides", []) or [])
+        for n in z.namelist():
+            if n.startswith("META-INF/jars/") and n.endswith(".jar"):
+                try:
+                    hurgar(zipfile.ZipFile(io.BytesIO(z.read(n))), acc)
+                except Exception:                                # noqa: BLE001
+                    pass
+
+    datos = urllib.request.urlopen(
+        urllib.request.Request(url, headers=UA)).read()
+    acc: set = set()
+    hurgar(zipfile.ZipFile(io.BytesIO(datos)), acc)
+    _CACHE_APORTA[url] = acc
+    return acc
 
 
 def con_dependencias(quiero: dict, man: dict) -> dict:
@@ -104,7 +270,10 @@ def con_dependencias(quiero: dict, man: dict) -> dict:
     while pendiente:
         entrada = pendiente.pop()
         meta = metadatos(entrada["url"])
-        ids.add(meta.get("id", ""))
+        # No solo su `id`: tambien sus alias y TODO lo que lleve anidado. Ver
+        # `aporta()` — mirar solo el id aborto dos veces por dependencias que
+        # ya venian dentro del propio jar.
+        ids |= aporta(entrada["url"])
         for dep in meta.get("depends", {}):
             if dep in YA_ESTA or dep in ids:
                 continue

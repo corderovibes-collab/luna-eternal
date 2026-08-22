@@ -66,25 +66,40 @@ public class Red implements ModInitializer {
     }
 
     /**
-     * La tarjeta de entrenador: el nivel de cada una de las cinco Vías.
+     * Los datos de sesión que el PokePad enseña bajo la cara del jugador.
      *
-     * <p><b>Va como lista y no como cinco campos con nombre</b>, en el orden de
-     * {@code Path.values()}. Añadir una Vía sexta sería entonces cambiar el
-     * enum y ya; con cinco campos fijos habría que tocar el paquete, el códec,
-     * la caché del cliente y el dibujado, y bastaría olvidarse de uno para que
-     * la nueva no apareciera sin que nada fallara.
+     * <p><b>Las Vías van como lista y no como cinco campos con nombre</b>, en el
+     * orden de {@code Path.values()}. Añadir una Vía sexta sería entonces
+     * cambiar el enum y ya; con cinco campos fijos habría que tocar el paquete,
+     * el códec, la caché del cliente y el dibujado, y bastaría olvidarse de uno
+     * para que la nueva no apareciera sin que nada fallara.
      *
-     * <p>Solo el nivel, no la experiencia: la tarjeta enseña <i>en qué punto
-     * estás</i>, y una barra de progreso dentro de cada nivel a este tamaño
-     * sería tres píxeles moviéndose.
+     * <p><b>Clan, trabajo y división viajan aunque todavía no existan.</b> Hoy
+     * el servidor manda cadena vacía en los tres y el Pad dibuja un guión. Es
+     * deliberado: cuando esos sistemas se construyan, encenderlos es rellenar
+     * estas tres líneas, y no volver a tocar el protocolo, el códec, la caché y
+     * el dibujado — que es donde se pierde una tarde y se olvida un sitio.
+     *
+     * <p><b>Las medallas van como MÁSCARA DE BITS, no como lista.</b> Son
+     * dieciséis —ocho de Kanto y ocho de Johto (D-017)— y lo único que hay que
+     * saber de cada una es si se tiene. Un {@code int} lo dice entero, se
+     * compara de un vistazo y no puede llegar a medias: una lista de dieciséis
+     * booleanos ocuparía diecisiete bytes para decir lo mismo y permitiría que
+     * llegara con quince.
      */
-    public record Ficha(List<Integer> vias) implements CustomPayload {
+    public record Ficha(List<Integer> vias, String clan, String trabajo,
+                        String division, int medallas) implements CustomPayload {
         public static final Id<Ficha> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "ficha"));
         public static final PacketCodec<RegistryByteBuf, Ficha> CODEC =
                 PacketCodec.tuple(
                         PacketCodecs.VAR_INT.collect(PacketCodecs.toList()),
-                        Ficha::vias, Ficha::new);
+                        Ficha::vias,
+                        PacketCodecs.STRING, Ficha::clan,
+                        PacketCodecs.STRING, Ficha::trabajo,
+                        PacketCodecs.STRING, Ficha::division,
+                        PacketCodecs.VAR_INT, Ficha::medallas,
+                        Ficha::new);
 
         @Override
         public Id<? extends CustomPayload> getId() {
@@ -147,7 +162,12 @@ public class Red implements ModInitializer {
                         var estado = niveles.get(via);
                         vias.add(estado == null ? 0 : estado.level());
                     }
-                    var ficha = new Ficha(vias);
+                    // Clan, trabajo, división y medallas todavía no tienen
+                    // sistema detrás. Se mandan vacíos a propósito en vez de
+                    // inventar un valor: el Pad dibuja un guión, que dice «esto
+                    // aún no», mientras que un «Sin clan» dice «ya funciona y no
+                    // tienes ninguno» — que no es verdad.
+                    var ficha = new Ficha(vias, "", "", "", 0);
                     // Volver al hilo del servidor para enviar: la red no es
                     // segura desde un hilo cualquiera.
                     jugador.getServer().execute(() -> {

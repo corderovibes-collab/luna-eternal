@@ -132,8 +132,8 @@ RESALTADA = 7
 # factor de 1,4 y ablanda el dibujo; darle aire dentro de una celda mayor lo
 # deja intacto y llena la pantalla igual. Y es lo que hace la referencia: sus
 # iconos tambien tienen margen dentro de su celda.
-AIRE = 18       # margen entre el icono y el borde de su celda
-HUECO = 34      # separacion HORIZONTAL entre celdas
+AIRE = 14       # margen entre el icono y el borde de su celda
+HUECO = 26      # separacion HORIZONTAL entre celdas
 
 # El nombre de cada aplicacion, debajo de su icono.
 #
@@ -619,6 +619,101 @@ MOLDURA = (69, 74, 91)
 DONANTE = (1020, 1240)
 
 
+def medir_arco(chasis: Image.Image, rej_y: int) -> tuple:
+    """Donde esta el arco blanco que sube entre las dos orejas de Rotom.
+
+    Devuelve `(x0, x1, cima)` en pixeles del arte.
+
+    ⚠ SE MIDE, NO SE ESCRIBE. Es el mismo motivo que todo lo demas de este
+    fichero: el chasis ya ha cambiado de estructura cinco veces, y una
+    coordenada a mano se queda mintiendo EN SILENCIO -- el codigo dibuja la
+    boca donde estaba en la version anterior y nada falla.
+
+    El arco se reconoce porque es la unica parte del claro de la pantalla que
+    sube POR ENCIMA de su borde recto. Se busca, columna a columna, donde
+    empieza el claro; las columnas donde empieza mas arriba que el resto son
+    el arco.
+    """
+    a = np.array(chasis.convert("RGBA"))
+    r, g, b, al = (a[..., i].astype(int) for i in range(4))
+    # El claro de la pantalla: casi blanco azulado. Se ignora la franja de
+    # arriba, donde esta el logo, que tambien es claro.
+    claro = (al > 200) & (r > 200) & (g > 210) & (b > 230)
+    claro[:150, :] = False
+
+    primero = {}
+    for x in range(a.shape[1]):
+        col = np.nonzero(claro[:, x])[0]
+        if len(col):
+            primero[x] = int(col.min())
+    if not primero:
+        return None
+    # El borde recto de la pantalla es el valor MAS COMUN; el arco, lo que sube.
+    from collections import Counter
+    recto = Counter(primero.values()).most_common(1)[0][0]
+    arco = sorted(x for x, y in primero.items() if y < recto - 6)
+    if not arco:
+        return None
+    # Un solo tramo continuo: si hubiera dos, uno seria otra cosa.
+    tramos, ini = [], arco[0]
+    for i in range(1, len(arco)):
+        if arco[i] - arco[i - 1] > 8:
+            tramos.append((ini, arco[i - 1])); ini = arco[i]
+    tramos.append((ini, arco[-1]))
+    x0, x1 = max(tramos, key=lambda tr: tr[1] - tr[0])
+    cima = min(primero[x] for x in range(x0, x1 + 1) if x in primero)
+    return x0, x1, cima
+
+
+def poner_boca(chasis: Image.Image, rej_y: int) -> Image.Image:
+    """Pega la boca de Rotom en el arco, entre los ojos y encima de la rejilla.
+
+    Va INCRUSTADA en el chasis y no dibujada por el codigo del juego porque no
+    cambia nunca: es parte del dibujo, como los ojos. Dibujarla en tiempo de
+    ejecucion seria una textura mas que cargar para pintar siempre lo mismo.
+
+    ⚠ El limite de abajo es `rej_y`, donde empieza la rejilla. La rejilla se
+    dibuja DESPUES del chasis, asi que una boca que baje de ahi no queda
+    "detras": queda TAPADA por la primera fila de celdas.
+    """
+    origen = ARTE / "icons" / "boca_rotom.png"
+    if not origen.exists():
+        print(f"  boca      FALTA {origen.relative_to(RAIZ)}")
+        return chasis
+    arco = medir_arco(chasis, rej_y)
+    if arco is None:
+        print("  boca      no se encontro el arco entre los ojos; no se pone")
+        return chasis
+    x0, x1, cima = arco
+
+    boca = preparar(origen)
+    # ⚠ RECORTAR AL CONTENIDO ANTES DE ESCALAR.
+    #
+    # El PNG viene en un lienzo de 100x100 con la boca dentro y transparencia
+    # alrededor. Escalando el lienzo, lo que se ajusta al hueco es el AIRE: la
+    # boca salio a 39x39 --cuadrada-- cuando en realidad mide 88x59 y ocupaba
+    # menos de la mitad de esa caja. Recortada, el hueco lo llena la boca.
+    caja = boca.getbbox()
+    if caja:
+        boca = boca.crop(caja)
+    aire = 8
+    alto_max = max(1, rej_y - (cima + aire) - aire)
+    ancho_max = max(1, (x1 - x0) - aire * 2)
+    escala = min(alto_max / boca.height, ancho_max / boca.width)
+    w, h = max(1, round(boca.width * escala)), max(1, round(boca.height * escala))
+    boca = reducir(boca, w, h)
+
+    # Centrada en el arco horizontalmente, y verticalmente en el hueco que
+    # queda entre la cima del arco y la rejilla.
+    px = (x0 + x1) // 2 - w // 2
+    py = cima + aire + max(0, (alto_max - h) // 2)
+    fuera = chasis.convert("RGBA")
+    fuera.alpha_composite(boca, (px, py))
+    print(f"  boca      {w}x{h} en {px},{py}  "
+          f"(arco x {x0}..{x1}, cima y={cima}, rejilla y={rej_y})")
+    return fuera
+
+
 def quitar_carita(im: Image.Image) -> Image.Image:
     """Borra la carita verde de la boca de Rotom. Decision del usuario.
 
@@ -824,8 +919,11 @@ def medir_panel_superior(chasis: Image.Image) -> tuple:
     liso = ((np.abs(a[..., :3] - np.array(FONDO_CABECERA)).max(axis=2) < 8)
             & (a[..., 3] > 200))
     # A media altura de la banda, el tramo liso mas largo.
-    cy = int(h * 0.14)
+    cy = int(h * 0.17)
+    # Solo la mitad derecha: a la izquierda esta el panel del jugador, que es
+    # del mismo gris y siempre gana en anchura.
     xs = np.where(liso[cy])[0]
+    xs = xs[xs > w * 0.5]
     if not len(xs):
         raise SystemExit("No se encuentra la banda de la cabecera")
     tramos_x, ini_t, ant = [], None, -9
@@ -841,6 +939,104 @@ def medir_panel_superior(chasis: Image.Image) -> tuple:
     col = liso[:, (x0 + x1) // 2]
     ys = [y for y in range(int(h * 0.05), int(h * 0.25)) if col[y]]
     return (int(x0), min(ys), int(x1 - x0 + 1), max(ys) - min(ys) + 1)
+
+
+# El aire entre la ficha y los bordes de su hueco.
+FICHA_AIRE = 30
+
+# ⚠ EL LADO DERECHO LLEVA MAS AIRE QUE EL IZQUIERDO, Y ES A PROPOSITO.
+#
+# Peticion del usuario: las celdas quedaban pegadas a la linea naranja que
+# separa el panel de la pantalla. No es simetria por simetria -- a la izquierda
+# no hay nada contra lo que chocar, y a la derecha si.
+#
+# Mueve las celdas Y las medallas de una vez, porque las dos salen del mismo
+# borde util. Si algun dia hay que separarlas mas, se toca este numero y ya.
+FICHA_AIRE_DER = FICHA_AIRE + 18
+
+# EL PANEL DE SESION, bajo la cara.
+#
+# Sustituye a la tarjeta de las Vias (decision del usuario, 2026-08-17): en vez
+# de cinco reputaciones en estrellas, los datos que se miran a diario. El orden
+# es el que el pidio, y no es arbitrario: primero lo que tienes, luego a quien
+# perteneces, luego lo que has ganado.
+FILAS_INFO = ("clan", "trabajo", "division")
+FILA_ICONO = 36          # el lado del icono de cada fila
+FILA_ALTO = 52           # lo que ocupa una fila entera, icono incluido
+FILA_CELDA = FILA_ALTO - 6   # la celda; los 6 que sobran son el aire de abajo
+FILA_PAD = 10                # margen interior de la celda
+
+# Los mismos colores que PokePadScreen. El panel del chasis se MIDIO: #222529,
+# luma 37, o sea casi negro. Por eso estas celdas van mas CLARAS que su fondo,
+# al reves que las de la rejilla -- la regla no es "la celda va oscura", es "la
+# celda tiene que separarse de su fondo".
+PANEL_FONDO = (34, 37, 41, 255)
+FILA_FONDO = (52, 59, 77, 255)
+FILA_BORDE = (89, 100, 127, 255)
+
+# El "+" se DIBUJA, no se pega. Era la unica pieza del panel con bisel y
+# volumen propios encima de cinco filas planas, y cantaba.
+MAS_LADO, MAS_GROSOR, MAS_BRAZO = 34, 6, 18
+MAS_APAGADO = (124, 133, 155, 255)
+FILA_AIRE = 14           # aire entre el bloque de filas y el de medallas
+
+# Las medallas. Ocho por region y dos filas: Kanto y Johto, que son las
+# generaciones encendidas (D-017). Se ensenan SIEMPRE las dieciseis, apagadas
+# las que no se tienen — un hueco vacio no dice cuantas faltan.
+MEDALLA_COLS = 8
+MEDALLA_FILAS = 2
+MEDALLA_SEP = 3
+
+# ⚠ LAS MEDALLAS VIVEN EN EL MISMO MARGEN QUE EL TEXTO, y se intento lo otro.
+#
+# Se probo a centrarlas en el hueco entero para que crecieran de 32 a 36 --se
+# pidio que fueran "un poquito mas grandes"-- y EN LA MAQUETA SE VIO que la
+# octava columna cruzaba el divisor naranja del panel. O sea: `medir_ficha`
+# devuelve un hueco MAS ANCHO que la ranura que se ve dibujada, porque mide la
+# zona hundida y el divisor cae dentro de ella.
+#
+# El margen de texto (FICHA_AIRE) si coincide con el borde visible, asi que es
+# el que manda para todo. Que las medallas midan 32 y no 36 es el precio de
+# tener ocho por fila; el sitio se gana con el aire de arriba, no invadiendo.
+
+# El orden de gimnasio, no el alfabetico: es como se consiguen y como se
+# recuerdan. Tiene que ser EL MISMO que el de PokePadScreen.MEDALLAS.
+MEDALLA_ORDEN = (
+    "kanto_boulder", "kanto_cascade", "kanto_thunder", "kanto_rainbow",
+    "kanto_soul", "kanto_marsh", "kanto_volcano", "kanto_earth",
+    "johto_zephyr", "johto_hive", "johto_plain", "johto_fog",
+    "johto_storm", "johto_mineral", "johto_glacier", "johto_rising",
+)
+# Cuantas se ensenan conseguidas en la maqueta. Ni cero ni dieciseis: con cero
+# no se ve como queda una encendida, y con todas no se ve el contraste, que es
+# justo lo que hay que aprobar.
+MEDALLAS_MAQUETA = 5
+
+ETIQUETAS = {"clan": "Clan", "trabajo": "Trabajo", "division": "Division"}
+
+
+def medir_ficha(chasis: Image.Image, cara: tuple) -> tuple:
+    """El hueco libre del panel izquierdo, DEBAJO de la ranura de la cara.
+
+    Es donde va la ficha de sesion. Se mide en vez de escribirse porque el panel
+    ya ha cambiado tres veces, y cada vez las medidas a mano se quedaron
+    mintiendo en silencio.
+    """
+    a = np.array(chasis.convert("RGBA")).astype(int)
+    h, w = a.shape[:2]
+    # El gris del panel, tomado de un punto que seguro esta dentro: justo
+    # debajo de la ranura de la cara y a su misma altura horizontal.
+    col = a[cara[3] + 30, (cara[0] + cara[2]) // 2, :3]
+    liso = ((np.abs(a[..., :3] - col).max(axis=2) < 8) & (a[..., 3] > 200))
+    liso[:cara[3] + 10] = False          # todo lo que hay encima de la cara
+    liso[:, int(w * 0.35):] = False      # y el resto del chasis
+    filas = np.where(liso.sum(1) > 80)[0]
+    if not len(filas):
+        raise SystemExit("No se encuentra el hueco de la ficha bajo la cara")
+    cy = (filas.min() + filas.max()) // 2
+    xs = np.where(liso[cy])[0]
+    return (int(xs.min()), int(filas.min()),
+            int(xs.max() - xs.min() + 1), int(filas.max() - filas.min() + 1))
 
 
 def interior_util(chasis: Image.Image, caja: tuple) -> tuple:
@@ -889,21 +1085,19 @@ def main() -> None:
 
     print("POKEPAD")
     chasis = quitar_carita(Image.open(ARTE / "fondo_base.png").convert("RGBA"))
-    # El chasis tambien: tiene menos motas, pero es el mismo problema.
-    guardar(sangrar_alfa(chasis), SALIDA / "pokepad.png")
+    # ⚠ El chasis NO se guarda todavia: falta pegarle la boca, y para saber
+    #   donde cabe hace falta `rej_y`, que se calcula mas abajo. Se guarda al
+    #   final, en cuanto esta esa medida.
     x0, y0, x1, y1 = medir_pantalla(chasis)
     cajas = medir_cajas(chasis, hasta_x=x0 - 20)
     print(f"  chasis    {chasis.size[0]} x {chasis.size[1]}")
     print(f"  pantalla  x {x0}-{x1}  y {y0}-{y1}   ({x1 - x0} x {y1 - y0})")
-    if len(cajas) != 3:
-        raise SystemExit(
-            f"Se esperaban 3 ranuras en el panel izquierdo y se han medido "
-            f"{len(cajas)}: {cajas}.\nEl chasis ha cambiado de estructura; hay "
-            f"que decidir que va en cada ranura antes de generar nada.")
-    for nombre, c in zip(("cara", "botones", "saldo"), cajas):
-        ix, iy, iw, ih = interior(c)
-        print(f"  ranura    {nombre:<8} x {c[0]}-{c[2]}  y {c[1]}-{c[3]}"
-              f"   hueco util {iw} x {ih} en {ix},{iy}")
+    if not cajas:
+        raise SystemExit("No se encuentra la ranura de la cara en el chasis.")
+    c = cajas[0]
+    ix, iy, iw, ih = interior(c)
+    print(f"  ranura    cara     x {c[0]}-{c[2]}  y {c[1]}-{c[3]}"
+          f"   hueco util {iw} x {ih} en {ix},{iy}")
 
     # En el orden de la rejilla, no en el del alfabeto. Y se falla aqui si
     # falta uno: un hueco en la pantalla principal es peor que no generar.
@@ -952,6 +1146,21 @@ def main() -> None:
         guardar(a_tamano(preparar(plata), MONEDA), SALIDA / "plata.png")
         print(f"  plata     {plata.name} a {MONEDA}x{MONEDA}")
 
+    # LOS ICONOS DEL PANEL DE SESION.
+    #
+    # Uno por fila: clan, trabajo y division. Van a FILA_ICONO y no al tamano de
+    # los de la rejilla: aqui acompanan a una linea de texto, no son el motivo de
+    # la celda, y a 100 se comerian la fila entera.
+    for fila in FILAS_INFO:
+        origen = ARTE / "icons" / f"icon_fila_{fila}.png"
+        if origen.exists():
+            guardar(a_tamano(preparar(origen), FILA_ICONO),
+                    SALIDA / f"fila_{fila}.png")
+        else:
+            print(f"  fila      FALTA {origen.relative_to(RAIZ)}")
+    print(f"  filas     {len(FILAS_INFO)} iconos de sesion a "
+          f"{FILA_ICONO}x{FILA_ICONO}")
+
     guardar(estrella(True), SALIDA / "estrella.png")
     guardar(estrella(False), SALIDA / "estrella_vacia.png")
     print(f"  estrellas dos de {ESTRELLA}x{ESTRELLA}, dibujadas a 4x y reducidas")
@@ -998,71 +1207,59 @@ def main() -> None:
     rej_x = x0 + ((x1 - x0) - rej_w) // 2
     rej_y = y0 + ((y1 - y0) - rej_h) // 2
 
+    # La boca de Rotom, ahora que se sabe donde empieza la rejilla. Va pegada
+    # al chasis, no dibujada por el juego: no cambia nunca.
+    chasis = poner_boca(chasis, rej_y)
+    guardar(sangrar_alfa(chasis), SALIDA / "pokepad.png")
+
     # La cara, centrada en la ranura de arriba.
     cx, cy, cw, chh = interior(cajas[0])
     cara_x, cara_y = cx + (cw - CARA_LADO) // 2, cy + (chh - CARA_LADO) // 2
     if CARA_LADO > cw or CARA_LADO > chh:
         raise SystemExit(f"La cara ({CARA_LADO}) no cabe en {cw}x{chh}")
 
-    # La tarjeta, dentro del hueco UTIL de la ranura de en medio: no basta con
-    # descontar la moldura, hay un bisel oscuro de otros 14 px encima.
-    tx, ty, tw, th = interior_util(chasis, cajas[1])
-    tarj_x = tx + TARJ_AIRE
-    tarj_der = tx + tw - TARJ_AIRE
-    alto_tarj = (len(VIAS) - 1) * TARJ_FILA + TEXTO_ALTO
-    if alto_tarj > th:
-        raise SystemExit(f"La tarjeta no cabe: {alto_tarj} en {th}")
-    tarj_y = ty + (th - alto_tarj) // 2
-    estrellas_w = len(VIAS) * ESTRELLA + (len(VIAS) - 1) * ESTRELLA_SEP
-    print(f"  tarjeta   hueco util {tw}x{th} en {tx},{ty}"
-          f"   estrellas {estrellas_w} px, nombre {tarj_der - tarj_x - estrellas_w - 8} px")
+    # LA FICHA DE SESION, en el hueco que queda bajo la cara.
+    #
+    # Sustituye a la tarjeta de las Vias y a las dos ranuras de saldo: el chasis
+    # nuevo ya no las tiene. Aqui van, uno debajo de otro, el nombre del
+    # jugador, sus dos saldos y el resto de datos de sesion.
+    fx, fy, fw, fh = medir_ficha(chasis, cajas[0])
+    ficha_x0 = fx + FICHA_AIRE
+    ficha_x1 = fx + fw - FICHA_AIRE_DER
+    print(f"  ficha     hueco {fw} x {fh} en {fx},{fy}"
+          f"   -> util x {ficha_x0}..{ficha_x1}")
 
-    # LOS DOS SALDOS DE LA BARRA. Se recomponen con los MISMOS numeros que usa
-    # `colocar_botones`, para que las dos mitades de la barra no se separen.
-    ppx, ppy, ppw, pph = medir_panel_superior(chasis)
-    mas_w, mas_h = BARRA_MAS
-    grupo = MONEDA + BARRA_AIRE + BARRA_NUM + BARRA_AIRE + mas_w
-    en_panel = [n for n in BOTONES if SITIOS[n][0] == "panel"]
-    botones_w = (len(en_panel) * BOTON_PANEL[0]
-                 + (len(en_panel) - 1) * BOTON_SEP_X)
-    barra_x = ppx + ppw - BARRA_MARGEN - (2 * grupo + 2 * BARRA_HUECO + botones_w)
-    cy_barra = ppy + pph // 2
-    saldos = []
-    for i in range(2):
-        gx = barra_x + i * (grupo + BARRA_HUECO)
-        saldos.append({
-            "moneda": (gx, cy_barra - MONEDA // 2),
-            "centro": (gx + MONEDA + BARRA_AIRE + BARRA_NUM // 2, cy_barra),
-            "mas": (gx + MONEDA + BARRA_AIRE + BARRA_NUM + BARRA_AIRE,
-                    cy_barra - mas_h // 2),
-        })
+    pbx, pby, pbw, pbh = medir_panel_superior(chasis)
 
-    # El saldo: la moneda pegada a la izquierda del hueco UTIL, y el numero
-    # centrado en lo que sobra. Centrar el numero en la ranura ENTERA lo dejaria
-    # descolocado respecto a su moneda.
-    sx, sy, sw, sh = interior_util(chasis, cajas[2])
-    moneda_x = sx + MONEDA_AIRE
-    moneda_y = sy + (sh - MONEDA) // 2
-    resto = sx + MONEDA_AIRE + MONEDA + MONEDA_AIRE
-    saldo_cx = (resto + sx + sw) // 2
-    saldo_cy = sy + sh // 2
-
-    print(f"\n  PARA PokePadScreen:")
+    print("\n  PARA PokePadScreen:")
     print(f"    REJ_X = {rej_x}, REJ_Y = {rej_y}")
     print(f"    CELDA = {celda}, HUECO_X = {HUECO}, HUECO_Y = {hueco_y}, "
           f"ICONO = {lado}")
-    print(f"    TEXTO_ALTO = {TEXTO_ALTO}, TEXTO_SOLAPE = {TEXTO_SOLAPE}")
     print(f"    CARA_X = {cara_x}, CARA_Y = {cara_y}, CARA_LADO = {CARA_LADO}")
-    print(f"    SALDO_CX = {saldo_cx}, SALDO_CY = {saldo_cy}")
-    print(f"    MONEDA_X = {moneda_x}, MONEDA_Y = {moneda_y}, MONEDA = {MONEDA}")
-    for nombre, s in zip(("PLATA", "LUNA"), saldos):
-        print(f"    {nombre}_X = {s['moneda'][0]}, {nombre}_Y = {s['moneda'][1]}, "
-              f"{nombre}_CX = {s['centro'][0]}, {nombre}_CY = {s['centro'][1]}, "
-              f"{nombre}_MAS_X = {s['mas'][0]}, {nombre}_MAS_Y = {s['mas'][1]}")
-    print(f"    BARRA_MAS_W = {BARRA_MAS[0]}, BARRA_MAS_H = {BARRA_MAS[1]}")
-    print(f"    TARJ_X = {tarj_x}, TARJ_Y = {tarj_y}, TARJ_FILA = {TARJ_FILA}, "
-          f"TARJ_DER = {tarj_der}")
-    print(f"    BOTON = {{      // x, y, ancho, alto — en el orden de BOTONES")
+    # El panel de sesion, fila a fila. El lado de la medalla se DEDUCE del ancho
+    # util: ocho por fila con su separacion, y lo que salga. Escribirlo a mano
+    # significaria que el dia que el hueco cambie las medallas se salgan del
+    # panel sin que nada falle.
+    ficha_y = fy + FICHA_AIRE
+    ficha_y1 = fy + fh - FICHA_AIRE
+    med_ancho = ficha_x1 - ficha_x0
+    medalla = (med_ancho - MEDALLA_SEP * (MEDALLA_COLS - 1)) // MEDALLA_COLS
+    # Centrado de verdad: lo que sobra al dividir se reparte a los dos lados.
+    med_x0 = ficha_x0 + (med_ancho - (medalla * MEDALLA_COLS
+                                      + MEDALLA_SEP * (MEDALLA_COLS - 1))) // 2
+    alto_filas = FILA_ALTO * (2 + len(FILAS_INFO))       # los dos saldos + las tres
+    medallas_y = ficha_y + alto_filas + FILA_AIRE + TEXTO_ALTO + 6
+    fondo = medallas_y + MEDALLA_FILAS * (medalla + MEDALLA_SEP)
+    if fondo > ficha_y1:
+        raise SystemExit(
+            f"El panel de sesion no cabe: necesita hasta y={fondo} y el hueco "
+            f"acaba en {ficha_y1}. Baja FILA_ALTO o MEDALLA_COLS.")
+    print(f"    FICHA_X0 = {ficha_x0}, FICHA_X1 = {ficha_x1}, FICHA_Y = {ficha_y}")
+    print(f"    FILA_ALTO = {FILA_ALTO}, FILA_ICONO = {FILA_ICONO}")
+    print(f"    MEDALLAS_X = {med_x0}, MEDALLAS_Y = {medallas_y}, "
+          f"MEDALLA = {medalla}, MEDALLA_SEP = {MEDALLA_SEP}")
+    print(f"    (el panel acaba en y={fondo}, el hueco en y={ficha_y1})")
+    print(f"    BOTON = {{      // x, y, ancho, alto")
     for nombre in BOTONES:
         bx, by, bw, bh = sitios[nombre]
         print(f"        {{{bx:>4}, {by:>3}, {bw:>2}, {bh:>2}}},   // {nombre}")
@@ -1073,9 +1270,10 @@ def main() -> None:
         for pag in range(2):
             maqueta(Image.open(SALIDA / "pokepad.png"), iconos,
                     rej_x, rej_y, celda, lado, hueco_y,
-                    (cara_x, cara_y), sitios, (saldo_cx, saldo_cy),
-                    (tarj_x, tarj_y, tarj_der), (moneda_x, moneda_y),
-                    saldos, pag)
+                    (cara_x, cara_y), sitios,
+                    {"x0": ficha_x0, "x1": ficha_x1, "y": ficha_y,
+                     "medallas": medallas_y, "medalla": medalla,
+                     "med_x": med_x0}, pag)
 
 
 def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
@@ -1088,7 +1286,6 @@ def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
     pantalla = medir_pantalla(chasis)
     bx, by, bw, bh = medir_banda(chasis, pantalla)
     px, py, pw, ph = medir_panel_superior(chasis)
-    qx, qy, qw, qh = medir_cuadro(chasis, cajas[2])
 
     sitios = {}
     ancho_b, alto_b = BOTON_BANDA
@@ -1103,11 +1300,12 @@ def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
     en_panel = sorted((n for n in BOTONES if SITIOS[n][0] == "panel"),
                       key=lambda n: SITIOS[n][1])
     botones_w = len(en_panel) * ancho_p + (len(en_panel) - 1) * BOTON_SEP_X
-    total = 2 * grupo + 2 * BARRA_HUECO + botones_w
-    if total > pw - BARRA_MARGEN:
-        raise SystemExit(f"La barra de sesion no cabe: {total} en {pw}")
-    barra_x = px + pw - BARRA_MARGEN - total
-    fila_x = barra_x + 2 * grupo + 2 * BARRA_HUECO
+    # En la banda de arriba solo van `ajustes` y `cerrar`: los saldos se han
+    # mudado a la ficha del panel izquierdo, que es donde el chasis les hizo
+    # sitio de verdad.
+    if botones_w > pw - BARRA_MARGEN:
+        raise SystemExit(f"Los botones no caben: {botones_w} en {pw}")
+    fila_x = px + pw - BARRA_MARGEN - botones_w
 
     for nombre in BOTONES:
         sitio, i = SITIOS[nombre]
@@ -1117,9 +1315,6 @@ def colocar_botones(chasis: Image.Image, cajas: list) -> dict:
             centro = bx + bw * (2 * i + 1) // 4
             sitios[nombre] = (centro - ancho_b // 2,
                               by + (bh - alto_b) // 2, ancho_b, alto_b)
-        elif sitio == "cuadro":
-            sitios[nombre] = (qx + (qw - ancho_c) // 2,
-                              qy + (qh - alto_c) // 2, ancho_c, alto_c)
         else:
             sitios[nombre] = (fila_x + i * (ancho_p + BOTON_SEP_X),
                               py + (ph - alto_p) // 2, ancho_p, alto_p)
@@ -1160,8 +1355,51 @@ def candado_provisional(lado: int) -> Image.Image:
     return img
 
 
+def descargar_medallas() -> dict:
+    """Las medallas del mod de CobbleVerse, SOLO para la maqueta.
+
+    ⚠ NO se copian a nuestros assets, y no es un detalle: el mod es
+    CC-BY-NC-ND. En el juego el Pad las referencia por identificador —el mod va
+    instalado en el cliente, asi que sus texturas ya estan cargadas— y aqui solo
+    se bajan a `build/` para poder ENSENAR como queda el panel. `build/` no se
+    publica.
+
+    Si el manifiesto no esta generado todavia, se devuelve vacio y la maqueta
+    dibuja recuadros: preferible a no poder verla.
+    """
+    import io
+    import json
+    import urllib.request
+    import zipfile
+    cache = SALIDA.parent / "medallas"
+    if cache.exists() and any(cache.iterdir()):
+        return {p.stem: Image.open(p).convert("RGBA")
+                for p in cache.glob("*.png")}
+    manifiesto = RAIZ / "build" / "pack" / "manifest.json"
+    if not manifiesto.exists():
+        return {}
+    try:
+        entrada = next(f for f in json.loads(manifiesto.read_text(encoding="utf-8"))["files"]
+                       if "CobbleverseBadges" in f["path"])
+        z = zipfile.ZipFile(io.BytesIO(urllib.request.urlopen(urllib.request.Request(
+            entrada["url"], headers={"User-Agent": "PokeReport/0.1"})).read()))
+    except Exception as e:                       # noqa: BLE001
+        print(f"  medallas  no se pudieron bajar ({e})")
+        return {}
+    cache.mkdir(parents=True, exist_ok=True)
+    salida = {}
+    for nombre in MEDALLA_ORDEN:
+        ruta = f"assets/cobbleversebadges/textures/item/{nombre}_badge.png"
+        if ruta not in z.namelist():
+            continue
+        (cache / f"{nombre}.png").write_bytes(z.read(ruta))
+        salida[nombre] = Image.open(cache / f"{nombre}.png").convert("RGBA")
+    print(f"  medallas  {len(salida)} bajadas a build/ (solo para la maqueta)")
+    return salida
+
+
 def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
-            cara, sitios, saldo, tarj, moneda, plata, pagina=0) -> None:
+            cara, sitios, panel, pagina=0) -> None:
     """Monta una pantalla con las celdas dibujadas como las dibuja el juego:
     rectangulos planos. Ver docs/ui/prompts-arte-pokepad.md §4.
 
@@ -1240,39 +1478,94 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
     d.rectangle([cara[0], cara[1], cara[0] + CARA_LADO - 1, cara[1] + CARA_LADO - 1],
                 fill=(150, 110, 90, 255), outline=(210, 170, 150, 255), width=2)
 
-    # LA TARJETA DE ENTRENADOR. Mismos numeros que PokePadScreen: si la
-    # maqueta no ensena lo que se va a ver, no sirve para aprobar nada.
+    # EL PANEL DE SESION. Mismos numeros que PokePadScreen: si la maqueta no
+    # ensena lo que se va a ver, no sirve para aprobar nada.
     try:
         fuente = ImageFont.truetype("arial.ttf", TEXTO_ALTO)
-        gorda = ImageFont.truetype("arial.ttf", 22)
+        gorda = ImageFont.truetype("arial.ttf", 27)
+        chica = ImageFont.truetype("arialbd.ttf", TEXTO_ALTO)
     except OSError:
-        fuente = gorda = ImageFont.load_default()
-    llena = Image.open(SALIDA / "estrella.png").convert("RGBA")
-    vacia = Image.open(SALIDA / "estrella_vacia.png").convert("RGBA")
-    for i, nombre in enumerate(VIAS):
-        y = tarj[1] + i * TARJ_FILA
-        d.text((tarj[0], y), nombre, font=fuente, fill=TARJ_COLOR)
-        for e in range(5):
-            px = tarj[2] - (5 - e) * (ESTRELLA + ESTRELLA_SEP)
-            out.alpha_composite(llena if e < NIVELES_MAQUETA[i] else vacia,
-                                (px, y + 2))
+        fuente = gorda = chica = ImageFont.load_default()
 
-    # LA BARRA DE SESION: los dos saldos, cada uno con su moneda y su "+".
-    #
-    # Los dos arriba y juntos: son el mismo tipo de dato y asi se comparan de
-    # una mirada. La ranura de abajo a la izquierda queda LIBRE.
-    boton_mas = (Image.open(SALIDA / "boton_mas.png").convert("RGBA")
-                 .resize(BARRA_MAS, Image.LANCZOS)
-                 if (SALIDA / "boton_mas.png").exists() else None)
-    for s, arte, valor, color in (
-            (plata[0], "plata.png", "12,345", (226, 232, 242, 255)),
-            (plata[1], "lunacoin.png", "48", (255, 211, 74, 255))):
+    x0f, x1f, y0f = panel["x0"], panel["x1"], panel["y"]
+
+    def celda_fila(yy, x_ini=None, x_fin=None, fondo=FILA_FONDO,
+                   borde=FILA_BORDE, alto=None, fuera=PANEL_FONDO):
+        """La misma celda que dibuja PokePadScreen: plana, con borde y las
+        cuatro esquinas mordidas del color del fondo de debajo."""
+        xa = x0f if x_ini is None else x_ini
+        xb = x1f if x_fin is None else x_fin
+        h = FILA_CELDA if alto is None else alto
+        d.rectangle([xa, yy, xb - 1, yy + h - 1], fill=fondo, outline=borde,
+                    width=BORDE)
+        for ex, ey in ((xa, yy), (xb - MORDIDA, yy),
+                       (xa, yy + h - MORDIDA), (xb - MORDIDA, yy + h - MORDIDA)):
+            d.rectangle([ex, ey, ex + MORDIDA - 1, ey + MORDIDA - 1], fill=fuera)
+
+    y = y0f
+    # Las dos monedas, cada una en su celda.
+    for arte, valor, color, con_mas in (
+            ("plata.png", "12,345", (226, 232, 242, 255), False),
+            ("lunacoin.png", "48", (255, 211, 74, 255), True)):
+        celda_fila(y)
         if (SALIDA / arte).exists():
             out.alpha_composite(Image.open(SALIDA / arte).convert("RGBA"),
-                                tuple(s["moneda"]))
-        d.text(tuple(s["centro"]), valor, font=gorda, fill=color, anchor="mm")
-        if boton_mas:
-            out.alpha_composite(boton_mas, tuple(s["mas"]))
+                                (x0f + FILA_PAD, y + (FILA_CELDA - MONEDA) // 2))
+        d.text((x0f + FILA_PAD + MONEDA + 12, y + FILA_CELDA // 2), valor,
+               font=gorda, fill=color, anchor="lm")
+        if con_mas:
+            # El "+": su propia celda pequena y dos barras cruzadas. Apagado,
+            # porque todavia no hay tienda a la que llevar.
+            mx = x1f - FILA_PAD - MAS_LADO
+            my = y + (FILA_CELDA - MAS_LADO) // 2
+            celda_fila(my, mx, mx + MAS_LADO, alto=MAS_LADO, fuera=FILA_FONDO,
+                       borde=(150, 161, 192, 255))
+            cx, cy = mx + MAS_LADO // 2, my + MAS_LADO // 2
+            d.rectangle([cx - MAS_BRAZO // 2, cy - MAS_GROSOR // 2,
+                         cx + MAS_BRAZO // 2, cy + MAS_GROSOR // 2],
+                        fill=MAS_APAGADO)
+            d.rectangle([cx - MAS_GROSOR // 2, cy - MAS_BRAZO // 2,
+                         cx + MAS_GROSOR // 2, cy + MAS_BRAZO // 2],
+                        fill=MAS_APAGADO)
+        y += FILA_ALTO
+
+    # Clan, trabajo y division. Guion en los tres: hoy no hay sistema detras y
+    # la maqueta tiene que ensenar el estado REAL, no uno inventado.
+    for fila in FILAS_INFO:
+        celda_fila(y)
+        icono = SALIDA / f"fila_{fila}.png"
+        if icono.exists():
+            out.alpha_composite(Image.open(icono).convert("RGBA"),
+                                (x0f + FILA_PAD, y + (FILA_CELDA - FILA_ICONO) // 2))
+        d.text((x0f + FILA_PAD + FILA_ICONO + 12, y + FILA_CELDA // 2),
+               ETIQUETAS[fila], font=fuente, fill=(159, 176, 212, 255),
+               anchor="lm")
+        d.text((x1f - FILA_PAD, y + FILA_CELDA // 2), "-", font=fuente,
+               fill=(255, 255, 255, 255), anchor="rm")
+        y += FILA_ALTO
+
+    # LAS MEDALLAS. Las dieciseis, apagadas las que no se tienen.
+    d.text((x0f, panel["medallas"] - TEXTO_ALTO - 6), "MEDALLAS", font=chica,
+           fill=(159, 176, 212, 255))
+    medallas = descargar_medallas()
+    paso = panel["medalla"] + MEDALLA_SEP
+    for i, nombre in enumerate(MEDALLA_ORDEN):
+        mx = panel["med_x"] + (i % MEDALLA_COLS) * paso
+        my = panel["medallas"] + (i // MEDALLA_COLS) * paso
+        im = medallas.get(nombre)
+        if im is None:
+            d.rectangle([mx, my, mx + panel["medalla"] - 1,
+                         my + panel["medalla"] - 1],
+                        outline=(90, 100, 130, 255), width=2)
+            continue
+        im = im.resize((panel["medalla"], panel["medalla"]), Image.NEAREST)
+        if i >= MEDALLAS_MAQUETA:
+            # El mismo tinte que el codigo: MULTIPLICA, no repinta.
+            a = np.array(im).astype(int)
+            for c, v in enumerate((0x3C, 0x42, 0x58)):
+                a[..., c] = a[..., c] * v // 255
+            im = Image.fromarray(a.astype(np.uint8), "RGBA")
+        out.alpha_composite(im, (mx, my))
 
     # Sin ampliar. El chasis ya mide 1380x828, que es el tamano al que se va a
     # dibujar en pantalla: ampliarlo ensenaria algo que nadie va a ver. Antes se

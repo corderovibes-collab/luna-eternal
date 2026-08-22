@@ -47,6 +47,11 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(Red.Cosmeticos.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
+        // Las cinco Vias. Llegan al abrir Trabajos, no antes: nadie las mira
+        // el resto del tiempo.
+        ClientPlayNetworking.registerGlobalReceiver(Red.Trabajos.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
         // Quien lleva que. Llega al entrar --lo de todos-- y cada vez que
         // alguien se pone o se quita algo. Es lo que hace que un cosmetico lo
         // vean los DEMAS y no solo su dueño en la tienda.

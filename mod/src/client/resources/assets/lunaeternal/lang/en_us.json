@@ -45,6 +45,7 @@
   "pokepad.lunaeternal.inicio": "HOME",
   "pokepad.lunaeternal.medallas": "MEDALLAS",
   "pokepad.lunaeternal.necesitas_pokemon": "You need a %s in your party to use this outfit.",
+  "pokepad.lunaeternal.nivel_total": "TOTAL LEVEL",
   "pokepad.lunaeternal.ordenar.coge": "Pick an icon to move it",
   "pokepad.lunaeternal.ordenar.suelta": "Pick where to put it",
   "pokepad.lunaeternal.proximamente": "Coming soon",
@@ -59,6 +60,9 @@
   "pokepad.lunaeternal.via.2": "Collector",
   "pokepad.lunaeternal.via.3": "Trader",
   "pokepad.lunaeternal.via.4": "Breeder",
+  "pokepad.lunaeternal.via_maxima": "MAXED",
+  "pokepad.lunaeternal.via_ninguna": "None yet",
+  "pokepad.lunaeternal.via_principal": "MAIN PATH",
   "pokepad.lunaeternal.voz.oir": "Play description",
   "pokepad.lunaeternal.voz.sin": "No recording yet",
   "subtitles.lunaeternal.pokedex.voz": "Pokédex description"

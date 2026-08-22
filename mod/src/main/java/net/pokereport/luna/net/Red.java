@@ -307,6 +307,68 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «Dame mis Vías», al abrir la pantalla de Trabajos. */
+    public record PedirTrabajos() implements CustomPayload {
+        public static final Id<PedirTrabajos> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_trabajos"));
+        public static final PacketCodec<RegistryByteBuf, PedirTrabajos> CODEC =
+                PacketCodec.unit(new PedirTrabajos());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Una Vía con su progreso REAL.
+     *
+     * <p>⚠ Viaja la XP en bruto y el umbral, no un porcentaje. Un porcentaje ya
+     * calculado impide enseñar «1.240 / 3.000», que es lo que deja ver cuánto
+     * falta de verdad; y si algún día la curva cambia, el cliente seguiría
+     * dibujando la barra bien sin tocar nada.
+     *
+     * <p>{@code xpSiguiente == 0} significa <b>nivel máximo</b>. Se manda un cero
+     * en vez de {@code Long.MAX_VALUE} —que es lo que devuelve la curva— porque
+     * el cliente tendría que conocer ese centinela para no dibujar una barra
+     * llena al 0,0000001 %.
+     */
+    public record ViaEstado(String id, int nivel, long xp, long xpSiguiente) {
+        public static final PacketCodec<RegistryByteBuf, ViaEstado> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, ViaEstado::id,
+                        PacketCodecs.VAR_INT, ViaEstado::nivel,
+                        PacketCodecs.VAR_LONG, ViaEstado::xp,
+                        PacketCodecs.VAR_LONG, ViaEstado::xpSiguiente,
+                        ViaEstado::new);
+
+        public boolean alMaximo() {
+            return xpSiguiente <= 0;
+        }
+    }
+
+    /**
+     * Las cinco Vías del jugador.
+     *
+     * <p>⚠ <b>Van las cinco SIEMPRE</b>, incluidas las que están a cero. Mandar
+     * solo las empezadas dejaría la pantalla con huecos cambiantes, y sobre todo
+     * escondería las que aún no has tocado — que son justo las que el jugador
+     * necesita ver para saber que existen.
+     */
+    public record Trabajos(List<ViaEstado> vias) implements CustomPayload {
+        public static final Id<Trabajos> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "trabajos"));
+        public static final PacketCodec<RegistryByteBuf, Trabajos> CODEC =
+                PacketCodec.tuple(
+                        ViaEstado.CODEC.collect(PacketCodecs.toList()), Trabajos::vias,
+                        Trabajos::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /**
      * Las categorías que <b>ven los demás</b> y por tanto hay que difundir.
      *
@@ -406,6 +468,8 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(AccionCosmetico.ID, AccionCosmetico.CODEC);
         PayloadTypeRegistry.playS2C().register(Cosmeticos.ID, Cosmeticos.CODEC);
         PayloadTypeRegistry.playS2C().register(LlevaPuesto.ID, LlevaPuesto.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirTrabajos.ID, PedirTrabajos.CODEC);
+        PayloadTypeRegistry.playS2C().register(Trabajos.ID, Trabajos.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -455,6 +519,35 @@ public class Red implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(PedirCosmeticos.ID, (carga, ctx) -> {
             var jugador = ctx.player();
             LunaEternal.submit(() -> enviarCosmeticos(jugador));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirTrabajos.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                try {
+                    long id = LunaEternal.players()
+                            .resolve(jugador.getUuid(), jugador.getName().getString());
+                    var niveles = LunaEternal.progression().all(id);
+                    List<ViaEstado> vias = new ArrayList<>(Path.values().length);
+                    for (Path via : Path.values()) {
+                        var estado = niveles.get(via);
+                        int nivel = estado == null ? 0 : estado.level();
+                        long xp = estado == null ? 0 : estado.xp();
+                        // ⚠ El cero de «nivel maximo» se decide AQUI y no en el
+                        //   cliente: la curva es del servidor, y el centinela que
+                        //   devuelve (Long.MAX_VALUE) es un detalle suyo.
+                        long falta = nivel >= Path.MAX_LEVEL
+                                ? 0 : Path.xpForNextLevel(nivel);
+                        vias.add(new ViaEstado(via.name(), nivel, xp, falta));
+                    }
+                    var carga2 = new Trabajos(vias);
+                    jugador.getServer().execute(
+                            () -> ServerPlayNetworking.send(jugador, carga2));
+                } catch (Exception e) {
+                    LunaEternal.LOG.warn("No se pudieron leer las vias de {}: {}",
+                            jugador.getName().getString(), e.toString());
+                }
+            });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(AccionCosmetico.ID, (carga, ctx) -> {

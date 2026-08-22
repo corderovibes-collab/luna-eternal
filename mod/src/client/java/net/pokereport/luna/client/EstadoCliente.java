@@ -19,6 +19,7 @@ public final class EstadoCliente {
     private static Red.Saldo saldo;
     private static Red.Ficha ficha;
     private static Red.Cosmeticos cosmeticos;
+    private static Red.Trabajos trabajos;
 
     private EstadoCliente() {}
 
@@ -52,12 +53,22 @@ public final class EstadoCliente {
      * vacia mientras el paquete esta en vuelo hace creer que no hay nada a la
      * venta.
      */
+    public static void guardar(Red.Trabajos nuevos) {
+        trabajos = nuevos;
+    }
+
+    /** Las Vias. {@code null} hasta que llega la respuesta a `PedirTrabajos`. */
+    public static Red.Trabajos trabajos() {
+        return trabajos;
+    }
+
     public static Red.Cosmeticos cosmeticos() {
         return cosmeticos;
     }
 
     /** Al salir del mundo se olvida: el saldo es de esa partida, no del cliente. */
     public static void olvidar() {
+        trabajos = null;
         saldo = null;
         ficha = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo

@@ -45,6 +45,7 @@
   "pokepad.lunaeternal.inicio": "INICIO",
   "pokepad.lunaeternal.medallas": "MEDALLAS",
   "pokepad.lunaeternal.necesitas_pokemon": "Necesitas un %s en tu equipo para ponerle este disfraz.",
+  "pokepad.lunaeternal.nivel_total": "NIVEL TOTAL",
   "pokepad.lunaeternal.ordenar.coge": "Elige un icono para moverlo",
   "pokepad.lunaeternal.ordenar.suelta": "Elige dónde ponerlo",
   "pokepad.lunaeternal.proximamente": "Próximamente",
@@ -59,6 +60,9 @@
   "pokepad.lunaeternal.via.2": "Coleccionista",
   "pokepad.lunaeternal.via.3": "Comerciante",
   "pokepad.lunaeternal.via.4": "Criador",
+  "pokepad.lunaeternal.via_maxima": "AL MAXIMO",
+  "pokepad.lunaeternal.via_ninguna": "Ninguna todavia",
+  "pokepad.lunaeternal.via_principal": "VIA PRINCIPAL",
   "pokepad.lunaeternal.voz.oir": "Oír la descripción",
   "pokepad.lunaeternal.voz.sin": "Sin descripción grabada",
   "subtitles.lunaeternal.pokedex.voz": "Descripción de la Pokédex"

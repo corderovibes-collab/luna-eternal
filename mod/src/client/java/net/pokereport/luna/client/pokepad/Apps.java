@@ -58,6 +58,7 @@ public final class Apps {
         return switch (app.id()) {
             case "pokedex" -> abrirPokedex();
             case "cosmeticos" -> abrirCosmeticos();
+            case "trabajos" -> abrirTrabajos();
             default -> false;
         };
     }
@@ -70,6 +71,12 @@ public final class Apps {
      * volver -- si volviera creando un PokePadScreen nuevo, se perderia en que
      * pagina de aplicaciones estaba el jugador.
      */
+    private static boolean abrirTrabajos() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new TrabajosScreen(cliente.currentScreen));
+        return true;
+    }
+
     private static boolean abrirCosmeticos() {
         MinecraftClient cliente = MinecraftClient.getInstance();
         cliente.setScreen(new CosmeticosScreen(cliente.currentScreen));

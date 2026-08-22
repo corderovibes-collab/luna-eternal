@@ -234,9 +234,27 @@ public class Red implements ModInitializer {
                         PacketCodecs.INTEGER, AccionCosmetico::ranura,
                         AccionCosmetico::new);
 
-        /** Comprar, en vez de equipar. */
+        /** Comprar. Sin ranura porque no se le pone a nadie. */
+        public static final int COMPRAR = -1;
+        /** Equipar y que el SERVIDOR elija la ranura: el cliente no lee su equipo. */
+        public static final int AUTOMATICA = -2;
+
+        /**
+         * ⚠⚠ ESTO ERA `ranura < 0`, Y SE TRAGABA LAS DOS.
+         *
+         * Con -1 = comprar y -2 = equipar, "menor que cero" es verdad para
+         * ambas: pulsar EQUIPAR mandaba -2, el servidor lo tomaba por una compra
+         * y contestaba "ya tienes ese cosmetico". El mensaje era correcto para
+         * lo que el servidor creia estar haciendo, y por eso despistaba: no
+         * sonaba a fallo de codigo, sonaba a que la tienda te llevaba la
+         * contraria.
+         *
+         * Dos centinelas negativos con una comprobacion de signo es un error
+         * esperando: por eso ahora son constantes con nombre y la comparacion es
+         * exacta.
+         */
         public boolean esCompra() {
-            return ranura < 0;
+            return ranura == COMPRAR;
         }
 
         @Override
@@ -368,7 +386,6 @@ public class Red implements ModInitializer {
                     .resolve(jugador.getUuid(), jugador.getName().getString());
             var svc = LunaEternal.cosmetics();
             var poseidos = svc.poseidos(id);
-            var equipados = svc.equipados(id);
             long saldo = LunaEternal.economy().balance(id, Currency.REPORTCOIN);
 
             List<PiezaCosmetica> piezas = new ArrayList<>();
@@ -377,7 +394,8 @@ public class Red implements ModInitializer {
                 if (poseidos.contains(p.id())) {
                     banderas |= PiezaCosmetica.POSEIDO;
                 }
-                if (p.id().equals(equipados.get(p.categoria()))) {
+                // ⚠ Se lee del POKEMON, no de la tabla. Ver `loLleva`.
+                if (net.pokereport.luna.cosmetics.CosmeticsService.loLleva(jugador, p)) {
                     banderas |= PiezaCosmetica.EQUIPADO;
                 }
                 if (p.aspecto().isEmpty()

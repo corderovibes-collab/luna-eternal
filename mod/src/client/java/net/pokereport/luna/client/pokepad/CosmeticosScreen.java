@@ -617,8 +617,9 @@ public class CosmeticosScreen extends Screen {
         //   El unico caso que quedaria fuera es llevar DOS de la misma especie y
         //   querer elegir cual. Si eso llega a importar, aqui es donde se abre
         //   la tira de eleccion.
-        // -1 comprar · -2 equipar y que el servidor elija la ranura.
-        int ranura = est == Cosmetico.Estado.COMPRAR ? -1 : -2;
+        int ranura = est == Cosmetico.Estado.COMPRAR
+                ? Red.AccionCosmetico.COMPRAR
+                : Red.AccionCosmetico.AUTOMATICA;
         ClientPlayNetworking.send(new Red.AccionCosmetico(c.id(), ranura));
     }
 

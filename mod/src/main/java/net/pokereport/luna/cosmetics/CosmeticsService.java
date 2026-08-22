@@ -349,6 +349,38 @@ public class CosmeticsService {
                 pokemon.getSpecies().getResourceIdentifier().toString());
     }
 
+    /**
+     * ¿Hay algún Pokémon del equipo llevando ESTE disfraz ahora mismo?
+     *
+     * <p>⚠⚠ LA VERDAD ESTA EN EL POKEMON, NO EN UNA TABLA NUESTRA.
+     *
+     * Antes «equipado» salia de `player_cosmetic_equipped`, que se escribia al
+     * equipar. Con el cambio a disfraces eso dejo de ser cierto por dos motivos:
+     *
+     *   1. El disfraz lo lleva el POKEMON, y puede perderlo por caminos que no
+     *      pasan por nosotros -- un comando, otro mod, una transferencia.
+     *   2. Aquella tabla guardaba UNO POR CATEGORIA. Ahora puedes tener a la vez
+     *      un Charizard con armadura y un Snorlax de cocinero: los dos son
+     *      «mascotas», asi que la tabla solo podia recordar uno y mentia sobre
+     *      el otro.
+     *
+     * Leyendolo del equipo no hay nada que sincronizar y no puede desfasarse.
+     */
+    public static boolean loLleva(net.minecraft.server.network.ServerPlayerEntity jugador,
+                                  Catalogo.Pieza pieza) {
+        if (pieza.aspecto().isEmpty()) {
+            return false;
+        }
+        var equipo = com.cobblemon.mod.common.Cobblemon.INSTANCE.getStorage().getParty(jugador);
+        for (int i = 0; i < 6; i++) {
+            var p = equipo.get(i);
+            if (p != null && coincide(p, pieza) && p.getAspects().contains(pieza.aspecto())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** La primera ranura del equipo que sirve para ese cosmetico, o -1. */
     public static int primeraRanura(net.minecraft.server.network.ServerPlayerEntity jugador,
                                     Catalogo.Pieza pieza) {

@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import net.fabricmc.fabric.api.client.model.loading.v1.FabricBakedModelManager;
 import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
 import net.minecraft.client.MinecraftClient;
@@ -90,6 +91,10 @@ public final class Sombreros {
      */
     private static volatile String previsualizado;
 
+    /** Ver `render`: el ItemStack no puede estar vacio, aunque no se vea. */
+    private static final ItemStack SOPORTE =
+            new ItemStack(net.minecraft.item.Items.CARVED_PUMPKIN);
+
     public static void probar(String cosmeticId) {
         previsualizado = cosmeticId;
     }
@@ -133,13 +138,19 @@ public final class Sombreros {
         ModelLoadingPlugin.register(ctx -> ctx.addModels(ids));
     }
 
-    /** Engancha el dibujado a los dos modelos de jugador (normal y de brazo fino). */
+    /**
+     * Engancha el dibujado a los dos modelos de jugador (normal y de brazo fino).
+     *
+     * <p>Se usa el {@code RegistrationHelper} que da el evento y no
+     * {@code addFeature} directamente: es la via que Fabric declara para esto, y
+     * la otra es un metodo protegido al que se llega por accidente.
+     */
     public static void registrarDibujado() {
         LivingEntityFeatureRendererRegistrationCallback.EVENT.register(
                 (tipo, renderizador, ayuda, ctx) -> {
                     if (renderizador instanceof
                             net.minecraft.client.render.entity.PlayerEntityRenderer pr) {
-                        pr.addFeature(new Capa(pr));
+                        ayuda.register(new Capa(pr));
                     }
                 });
     }
@@ -165,28 +176,43 @@ public final class Sombreros {
                 return;
             }
             var cliente = MinecraftClient.getInstance();
-            var horneado = cliente.getBakedModelManager()
-                    .getModel(ModelIdentifier.ofInventoryVariant(modeloDe(id)));
+
+            // ⚠⚠ `FabricBakedModelManager.getModel(Identifier)`, NO el `getModel`
+            //    de vanilla. Son dos cosas distintas y se parecen demasiado:
+            //
+            //      vanilla   getModel(ModelIdentifier)   los modelos del JUEGO
+            //      Fabric    getModel(Identifier)        los que añade un mod
+            //
+            //    Los nuestros entran por `addModels`, o sea por el segundo. Con
+            //    el primero devuelve el modelo de «falta esto» --nunca null-- y
+            //    ademas ese no se dibuja: NO SALIA NADA, sin un solo error.
+            var horneado = ((FabricBakedModelManager) cliente.getBakedModelManager())
+                    .getModel(modeloDe(id));
             if (horneado == null) {
                 return;
             }
 
             m.push();
-            // ⚠ SE ENGANCHA AL HUESO DE LA CABEZA, no a la posición del jugador.
-            //   Así el sombrero hereda la rotación y el balanceo sin una línea de
-            //   animación: si la cabeza mira arriba, el sombrero mira arriba. Y
-            //   funciona igual agachado, nadando y durmiendo, que son tres casos
-            //   que a mano habría que tratar uno por uno.
+            // ⚠ ESTA SECUENCIA ES LA DE `HeadFeatureRenderer` DE VANILLA, Y EL
+            //   ORDEN IMPORTA. Yo la habia escrito «a ojo» --rotar, trasladar,
+            //   escalar, recentrar-- y el sombrero salia desplazado y del reves.
+            //   Los modelos ya traen su propia transformacion `head` (una
+            //   traslacion fina), y `ModelTransformationMode.HEAD` la aplica: lo
+            //   de aqui solo lleva el origen a la cabeza.
             getContextModel().head.rotate(m);
-
-            // Los modelos vienen pensados para dibujarse como un objeto en la
-            // cabeza, así que el centro está en (0.5, 0.5, 0.5) de su cubo.
-            m.translate(0.0, -0.25, 0.0);
+            m.translate(0.0f, -0.25f, 0.0f);
+            m.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(180.0f));
             m.scale(0.625f, -0.625f, -0.625f);
-            m.translate(-0.5, -0.5, -0.5);
 
+            // ⚠⚠ EL ItemStack NO PUEDE ESTAR VACIO. `renderItem` empieza con
+            //    `if (!stack.isEmpty())` y se va sin dibujar: con `ItemStack.EMPTY`
+            //    no sale nada y no hay ni excepcion ni aviso. El objeto no se ve
+            //    --la geometria la pone el modelo que le pasamos-- pero tiene que
+            //    existir. Se usa la calabaza tallada porque es lo que los packs
+            //    originales usaban de percha, asi que si algun dia algo mira el
+            //    objeto, encuentra lo que espera.
             cliente.getItemRenderer().renderItem(
-                    ItemStack.EMPTY, ModelTransformationMode.HEAD, false,
+                    SOPORTE, ModelTransformationMode.HEAD, false,
                     m, vc, luz, OverlayTexture.DEFAULT_UV, horneado);
             m.pop();
         }

@@ -48,8 +48,26 @@ JAVA = RAIZ / "mod" / "src" / "main" / "java" / "net" / "pokereport" / "luna" / 
 ASSETS = RAIZ / "neon" / "src" / "main" / "resources" / "resourcepacks" / "cosmeticos"
 
 # `dex/` y `msd/` son variantes del MISMO cosmetico para formas concretas
-# (megas). Contarlas daria tres Charizard `knight` en la rejilla.
-SUBCARPETAS_VARIANTES = ("dex", "msd")
+# (megas). Contarlas daria tres Charizard `knight` en la rejilla. `mega/` es la
+# carpeta donde Cosmetic Expansion mete las megaevoluciones enteras.
+SUBCARPETAS_VARIANTES = ("dex", "msd", "mega")
+
+# ⚠⚠ ASPECTOS QUE SON UN CAMBIO DE FORMA, NO UN DISFRAZ.
+#
+#   Lo reporto el usuario: «agregaste mega evoluciones pero en realidad no son
+#   cosmeticos, son evoluciones». Y tenia razon: Cosmetic Expansion declara
+#   `mega`, `mega_x` y `mega_y` como aspectos sueltos --el mismo mecanismo que un
+#   disfraz-- porque necesita el modelo de la forma mega para poder dibujar SUS
+#   cosmeticos encima de ella.
+#
+#   Vender eso seria vender una megaevolucion por 4.000 LunaCoins, que no es un
+#   cosmetico: es progresion, y la progresion NO SE VENDE (P4, D-014).
+#
+#   ⚠ NO se excluye por contener "mega": `mega_glove` (un guante de Lucario) y
+#     `armor_evo`/`armored` (la armadura de Mewtwo) SI son cosmeticos. La lista es
+#     de formas EXACTAS a proposito -- una heuristica por subcadena se llevaria
+#     por delante tres cosmeticos legitimos.
+FORMAS_NO_COSMETICAS = {"mega", "mega_x", "mega_y", "gmax", "gigantamax", "eternamax"}
 
 # Precios PROVISIONALES por tramos. CLAUDE.md dice que la economia se calibra con
 # datos reales; esto solo reparte para que la tienda no tenga todo al mismo
@@ -150,8 +168,12 @@ def leer_mascotas(zips):
         for n in z.namelist():
             if "/resolvers/" not in n or not n.endswith(".json"):
                 continue
-            sub = n.split("/resolvers/")[1].rsplit("/", 1)[0]
-            if sub.rsplit("/", 1)[-1] in SUBCARPETAS_VARIANTES:
+            # ⚠ SE MIRAN TODOS LOS TRAMOS, no solo el ultimo. Estaba mirando
+            #   solo el ultimo, y `cosmetic/mega/0150_mewtwo` acaba en
+            #   `0150_mewtwo`: las megaevoluciones de Cosmetic Expansion se
+            #   colaron enteras y llegaron a la tienda.
+            tramos = n.split("/resolvers/")[1].split("/")[:-1]
+            if any(x in SUBCARPETAS_VARIANTES for x in tramos):
                 continue
             datos = json.loads(z.read(n))
             especie = datos.get("species", "").split(":")[-1].strip().lower()
@@ -163,6 +185,9 @@ def leer_mascotas(zips):
                 # el mismo cosmetico sobre otra forma. Y con modelo: una variacion
                 # sin el es un recoloreado que hereda el del cosmetico base.
                 if len(aspectos) != 1 or not var.get("model"):
+                    continue
+                if aspectos[0] in FORMAS_NO_COSMETICAS:
+                    descartados.append((nombre, especie, aspectos[0], "es una FORMA, no un disfraz"))
                     continue
                 poser = (var.get("poser") or "").split(":")[-1]
                 # Solo se rechaza si el pack nombra un poser SUYO y no lo trae:
@@ -336,8 +361,19 @@ def copiar_assets(zips, sombreros):
         d = json.loads(modelo)
         d["textures"] = {k: "lunaeternal:sombreros/" + ident
                          for k in (d.get("textures") or {})}
-        # `parent` de estos modelos suele ser `block/block`, que existe en
-        # vanilla: se conserva.
+
+        # ⚠⚠ SE QUITA EL `parent`, Y NO ES LIMPIEZA: SIN ESTO EL MODELO NO CARGA.
+        #
+        #   Cinco de los seis modelos de Cobblemon Accessories traen
+        #   `"parent": "ash_journey"` --un nombre SUELTO, sin espacio de
+        #   nombres--, que Minecraft resuelve como `minecraft:ash_journey` y no
+        #   existe. Son restos de Blockbench, o apuntan a los SUBMODELOS que no
+        #   copiamos (`lilie_hat3`, `dawn_hat2`).
+        #
+        #   Los 46 traen su propia geometria, su propio `display` y sus propias
+        #   texturas, asi que el padre no aporta nada. Y el sintoma de dejarlo no
+        #   es un error: es un sombrero que no se dibuja.
+        d.pop("parent", None)
         (base / "models" / "sombreros").mkdir(parents=True, exist_ok=True)
         (base / "models" / "sombreros" / (ident + ".json")).write_text(
             json.dumps(d, indent=1), encoding="utf-8")

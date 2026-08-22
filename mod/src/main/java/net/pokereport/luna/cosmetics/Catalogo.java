@@ -63,7 +63,6 @@ public final class Catalogo {
     }
 
     public static final String MASCOTAS = "mascotas";
-    public static final String CAPAS = "capas";
     public static final String SOMBREROS = "sombreros";
     public static final String AURAS = "auras";
 
@@ -106,8 +105,19 @@ public final class Catalogo {
         return POR_ID.get(id);
     }
 
-    /** Las categorías, en el orden en que salen las pestañas. */
+    /**
+     * Las categorías, en el orden en que salen las pestañas.
+     *
+     * <p>⚠ <b>Capas se retiró</b> (decisión del usuario). Estaba declarada y
+     * vacía, esperando arte que había que dibujar entero: todas las mods de capas
+     * que existen bajan la capa de un servicio externo indexado por la cuenta de
+     * Mojang, y con {@code online-mode=false} no hay cuenta que consultar.
+     *
+     * <p>La constante se quitó del todo en vez de dejarla sin usar. Nadie había
+     * comprado ninguna —la lista siempre estuvo vacía— así que no hay filas
+     * huérfanas en {@code player_cosmetics}. Si algún día vuelve, vuelve entera.
+     */
     public static List<String> categorias() {
-        return List.of(MASCOTAS, CAPAS, SOMBREROS, AURAS);
+        return List.of(MASCOTAS, SOMBREROS, AURAS);
     }
 }

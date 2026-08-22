@@ -5,7 +5,7 @@ import java.util.List;
 import net.pokereport.luna.cosmetics.Catalogo.Pieza;
 
 /**
- * Los cosméticos <b>del jugador</b>: capas, sombreros y auras.
+ * Los cosméticos <b>del jugador</b>: sombreros y auras.
  *
  * <p>Se escriben a mano, al contrario que {@link CatalogoMascotas}, y es la
  * decisión correcta por el mismo motivo por el que aquél se genera: <b>el
@@ -17,8 +17,8 @@ import net.pokereport.luna.cosmetics.Catalogo.Pieza;
  *
  * Las cuatro pestañas vienen de la petición original: <i>«arriba va a estar un
  * diseño 3D de tu personaje… los artículos cosméticos para tu personaje,
- * mascotas, etc»</i>. «Mascotas» acabó siendo Pokémon disfrazados; las otras
- * tres siguen siendo lo que se pidió — <b>cosas que lleva el jugador</b>. Por eso
+ * mascotas, etc»</i>. «Mascotas» acabó siendo Pokémon disfrazados; las
+ * demás siguen siendo lo que se pidió — <b>cosas que lleva el jugador</b>. Por eso
  * su equipado vive en {@code player_cosmetic_equipped} y no en el Pokémon.
  *
  * <h2>Las auras no tienen arte, y es a propósito</h2>
@@ -141,17 +141,6 @@ public final class CatalogoLuna {
     }
 
     /**
-     * Capas y sombreros: <b>todavía vacíos, y a la vista.</b>
-     *
-     * <p>Se dejan declarados en vez de no existir para que la pestaña salga
-     * vacía en vez de fallar, y para que el sitio donde van esté escrito. Lo que
-     * falta es <b>arte</b>: D-032 dice que se dibuja y no se baja, porque el arte
-     * que circula es ARR o CC-BY-NC — la misma cláusula que descartó CobbleVerse
-     * (D-006) y que choca con la venta de paquetes (D-007).
-     */
-    public static final List<Pieza> CAPAS = List.of();
-
-    /**
      * Los sombreros se GENERAN, al contrario que las auras y las capas.
      *
      * <p>Y por el mismo criterio que separa las otras dos mitades del catalogo:
@@ -178,8 +167,7 @@ public final class CatalogoLuna {
     }
 
     static List<Pieza> piezas() {
-        List<Pieza> todas = new java.util.ArrayList<>(CAPAS);
-        todas.addAll(SOMBREROS);
+        List<Pieza> todas = new java.util.ArrayList<>(SOMBREROS);
         for (PiezaAura p : AURAS) {
             todas.add(p.pieza());
         }

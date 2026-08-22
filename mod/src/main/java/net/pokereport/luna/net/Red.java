@@ -317,8 +317,7 @@ public class Red implements ModInitializer {
      */
     private static final List<String> DIFUNDIDAS = List.of(
             net.pokereport.luna.cosmetics.Catalogo.AURAS,
-            net.pokereport.luna.cosmetics.Catalogo.SOMBREROS,
-            net.pokereport.luna.cosmetics.Catalogo.CAPAS);
+            net.pokereport.luna.cosmetics.Catalogo.SOMBREROS);
 
     /**
      * Cuenta a todos lo que lleva un jugador, y a ese jugador lo de todos.

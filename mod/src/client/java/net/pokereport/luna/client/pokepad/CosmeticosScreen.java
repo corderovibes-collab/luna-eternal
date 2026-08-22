@@ -110,7 +110,28 @@ public class CosmeticosScreen extends Screen {
     private static final int ORO = 0xFFFFD65C;
     private static final int VERDE_PUESTO = 0xFF157A3E;
 
-    private static final String[] CATEGORIAS = { "mascotas", "capas", "sombreros", "auras" };
+    /**
+     * Las pestañas SALEN DEL CATÁLOGO que manda el servidor, no de una lista de
+     * aquí.
+     *
+     * <p>⚠⚠ ESTUVO ESCRITA A MANO Y ERA UN FALLO ESPERANDO. Eran dos listas en
+     * dos lados —{@code Catalogo.categorias()} en el servidor y un array aquí— sin
+     * nada que las atara. Si aquí sobraba una, salía una pestaña vacía para
+     * siempre; si faltaba, <b>sus cosméticos eran inalcanzables aunque el servidor
+     * los mandara</b>. Al retirar «Capas» hubo que acordarse de tocar las dos, y
+     * acordarse no es un mecanismo.
+     *
+     * <p>Ahora se derivan de las piezas recibidas, en su orden de aparición —que
+     * es el de {@code Catalogo.todas()}—. Una categoría sin piezas no sale, que es
+     * exactamente lo que se quiere: una pestaña vacía no es información.
+     *
+     * <p>El respaldo solo cubre el hueco entre abrir la pantalla y que llegue el
+     * catálogo, que es un fotograma o dos. Sin él, la fila de pestañas parpadea al
+     * abrir.
+     */
+    private static final List<String> RESPALDO = List.of("mascotas", "sombreros", "auras");
+
+    private List<String> categorias = RESPALDO;
 
     private final Screen anterior;
 
@@ -166,6 +187,25 @@ public class CosmeticosScreen extends Screen {
                     (p.banderas() & Red.PiezaCosmetica.EQUIPABLE) != 0));
         }
         catalogo = lista;
+
+        // Las pestañas, en el orden en que las piezas llegan --que es el de
+        // `Catalogo.todas()` en el servidor--. Ver el comentario de `RESPALDO`.
+        List<String> cats = new ArrayList<>();
+        for (Cosmetico x : lista) {
+            if (!cats.contains(x.categoria())) {
+                cats.add(x.categoria());
+            }
+        }
+        if (!cats.isEmpty()) {
+            categorias = List.copyOf(cats);
+            // ⚠ La pestaña abierta puede quedarse fuera de rango si el servidor
+            //   retira una categoria mientras la pantalla esta abierta. Sin esto
+            //   seria un IndexOutOfBounds en el siguiente fotograma.
+            if (pestana >= categorias.size()) {
+                pestana = 0;
+                pagina = 0;
+            }
+        }
 
         // Se reengancha el enfoque POR IDENTIFICADOR, no por referencia: la
         // lista se reconstruye entera en cada paquete, asi que el objeto que
@@ -225,7 +265,7 @@ public class CosmeticosScreen extends Screen {
 
     /** Los cosméticos de la pestaña activa. */
     private List<Cosmetico> visibles() {
-        String cat = CATEGORIAS[pestana];
+        String cat = categorias.get(Math.min(pestana, categorias.size() - 1));
         return catalogo.stream().filter(c -> c.categoria().equals(cat)).toList();
     }
 
@@ -393,8 +433,8 @@ public class CosmeticosScreen extends Screen {
 
     private void dibujarPestanas(DrawContext ctx, int rx, int ry) {
         int anchoUtil = PANT_W - 2 * MARGEN;
-        int pw = anchoUtil / CATEGORIAS.length;
-        for (int i = 0; i < CATEGORIAS.length; i++) {
+        int pw = anchoUtil / categorias.size();
+        for (int i = 0; i < categorias.size(); i++) {
             int ax = PANT_X + MARGEN + i * pw, ay = PANT_Y + MARGEN;
             int x = px(ax), y = py(ay), w = pl(pw - 6), h = pl(PESTANA_ALTO);
             boolean activa = i == pestana;
@@ -403,7 +443,7 @@ public class CosmeticosScreen extends Screen {
             ctx.fill(x, y, x + w, y + h, activa || encima ? CELDA_ENCIMA : CELDA_FONDO);
             marco(ctx, x, y, w, h, activa || encima ? BORDE_ENCIMA : CELDA_BORDE,
                     Math.max(1, pl(activa ? 4 : 2)));
-            texto(ctx, Text.translatable("pokepad.lunaeternal.cat." + CATEGORIAS[i]),
+            texto(ctx, Text.translatable("pokepad.lunaeternal.cat." + categorias.get(i)),
                     ax + (pw - 6) / 2, ay + PESTANA_ALTO / 2 - 13, 26,
                     TEXTO_OSCURO, true, true);
         }
@@ -627,8 +667,8 @@ public class CosmeticosScreen extends Screen {
         }
 
         // Pestañas
-        int pw = (PANT_W - 2 * MARGEN) / CATEGORIAS.length;
-        for (int i = 0; i < CATEGORIAS.length; i++) {
+        int pw = (PANT_W - 2 * MARGEN) / categorias.size();
+        for (int i = 0; i < categorias.size(); i++) {
             if (dentro(rx, ry, px(PANT_X + MARGEN + i * pw), py(PANT_Y + MARGEN),
                     pl(pw - 6), pl(PESTANA_ALTO))) {
                 if (i != pestana) {

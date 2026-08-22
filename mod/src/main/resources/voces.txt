@@ -68,6 +68,7 @@ machoke
 machamp
 bellsprout
 weepinbell
+victreebel
 tentacool
 tentacruel
 geodude

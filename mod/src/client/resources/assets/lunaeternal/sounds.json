@@ -699,6 +699,16 @@
       }
     ]
   },
+  "pokedex.victreebel": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/victreebel",
+        "stream": true
+      }
+    ]
+  },
   "pokedex.tentacool": {
     "category": "voice",
     "subtitle": "subtitles.lunaeternal.pokedex.voz",

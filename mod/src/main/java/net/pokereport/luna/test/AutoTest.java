@@ -290,14 +290,17 @@ public final class AutoTest {
         check("sin forma se usa la especie",
             net.pokereport.luna.pokedex.VozService.clave("Ekans", "")
                 .equals("ekans"));
-        // Victreebel (dex 71) es la unica especie de Gen 1 sin grabar: se
-        // salto en la sesion de grabacion y queda como el caso real de
-        // "sin voz", en vez de uno inventado.
+        // El caso "sin voz" YA NO ES VICTREEBEL: se grabo el 2026-08-22 y con
+        // el Kanto quedo completo. Se usa Treecko, que es de Gen 3 y por tanto
+        // ni tiene voz ni la va a tener mientras solo esten activas Kanto y
+        // Johto (D-017). Sigue siendo un caso REAL y no uno inventado.
         check("una especie sin grabar no da clave",
-            net.pokereport.luna.pokedex.VozService.clave("Victreebel", "").isEmpty());
-        check("hay las 255 voces del catalogo (150 de Kanto sin Victreebel, "
+            net.pokereport.luna.pokedex.VozService.clave("Treecko", "").isEmpty());
+        check("hay las 256 voces del catalogo (151 de Kanto COMPLETO, "
                 + "100 de Johto, mas 5 formas de Alola)",
-            net.pokereport.luna.pokedex.VozService.cuantas() == 255);
+            net.pokereport.luna.pokedex.VozService.cuantas() == 256);
+        check("Victreebel, el ultimo hueco de Kanto, ya tiene voz",
+            net.pokereport.luna.pokedex.VozService.tieneVoz("victreebel"));
         // Johto entero, que es la otra generacion activa (D-017).
         check("Chikorita, el inicial de Johto, tiene voz",
             net.pokereport.luna.pokedex.VozService.tieneVoz("chikorita"));
@@ -311,7 +314,7 @@ public final class AutoTest {
                 .equals("porygon2"));
         // Y lo importante al reves: una especie sin grabar NO manda paquete.
         check("una especie sin grabar no suena",
-            !net.pokereport.luna.pokedex.VozService.tieneVoz("victreebel"));
+            !net.pokereport.luna.pokedex.VozService.tieneVoz("treecko"));
         check("un nombre vacio no suena",
             !net.pokereport.luna.pokedex.VozService.tieneVoz(""));
         check("un nombre nulo no revienta",

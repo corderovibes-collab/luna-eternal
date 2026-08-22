@@ -47,6 +47,12 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(Red.Cosmeticos.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
+        // Quien lleva que aura. Llega al entrar (las de todos) y cada vez que
+        // alguien se pone o se quita una. Es lo que hace que un aura la vean los
+        // DEMAS y no solo su dueño en la tienda.
+        ClientPlayNetworking.registerGlobalReceiver(Red.AuraDe.ID,
+                (carga, ctx) -> Auras.recibir(carga.jugador(), carga.aura()));
+
         // La voz de la Pokédex. Llega solo a quien ha escaneado; aquí solo se
         // reproduce, la decisión de a quién mandarla es del servidor.
         ClientPlayNetworking.registerGlobalReceiver(Red.VozPokedex.ID,
@@ -60,9 +66,16 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((manejador, cliente) -> {
             EstadoCliente.olvidar();
             VozPokedex.callar();
+            // Sin esto, entrar en otro mundo arrastra las auras del anterior.
+            Auras.olvidarTodo();
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(cliente -> {
+            // Las partículas de las auras. Va lo PRIMERO del tick y fuera del
+            // bucle de la tecla: si se colara dentro, solo se dibujarían mientras
+            // hay pulsaciones en la cola, o sea casi nunca.
+            Auras.tick(cliente);
+
             // `wasPressed` vacía la cola de pulsaciones: con un `if` simple, una
             // pulsación larga abriría y cerraría la pantalla en bucle.
             while (abrirPad.wasPressed()) {

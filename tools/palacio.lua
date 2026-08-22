@@ -136,7 +136,7 @@
     8. COMPROBACIONES     paleta y geometria, ANTES de tocar nada
     9. MAIN               orquesta todo
    10. RECETAS            como se toca esto sin romperlo
-   11. BITACORA           los cinco fallos que cazo el banco de pruebas
+   11. BITACORA           los seis fallos encontrados
 
   ---------------------------------------------------------------------------
   PLANTA, DE UN VISTAZO
@@ -270,19 +270,44 @@ local PUESTOS = 0
 -- bloques de altura, que nadie relaciona con una errata. Teniendolos todos
 -- juntos, `comprobar_paleta()` los valida de una pasada antes de construir.
 
---- Resuelve un id de bloque tolerando las dos formas de escribirlo.
---- `blocks.stone` funciona para vanilla; para un bloque con namespace hace
---- falta la forma de indice. Se prueban las dos porque no esta documentado
---- cual acepta cada version de Axiom, y fallar aqui en silencio es justo lo
---- que se quiere evitar.
+--- Resuelve un id de bloque.
+---
+--- ⚠⚠ LA TABLA `blocks` DE AXIOM ESTA ANIDADA POR NAMESPACE. Esto costo un
+--- palacio entero construido y vacio, asi que conviene leerlo:
+---
+---     blocks.lunaneon.neon_rojo        <- SI
+---     blocks["lunaneon:neon_rojo"]     <- NO, devuelve nil
+---
+--- Y `setBlock` con nil NO DA ERROR: simplemente no coloca nada. La primera
+--- ejecucion del palacio salio con el agua y nada mas -- el unico bloque
+--- vanilla del edificio-- porque los 344 ids del mod se estaban descartando
+--- en silencio, uno por uno, 500 000 veces.
+---
+--- No estaba documentado: la documentacion del Script Brush solo enseña
+--- ejemplos vanilla (`blocks.stone`) y NO MENCIONA los namespaces ni una vez.
+--- Se averiguo probando siete formas distintas en el juego
+--- (`tools/palacio_diagnostico.lua`) y mirando cual devolvia algo.
+---
+--- Vanilla acepta las dos: `blocks.stone` y `blocks.minecraft.stone`. Se
+--- prueban en ese orden y con respaldo, porque una version futura de Axiom
+--- podria cambiarlo y es preferible que siga funcionando a que se vacie otra
+--- vez sin decir nada.
 local function B(id)
-  local ok, b = pcall(function() return blocks[id] end)
+  local ns, ruta = string.match(id, "^([^:]+):(.+)$")
+  if not ns then ns, ruta = "minecraft", id end
+
+  -- 1. La forma que funciona: anidada por namespace.
+  local ok, b = pcall(function() return blocks[ns][ruta] end)
   if ok and b then return b end
-  -- Sin namespace explicito, probar como vanilla.
-  if not string.find(id, ":") then
-    local ok2, b2 = pcall(function() return blocks["minecraft:" .. id] end)
-    if ok2 and b2 then return b2 end
-  end
+
+  -- 2. Plana, solo la ruta. Es la que documenta Axiom para vanilla.
+  local ok2, b2 = pcall(function() return blocks[ruta] end)
+  if ok2 and b2 then return b2 end
+
+  -- 3. Con dos puntos, por si alguna version la aceptara.
+  local ok3, b3 = pcall(function() return blocks[id] end)
+  if ok3 and b3 then return b3 end
+
   return nil
 end
 
@@ -4809,7 +4834,7 @@ return getBlock(x, y, z)
 
 --[[ ===========================================================================
 
-  11. BITACORA — los fallos que cazo el banco de pruebas
+  11. BITACORA — los fallos encontrados antes de darlo por bueno
 
   Se deja escrito porque los cinco son del mismo tipo, y ese tipo es el que
   mas duele en una planta radial: PIEZAS QUE SE DISENAN POR SEPARADO Y NADIE
@@ -4875,6 +4900,40 @@ return getBlock(x, y, z)
      fachada, torres y perimetro detras, y --lo que faltaba de verdad--
      anadiendo los pasos que conectan cada ala con el anillo. Sin ellos el
      ambulatorio habria sido un pasillo perfecto al que no se puede entrar.
+
+  ---------------------------------------------------------------------------
+  6. Y EL QUE SE ESCAPO AL BANCO: LA TABLA `blocks` VA ANIDADA
+
+     Este no lo cazo el banco, lo cazo EL JUEGO -- y por una razon que merece
+     quedar escrita: EL BANCO ERA DEMASIADO GENEROSO.
+
+     Su `blocks` simulado devolvia algo para CUALQUIER clave, asi que
+     `blocks["lunaneon:neon_rojo"]` resolvia perfectamente en la prueba y
+     devolvia nil en el juego. El banco confirmaba justo lo que habia que
+     comprobar.
+
+     Resultado en el juego: el palacio se construyo ENTERO y no se vio NADA,
+     salvo el anillo de agua -- el unico bloque vanilla del edificio. Los 344
+     ids del mod se descartaron en silencio, uno a uno, medio millon de veces,
+     porque `setBlock` con nil no da error.
+
+     La forma correcta es ANIDADA POR NAMESPACE:
+
+         blocks.lunaneon.neon_rojo        SI
+         blocks["lunaneon:neon_rojo"]     nil
+
+     No esta documentado. La documentacion del Script Brush solo enseña
+     ejemplos vanilla y no menciona los namespaces ni una vez. Se averiguo
+     probando siete formas en el juego (`tools/palacio_diagnostico.lua`).
+
+     Arreglado en `B()`, que ahora parte el id por los dos puntos. Y el banco
+     se corrigio para imitar la tabla anidada EXACTAMENTE, incluido el fallo de
+     la forma con dos puntos: con la version vieja de `B()` ahora reporta 344
+     ids muertos y 60 556 bloques en vez de 566 045.
+
+     LA LECCION: un simulador permisivo es peor que no tener simulador, porque
+     da confianza. Si el doble de una API acepta mas que la API de verdad, lo
+     unico que verifica es que el codigo no revienta.
 
   ---------------------------------------------------------------------------
   LO QUE SIGUE SIN COMPROBAR

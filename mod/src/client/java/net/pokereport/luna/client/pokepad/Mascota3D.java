@@ -156,6 +156,11 @@ public final class Mascota3D {
                                int x, int y, int ancho, int alto,
                                float origenY, float delta, boolean animar) {
         if (!c.esMascota()) {
+            // Los cosmeticos del JUGADOR --capas, sombreros, auras-- no tienen
+            // especie. Se dibuja al propio jugador llevandolos puestos, que es lo
+            // que se pedia desde el principio: «arriba va a estar un diseño 3D de
+            // tu personaje».
+            dibujarJugador(ctx, x, y, ancho, alto);
             return;
         }
         Identifier especie = Identifier.tryParse(c.especie());
@@ -279,6 +284,73 @@ public final class Mascota3D {
         net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
                 ctx, x, y, x + ancho, y + alto,
                 Math.round(Math.min(ancho, alto) * 0.30f), 0.0f, cx, cy, ent);
+    }
+
+    /**
+     * El propio jugador, para los cosmeticos que lleva EL.
+     *
+     * <p>⚠ <b>Se dibuja al jugador de verdad y no un maniqui.</b> Un cosmetico se
+     * compra para verse uno mismo con el puesto; con un modelo generico, la
+     * pantalla enseñaria como le queda a otro. Y sale gratis: la entidad ya
+     * existe y ya esta cargada con su skin.
+     *
+     * <p>El aura NO se dibuja aqui: va en {@link #dibujarAura}, que se llama
+     * desde la pasada 2D. Ver alli por que.
+     */
+    private static void dibujarJugador(DrawContext ctx,
+                                       int x, int y, int ancho, int alto) {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        if (cliente.player == null) {
+            return;
+        }
+        int cx = x + ancho / 2, cy = y + alto / 2;
+        net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
+                ctx, x, y, x + ancho, y + alto,
+                Math.round(Math.min(ancho, alto) * 0.34f), 0.0f, cx, cy, cliente.player);
+    }
+
+    /**
+     * Los puntos del aura. <b>Se llama desde la pasada 2D, NO desde la de modelos.</b>
+     *
+     * <p>⚠⚠ ESTABA DENTRO DE `dibujarJugador`, Y ERA UN FALLO DE LOS QUE ESTE
+     * FICHERO YA PAGÓ UNA VEZ. La pasada de modelos tiene escrito en su propio
+     * comentario: «aquí no se dibuja ni un rectángulo ni una letra». Meter un
+     * {@code ctx.fill} ahí vuelve a intercalar plano y 3D, que es exactamente la
+     * mezcla que costó cuatro intentos de depurar.
+     *
+     * <p>Consecuencia aceptada: los puntos quedan <b>DETRÁS</b> del personaje,
+     * porque lo plano se vuelca antes. Se ve bien igual —el modelo es estrecho y
+     * la órbita es ancha, así que asoman por los lados— y es preferible a
+     * recuperar el titileo por un adorno.
+     *
+     * <p>⚠ Y son una IMITACIÓN, no las partículas de verdad. Esas viven en el
+     * mundo ({@code Auras}) y no caben aquí: el sistema de partículas dibuja en
+     * coordenadas del mundo y una celda de interfaz no tiene mundo detrás.
+     */
+    public static void dibujarAura(DrawContext ctx, Cosmetico c,
+                                   int x, int y, int ancho, int alto) {
+        if (c.esMascota()) {
+            return;
+        }
+        var aura = net.pokereport.luna.cosmetics.CatalogoLuna.auraDe(c.id());
+        if (aura == null) {
+            return;
+        }
+        int cx = x + ancho / 2, cy = y + alto / 2;
+        // El giro sale del reloj de pared y no del tick del mundo: la ciudadela
+        // tiene la hora congelada, y con `world.getTime()` esto se quedaria
+        // quieto justo alli. Es el mismo motivo por el que `Auras` lleva su
+        // propio contador.
+        long t = System.currentTimeMillis() / 40;
+        int color = 0xFF000000 | aura.color();
+        int radio = Math.min(ancho, alto) / 3;
+        for (int i = 0; i < 8; i++) {
+            double giro = t * 0.05 + i * (Math.PI * 2 / 8);
+            int px = cx + (int) Math.round(Math.cos(giro) * radio);
+            int py = cy + (int) Math.round(Math.sin(giro) * radio * 0.45)
+                    + (int) Math.round(Math.sin(t * 0.03 + i) * 4);
+            ctx.fill(px - 1, py - 1, px + 2, py + 2, color);
+        }
     }
 
     /** Una criatura por cosmetico. Ver `dibujarCriatura`. */

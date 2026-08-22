@@ -35,7 +35,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 DESTINO = (RAIZ / "mod" / "src" / "main" / "java" / "net" / "pokereport"
-           / "luna" / "cosmetics" / "Catalogo.java")
+           / "luna" / "cosmetics" / "CatalogoMascotas.java")
 
 # Precios PROVISIONALES por tramos. CLAUDE.md dice que la economia se calibra con
 # datos reales; esto solo reparte para que la tienda no tenga todo al mismo
@@ -164,103 +164,45 @@ def leer(zip_path: Path):
 PLANTILLA = '''package net.pokereport.luna.cosmetics;
 
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+
+import net.pokereport.luna.cosmetics.Catalogo.Pieza;
 
 /**
- * Que cosmeticos existen y cuanto valen. <b>Vive en el servidor y solo ahi.</b>
- *
- * <p>⚠⚠ ESTE FICHERO SE GENERA. No se edita a mano:
+ * Los disfraces de Pokemon. <b>ESTE FICHERO SE GENERA:</b>
  *
  * <pre>
  * python tools/gen_catalogo_cosmeticos.py &lt;zip de CobblemonMoreCosmetics&gt;
  * </pre>
  *
- * <p>Se genera <b>leyendo el pack instalado</b> porque escribirlo a mano ya
- * fallo: el catalogo prometia disfraces que el pack no tenia, se cobraban, y
- * salia el Pokemon normal. Sin error y sin nada en el log. Generandolo, el
- * catalogo no puede prometer lo que no existe.
+ * <p>Se genera <b>leyendo los RESOLVERS del pack</b>, que es lo unico que dice
+ * la verdad sobre lo que se puede dibujar. Escribirlo a mano fallo tres veces
+ * seguidas, y las tres con el mismo sintoma --se cobraba y salia el Pokemon
+ * normal-- por tres causas distintas:
  *
- * <p>Con {@code D-039} —los cosmeticos solo se consiguen comprandolos o en
- * eventos— este catalogo es la unica fuente que hay: un identificador que no
- * este aqui se rechaza al comprar.
+ * <ol>
+ *   <li>Se copio del repositorio (HEAD), que declara los cosmeticos como
+ *       {@code species_features}; la version publicada usa {@code cosmetic_items}.</li>
+ *   <li>{@code 26sinnohbundle} declara seis cosmeticos cuyo arte se vende aparte,
+ *       y {@code pangoro_operator.json} pone {@code "pokemon": ["operator"]},
+ *       que es una errata suya.</li>
+ *   <li>{@code pangoro_operator} tenia resolver, modelo y textura pero <b>no
+ *       poser</b>, y Cobblemon no cae al de la especie: dibuja un bulto.</li>
+ * </ol>
  *
- * <h2>⚠⚠ POR QUE NO HAY CAMPO `objeto`, HABIENDOLO TENIDO</h2>
+ * <p>Hoy se exigen <b>las cuatro piezas</b>. Lo que el pack declara y no puede
+ * dibujar se imprime al generar, en vez de acabar en la tienda.
  *
- * El pack declara cada cosmetico con un {@code consumedItem}: `charizard_knight`
- * se aplica dando un {@code minecraft:iron_helmet}. Se leyo, se guardo aqui, y
- * se aplicaba con {@code swapCosmeticItem}. <b>Funcionaba, y por eso se tardo en
- * ver el problema:</b>
- *
- * <pre>
- * craftear un yelmo de hierro = el disfraz de 2.500 LunaCoins, gratis
- * quitarlo por el menu de Cobblemon = ademas te quedas el objeto
- * </pre>
- *
- * {@code cosmetic_items} esta pensado para conseguirse jugando, y <b>D-039 dice
- * exactamente lo contrario</b>. No se puede vigilar esa puerta desde el mod, asi
- * que <b>el datapack del pack no se instala</b> --sin el, `cosmetic_items` ni se
- * registra-- y el aspecto se fuerza directo con {@code setForcedAspects}.
- *
- * El campo se quito en vez de dejarlo sin usar: un dato que sigue ahi es una
- * invitacion a volver a usarlo.
- *
- * <h2>⚠ LOS PRECIOS SON PROVISIONALES</h2>
- *
- * CLAUDE.md lo dice de toda la economia: se calibra con datos reales. Los tramos
- * --legendario, inicial, normal-- solo evitan que todo cueste lo mismo, que es
- * lo unico que se sabe seguro que estaria mal.
+ * <p>⚠ Los precios son por tramos y <b>PROVISIONALES</b>: CLAUDE.md dice que
+ * toda la economia se calibra con datos reales.
  */
-public final class Catalogo {
+public final class CatalogoMascotas {
 
-    private Catalogo() {
+    private CatalogoMascotas() {
     }
 
-    /**
-     * Un cosmetico del catalogo.
-     *
-     * @param especie identificador completo, {@code cobblemon:charizard}
-     * @param aspecto el aspecto que aplica, {@code knight}
-     * @param precio  ver abajo
-     * @param precio  en LunaCoins. <b>{@code 0} = NO esta a la venta</b>, solo
-     *                sale en eventos (D-039), que no es lo mismo que gratis
-     */
-    public record Pieza(String id, String categoria, String especie,
-                        String aspecto, int precio) {
-
-        /** Criatura de Minecraft en vez de Pokemon: la dibuja otro codigo. */
-        public boolean esDeMinecraft() {
-            return especie.startsWith("minecraft:");
-        }
-    }
-
-    public static final String MASCOTAS = "mascotas";
-    public static final String CAPAS = "capas";
-    public static final String SOMBREROS = "sombreros";
-    public static final String AURAS = "auras";
-
-    /** GENERADO. Ver la cabecera de la clase. */
-    private static final List<Pieza> PIEZAS = List.of(
+    static final List<Pieza> PIEZAS = List.of(
 %(piezas)s
     );
-
-    private static final Map<String, Pieza> POR_ID =
-            PIEZAS.stream().collect(Collectors.toMap(Pieza::id, Function.identity()));
-
-    public static List<Pieza> todas() {
-        return PIEZAS;
-    }
-
-    /** {@code null} si no existe. Quien compre un identificador desconocido se queda sin nada. */
-    public static Pieza de(String id) {
-        return POR_ID.get(id);
-    }
-
-    /** Las categorias, en el orden en que salen las pestañas. */
-    public static List<String> categorias() {
-        return List.of(MASCOTAS, CAPAS, SOMBREROS, AURAS);
-    }
 }
 '''
 
@@ -284,7 +226,7 @@ def main() -> None:
     for especie, aspecto in filas:
         ident = "%s_%s" % (especie, aspecto)
         lineas.append(
-            '            new Pieza("%s", MASCOTAS, "cobblemon:%s", "%s", %d)'
+            '            new Pieza("%s", Catalogo.MASCOTAS, "cobblemon:%s", "%s", %d)'
             % (ident, especie, aspecto, precio(especie)))
 
     DESTINO.write_text(

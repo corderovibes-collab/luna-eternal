@@ -325,6 +325,12 @@ public class CosmeticosScreen extends Screen {
     }
 
     private void dibujarPreview(DrawContext ctx) {
+        // Igual que en la celda: lo plano del aura va en esta pasada.
+        if (enfocado != null) {
+            Mascota3D.dibujarAura(ctx, enfocado,
+                    px(PANEL_X + 8), py(PANEL_Y + NAV_ALTO),
+                    pl(PANEL_W - 16), pl(PANEL_H - NAV_ALTO - SALDO_ALTO - 8));
+        }
         int ax = PANEL_X + 8, ay = PANEL_Y + NAV_ALTO;
         int aw = PANEL_W - 16, ah = PANEL_H - NAV_ALTO - SALDO_ALTO - 8;
 
@@ -335,7 +341,7 @@ public class CosmeticosScreen extends Screen {
         }
         texto(ctx, Text.literal(nombreDe(enfocado)), ax + aw / 2, ay + ah - 34, 26,
                 ORO, true, false);
-        texto(ctx, Text.literal(enfocado.aspecto()), ax + aw / 2, ay + ah - 6, 20,
+        texto(ctx, Text.literal(subtituloDe(enfocado)), ax + aw / 2, ay + ah - 6, 20,
                 TEXTO_SUAVE, true, false);
     }
 
@@ -347,6 +353,15 @@ public class CosmeticosScreen extends Screen {
      * de que Pokemon era cada uno sin mirar el dibujo.
      */
     private static String nombreDe(Cosmetico c) {
+        // ⚠ EN LOS COSMETICOS DEL JUGADOR EL NOMBRE VA EN `aspecto`, no en
+        //   `especie` --que esta vacia, porque no dependen de ningun Pokemon--.
+        //   Sin esto la tienda enseñaba el identificador crudo: «aura_neon_cian».
+        //   El campo se reutiliza en vez de añadir uno sexto al paquete: en las
+        //   mascotas `aspecto` ya es «lo que distingue a esta pieza», y en las
+        //   del jugador tambien.
+        if (!c.esMascota()) {
+            return c.aspecto().isEmpty() ? c.id() : c.aspecto();
+        }
         String s = c.especie();
         int i = s.indexOf(':');
         if (i >= 0) {
@@ -356,6 +371,14 @@ public class CosmeticosScreen extends Screen {
             return c.id();
         }
         return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /** La linea pequeña bajo el nombre en el previsualizador. */
+    private static String subtituloDe(Cosmetico c) {
+        // En una mascota, el aspecto («knight») dice cual de los disfraces de esa
+        // especie es. En un cosmetico del jugador, el aspecto YA ES el nombre, asi
+        // que repetirlo no informa de nada: se pone la categoria.
+        return c.esMascota() ? c.aspecto() : c.categoria();
     }
 
     private void dibujarSaldo(DrawContext ctx, int rx, int ry) {
@@ -466,6 +489,11 @@ public class CosmeticosScreen extends Screen {
         ctx.fill(x, y, x + w, y + h, encima ? CELDA_ENCIMA : CELDA_FONDO);
         marco(ctx, x, y, w, h, marcado ? BORDE_ENCIMA : CELDA_BORDE,
                 Math.max(1, pl(marcado ? 4 : 2)));
+
+        // Los puntos del aura. Van AQUI --pasada 2D-- y no con el modelo: ver
+        // `Mascota3D.dibujarAura`. Quedan detras del personaje, que es la
+        // consecuencia aceptada de no volver a mezclar plano y 3D.
+        Mascota3D.dibujarAura(ctx, c, x, y, w, h - pl(PIE));
 
         // El 3D ocupa todo lo que no es el pie. Se dibuja ANTES que el nombre
         // para que el nombre quede por encima y siga leyendose.

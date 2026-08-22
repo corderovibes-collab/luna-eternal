@@ -61,6 +61,17 @@ QUEREMOS = {
                     "menos lag en cuanto haya varias personas peleando",
     "letmedespawn": "Los mobs desaparecen como deberian. Sin esto se acumulan "
                     "y se comen el limite de entidades",
+    # ⚠ `server_side: required` EN MODRINTH, y no es un formalismo: la
+    #   colocacion multiple la APLICA EL SERVIDOR (P6, nunca confiar en el
+    #   cliente). Solo en el cliente, las herramientas se ven y no hacen nada.
+    #
+    #   El jar se llama `effortless-1.21.1-3.4.0.jar`; aqui va el NOMBRE DEL
+    #   FICHERO, no el slug de Modrinth --son dos cosas distintas y ya costo un
+    #   manifiesto entero con `letmedespawn`/`lmd`.
+    "effortless":   "Simetria, matrices y modos de construccion. Lo aplica el "
+                    "SERVIDOR, asi que solo en el cliente no haria nada. "
+                    "Registra 0 bloques y 0 objetos: no puede descuadrar "
+                    "ningun registro",
 
     # --- lo que llega con CobbleVerse (2026-08-17) -------------------------
     # Estos NO son optimizaciones: son REGLAS DE JUEGO. Un mod de reglas que

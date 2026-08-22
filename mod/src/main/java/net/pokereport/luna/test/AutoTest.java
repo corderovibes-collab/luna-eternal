@@ -73,6 +73,7 @@ public final class AutoTest {
             testTelemetria(a, b);
             testCazas(a);
             testVozPokedex();
+            testCosmeticos();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -95,6 +96,89 @@ public final class AutoTest {
     }
 
     // ------------------------------------------------------------ pruebas
+
+    /**
+     * Los invariantes del catalogo de cosmeticos.
+     *
+     * <p>⚠ <b>Existe porque el catalogo esta partido en dos mitades que nadie
+     * mira juntas:</b> una la genera un script del zip de CobblemonMoreCosmetics
+     * y la otra se escribe a mano. Cada una es correcta por su lado; lo que no
+     * comprueba nadie es lo que pasa al unirlas.
+     *
+     * <p>Y hay precedente: el catalogo ya vendio disfraces que no existian
+     * <b>tres veces seguidas</b>, y las tres el sintoma fue el mismo --se cobraba
+     * y no se veia nada-- por causas distintas. Ninguna dio error.
+     */
+    private void testCosmeticos() {
+        var todas = net.pokereport.luna.cosmetics.Catalogo.todas();
+        check("el catalogo de cosmeticos no esta vacio", !todas.isEmpty());
+
+        // Que no haya identificadores repetidos lo comprueba `Catalogo` al
+        // cargarse, y revienta si los hay. Aqui se comprueba lo que aquello no
+        // puede: que cada pieza sea COHERENTE consigo misma.
+        boolean categoriasValidas = true;
+        boolean mascotasConAspecto = true;
+        boolean jugadorSinEspecie = true;
+        boolean preciosSanos = true;
+        var validas = net.pokereport.luna.cosmetics.Catalogo.categorias();
+        for (var pieza : todas) {
+            if (!validas.contains(pieza.categoria())) {
+                categoriasValidas = false;
+            }
+            // Una mascota sin aspecto no se puede aplicar: `disfrazar` fuerza
+            // `pieza.aspecto()` y forzar la cadena vacia no hace nada. Se
+            // cobraria y no pasaria nada, que es el fallo de siempre.
+            if (pieza.esDePokemon() && pieza.aspecto().isEmpty()) {
+                mascotasConAspecto = false;
+            }
+            // Y al reves: una pieza del jugador CON especie iria por `disfrazar`,
+            // que le buscaria un Pokemon de esa especie en el equipo.
+            if (!pieza.esDePokemon() && !pieza.especie().isEmpty()) {
+                jugadorSinEspecie = false;
+            }
+            // Un precio negativo cobraria al reves: `comprar` haria un debit de
+            // -1500, que es un ingreso. Nunca ha pasado, y por eso mismo nadie
+            // lo miraria.
+            if (pieza.precio() < 0) {
+                preciosSanos = false;
+            }
+        }
+        check("toda pieza tiene una categoria de las declaradas", categoriasValidas);
+        check("toda mascota lleva aspecto", mascotasConAspecto);
+        check("ninguna pieza de jugador lleva especie", jugadorSinEspecie);
+        check("ningun precio es negativo", preciosSanos);
+
+        // Las auras: cada una tiene que estar en el catalogo general Y tener su
+        // receta. Estan en dos listas distintas del mismo fichero, y es
+        // exactamente el tipo de cosa que se desincroniza al añadir una.
+        boolean aurasCompletas = true;
+        boolean aurasEnCatalogo = true;
+        for (var pa : net.pokereport.luna.cosmetics.CatalogoLuna.AURAS) {
+            if (net.pokereport.luna.cosmetics.CatalogoLuna.auraDe(pa.pieza().id()) == null) {
+                aurasCompletas = false;
+            }
+            var enCatalogo = net.pokereport.luna.cosmetics.Catalogo.de(pa.pieza().id());
+            if (enCatalogo == null
+                    || !enCatalogo.categoria()
+                            .equals(net.pokereport.luna.cosmetics.Catalogo.AURAS)) {
+                aurasEnCatalogo = false;
+            }
+            // La cadencia es un modulo: con 0 seria una division por cero en cada
+            // fotograma del cliente, y el fallo saldria en el juego y no aqui.
+            if (pa.aura().cadencia() <= 0 || pa.aura().cuantas() <= 0) {
+                aurasCompletas = false;
+            }
+        }
+        check("cada aura tiene su receta y es dibujable", aurasCompletas);
+        check("cada aura esta en el catalogo y en su categoria", aurasEnCatalogo);
+
+        // Que exista al menos una que NO se vende. D-039 dice que los eventos son
+        // «la mitad que hace funcionar la decision»: si todo fuera de pago, los
+        // unicos con cosmetico serian los que pagan y el escaparate se apaga solo.
+        boolean hayDeEvento = todas.stream().anyMatch(x -> x.precio() == 0);
+        check("hay cosmeticos que solo salen en eventos (D-039)", hayDeEvento);
+    }
+
 
     private void testCreditAndDebit(long p) throws Exception {
         economy.credit(p, Currency.POKEDOLLAR, 1000, "autotest", key());

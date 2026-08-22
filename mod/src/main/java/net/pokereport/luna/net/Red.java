@@ -270,6 +270,91 @@ public class Red implements ModInitializer {
     }
 
 
+    /**
+     * Quién lleva qué aura. <b>Del servidor a TODOS los clientes.</b>
+     *
+     * <p>⚠⚠ ESTE ES EL PAQUETE QUE CONVIERTE UN COSMÉTICO EN UN PRODUCTO.
+     * {@code monetization.md} lo avisa: «un cosmético sin nadie que lo vea no
+     * vale nada». Los disfraces de Pokémon se ven solos porque el aspecto viaja
+     * dentro del Pokémon; un aura <b>no viaja con nada</b>, así que si esto no
+     * existe, el aura solo la ve su dueño en la tienda — que es exactamente
+     * media función, y ya pasó una vez.
+     *
+     * <p>Viaja el <b>UUID</b> y no el nombre: un jugador puede cambiarse el
+     * nombre y el UUID es lo que el cliente usa para encontrar la entidad.
+     *
+     * <p>Cadena vacía = <b>se lo ha quitado</b>. Hace falta un valor para eso: si
+     * quitarse el aura se difundiera «no mandando nada», los demás seguirían
+     * viéndosela hasta reconectar.
+     */
+    public record AuraDe(java.util.UUID jugador, String aura) implements CustomPayload {
+        public static final Id<AuraDe> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "aura_de"));
+        public static final PacketCodec<RegistryByteBuf, AuraDe> CODEC =
+                PacketCodec.tuple(
+                        // ⚠ Uuids.PACKET_CODEC, NO PacketCodecs.UUID: ese no
+                        //   existe en 1.21.1 y el error de compilación no dice
+                        //   cuál es el bueno.
+                        net.minecraft.util.Uuids.PACKET_CODEC, AuraDe::jugador,
+                        PacketCodecs.STRING, AuraDe::aura,
+                        AuraDe::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Cuenta a todo el mundo el aura de un jugador, y a ese jugador las de todos.
+     *
+     * <p>⚠ Las DOS direcciones hacen falta y por motivos distintos. Al entrar,
+     * el recién llegado no sabe nada de nadie —se perdió las difusiones de antes—
+     * y los que ya estaban no saben nada de él. Mandar solo una deja un servidor
+     * donde cada uno ve un subconjunto distinto, que es peor que no verlas.
+     */
+    public static void difundirAura(net.minecraft.server.network.ServerPlayerEntity quien,
+                                    String aura, boolean tambienLasDemas) {
+        var servidor = quien.getServer();
+        if (servidor == null) {
+            return;
+        }
+        var mio = new AuraDe(quien.getUuid(), aura == null ? "" : aura);
+        for (var otro : servidor.getPlayerManager().getPlayerList()) {
+            ServerPlayNetworking.send(otro, mio);
+        }
+        if (!tambienLasDemas) {
+            return;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                var svc = LunaEternal.cosmetics();
+                var pendientes = new java.util.ArrayList<AuraDe>();
+                for (var otro : servidor.getPlayerManager().getPlayerList()) {
+                    if (otro == quien) {
+                        continue;
+                    }
+                    long id = LunaEternal.players()
+                            .resolve(otro.getUuid(), otro.getName().getString());
+                    String suya = svc.equipados(id).get(
+                            net.pokereport.luna.cosmetics.Catalogo.AURAS);
+                    if (suya != null && !suya.isEmpty()) {
+                        pendientes.add(new AuraDe(otro.getUuid(), suya));
+                    }
+                }
+                servidor.execute(() -> {
+                    for (AuraDe a : pendientes) {
+                        ServerPlayNetworking.send(quien, a);
+                    }
+                });
+            } catch (Exception e) {
+                // Quedarse sin ver las auras de los demás es feo; que falle el
+                // login por eso sería mucho peor.
+                LunaEternal.LOG.warn("No se pudieron difundir las auras: {}", e.toString());
+            }
+        });
+    }
+
     @Override
     public void onInitialize() {
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
@@ -279,6 +364,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirCosmeticos.ID, PedirCosmeticos.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionCosmetico.ID, AccionCosmetico.CODEC);
         PayloadTypeRegistry.playS2C().register(Cosmeticos.ID, Cosmeticos.CODEC);
+        PayloadTypeRegistry.playS2C().register(AuraDe.ID, AuraDe.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -339,7 +425,29 @@ public class Red implements ModInitializer {
                     var svc = LunaEternal.cosmetics();
                     net.pokereport.luna.cosmetics.CosmeticsService.Resultado r;
 
-                    if (carga.esQuitar()) {
+                    // ⚠ LAS PIEZAS DEL JUGADOR NO PASAN POR `disfrazar`. Aquel
+                    //   busca un Pokemon de la especie y le fuerza el aspecto;
+                    //   una capa o un aura no tienen especie y no van en ningun
+                    //   Pokemon. Se separan por LA PIEZA y no por la categoria:
+                    //   la pieza ya lleva la respuesta (`especie` vacia), y una
+                    //   comprobacion por nombre de categoria se olvida el dia que
+                    //   se añada la quinta.
+                    var pieza = net.pokereport.luna.cosmetics.Catalogo.de(carga.id());
+                    boolean delJugador = pieza != null && !pieza.esDePokemon();
+
+                    if (delJugador && !carga.esCompra()) {
+                        // Quitar = equipar la cadena vacia. Es la misma
+                        // operacion: «que categoria lleva que», y vacio es una
+                        // respuesta valida.
+                        r = svc.equipar(id, pieza.categoria(),
+                                carga.esQuitar() ? "" : carga.id());
+                        if (r.ok() && pieza.categoria()
+                                .equals(net.pokereport.luna.cosmetics.Catalogo.AURAS)) {
+                            String ahora = carga.esQuitar() ? "" : carga.id();
+                            jugador.getServer().execute(
+                                    () -> difundirAura(jugador, ahora, false));
+                        }
+                    } else if (carga.esQuitar()) {
                         r = svc.desvestir(jugador, id, carga.id());
                     } else if (!carga.esCompra()) {
                         r = svc.disfrazar(jugador, id, carga.id(), carga.ranura());
@@ -394,6 +502,19 @@ public class Red implements ModInitializer {
                     .resolve(jugador.getUuid(), jugador.getName().getString());
             var svc = LunaEternal.cosmetics();
             var poseidos = svc.poseidos(id);
+            // ⚠ LAS DOS FUENTES DE «LO LLEVA PUESTO» SON DISTINTAS, Y TIENE QUE
+            //   SER ASI:
+            //
+            //     mascota   se lee del POKEMON (sus aspectos). La tabla se
+            //               quedaria mintiendo en cuanto el jugador cambie de
+            //               equipo o le quiten el disfraz por otra via
+            //     jugador   se lee de la TABLA. Una capa o un aura no viven en
+            //               ninguna entidad: si no esta anotada, no esta
+            //
+            //   Preguntarle a la fuente equivocada no da error: da un EQUIPADO
+            //   que no se corresponde con nada, que es lo que ya paso con el
+            //   Snorlax cuando el equipado de mascotas salia de la tabla.
+            var equipados = svc.equipados(id);
             long saldo = LunaEternal.economy().balance(id, Currency.REPORTCOIN);
 
             List<PiezaCosmetica> piezas = new ArrayList<>();
@@ -402,11 +523,15 @@ public class Red implements ModInitializer {
                 if (poseidos.contains(p.id())) {
                     banderas |= PiezaCosmetica.POSEIDO;
                 }
-                // ⚠ Se lee del POKEMON, no de la tabla. Ver `loLleva`.
-                if (net.pokereport.luna.cosmetics.CosmeticsService.loLleva(jugador, p)) {
+                boolean puesto = p.esDePokemon()
+                        ? net.pokereport.luna.cosmetics.CosmeticsService.loLleva(jugador, p)
+                        : p.id().equals(equipados.get(p.categoria()));
+                if (puesto) {
                     banderas |= PiezaCosmetica.EQUIPADO;
                 }
-                if (p.aspecto().isEmpty()
+                // Lo del jugador SIEMPRE se puede equipar: no depende de tener
+                // ninguna especie. Lo de Pokemon, solo si hay uno que encaje.
+                if (!p.esDePokemon()
                         || net.pokereport.luna.cosmetics.CosmeticsService
                                 .primeraRanura(jugador, p) >= 0) {
                     banderas |= PiezaCosmetica.EQUIPABLE;

@@ -274,7 +274,7 @@ public class CosmeticsService {
         if (pieza == null) {
             return Resultado.no("Ese cosmético no existe.");
         }
-        if (pieza.aspecto().isEmpty() || pieza.esDeMinecraft()) {
+        if (!pieza.esDePokemon()) {
             return Resultado.no("Ese cosmético no se le puede poner a un Pokémon.");
         }
         try (Connection c = db.connection()) {

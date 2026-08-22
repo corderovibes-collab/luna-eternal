@@ -278,6 +278,34 @@ EXTRA_CONSTRUCTOR = [
     # antes a proposito.
     "malilib",
     "litematica",
+    # ⚠ EL SLUG ES `effortless`, Y EL PROYECTO SE LLAMA "Effortless Structure".
+    #   Hay OTRO mod, `effortless-building` ("Effortless Building"), que hace
+    #   casi lo mismo. Escribir el slug equivocado no da error: baja el otro.
+    #
+    # Simetria, matrices, espejo y modos de construccion (linea, muro, cubo,
+    # esfera). Pedido por el usuario el 2026-08-22 para levantar la ciudadela.
+    #
+    # LICENCIA: LGPL-3.0-only. Uso comercial permitido, que es lo que exige
+    # D-008 con la tienda de pago (D-007). Misma familia que el conector de
+    # MariaDB que ya empaquetamos y que `lmd`, asi que hay precedente.
+    #
+    # ⚠⚠ SE ELIGIO ESTE Y NO `effortless-building` POR UN MOTIVO MEDIDO, NO POR
+    #    EL NOMBRE. Se abrieron los dos jars y se conto lo que registran:
+    #
+    #      effortless (Structure) 3.4.0  ->  0 blockstates, 0 objetos, 0 datos
+    #      effortlessbuilding     4.2    ->  1 objeto (randomizer_tool) + receta
+    #
+    #    Un mod que registra un OBJETO entra en un registro QUE SE SINCRONIZA, y
+    #    esta el precedente de `trinkets`: nadie podia entrar al servidor y el
+    #    error no nombraba al culpable. Structure no registra NADA, asi que
+    #    tenerlo en el servidor y solo en los clientes de constructor no puede
+    #    descuadrar ningun registro.
+    #
+    # ⚠ VA EN CONSTRUCTOR Y NO EN JUGADOR A PROPOSITO: ademas de colocar,
+    #   ROMPE VARIOS BLOQUES A LA VEZ. En el mundo compartido eso acelera el
+    #   griefing, y los constructores ya van filtrados (OP nivel 2, D-028).
+    #   Moverlo a EXTRA_JUGADOR es cambiar de lista si algun dia se decide.
+    "effortless",
 ]
 
 # Shaders NUESTROS, ademas del Complementary Reimagined que ya trae la base.

@@ -159,9 +159,24 @@ comprobación previa del servicio evita cobrar en el caso normal, pero **dos cli
 rápidos pueden pasarla los dos**: lo que sostiene el invariante es que la segunda
 inserción choca contra la clave y deshace su transacción entera.
 
-Y la **clave de idempotencia se deriva** del jugador y el cosmético, no de un
-UUID nuevo. Con un UUID por petición, dos clics son dos claves distintas y la
-idempotencia no protege de nada.
+### ⚠️ La clave de idempotencia es un UUID, y estuvo mal a propósito
+
+Se escribió **derivada** del jugador y el cosmético —`cosm:<jugador>:<pieza>`—
+con el razonamiento de que así dos clics rápidos comparten clave. Era un error,
+y de los que solo se ven pensando en el caso raro:
+
+> Si algún día se le **retira** un cosmético a alguien —reembolso, corrección de
+> un evento— y lo vuelve a comprar, esa clave **ya está usada**. La economía
+> contesta `ALREADY_APPLIED`, **el cobro se salta**, y la anotación sí entra.
+> Cosmético gratis, sin ningún error.
+
+Y no hacía falta: el cobro y la anotación van en la **misma transacción**, así
+que si la inserción choca contra la clave primaria se deshace todo, cobro
+incluido. Los dos clics ya estaban cubiertos por ahí.
+
+**Una clave derivada del OBJETO en vez de la OPERACIÓN** convierte «esta
+operación ya se hizo» en «este objeto ya se compró alguna vez», y eso deja de ser
+lo mismo en cuanto algo se pueda deshacer.
 
 ---
 

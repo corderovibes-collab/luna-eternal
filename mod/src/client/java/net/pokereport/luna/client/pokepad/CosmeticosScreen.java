@@ -245,6 +245,7 @@ public class CosmeticosScreen extends Screen {
         // Primera pasada: TODO lo plano. Segunda: TODOS los modelos, ya con el
         // bufer vacio. Un solo orden posible, siempre el mismo.
         dibujarNavegacion(ctx, ratonX, ratonY);
+        dibujarPreview(ctx);
         dibujarSaldo(ctx, ratonX, ratonY);
         dibujarPestanas(ctx, ratonX, ratonY);
         dibujarRejilla(ctx, ratonX, ratonY);

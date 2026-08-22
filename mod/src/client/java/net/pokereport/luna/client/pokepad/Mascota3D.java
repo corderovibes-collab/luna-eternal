@@ -103,9 +103,38 @@ public final class Mascota3D {
      */
     private static final Map<String, FloatingState> ESTADOS = new HashMap<>();
 
-    /** Giro fijo: de perfil y ligeramente hacia el jugador, como el PC de Cobblemon. */
-    private static final Quaternionf GIRO =
-            new Quaternionf().rotationXYZ(0.35f, -0.55f, 0f);
+    /**
+     * ⚠⚠⚠ EL GIRO SE CREA NUEVO EN CADA LLAMADA. NUNCA SE COMPARTE.
+     *
+     * AQUI ESTABA EL TITILEO, y costo cuatro intentos encontrarlo porque el
+     * sintoma no apuntaba aqui.
+     *
+     * `drawProfilePokemon` hace esto, en su linea 143:
+     *
+     * <pre>
+     *     rotation.conjugate()
+     *     entityRenderDispatcher.overrideCameraOrientation(rotation)
+     * </pre>
+     *
+     * <b>`conjugate()` MODIFICA EL OBJETO QUE SE LE PASA</b>, no devuelve una
+     * copia. Con una constante compartida, cada llamada invertia el MISMO
+     * cuaternion.
+     *
+     * Y eso explica el sintoma raro que despisto tanto: con 8 celdas se
+     * invertia 8 veces por fotograma --numero PAR, vuelve al valor original--
+     * asi que la rejilla sola parecia estable. Al añadir el previsualizador son
+     * NUEVE llamadas: impar. La paridad cambia en cada fotograma y el modelo
+     * alterna entre dos orientaciones. Eso es el titileo.
+     *
+     * Por eso "solo titila al previsualizar" no era una pista sobre el
+     * previsualizador: era una pista sobre la PARIDAD.
+     *
+     * Cobblemon crea uno nuevo en cada llamada --`Quaternionf().fromEuler...`
+     * dentro de `StorageSlot.render`-- justo por esto.
+     */
+    private static Quaternionf giro() {
+        return new Quaternionf().rotationXYZ(0.35f, -0.55f, 0f);
+    }
 
     /**
      * Pinta el cosmético centrado en la caja dada, en coordenadas ya escaladas.
@@ -170,7 +199,7 @@ public final class Mascota3D {
             PokemonGuiUtilsKt.drawProfilePokemon(
                     especie,            // species
                     m,                  // matrixStack
-                    GIRO,               // rotation
+                    giro(),             // rotation: NUEVO cada vez, ver `giro()`
                     PoseType.PROFILE,   // poseType
                     estado,             // state
                     animar ? delta : 0f, // partialTicks: ver `animar`

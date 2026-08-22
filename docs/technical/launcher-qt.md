@@ -632,10 +632,22 @@ no hay que esperar por él**.
 
 ### Lo que sigue faltando en el equipo
 
-**Python.** `tools/*.py` no corren: no hay intérprete, y
-`.toolchain/venv/Scripts/python.exe` apunta a `C:\Python314`, que se borró con
-el formateo. Afecta a `gen_manifest.py` (publicar el pack), `mods_servidor.py`
-(`INF-008`) y `gen_bloques.py`.
+**Python: recuperado el 2026-08-21**, en `.toolchain\python` (3.12.10 + pip +
+Pillow + numpy). Verificado con `gen_bloques.py --verificar`: 602 bloques, 1540
+modelos, 230 texturas. `.toolchain/venv` es un resto muerto — apuntaba a
+`C:\Python314`, borrado con el formateo.
+
+> ⚠️ **El instalador MSI de Python falla con `0x80070003` en este equipo**, en
+> `.toolchain` y también en la ruta por defecto. Se usa la **distribución
+> embebida** (zip), que además no toca el sistema. Dos trampas suyas, las dos
+> mudas:
+>
+> 1. `import site` viene **comentado** en `python312._pth`. Sin descomentarlo no
+>    hay `site-packages` y `pip` se instala pero no sirve para nada.
+> 2. **Con un `._pth` presente, Python NO añade el directorio del script a
+>    `sys.path`.** Por eso `gen_bloques.py` moría con
+>    `ModuleNotFoundError: No module named 'bloques'` con el paquete justo al
+>    lado. Se arregla con `..\..\tools` como primera línea del `._pth`.
 
 **Windows 10 22H2 está fuera de soporte** desde octubre de 2025. El equipo
 admite Windows 11 de sobra. No bloquea nada hoy; conviene decidirlo antes de que

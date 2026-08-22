@@ -261,12 +261,42 @@ def rama_por_defecto() -> str:
         r = subprocess.run(["gh", "api", f"repos/{REPO_PUBLICO}",
                             "--jq", ".default_branch"],
                            capture_output=True, text=True, check=True)
-        return r.stdout.strip() or "main"
+        if r.stdout.strip():
+            return r.stdout.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
-        # Sin `gh` no se puede preguntar. Se avisa en vez de adivinar en
-        # silencio: un enlace equivocado aqui deja a todo el mundo sin pack.
-        print("  AVISO: no se pudo consultar la rama por defecto, se asume 'main'")
-        return "main"
+        pass
+
+    # SEGUNDO INTENTO, SIN `gh`. El 2026-08-21, con el PC recien formateado, `gh`
+    # no estaba -- y esta funcion contestaba `main` tan tranquila. `git` habla
+    # con el mismo servidor y casi siempre esta.
+    try:
+        r = subprocess.run(["git", "ls-remote", "--symref",
+                            f"https://github.com/{REPO_PUBLICO}", "HEAD"],
+                           capture_output=True, text=True, check=True, timeout=30)
+        for linea in r.stdout.splitlines():
+            # ref: refs/heads/master\tHEAD
+            if linea.startswith("ref:") and "\tHEAD" in linea:
+                return linea.split()[1].rsplit("/", 1)[-1]
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    # ⚠⚠ EL ULTIMO RECURSO ES `master`, NO `main`, Y ESO NO ES UN DETALLE.
+    #
+    # Aqui ponia `main`, que es la costumbre general y NO la de este repositorio.
+    # O sea que el respaldo era exactamente el valor equivocado: sin `gh`, esta
+    # funcion devolvia con toda naturalidad la rama que da 404, y el aviso decia
+    # "se asume 'main'" como si eso fuera prudente. El manifiesto se publica
+    # bien, los enlaces apuntan a la nada, y el launcher no tiene forma de
+    # explicarlo -- es el fallo que este mismo docstring dice haber costado ya
+    # una vez.
+    #
+    # Adivinar sigue estando mal; adivinar el valor que sabemos que es falso
+    # esta peor. Si algun dia el repositorio se renombra a `main`, los dos
+    # intentos de arriba lo diran.
+    print(f"  AVISO: no se pudo consultar la rama por defecto ni con `gh` ni con `git`.")
+    print(f"         Se usa 'master', que es la de {REPO_PUBLICO}. COMPRUEBALO"
+          f" antes de publicar.")
+    return "master"
 
 
 RAMA = rama_por_defecto()
@@ -508,6 +538,18 @@ def construir() -> dict:
             "url": f"{BASE_ACTIVOS}/{raiz}-{sha_zip[:10]}.zip",
             "archive": True,
             "keepExisting": True,
+            # ⚠ Y TAMBIEN `once`, que parece redundante y NO LO ES.
+            #
+            # `keepExisting` solo lo entiende el launcher nuevo, y los que ya
+            # estan repartidos ignoran el campo y extraen PISANDO. `once` si lo
+            # entienden todos --y se mira ANTES que `archive`--, asi que a un
+            # launcher viejo esto le dice "extrae solo si no esta la carpeta".
+            # Sin esta linea, actualizar el pack le borraba a la gente su
+            # configuracion; a el le petaba con EPERM en un fichero oculto.
+            #
+            # Se paga con que un fichero de config NUEVO no llega a quien ya
+            # tenga la carpeta. Se cobra cuando todos hayan actualizado.
+            "once": True,
         })
         resumen.append(f"{raiz} {len(entradas)} ficheros "
                        f"({len(datos_zip) // 1024} KB)")
@@ -561,6 +603,38 @@ def construir() -> dict:
     # ocho sitios distintos y la regla es una sola. Ponerla en cada uno es la
     # forma segura de que el noveno se olvide.
     ficheros = [con_espejos(f) for f in ficheros]
+
+    # ⚠ NI UNA RUTA REPETIDA, Y NO ES POR PULCRITUD.
+    #
+    # `applySync` descarga DIEZ ficheros a la vez. Dos entradas con la MISMA
+    # ruta son dos escrituras simultaneas sobre el mismo fichero, y de ahi sale
+    # un jar a medias — el `ZipFile invalid LOC header` que ya costo una tarde,
+    # con la gracia de que el fallo aparece mucho despues y en un sitio que no
+    # se parece en nada a la causa.
+    #
+    # Aparecio al pasar la base a CobbleVerse: ellos ya traen EuphoriaPatcher y
+    # ComplementaryUnbound, que nosotros ademas anadiamos por nuestra cuenta.
+    # Con el pack de Cobblemon no pasaba porque no los traia.
+    #
+    # Se avisa ademas de deduplicar: si algun dia se repite una ruta con
+    # CONTENIDO distinto, eso no es un duplicado sino un conflicto, y quedarse
+    # callado con el primero seria elegir a cara o cruz.
+    vistos, unicos = {}, []
+    for f in ficheros:
+        anterior = vistos.get(f["path"])
+        if anterior is None:
+            vistos[f["path"]] = f
+            unicos.append(f)
+            continue
+        if anterior["sha1"] != f["sha1"]:
+            raise SystemExit(
+                f"CONFLICTO: '{f['path']}' aparece dos veces con contenido "
+                f"distinto ({anterior['sha1'][:10]} y {f['sha1'][:10]}). "
+                f"Decide cual va antes de publicar.")
+        print(f"  duplicado       {f['path']} (lo trae la base y lo aniadiamos "
+              f"tambien nosotros)")
+    ficheros = unicos
+
     return {
         "packVersion": VERSION_PACK,
         "minecraft": MC,

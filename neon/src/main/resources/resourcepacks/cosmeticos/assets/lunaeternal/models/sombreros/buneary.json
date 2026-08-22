@@ -5,8 +5,8 @@
   64
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/buneary",
-  "particle": "lunaeternal:sombreros/buneary"
+  "0": "lunaeternal:item/sombreros/buneary",
+  "particle": "lunaeternal:item/sombreros/buneary"
  },
  "elements": [
   {

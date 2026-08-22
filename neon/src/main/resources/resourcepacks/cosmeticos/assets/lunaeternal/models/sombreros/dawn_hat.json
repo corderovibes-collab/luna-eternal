@@ -6,8 +6,8 @@
   64
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/dawn_hat",
-  "particle": "lunaeternal:sombreros/dawn_hat"
+  "0": "lunaeternal:item/sombreros/dawn_hat",
+  "particle": "lunaeternal:item/sombreros/dawn_hat"
  },
  "elements": [
   {

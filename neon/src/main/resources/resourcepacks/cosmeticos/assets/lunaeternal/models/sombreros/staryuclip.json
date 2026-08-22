@@ -5,8 +5,8 @@
   32
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/staryuclip",
-  "particle": "lunaeternal:sombreros/staryuclip"
+  "0": "lunaeternal:item/sombreros/staryuclip",
+  "particle": "lunaeternal:item/sombreros/staryuclip"
  },
  "elements": [
   {

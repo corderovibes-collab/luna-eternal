@@ -5,8 +5,8 @@
   64
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/psycap",
-  "particle": "lunaeternal:sombreros/psycap"
+  "0": "lunaeternal:item/sombreros/psycap",
+  "particle": "lunaeternal:item/sombreros/psycap"
  },
  "elements": [
   {

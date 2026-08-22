@@ -6,8 +6,8 @@
   64
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/ash_journey",
-  "particle": "lunaeternal:sombreros/ash_journey"
+  "0": "lunaeternal:item/sombreros/ash_journey",
+  "particle": "lunaeternal:item/sombreros/ash_journey"
  },
  "elements": [
   {

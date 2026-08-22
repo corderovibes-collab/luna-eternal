@@ -5,8 +5,8 @@
   64
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/breloomshroom_shiny",
-  "particle": "lunaeternal:sombreros/breloomshroom_shiny"
+  "0": "lunaeternal:item/sombreros/breloomshroom_shiny",
+  "particle": "lunaeternal:item/sombreros/breloomshroom_shiny"
  },
  "elements": [
   {

@@ -359,7 +359,27 @@ def copiar_assets(zips, sombreros):
     base = ASSETS / "assets" / "lunaeternal"
     for ident, modelo, ruta_tex, tex, _ in sombreros:
         d = json.loads(modelo)
-        d["textures"] = {k: "lunaeternal:sombreros/" + ident
+        # ⚠⚠ LA TEXTURA TIENE QUE VIVIR BAJO `textures/item/`, Y NO ES ESTILO.
+        #
+        #   El atlas de bloques --que es de donde los modelos de objeto sacan sus
+        #   sprites-- se construye con DOS fuentes de tipo `directory`:
+        #
+        #       {"type":"directory","source":"block","prefix":"block/"}
+        #       {"type":"directory","source":"item", "prefix":"item/"}
+        #
+        #   (leido de assets/minecraft/atlases/blocks.json del jar de 1.21.1).
+        #   Recorren TODOS los espacios de nombres, pero SOLO esas dos carpetas.
+        #
+        #   Estaban en `textures/sombreros/`, o sea fuera de las dos: no se
+        #   cosian al atlas, y el modelo se quedaba con el sprite de "falta
+        #   esto". El sintoma es un bloque NEGRO Y MAGENTA, que parece una
+        #   textura perdida --y lo es, pero no porque el fichero falte: esta ahi
+        #   y en el jar, solo que en una carpeta que nadie mira--.
+        #
+        #   Un pack NO puede añadir fuentes al atlas sin SOBRESCRIBIR
+        #   `blocks.json` entero, y eso pisaria el de vanilla. Meterlas en
+        #   `item/` usa la fuente que ya existe y no sobrescribe nada.
+        d["textures"] = {k: "lunaeternal:item/sombreros/" + ident
                          for k in (d.get("textures") or {})}
 
         # ⚠⚠ SE QUITA EL `parent`, Y NO ES LIMPIEZA: SIN ESTO EL MODELO NO CARGA.
@@ -377,8 +397,8 @@ def copiar_assets(zips, sombreros):
         (base / "models" / "sombreros").mkdir(parents=True, exist_ok=True)
         (base / "models" / "sombreros" / (ident + ".json")).write_text(
             json.dumps(d, indent=1), encoding="utf-8")
-        (base / "textures" / "sombreros").mkdir(parents=True, exist_ok=True)
-        (base / "textures" / "sombreros" / (ident + ".png")).write_bytes(tex)
+        (base / "textures" / "item" / "sombreros").mkdir(parents=True, exist_ok=True)
+        (base / "textures" / "item" / "sombreros" / (ident + ".png")).write_bytes(tex)
         copiados += 2
 
     (ASSETS / "pack.mcmeta").write_text(json.dumps({

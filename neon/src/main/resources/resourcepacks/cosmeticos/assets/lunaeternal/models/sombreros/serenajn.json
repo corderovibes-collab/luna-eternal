@@ -6,8 +6,8 @@
   64
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/serenajn",
-  "particle": "lunaeternal:sombreros/serenajn"
+  "0": "lunaeternal:item/sombreros/serenajn",
+  "particle": "lunaeternal:item/sombreros/serenajn"
  },
  "elements": [
   {

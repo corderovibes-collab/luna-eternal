@@ -5,8 +5,8 @@
   64
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/blaziken_cap_shiny",
-  "particle": "lunaeternal:sombreros/blaziken_cap_shiny"
+  "0": "lunaeternal:item/sombreros/blaziken_cap_shiny",
+  "particle": "lunaeternal:item/sombreros/blaziken_cap_shiny"
  },
  "elements": [
   {

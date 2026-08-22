@@ -6,8 +6,8 @@
   128
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/lilie_hat",
-  "particle": "lunaeternal:sombreros/lilie_hat"
+  "0": "lunaeternal:item/sombreros/lilie_hat",
+  "particle": "lunaeternal:item/sombreros/lilie_hat"
  },
  "elements": [
   {

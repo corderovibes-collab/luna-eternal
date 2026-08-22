@@ -5,8 +5,8 @@
   64
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/toedscool",
-  "particle": "lunaeternal:sombreros/toedscool"
+  "0": "lunaeternal:item/sombreros/toedscool",
+  "particle": "lunaeternal:item/sombreros/toedscool"
  },
  "elements": [
   {

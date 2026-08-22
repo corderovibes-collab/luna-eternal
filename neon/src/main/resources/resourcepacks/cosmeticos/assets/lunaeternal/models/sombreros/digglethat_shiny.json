@@ -6,8 +6,8 @@
   32
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/digglethat_shiny",
-  "particle": "lunaeternal:sombreros/digglethat_shiny"
+  "0": "lunaeternal:item/sombreros/digglethat_shiny",
+  "particle": "lunaeternal:item/sombreros/digglethat_shiny"
  },
  "elements": [
   {

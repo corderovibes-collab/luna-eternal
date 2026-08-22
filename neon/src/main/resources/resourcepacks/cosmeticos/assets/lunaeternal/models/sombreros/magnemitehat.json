@@ -5,8 +5,8 @@
   32
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/magnemitehat",
-  "particle": "lunaeternal:sombreros/magnemitehat"
+  "0": "lunaeternal:item/sombreros/magnemitehat",
+  "particle": "lunaeternal:item/sombreros/magnemitehat"
  },
  "elements": [
   {

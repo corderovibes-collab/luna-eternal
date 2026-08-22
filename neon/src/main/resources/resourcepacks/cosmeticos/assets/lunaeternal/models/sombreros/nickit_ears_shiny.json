@@ -5,8 +5,8 @@
   32
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/nickit_ears_shiny",
-  "particle": "lunaeternal:sombreros/nickit_ears_shiny"
+  "0": "lunaeternal:item/sombreros/nickit_ears_shiny",
+  "particle": "lunaeternal:item/sombreros/nickit_ears_shiny"
  },
  "elements": [
   {

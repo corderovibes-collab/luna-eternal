@@ -5,8 +5,8 @@
   32
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/parasshroom",
-  "particle": "lunaeternal:sombreros/parasshroom"
+  "0": "lunaeternal:item/sombreros/parasshroom",
+  "particle": "lunaeternal:item/sombreros/parasshroom"
  },
  "elements": [
   {

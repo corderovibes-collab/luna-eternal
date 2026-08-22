@@ -6,8 +6,8 @@
   64
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/gwynnza",
-  "particle": "lunaeternal:sombreros/gwynnza"
+  "0": "lunaeternal:item/sombreros/gwynnza",
+  "particle": "lunaeternal:item/sombreros/gwynnza"
  },
  "elements": [
   {

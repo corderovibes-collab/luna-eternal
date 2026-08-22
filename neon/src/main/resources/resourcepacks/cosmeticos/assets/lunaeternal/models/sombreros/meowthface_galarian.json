@@ -1,10 +1,10 @@
 {
  "credit": "Made with Blockbench",
  "textures": {
-  "0": "lunaeternal:sombreros/meowthface_galarian",
-  "2": "lunaeternal:sombreros/meowthface_galarian",
-  "3": "lunaeternal:sombreros/meowthface_galarian",
-  "particle": "lunaeternal:sombreros/meowthface_galarian"
+  "0": "lunaeternal:item/sombreros/meowthface_galarian",
+  "2": "lunaeternal:item/sombreros/meowthface_galarian",
+  "3": "lunaeternal:item/sombreros/meowthface_galarian",
+  "particle": "lunaeternal:item/sombreros/meowthface_galarian"
  },
  "elements": [
   {

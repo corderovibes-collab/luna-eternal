@@ -5,9 +5,9 @@
   32
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/morelullshroom_shiny",
-  "2": "lunaeternal:sombreros/morelullshroom_shiny",
-  "particle": "lunaeternal:sombreros/morelullshroom_shiny"
+  "0": "lunaeternal:item/sombreros/morelullshroom_shiny",
+  "2": "lunaeternal:item/sombreros/morelullshroom_shiny",
+  "particle": "lunaeternal:item/sombreros/morelullshroom_shiny"
  },
  "elements": [
   {

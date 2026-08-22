@@ -5,8 +5,8 @@
   32
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/goomyhat",
-  "particle": "lunaeternal:sombreros/goomyhat"
+  "0": "lunaeternal:item/sombreros/goomyhat",
+  "particle": "lunaeternal:item/sombreros/goomyhat"
  },
  "elements": [
   {

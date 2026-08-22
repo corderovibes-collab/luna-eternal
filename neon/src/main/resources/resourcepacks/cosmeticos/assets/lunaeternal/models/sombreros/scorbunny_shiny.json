@@ -5,8 +5,8 @@
   32
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/scorbunny_shiny",
-  "particle": "lunaeternal:sombreros/scorbunny_shiny"
+  "0": "lunaeternal:item/sombreros/scorbunny_shiny",
+  "particle": "lunaeternal:item/sombreros/scorbunny_shiny"
  },
  "elements": [
   {

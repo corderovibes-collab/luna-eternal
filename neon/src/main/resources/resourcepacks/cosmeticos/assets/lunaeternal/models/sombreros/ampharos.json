@@ -5,8 +5,8 @@
   32
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/ampharos",
-  "particle": "lunaeternal:sombreros/ampharos"
+  "0": "lunaeternal:item/sombreros/ampharos",
+  "particle": "lunaeternal:item/sombreros/ampharos"
  },
  "elements": [
   {

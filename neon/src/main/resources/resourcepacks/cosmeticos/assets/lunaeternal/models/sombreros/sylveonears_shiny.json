@@ -5,8 +5,8 @@
   32
  ],
  "textures": {
-  "0": "lunaeternal:sombreros/sylveonears_shiny",
-  "particle": "lunaeternal:sombreros/sylveonears_shiny"
+  "0": "lunaeternal:item/sombreros/sylveonears_shiny",
+  "particle": "lunaeternal:item/sombreros/sylveonears_shiny"
  },
  "elements": [
   {

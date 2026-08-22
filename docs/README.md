@@ -29,7 +29,8 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`ui/dibujado.md`](ui/dibujado.md) | ✅ | ⚠️ **Las 5 reglas de dibujado que cumple toda pantalla.** Leer ANTES de escribir una nueva |
 | [`world/world-structure.md`](world/world-structure.md) | ✅ | Lobby · ciudadela · mundo, y el recorrido de entrada |
 | [`world/worlds.md`](world/worlds.md) | ✅ | Hogar permanente vs Salvaje que reinicia; lobby y modpack |
-| [`pokemon/generations.md`](pokemon/generations.md) | ✅ | Kanto + Johto primero, despliegue progresivo |
+| [`pokemon/generations.md`](pokemon/generations.md) | ✅ | Kanto + Johto primero, despliegue progresivo. ⚠️ **§3-ter: los mods también meten spawns** |
+| [`pokemon/voces-pokedex.md`](pokemon/voces-pokedex.md) | ✅ | **Las 256 voces de la Pokédex**: el pipeline y sus cinco trampas |
 | [`economy/treasures.md`](economy/treasures.md) | ⚠️ | Cofres y llaves — **con una objeción abierta sobre legendarios** |
 | [`ui/interfaces-catalog.md`](ui/interfaces-catalog.md) | ✅ | Las 22 pantallas, prioridad y patrones comunes |
 | [`technical/launcher.md`](technical/launcher.md) | ✅ | **El launcher**: se autoactualiza él y el pack, perfiles, reparar, diagnóstico |

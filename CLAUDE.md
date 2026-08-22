@@ -3,11 +3,18 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-08-21
+**Última actualización:** 2026-08-22
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela)
-**Estado:** PHASE 0 y PHASE 1 completadas. 25 documentos, decisiones D-001 a
-D-031. **El mod está desplegado y funcionando contra MariaDB:** economía de
+**Estado:** PHASE 0 y PHASE 1 completadas. 26 documentos, decisiones D-001 a
+D-038. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, cinco vías de progresión, y las interfaces base operativas.
+
+> **2026-08-22 — Kanto y Johto, de verdad y en las dos direcciones.** Las
+> **256 voces** de la Pokédex están completas (`docs/pokemon/voces-pokedex.md`)
+> y el límite de generaciones **por fin cierra**: se descubrió que llevaba seis
+> días dejando pasar **29 especies de Gen 3-8** —los spawns los metían mods, no
+> Cobblemon— y que **la Pokédex no estaba limitada en absoluto**. Las dos cosas
+> arregladas y documentadas en `docs/pokemon/generations.md` §3-ter y §4.
 
 > **2026-08-13 — el día que el servidor pasó a tener cara propia.** El pack ya
 > no es una lista de siete mods elegidos a ojo: **parte del modpack oficial de
@@ -36,8 +43,33 @@ Cobblemon     1.7.3 instalado · Done (9,0 s) · ~1,9 GB de 4096
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 112/112 correctos (2026-08-12, en vivo)
-              eran 125: los 13 de fondos se fueron con el resource pack
+Autotest      /luna autotest -> 136/136 correctos (2026-08-22, en vivo)
+              eran 112 el 12-ago; las nuevas cubren las voces
+              y antes 125: los 13 de fondos se fueron con el resource pack
+Voces         256 VOCES DE LA POKEDEX · KANTO Y JOHTO COMPLETOS
+              (2026-08-22) · docs/pokemon/voces-pokedex.md
+              151 de Kanto + 100 de Johto + 5 formas de Alola
+              "Pokédex: 256 voces listas" en el log del arranque
+              python tools/gen_voces.py --origen "RUTA"
+              ⚠⚠ REHACE EL CATALOGO ENTERO EN CADA EJECUCION. Hay que
+                 pasarle TODAS las generaciones o borra las que falten
+              ⚠ LAS 5 FORMAS DE ALOLA SE CONSERVAN A MANO: su carpeta de
+                origen ya no existe en Descargas. Copiar sus .ogg fuera,
+                regenerar, y devolverlos + reañadirlos a sounds.json y
+                voces.txt. Detalle en el doc §3.3
+              ⚠ EL DESFASE DE KANTO, que costo entender: en la grabacion
+                se salto Victreebel (71) pero la numeracion siguio
+                corrida, asi que `71.MP3` era TENTACOOL (72) y asi hasta
+                `150.MP3` = Mew (151). JOHTO NO LO LLEVA: empieza en 152
+                --el 151 no existe-- y el hueco ES la realineacion
+                NO se dedujo, se VERIFICO escuchando 152.MP3 (Chikorita).
+                Equivocarse era asignar mal 100 voces y que nada lo
+                detectara: cada Pokemon describiendo al siguiente
+              ⚠ los .ogg salen SIEMPRE como modificados en git: un flujo
+                Ogg lleva un numero de serie aleatorio, asi que
+                reconvertir nunca da los mismos bytes. Es esperado
+              ⚠ hace falta ffmpeg (Minecraft solo reproduce OGG Vorbis)
+              el jar paso de 24 MB a 41: es lo que mas pesa del mod
 Telemetría    /luna economia · informe automático al log cada hora
               tablist con rangos (la barra lateral se borro, D-026)
 Pack base     COBBLEVERSE 1.7.42 (D-037, revoca D-031) — ORDEN DEL
@@ -442,6 +474,16 @@ Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
                 receta en docs/technical/launcher-qt.md §9
                 ⚠ EL JDK TIENE QUE SER 17, NO 21: Prism compila el
                   NewLaunch.jar con `-source 7` y JDK 20 lo elimino
+                ⚠⚠ PERO EL MOD EXIGE JDK 21 (MC 1.21.1), ASI QUE HACEN
+                   FALTA LOS DOS. NO son intercambiables y estan en
+                   sitios distintos:
+                     launcher Qt  .toolchain/jdk        JDK 17
+                     mod          Eclipse Adoptium 21   JDK 21
+                   la ruta del 21 esta ESCRITA A MANO en mod/build.sh, y
+                   el 2026-08-22 apuntaba al JDK de PrismLauncher, que ya
+                   no existe tras el formateo: `bash build.sh` abortaba
+                   con "no hay JDK 21" y el mod no se podia compilar
+                   winget install EclipseAdoptium.Temurin.21.JDK
               ⚠ el enlazado falla con LNK1104 si el launcher esta ABIERTO
               ⚠ QtTest en Windows NO escribe por la tuberia: hace falta
                 `-o fichero,txt`. Un `exit 0` mudo NO significa que no
@@ -490,6 +532,7 @@ Cliente       (respaldo) mrpack jugador 185 MB · constructor 233 MB
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
               Y LA POKEDEX TAMBIEN, desde el 2026-08-22 (antes NO)
+              docs/pokemon/generations.md §3-ter y §4
               python tools/gen_generaciones.py  ->  world/datapacks/
               ⚠⚠ NO BASTA CON LEER vendor/cobblemon: HAY QUE MIRAR
                  DENTRO DE LOS JARS. El generador solo leia el fuente
@@ -604,6 +647,21 @@ Bloques       UN SOLO generador para las SEIS familias:
               es la unica forma de ver si encaja consigo misma, y una
               que no encaja no se nota en el editor sino en la fachada
               detalle en docs/world/bloques.md
+Herramientas  LO QUE TIENE QUE ESTAR EN LA MAQUINA, y que el formateo
+              del 2026-08-20 se llevo. Los tres fallaron el 22-ago y
+              cada uno paro el trabajo hasta instalarlo:
+                JDK 21    compilar el mod       Temurin (ver arriba)
+                ffmpeg    convertir las voces   Gyan.FFmpeg
+                gh        publicar el pack      GitHub.cli
+              winget install EclipseAdoptium.Temurin.21.JDK Gyan.FFmpeg GitHub.cli
+              ⚠ winget MODIFICA EL PATH PERO NO EL SHELL YA ABIERTO: hay
+                que usar la ruta completa o abrir otra terminal
+              ⚠ `gh` necesita login aparte, y el token que git tiene
+                cacheado NO SIRVE: le falta el permiso `read:org` y
+                `gh auth login --with-token` lo rechaza. Va por
+                navegador: gh auth login --web
+              python: .toolchain/python/python.exe (el `python` del PATH
+              es el alias de la Store y NO funciona)
 Servidor      allow-flight=true (lo exige Axiom; revertir al abrir)
               enforce-secure-profile=false · require-resource-pack=false
 ```

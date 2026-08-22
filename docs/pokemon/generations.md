@@ -16,16 +16,22 @@ generaciones con el tiempo.
 
 ## Current Status
 
-**IMPLEMENTADO** (2026-08-11). Datapack generado y desplegado:
-**251 especies activas, 583 spawns apagados**. Generador en
-`tools/gen_generaciones.py`.
+**IMPLEMENTADO** (2026-08-11) y **CORREGIDO** (2026-08-22). Datapack generado y
+desplegado: **251 especies activas, 608 spawns apagados**, y desde el 22-ago
+**la Pokédex también está recortada**. Generador en `tools/gen_generaciones.py`.
 
 ⚠️ Carga confirmada, **efecto en el juego sin verificar**: `/checkspawn`
 requiere un jugador conectado.
 
+> ⚠️⚠️ **El 2026-08-22 se descubrió que llevaba seis días incompleto.** Eran 583
+> spawns y son 608: faltaban **25 ficheros que añaden mods**, no Cobblemon. Ver
+> §3-ter — es la parte de este documento que más importa si vuelves a tocar esto.
+
 ## Last Decision
 
-D-017 · y la decisión de **no bloquear las evoluciones que cruzan** (§3-bis).
+D-017 · la decisión de **no bloquear las evoluciones que cruzan** (§3-bis) · y
+la del **2026-08-22: la Pokédex oculta lo bloqueado en vez de enseñarlo con
+candado** (§4), que revoca el diseño anterior.
 
 ---
 
@@ -112,8 +118,44 @@ no toca y las apaga.** Nada de borrar archivos ni tocar el jar.
       —porygonz, mimejr, jangmoo, hakamoo— se habrían quedado activas**
 - [x] Comprobación cruzada: cero fugas entre los 823 ficheros
 - [x] La carpeta `herds/` solo tiene a Bulbasaur (Gen 1): no hay fuga por ahí
+- [x] **Los spawns que añaden los mods** (2026-08-22, §3-ter) — 25 más
+- [x] **Ningún fichero de spawn mezcla** especies dentro y fuera de rango: son
+      0, comprobado. Es lo que rompería el criterio de «la primera especie
+      manda» y obligaría a editar spawns en vez de apagarlos enteros
 - [ ] Que un Pokémon apagado no aparece por incursión, pesca ni huevo
 - [ ] Que la cría no produce especies apagadas
+
+---
+
+## 3-ter. ⚠️ No basta con leer el fuente de Cobblemon
+
+**Esta es la lección cara de este documento.**
+
+La primera versión del generador leía solo `vendor/cobblemon`, y durante seis
+días el datapack pareció correcto. El 2026-08-17 entró CobbleVerse (D-037) con
+mods que meten spawns **suyos** en el **mismo namespace**
+`data/cobblemon/spawn_pool_world/`, que el generador no miraba:
+
+| Mod | Spawns | Especies que aparecían |
+|---|---|---|
+| `mega_showdown` | 24 | Castform, Burmy, Wormadam, Mothim, Cherubi, Cherrim, Snover, Abomasnow, Rotom, Audino, Darumaka, Darmanitan, Oricorio, Rockruff, Lycanroc, Minior, Blipbug, Dottler, Orbeetle, Duraludon |
+| `cobblemon-additions` | 1 | Hatenna, Hatterene, Hattrem, Liepard, Purrloin |
+
+O sea **29 especies de Gen 3-8 apareciendo en un servidor que se anuncia como
+Kanto + Johto**. Y nadie se enteró, porque **no hay nada que avise**: el
+datapack se genera igual de bien, solo que incompleto.
+
+Lo que se cambió, y por qué así:
+
+- El generador **lee también los jars instalados** y respeta la ruta tal cual
+  viene — sobrescribir exige la **misma** ruta. Como todos usan el namespace de
+  Cobblemon, el mecanismo de siempre los tapa sin inventar nada.
+- **Aborta** si no encuentra la carpeta de mods, en vez de publicar un datapack
+  con agujeros. Un fallo ruidoso es mejor que seis días de silencio.
+
+> **La regla general:** cada mod nuevo que toque Cobblemon puede abrir un
+> agujero aquí, y no lo va a decir. Regenerar el datapack es parte de instalar
+> un mod, no una tarea aparte.
 
 ---
 
@@ -148,10 +190,40 @@ togekiss, yanmega.
 
 ---
 
-## 4. Qué ve el jugador
+## 4. Qué ve el jugador — **cambiado el 2026-08-22**
 
-**Lo bloqueado no se oculta** (P9 e `interfaz-cliente.md`). La Pokédex muestra
-las 1 025 entradas, pero las inactivas dicen por qué:
+### Lo que está implementado hoy: se oculta
+
+**Decisión del usuario, 2026-08-22, literal:** *«en la pokedex solo deben
+aparecer los pokemones de la primera y segunda generacion, los otros quedan
+bloqueados»*. Así que:
+
+| | |
+|---|---|
+| `national.json` | pasa a agregar **solo** `kanto` y `johto` |
+| Las otras 9 regiones | se **vacían** (`entries: []`) |
+| Kanto | 151 → **162** entradas |
+| Johto | 100 → **112** entradas |
+
+Las 23 entradas de más son las **evoluciones que cruzan** (§3-bis), puestas en
+la dex de su **preevolución**: Ursaluna aparece en Johto porque Ursaring es de
+Johto. Sin eso, quien consiguiera un Ursaluna tendría un Pokémon que la Pokédex
+no reconoce — parece un fallo, no una recompensa.
+
+> ⚠️ **Se vacían, no se borran, y quedan 9 pestañas de región vacías.** Un
+> datapack puede sobrescribir un fichero pero no eliminarlo, y la interfaz lista
+> **todas** las dex cargadas sin filtrar las vacías
+> (`PokedexGUI.kt:173`: `availableRegions = Dexes.dexEntryMap.keys.toList()`).
+> Es lo único que se puede hacer **desde datos**.
+
+> ⚠️ Se comprueba que la entrada de dex **exista** antes de referenciarla:
+> `getEntries()` hace `mapNotNull`, o sea que un id inventado se descarta **en
+> silencio** y esa especie no saldría sin que nada avise.
+
+### Lo que se había diseñado: enseñarlo con candado
+
+El diseño anterior era **el contrario**, y se deja escrito porque el argumento
+sigue siendo bueno:
 
 ```
 ┌─ #0387 Turtwig ──────────────── 🔒 ─┐
@@ -162,8 +234,15 @@ las 1 025 entradas, pero las inactivas dicen por qué:
 └──────────────────────────────────────┘
 ```
 
-Eso convierte una limitación en una **promesa**: el jugador ve que el mundo va
-a crecer. Es lo contrario de esconderlo, que se leería como carencia.
+Eso convertía la limitación en una **promesa**: el jugador veía que el mundo va
+a crecer, en vez de leerlo como carencia.
+
+**Por qué no está así:** además de que el usuario pidió ocultarlas, **la Pokédex
+de Cobblemon no tiene forma de marcar una entrada como bloqueada desde un
+datapack**. Una entrada está o no está. Ese diseño exige **nuestra propia
+pantalla de Pokédex** en el mod de cliente, que hoy no existe (`ART-002`,
+D-026). Cuando exista, esto se puede recuperar: el dato de qué generación está
+activa ya lo tiene el servidor.
 
 ---
 
@@ -211,10 +290,18 @@ No se abre por calendario, sino cuando se cumplen las tres:
 
 ## Next Actions
 
-1. Ratificar el arranque con Kanto + Johto
-2. `PKM-004` — script que genera el datapack de apagado
-3. Auditar cadenas evolutivas que cruzan generaciones
-4. `PKM-002` — diseño del inicial
+1. ~~Ratificar el arranque con Kanto + Johto~~ ✅ D-017
+2. ~~`PKM-004` — script que genera el datapack de apagado~~ ✅ y corregido
+   el 2026-08-22 (§3-ter)
+3. ~~Auditar cadenas evolutivas que cruzan generaciones~~ ✅ §3-bis
+4. **Verificar en el juego** — lo único que queda y no puedo hacer yo:
+   `/checkspawn common` en el Mundo Salvaje no debe sacar nada de Hoenn en
+   adelante, y la Pokédex debe abrir en National con 251
+5. `PKM-005` — que los objetos de evolución de §3-bis sean obtenibles, o esas
+   23 evoluciones son un callejón sin salida
+6. `PKM-002` — diseño del inicial
+7. Cuando exista la Pokédex propia (`ART-002`): recuperar las entradas
+   bloqueadas con candado en vez de ocultas (§4)
 
 ## Related Systems
 

@@ -379,6 +379,10 @@ Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
                  Se diferencian SOLO en un punto
               ---------------------------------------------------------
               0.2.0 ARREGLA LO QUE HACIA ABANDONAR LA INSTALACION
+              PUBLICADA Y DESCARGABLE (2026-08-21). CI verde, 13 pasos,
+              35 min -- la PRIMERA vez que ese flujo llega al final
+                .../luna-eternal-launcher/releases/download/v0.2.0/
+                LunaEternal-Setup.exe   ·   27,1 MB
               Tres fallos, ninguno el que parecia. Detalle completo en
               docs/technical/launcher-qt.md §8
                 1) LAS DESCARGAS NO REINTENTABAN NI UNA VEZ. 157 de los

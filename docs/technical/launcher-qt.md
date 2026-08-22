@@ -529,13 +529,43 @@ juego**, y conviene enumerarlos antes de darlo por hecho.
 | 65/65 pruebas del motor | ✅ incluidas las 10 de `LunaDownload` con la API nueva |
 | Las 8 DLL del runtime en el instalador | ✅ `File *.dll` las empaqueta; +632 KB comprimidos |
 | Arranque, requisitos, sync 159/159, juego | ✅ verificado en vivo |
+| La **política** de reintentos | ✅ `test_soloUn4xxDescartaElOrigen`, 11/11 en `LunaDownload` |
 | **Los reintentos, contra un fallo real** | ❌ **NO**. No hubo nada que descargar, así que `FileTask` no bajó ni un byte |
 | **El aviso de Visual C++** | ❌ **NO**. Este PC ya tiene el runtime; hace falta un Windows limpio |
 
-> ⚠️ **El arreglo del 96 % sigue sin demostrarse.** Está escrito, compilado y en
-> el binario, pero hasta que una descarga falle de verdad y se vea aguantar, es
-> una hipótesis bien fundada — no un hecho. La prueba barata: quitar 3 mods de
-> la instancia y darle a Jugar.
+> ⚠️ **El arreglo del 96 % sigue sin demostrarse.** Está escrito, compilado,
+> publicado y con su política cubierta por pruebas — pero hasta que una descarga
+> falle de verdad y se vea aguantar, el **mecanismo** es una hipótesis bien
+> fundada, no un hecho. La prueba barata: quitar 3 mods de la instancia y darle
+> a Jugar. **Se estrena en la máquina de un jugador.**
+
+### 8.8 · Publicado: v0.2.0 (2026-08-21)
+
+```
+https://github.com/corderovibes-collab/luna-eternal-launcher/releases/download/v0.2.0/LunaEternal-Setup.exe
+28.394.156 B (27,1 MB)  ·  CI verde, 13 pasos, 35 min
+```
+
+**Fue la primera vez que `luna-release.yml` llegó hasta el final.** En `v0.1.0`
+el flujo que corrió y falló fue el de Freesm (§8.6 del commit `c588d710d`).
+
+Dos cosas que se interceptaron *entre* el «vamos a publicar» y el tag, las dos
+habrían llegado a los jugadores:
+
+| | |
+|---|---|
+| **La versión estaba escrita a mano** como `0.1.0` en `CMakeLists.txt`, y la CI **no la deriva de la etiqueta** | Publicar `v0.2.0` habría colgado una release con un binario que se identifica como 0.1.0. El autoactualizador compara versiones: actualiza, sigue viendo la vieja, **vuelve a actualizar en cada arranque**. Bucle sin ningún error visible |
+| **`release.yml` se disparaba con `tags: "*"`** | Cada publicación arrancaba la matriz entera de Freesm con secretos que no tenemos, y peleándose por la misma release. Pasa a `workflow_dispatch` |
+
+> ⚠️ **Subir de versión = tocar el número en `CMakeLists.txt` Y empujar su
+> etiqueta.** No hay nada que lo compruebe automáticamente; si se olvida, el
+> síntoma es el bucle de actualización, que no da error.
+
+**Mejora pendiente, medida:** la CI compila los **27 ejecutables de prueba**,
+cada uno enlazado con LTCG — exactamente lo que hacía eterna la compilación en
+local (§9). Pasarle `-DBUILD_TESTING=OFF` al flujo de publicación se llevaría
+buena parte de esos 35 minutos. No se tocó para no cambiar el workflow con una
+ejecución en marcha.
 
 ## 9. El PC de desarrollo se formateó (2026-08-20) y qué costó eso
 
@@ -655,10 +685,14 @@ sí lo haga.
 
 ## Last Decision
 
-**2026-08-21** — arreglados los tres fallos que hacían abandonar la
-instalación (§8): reintentos en las descargas del pack, errores que nombran el
-fichero y la causa, y el runtime de Visual C++ empaquetado y comprobado.
-**Escrito y revisado, sin compilar**: ver §9.
+**2026-08-21 · v0.2.0 PUBLICADA** — arreglados los tres fallos que hacían
+abandonar la instalación (§8) más el `--launch` que se saltaba la sincronización
+(§8.6). Toolchain reconstruido tras el formateo (§9). CI verde a la primera que
+llegó hasta el final. Commits `def0b0086`, `c588d710d`, `b9bf77a38` en `luna`.
+
+> **Lo que NO quedó demostrado, y conviene no olvidarlo:** el mecanismo de
+> reintentos nunca se ejercitó contra un fallo de red real, y el aviso de
+> Visual C++ necesita un Windows limpio. Ver §8.7.
 
 **2026-08-18** — motor completo y probado (64 pruebas, 7 piezas). Nada
 enchufado a la interfaz todavía. Ver commits `23201dc45` … `c8fd670e7` en la
@@ -666,11 +700,18 @@ rama `luna`.
 
 ## Next Actions
 
-1. **Reiniciar el equipo** para que se apliquen `KB5066790`/`KB5066791` (§9) —
-   sin eso vcpkg no arranca y no se puede compilar nada
-2. Compilar: `powershell tools/build-launcher.ps1` (sin LTO, rápido, para ver
-   si el código de §8 compila) y luego `-Publicar -Instalador`
-3. Verificar en un Windows **limpio**, que es el único sitio donde se ve §8.3
-4. Reinstalar Python — `tools/*.py` no corren (§9)
-5. Publicar y medir: cuántos llegan a la plaza sin pedir ayuda
+1. **Probar en un Windows limpio.** Es el único sitio donde se ve §8.3 — el
+   fallo del runtime de Visual C++, que es el que dejaba el doble clic sin hacer
+   absolutamente nada. El PC de desarrollo ya tiene el runtime y no sirve
+2. **Cuando alguien reporte un fallo de descarga, pedirle la captura.** El
+   mensaje ahora trae fichero, servidor y código: es la primera vez que un
+   informe de un jugador va a servir para diagnosticar, y además es la única
+   forma de ver si los reintentos aguantan
+3. `-DBUILD_TESTING=OFF` en `luna-release.yml` — 27 enlazados con LTCG de menos
+   (§8.8)
+4. Medir: cuántos llegan a la plaza sin pedir ayuda. **Ese numero es el que dice
+   si esto sirvió de algo**; hasta ahora la única señal era gente que se iba
+5. `MARCA-001` — el renombrado a «PokeReport Network». ⚠️ Cambiar el `AppID`
+   mueve la carpeta de datos: quien ya lo tenga instalado se encontraría una
+   instalación vacía y volvería a bajar 450 MB
 6. Diagnóstico y reparar (lo que el de Electron sí tiene)

@@ -488,7 +488,39 @@ Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
 Cliente       (respaldo) mrpack jugador 185 MB · constructor 233 MB
               Fabric Loader 0.19.3 (Cobblemon exige >= 0.17.2)
 Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
-Generaciones  Kanto + Johto activas · 583 spawns apagados por datapack
+Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
+              Y LA POKEDEX TAMBIEN, desde el 2026-08-22 (antes NO)
+              python tools/gen_generaciones.py  ->  world/datapacks/
+              ⚠⚠ NO BASTA CON LEER vendor/cobblemon: HAY QUE MIRAR
+                 DENTRO DE LOS JARS. El generador solo leia el fuente
+                 clonado, y con CobbleVerse (D-037) entraron mods que
+                 meten spawns SUYOS en el MISMO namespace
+                 `data/cobblemon/spawn_pool_world/`:
+                   mega_showdown        24  Castform, Rotom, Rockruff,
+                                            Orbeetle, Duraludon...
+                   cobblemon-additions   1  Hatenna, Liepard, Purrloin
+                 29 especies de Gen 3-8 aparecieron SEIS DIAS en un
+                 servidor que se anuncia Kanto+Johto, y nada aviso: el
+                 datapack se genera igual de bien, solo que incompleto
+                 hoy el script ABORTA si no encuentra la carpeta de mods
+                 en vez de publicar un datapack con agujeros
+              ⚠ LA POKEDEX SE VACIA, NO SE BORRA. Un datapack no puede
+                eliminar un fichero, y la interfaz lista TODAS las dex
+                cargadas sin filtrar las vacias (PokedexGUI.kt:173), asi
+                que quedan 9 pestañas de region VACIAS. Es lo unico que
+                se puede hacer desde datos
+                national -> solo agrega kanto y johto
+              ⚠ LAS 23 EVOLUCIONES QUE CRUZAN SI ENTRAN EN LA POKEDEX,
+                en la dex de su PREEVOLUCION (ursaluna en Johto, porque
+                ursaring es de Johto). Kanto 151->162, Johto 100->112.
+                Sin eso, quien consiguiera un Ursaluna tendria un
+                Pokemon que la Pokedex no reconoce: parece un fallo y no
+                una recompensa. Las evoluciones NO se bloquean (ver el
+                docstring del generador: son el contenido mas dificil)
+              ⚠ SIN VERIFICAR EN EL JUEGO. `/checkspawn` exige un
+                jugador conectado; desde consola solo consta que el
+                datapack carga sin errores. Es el mismo PKM-004 de
+                siempre
 Interfaz      NO HAY. Se borro entera (D-026): Pad y menus de cofre
               a la espera del arte real. Debajo todo sigue vivo:
               /luna autotest sigue verde y la logica no se toco

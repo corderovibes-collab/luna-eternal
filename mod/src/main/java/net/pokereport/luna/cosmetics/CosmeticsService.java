@@ -314,32 +314,145 @@ public class CosmeticsService {
             return Resultado.no("Ese disfraz no es para " + pokemon.getSpecies().getName() + ".");
         }
 
-        // ⚠⚠ SE APLICA DANDO EL OBJETO, NO ENCENDIENDO UNA BANDERA.
+        // ⚠⚠⚠ SE FUERZA EL ASPECTO. NI BANDERA, NI OBJETO. Y LAS TRES FORMAS
+        //     SE PROBARON, EN ESTE ORDEN:
         //
-        // Estuvo escrito con `FlagSpeciesFeature`, leyendo el repositorio de
-        // GitHub -- que declara los cosmeticos como `species_features`. La
-        // version PUBLICADA del pack usa `cosmetic_items`, que es el sistema
-        // NATIVO de Cobblemon 1.7 y funciona distinto: le das un objeto al
-        // Pokemon y el motor le pone los aspectos.
+        //  1) FlagSpeciesFeature -- leyendo el repositorio de GitHub, que declara
+        //     los cosmeticos como `species_features`. No pasaba nada: la version
+        //     PUBLICADA del pack no usa eso.
         //
-        // Encendiendo la bandera no pasaba nada: Cobblemon no conocia esa
-        // feature, `updateAspects()` no añadia el aspecto, y el jugador se
-        // quedaba con su Pokemon normal despues de pagar.
+        //  2) swapCosmeticItem -- el sistema `cosmetic_items` nativo de Cobblemon
+        //     1.7, que es el que el pack SI usa. Funcionaba... y ABRIA UN AGUJERO
+        //     QUE SE LLEVABA LA TIENDA POR DELANTE:
         //
-        // `swapCosmeticItem` devuelve el que llevaba, si llevaba alguno. No se
-        // guarda: los disfraces son nuestros, no objetos del inventario, y
-        // devolverselo al jugador crearia un objeto de la nada.
-        var objeto = net.minecraft.registry.Registries.ITEM.getOrEmpty(
-                net.minecraft.util.Identifier.of(pieza.objeto())).orElse(null);
-        if (objeto == null) {
-            LunaEternal.LOG.warn("El cosmetico {} pide el objeto {}, que no existe",
-                    cosmeticId, pieza.objeto());
-            return Resultado.no("Ese cosmético no se puede aplicar ahora mismo.");
+        //       `charizard_knight` se aplica con un `minecraft:iron_helmet`.
+        //       Cualquiera craftea uno, se lo da a su Charizard, y tiene el
+        //       disfraz de 2.500 LunaCoins gratis. Y al reves: se lo quita por
+        //       el menu de Cobblemon y SE QUEDA CON EL OBJETO.
+        //
+        //     Eso no es un fallo de esta funcion: es que `cosmetic_items` esta
+        //     pensado para conseguirse jugando, y D-039 dice exactamente lo
+        //     contrario -- solo con LunaCoins o en eventos. Los dos sistemas no
+        //     pueden convivir, porque el suyo es una puerta que no podemos
+        //     cerrar desde aqui.
+        //
+        //  3) forcedAspects -- lo que hay ahora. El aspecto va DIRECTO al
+        //     Pokemon, y EL DATAPACK DEL PACK NO SE INSTALA: sin el, `cosmetic_items`
+        //     no se registra y el objeto no aplica nada. La puerta no se vigila,
+        //     se quita.
+        //
+        // Funciona porque `updateAspects()` hace  aspectos = proveedores +
+        // forcedAspects  (verificado en el bytecode de 1.7.3), `PokemonP3` lo
+        // guarda y `ClientPokemonP3` lo sincroniza. O sea: persiste y se ve.
+        //
+        // ⚠ SE CONSERVA lo que hubiera en forcedAspects que no sea nuestro. Un
+        //   `forcedAspects = Set.of(aspecto)` a secas borraria lo que pusiera
+        //   cualquier otro mod, y el sintoma seria "al ponerme un disfraz se me
+        //   quito otra cosa" en un servidor con 158 mods.
+        var aspectos = new java.util.HashSet<>(pokemon.getForcedAspects());
+        aspectos.removeAll(aspectosDelCatalogo(pieza.especie()));   // uno cada vez
+        aspectos.add(pieza.aspecto());
+        pokemon.setForcedAspects(aspectos);
+
+        // ⚠ Y SE LIMPIA EL OBJETO COSMETICO, por si el Pokemon venia de la epoca
+        //   de (2). Sin esto quedaria un `cosmeticItem` guardado que no pinta
+        //   nada hoy, pero que volveria a pintar si alguien reinstalara el
+        //   datapack -- un disfraz que reaparece solo meses despues.
+        if (!pokemon.getCosmeticItem().isEmpty()) {
+            pokemon.setCosmeticItem(net.minecraft.item.ItemStack.EMPTY);
         }
-        pokemon.swapCosmeticItem(new net.minecraft.item.ItemStack(objeto), false);
         pokemon.updateAspects();
 
         return Resultado.si();
+    }
+
+    /**
+     * Quitarle el disfraz al Pokemon que lo lleve puesto.
+     *
+     * <p>⚠ <b>NO hace falta la ranura, y pedirla seria un error.</b> El cliente
+     * no sabe en que ranura esta —es justo lo que ya fallo una vez, cuando
+     * intentaba leer su propio equipo y comparaba especies por el nombre
+     * visible—, y ademas la ranura puede haber cambiado desde que se pinto la
+     * pantalla: basta con reordenar el equipo. Se busca aqui, contra el equipo
+     * de verdad, en el momento de quitarlo.
+     *
+     * <p><b>Se quita del {@code forcedAspects}</b>, que es donde lo puso
+     * {@code disfrazar}. Ver alli por que no es un objeto: {@code cosmetic_items}
+     * se aplica con un objeto crafteable, y eso saltaba la tienda entera.
+     *
+     * <p>⚠ <b>ESTA ES LA UNICA FORMA DE QUITARSELO, y es deliberado.</b> El menu
+     * de Cobblemon no lo ofrece porque no hay objeto cosmetico que devolver: sin
+     * el datapack, para Cobblemon ese Pokemon no lleva nada puesto, solo tiene un
+     * aspecto forzado. Poner y quitar pasan los dos por el PokePad.
+     *
+     * <p><b>Quitarlo NO lo devuelve al catalogo:</b> sigue comprado. La posesion
+     * esta en {@code player_cosmetics} y esto no la toca. Es lo que permite
+     * ponerselo y quitarselo sin volver a pagar, que es lo que un jugador espera
+     * de un cosmetico.
+     */
+    public Resultado desvestir(net.minecraft.server.network.ServerPlayerEntity jugador,
+                               long playerId, String cosmeticId)
+            throws SQLException {
+
+        Catalogo.Pieza pieza = Catalogo.de(cosmeticId);
+        if (pieza == null) {
+            return Resultado.no("Ese cosmético no existe.");
+        }
+        // Se comprueba la posesion igual que al ponerlo. No porque quitar algo
+        // que no tienes haga daño --no lo hace--, sino porque si el cliente pide
+        // quitar un cosmetico que no ha comprado, algo no cuadra y prefiero que
+        // se note aqui.
+        try (Connection c = db.connection()) {
+            if (!tiene(c, playerId, cosmeticId)) {
+                return Resultado.no("No tienes ese cosmético.");
+            }
+        }
+
+        var equipo = com.cobblemon.mod.common.Cobblemon.INSTANCE
+                .getStorage().getParty(jugador);
+        for (int i = 0; i < 6; i++) {
+            var pokemon = equipo.get(i);
+            if (pokemon == null || !coincide(pokemon, pieza)
+                    || !pokemon.getAspects().contains(pieza.aspecto())) {
+                continue;
+            }
+            var aspectos = new java.util.HashSet<>(pokemon.getForcedAspects());
+            aspectos.remove(pieza.aspecto());
+            pokemon.setForcedAspects(aspectos);
+            if (!pokemon.getCosmeticItem().isEmpty()) {
+                pokemon.setCosmeticItem(net.minecraft.item.ItemStack.EMPTY);
+            }
+            pokemon.updateAspects();
+            // Sin mensaje de exito a proposito: el handler solo enseña los
+            // fallos, y el aviso de que ha funcionado es la propia pantalla, que
+            // vuelve a decir EQUIPAR en cuanto llega el catalogo nuevo.
+            return Resultado.si();
+        }
+        // Que no lo lleve nadie NO ES UN FALLO. La pantalla pudo pintarse antes
+        // de que el jugador cambiara de equipo, o de que el Pokemon se fuera al
+        // PC. El estado que queria --que no lo lleve nadie-- ya es el que hay,
+        // asi que se contesta que si: un error rojo aqui seria mentir sobre algo
+        // que esta bien.
+        return Resultado.si();
+    }
+
+    /**
+     * Todos los aspectos que el catalogo puede poner a esa especie.
+     *
+     * <p>Sirve para <b>quitar el disfraz anterior al poner uno nuevo</b>: un
+     * Pokemon lleva uno cada vez. Sin esto, equipar `knight` sobre `steampunk`
+     * dejaria los dos aspectos puestos, y lo que se dibuja con dos resolvers
+     * compitiendo no lo decide nadie -- saldria uno u otro segun el orden, que
+     * es la clase de fallo que solo aparece a veces.
+     */
+    private static java.util.Set<String> aspectosDelCatalogo(String especie) {
+        java.util.Set<String> s = new java.util.HashSet<>();
+        for (Catalogo.Pieza p : Catalogo.todas()) {
+            if (p.especie().equals(especie) && !p.aspecto().isEmpty()) {
+                s.add(p.aspecto());
+            }
+        }
+        return s;
     }
 
     /** La especie de ese Pokemon es la que pide el cosmetico. Ver `disfrazar`. */

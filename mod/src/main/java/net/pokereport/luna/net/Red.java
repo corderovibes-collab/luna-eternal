@@ -238,6 +238,8 @@ public class Red implements ModInitializer {
         public static final int COMPRAR = -1;
         /** Equipar y que el SERVIDOR elija la ranura: el cliente no lee su equipo. */
         public static final int AUTOMATICA = -2;
+        /** Quitarselo al Pokemon que lo lleve puesto. Tampoco necesita ranura. */
+        public static final int QUITAR = -3;
 
         /**
          * ⚠⚠ ESTO ERA `ranura < 0`, Y SE TRAGABA LAS DOS.
@@ -255,6 +257,10 @@ public class Red implements ModInitializer {
          */
         public boolean esCompra() {
             return ranura == COMPRAR;
+        }
+
+        public boolean esQuitar() {
+            return ranura == QUITAR;
         }
 
         @Override
@@ -333,7 +339,9 @@ public class Red implements ModInitializer {
                     var svc = LunaEternal.cosmetics();
                     net.pokereport.luna.cosmetics.CosmeticsService.Resultado r;
 
-                    if (!carga.esCompra()) {
+                    if (carga.esQuitar()) {
+                        r = svc.desvestir(jugador, id, carga.id());
+                    } else if (!carga.esCompra()) {
                         r = svc.disfrazar(jugador, id, carga.id(), carga.ranura());
                     } else {
                         // ⚠⚠ UUID NUEVO, Y NO UNA CLAVE DERIVADA DEL COSMETICO.

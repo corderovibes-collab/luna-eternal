@@ -147,10 +147,25 @@ import java.util.stream.Collectors;
  * eventos— este catalogo es la unica fuente que hay: un identificador que no
  * este aqui se rechaza al comprar.
  *
- * <h2>Como se aplica</h2>
+ * <h2>⚠⚠ POR QUE NO HAY CAMPO `objeto`, HABIENDOLO TENIDO</h2>
  *
- * Cobblemon 1.7 los aplica por OBJETO, no por bandera: se le da a un Pokemon el
- * {@code objeto} y el motor le pone el aspecto. Por eso cada pieza lo lleva.
+ * El pack declara cada cosmetico con un {@code consumedItem}: `charizard_knight`
+ * se aplica dando un {@code minecraft:iron_helmet}. Se leyo, se guardo aqui, y
+ * se aplicaba con {@code swapCosmeticItem}. <b>Funcionaba, y por eso se tardo en
+ * ver el problema:</b>
+ *
+ * <pre>
+ * craftear un yelmo de hierro = el disfraz de 2.500 LunaCoins, gratis
+ * quitarlo por el menu de Cobblemon = ademas te quedas el objeto
+ * </pre>
+ *
+ * {@code cosmetic_items} esta pensado para conseguirse jugando, y <b>D-039 dice
+ * exactamente lo contrario</b>. No se puede vigilar esa puerta desde el mod, asi
+ * que <b>el datapack del pack no se instala</b> --sin el, `cosmetic_items` ni se
+ * registra-- y el aspecto se fuerza directo con {@code setForcedAspects}.
+ *
+ * El campo se quito en vez de dejarlo sin usar: un dato que sigue ahi es una
+ * invitacion a volver a usarlo.
  *
  * <h2>⚠ LOS PRECIOS SON PROVISIONALES</h2>
  *
@@ -168,12 +183,12 @@ public final class Catalogo {
      *
      * @param especie identificador completo, {@code cobblemon:charizard}
      * @param aspecto el aspecto que aplica, {@code knight}
-     * @param objeto  el objeto que Cobblemon consume para aplicarlo
+     * @param precio  ver abajo
      * @param precio  en LunaCoins. <b>{@code 0} = NO esta a la venta</b>, solo
      *                sale en eventos (D-039), que no es lo mismo que gratis
      */
     public record Pieza(String id, String categoria, String especie,
-                        String aspecto, String objeto, int precio) {
+                        String aspecto, int precio) {
 
         /** Criatura de Minecraft en vez de Pokemon: la dibuja otro codigo. */
         public boolean esDeMinecraft() {
@@ -229,8 +244,8 @@ def main() -> None:
     for especie, aspecto, objeto in filas:
         ident = "%s_%s" % (especie, aspecto)
         lineas.append(
-            '            new Pieza("%s", MASCOTAS, "cobblemon:%s", "%s", "%s", %d)'
-            % (ident, especie, aspecto, objeto, precio(especie)))
+            '            new Pieza("%s", MASCOTAS, "cobblemon:%s", "%s", %d)'
+            % (ident, especie, aspecto, precio(especie)))
 
     DESTINO.write_text(
         PLANTILLA % {"piezas": ",\n".join(lineas)}, encoding="utf-8")

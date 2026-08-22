@@ -60,6 +60,7 @@ public class CosmeticosScreen extends Screen {
     private static final Identifier MONEDA = tex("lunacoin_oro");
     private static final Identifier MAS = tex("boton_mas_luna");
     private static final Identifier ATRAS = tex("boton_atras");
+    private static final Identifier ADELANTE = tex("boton_adelante");
     private static final Identifier CERRAR = tex("boton_cerrar");
 
     /** El arte, a tamaño real. Ver la regla 2 de `dibujado.md`. */
@@ -86,6 +87,19 @@ public class CosmeticosScreen extends Screen {
      */
     private static final int PIE = 38;
 
+    // ---- las flechas de pagina, MEDIDAS sobre la banda naranja del chasis ---
+    //
+    // ⚠ Estas cuatro cifras salen de recorrer el PNG, no de mirarlo. La banda
+    //   calida de abajo va de y=698 a y=745 y lleva adornos oscuros --las muescas
+    //   en diagonal-- en x=732..744, 763..774, 936..947 y 966..978. Los huecos
+    //   limpios que quedan son 437..731, 775..935 y 979..1273, asi que las
+    //   flechas van en el primero y el tercero, a la misma distancia del centro
+    //   de la pantalla (x=860). Escribirlas a ojo ya ha salido mal cuatro veces
+    //   con este chasis.
+    private static final int PAG_W = 50, PAG_H = 40;
+    private static final int PAG_Y = 698 + (745 - 698 - PAG_H) / 2;
+    private static final int PAG_SEP = 215;      // desde el centro de la pantalla
+
     // ---- paleta, la misma de la pantalla principal -------------------------
     private static final int CELDA_FONDO = 0xFFBFCBE8;
     private static final int CELDA_BORDE = 0xFF7C89B4;
@@ -94,6 +108,7 @@ public class CosmeticosScreen extends Screen {
     private static final int TEXTO_OSCURO = 0xFF16203A;
     private static final int TEXTO_SUAVE = 0xFF5A668C;
     private static final int ORO = 0xFFFFD65C;
+    private static final int VERDE_PUESTO = 0xFF157A3E;
 
     private static final String[] CATEGORIAS = { "mascotas", "capas", "sombreros", "auras" };
 
@@ -250,6 +265,7 @@ public class CosmeticosScreen extends Screen {
         dibujarSaldo(ctx, ratonX, ratonY);
         dibujarPestanas(ctx, ratonX, ratonY);
         dibujarRejilla(ctx, ratonX, ratonY);
+        dibujarPaginas(ctx, ratonX, ratonY);
 
         ctx.draw();
 
@@ -370,6 +386,55 @@ public class CosmeticosScreen extends Screen {
         }
     }
 
+    /**
+     * Las flechas de pagina, en la banda naranja de abajo.
+     *
+     * <p>⚠⚠ <b>SIN ESTO, 54 DE LOS 62 COSMETICOS ERAN INALCANZABLES.</b> El campo
+     * {@code pagina} existia y se usaba en los tres sitios que tocaba —dibujar la
+     * rejilla, dibujar los modelos y detectar el clic— pero <b>nada lo cambiaba
+     * nunca</b>. La tienda enseñaba los ocho primeros y no habia forma de ver el
+     * resto: ni flechas, ni rueda, ni teclas. Y no daba ningun error, claro.
+     *
+     * <p>Se dibujan apagadas en los extremos en vez de esconderse. Una flecha que
+     * desaparece mueve la que queda y deja al jugador sin saber si ha llegado al
+     * final o si ha dejado de funcionar algo.
+     */
+    private void dibujarPaginas(DrawContext ctx, int rx, int ry) {
+        int total = paginas();
+        if (total <= 1) {
+            return;            // una sola pagina: las flechas solo estorbarian
+        }
+        int cx = PANT_X + PANT_W / 2;
+        dibujarFlecha(ctx, ATRAS, cx - PAG_SEP - PAG_W / 2, rx, ry, pagina > 0);
+        dibujarFlecha(ctx, ADELANTE, cx + PAG_SEP - PAG_W / 2, rx, ry, pagina < total - 1);
+
+        // El contador va entre las dos, en el hueco central que los adornos
+        // dejan libre (x=775..935).
+        texto(ctx, Text.literal((pagina + 1) + " / " + total),
+                cx, PAG_Y + PAG_H / 2 - 9, 18, 0xFFFFFFFF, true, true);
+    }
+
+    private void dibujarFlecha(DrawContext ctx, Identifier tex, int ax,
+                               int rx, int ry, boolean viva) {
+        boolean encima = viva && dentro(rx, ry, px(ax), py(PAG_Y), pl(PAG_W), pl(PAG_H));
+        // El realce es un marco, no un cambio de color: la textura del boton ya
+        // trae su propio tono y teñirla la ensucia.
+        if (encima) {
+            marco(ctx, px(ax) - 2, py(PAG_Y) - 2, pl(PAG_W) + 4, pl(PAG_H) + 4,
+                    BORDE_ENCIMA, 2);
+        }
+        // Lo apagado se dibuja a media opacidad. Es lo que hace el resto del Pad
+        // con las celdas bloqueadas, asi que se lee igual sin explicar nada.
+        ctx.setShaderColor(1f, 1f, 1f, viva ? 1f : 0.4f);
+        dibujarTextura(ctx, tex, px(ax), py(PAG_Y), pl(PAG_W), pl(PAG_H), 120, 96);
+        ctx.setShaderColor(1f, 1f, 1f, 1f);
+    }
+
+    private int paginas() {
+        int n = visibles().size();
+        return Math.max(1, (n + porPagina() - 1) / porPagina());
+    }
+
     private void dibujarRejilla(DrawContext ctx, int rx, int ry) {
         List<Cosmetico> lista = visibles();
         int anchoUtil = PANT_W - 2 * MARGEN;
@@ -416,9 +481,7 @@ public class CosmeticosScreen extends Screen {
 
         // ---- el precio primero, porque es el que NO se puede recortar
         int altoPrecio = 18;
-        Text precio = est == Cosmetico.Estado.COMPRAR
-                ? Text.literal(String.valueOf(c.precio()))
-                : Text.translatable("pokepad.lunaeternal.tuyo");
+        Text precio = etiquetaIzquierda(c);
         int finPrecio = est == Cosmetico.Estado.COMPRAR
                 ? ax + 36 + anchoArte(precio, altoPrecio)
                 : ax + 10 + anchoArte(precio, 16);
@@ -452,38 +515,62 @@ public class CosmeticosScreen extends Screen {
             texto(ctx, precio, ax + 36, ay + ah / 2 - altoPrecio / 2, altoPrecio,
                     TEXTO_OSCURO, false, true);
         } else {
-            texto(ctx, precio, ax + 10, ay + ah / 2 - 8, 16, TEXTO_SUAVE, false, true);
+            // PUESTO en verde y TUYO en gris. Es lo unico que separa "lo tienes"
+            // de "lo tienes Y lo llevas", ahora que el boton dice la accion en
+            // vez del estado.
+            int tono = est == Cosmetico.Estado.EQUIPADO ? VERDE_PUESTO : TEXTO_SUAVE;
+            texto(ctx, precio, ax + 10, ay + ah / 2 - 8, 16, tono, false, true);
         }
 
         int relleno = switch (est) {
             case COMPRAR -> BORDE_ENCIMA;
             case DE_EVENTO -> 0xFF6E7899;
             case EQUIPAR -> 0xFF567AC8;
-            case EQUIPADO -> 0xFFCEDCF4;
+            // Antes era casi el color de la celda --un boton apagado, porque no
+            // hacia nada--. Ahora QUITAR se pulsa, asi que tiene que parecer
+            // pulsable; en gris para que no compita con COMPRAR ni con EQUIPAR,
+            // que son las acciones que queremos que se vean primero.
+            case EQUIPADO -> 0xFF6E7899;
             case SIN_POKEMON -> 0xFF8A8FA3;
         };
-        int tinta = est == Cosmetico.Estado.EQUIPADO ? 0xFF185C34 : 0xFFFFFFFF;
+        int tinta = 0xFFFFFFFF;
         ctx.fill(px(bx), py(ay + 4), px(bx + bw), py(ay + ah - 4), relleno);
         texto(ctx, etiqueta, bx + bw / 2, ay + ah / 2 - altoBoton / 2, altoBoton,
                 tinta, true, false);
     }
 
+    /**
+     * Lo que pone en el BOTON, que es lo que hace al pulsarlo.
+     *
+     * <p>⚠ EQUIPADO dice «QUITAR», y no es un descuido. Un boton se etiqueta con
+     * la accion, no con el estado: «EQUIPADO» describia la celda y dejaba al
+     * jugador sin saber que iba a pasar al pulsarlo --de hecho no pasaba nada--.
+     * Que esta puesto se sigue viendo, pero en la ETIQUETA de la izquierda, que
+     * es donde va el estado: ahi pone PUESTO en vez de TUYO.
+     */
     private static String clave(Cosmetico.Estado est) {
         return switch (est) {
             case COMPRAR -> "comprar";
             case DE_EVENTO -> "evento";
             case EQUIPAR -> "equipar";
-            case EQUIPADO -> "equipado";
+            case EQUIPADO -> "quitar";
             case SIN_POKEMON -> "sin_pokemon";
+        };
+    }
+
+    /** La etiqueta de la izquierda: el precio si esta a la venta, el ESTADO si es tuyo. */
+    private static Text etiquetaIzquierda(Cosmetico c) {
+        return switch (c.estado()) {
+            case COMPRAR -> Text.literal(String.valueOf(c.precio()));
+            case EQUIPADO -> Text.translatable("pokepad.lunaeternal.puesto");
+            default -> Text.translatable("pokepad.lunaeternal.tuyo");
         };
     }
 
     /** El area del boton, CALCULADA IGUAL que al dibujarlo. Ver `dibujarPie`. */
     private int botonX(Cosmetico c, int ax, int aw) {
         Cosmetico.Estado est = c.estado();
-        Text precio = est == Cosmetico.Estado.COMPRAR
-                ? Text.literal(String.valueOf(c.precio()))
-                : Text.translatable("pokepad.lunaeternal.tuyo");
+        Text precio = etiquetaIzquierda(c);
         return (est == Cosmetico.Estado.COMPRAR
                 ? ax + 36 + anchoArte(precio, 18)
                 : ax + 10 + anchoArte(precio, 16)) + 10;
@@ -522,6 +609,20 @@ public class CosmeticosScreen extends Screen {
                     sonar(true);
                 }
                 return true;
+            }
+        }
+
+        // Flechas de pagina. Van ANTES que las celdas porque estan fuera del
+        // area de la rejilla y no compiten con ella; el orden es solo para que
+        // el codigo se lea igual que se dibuja.
+        int total = paginas();
+        if (total > 1) {
+            int pcx = PANT_X + PANT_W / 2;
+            if (dentro(rx, ry, px(pcx - PAG_SEP - PAG_W / 2), py(PAG_Y), pl(PAG_W), pl(PAG_H))) {
+                return cambiarPagina(-1);
+            }
+            if (dentro(rx, ry, px(pcx + PAG_SEP - PAG_W / 2), py(PAG_Y), pl(PAG_W), pl(PAG_H))) {
+                return cambiarPagina(+1);
             }
         }
 
@@ -595,7 +696,9 @@ public class CosmeticosScreen extends Screen {
             }
             return;
         }
-        if (est == Cosmetico.Estado.EQUIPADO || est == Cosmetico.Estado.DE_EVENTO) {
+        // DE_EVENTO no se compra: solo sale en eventos (D-039). Suena a
+        // bloqueado porque lo esta, y no hay accion que ofrecer.
+        if (est == Cosmetico.Estado.DE_EVENTO) {
             sonar(false);
             return;
         }
@@ -617,10 +720,39 @@ public class CosmeticosScreen extends Screen {
         //   El unico caso que quedaria fuera es llevar DOS de la misma especie y
         //   querer elegir cual. Si eso llega a importar, aqui es donde se abre
         //   la tira de eleccion.
-        int ranura = est == Cosmetico.Estado.COMPRAR
-                ? Red.AccionCosmetico.COMPRAR
-                : Red.AccionCosmetico.AUTOMATICA;
+        int ranura = switch (est) {
+            case COMPRAR -> Red.AccionCosmetico.COMPRAR;
+            // ⚠ QUITAR TAMPOCO LLEVA RANURA. Podria mandarse la que se dibujo,
+            //   pero el equipo puede haber cambiado desde entonces --basta con
+            //   reordenarlo-- y se le quitaria el disfraz al Pokemon equivocado.
+            //   El servidor busca cual lo lleva en el momento de quitarlo.
+            case EQUIPADO -> Red.AccionCosmetico.QUITAR;
+            default -> Red.AccionCosmetico.AUTOMATICA;
+        };
         ClientPlayNetworking.send(new Red.AccionCosmetico(c.id(), ranura));
+    }
+
+    /**
+     * Cambiar de pagina.
+     *
+     * <p>⚠ <b>NO da la vuelta al llegar al final</b>, y se dibuja apagada en vez
+     * de esconderse: las dos cosas son la misma decision. Una flecha que salta de
+     * la ultima pagina a la primera hace que el jugador no sepa cuantas hay, y
+     * una que desaparece mueve a la otra de sitio.
+     *
+     * <p>El enfocado NO se borra al cambiar de pagina: el previsualizador sigue
+     * enseñando lo ultimo que se miro, que es util al comparar dos cosmeticos que
+     * han quedado en paginas distintas.
+     */
+    private boolean cambiarPagina(int paso) {
+        int destino = pagina + paso;
+        if (destino < 0 || destino >= paginas()) {
+            sonar(false);
+            return true;
+        }
+        pagina = destino;
+        sonar(true);
+        return true;
     }
 
     private void volver() {

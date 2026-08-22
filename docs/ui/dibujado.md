@@ -18,7 +18,7 @@ equivocados**.
 
 ## Current Status
 
-`PokePadScreen` cumple las cinco reglas. Cualquier pantalla nueva las hereda.
+`PokePadScreen` cumple las seis reglas. Cualquier pantalla nueva las hereda.
 
 ---
 

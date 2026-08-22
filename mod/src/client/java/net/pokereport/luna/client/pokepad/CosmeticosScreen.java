@@ -50,7 +50,7 @@ import java.util.List;
  *
  * <h2>Antes de tocar el dibujado</h2>
  *
- * Lee {@code docs/ui/dibujado.md}. Son cinco reglas y <b>ninguna da error al
+ * Lee {@code docs/ui/dibujado.md}. Son seis reglas y <b>ninguna da error al
  * compilar</b>: se pagan en horas depurando. La primera —encender la mezcla
  * alfa a mano— costó una noche entera.
  */

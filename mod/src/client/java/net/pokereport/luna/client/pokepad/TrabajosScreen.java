@@ -53,6 +53,11 @@ public class TrabajosScreen extends Screen {
     private static final Identifier CHASIS =
             Identifier.of("lunaeternal", "textures/gui/pokepad/pokepad.png");
 
+    private static final Identifier ATRAS =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/boton_atras.png");
+    private static final Identifier CERRAR =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/boton_cerrar.png");
+
     private static final int NAT_ANCHO = 1380, NAT_ALTO = 828;
 
     // ---- medidas del arte, las mismas que usa el resto del Pad --------------
@@ -95,16 +100,46 @@ public class TrabajosScreen extends Screen {
         ClientPlayNetworking.send(new Red.PedirTrabajos());
     }
 
+    /**
+     * ⚠⚠ HAY QUE DIVIDIR POR LA ESCALA DE LA INTERFAZ, Y ME LO SALTE.
+     *
+     * <p>{@code getFramebufferWidth()} son PIXELES REALES; {@code width} y
+     * {@code height} de una {@code Screen} van en coordenadas ya escaladas por el
+     * GUI Scale del jugador. Mezclar los dos sin dividir hace que todo salga
+     * multiplicado por esa escala: con GUI Scale 4, cuatro veces más grande. El
+     * usuario lo vio así —«se ve demasiado grande»— y en la captura cabía una
+     * fila y media.
+     *
+     * <p>Y el {@code Math.min(1.0, ...)} tampoco sobra: sin él, en una pantalla
+     * grande el chasis se AMPLÍA por encima de su tamaño nativo y el arte se ve
+     * borroso.
+     *
+     * <p><b>Esto estaba resuelto en {@code CosmeticosScreen} y lo reescribí de
+     * cero en vez de copiarlo.</b> La lección no es la fórmula: es que una
+     * pantalla nueva del Pad empieza copiando la geometría de una que ya
+     * funciona, no escribiéndola otra vez.
+     */
     private void recalcular() {
+        double gui = client != null ? client.getWindow().getScaleFactor() : 1;
         int ventanaW = client == null ? NAT_ANCHO : client.getWindow().getFramebufferWidth();
         int ventanaH = client == null ? NAT_ALTO : client.getWindow().getFramebufferHeight();
         double cabe = Math.min(ventanaW / (double) NAT_ANCHO, ventanaH / (double) NAT_ALTO);
-        // 0,92 para que el chasis no toque los bordes de la ventana.
-        k = (float) (cabe * 0.92);
+        k = (float) (Math.min(1.0, cabe) / gui);
         ancho = Math.round(NAT_ANCHO * k);
         alto = Math.round(NAT_ALTO * k);
         x0 = (width - ancho) / 2;
         y0 = (height - alto) / 2;
+
+        // ⚠ REGLA 3 de dibujado.md: encoger con vecino más próximo TIRA filas y
+        // columnas enteras. Solo si el tamaño no sale exacto se pasa a filtrado
+        // lineal, que reparte el error en vez de dejar rayas cruzando el chasis.
+        boolean exacto = Math.round(ancho * gui) == NAT_ANCHO
+                && Math.round(alto * gui) == NAT_ALTO;
+        if (client != null) {
+            for (Identifier tex : new Identifier[] { CHASIS, ATRAS, CERRAR }) {
+                client.getTextureManager().getTexture(tex).setFilter(!exacto, false);
+            }
+        }
     }
 
     @Override
@@ -159,7 +194,7 @@ public class TrabajosScreen extends Screen {
     private void dibujarNavegacion(DrawContext ctx, int rx, int ry) {
         int cy = PANEL_Y + NAV_ALTO / 2;
         boolean sobreAtras = dentro(rx, ry, px(PANEL_X + 18), py(cy) - pl(24), pl(60), pl(48));
-        dibujarTextura(ctx, Identifier.of("lunaeternal", "textures/gui/pokepad/boton_atras.png"),
+        dibujarTextura(ctx, ATRAS,
                 px(PANEL_X + 18), py(cy) - pl(24), pl(60), pl(48), 120, 96);
         if (sobreAtras) {
             marco(ctx, px(PANEL_X + 18) - 2, py(cy) - pl(24) - 2,
@@ -169,7 +204,7 @@ public class TrabajosScreen extends Screen {
                 PANEL_X + 92, cy - 14, 28, 0xFFFFFFFF, false, false);
 
         int cx = PANEL_X + PANEL_W - 18 - 80;
-        dibujarTextura(ctx, Identifier.of("lunaeternal", "textures/gui/pokepad/boton_cerrar.png"),
+        dibujarTextura(ctx, CERRAR,
                 px(cx), py(cy) - pl(32), pl(80), pl(64), 120, 96);
         if (dentro(rx, ry, px(cx), py(cy) - pl(32), pl(80), pl(64))) {
             marco(ctx, px(cx) - 2, py(cy) - pl(32) - 2, pl(80) + 4, pl(64) + 4, BORDE_ENCIMA, 2);

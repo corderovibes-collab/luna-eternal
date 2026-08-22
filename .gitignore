@@ -64,6 +64,11 @@ arte-origen/
 # Rastro que deja `aqt` al instalar Qt. No es del proyecto.
 aqtinstall.log
 
+# Permisos locales de Claude Code para esta maquina. `settings.json` (sin
+# "local") si es del equipo; este es por-maquina y no debe pisarse entre
+# colaboradores.
+/.claude/settings.local.json
+
 # Toolchain local del launcher Qt: Qt 6.10.2 + vcpkg + JDK 17, ~4,5 GB.
 #
 # ⚠ `tools/toolchain.py` NO EXISTE. Aqui ponia que el toolchain se recuperaba

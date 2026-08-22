@@ -203,6 +203,36 @@ Luz de color  ⚠ LA LUZ DE MINECRAFT NO TIENE COLOR. El motor guarda
               el suelo. Complementary > Performance > COLORED_LIGHTING
               viene en 0. Hacen cosas distintas, no se estorban
               detalle en docs/world/neon.md §1
+Cosmeticos    LA PRIMERA SUB-PANTALLA YA EXISTE Y FUNCIONA EN EL JUEGO
+              (2026-08-22, verificado por el usuario)
+              detalle completo en docs/ui/cosmeticos.md
+              4 pestañas · rejilla 4x2 · previsualizador 3D · saldo
+              12 Pokemon disfrazados (CobblemonMoreCosmetics, MIT) y
+              8 criaturas pequeñas de Minecraft
+              D-039: NO se consiguen jugando. Solo LunaCoins o eventos
+              V011 aplicada · autotest 136/136 tras ella
+              ⚠⚠ EL MOD TIENE DOS DESTINOS Y SE OLVIDA EL SEGUNDO:
+                 servidor  python tools/desplegar.py mod --reiniciar
+                 clientes  python tools/gen_manifest.py --publicar
+                 El jar que baja el launcher NO sale del servidor: sale
+                 del manifiesto. Subir solo al servidor deja a todo el
+                 mundo con el jar viejo, y el sintoma es una pantalla
+                 que "no abre" -- se comporta como debe, y eso despista
+              ⚠⚠⚠ EL TITILEO DE LOS MODELOS COSTO CUATRO INTENTOS.
+                 `drawProfilePokemon` hace `rotation.conjugate()`, que
+                 MUTA el cuaternion que se le pasa. Con una constante
+                 compartida, 8 celdas lo invierten 8 veces (par, vuelve
+                 al valor) y con el previsualizador son 9 (impar): el
+                 modelo alterna orientacion cada fotograma
+                 "solo titila al previsualizar" NO era una pista sobre
+                 el previsualizador: era sobre la PARIDAD de llamadas
+                 esta es la REGLA 6 de docs/ui/dibujado.md
+              ⚠ vendor/cobblemon es HEAD, NO 1.7.3 (clon --depth 1).
+                Para una firma concreta: javap sobre el jar instalado
+              LO QUE FALTA: que el cosmetico SE VEA EN EL MUNDO. El
+              servidor ya difunde quien lleva que; falta dibujarlo en
+              el cliente (decidido: solo cliente, SIN entidad). Hoy
+              solo lo ve su dueño, y eso es media funcion
 PokePad       LA PANTALLA PRINCIPAL ESTA TERMINADA (2026-08-15)
               verificada en el juego por el usuario. Tecla B
               mod/src/client/ · lunaeternal vuelve a tener cliente
@@ -564,9 +594,12 @@ Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
                 jugador conectado; desde consola solo consta que el
                 datapack carga sin errores. Es el mismo PKM-004 de
                 siempre
-Interfaz      NO HAY. Se borro entera (D-026): Pad y menus de cofre
-              a la espera del arte real. Debajo todo sigue vivo:
-              /luna autotest sigue verde y la logica no se toco
+Interfaz      YA HAY DOS PANTALLAS, y las dos verificadas en el juego:
+              el PokePad (2026-08-16) y COSMETICOS (2026-08-22)
+              D-026 borro la vieja para rehacerla con arte real, y eso
+              es lo que se hizo. El resto de servicios --economia,
+              tienda, GTS, kits, misiones, cazas, viaje-- SIGUEN SIN
+              PANTALLA: la logica esta viva y probada, falta la cara
 Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
               solo captura las avanza; crianza cuenta al ECLOSIONAR
 Repos         luna-eternal (privado) · luna-eternal-pack (publico)

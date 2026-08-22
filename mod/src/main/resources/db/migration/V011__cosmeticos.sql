@@ -42,9 +42,20 @@ CREATE TABLE IF NOT EXISTS player_cosmetics (
     --   deshace, en vez de cobrar dos veces por lo mismo.
     PRIMARY KEY (player_id, cosmetic_id),
 
+    -- ⚠ LA TABLA ES `player` EN SINGULAR Y SU CLAVE ES `player_id`, NO `id`.
+    --   Escribir `players (id)` --que es como se llamaria en casi cualquier otro
+    --   proyecto-- da errno 150 "Foreign key constraint is incorrectly formed",
+    --   el MISMO error que CLAUDE.md avisa para el tipo equivocado. O sea que el
+    --   error no distingue entre "el tipo no cuadra" y "la tabla no existe", y
+    --   se pierde el tiempo mirando el tipo, que estaba bien.
+    --
+    -- ⚠ RESTRICT y no CASCADE: es lo que usan las otras siete tablas. Con
+    --   claves sustitutas (D-010) no se borran jugadores, asi que RESTRICT no
+    --   estorba y convierte un borrado accidental en un error en vez de en una
+    --   perdida silenciosa de datos.
     CONSTRAINT fk_cosmetics_player
-        FOREIGN KEY (player_id) REFERENCES players (id)
-        ON DELETE CASCADE
+        FOREIGN KEY (player_id) REFERENCES player (player_id)
+        ON DELETE RESTRICT
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 
 -- Lo que lleva PUESTO cada jugador, una fila por categoria.
@@ -64,6 +75,18 @@ CREATE TABLE IF NOT EXISTS player_cosmetic_equipped (
     PRIMARY KEY (player_id, categoria),
 
     CONSTRAINT fk_equipped_player
-        FOREIGN KEY (player_id) REFERENCES players (id)
-        ON DELETE CASCADE
+        FOREIGN KEY (player_id) REFERENCES player (player_id)
+        ON DELETE RESTRICT
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+
+-- ⚠ CADA MIGRACION SE REGISTRA A SI MISMA. El motor solo comprueba la tabla, no
+--   la ejecucion: sin este INSERT el arranque falla en seco con "no se registro
+--   en schema_version".
+--
+--   Y el aviso de V010 explica por que es asi de estricto: olvidarlo, combinado
+--   con unos DROP TABLE que habia al principio, borraba las cazas de todo el
+--   servidor en cada reinicio. El fallo ruidoso de hoy es el precio de que
+--   aquello no se repita en silencio.
+INSERT INTO schema_version (version, description)
+VALUES (11, 'cosmeticos: posesion y equipado')
+ON DUPLICATE KEY UPDATE version = version;

@@ -39,7 +39,7 @@ tres monedas, cinco vías de progresión, y las interfaces base operativas.
 ```
 Servidor dev  7dc30799 · s12.mia.us.tarohosting.lat:33043
               MC 1.21.1 Fabric · whitelist ON · TheJuanCE op nivel 4
-Cobblemon     1.7.3 instalado · Done (9,0 s) · ~1,9 GB de 4096
+Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
@@ -173,11 +173,15 @@ Mods          servidor 29 jars · cliente 155 · NO tienen que coincidir
                 tablas de botin de los entrenadores no parseaban
                 ("Unknown registry key ... tmcraft:tm_bulkup") = 55
                 entrenadores que no sueltan nada al ganarles
-              ⚠⚠ RAM: 4.447 MB DE UN LIMITE DE 4.096. B-003 YA NO ES UNA
-                 PREGUNTA: el servidor corre POR ENCIMA de su limite,
-                 con swap=0 y el OOM-killer armado. 158 mods, Cobblemon
-                 y 1.714 entrenadores no caben en 4 GB
-                 (era 1,9 GB con 14 mods esta misma manana)
+              RAM: 8 GB desde el 2026-08-22. Medido en el panel con el
+                 servidor arriba: 4,34 GiB de 8, y 1h57m de actividad
+                 sin caidas. Antes eran 4 GB y corria POR ENCIMA del
+                 limite (4.447 MB), con swap=0 y el OOM-killer armado:
+                 158 mods, Cobblemon y 1.714 entrenadores no caben en 4
+                 ⚠ Que quepa NO es que sobre. Queda menos de la mitad
+                   libre y el mundo esta vacio: no hay jugadores
+                   cargando chunks, ni combates, ni entidades. El
+                   margen de verdad se mide con gente dentro
               datapack: COBBLEVERSE-RCT-DP-v20 en world/datapacks
                 154 entrenadores curados con dialogo. 1559 -> 1714
                 se comprueba POR DENTRO que no lleva worldgen antes
@@ -987,7 +991,7 @@ cosecha** — ver [current-server-audit.md](docs/analysis/current-server-audit.m
 | Servidor | ID | RAM | Rol |
 |---|---|---|---|
 | Paquete Ender Dragon | `2a0a48ff` | 16 GB | **Producción.** PokeReport actual. READ-ONLY |
-| Paquete Esqueleto | `7dc30799` | 4 GB | **Desarrollo Luna Eternal.** Limpio, MC 1.21.1 Fabric |
+| Paquete Esqueleto | `7dc30799` | **8 GB** | **Desarrollo Luna Eternal.** MC 1.21.1 Fabric. Subido de 4 a 8 GB el 2026-08-22 |
 
 Panel: `control.tarohosting.com` · Producción: `s17.mia.us.tarohosting.lat:33445`
 
@@ -1094,7 +1098,7 @@ documentación · migración · rollback.
 |---|---|---|
 | ~~B-001~~ | ~~¿Dónde se desarrolla?~~ | ✅ Resuelta por D-004 |
 | ~~B-002~~ | ~~CobbleVerse vs Cobblemon oficial~~ | ✅ Resuelta y **ratificada** (D-006 + D-007) |
-| **B-003** | ¿4 GB basta? Sirve para sistemas aislados, **no** como réplica de producción | Presupuesto y pruebas de carga |
+| ~~B-003~~ | ✅ **RESUELTA por ampliación, no por análisis (2026-08-22).** El servidor pasa de 4 a **8 GB**. Con 4 corría por encima de su límite —4.447 MB medidos— y solo no caía por suerte. Ahora usa **4,34 GiB de 8** con el mundo vacío. ⚠️ **Que quepa no es que sobre:** ese número está medido *sin jugadores*, o sea sin chunks cargados, sin combates y sin entidades. Lo que decía la pregunta original sigue en pie — *sirve para sistemas aislados, no como réplica de producción* — y **el margen real solo se mide con gente dentro**. La prueba de carga sigue pendiente |
 | **B-004** | ~~¿`online-mode` real?~~ ✅ **Es `false`.** Decisión pendiente: ¿el servidor nuevo nace en `online-mode=true`? | Anti-abuso (multicuenta ilimitada mientras siga offline). **Ya no bloquea el desarrollo**: D-010 hace el esquema indiferente |
 | **B-005** | ¿Se aprueba la visión y el core loop propuestos? | PHASE 2 en adelante |
 | ~~B-006~~ | ~~¿Hay capacidad de desarrollo en Java/Kotlin?~~ | ✅ Resuelta por D-011: lo escribe Claude |
@@ -1188,7 +1192,7 @@ No se avanza de fase sin criterios de aceptación cumplidos.
 - **Ninguna credencial entra en el repositorio ni en documentación.**
   Plantilla en `.env.example`, valores reales en `.env` (git-ignorado).
 - Credenciales conocidas como **comprometidas** (circularon en texto plano):
-  la API key de Pterodactyl y la contraseña RCON del servidor de 4 GB.
+  la API key de Pterodactyl y la contraseña RCON del servidor de desarrollo.
   Ver backlog `SEC-001`.
 - Producción no se toca sin backup verificado previo.
 

@@ -3,7 +3,7 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-08-13
+**Última actualización:** 2026-08-21
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela)
 **Estado:** PHASE 0 y PHASE 1 completadas. 25 documentos, decisiones D-001 a
 D-031. **El mod está desplegado y funcionando contra MariaDB:** economía de
@@ -366,17 +366,48 @@ Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
                 para 1.21.1 exige 0.6.x y se niega a arrancar fuera
                 de rango. El numero NO esta escrito a mano: se lee
                 del jar de Iris. §2-quinquies
-Launcher      DOS LAUNCHERS VIVOS. NO CONFUNDIRLOS
+Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
               ---------------------------------------------------------
-              EL QUE USA LA GENTE HOY:  Electron 1.1.1
-                launcher/ · 39 pruebas · datos en %APPDATA%\.lunaeternal
-                                                            ^ CON PUNTO
-              EL FORK NUEVO:            Qt 0.1.0 "Ciudadela"
-                D:\luna-launcher · rama `luna` · 28 commits
+              EL QUE SE REPARTE:  Qt 0.2.0 "Ciudadela" (2026-08-21)
+                D:\luna-launcher · rama `luna`
                 repo PUBLICO github.com/corderovibes-collab/luna-eternal-launcher
                 datos en %APPDATA%\LunaEternal  <- SIN PUNTO
+              EL VIEJO:           Electron 1.1.1
+                launcher/ · 39 pruebas · datos en %APPDATA%\.lunaeternal
+                                                            ^ CON PUNTO
               ⚠⚠ BORRAR LA CARPETA EQUIVOCADA CUESTA 450 MB DE DESCARGA.
                  Se diferencian SOLO en un punto
+              ---------------------------------------------------------
+              0.2.0 ARREGLA LO QUE HACIA ABANDONAR LA INSTALACION
+              Tres fallos, ninguno el que parecia. Detalle completo en
+              docs/technical/launcher-qt.md §8
+                1) LAS DESCARGAS NO REINTENTABAN NI UNA VEZ. 157 de los
+                   159 ficheros tienen UN SOLO origen, asi que
+                   `MultipleOptionsTask` no era failover de nada, y
+                   `makeFile` no enciende `AutoRetry` (que ademas solo
+                   cubre el 429). Con un 2 % de fallo por fichero
+                   --wifi domestico normal-- la instalacion COMPLETA
+                   fallaba el 96 % de las veces
+                2) el error decia "Multiples subtareas fallidas" y nada
+                   mas: ni fichero, ni servidor, ni codigo
+                3) ⚠ EL INSTALADOR NO LLEVABA EL RUNTIME DE VISUAL C++.
+                   El CMakeLists lo excluye a proposito (herencia de
+                   aguas arriba). Sin el, en un Windows limpio el doble
+                   clic NO HACE NADA: ni ventana, ni error, ni log
+              y de propina, `--launch` --el acceso directo que ofrece
+              Prism-- se saltaba la sincronizacion entera
+              ⚠ LOS REINTENTOS NO SE HAN PROBADO CONTRA UN FALLO REAL.
+                Se estrenan en la maquina de un jugador
+              ⚠ EL AVISO DE VISUAL C++ TAMPOCO: hace falta un Windows
+                limpio, y el de desarrollo ya tiene el runtime
+              ⚠⚠ LA VERSION ESTA ESCRITA A MANO EN CMakeLists.txt Y LA CI
+                 NO LA SACA DEL TAG. Publicar `v0.2.0` con un 0.1.0
+                 dentro deja al autoactualizador en BUCLE: actualiza,
+                 sigue viendo la vieja, vuelve a actualizar. Subir de
+                 version = tocar el numero Y empujar su etiqueta
+              ⚠ `release.yml` (el de Freesm) se disparaba con CUALQUIER
+                etiqueta y lanzaba su matriz entera con secretos que no
+                tenemos. En v0.1.0 arranco y fallo. Pasa a manual
               ---------------------------------------------------------
               EL FORK YA FUNCIONA DE PUNTA A PUNTA (2026-08-20)
               verificado desde cero: pide el nombre -> crea la instancia
@@ -389,7 +420,24 @@ Launcher      DOS LAUNCHERS VIVOS. NO CONFUNDIRLOS
                 LunaSync · LunaDownload · LunaApply · LunaUpdate
               compilar SOLO lo que toca (34 s en vez de minutos):
                 powershell tools/build-launcher.ps1 -Solo LunaEternal
-                powershell tools/build-launcher.ps1 -Instalador
+              instalador COMPLETO en 2,4 min:
+                powershell tools/build-launcher.ps1 -Instalador -SinPruebas
+              ⚠⚠ `-Publicar` NO CAMBIA NADA EN MSVC, y esperarlo es tirar
+                 el tiempo. `/GL` y `/LTCG` se aplican SIEMPRE en Release
+                 (CMakeLists.txt:48-60), fuera de `if(ENABLE_LTO)`:
+                 medido, con LTO ON y OFF sale el MISMO exe de 16,4 MB
+                 en ~2,5 min. Lo que hacia eterna la compilacion eran
+                 los 27 EJECUTABLES DE PRUEBA, cada uno enlazado con
+                 LTCG. `-SinPruebas` bajo el ciclo de ~15 min a 2,4
+              ⚠ y entonces hay que ACORDARSE de correrlas: saltarselas
+                al empaquetar esta bien, saltarselas siempre es como no
+                tenerlas. Se corren al tocar launcher/luna/
+              ⚠ TOOLCHAIN en .toolchain/ (git-ignorado, ~4,5 GB):
+                Qt 6.10.2 · vcpkg · JDK 17 · NSIS 3.11 · Python 3.12
+                MSVC va al sistema (Build Tools 2022, trae CMake+Ninja)
+                receta en docs/technical/launcher-qt.md §9
+                ⚠ EL JDK TIENE QUE SER 17, NO 21: Prism compila el
+                  NewLaunch.jar con `-source 7` y JDK 20 lo elimino
               ⚠ el enlazado falla con LNK1104 si el launcher esta ABIERTO
               ⚠ QtTest en Windows NO escribe por la tuberia: hace falta
                 `-o fichero,txt`. Un `exit 0` mudo NO significa que no
@@ -739,7 +787,7 @@ Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 | `LNC-003` | **Certificado de firma de codigo — DIFERIDO a proposito (decision del usuario, 2026-08-17).** No tiene NADA que ver con las cuentas no premium: eso ya funciona y es gratis (`online-mode=false` + cuentas offline). Lo que arregla es que Windows deje de acusar al INSTALADOR de ser un virus — la pantalla azul de «Windows protegio su PC» que sale en cada instalacion limpia y que una parte de la gente no se atreve a saltar. **No rompe nada no tenerlo**: el launcher se reparte sin firmar desde siempre. Lo unico que se pierde es la autoactualizacion en macOS, que sin firma no puede aplicarse (en Windows si funciona). ~120 $/año que con 20 personas no compensan; se revisa cuando explicar donde hay que pulsar cueste mas que el certificado. Ver [distribucion.md §6](docs/technical/distribucion.md) |
 | ~~`INF-008`~~ | ✅ **RESUELTO, verificado contra el panel el 2026-08-21.** Se midio jar a jar el servidor contra el manifiesto del cliente: **0 ficheros con el mismo nombre y distinto tamaño, y 0 mods con la misma familia y distinta version**. `fabric-api`, `lithium` y `lunaeternal` ya coinciden; los 141 KB de diferencia de `lunaeternal` no existen. `python tools/mods_servidor.py` dice «nada que hacer», y ahora sabemos que dice la verdad. **Lo que quedo aprendido:** solo hay **2 jars en el servidor que no estan en el cliente** —`EasyAuth-3.4.4` y `worldedit-mod-7.3.8`—, y **eso es correcto**. La regla de §0 («el servidor tiene que ser subconjunto del cliente») es mas estricta que la realidad: lo que echa gente con «Registry remapping failed» es un desajuste en registros **que se sincronizan** (bloques, objetos, entidades). Un mod de servidor que solo añade comandos y autenticacion no registra nada de eso. La regla util es la otra que ya esta escrita: *un mod que registre algo que se sincroniza tiene que estar en los dos lados* |
 | **`MARCA-001`** | ⏰ **El servidor pasa a llamarse «PokeReport Network», no «Luna Eternal»** (decision del usuario, 2026-08-20). NO aplicado todavia: recompilar el fork entero cuesta mucho y no se hizo justo antes de repartir la primera version. **El alcance completo esta en [launcher-qt.md](docs/technical/launcher-qt.md)** — son siete sitios solo en el fork, mas `servers.dat`, el launcher de Electron y el mod. ⚠ Cambiar el `AppID` MUEVE LA CARPETA DE DATOS: quien ya lo tenga instalado se encontraria una instalacion vacia y volveria a bajar 450 MB |
-| **`GPL-001`** | ⏰ **Crear el repositorio PUBLICO del launcher Qt.** No es opcional: GPL-3.0 obliga a publicar el fuente completo del fork al distribuir el binario (D-035) |
+| ~~`GPL-001`~~ | ✅ **CUMPLIDO, comprobado por la API el 2026-08-21.** `corderovibes-collab/luna-eternal-launcher` es **publico y GPL-3.0**, y el binario se distribuye desde ese mismo repositorio: el fuente completo del fork viaja con el, que es lo que exige la licencia (D-035). **Sigue siendo una obligacion viva, no una casilla marcada:** cualquier cosa que se le añada encima --anti-abuso, capa de identidad, lo que sea-- hay que publicarla tambien. Y con tienda de pago (D-007) eso no es gratis |
 | **`LNC-002`** | Crear el token `PACK_TOKEN` para que el launcher publique sus releases — ver [launcher.md §2](docs/technical/launcher.md) |
 | **`ART-002`** | Enviar el arte de la interfaz nueva: fondos, botones, iconos (D-026) |
 | `SEC-001` | **Rotar la API key de Pterodactyl.** Ha vuelto a circular en texto plano el 2026-08-12. Está en `.env` (git-ignorado) y funciona; conviene regenerarla en el panel cuando se cierre la fase de construcción |

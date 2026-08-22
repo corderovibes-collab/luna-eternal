@@ -45,6 +45,23 @@ RAIZ = Path(__file__).resolve().parent.parent
 ARTE = RAIZ / "arte" / "pokepad"
 SALIDA = RAIZ / "build" / "pokepad"
 
+# Los botones YA EXISTEN y ya se usan en la pantalla principal. Se cogen de ahi
+# en vez de dibujar unos nuevos: dos juegos de botones parecidos pero distintos
+# es la forma mas facil de que una pantalla se sienta de otra aplicacion.
+BOTONES = (RAIZ / "mod" / "src" / "client" / "resources" / "assets"
+           / "lunaeternal" / "textures" / "gui" / "pokepad")
+
+# La franja de navegacion, ARRIBA del panel izquierdo.
+#
+# ⚠ ESTE FONDO NO TRAE RANURA PARA BOTONES, al contrario que el chasis
+#   principal: la izquierda la ocupan el preview y las LunaCoins, y la derecha es
+#   pantalla de punta a punta. Asi que la franja se abre quitandole alto al
+#   preview -- 72 px de 529, que sigue dejando un retrato holgado.
+#
+#   Arriba y no abajo porque abajo esta el saldo, y meter "cerrar" al lado del
+#   "+" de comprar es pedir un clic equivocado sobre dinero real.
+NAV_ALTO = 72
+
 # La paleta de la pantalla principal, importada y no copiada: si alli cambia un
 # tono, esta maqueta tiene que cambiar con el o deja de servir para aprobar nada.
 from gen_pokepad import (  # noqa: E402
@@ -68,8 +85,20 @@ AIRE = 14          # entre celdas
 MARGEN = 12        # de la rejilla al bisel de la pantalla
 PESTANA_ALTO = 56
 
-# El pie de cada celda: donde va el precio. El resto es el 3D.
-PIE = 46
+# El pie de cada celda: precio ARRIBA y boton ABAJO, apilados.
+#
+# ⚠ No caben en la misma fila. La celda mide 144 de ancho y el precio con su
+#   moneda ya se lleva 80; lo que quedaria para el boton son 60 px, donde
+#   "COMPRAR" no entra ni a cuerpo 14. Apilados, el boton ocupa el ancho entero
+#   de la celda y se puede pulsar sin apuntar.
+PIE_PRECIO = 32
+PIE_BOTON = 34
+PIE = PIE_PRECIO + PIE_BOTON + 6
+
+# Los tres estados de una celda. Son los que hacen falta para que la pantalla se
+# entienda sin explicarla: si no distingues "comprado" de "puesto", la gente
+# vuelve a comprar lo que ya tiene.
+COMPRAR, EQUIPAR, EQUIPADO = range(3)
 
 SALDO_ALTO = 147   # la franja de LunaCoins, abajo del panel izquierdo
 
@@ -135,6 +164,51 @@ def medir_panel(chasis: Image.Image) -> tuple:
     return x0, y0, x1, y1
 
 
+def moneda_oro(origen: Path, destino: Path) -> Image.Image:
+    """La LunaCoin, en oro.
+
+    ⚠ EL ARTE DE `lunacoin.png` ES AZUL PLATEADO, Y ESO CONTRADICE D-034.
+      Esa decision dice, literal, que "el dorado es ahora de las LunaCoins" y
+      que la Plata pasa a blanco justamente para no competir con el. Con las dos
+      monedas en tonos frios --la Plata es gris y la LunaCoin azul-- se
+      distinguen mal a 26 px, que es el tamaño al que aparecen en las celdas.
+
+    NO se recolorea rotando el tono. Un giro de azul a dorado desaturado deja un
+    marron sucio, porque el azul del arte tiene poca saturacion y el giro
+    conserva esa pobreza. Se hace un MAPA DE GRADIENTE: se lee la luminancia de
+    cada pixel y se busca su color en una rampa de oro. Asi se conservan el
+    relieve, el brillo y la luna, y el resultado es oro de verdad y no azul
+    tintado.
+
+    El alfa no se toca: la silueta y el dentado del engranaje siguen siendo los
+    del original, pixel a pixel.
+    """
+    im = Image.open(origen).convert("RGBA")
+    a = np.array(im).astype(float)
+    lum = (0.2126 * a[..., 0] + 0.7152 * a[..., 1] + 0.0722 * a[..., 2]) / 255.0
+
+    # La rampa: de la sombra al brillo. Los extremos importan mas que el centro
+    # -- sin un tope casi blanco la moneda pierde el destello y parece plana.
+    paradas = [
+        (0.00, (61, 38, 4)),
+        (0.35, (146, 96, 15)),
+        (0.60, (214, 158, 41)),
+        (0.80, (247, 205, 92)),
+        (1.00, (255, 243, 199)),
+    ]
+    xs = np.array([p for p, _ in paradas])
+    out = np.zeros_like(a)
+    for c in range(3):
+        ys = np.array([col[c] for _, col in paradas], dtype=float)
+        out[..., c] = np.interp(lum, xs, ys)
+    out[..., 3] = a[..., 3]
+
+    oro = Image.fromarray(out.astype("uint8"), "RGBA")
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    oro.save(destino)
+    return oro
+
+
 def texto(d: ImageDraw.ImageDraw, xy, s, fuente, color=TEXTO_COLOR,
           contorno=TEXTO_CONTORNO, anclaje="mm"):
     """Texto con contorno, que es lo unico que se lee sobre el fondo casi blanco.
@@ -175,30 +249,40 @@ def main() -> None:
                 continue
         return ImageFont.load_default()
 
-    # ----------------------------------------------------- panel izquierdo
+    # ------------------------------------------- navegacion, arriba del panel
+    # Los botones son los MISMOS de la pantalla principal, no unos nuevos.
+    atras = Image.open(BOTONES / "boton_atras.png").convert("RGBA")
+    cerrar = Image.open(BOTONES / "boton_cerrar.png").convert("RGBA")
+    nav_cy = py0 + NAV_ALTO // 2
+    im.alpha_composite(atras, (px0 + 18, nav_cy - atras.height // 2))
+    texto(d, (px0 + 18 + atras.width + 10, nav_cy), "INICIO", fuente(20),
+          color=(210, 216, 232, 255), contorno=(20, 22, 28, 255), anclaje="lm")
+    im.alpha_composite(cerrar, (px1 - 18 - cerrar.width, nav_cy - cerrar.height // 2))
+
+    # ----------------------------------------------------- previsualizador
+    prev_y0 = py0 + NAV_ALTO
     prev_y1 = py1 - SALDO_ALTO
-    d.rectangle([px0 + 8, py0 + 8, px1 - 8, prev_y1 - 8],
+    d.rectangle([px0 + 8, prev_y0, px1 - 8, prev_y1 - 8],
                 outline=(90, 100, 130, 255), width=3)
-    texto(d, ((px0 + px1) // 2, (py0 + prev_y1) // 2 - 20),
+    texto(d, ((px0 + px1) // 2, (prev_y0 + prev_y1) // 2 - 20),
           "PREVISUALIZADOR 3D", fuente(26),
           color=(150, 160, 190, 255), contorno=(20, 22, 28, 255))
-    texto(d, ((px0 + px1) // 2, (py0 + prev_y1) // 2 + 20),
-          "%d x %d" % (px1 - px0 - 16, prev_y1 - py0 - 16), fuente(22),
+    texto(d, ((px0 + px1) // 2, (prev_y0 + prev_y1) // 2 + 20),
+          "%d x %d" % (px1 - px0 - 16, prev_y1 - prev_y0 - 8), fuente(22),
           color=(110, 120, 150, 255), contorno=(20, 22, 28, 255))
 
-    # LunaCoins + el "+", abajo. La moneda es el arte real.
-    moneda = Image.open(ARTE / "lunacoin.png").convert("RGBA").resize(
-        (MONEDA, MONEDA), Image.LANCZOS)
+    # ------------------------------------------------ LunaCoins, abajo
+    oro = moneda_oro(ARTE / "lunacoin.png", ARTE / "lunacoin_oro.png")
+    moneda = oro.resize((MONEDA, MONEDA), Image.LANCZOS)
     cy = (prev_y1 + py1) // 2
     im.alpha_composite(moneda, (px0 + 24, cy - MONEDA // 2))
     texto(d, (px0 + 24 + MONEDA + 14, cy), "12.500", fuente(34),
           color=(255, 214, 92, 255), contorno=(20, 22, 28, 255), anclaje="lm")
 
-    mas = px1 - 24 - 52
-    d.rounded_rectangle([mas, cy - 26, mas + 52, cy + 26], radius=10,
-                        fill=BORDE_ENCIMA, outline=(255, 214, 92, 255), width=3)
-    texto(d, (mas + 26, cy), "+", fuente(38),
-          color=(255, 255, 255, 255), contorno=(120, 40, 0, 255))
+    # El "+" es el arte que YA EXISTE. Antes se dibujaba a mano aqui, teniendo
+    # `boton_mas.png` al lado: dos "+" distintos en la misma aplicacion.
+    mas = Image.open(BOTONES / "boton_mas.png").convert("RGBA")
+    im.alpha_composite(mas, (px1 - 24 - mas.width, cy - mas.height // 2))
 
     # ------------------------------------------------------ pestañas
     ancho = sx1 - sx0 - 2 * MARGEN
@@ -239,14 +323,30 @@ def main() -> None:
         texto(d, (cx + cw // 2, cyy + (ch - PIE) // 2 + 14), var, fuente(16),
               color=(90, 102, 140, 255))
 
-        if equipada:
-            texto(d, (cx + cw // 2, cyy + ch - PIE // 2), "EQUIPADO", fuente(18),
-                  color=(20, 110, 60, 255))
-        else:
+        # ---- pie: el precio arriba y el boton abajo
+        estado = EQUIPADO if equipada else (EQUIPAR if i == 5 else COMPRAR)
+        py_precio = cyy + ch - PIE + PIE_PRECIO // 2
+        py_boton = cyy + ch - PIE_BOTON - 6
+
+        if estado == COMPRAR:
             im.alpha_composite(moneda.resize((26, 26), Image.LANCZOS),
-                               (cx + 14, cyy + ch - PIE // 2 - 13))
-            texto(d, (cx + 46, cyy + ch - PIE // 2), "%d" % precio, fuente(21),
-                  anclaje="lm")
+                               (cx + 14, py_precio - 13))
+            texto(d, (cx + 46, py_precio), "%d" % precio, fuente(21), anclaje="lm")
+        else:
+            # Ya es tuyo: enseñar el precio otra vez invita a pagarlo dos veces.
+            texto(d, (cx + cw // 2, py_precio), "EN TU COLECCION", fuente(15),
+                  color=(90, 102, 140, 255))
+
+        etiqueta, relleno, borde, tinta = {
+            COMPRAR: ("COMPRAR", BORDE_ENCIMA, (255, 214, 92, 255), (255, 255, 255, 255)),
+            EQUIPAR: ("EQUIPAR", (86, 122, 200, 255), (150, 180, 240, 255), (255, 255, 255, 255)),
+            EQUIPADO: ("EQUIPADO", (206, 220, 244, 255), (120, 160, 110, 255), (24, 92, 52, 255)),
+        }[estado]
+        d.rounded_rectangle([cx + 10, py_boton, cx + cw - 10, py_boton + PIE_BOTON],
+                            radius=8, fill=relleno, outline=borde, width=3)
+        texto(d, (cx + cw // 2, py_boton + PIE_BOTON // 2), etiqueta, fuente(19),
+              color=tinta, contorno=(30, 40, 70, 160) if estado != EQUIPADO
+              else TEXTO_CONTORNO)
 
     SALIDA.mkdir(parents=True, exist_ok=True)
     destino = SALIDA / "maqueta_cosmeticos.png"

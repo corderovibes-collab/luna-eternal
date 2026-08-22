@@ -42,12 +42,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-import sys
 
-# El generador se ejecuta desde la raiz del repo, asi que su propia carpeta
-# no esta en el path. Sin esto, `import sombreros_luna` falla.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import sombreros_luna  # noqa: E402  (necesita el sys.path de arriba)
 
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -561,13 +556,6 @@ def main() -> None:
     sombreros, sombreros_fuera = leer_sombreros(de_sombreros)
     padres = padres_de(de_sombreros)
 
-    # Las gorras de Poke Ball son NUESTRAS: no salen de ningun pack, se pintan
-    # sobre el modelo gris de Simple Hats. Ver tools/sombreros_luna.py.
-    gorras = sombreros_luna.generar(de_sombreros)
-    if not gorras:
-        print("  AVISO: no se generaron las gorras de Poke Ball -- falta el "
-              "modelo base `baseballhat` de Simple Hats.")
-    sombreros = sombreros + gorras
     if not filas:
         raise SystemExit(
             "Ningun pack trae resolvers. O no son los packs, o cambiaron de "
@@ -581,15 +569,13 @@ def main() -> None:
 
     escribir("CatalogoSombreros", "Los sombreros que lleva el JUGADOR.",
              ['            new Pieza("sombrero_%s", Catalogo.SOMBREROS, "", "%s", %d)'
-              % (i, nom.replace('"', "'"),
-                 sombreros_luna.precio(i) if pack == "Luna" else TRAMOS["sombrero"])
-              for i, _, _, nom, pack in sombreros])
+              % (i, nom.replace('"', "'"), TRAMOS["sombrero"])
+              for i, _, _, nom, _ in sombreros])
 
     copiados = copiar_assets(zips, sombreros, padres)
 
     print("mascotas   %3d  (%d especies)" % (len(filas), len({f[0] for f in filas})))
-    print("sombreros  %3d  (%d de packs + %d gorras nuestras)"
-          % (len(sombreros), len(sombreros) - len(gorras), len(gorras)))
+    print("sombreros  %3d" % len(sombreros))
     print("assets     %3d ficheros -> %s" % (copiados, ASSETS))
 
     if descartados:

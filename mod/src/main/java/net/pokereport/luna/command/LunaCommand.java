@@ -100,7 +100,9 @@ public final class LunaCommand {
 
             .then(literal("cosmeticos")
                 .requires(s -> s.hasPermissionLevel(3))
-                .executes(ctx -> cosmeticos(ctx.getSource())))
+                .executes(ctx -> cosmeticos(ctx.getSource()))
+                .then(literal("huerfanos")
+                    .executes(ctx -> huerfanos(ctx.getSource()))))
 
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
@@ -338,6 +340,47 @@ public final class LunaCommand {
                 });
             } catch (Exception e) {
                 LunaEternal.LOG.warn("No se pudieron leer los cosmeticos: {}", e.toString());
+            }
+        });
+        return 1;
+    }
+
+    /**
+     * Cosmeticos que alguien TIENE y ya no estan en el catalogo.
+     *
+     * <p>⚠ EXISTE PORQUE EL CATALOGO PUEDE ENCOGER, y encoger es normal: se
+     * retiraron los nueve que el pack declaraba sin arte, las cinco formas mega y
+     * la categoria de capas entera. Cada vez que eso pasa, quien hubiera comprado
+     * uno se queda con una fila en {@code player_cosmetics} que apunta a algo que
+     * ya no existe.
+     *
+     * <p><b>No rompe nada</b> —el catalogo se recorre al reves, asi que la pieza
+     * simplemente no sale— y ese es justo el problema: <b>es invisible</b>. El
+     * jugador pago y no tiene nada, y nadie se entera hasta que pregunta.
+     *
+     * <p>Esto no devuelve el dinero: solo dice a quien hay que devolverselo.
+     * Reembolsar automaticamente seria peor —una regeneracion del catalogo con un
+     * fallo devolveria dinero a medio servidor— y {@code /luna dar} ya existe.
+     */
+    private static int huerfanos(ServerCommandSource origen) {
+        LunaEternal.submit(() -> {
+            try {
+                var filas = LunaEternal.cosmetics().huerfanos();
+                origen.getServer().execute(() -> {
+                    if (filas.isEmpty()) {
+                        origen.sendFeedback(() -> Text.literal(
+                                "§aNadie tiene cosmeticos retirados."), false);
+                        return;
+                    }
+                    origen.sendFeedback(() -> Text.literal(
+                            "§e" + filas.size() + " compras de cosmeticos que ya "
+                            + "no estan en el catalogo:"), false);
+                    for (String l : filas) {
+                        origen.sendFeedback(() -> Text.literal("§7  " + l), false);
+                    }
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudieron buscar los huerfanos: {}", e.toString());
             }
         });
         return 1;

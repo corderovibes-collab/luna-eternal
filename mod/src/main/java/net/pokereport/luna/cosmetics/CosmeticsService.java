@@ -47,6 +47,35 @@ public class CosmeticsService {
     }
 
     /** Lo que lleva puesto, por categoría. */
+    /**
+     * Quien tiene que cosmetico RETIRADO, y cuanto pago. Ver `/luna cosmeticos huerfanos`.
+     *
+     * <p>Se filtra en Java y no en SQL a proposito: el catalogo vive en el codigo,
+     * no en la base, asi que la consulta no puede saber que es un huerfano. Son
+     * pocas filas --una por cosmetico comprado en todo el servidor-- y traerlas
+     * enteras es mas simple que mantener una lista de identificadores en SQL que
+     * habria que regenerar en cada despliegue.
+     */
+    public java.util.List<String> huerfanos() throws SQLException {
+        var salida = new java.util.ArrayList<String>();
+        String sql = "SELECT p.name, c.cosmetic_id, c.precio_pagado, c.origen "
+                + "FROM player_cosmetics c JOIN player p ON p.player_id = c.player_id "
+                + "ORDER BY p.name, c.cosmetic_id";
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             var rs = ps.executeQuery()) {
+            while (rs.next()) {
+                String id = rs.getString(2);
+                if (Catalogo.de(id) != null) {
+                    continue;
+                }
+                salida.add(String.format("%-16s %-34s %d LunaCoins (%s)",
+                        rs.getString(1), id, rs.getLong(3), rs.getString(4)));
+            }
+        }
+        return salida;
+    }
+
     public Map<String, String> equipados(long playerId) throws SQLException {
         Map<String, String> out = new HashMap<>();
         try (Connection c = db.connection();

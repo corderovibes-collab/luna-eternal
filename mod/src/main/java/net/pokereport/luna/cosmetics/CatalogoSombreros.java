@@ -398,26 +398,6 @@ public final class CatalogoSombreros {
             new Pieza("sombrero_winghat", Catalogo.SOMBREROS, "", "Wing Cap", 1200),
             new Pieza("sombrero_worm_hat", Catalogo.SOMBREROS, "", "Worm Hat", 1200),
             new Pieza("sombrero_worms_mine", Catalogo.SOMBREROS, "", "Worm's Mine", 1200),
-            new Pieza("sombrero_zigzagwitchhat", Catalogo.SOMBREROS, "", "Witch Hat", 1200),
-            new Pieza("sombrero_gorra_poke", Catalogo.SOMBREROS, "", "Gorra Poké Ball", 2000),
-            new Pieza("sombrero_gorra_great", Catalogo.SOMBREROS, "", "Gorra Super Ball", 2000),
-            new Pieza("sombrero_gorra_ultra", Catalogo.SOMBREROS, "", "Gorra Ultra Ball", 2000),
-            new Pieza("sombrero_gorra_master", Catalogo.SOMBREROS, "", "Gorra Master Ball", 3500),
-            new Pieza("sombrero_gorra_premier", Catalogo.SOMBREROS, "", "Gorra Premier Ball", 2000),
-            new Pieza("sombrero_gorra_dusk", Catalogo.SOMBREROS, "", "Gorra Ocaso", 2000),
-            new Pieza("sombrero_gorra_heal", Catalogo.SOMBREROS, "", "Gorra Sanadora", 2000),
-            new Pieza("sombrero_gorra_net", Catalogo.SOMBREROS, "", "Gorra Malla", 2000),
-            new Pieza("sombrero_gorra_dive", Catalogo.SOMBREROS, "", "Gorra Buceo", 2000),
-            new Pieza("sombrero_gorra_quick", Catalogo.SOMBREROS, "", "Gorra Veloz", 2000),
-            new Pieza("sombrero_gorra_luxury", Catalogo.SOMBREROS, "", "Gorra Lujo", 3500),
-            new Pieza("sombrero_gorra_level", Catalogo.SOMBREROS, "", "Gorra Nivel", 2000),
-            new Pieza("sombrero_gorra_friend", Catalogo.SOMBREROS, "", "Gorra Amiga", 2000),
-            new Pieza("sombrero_gorra_love", Catalogo.SOMBREROS, "", "Gorra Amor", 2000),
-            new Pieza("sombrero_gorra_moon", Catalogo.SOMBREROS, "", "Gorra Lunar", 2000),
-            new Pieza("sombrero_gorra_timer", Catalogo.SOMBREROS, "", "Gorra Turno", 2000),
-            new Pieza("sombrero_gorra_repeat", Catalogo.SOMBREROS, "", "Gorra Acopio", 2000),
-            new Pieza("sombrero_gorra_nest", Catalogo.SOMBREROS, "", "Gorra Nido", 2000),
-            new Pieza("sombrero_gorra_beast", Catalogo.SOMBREROS, "", "Gorra Ente", 3500),
-            new Pieza("sombrero_gorra_cherish", Catalogo.SOMBREROS, "", "Gorra Gloria", 3500)
+            new Pieza("sombrero_zigzagwitchhat", Catalogo.SOMBREROS, "", "Witch Hat", 1200)
     );
 }

@@ -16,10 +16,26 @@ coincide con el código, gana el código y se corrige esto.
 
 ## Current Status
 
-**2026-08-22 · funcionando en el juego, verificado por el usuario.**
+**2026-08-22 · funcionando en el juego, y LA COMPRA VERIFICADA CON DINERO.**
 
 Se abre desde el PokePad, dibuja los Pokémon en 3D sin titilar, el catálogo
-viene del servidor y comprar/equipar están escritos de punta a punta.
+viene del servidor y **comprar cobra de verdad**. Medido con `/luna economia`
+después de cuatro compras reales:
+
+```
+REPORTCOINS
+  Masa: 500  ✔ cuadra con el libro de asientos
+  admin_grant        +10.000    (1 op)
+  cosmetico_compra    -9.500    (4 ops)
+```
+
+Los 9.500 son exactamente `2500 + 1200 + 1800 + 4000`: cada compra cobró **su**
+precio, y hubo **4 operaciones para 4 compras** — ni un doble cobro. El libro de
+asientos cuadra, que es lo que dice que la contabilidad es correcta y no solo
+que la pantalla parecía funcionar.
+
+> Con esto, los jugadores con actividad económica del servidor pasan de **0 a
+> 1**. Es la primera vez que esta economía mueve algo.
 
 ```
 pantalla       CosmeticosScreen.java        4 pestañas · rejilla 4x2 · preview
@@ -176,8 +192,10 @@ debe, que es lo que despista.
    `monetization.md` avisa de que «un cosmético sin nadie que lo vea no vale
    nada». Decisión tomada: **solo cliente, sin entidad** — cero coste de tick y
    cero interferencia con combates y capturas.
-2. **Probar una compra de verdad.** El usuario tiene 0 LunaCoins, así que el
-   botón siempre va a rechazar. Hace falta saldo de prueba.
+2. ~~Probar una compra de verdad.~~ ✅ **Hecho el 2026-08-22**, ver *Current
+   Status*. Para dar saldo: `/luna dar REPORTCOIN <cantidad>` desde el juego
+   (nivel 3). **Falta probar el caso de saldo insuficiente**, que es el que
+   enseña el mensaje de error.
 3. **Capas, Sombreros y Auras están vacías.** Las mascotas se llenan solas con
    los 66 cosméticos MIT; esas tres hay que generarlas (D-032: se dibujan, no se
    bajan).
@@ -196,8 +214,9 @@ solo.
 
 ## Next Actions
 
-1. El dibujado en el mundo (§6.1)
-2. Saldo de prueba y una compra completa
+1. El dibujado en el mundo (§6.1) — **lo único que falta para que esto sea un
+   producto y no una pantalla bonita**
+2. Probar el rechazo por saldo insuficiente y el estado EQUIPAR/EQUIPADO
 3. El arte de las tres pestañas vacías
 
 ## Related Documents

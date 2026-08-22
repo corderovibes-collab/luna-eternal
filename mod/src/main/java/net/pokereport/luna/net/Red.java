@@ -222,6 +222,39 @@ public class Red implements ModInitializer {
         }
     }
 
+    /**
+     * «Este jugador lleva puesta esta mascota». Va a TODO el mundo.
+     *
+     * <p>Es lo que convierte la tienda en algo que existe: un cosmetico que solo
+     * ve su dueño no vale nada, y {@code monetization.md} lo dice con esas
+     * palabras. Sin este paquete, comprar y equipar funcionan y no se nota.
+     *
+     * <p>⚠ Viaja <b>especie y aspecto</b>, no el identificador del catalogo. El
+     * cliente que lo recibe solo necesita saber QUE dibujar, y asi no hace falta
+     * que conozca el catalogo de otro jugador -- que ademas incluye precios y
+     * que no tiene por que ver.
+     *
+     * <p>Especie vacia significa <b>no lleva nada</b>. Es el mismo paquete para
+     * poner y para quitar: dos paquetes distintos permitirian que llegara el de
+     * poner y se perdiera el de quitar, y el cosmetico se quedaria pegado.
+     */
+    public record CosmeticoPuesto(java.util.UUID jugador, String especie, String aspecto)
+            implements CustomPayload {
+        public static final Id<CosmeticoPuesto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "cosmetico_puesto"));
+        public static final PacketCodec<RegistryByteBuf, CosmeticoPuesto> CODEC =
+                PacketCodec.tuple(
+                        net.minecraft.util.Uuids.PACKET_CODEC, CosmeticoPuesto::jugador,
+                        PacketCodecs.STRING, CosmeticoPuesto::especie,
+                        PacketCodecs.STRING, CosmeticoPuesto::aspecto,
+                        CosmeticoPuesto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     @Override
     public void onInitialize() {
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
@@ -231,6 +264,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirCosmeticos.ID, PedirCosmeticos.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionCosmetico.ID, AccionCosmetico.CODEC);
         PayloadTypeRegistry.playS2C().register(Cosmeticos.ID, Cosmeticos.CODEC);
+        PayloadTypeRegistry.playS2C().register(CosmeticoPuesto.ID, CosmeticoPuesto.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -276,6 +310,13 @@ public class Red implements ModInitializer {
             });
         });
 
+        // ⚠ AL ENTRAR HAY QUE SINCRONIZAR EN LAS DOS DIRECCIONES, y es facil
+        // dejarse una: cada una funciona a medias y el fallo solo aparece con
+        // dos personas conectadas. Ver `Difusion.alEntrar`.
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
+                (manejador, remitente, servidor) ->
+                        net.pokereport.luna.cosmetics.Difusion.alEntrar(manejador.player));
+
         ServerPlayNetworking.registerGlobalReceiver(PedirCosmeticos.ID, (carga, ctx) -> {
             var jugador = ctx.player();
             LunaEternal.submit(() -> enviarCosmeticos(jugador));
@@ -317,6 +358,12 @@ public class Red implements ModInitializer {
                     // forma de que la tienda del cliente vuelva a la verdad sin
                     // tener que adivinar que ha cambiado.
                     enviarCosmeticos(jugador);
+
+                    // Y si de verdad cambio lo que lleva puesto, se entera todo
+                    // el mundo. Solo al equipar: comprar no cambia tu aspecto.
+                    if (carga.equipar() && r.ok()) {
+                        net.pokereport.luna.cosmetics.Difusion.difundir(jugador);
+                    }
                 } catch (Exception e) {
                     LunaEternal.LOG.warn("Cosmetico {} de {} fallo: {}",
                             carga.id(), jugador.getName().getString(), e.toString());

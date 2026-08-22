@@ -23,7 +23,7 @@ public record App(String id, boolean abierta) {
     public static final App[] TODAS = {
         // La primera que se abre de verdad: lleva a la Pokédex de Cobblemon.
         new App("pokedex",    true),
-        new App("cosmeticos", false),
+        new App("cosmeticos", true),
         new App("trabajos",   false),
         new App("misiones",   false),
         new App("warps",      false),

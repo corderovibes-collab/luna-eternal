@@ -57,8 +57,23 @@ public final class Apps {
         }
         return switch (app.id()) {
             case "pokedex" -> abrirPokedex();
+            case "cosmeticos" -> abrirCosmeticos();
             default -> false;
         };
+    }
+
+    /**
+     * La tienda de cosmeticos.
+     *
+     * <p>Sin reflexion, al contrario que la Pokedex: esta pantalla es NUESTRA.
+     * Se le pasa la pantalla actual para que el boton INICIO sepa a donde
+     * volver -- si volviera creando un PokePadScreen nuevo, se perderia en que
+     * pagina de aplicaciones estaba el jugador.
+     */
+    private static boolean abrirCosmeticos() {
+        MinecraftClient cliente = MinecraftClient.getInstance();
+        cliente.setScreen(new CosmeticosScreen(cliente.currentScreen));
+        return true;
     }
 
     private static boolean abrirPokedex() {

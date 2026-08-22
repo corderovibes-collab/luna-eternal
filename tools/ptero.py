@@ -106,7 +106,32 @@ def subir(directorio, nombre, datos, servidor=None):
 
     Se comprueba el tamano al terminar en vez de dar por buena la subida: un
     jar truncado no se queja al subir, se queja al arrancar el servidor.
+
+    ⚠⚠ BORRA EL FICHERO ANTERIOR ANTES DE SUBIR, Y ESO NO ES OPCIONAL.
+
+    SOBRESCRIBIR UN JAR LO CORROMPE. No da error al subir, y el tamano hasta
+    coincide: el fallo aparece mas tarde, al CARGAR UNA CLASE, con
+
+        java.util.zip.ZipException: ZipFile invalid LOC header (bad signature)
+
+    que no se parece en nada a "el jar esta mal".
+
+    El 2026-08-22 costo que nadie pudiera entrar al servidor. El sintoma fue
+    "Datos del jugador no valido" en la pantalla del jugador, porque la clase que
+    fallaba --`Difusion`-- se carga PEREZOSAMENTE al conectarse alguien: el
+    servidor arrancaba perfecto y solo reventaba al entrar. Diagnosticarlo desde
+    el mensaje del cliente es imposible.
+
+    ⚠ EL BORRADO ESTABA EN `desplegar.py` Y NO AQUI, y por eso paso: se llamo a
+      esta funcion directamente --para encadenar subida y publicacion en un
+      comando-- y se perdio la proteccion. Una salvaguarda que vive en UN
+      llamante protege a ese llamante; puesta en el primitivo, protege a todos.
     """
+    for n, _tam, es_fichero in listar(directorio, servidor=servidor):
+        if n == nombre and es_fichero:
+            borrar(directorio, [nombre], servidor=servidor)
+            break
+
     url = pedir("GET", "/files/upload", servidor=servidor)["attributes"]["url"]
     frontera = "----LunaEternal" + hashlib.sha1(datos[:4096]).hexdigest()[:16]
     cuerpo = (

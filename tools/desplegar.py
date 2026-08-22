@@ -57,6 +57,16 @@ def desplegar(nombre: str) -> None:
     datos = jar.read_bytes()
     print(f"\n{nombre.upper()}  ·  {jar.name}  ({len(datos) / 1024:.0f} KB)")
 
+    # ⚠ ESTE BORRADO NO ES EL MISMO QUE EL DE `ptero.subir`, y quitar uno
+    #   pensando que sobra deja un agujero:
+    #
+    #     aqui           borra TODAS las versiones viejas del prefijo, aunque se
+    #                    llamen distinto -- si no, quedan dos jars del mismo mod
+    #                    y Fabric aborta con "Incompatible mods found"
+    #     ptero.subir    borra el fichero CON ESE NOMBRE antes de subirlo, porque
+    #                    sobrescribir corrompe el zip
+    #
+    #   Son complementarios: uno limpia el pasado y el otro protege el presente.
     viejos = [n for n, _, es_fichero in ptero.listar("/mods")
               if es_fichero and n.startswith(prefijo) and n.endswith(".jar")]
     if viejos:

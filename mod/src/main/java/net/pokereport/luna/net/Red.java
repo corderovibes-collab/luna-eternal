@@ -171,6 +171,16 @@ public class Red implements ModInitializer {
 
         public static final int POSEIDO = 1;
         public static final int EQUIPADO = 2;
+        /**
+         * Tienes en el EQUIPO el Pokemon al que se le pone.
+         *
+         * <p>⚠ Lo decide el SERVIDOR y viaja como bandera, en vez de que el
+         * cliente mire su propio equipo. Se intento al reves y fallo: el cliente
+         * comparaba por `Species.getName()`, que es el nombre PARA MOSTRAR y se
+         * traduce -- asi que el boton decia "no lo tienes" con el Pokemon
+         * delante. Ademas P6 ya lo decia: el cliente dibuja, no decide.
+         */
+        public static final int EQUIPABLE = 4;
     }
 
     /**
@@ -369,6 +379,11 @@ public class Red implements ModInitializer {
                 }
                 if (p.id().equals(equipados.get(p.categoria()))) {
                     banderas |= PiezaCosmetica.EQUIPADO;
+                }
+                if (p.aspecto().isEmpty()
+                        || net.pokereport.luna.cosmetics.CosmeticsService
+                                .primeraRanura(jugador, p) >= 0) {
+                    banderas |= PiezaCosmetica.EQUIPABLE;
                 }
                 piezas.add(new PiezaCosmetica(p.id(), p.categoria(), p.especie(),
                         p.aspecto(), p.precio(), banderas));

@@ -33,7 +33,8 @@ public record Cosmetico(
         String aspecto,
         int precio,
         boolean poseido,
-        boolean equipado) {
+        boolean equipado,
+        boolean equipable) {
 
     /**
      * Qué botón toca dibujar. Son tres estados y no dos, y esa es justo la
@@ -48,8 +49,9 @@ public record Cosmetico(
             return Estado.EQUIPADO;
         }
         if (poseido) {
-            // ⚠ Tenerlo no basta: hace falta el Pokemon al que ponerselo.
-            return MiEquipo.tienesLaEspecie(this) ? Estado.EQUIPAR : Estado.SIN_POKEMON;
+            // ⚠ Tenerlo no basta: hace falta el Pokemon al que ponerselo. Y eso
+            //   lo dice el SERVIDOR, no lo mira el cliente -- ver Red.EQUIPABLE.
+            return equipable ? Estado.EQUIPAR : Estado.SIN_POKEMON;
         }
         return precio > 0 ? Estado.COMPRAR : Estado.DE_EVENTO;
     }

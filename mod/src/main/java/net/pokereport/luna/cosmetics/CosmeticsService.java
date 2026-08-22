@@ -283,6 +283,18 @@ public class CosmeticsService {
             }
         }
 
+        // ⚠ RANURA NEGATIVA = "elige tu". El cliente no tiene por que saber en
+        //   que ranura esta: preguntarselo obligaba a que leyera su propio
+        //   equipo, y eso es justo lo que fallaba -- comparaba por el nombre
+        //   VISIBLE de la especie. El servidor tiene el equipo de verdad.
+        if (ranura < 0) {
+            ranura = primeraRanura(jugador, pieza);
+            if (ranura < 0) {
+                return Resultado.no("No tienes ningún "
+                        + pieza.especie().substring(pieza.especie().indexOf(':') + 1)
+                        + " en el equipo.");
+            }
+        }
         var equipo = com.cobblemon.mod.common.Cobblemon.INSTANCE
                 .getStorage().getParty(jugador);
         var pokemon = equipo.get(ranura);
@@ -290,13 +302,16 @@ public class CosmeticsService {
             return Resultado.no("No hay ningún Pokémon en esa ranura.");
         }
 
-        String especieEsperada = pieza.especie().contains(":")
-                ? pieza.especie().substring(pieza.especie().indexOf(':') + 1)
-                : pieza.especie();
-        String especieReal = pokemon.getSpecies().getName().toLowerCase();
-        if (!especieReal.equalsIgnoreCase(especieEsperada)) {
-            return Resultado.no("Ese disfraz es de " + especieEsperada
-                    + ", no de " + pokemon.getSpecies().getName() + ".");
+        // ⚠⚠ SE COMPARA POR IDENTIFICADOR, NO POR `getName()`.
+        //
+        //   `getName()` es el nombre PARA MOSTRAR: se traduce, y en algunos
+        //   idiomas no coincide con el identificador. Comparando por ahi, el
+        //   disfraz "no encaja" en español y si en ingles -- un fallo que
+        //   depende del idioma del servidor y que nadie relacionaria con esto.
+        //
+        //   `getResourceIdentifier()` es `cobblemon:charizard` siempre.
+        if (!coincide(pokemon, pieza)) {
+            return Resultado.no("Ese disfraz no es para " + pokemon.getSpecies().getName() + ".");
         }
 
         // ⚠ Se apagan los OTROS disfraces de la misma especie antes de encender
@@ -322,6 +337,28 @@ public class CosmeticsService {
         pokemon.updateAspects();
 
         return Resultado.si();
+    }
+
+    /** La especie de ese Pokemon es la que pide el cosmetico. Ver `disfrazar`. */
+    public static boolean coincide(com.cobblemon.mod.common.pokemon.Pokemon pokemon,
+                                   Catalogo.Pieza pieza) {
+        if (pokemon == null || pieza.especie().isEmpty()) {
+            return false;
+        }
+        return pieza.especie().equalsIgnoreCase(
+                pokemon.getSpecies().getResourceIdentifier().toString());
+    }
+
+    /** La primera ranura del equipo que sirve para ese cosmetico, o -1. */
+    public static int primeraRanura(net.minecraft.server.network.ServerPlayerEntity jugador,
+                                    Catalogo.Pieza pieza) {
+        var equipo = com.cobblemon.mod.common.Cobblemon.INSTANCE.getStorage().getParty(jugador);
+        for (int i = 0; i < 6; i++) {
+            if (coincide(equipo.get(i), pieza)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private boolean tiene(Connection c, long playerId, String cosmeticId)

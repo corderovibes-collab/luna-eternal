@@ -147,7 +147,8 @@ public class CosmeticosScreen extends Screen {
             lista.add(new Cosmetico(
                     p.categoria(), p.id(), p.especie(), p.aspecto(), p.precio(),
                     (p.banderas() & Red.PiezaCosmetica.POSEIDO) != 0,
-                    (p.banderas() & Red.PiezaCosmetica.EQUIPADO) != 0));
+                    (p.banderas() & Red.PiezaCosmetica.EQUIPADO) != 0,
+                    (p.banderas() & Red.PiezaCosmetica.EQUIPABLE) != 0));
         }
         catalogo = lista;
 
@@ -590,7 +591,7 @@ public class CosmeticosScreen extends Screen {
             if (client != null && client.player != null) {
                 client.player.sendMessage(Text.translatable(
                         "pokepad.lunaeternal.necesitas_pokemon",
-                        MiEquipo.nombreEspecie(c.especie())), true);
+                        nombreDe(c)), true);
             }
             return;
         }
@@ -616,7 +617,8 @@ public class CosmeticosScreen extends Screen {
         //   El unico caso que quedaria fuera es llevar DOS de la misma especie y
         //   querer elegir cual. Si eso llega a importar, aqui es donde se abre
         //   la tira de eleccion.
-        int ranura = est == Cosmetico.Estado.COMPRAR ? -1 : MiEquipo.primeraRanuraValida(c);
+        // -1 comprar · -2 equipar y que el servidor elija la ranura.
+        int ranura = est == Cosmetico.Estado.COMPRAR ? -1 : -2;
         ClientPlayNetworking.send(new Red.AccionCosmetico(c.id(), ranura));
     }
 

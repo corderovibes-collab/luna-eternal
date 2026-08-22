@@ -100,14 +100,17 @@ public final class Mascota3D {
      *               animandose a la vez en una rejilla es ruido visual, y con la
      *               animacion parada se aprecia mejor el disfraz, que es lo que
      *               se esta vendiendo
-     * @param escala tamaño del modelo. No es el de la caja: un Wailord y un
+     * @param origenY donde cae el ORIGEN del modelo dentro de la caja, de 0
+     *                (arriba) a 1 (abajo). El modelo cuelga hacia abajo desde
+     *                ahi, asi que un valor alto lo saca por el pie
+     * @param animar solo el que esta bajo el raton se anima. Es lo que hace el un Wailord y un
      *               Joltik con el mismo número salen igual de altos, que es lo
      *               que se quiere en una rejilla — si cada uno saliera a su
      *               tamaño real, media tienda serían motas
      */
     public static void dibujar(DrawContext ctx, Cosmetico c,
                                int x, int y, int ancho, int alto,
-                               float escala, float delta, boolean animar) {
+                               float origenY, float delta, boolean animar) {
         if (!c.esMascota()) {
             return;
         }
@@ -116,7 +119,7 @@ public final class Mascota3D {
             return;
         }
         if (c.esDeMinecraft()) {
-            dibujarCriatura(ctx, c, especie, x, y, ancho, alto, escala);
+            dibujarCriatura(ctx, c, especie, x, y, ancho, alto);
             return;
         }
 
@@ -135,16 +138,17 @@ public final class Mascota3D {
 
         MatrixStack m = ctx.getMatrices();
         m.push();
-        // ⚠⚠ Z = 0, NO 100. AQUI ESTABA EL TITILEO.
+        // ⚠⚠ EL MODELO CUELGA HACIA ABAJO DESDE SU ORIGEN, Y ESO CAMBIA DONDE
+        //    HAY QUE PONERLO.
         //
-        // Con z=100 el modelo se dibuja a una profundidad distinta de la de la
-        // interfaz, y la prueba de profundidad decide de forma inestable quien
-        // queda delante: el modelo aparecia y desaparecia entre fotogramas.
+        // El PC de Cobblemon traslada a `posY + 1.0` sobre una celda de 25: el
+        // origen va casi ARRIBA (4 %), no en el centro. Yo lo ponia al 62 %, y
+        // por eso los Pokemon salian bajos y cortados por el pie de la celda --
+        // no era la escala, era el punto de anclaje.
         //
-        // El PC de Cobblemon --que dibuja una rejilla igual que esta-- traslada
-        // a z=0 y NO toca el bufer ni el estado de OpenGL. Se copia su receta en
-        // vez de inventar otra: la suya lleva años funcionando en produccion.
-        m.translate(x + ancho / 2.0, y + alto * 0.62, 0.0);
+        // La escala tambien sale de ellos: 2.5 de matriz por 4.5 de parametro
+        // sobre 25 px, o sea 0,45 por pixel de caja.
+        m.translate(x + ancho / 2.0, y + alto * origenY, 0.0);
 
         try {
             PokemonGuiUtilsKt.drawProfilePokemon(
@@ -154,7 +158,7 @@ public final class Mascota3D {
                     PoseType.PROFILE,   // poseType
                     estado,             // state
                     animar ? delta : 0f, // partialTicks: ver `animar`
-                    escala,             // scale
+                    Math.min(ancho, alto) * 0.45f,  // scale: la proporcion de Cobblemon
                     true,               // applyProfileTransform
                     false,              // applyBaseScale: ver el javadoc de `escala`
                     false,              // doQuirks: los tics de idle distraen en una rejilla
@@ -196,7 +200,7 @@ public final class Mascota3D {
      * y saldrian en las estadisticas.
      */
     private static void dibujarCriatura(DrawContext ctx, Cosmetico c, Identifier id,
-                                        int x, int y, int ancho, int alto, float escala) {
+                                        int x, int y, int ancho, int alto) {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
         if (cliente.world == null) {
             return;
@@ -227,7 +231,7 @@ public final class Mascota3D {
         int cx = x + ancho / 2, cy = y + alto / 2;
         net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
                 ctx, x, y, x + ancho, y + alto,
-                Math.round(escala * 0.55f), 0.0f, cx, cy, ent);
+                Math.round(Math.min(ancho, alto) * 0.30f), 0.0f, cx, cy, ent);
     }
 
     /** Una criatura por cosmetico. Ver `dibujarCriatura`. */

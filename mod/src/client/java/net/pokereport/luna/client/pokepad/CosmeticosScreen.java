@@ -227,11 +227,72 @@ public class CosmeticosScreen extends Screen {
 
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
 
+        // ⚠⚠ DOS PASADAS, Y ESTE ES EL ARREGLO DEL TITILEO.
+        //
+        // `DrawContext` NO dibuja al momento: acumula rectangulos y texturas en
+        // un bufer y los vuelca cuando le toca. `drawProfilePokemon`, en cambio,
+        // dibuja YA, hablando con OpenGL directamente.
+        //
+        // Intercalados --una celda, su modelo, la siguiente celda...-- el orden
+        // entre lo 2D y lo 3D cambia de un fotograma a otro segun cuando caiga
+        // el volcado, y eso es lo que se ve como titileo. No es el modelo: es
+        // quien pinta primero, y cambia solo.
+        //
+        // Se probaron dos parches antes y ninguno bastaba, porque los dos
+        // seguian intercalando: vaciar el bufer alrededor de cada modelo, y
+        // cambiar la profundidad. Lo que lo arregla es no intercalar.
+        //
+        // Primera pasada: TODO lo plano. Segunda: TODOS los modelos, ya con el
+        // bufer vacio. Un solo orden posible, siempre el mismo.
         dibujarNavegacion(ctx, ratonX, ratonY);
-        dibujarPreview(ctx, delta);
         dibujarSaldo(ctx, ratonX, ratonY);
         dibujarPestanas(ctx, ratonX, ratonY);
-        dibujarRejilla(ctx, ratonX, ratonY, delta);
+        dibujarRejilla(ctx, ratonX, ratonY);
+
+        ctx.draw();
+
+        dibujarModelos(ctx, ratonX, ratonY, delta);
+    }
+
+    /**
+     * Segunda pasada: SOLO los modelos, con el bufer de la interfaz ya vaciado.
+     *
+     * <p>Ver el comentario de `render`. Aqui no se dibuja ni un rectangulo ni
+     * una letra: en cuanto se mezcle algo plano, vuelve el titileo.
+     */
+    private void dibujarModelos(DrawContext ctx, int rx, int ry, float delta) {
+        // El previsualizador. Su caja es alta y estrecha, asi que el origen va
+        // mas abajo que en una celda: con 0,06 el modelo quedaria pegado al
+        // techo del panel.
+        if (enfocado != null) {
+            int ax = PANEL_X + 8, ay = PANEL_Y + NAV_ALTO;
+            int aw = PANEL_W - 16, ah = PANEL_H - NAV_ALTO - SALDO_ALTO - 8;
+            Mascota3D.dibujar(ctx, enfocado, px(ax), py(ay), pl(aw), pl(ah),
+                    0.34f, delta, true);
+        }
+
+        List<Cosmetico> lista = visibles();
+        int anchoUtil = PANT_W - 2 * MARGEN;
+        int gy0 = PANT_Y + MARGEN + PESTANA_ALTO + AIRE;
+        int altoUtil = PANT_Y + PANT_H - gy0 - MARGEN;
+        int cw = (anchoUtil - (COLS - 1) * AIRE) / COLS;
+        int ch = (altoUtil - (FILAS - 1) * AIRE) / FILAS;
+        int desde = pagina * porPagina();
+
+        for (int n = 0; n < porPagina(); n++) {
+            int idx = desde + n;
+            if (idx >= lista.size()) {
+                break;
+            }
+            int ax = PANT_X + MARGEN + (n % COLS) * (cw + AIRE);
+            int ay = gy0 + (n / COLS) * (ch + AIRE);
+            int x = px(ax), y = py(ay), w = pl(cw), h = pl(ch);
+            boolean encima = dentro(rx, ry, x, y, w, h);
+            // La caja del modelo es la celda menos el pie, que es donde van el
+            // precio y el boton.
+            Mascota3D.dibujar(ctx, lista.get(idx), x + pl(10), y + pl(6),
+                    w - pl(20), h - pl(PIE + 6), 0.06f, delta, encima);
+        }
     }
 
     private void dibujarNavegacion(DrawContext ctx, int rx, int ry) {
@@ -245,7 +306,7 @@ public class CosmeticosScreen extends Screen {
         dibujarTextura(ctx, CERRAR, px(PANEL_X + PANEL_W - 18) - cw, cy - chh / 2, cw, chh, 80, 64);
     }
 
-    private void dibujarPreview(DrawContext ctx, float delta) {
+    private void dibujarPreview(DrawContext ctx) {
         int ax = PANEL_X + 8, ay = PANEL_Y + NAV_ALTO;
         int aw = PANEL_W - 16, ah = PANEL_H - NAV_ALTO - SALDO_ALTO - 8;
 
@@ -254,11 +315,6 @@ public class CosmeticosScreen extends Screen {
                     ax + aw / 2, ay + ah / 2, 24, TEXTO_SUAVE, true, false);
             return;
         }
-        // ⚠ EL MODELO VA GRANDE. El previsualizador mide 299x465 pixeles del
-        //   arte: con la escala de la celda, un Mewtwo se quedaba en un tercio
-        //   del hueco y el panel parecia vacio.
-        Mascota3D.dibujar(ctx, enfocado, px(ax), py(ay), pl(aw), pl(ah), 170f * k, delta, true);
-
         texto(ctx, Text.literal(nombreDe(enfocado)), ax + aw / 2, ay + ah - 34, 26,
                 ORO, true, false);
         texto(ctx, Text.literal(enfocado.aspecto()), ax + aw / 2, ay + ah - 6, 20,
@@ -312,7 +368,7 @@ public class CosmeticosScreen extends Screen {
         }
     }
 
-    private void dibujarRejilla(DrawContext ctx, int rx, int ry, float delta) {
+    private void dibujarRejilla(DrawContext ctx, int rx, int ry) {
         List<Cosmetico> lista = visibles();
         int anchoUtil = PANT_W - 2 * MARGEN;
         int gy0 = PANT_Y + MARGEN + PESTANA_ALTO + AIRE;
@@ -329,12 +385,12 @@ public class CosmeticosScreen extends Screen {
             Cosmetico c = lista.get(idx);
             int ax = PANT_X + MARGEN + (n % COLS) * (cw + AIRE);
             int ay = gy0 + (n / COLS) * (ch + AIRE);
-            dibujarCelda(ctx, c, ax, ay, cw, ch, rx, ry, delta);
+            dibujarCelda(ctx, c, ax, ay, cw, ch, rx, ry);
         }
     }
 
     private void dibujarCelda(DrawContext ctx, Cosmetico c, int ax, int ay, int aw, int ah,
-                              int rx, int ry, float delta) {
+                              int rx, int ry) {
         int x = px(ax), y = py(ay), w = pl(aw), h = pl(ah);
         boolean encima = dentro(rx, ry, x, y, w, h);
         boolean elegido = enfocado != null && enfocado.id().equals(c.id());
@@ -346,11 +402,6 @@ public class CosmeticosScreen extends Screen {
 
         // El 3D ocupa todo lo que no es el pie. Se dibuja ANTES que el nombre
         // para que el nombre quede por encima y siga leyendose.
-        // Solo se anima el que esta bajo el raton: ocho a la vez es ruido, y
-        // parados se aprecia mejor el disfraz, que es lo que se vende.
-        Mascota3D.dibujar(ctx, c, x + pl(10), y + pl(6), w - pl(20), h - pl(PIE + 6),
-                62f * k, delta, encima);
-
         texto(ctx, Text.literal(nombreDe(c)), ax + aw / 2, ay + ah - PIE - 24, 22,
                 TEXTO_OSCURO, true, true);
 

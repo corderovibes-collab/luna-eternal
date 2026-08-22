@@ -98,6 +98,10 @@ public final class LunaCommand {
                 .requires(s -> s.hasPermissionLevel(3))
                 .executes(ctx -> rotarCazas(ctx.getSource())))
 
+            .then(literal("cosmeticos")
+                .requires(s -> s.hasPermissionLevel(3))
+                .executes(ctx -> cosmeticos(ctx.getSource())))
+
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> autotest(ctx.getSource())))
@@ -290,6 +294,55 @@ public final class LunaCommand {
      * Ejecuta la batería de invariantes económicos. Funciona desde la consola,
      * así que no hace falta ningún jugador conectado.
      */
+    /**
+     * Que cosmeticos tiene QUIEN LO ESCRIBE, leidos de la base.
+     *
+     * <p>Existe porque el usuario dijo «no compre el snorlax chef y dice que ya
+     * lo tengo», y la unica forma de contestar a eso sin suponer es MIRAR. Salio
+     * que si lo tenia --de las cuatro compras de prueba, con el catalogo viejo,
+     * que usaba los mismos identificadores-- pero eso no se sabia hasta mirarlo.
+     *
+     * <p>Se queda porque la pregunta va a volver: cada vez que alguien diga «yo
+     * no compre esto», la respuesta tiene que salir de la tabla, no de la
+     * memoria de nadie.
+     */
+    private static int cosmeticos(ServerCommandSource origen) {
+        var jugador = origen.getPlayer();
+        if (jugador == null) {
+            origen.sendError(Text.literal("Este comando se escribe desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                var tiene = LunaEternal.cosmetics().poseidos(id);
+                var lineas = new java.util.ArrayList<String>();
+                for (String c : new java.util.TreeSet<>(tiene)) {
+                    // Se marca lo que YA NO ESTA en el catalogo. Es el caso que
+                    // importa: un cosmetico comprado que despues se retiro --los
+                    // 8 del pack que no traian arte, por ejemplo-- sigue en la
+                    // tabla y no sale en la tienda. Sin esta marca, el recuento
+                    // de la pantalla y el de aqui no cuadran y parece un fallo.
+                    boolean vigente = net.pokereport.luna.cosmetics.Catalogo.de(c) != null;
+                    lineas.add((vigente ? "§7  " : "§8  ") + c
+                            + (vigente ? "" : " §8(ya no esta en el catalogo)"));
+                }
+                origen.getServer().execute(() -> {
+                    origen.sendFeedback(() -> Text.literal(
+                            "§7" + tiene.size() + " cosmeticos de "
+                            + jugador.getName().getString()), false);
+                    for (String l : lineas) {
+                        origen.sendFeedback(() -> Text.literal(l), false);
+                    }
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudieron leer los cosmeticos: {}", e.toString());
+            }
+        });
+        return 1;
+    }
+
     private static int autotest(ServerCommandSource src) {
         var server = src.getServer();
         src.sendFeedback(() -> Text.literal("§7Ejecutando autotest…"), false);

@@ -40,7 +40,7 @@ que la pantalla parecía funcionar.
 ```
 pantalla       CosmeticosScreen.java        4 pestañas · rejilla 4x2 · preview
 3D             Mascota3D.java               Cobblemon + criaturas de Minecraft
-catálogo       cosmetics/Catalogo.java      GENERADO · 62 piezas · 54 especies
+catálogo       cosmetics/Catalogo.java      GENERADO de los resolvers · 55 · 53 especies
 compra         cosmetics/CosmeticsService   transacción + idempotencia
 disfraces      CobblemonMoreCosmetics       SOLO assets (en lunaneon) · NADA de datapack
 tablas         V011__cosmeticos.sql         aplicada · autotest 136/136
@@ -375,6 +375,104 @@ escribir medidas a ojo ya ha salido mal cuatro veces.
 Se dibujan **apagadas en los extremos, no escondidas**: una flecha que
 desaparece mueve la que queda y deja al jugador sin saber si ha llegado al final
 o si ha dejado de funcionar algo.
+
+---
+
+## 5-quinquies. Ocho cosméticos que no se podían dibujar, y el que salía en blanco
+
+El usuario los fue nombrando uno a uno: *«el garchomp, el gardevoir, los que
+dicen sinnoh… el lucario sinnoh… hay uno que se llama operator y ni aparece,
+nada en blanco»*. Eran **dos fallos distintos del pack**, y el catálogo se los
+tragaba los dos:
+
+| | |
+|---|---|
+| `26sinnohbundle` | Declara **seis** cosméticos —charizard, decidueye, garchomp, gardevoir, greninja y lucario con aspecto `sinnoh`— **cuyo arte no viene en el pack**: es un paquete que se vende aparte |
+| `ninetales aurora` | Lo mismo, y este no lo había visto nadie |
+| `pangoro_operator.json` | Pone `"pokemon": ["operator"]` — **errata suya**: debería decir `pangoro`. Por eso salía una celda en blanco: `cobblemon:operator` no existe |
+
+### El catálogo pasa a generarse de los RESOLVERS
+
+```
+antes   data/cobblemon/cosmetic_items/       lo que el pack DECLARA
+ahora   assets/.../resolvers/cosmetic/…      lo que el pack puede DIBUJAR
+```
+
+**Un resolver *es* el dibujo**: si está, se puede pintar, y lleva la especie de
+verdad. Los seis del bundle no tienen resolver, y el de `operator` dice
+`pangoro`. Los dos problemas se caen solos.
+
+```
+62 declarados  ->  55 dibujables  (53 especies)
+```
+
+Dos filtros, y los dos con motivo medido:
+
+- **Solo la carpeta raíz.** `dex/` y `msd/` son variantes del *mismo* cosmético
+  para formas concretas (megas). Contarlas daría tres Charizard `knight` en la
+  rejilla.
+- **Se exige `model`.** Una variación sin modelo es un recoloreado (shiny,
+  hembra) que hereda el del cosmético base. **Comprobado que no pierde ninguno**:
+  los 55 de un solo aspecto tienen modelo.
+
+Y el generador **imprime los que quedan fuera** en vez de callárselos: si un día
+ese número cambia, es que el pack ha cambiado — y nos enteramos ahí, no porque
+alguien compre un disfraz invisible.
+
+> **Es la misma lección que 5-bis, una vuelta más:** el catálogo tiene que salir
+> de lo que **existe**, no de lo que alguien **declara**. La primera vez la
+> fuente equivocada fue GitHub; esta vez, un fichero del propio pack.
+
+---
+
+## 5-sexies. «Yo no compré el Snorlax chef»
+
+Lo preguntó el usuario y **la respuesta salió del libro de asientos, no de la
+memoria**. Se cobraron 9.500 REPORTCOINS en cuatro operaciones, y con los precios
+del catálogo de entonces solo hay una combinación:
+
+```
+2500  charizard_knight
+1200  eevee_valentines
+1800  snorlax_chef        <- el unico articulo a 1.800
+4000  mewtwo_boundary
+```
+
+Sí lo había comprado: fue una de las cuatro compras de prueba del 22-ago, con el
+catálogo escrito a mano, que usaba **los mismos identificadores** que el
+generado. La posesión sobrevivió al cambio de catálogo porque lo que guarda
+`player_cosmetics` es el identificador, y ese no cambió.
+
+**No era un fallo, pero la pregunta va a repetirse**, así que ahora se contesta
+mirando:
+
+```
+/luna cosmeticos          (nivel 3, desde el juego)
+```
+
+Marca en gris lo que ya **no está en el catálogo** — por ejemplo, alguno de los
+ocho que se acaban de retirar. Sin esa marca, el recuento de la tienda y el de
+la tabla no cuadran y parece un fallo nuevo.
+
+---
+
+## 5-septies. El contador de páginas se veía pixelado
+
+`texto()` escala por `alto * k / fontHeight`, y **`k` casi nunca es redondo**: con
+`alto=18` sale 1,26 o 2,4 según la ventana. La fuente de Minecraft es un mapa de
+bits, así que a escala fraccionaria cada píxel de letra cae a caballo entre dos
+de pantalla.
+
+**Y el contorno lo multiplica:** son cuatro copias desplazadas ±1 *en coordenadas
+ya escaladas*, o sea ±1,26 px reales — eso no es un borde, es una mancha.
+
+Se nota poco en «COMPRAR» —pequeño y sobre color plano— y muchísimo en el
+contador, que es el texto más grande de la pantalla.
+
+`textoNitido()` **redondea la escala a entero** (mínimo 1) y usa la sombra propia
+de `drawText`, que va a un píxel *de pantalla*. **No sustituye a `texto()`**: el
+tamaño final no es exactamente el pedido, y para algo que tiene que caber en un
+hueco medido eso importa. Para una etiqueta suelta, no.
 
 ---
 

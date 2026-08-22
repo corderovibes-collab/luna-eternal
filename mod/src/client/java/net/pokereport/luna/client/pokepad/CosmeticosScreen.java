@@ -409,9 +409,9 @@ public class CosmeticosScreen extends Screen {
         dibujarFlecha(ctx, ADELANTE, cx + PAG_SEP - PAG_W / 2, rx, ry, pagina < total - 1);
 
         // El contador va entre las dos, en el hueco central que los adornos
-        // dejan libre (x=775..935).
-        texto(ctx, Text.literal((pagina + 1) + " / " + total),
-                cx, PAG_Y + PAG_H / 2 - 9, 18, 0xFFFFFFFF, true, true);
+        // dejan libre (x=775..935). A escala ENTERA: ver `textoNitido`.
+        textoNitido(ctx, Text.literal((pagina + 1) + " / " + total),
+                cx, PAG_Y + PAG_H / 2, 18, 0xFFFFFFFF);
     }
 
     private void dibujarFlecha(DrawContext ctx, Identifier tex, int ax,
@@ -816,6 +816,44 @@ public class CosmeticosScreen extends Screen {
             ctx.drawText(textRenderer, linea, px, py + 1, TEXTO_CONTORNO, false);
         }
         ctx.drawText(textRenderer, linea, px, py, color, false);
+        m.pop();
+    }
+
+    /**
+     * Texto NITIDO: se dibuja a escala ENTERA, sin contorno.
+     *
+     * <p>⚠⚠ POR QUE HACE FALTA, HABIENDO YA UN {@code texto()}.
+     *
+     * <p>{@code texto()} escala por {@code alto * k / fontHeight}, y {@code k}
+     * casi nunca es redondo: con {@code alto=18} sale 1,26 o 2,4 segun la
+     * ventana. La fuente de Minecraft es un mapa de bits, asi que a escala
+     * fraccionaria cada pixel de letra cae a caballo entre dos de pantalla y el
+     * juego los promedia. <b>Y el contorno lo multiplica:</b> son cuatro copias
+     * desplazadas ±1 <i>en coordenadas ya escaladas</i>, o sea ±1,26 px reales,
+     * que no es un borde sino una mancha.
+     *
+     * <p>Se ve poco en «COMPRAR» --texto pequeño y sobre color plano-- y se ve
+     * muchisimo en el contador de paginas, que es el mas grande de la pantalla.
+     * El usuario lo reporto asi: «esos numeros se ven muy pixeleados».
+     *
+     * <p>Aqui la escala se REDONDEA a entero (minimo 1), que es donde la fuente
+     * cae pixel sobre pixel. El tamaño final no es exactamente el pedido, y para
+     * una etiqueta suelta da igual; para algo que tiene que caber en un hueco
+     * medido, NO -- por eso esto no sustituye a {@code texto()}, convive con el.
+     */
+    private void textoNitido(DrawContext ctx, Text linea, int cx, int centroY,
+                             int altoDeseado, int color) {
+        float escala = Math.max(1f, Math.round(altoDeseado * k / textRenderer.fontHeight));
+        var m = ctx.getMatrices();
+        m.push();
+        m.translate(x0, y0, 0);
+        m.scale(escala, escala, 1f);
+        int ancho = textRenderer.getWidth(linea);
+        int px = Math.round(cx * k / escala) - ancho / 2;
+        int py = Math.round(centroY * k / escala) - textRenderer.fontHeight / 2;
+        // Sombra en vez de contorno: la dibuja el propio drawText a UN pixel de
+        // pantalla, asi que no se emborrona, y sobre naranja basta para separar.
+        ctx.drawText(textRenderer, linea, px, py, color, true);
         m.pop();
     }
 

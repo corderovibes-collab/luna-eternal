@@ -66,60 +66,74 @@ def precio(especie: str) -> int:
     return TRAMOS["normal"]
 
 
-def leer(zip_path: Path) -> list:
-    """Saca (especie, aspecto, objeto) de los `cosmetic_items` del pack."""
+RESOLVERS = "cosmetic/morecosmetics"
+
+
+def leer(zip_path: Path):
+    """Saca (especie, aspecto) de los RESOLVERS, que es lo que se puede DIBUJAR.
+
+    Devuelve `(filas, declarados_sin_arte)`.
+
+    ⚠⚠ ANTES SE LEIA DE `cosmetic_items`, Y ESTABA MAL POR DOS SITIOS A LA VEZ:
+
+      1) `26sinnohbundle` declara SEIS cosmeticos --charizard, decidueye,
+         garchomp, gardevoir, greninja y lucario con el aspecto `sinnoh`-- cuyo
+         arte NO viene en el pack: es un paquete que se vende aparte. La tienda
+         los ofrecia, se cobraban, y salia el Pokemon NORMAL.
+
+      2) `pangoro_operator.json` pone `"pokemon": ["operator"]`, que es una
+         ERRATA suya: deberia decir `pangoro`. Ese cosmetico salia como una
+         celda en blanco, porque `cobblemon:operator` no existe.
+
+    Los resolvers no tienen ninguno de los dos problemas, porque un resolver ES
+    el dibujo: si esta, se puede pintar, y lleva la especie de verdad. Los seis
+    del `sinnohbundle` no tienen resolver, y el de `operator` dice `pangoro`.
+
+    ⚠ SOLO LA CARPETA RAIZ. `dex/` y `msd/` son variantes para formas concretas
+      --megas, sobre todo-- del MISMO cosmetico. Contarlas daria tres Charizard
+      `knight` distintos en la rejilla.
+
+    ⚠ SE EXIGE `model`. Una variacion sin modelo es un recoloreado (shiny,
+      hembra) que hereda el del cosmetico base, no un cosmetico aparte.
+      Comprobado: exigirlo no pierde ninguno --los 55 que tienen un solo aspecto
+      lo tienen--, asi que el filtro solo quita duplicados.
+    """
     z = zipfile.ZipFile(zip_path)
-    filas = []
+    filas = set()
+    for nombre in z.namelist():
+        if "/resolvers/" not in nombre or not nombre.endswith(".json"):
+            continue
+        if nombre.split("/resolvers/")[1].rsplit("/", 1)[0] != RESOLVERS:
+            continue
+        datos = json.loads(z.read(nombre))
+        especie = datos.get("species", "").split(":")[-1].strip().lower()
+        if not especie:
+            continue
+        for var in datos.get("variations", []):
+            aspectos = var.get("aspects", [])
+            # Un solo aspecto: los de varios son `["magma", "female"]` y demas,
+            # o sea el mismo cosmetico sobre otra forma.
+            if len(aspectos) == 1 and var.get("model"):
+                filas.add((especie, aspectos[0]))
+
+    # Lo que el pack DECLARA pero no puede dibujar. No se usa para nada mas que
+    # para avisar: si un dia el numero cambia, es que el pack ha cambiado y hay
+    # que mirarlo, en vez de enterarnos porque un jugador compra un disfraz
+    # invisible.
+    declarados = set()
     for nombre in z.namelist():
         if "/cosmetic_items/" not in nombre or not nombre.endswith(".json"):
             continue
         datos = json.loads(z.read(nombre))
         for especie in datos.get("pokemon", []):
-            # ⚠ Algunas especies vienen con calificador de forma:
-            #   "articuno galarian=false". Lo que identifica a la especie es lo
-            #   de antes del espacio; el resto es una condicion de forma que el
-            #   propio Cobblemon aplica.
+            # ⚠ Algunas vienen con calificador de forma:
+            #   "articuno galarian=false". La especie es lo de antes del espacio.
             especie = especie.split()[0].strip().lower()
-            if not especie:
-                continue
             for ci in datos.get("cosmeticItems", []):
-                aspectos = ci.get("aspects", [])
-                objeto = ci.get("consumedItem", "")
-                if len(aspectos) != 1 or not objeto:
-                    continue          # ver la cabecera: variantes, fuera
-                filas.append((especie, aspectos[0], objeto))
-    # Sin duplicados y en orden estable, para que el fichero generado no cambie
-    # de un dia para otro sin motivo.
-    filas = sorted(set(filas))
+                if len(ci.get("aspects", [])) == 1 and especie:
+                    declarados.add((especie, ci["aspects"][0]))
 
-    # ⚠ DOS COSMETICOS DE LA MISMA ESPECIE CON EL MISMO OBJETO SERIAN AMBIGUOS.
-    #
-    #   Se aplican dando el objeto al Pokemon, asi que el par (especie, objeto)
-    #   es lo que identifica al cosmetico DE VERDAD -- el identificador que
-    #   inventamos aqui no lo sabe Cobblemon. Si hubiera dos, comprar uno
-    #   aplicaria el otro la mitad de las veces, y la pantalla diria que llevas
-    #   puesto algo distinto de lo que pagaste.
-    #
-    #   Hoy no hay ninguno (comprobado sobre las 62 piezas). Esto esta aqui para
-    #   el dia que el pack añada uno, porque el sintoma seria "a veces sale el
-    #   cosmetico equivocado" y nadie lo relacionaria con esto.
-    vistos = {}
-    choques = []
-    for especie, aspecto, objeto in filas:
-        clave = (especie, objeto)
-        if clave in vistos:
-            choques.append("%s + %s -> %s y %s"
-                           % (especie, objeto, vistos[clave], aspecto))
-        vistos[clave] = aspecto
-    if choques:
-        raise SystemExit(
-            "AMBIGUEDAD: hay cosmeticos que comparten especie y objeto, "
-            "asi que no se pueden distinguir al aplicarlos:\n  "
-            + "\n  ".join(choques)
-            + "\n\nHay que elegir cual se vende, o dejar de identificarlos "
-              "por el objeto.")
-
-    return filas
+    return sorted(filas), sorted(declarados - filas)
 
 
 PLANTILLA = '''package net.pokereport.luna.cosmetics;
@@ -233,15 +247,16 @@ def main() -> None:
     if not zip_path.exists():
         raise SystemExit("no existe %s" % zip_path)
 
-    filas = leer(zip_path)
+    filas, sin_arte = leer(zip_path)
     if not filas:
         raise SystemExit(
-            "El zip no trae ningun `cosmetic_items`. O no es el pack, o cambio "
-            "de formato otra vez -- que ya paso una: el repositorio usa "
-            "`species_features` y la version publicada `cosmetic_items`.")
+            "El zip no trae ningun resolver bajo %s. O no es el pack, o cambio "
+            "de estructura -- que ya paso una vez: el repositorio declara los "
+            "cosmeticos como `species_features` y la version publicada usa "
+            "`cosmetic_items`." % RESOLVERS)
 
     lineas = []
-    for especie, aspecto, objeto in filas:
+    for especie, aspecto in filas:
         ident = "%s_%s" % (especie, aspecto)
         lineas.append(
             '            new Pieza("%s", MASCOTAS, "cobblemon:%s", "%s", %d)'
@@ -252,6 +267,13 @@ def main() -> None:
 
     print("%d cosmeticos de %d especies" % (len(filas), len({f[0] for f in filas})))
     print("-> %s" % DESTINO)
+
+    if sin_arte:
+        print("\nFUERA (%d): el pack los declara pero NO trae su arte." % len(sin_arte))
+        print("Se venderian y saldria el Pokemon normal, que es lo que ya paso.")
+        for especie, aspecto in sin_arte:
+            print("   %-16s %s" % (especie, aspecto))
+
     print("\nAVISO: los precios son por tramos y PROVISIONALES.")
 
 

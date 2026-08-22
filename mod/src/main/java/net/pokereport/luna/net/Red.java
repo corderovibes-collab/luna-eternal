@@ -132,12 +132,105 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «Dame el catálogo de cosméticos». Se pide al abrir la tienda. */
+    public record PedirCosmeticos() implements CustomPayload {
+        public static final Id<PedirCosmeticos> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cosmeticos"));
+        public static final PacketCodec<RegistryByteBuf, PedirCosmeticos> CODEC =
+                PacketCodec.unit(new PedirCosmeticos());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Una pieza del catálogo, tal y como la dibuja el Pad.
+     *
+     * <p>⚠ {@code banderas} es un mapa de bits y no dos booleanos, por el mismo
+     * motivo que {@code Ficha.medallas}: el codec de tupla admite seis campos, y
+     * gastar dos en dos booleanos obligaría a partir el paquete. Bit 0 =
+     * poseído, bit 1 = equipado.
+     *
+     * <p>⚠ <b>Viaja el precio, no si te lo puedes permitir.</b> Comparar contra
+     * el saldo es cosa del servidor al comprar: si el cliente decidiera qué
+     * puede pagar, bastaría con mentirle.
+     */
+    public record PiezaCosmetica(String id, String categoria, String especie,
+                                 String aspecto, int precio, int banderas) {
+        public static final PacketCodec<RegistryByteBuf, PiezaCosmetica> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, PiezaCosmetica::id,
+                        PacketCodecs.STRING, PiezaCosmetica::categoria,
+                        PacketCodecs.STRING, PiezaCosmetica::especie,
+                        PacketCodecs.STRING, PiezaCosmetica::aspecto,
+                        PacketCodecs.VAR_INT, PiezaCosmetica::precio,
+                        PacketCodecs.VAR_INT, PiezaCosmetica::banderas,
+                        PiezaCosmetica::new);
+
+        public static final int POSEIDO = 1;
+        public static final int EQUIPADO = 2;
+    }
+
+    /**
+     * El catálogo entero, con lo que posees y lo que llevas puesto.
+     *
+     * <p>Va <b>completo</b> y no por diferencias: son unas decenas de entradas y
+     * se manda al abrir la tienda y después de cada compra. Mandar cambios
+     * obligaría a que cliente y servidor coincidieran en el estado anterior, y
+     * un solo paquete perdido dejaría la tienda mintiendo hasta reiniciar.
+     */
+    public record Cosmeticos(List<PiezaCosmetica> piezas, long lunacoins)
+            implements CustomPayload {
+        public static final Id<Cosmeticos> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "cosmeticos"));
+        public static final PacketCodec<RegistryByteBuf, Cosmeticos> CODEC =
+                PacketCodec.tuple(
+                        PiezaCosmetica.CODEC.collect(PacketCodecs.toList()),
+                        Cosmeticos::piezas,
+                        PacketCodecs.VAR_LONG, Cosmeticos::lunacoins,
+                        Cosmeticos::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Compra esto» o «ponte esto».
+     *
+     * <p>⚠ Viaja el <b>identificador</b> y nada más. Ni el precio, ni la
+     * categoría, ni si se puede pagar: todo eso lo tiene el servidor, y aceptar
+     * cualquiera de esos datos del cliente sería aceptar el precio que él diga.
+     *
+     * @param equipar {@code true} = ponérselo; {@code false} = comprarlo
+     */
+    public record AccionCosmetico(String id, boolean equipar) implements CustomPayload {
+        public static final Id<AccionCosmetico> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_cosmetico"));
+        public static final PacketCodec<RegistryByteBuf, AccionCosmetico> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, AccionCosmetico::id,
+                        PacketCodecs.BOOL, AccionCosmetico::equipar,
+                        AccionCosmetico::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     @Override
     public void onInitialize() {
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Ficha.ID, Ficha.CODEC);
         PayloadTypeRegistry.playS2C().register(VozPokedex.ID, VozPokedex.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirCosmeticos.ID, PedirCosmeticos.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionCosmetico.ID, AccionCosmetico.CODEC);
+        PayloadTypeRegistry.playS2C().register(Cosmeticos.ID, Cosmeticos.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -182,5 +275,89 @@ public class Red implements ModInitializer {
                 }
             });
         });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirCosmeticos.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> enviarCosmeticos(jugador));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionCosmetico.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                try {
+                    long id = LunaEternal.players()
+                            .resolve(jugador.getUuid(), jugador.getName().getString());
+                    var svc = LunaEternal.cosmetics();
+                    net.pokereport.luna.cosmetics.CosmeticsService.Resultado r;
+
+                    if (carga.equipar()) {
+                        var pieza = net.pokereport.luna.cosmetics.Catalogo.de(carga.id());
+                        r = pieza == null
+                                ? new net.pokereport.luna.cosmetics.CosmeticsService
+                                        .Resultado(false, "Ese cosmetico no existe.")
+                                : svc.equipar(id, pieza.categoria(), carga.id());
+                    } else {
+                        // ⚠ LA CLAVE DE IDEMPOTENCIA SE DERIVA, NO SE INVENTA.
+                        //
+                        // Con un UUID nuevo por peticion, dos clics rapidos son
+                        // dos claves distintas y la idempotencia no protege de
+                        // nada. Atandola al jugador y al cosmetico, el segundo
+                        // clic reutiliza la clave del primero -- y lo que acaba
+                        // impidiendo el doble cobro es la clave primaria de
+                        // `player_cosmetics`, que es la defensa de verdad.
+                        r = svc.comprar(id, carga.id(), "cosm:" + id + ":" + carga.id());
+                    }
+
+                    if (!r.ok()) {
+                        jugador.getServer().execute(() ->
+                                jugador.sendMessage(net.minecraft.text.Text
+                                        .literal("§c" + r.mensaje()), true));
+                    }
+                    // Se reenvia el catalogo SIEMPRE, saliera bien o mal: es la
+                    // forma de que la tienda del cliente vuelva a la verdad sin
+                    // tener que adivinar que ha cambiado.
+                    enviarCosmeticos(jugador);
+                } catch (Exception e) {
+                    LunaEternal.LOG.warn("Cosmetico {} de {} fallo: {}",
+                            carga.id(), jugador.getName().getString(), e.toString());
+                }
+            });
+        });
+    }
+
+    /**
+     * Manda el catalogo entero con lo que el jugador posee y lleva puesto.
+     *
+     * <p>⚠ Corre en el executor de E/S y vuelve al hilo del servidor para
+     * enviar: consultar la base desde el hilo principal congela a todo el mundo,
+     * y enviar desde un hilo cualquiera no es seguro.
+     */
+    private static void enviarCosmeticos(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        try {
+            long id = LunaEternal.players()
+                    .resolve(jugador.getUuid(), jugador.getName().getString());
+            var svc = LunaEternal.cosmetics();
+            var poseidos = svc.poseidos(id);
+            var equipados = svc.equipados(id);
+            long saldo = LunaEternal.economy().balance(id, Currency.REPORTCOIN);
+
+            List<PiezaCosmetica> piezas = new ArrayList<>();
+            for (var p : net.pokereport.luna.cosmetics.Catalogo.todas()) {
+                int banderas = 0;
+                if (poseidos.contains(p.id())) {
+                    banderas |= PiezaCosmetica.POSEIDO;
+                }
+                if (p.id().equals(equipados.get(p.categoria()))) {
+                    banderas |= PiezaCosmetica.EQUIPADO;
+                }
+                piezas.add(new PiezaCosmetica(p.id(), p.categoria(), p.especie(),
+                        p.aspecto(), p.precio(), banderas));
+            }
+            var carga = new Cosmeticos(piezas, saldo);
+            jugador.getServer().execute(() -> ServerPlayNetworking.send(jugador, carga));
+        } catch (Exception e) {
+            LunaEternal.LOG.warn("No se pudo enviar el catalogo de cosmeticos a {}: {}",
+                    jugador.getName().getString(), e.toString());
+        }
     }
 }

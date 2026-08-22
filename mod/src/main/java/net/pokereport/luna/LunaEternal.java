@@ -45,6 +45,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.quest.QuestService quests;
     private static net.pokereport.luna.economy.EconomyStats stats;
     private static net.pokereport.luna.hunt.HuntService hunts;
+    private static net.pokereport.luna.cosmetics.CosmeticsService cosmetics;
     private static ExecutorService io;
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
     private static String builderKey = "";
@@ -161,6 +162,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             quests = new net.pokereport.luna.quest.QuestService(database);
             stats = new net.pokereport.luna.economy.EconomyStats(database);
             hunts = new net.pokereport.luna.hunt.HuntService(database);
+            cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);
@@ -212,6 +214,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     }
     public static net.pokereport.luna.shop.ShopCatalog shop() { return shop; }
     public static net.pokereport.luna.hunt.HuntService hunts() { return hunts; }
+    public static net.pokereport.luna.cosmetics.CosmeticsService cosmetics() { return cosmetics; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }
     public static net.pokereport.luna.kit.KitCatalog kits() { return kits; }

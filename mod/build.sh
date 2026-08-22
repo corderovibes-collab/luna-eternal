@@ -11,8 +11,8 @@
 set -euo pipefail
 
 # Ajusta esta ruta si cambia el JDK 21 de la máquina.
-JDK21_UNIX="/c/Users/JUAN/AppData/Roaming/PrismLauncher/java/java-runtime-delta"
-JDK21_WIN='C:\Users\JUAN\AppData\Roaming\PrismLauncher\java\java-runtime-delta'
+JDK21_UNIX="/c/Program Files/Eclipse Adoptium/jdk-21.0.12.101-hotspot"
+JDK21_WIN='C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot'
 
 if [ ! -x "$JDK21_UNIX/bin/javac.exe" ] && [ ! -x "$JDK21_UNIX/bin/javac" ]; then
   echo "ERROR: no hay JDK 21 en $JDK21_UNIX" >&2

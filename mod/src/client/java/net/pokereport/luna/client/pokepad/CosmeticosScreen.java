@@ -267,7 +267,7 @@ public class CosmeticosScreen extends Screen {
         if (enfocado != null) {
             int ax = PANEL_X + 8, ay = PANEL_Y + NAV_ALTO;
             int aw = PANEL_W - 16, ah = PANEL_H - NAV_ALTO - SALDO_ALTO - 8;
-            Mascota3D.dibujar(ctx, enfocado, px(ax), py(ay), pl(aw), pl(ah),
+            Mascota3D.dibujar(ctx, enfocado, "preview", px(ax), py(ay), pl(aw), pl(ah),
                     0.34f, delta, true);
         }
 
@@ -290,7 +290,7 @@ public class CosmeticosScreen extends Screen {
             boolean encima = dentro(rx, ry, x, y, w, h);
             // La caja del modelo es la celda menos el pie, que es donde van el
             // precio y el boton.
-            Mascota3D.dibujar(ctx, lista.get(idx), x + pl(10), y + pl(6),
+            Mascota3D.dibujar(ctx, lista.get(idx), "celda", x + pl(10), y + pl(6),
                     w - pl(20), h - pl(PIE + 6), 0.06f, delta, encima);
         }
     }

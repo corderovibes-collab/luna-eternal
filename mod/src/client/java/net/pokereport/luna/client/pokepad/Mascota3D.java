@@ -82,9 +82,24 @@ public final class Mascota3D {
     private static final Set<String> FALLIDOS = new HashSet<>();
 
     /**
-     * Un estado por cosmético. No se limpia: son unas decenas de objetos
-     * pequeños y vaciarlo al cambiar de pestaña costaría reiniciar la animación
-     * cada vez que el jugador va y vuelve.
+     * Un estado por RANURA Y cosmético, no solo por cosmético.
+     *
+     * <p>⚠⚠ AQUI ESTABA EL TITILEO DEL PREVISUALIZADOR, Y ES SUTIL.
+     *
+     * Con la clave siendo solo el identificador, el cosmetico que estas
+     * previsualizando comparte estado con SU PROPIA CELDA de la rejilla —
+     * porque el que miras sigue estando ahi. El mismo {@code FloatingState} se
+     * dibujaba DOS VECES en el mismo fotograma, con escalas, anclajes y
+     * animacion distintos, y cada pasada pisaba lo que la otra acababa de
+     * escribir: {@code currentModel}, la pose y el reloj de animacion.
+     *
+     * <p>Encaja exacto con el sintoma: la rejilla sola no titilaba, y empezaba
+     * justo al pulsar un cosmetico y verlo en el panel. No era el dibujado —
+     * era un estado compartido entre dos sitios que lo usan distinto.
+     *
+     * <p>No se limpia: son unas decenas de objetos pequeños, y vaciarlo al
+     * cambiar de pestaña costaría reiniciar la animación cada vez que el
+     * jugador va y vuelve.
      */
     private static final Map<String, FloatingState> ESTADOS = new HashMap<>();
 
@@ -108,7 +123,7 @@ public final class Mascota3D {
      *               que se quiere en una rejilla — si cada uno saliera a su
      *               tamaño real, media tienda serían motas
      */
-    public static void dibujar(DrawContext ctx, Cosmetico c,
+    public static void dibujar(DrawContext ctx, Cosmetico c, String ranura,
                                int x, int y, int ancho, int alto,
                                float origenY, float delta, boolean animar) {
         if (!c.esMascota()) {
@@ -119,11 +134,12 @@ public final class Mascota3D {
             return;
         }
         if (c.esDeMinecraft()) {
-            dibujarCriatura(ctx, c, especie, x, y, ancho, alto);
+            dibujarCriatura(ctx, c, ranura, especie, x, y, ancho, alto);
             return;
         }
 
-        FloatingState estado = ESTADOS.computeIfAbsent(c.id(), k -> new FloatingState());
+        FloatingState estado = ESTADOS.computeIfAbsent(ranura + ":" + c.id(),
+                k -> new FloatingState());
         // El aspecto es lo que convierte un Charizard en `charizard_knight`.
         // Se reasigna en cada fotograma a propósito: es barato, y así un cambio
         // de aspecto se ve sin tener que invalidar el estado.
@@ -199,13 +215,15 @@ public final class Mascota3D {
      * maqueta para dibujar: si entraran en el mundo, tendrian fisica, colisiones
      * y saldrian en las estadisticas.
      */
-    private static void dibujarCriatura(DrawContext ctx, Cosmetico c, Identifier id,
+    private static void dibujarCriatura(DrawContext ctx, Cosmetico c, String ranura,
+                                        Identifier id,
                                         int x, int y, int ancho, int alto) {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
         if (cliente.world == null) {
             return;
         }
-        net.minecraft.entity.LivingEntity ent = CRIATURAS.get(c.id());
+        String clave = ranura + ":" + c.id();
+        net.minecraft.entity.LivingEntity ent = CRIATURAS.get(clave);
         if (ent == null) {
             var tipo = net.minecraft.registry.Registries.ENTITY_TYPE.getOrEmpty(id).orElse(null);
             if (tipo == null) {
@@ -222,7 +240,7 @@ public final class Mascota3D {
                 return;
             }
             ent = viva;
-            CRIATURAS.put(c.id(), ent);
+            CRIATURAS.put(clave, ent);
         }
 
         // `drawEntity` recorta por si mismo con el rectangulo que se le pasa, y

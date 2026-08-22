@@ -35,6 +35,7 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`ui/interfaces-catalog.md`](ui/interfaces-catalog.md) | ✅ | Las 22 pantallas, prioridad y patrones comunes |
 | [`technical/launcher.md`](technical/launcher.md) | ✅ | **El launcher**: se autoactualiza él y el pack, perfiles, reparar, diagnóstico |
 | [`world/construccion.md`](world/construccion.md) | ✅ | Construir la ciudadela con Axiom, **entre varios a la vez** |
+| [`world/palacio.md`](world/palacio.md) | ✅ | **El Palacio Lunar**: decagono flotante, un ala por region, y las que aun no han llegado selladas |
 | [`world/neon.md`](world/neon.md) | ✅ | **Los bloques de neón**: 96 piezas, brillo sin luz, y el orden del despliegue |
 | [`world/bloques.md`](world/bloques.md) | ✅ | **Los bloques de obra**: 506 piezas de hormigón, metal, rejilla, vidrio y pavimento |
 | [`ui/interfaz-luna.md`](ui/interfaz-luna.md) | ✅ | **La interfaz de azul luna**: 323 texturas, y qué lo pinta el código |

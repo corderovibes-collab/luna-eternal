@@ -700,7 +700,32 @@ Ciudadela     NOCHE PERMANENTE (fixed_time 18000) · ambient_light 0.45
               se llega con /luna ir ciudadela (nivel 2)
               tools/ciudadela.py --solo-centro / --plano / --limpiar
               el plan de las 9 parcelas sigue vivo, se redibuja cuando toque
-Construcción  WorldEdit 7.3.8 + Axiom 5.4.2 cargados
+Construcción  WorldEdit 7.3.8 + Axiom 5.4.2 + Effortless 3.4.0
+              ⚠ EFFORTLESS ES `effortless`, NO `effortless-building`.
+                Son DOS mods distintos con el mismo aire y casi el mismo
+                nombre: "Effortless Structure" (huskcasaca) y "Effortless
+                Building" (Requios). Escribir el slug equivocado NO da
+                error: baja el otro
+                se eligio Structure por un dato MEDIDO, abriendo los dos
+                jars y contando lo que registran:
+                  effortless 3.4.0   0 blockstates, 0 objetos, 0 datos
+                  effortlessbuilding 4.2   1 objeto + su receta
+                un objeto entra en un registro QUE SE SINCRONIZA, y ahi
+                esta el precedente de `trinkets`: nadie entraba y el
+                error no nombraba al culpable
+              LGPL-3.0-only: uso comercial permitido (D-008 ✓), misma
+              familia que el conector de MariaDB que ya empaquetamos
+              ⚠ SOLO EN EL PERFIL CONSTRUCTOR, y no por peso: ademas de
+                colocar, ROMPE VARIOS BLOQUES A LA VEZ. En el mundo
+                compartido eso acelera el griefing; los constructores ya
+                van filtrados a OP nivel 2 (D-028). Pasarlo a todos es
+                mover una linea de EXTRA_CONSTRUCTOR a EXTRA_JUGADOR
+              ⚠ `server_side: required`: la colocacion multiple la aplica
+                el SERVIDOR (P6). Solo en el cliente no haria nada
+              ⚠ mods_servidor.py lee el manifiesto de `raw`, que cachea
+                ~3 min. Justo despues de publicar aborta diciendo "no
+                esta en el manifiesto del cliente" -- y tiene razon, aun
+                no esta. Hay que esperar a que propague
               varios constructores a la vez: SI. OP nivel 2 basta
               alta de un constructor: python tools/constructor.py --anadir
               ⚠ la licencia de Axiom es una cortesia de 30 DIAS, POR

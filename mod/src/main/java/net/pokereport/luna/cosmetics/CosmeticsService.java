@@ -58,9 +58,12 @@ public class CosmeticsService {
      */
     public java.util.List<String> huerfanos() throws SQLException {
         var salida = new java.util.ArrayList<String>();
-        String sql = "SELECT p.name, c.cosmetic_id, c.precio_pagado, c.origen "
+        // ⚠ La columna es `username`, no `name`. Lo escribi de memoria y
+        //   MariaDB lo caza al ejecutar, no al compilar: el fallo salio en
+        //   produccion como un WARN en el log y una respuesta vacia.
+        String sql = "SELECT p.username, c.cosmetic_id, c.precio_pagado, c.origen "
                 + "FROM player_cosmetics c JOIN player p ON p.player_id = c.player_id "
-                + "ORDER BY p.name, c.cosmetic_id";
+                + "ORDER BY p.username, c.cosmetic_id";
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement(sql);
              var rs = ps.executeQuery()) {

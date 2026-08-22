@@ -229,7 +229,15 @@ public final class LunaCommand {
         try {
             currency = Currency.valueOf(currencyName.toUpperCase());
         } catch (IllegalArgumentException e) {
-            src.sendError(Text.literal("Moneda desconocida. Usa POKEDOLLAR o MARK."));
+            // ⚠ EL MENSAJE SE CONSTRUYE DEL ENUM, no se escribe a mano. Decia
+            //   "Usa POKEDOLLAR o MARK" desde antes de que existiera REPORTCOIN
+            //   (D-013): la moneda funcionaba y el error juraba que no existia,
+            //   que es la peor combinacion -- quien lo leyera dejaria de
+            //   intentarlo. Sacandolo del enum, una moneda nueva se lista sola.
+            String monedas = java.util.Arrays.stream(Currency.values())
+                    .map(c -> c.name() + " (" + c.displayName + ")")
+                    .collect(java.util.stream.Collectors.joining(", "));
+            src.sendError(Text.literal("Moneda desconocida. Usa: " + monedas));
             return 0;
         }
 

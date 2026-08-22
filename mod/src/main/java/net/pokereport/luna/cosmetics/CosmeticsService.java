@@ -89,8 +89,14 @@ public class CosmeticsService {
      * pueden pasarla los dos. Lo que impide el doble cobro es que la segunda
      * inserción choca contra la clave y deshace su transacción entera.
      *
-     * @param clave clave de idempotencia (R4). El mismo clic reintentado no
-     *              vuelve a cobrar
+     * @param clave clave de idempotencia (R4). <b>Un UUID nuevo por peticion</b>,
+     *              NO una clave derivada del jugador y el cosmetico: esa se
+     *              probo y abria un agujero -- si alguna vez se le retira el
+     *              cosmetico a alguien y lo vuelve a comprar, la clave ya esta
+     *              usada, la economia contesta {@code ALREADY_APPLIED}, el cobro
+     *              se salta y el {@code INSERT} si entra. Cosmetico gratis, sin
+     *              error. El doble clic ya lo cubren la transaccion y la clave
+     *              primaria
      */
     public Resultado comprar(long playerId, String cosmeticId, String clave)
             throws SQLException {
@@ -135,7 +141,18 @@ public class CosmeticsService {
                 return Resultado.si();
             } catch (EconomyException e) {
                 c.rollback();
-                return Resultado.no("No tienes LunaCoins suficientes.");
+                // Se distingue por tipo. Antes todo fallo economico decia "no
+                // tienes suficientes", asi que un ALREADY_APPLIED --que es un
+                // fallo NUESTRO de claves-- se le echaba al saldo del jugador y
+                // nadie lo habria investigado nunca.
+                return switch (e.kind) {
+                    case INSUFFICIENT_FUNDS -> Resultado.no("No tienes LunaCoins suficientes.");
+                    default -> {
+                        LunaEternal.LOG.warn("Compra de {} por el jugador {} rechazada: {} ({})",
+                                cosmeticId, playerId, e.kind, e.getMessage());
+                        yield Resultado.no("No se pudo completar la compra.");
+                    }
+                };
             } catch (SQLException e) {
                 c.rollback();
                 throw e;

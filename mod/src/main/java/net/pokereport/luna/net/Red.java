@@ -338,15 +338,24 @@ public class Red implements ModInitializer {
                                         .Resultado(false, "Ese cosmetico no existe.")
                                 : svc.equipar(id, pieza.categoria(), carga.id());
                     } else {
-                        // ⚠ LA CLAVE DE IDEMPOTENCIA SE DERIVA, NO SE INVENTA.
+                        // ⚠⚠ UUID NUEVO, Y NO UNA CLAVE DERIVADA DEL COSMETICO.
                         //
-                        // Con un UUID nuevo por peticion, dos clics rapidos son
-                        // dos claves distintas y la idempotencia no protege de
-                        // nada. Atandola al jugador y al cosmetico, el segundo
-                        // clic reutiliza la clave del primero -- y lo que acaba
-                        // impidiendo el doble cobro es la clave primaria de
-                        // `player_cosmetics`, que es la defensa de verdad.
-                        r = svc.comprar(id, carga.id(), "cosm:" + id + ":" + carga.id());
+                        // Estuvo derivada --"cosm:<jugador>:<cosmetico>"-- con
+                        // el razonamiento de que asi dos clics rapidos comparten
+                        // clave. Era un error, y de los que solo se ven pensando
+                        // en el caso raro:
+                        //
+                        //   si algun dia se le RETIRA un cosmetico a alguien
+                        //   --reembolso, correccion de un evento-- y lo vuelve a
+                        //   comprar, esa clave YA ESTA USADA. La economia
+                        //   contesta ALREADY_APPLIED, el cobro se salta... y el
+                        //   INSERT si entra. Cosmetico gratis, sin error.
+                        //
+                        // Y no hacia falta: el cobro y la anotacion van en la
+                        // MISMA transaccion, asi que si el INSERT choca contra
+                        // la clave primaria se deshace todo, cobro incluido. Los
+                        // dos clics ya estaban cubiertos por ahi.
+                        r = svc.comprar(id, carga.id(), java.util.UUID.randomUUID().toString());
                     }
 
                     if (!r.ok()) {

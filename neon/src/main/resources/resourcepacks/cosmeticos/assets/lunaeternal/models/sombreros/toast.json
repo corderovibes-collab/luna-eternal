@@ -1,0 +1,183 @@
+{
+ "parent": "lunaeternal:sombreros/hatparent2",
+ "textures": {
+  "0": "lunaeternal:item/sombreros/toast",
+  "particle": "lunaeternal:item/sombreros/toast"
+ },
+ "elements": [
+  {
+   "from": [
+    3,
+    0,
+    2
+   ],
+   "to": [
+    12,
+    2,
+    11
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      5,
+      11,
+      14,
+      13
+     ],
+     "texture": "#0"
+    },
+    "east": {
+     "uv": [
+      5,
+      11,
+      14,
+      13
+     ],
+     "texture": "#0"
+    },
+    "south": {
+     "uv": [
+      5,
+      11,
+      14,
+      13
+     ],
+     "texture": "#0"
+    },
+    "west": {
+     "uv": [
+      5,
+      11,
+      14,
+      13
+     ],
+     "texture": "#0"
+    },
+    "up": {
+     "uv": [
+      14,
+      10,
+      5,
+      1
+     ],
+     "texture": "#0"
+    },
+    "down": {
+     "uv": [
+      14,
+      1,
+      5,
+      10
+     ],
+     "texture": "#0"
+    }
+   }
+  },
+  {
+   "from": [
+    5,
+    2,
+    4
+   ],
+   "to": [
+    7,
+    3,
+    6
+   ],
+   "faces": {
+    "north": {
+     "uv": [
+      1,
+      11,
+      3,
+      12
+     ],
+     "texture": "#0"
+    },
+    "east": {
+     "uv": [
+      1,
+      10,
+      3,
+      11
+     ],
+     "texture": "#0"
+    },
+    "south": {
+     "uv": [
+      1,
+      11,
+      3,
+      12
+     ],
+     "texture": "#0"
+    },
+    "west": {
+     "uv": [
+      1,
+      10,
+      3,
+      11
+     ],
+     "texture": "#0"
+    },
+    "up": {
+     "uv": [
+      3,
+      15,
+      1,
+      13
+     ],
+     "texture": "#0"
+    },
+    "down": {
+     "uv": [
+      3,
+      10,
+      1,
+      12
+     ],
+     "texture": "#0"
+    }
+   }
+  }
+ ],
+ "display": {
+  "gui": {
+   "rotation": [
+    35,
+    -135,
+    0
+   ],
+   "translation": [
+    -0.5,
+    4.5,
+    0
+   ]
+  },
+  "head": {
+   "rotation": [
+    -28,
+    0,
+    0
+   ],
+   "translation": [
+    0.25,
+    -1,
+    -9.75
+   ],
+   "scale": [
+    0.7,
+    0.7,
+    0.7
+   ]
+  },
+  "fixed": {
+   "scale": [
+    1,
+    1,
+    0.01
+   ]
+  }
+ }
+}

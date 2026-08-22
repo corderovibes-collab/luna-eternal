@@ -35,11 +35,20 @@ dibujar se imprime al terminar en vez de acabar en la tienda.
 """
 
 import hashlib
+
 import json
 import shutil
 import urllib.request
 import zipfile
 from pathlib import Path
+
+import sys
+
+# El generador se ejecuta desde la raiz del repo, asi que su propia carpeta
+# no esta en el path. Sin esto, `import sombreros_luna` falla.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sombreros_luna  # noqa: E402  (necesita el sys.path de arriba)
+
 
 RAIZ = Path(__file__).resolve().parent.parent
 FUENTES = RAIZ / "tools" / "packs_cosmeticos.json"
@@ -211,7 +220,7 @@ def leer_mascotas(zips):
 # -------------------------------------------------------------- sombreros
 
 
-def declarados_sombreros(z) -> set:
+def declarados_sombreros(z, estilo: str) -> set:
     """Que modelos DECLARA el pack como sombrero ponible.
 
     ⚠⚠ NO VALE COGER TODO JSON CON `elements`. Los packs traen SUBMODELOS --la
@@ -223,12 +232,28 @@ def declarados_sombreros(z) -> set:
        que el pack DECLARA... y despues comprobar que se puede dibujar. Ninguna de
        las dos cosas basta sola.
 
-    Cada pack lo declara a su manera:
+    ⚠ CADA PACK LO DECLARA A SU MANERA, Y NO SE PUEDE ADIVINAR. Por eso el estilo
+      esta ESCRITO en packs_cosmeticos.json en vez de deducirse: una heuristica
+      que acierta con tres packs falla con el cuarto, y falla en silencio.
 
-      CobbleHats    `carved_pumpkin.json`, con un `override` por sombrero
-      Accessories   un `.properties` de CIT Resewn por sombrero, con `model=./x`
+        objeto      un OBJETO en la cabeza. CobbleHats con los `overrides` de
+                    `carved_pumpkin.json`, Accessories con `.properties` de CIT
+        simplehats  todo modelo cuyo `parent` sea `simplehats:item/hatparent`.
+                    Es lo que separa sus 332 sombreros de sus bolsas y recortes
     """
     declarados = set()
+
+    if estilo == "simplehats":
+        for n in z.namelist():
+            if "/models/item/" not in n or not n.endswith(".json"):
+                continue
+            try:
+                d = json.loads(z.read(n))
+            except Exception:
+                continue
+            if "hatparent" in str(d.get("parent", "")):
+                declarados.add(n.rsplit("/", 1)[-1][:-5])
+        return declarados
 
     # CobbleHats: los overrides de la calabaza tallada.
     for n in z.namelist():
@@ -251,34 +276,55 @@ def declarados_sombreros(z) -> set:
     return declarados
 
 
+def nombres_de(z) -> dict:
+    """Los nombres de verdad, del `lang` del pack si lo trae.
+
+    Simple Hats llama `acornhat` a lo que enseña como "Acorn Cap". Sin esto la
+    tienda seria una lista de identificadores pegados, que es lo que pasa con los
+    46 de los otros dos packs -- "Alolan digglethat" -- porque ESOS no traen
+    nombres y no hay de donde sacarlos.
+    """
+    for n in z.namelist():
+        if n.endswith("/lang/en_us.json"):
+            try:
+                lang = json.loads(z.read(n))
+            except Exception:
+                return {}
+            return {k.rsplit(".", 1)[-1]: v for k, v in lang.items()
+                    if k.startswith("item.")}
+    return {}
+
+
 def leer_sombreros(zips):
-    """Los sombreros: su modelo json y su textura.
+    """Los sombreros: su modelo json, su textura y su nombre.
 
-    ⚠⚠ NINGUNO DE LOS DOS PACKS SE USA COMO SUS AUTORES LO PENSARON, Y ES A
-       PROPOSITO. CobbleHats los aplica con una CALABAZA TALLADA + CustomModelData
-       y Accessories con CIT Resewn sobre un casco; las dos formas son un OBJETO
-       que el jugador lleva encima, y eso significa:
+    ⚠⚠ NINGUN PACK SE USA COMO SUS AUTORES LO PENSARON, Y ES A PROPOSITO.
+       CobbleHats los aplica con una CALABAZA TALLADA + CustomModelData,
+       Accessories con CIT Resewn sobre un casco, y Simple Hats con un OBJETO en
+       una ranura de accesorios. Las tres formas son un objeto que el jugador
+       lleva encima, y eso significa:
 
-         - ocupa la ranura del casco (o sombrero, o proteccion)
+         - ocupa una ranura (casco, o la de accesorios de otro mod)
          - se cae al morir, se comercia, se pierde
          - y sobre todo SE PUEDE REGALAR, asi que el cosmetico dejaria de venir
            solo de LunaCoins o de eventos, que es lo que dice D-039
 
-       Lo que se aprovecha son sus MODELOS, que son json normales. El sombrero lo
-       dibuja el cliente sobre la cabeza y no existe objeto ninguno: el servidor
-       dice quien lleva cual, igual que con las auras.
+       Lo que se aprovecha son sus MODELOS. El sombrero lo dibuja el cliente
+       sobre la cabeza y no existe objeto ninguno: el servidor dice quien lleva
+       cual, igual que con las auras. Simple Hats ni siquiera se instala como mod.
 
-    Devuelve [(id, bytes_modelo, ruta_textura, bytes_textura, pack)].
+    Devuelve ([(id, modelo_dict, bytes_textura, nombre, pack)], descartados).
     """
-    salida, sin_modelo = [], []
-    for nombre, z in zips:
-        declarados = declarados_sombreros(z)
+    salida, fuera = [], []
+    for nombre, z, estilo in zips:
+        declarados = declarados_sombreros(z, estilo)
+        nombres = nombres_de(z)
+
         # ⚠ SOLO BAJO `models/` O `cit/`. El nombre de un modelo y el de SU RECETA
         #   son el mismo --`models/block/custom/blaziken_cap.json` y
         #   `data/crafting/recipe/blaziken_cap.json`-- asi que indexando por la
-        #   hoja del nombre, la receta PISA al modelo. El sintoma era "el modelo no
-        #   tiene geometria" en ocho sombreros que la tienen perfectamente: lo que
-        #   se estaba leyendo era la receta.
+        #   hoja del nombre, la receta PISA al modelo. El sintoma era "el modelo
+        #   no tiene geometria" en ocho sombreros que la tienen perfectamente.
         modelos = {}
         for n in z.namelist():
             if not n.endswith(".json"):
@@ -292,18 +338,18 @@ def leer_sombreros(zips):
         for ident in sorted(declarados):
             n = modelos.get(ident)
             if not n:
-                sin_modelo.append((nombre, ident, "el modelo no viene"))
+                fuera.append((nombre, ident, "el modelo no viene"))
                 continue
             try:
-                datos = json.loads(z.read(n))
+                d = json.loads(z.read(n))
             except Exception:
-                sin_modelo.append((nombre, ident, "el modelo no se puede leer"))
+                fuera.append((nombre, ident, "el modelo no se puede leer"))
                 continue
-            if not datos.get("elements"):
-                sin_modelo.append((nombre, ident, "el modelo no tiene geometria"))
+            if not d.get("elements"):
+                fuera.append((nombre, ident, "el modelo no tiene geometria"))
                 continue
             tex = None
-            for valor in (datos.get("textures") or {}).values():
+            for valor in (d.get("textures") or {}).values():
                 hoja = str(valor).rsplit("/", 1)[-1]
                 for x in z.namelist():
                     if x.endswith("/" + hoja + ".png"):
@@ -312,25 +358,46 @@ def leer_sombreros(zips):
                 if tex:
                     break
             if not tex:
-                sin_modelo.append((nombre, ident, "sin textura"))
+                fuera.append((nombre, ident, "sin textura"))
                 continue
-            salida.append((ident, z.read(n), tex, z.read(tex), nombre))
+            salida.append((ident, d, z.read(tex),
+                           nombres.get(ident) or bonito(ident), nombre))
 
     # Sin identificadores repetidos entre packs, y en orden estable para que el
     # fichero generado no cambie de un dia para otro sin motivo.
     vistos, unicos = set(), []
     for s in sorted(salida, key=lambda x: x[0]):
         if s[0] in vistos:
+            fuera.append((s[4], s[0], "identificador repetido en otro pack"))
             continue
         vistos.add(s[0])
         unicos.append(s)
-    return unicos, sin_modelo
+    return unicos, fuera
+
+
+def padres_de(zips) -> dict:
+    """Los modelos PADRE que los sombreros necesitan, ya listos para copiar.
+
+    ⚠ Simple Hats mete las transformaciones --entre ellas la de `head`, que es la
+      que coloca el sombrero sobre la cabeza-- en dos modelos padre compartidos,
+      `hatparent` y `hatparent2`. Sin copiarlos, sus 332 sombreros heredarian de
+      algo que no existe y no se dibujaria ninguno.
+    """
+    padres = {}
+    for _, z, estilo in zips:
+        if estilo != "simplehats":
+            continue
+        for n in z.namelist():
+            hoja = n.rsplit("/", 1)[-1]
+            if "/models/item/" in n and hoja.startswith("hatparent"):
+                padres[hoja[:-5]] = json.loads(z.read(n))
+    return padres
 
 
 # ----------------------------------------------------------------- assets
 
 
-def copiar_assets(zips, sombreros):
+def copiar_assets(zips, sombreros, padres):
     """Los assets de los packs, al resource pack incrustado en `lunaneon`.
 
     ⚠ SOLO `assets/`. El `data/` se queda fuera a proposito -- ver la cabecera.
@@ -346,7 +413,7 @@ def copiar_assets(zips, sombreros):
     ASSETS.mkdir(parents=True)
 
     copiados = 0
-    for _, z in zips:
+    for _, z, _ in zips:
         for n in z.namelist():
             # Los de `minecraft:` son los sombreros y se tratan aparte, abajo.
             if not n.startswith("assets/cobblemon/") or n.endswith("/"):
@@ -357,8 +424,17 @@ def copiar_assets(zips, sombreros):
             copiados += 1
 
     base = ASSETS / "assets" / "lunaeternal"
-    for ident, modelo, ruta_tex, tex, _ in sombreros:
-        d = json.loads(modelo)
+    # ⚠ LOS PADRES PRIMERO. Simple Hats mete la transformacion `head` --la que
+    #   coloca el sombrero sobre la cabeza-- en dos modelos padre compartidos.
+    #   Sin copiarlos, sus 332 sombreros heredarian de algo que no existe.
+    for ident, d in padres.items():
+        (base / "models" / "sombreros").mkdir(parents=True, exist_ok=True)
+        (base / "models" / "sombreros" / (ident + ".json")).write_text(
+            json.dumps(d, indent=1), encoding="utf-8")
+        copiados += 1
+
+    for ident, modelo, tex, _, _ in sombreros:
+        d = dict(modelo)
         # ⚠⚠ LA TEXTURA TIENE QUE VIVIR BAJO `textures/item/`, Y NO ES ESTILO.
         #
         #   El atlas de bloques --que es de donde los modelos de objeto sacan sus
@@ -393,7 +469,25 @@ def copiar_assets(zips, sombreros):
         #   Los 46 traen su propia geometria, su propio `display` y sus propias
         #   texturas, asi que el padre no aporta nada. Y el sintoma de dejarlo no
         #   es un error: es un sombrero que no se dibuja.
-        d.pop("parent", None)
+        # ⚠ EL `parent` SE REESCRIBE O SE QUITA, SEGUN LO QUE APUNTE.
+        #
+        #   Simple Hats lo usa DE VERDAD: sus sombreros no traen transformaciones
+        #   propias, las heredan de `hatparent`. Quitarselo los dejaria sin la de
+        #   `head` y saldrian en el sitio equivocado.
+        #
+        #   Los cinco de Cobblemon Accessories lo traen como resto de Blockbench
+        #   --`"parent": "ash_journey"`, un nombre SUELTO sin espacio de nombres,
+        #   que Minecraft resuelve como `minecraft:...` y no existe-- o apuntando
+        #   a submodelos que no copiamos. Esos si se quitan: traen su propia
+        #   geometria y su propio `display`.
+        #
+        #   Distinguirlos por el nombre del padre y no por el pack: lo que importa
+        #   es si ESE padre existe entre los que hemos copiado.
+        padre = str(d.get("parent", "")).rsplit("/", 1)[-1]
+        if padre in padres:
+            d["parent"] = "lunaeternal:sombreros/" + padre
+        else:
+            d.pop("parent", None)
         (base / "models" / "sombreros").mkdir(parents=True, exist_ok=True)
         (base / "models" / "sombreros" / (ident + ".json")).write_text(
             json.dumps(d, indent=1), encoding="utf-8")
@@ -455,15 +549,25 @@ def main() -> None:
     fuentes = json.loads(FUENTES.read_text(encoding="utf-8"))["packs"]
     zips = []
     for pack in fuentes:
-        zips.append((pack["nombre"], zipfile.ZipFile(bajar(pack))))
+        zips.append((pack["nombre"], zipfile.ZipFile(bajar(pack)),
+                     pack.get("estilo", "objeto")))
 
-    de_mascotas = [(n, z) for (n, z), p in zip(zips, fuentes)
+    de_mascotas = [(n, z) for (n, z, _), p in zip(zips, fuentes)
                    if p["aporta"] == "mascotas"]
-    de_sombreros = [(n, z) for (n, z), p in zip(zips, fuentes)
+    de_sombreros = [(n, z, e) for (n, z, e), p in zip(zips, fuentes)
                     if p["aporta"] == "sombreros"]
 
     filas, descartados = leer_mascotas(de_mascotas)
     sombreros, sombreros_fuera = leer_sombreros(de_sombreros)
+    padres = padres_de(de_sombreros)
+
+    # Las gorras de Poke Ball son NUESTRAS: no salen de ningun pack, se pintan
+    # sobre el modelo gris de Simple Hats. Ver tools/sombreros_luna.py.
+    gorras = sombreros_luna.generar(de_sombreros)
+    if not gorras:
+        print("  AVISO: no se generaron las gorras de Poke Ball -- falta el "
+              "modelo base `baseballhat` de Simple Hats.")
+    sombreros = sombreros + gorras
     if not filas:
         raise SystemExit(
             "Ningun pack trae resolvers. O no son los packs, o cambiaron de "
@@ -477,12 +581,15 @@ def main() -> None:
 
     escribir("CatalogoSombreros", "Los sombreros que lleva el JUGADOR.",
              ['            new Pieza("sombrero_%s", Catalogo.SOMBREROS, "", "%s", %d)'
-              % (i, bonito(i), TRAMOS["sombrero"]) for i, _, _, _, _ in sombreros])
+              % (i, nom.replace('"', "'"),
+                 sombreros_luna.precio(i) if pack == "Luna" else TRAMOS["sombrero"])
+              for i, _, _, nom, pack in sombreros])
 
-    copiados = copiar_assets(zips, sombreros)
+    copiados = copiar_assets(zips, sombreros, padres)
 
     print("mascotas   %3d  (%d especies)" % (len(filas), len({f[0] for f in filas})))
-    print("sombreros  %3d" % len(sombreros))
+    print("sombreros  %3d  (%d de packs + %d gorras nuestras)"
+          % (len(sombreros), len(sombreros) - len(gorras), len(gorras)))
     print("assets     %3d ficheros -> %s" % (copiados, ASSETS))
 
     if descartados:

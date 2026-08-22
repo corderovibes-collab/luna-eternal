@@ -42,7 +42,7 @@ pantalla       CosmeticosScreen.java        4 pestañas · rejilla 4x2 · previe
 3D             Mascota3D.java               Cobblemon + criaturas de Minecraft
 catálogo       cosmetics/Catalogo.java      GENERADO · 62 piezas · 54 especies
 compra         cosmetics/CosmeticsService   transacción + idempotencia
-disfraces      CobblemonMoreCosmetics       datapack (servidor) + assets (jar)
+disfraces      CobblemonMoreCosmetics       SOLO assets (en lunaneon) · NADA de datapack
 tablas         V011__cosmeticos.sql         aplicada · autotest 136/136
 arte           arte/pokepad/fondo_cosmeticos.png
 maqueta        tools/gen_cosmeticos.py
@@ -269,6 +269,112 @@ CobbleVerse (D-037), del que solo se guardan URL y hash.
 > Cosmeticos: modelos de disfraces activados
 > 46 data pack(s) enabled: ... [file/CobblemonMoreCosmetics.zip (world)]
 > ```
+
+---
+
+## 5-ter. ⚠️⚠️⚠️ El disfraz se crafteaba, y eso se llevaba la tienda entera
+
+**Lo reportó el usuario, y no lo habría encontrado ninguna prueba nuestra:** no
+era un fallo del código, era el diseño del sistema que estábamos usando.
+
+`cosmetic_items` aplica el disfraz **dándole un objeto al Pokémon**. Y el objeto
+de `charizard_knight` es un `minecraft:iron_helmet`:
+
+```
+craftear un yelmo de hierro    = el disfraz de 2.500 LunaCoins, gratis
+quitarlo por el menu de ellos  = y ademas te quedas el objeto
+```
+
+`cosmetic_items` **está pensado para conseguirse jugando**, y
+[D-039](../../CLAUDE.md) dice exactamente lo contrario: solo con LunaCoins o en
+eventos. Los dos diseños no pueden convivir, y el suyo es una puerta que no se
+puede cerrar desde el mod.
+
+> **No se vigila la puerta: se quita.** El **datapack no se instala**. Sin él,
+> `cosmetic_items` no registra nada, y el objeto no aplica ni quita nada.
+
+### El aspecto se fuerza directo
+
+```java
+pokemon.setForcedAspects(aspectos);   // ni bandera, ni objeto
+pokemon.updateAspects();
+```
+
+Verificado **en el bytecode de 1.7.3** antes de escribirlo, porque de esto ya me
+equivoqué dos veces leyendo el repositorio en vez del jar:
+
+| | |
+|---|---|
+| `updateAspects()` | hace `aspectos = proveedores + forcedAspects` |
+| `PokemonP3` | lo **guarda** — persiste entre sesiones |
+| `ClientPokemonP3` | lo **sincroniza** — lo ven los demás |
+
+**Los assets siguen incrustados en `lunaneon`**: el resolver se activa por
+**aspecto** y vive en `assets/`, no en `data/`. El dibujo nunca dependió del
+datapack.
+
+### Las tres formas, en el orden en que se probaron
+
+| | Qué pasó |
+|---|---|
+| `FlagSpeciesFeature` | Nada. Se leyó de GitHub (HEAD), que declara `species_features`; la versión publicada no usa eso |
+| `swapCosmeticItem` | **Funcionaba** — y por eso se tardó en ver el problema. Abría el agujero de arriba |
+| `setForcedAspects` | Lo que hay. Sin objeto de por medio, así que no hay nada que craftear |
+
+> ⚠️ **Quien tuviera un disfraz puesto por el sistema viejo lo ha perdido.** Se
+> vuelve a equipar desde el PokePad, sin pagar. `disfrazar()` limpia el
+> `cosmeticItem` que quedara, para que no reaparezca si alguien reinstalara el
+> datapack algún día.
+
+### El campo `objeto` se quitó del catálogo
+
+No se usa. **Un dato que sigue ahí es una invitación a volver a usarlo**, y esta
+vez sabemos a dónde lleva.
+
+---
+
+## 5-quater. Poner y quitar, los dos desde el PokePad
+
+El botón de un cosmético puesto decía **EQUIPADO** y no hacía nada. Un botón se
+etiqueta con la **acción**, no con el estado:
+
+```
+COMPRAR      [moneda] 2500   COMPRAR
+EQUIPAR      TUYO             EQUIPAR
+EQUIPADO     PUESTO (verde)   QUITAR
+```
+
+Que está puesto se sigue viendo, pero en la **etiqueta de la izquierda**, que es
+donde va el estado. **Quitarlo no lo devuelve al catálogo**: sigue comprado, la
+posesión está en `player_cosmetics` y `desvestir()` no la toca.
+
+> ⚠️ **QUITAR tampoco lleva ranura.** Podría mandarse la que se dibujó, pero el
+> equipo puede haber cambiado desde entonces —basta con reordenarlo— y se le
+> quitaría el disfraz al Pokémon equivocado. El servidor busca cuál lo lleva en
+> el momento de quitarlo.
+
+### ⚠️ Y las flechas arreglaron algo que nadie había visto
+
+`pagina` se usaba en los tres sitios que tocaba —dibujar la rejilla, dibujar los
+modelos, detectar el clic— pero **nada lo cambiaba nunca**. La tienda enseñaba
+los ocho primeros de 62 y **54 eran inalcanzables**. Ni flechas, ni rueda, ni
+teclas, y ningún error.
+
+Las medidas de la banda naranja salen de **recorrer el PNG**, no de mirarlo:
+
+```
+banda calida   y = 698..745
+adornos        x = 732..744, 763..774, 936..947, 966..978
+huecos libres  x = 437..731, 775..935, 979..1273
+```
+
+Las flechas van en el primero y el tercero, a la misma distancia del centro
+(x=860); el contador «3 / 8» va en el hueco de en medio. Con este chasis,
+escribir medidas a ojo ya ha salido mal cuatro veces.
+
+Se dibujan **apagadas en los extremos, no escondidas**: una flecha que
+desaparece mueve la que queda y deja al jugador sin saber si ha llegado al final
+o si ha dejado de funcionar algo.
 
 ---
 

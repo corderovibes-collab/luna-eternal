@@ -214,6 +214,27 @@ Cosmeticos    LA PRIMERA SUB-PANTALLA YA EXISTE Y FUNCIONA EN EL JUEGO
               62 disfraces de 54 especies (CobblemonMoreCosmetics, MIT)
               EL CATALOGO SE GENERA DEL ZIP, no se escribe:
                 python tools/gen_catalogo_cosmeticos.py <zip>
+              ⚠⚠⚠ Y EL DISFRAZ SE CRAFTEABA, que era peor todavia.
+                 `cosmetic_items` aplica el disfraz DANDO UN OBJETO al
+                 Pokemon, y el de `charizard_knight` es un
+                 `minecraft:iron_helmet`:
+                   craftear un yelmo   = disfraz de 2.500 LunaCoins gratis
+                   quitarlo con su menu= y encima te quedas el objeto
+                 NO era un fallo del codigo: `cosmetic_items` esta PENSADO
+                 para conseguirse jugando, y D-039 dice lo contrario. Los
+                 dos disenios no pueden convivir
+                 NO SE VIGILA LA PUERTA, SE QUITA: el DATAPACK NO SE
+                 INSTALA. Sin el, `cosmetic_items` no registra nada y el
+                 objeto no aplica ni quita nada. El aspecto se fuerza
+                 directo: pokemon.setForcedAspects(...)
+                 verificado EN EL BYTECODE de 1.7.3, no en el repo:
+                   updateAspects()  aspectos = proveedores + forcedAspects
+                   PokemonP3        lo guarda (persiste)
+                   ClientPokemonP3  lo sincroniza (lo ven los demas)
+                 los assets siguen incrustados: el resolver se activa por
+                 ASPECTO y vive en assets/, nunca dependio del datapack
+                 ⚠ quien tuviera un disfraz puesto por la via vieja LO HA
+                   PERDIDO. Se reequipa desde el PokePad, sin pagar
               ⚠⚠ LA TIENDA VENDIO 62 DISFRACES QUE NO EXISTIAN. Se
                  compraban, se cobraban, y salia el Pokemon NORMAL: sin
                  error, sin aviso, sin nada en el log. Tres fallos, y
@@ -234,12 +255,26 @@ Cosmeticos    LA PRIMERA SUB-PANTALLA YA EXISTE Y FUNCIONA EN EL JUEGO
                 especie con el mismo objeto serian indistinguibles, y el
                 sintoma seria "a veces sale el equivocado". El generador
                 ABORTA si aparece uno
-              va en DOS SITIOS y son mitades distintas:
-                servidor  world/datapacks/  el data/  (objeto -> aspecto)
+              SOLO LOS ASSETS, y en un solo sitio:
                 cliente   lunaneon.jar!/resourcepacks/cosmeticos/
-                          el assets/ (modelos), ALWAYS_ENABLED
-                solo assets en el jar: el data/ ya va de datapack
+                          ALWAYS_ENABLED (DEFAULT_ENABLED no existe para
+                          resource packs, lo dice el javadoc de Fabric)
+                servidor  NADA. El datapack se retiro a proposito
                 MIT, asi que redistribuirlo SI se puede (CobbleVerse no)
+              PONER Y QUITAR, los dos desde el PokePad y solo desde ahi
+                el boton de un cosmetico puesto decia EQUIPADO y no hacia
+                nada. Un boton se etiqueta con la ACCION: dice QUITAR
+                el estado va en la etiqueta de la izquierda: PUESTO en
+                verde, en vez de TUYO en gris
+                quitarlo NO lo devuelve al catalogo: sigue comprado
+              ⚠⚠ Y NADIE HABIA VISTO QUE LA PAGINACION NO EXISTIA. El
+                 campo `pagina` se usaba en los tres sitios que tocaba
+                 --rejilla, modelos, clic-- pero NADA LO CAMBIABA NUNCA:
+                 54 de los 62 cosmeticos eran INALCANZABLES, sin error
+                 las flechas van en la banda naranja, y sus medidas salen
+                 de RECORRER el PNG: banda y=698..745, adornos en
+                 x=732..744, 763..774, 936..947, 966..978, huecos libres
+                 437..731, 775..935 y 979..1273
               D-039: NO se consiguen jugando. Solo LunaCoins o eventos
               V011 aplicada · autotest 136/136 tras ella
               ⚠⚠ EL MOD TIENE DOS DESTINOS Y SE OLVIDA EL SEGUNDO:

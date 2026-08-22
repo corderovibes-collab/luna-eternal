@@ -263,7 +263,7 @@ PokePad       LA PANTALLA PRINCIPAL ESTA TERMINADA (2026-08-15)
               tamano REAL de pantalla, un texel cae en un pixel sea
               cual sea el ajuste del jugador
               ⚠⚠ ANTES DE ESCRIBIR CUALQUIER PANTALLA NUEVA, LEE
-                 docs/ui/dibujado.md. Son 5 reglas y ninguna da error
+                 docs/ui/dibujado.md. Son 6 reglas y ninguna da error
                  al compilar; se pagan en horas depurando en el juego
                  La primera, la que costo una noche entera:
                  HAY QUE ENCENDER RenderSystem.enableBlend() A MANO.

@@ -155,7 +155,66 @@ escondidos donde no se ven es una bomba de relojería, y ya explotó una vez.
 
 ---
 
-## 6. Cómo se depura esto, que es lo que más tiempo ahorra
+## 6. ⚠️⚠️ Si una API recibe un objeto mutable, va a mutarlo
+
+**La regla que más cara ha salido hasta ahora: cuatro intentos fallidos y una
+tarde entera.**
+
+`drawProfilePokemon` de Cobblemon hace esto, en su línea 143:
+
+```kotlin
+rotation.conjugate()
+entityRenderDispatcher.overrideCameraOrientation(rotation)
+```
+
+`conjugate()` **modifica el cuaternión que se le pasa**. No devuelve una copia.
+La tienda de cosméticos le pasaba una constante compartida:
+
+```java
+private static final Quaternionf GIRO = new Quaternionf().rotationXYZ(...);
+```
+
+así que **cada llamada invertía el mismo objeto**.
+
+### El síntoma mentía, y ahí está la lección
+
+Los modelos titilaban. Pero solo **al abrir el previsualizador** — la rejilla
+sola se veía estable. Eso hizo buscar el fallo en el panel durante tres
+intentos:
+
+| Intento | Hipótesis | Por qué era razonable | Por qué no servía |
+|---|---|---|---|
+| 1 | El búfer de la interfaz | `DrawContext` acumula y el 3D dibuja ya | Cierto, pero no era la causa |
+| 2 | La profundidad (`z=100`) | Cobblemon usa `z=0` | Cierto, y tampoco |
+| 3 | Estado compartido por especie | Cobblemon da uno por widget | Cierto, y tampoco |
+
+Los tres eran **correcciones legítimas** —el código quedó mejor— y ninguno
+tocaba el problema.
+
+La explicación: con 8 celdas el cuaternión se invierte 8 veces por fotograma.
+**Par**, vuelve al valor original, y la rejilla parece estable. Con el
+previsualizador son **nueve**: impar, la paridad cambia en cada fotograma y el
+modelo alterna entre dos orientaciones.
+
+> **«Solo falla al previsualizar» no era una pista sobre el previsualizador: era
+> una pista sobre la PARIDAD del número de llamadas.** Leer bien el síntoma y mal
+> lo que significa cuesta lo mismo que no leerlo.
+
+### Qué hacer
+
+Pasar siempre un objeto **nuevo**, o una copia:
+
+```java
+private static Quaternionf giro() {          // NO una constante
+    return new Quaternionf().rotationXYZ(0.35f, -0.55f, 0f);
+}
+```
+
+`static final` protege la **referencia**, no el **contenido**. Con cuaterniones,
+matrices, vectores y listas, esa distinción es la que hace daño — y Cobblemon
+crea uno nuevo en cada llamada (`StorageSlot.render`) justo por esto.
+
+## 7. Cómo se depura esto, que es lo que más tiempo ahorra
 
 **Una captura pegada en un chat no sirve.** La compresión inventa exactamente
 el mismo tipo de motas de colores que se están buscando, y lleva a diagnosticar
@@ -195,7 +254,7 @@ Ninguna. Estas reglas se aplican al construir cada pantalla nueva.
 
 ---
 
-## 6. Encoger un 0,5 % cuesta tanto como encogerlo mucho
+## 8. Encoger un 0,5 % cuesta tanto como encogerlo mucho
 
 **Síntoma:** el bisel naranja del chasis v4 «se veía de baja calidad», con
 escalones sucios, mientras que el mismo Pad con el chasis v3 se veía limpio.

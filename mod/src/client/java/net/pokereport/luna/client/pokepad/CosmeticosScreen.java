@@ -459,6 +459,7 @@ public class CosmeticosScreen extends Screen {
             case DE_EVENTO -> 0xFF6E7899;
             case EQUIPAR -> 0xFF567AC8;
             case EQUIPADO -> 0xFFCEDCF4;
+            case SIN_POKEMON -> 0xFF8A8FA3;
         };
         int tinta = est == Cosmetico.Estado.EQUIPADO ? 0xFF185C34 : 0xFFFFFFFF;
         ctx.fill(px(bx), py(ay + 4), px(bx + bw), py(ay + ah - 4), relleno);
@@ -472,6 +473,7 @@ public class CosmeticosScreen extends Screen {
             case DE_EVENTO -> "evento";
             case EQUIPAR -> "equipar";
             case EQUIPADO -> "equipado";
+            case SIN_POKEMON -> "sin_pokemon";
         };
     }
 
@@ -578,21 +580,44 @@ public class CosmeticosScreen extends Screen {
      */
     private void accion(Cosmetico c) {
         Cosmetico.Estado est = c.estado();
+
+        // ⚠ SIN_POKEMON suena a bloqueado y dice POR QUE. Es el caso que este
+        //   estado existe para evitar: sin el, el boton diria EQUIPAR, el
+        //   servidor lo rechazaria con razon, y el jugador --que ya ha pagado--
+        //   no sabria si el fallo es suyo o nuestro.
+        if (est == Cosmetico.Estado.SIN_POKEMON) {
+            sonar(false);
+            if (client != null && client.player != null) {
+                client.player.sendMessage(Text.translatable(
+                        "pokepad.lunaeternal.necesitas_pokemon",
+                        MiEquipo.nombreEspecie(c.especie())), true);
+            }
+            return;
+        }
         if (est == Cosmetico.Estado.EQUIPADO || est == Cosmetico.Estado.DE_EVENTO) {
-            // Ya lo llevas, o no esta a la venta. Suena a bloqueado en vez de
-            // mandar una peticion que el servidor va a rechazar igual.
             sonar(false);
             return;
         }
         sonar(true);
+
         // ⚠ NO SE CAMBIA NADA EN PANTALLA AQUI. Se manda y se espera: el
         // servidor cobra, comprueba y responde con el catalogo entero, y
         // `leerDelServidor` lo recoge en el siguiente fotograma.
         //
         // Pintar la compra antes de que ocurra es lo que hace que un fallo de
         // saldo se vea como un cosmetico comprado que desaparece al reabrir.
-        ClientPlayNetworking.send(
-                new Red.AccionCosmetico(c.id(), est == Cosmetico.Estado.EQUIPAR));
+        //
+        // ⚠ AL EQUIPAR VIAJA LA RANURA, y se elige la PRIMERA del equipo cuya
+        //   especie encaje. No hay selector, y es por lo que el propio cosmetico
+        //   impone: un disfraz es de UNA especie, asi que en un equipo normal
+        //   hay como mucho un Pokemon valido. Un selector de seis casillas con
+        //   cinco invalidas es una pregunta cuya respuesta ya sabemos.
+        //
+        //   El unico caso que quedaria fuera es llevar DOS de la misma especie y
+        //   querer elegir cual. Si eso llega a importar, aqui es donde se abre
+        //   la tira de eleccion.
+        int ranura = est == Cosmetico.Estado.COMPRAR ? -1 : MiEquipo.primeraRanuraValida(c);
+        ClientPlayNetworking.send(new Red.AccionCosmetico(c.id(), ranura));
     }
 
     private void volver() {

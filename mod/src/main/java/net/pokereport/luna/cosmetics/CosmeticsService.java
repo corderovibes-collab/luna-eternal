@@ -243,6 +243,87 @@ public class CosmeticsService {
         return Resultado.si();
     }
 
+
+    /**
+     * Le pone el disfraz a un Pokémon del equipo.
+     *
+     * <p>Esto sustituye al «llevar una mascota detrás». Los 66 cosméticos de
+     * {@code CobblemonMoreCosmetics} son <b>species features</b> de Cobblemon
+     * —una bandera con {@code isAspect: true}— así que activarla hace que
+     * <b>Cobblemon lo dibuje él</b>: en combate, cuando lo sacas, en el PC y en
+     * el resumen. Por eso se ve bien sin que nosotros dibujemos nada.
+     *
+     * <p>⚠ <b>Se comprueba que la especie coincide.</b> El aspecto {@code knight}
+     * solo está asignado a Charizard en el datapack; ponérselo a un Pidgey
+     * activaría una bandera que su modelo no conoce, y Cobblemon dibujaría un
+     * Pidgey normal. No falla, no avisa, y el jugador ha pagado por nada.
+     *
+     * <p>⚠⚠ Y se comprueba <b>la posesión</b>, igual que antes. Sin eso un
+     * cliente modificado disfraza cualquier cosa sin comprarla — y como el
+     * disfraz lo ven los demás, sería indistinguible de haberlo comprado.
+     *
+     * @param ranura del equipo, 0..5. Se resuelve contra el equipo de ESTE
+     *               jugador, así que un Pokémon ajeno no es un estado que se
+     *               pueda pedir
+     */
+    public Resultado disfrazar(net.minecraft.server.network.ServerPlayerEntity jugador,
+                               long playerId, String cosmeticId, int ranura)
+            throws SQLException {
+
+        Catalogo.Pieza pieza = Catalogo.de(cosmeticId);
+        if (pieza == null) {
+            return Resultado.no("Ese cosmético no existe.");
+        }
+        if (pieza.aspecto().isEmpty() || pieza.esDeMinecraft()) {
+            return Resultado.no("Ese cosmético no se le puede poner a un Pokémon.");
+        }
+        try (Connection c = db.connection()) {
+            if (!tiene(c, playerId, cosmeticId)) {
+                return Resultado.no("No tienes ese cosmético.");
+            }
+        }
+
+        var equipo = com.cobblemon.mod.common.Cobblemon.INSTANCE
+                .getStorage().getParty(jugador);
+        var pokemon = equipo.get(ranura);
+        if (pokemon == null) {
+            return Resultado.no("No hay ningún Pokémon en esa ranura.");
+        }
+
+        String especieEsperada = pieza.especie().contains(":")
+                ? pieza.especie().substring(pieza.especie().indexOf(':') + 1)
+                : pieza.especie();
+        String especieReal = pokemon.getSpecies().getName().toLowerCase();
+        if (!especieReal.equalsIgnoreCase(especieEsperada)) {
+            return Resultado.no("Ese disfraz es de " + especieEsperada
+                    + ", no de " + pokemon.getSpecies().getName() + ".");
+        }
+
+        // ⚠ Se apagan los OTROS disfraces de la misma especie antes de encender
+        //   este. Si no, un Charizard podria acabar con `knight` y `pastel` a la
+        //   vez: dos banderas encendidas son dos aspectos, y el resultado
+        //   depende de cual gane en el resolutor -- o sea, impredecible.
+        for (Catalogo.Pieza otra : Catalogo.todas()) {
+            if (otra.aspecto().isEmpty() || otra.aspecto().equals(pieza.aspecto())) {
+                continue;
+            }
+            var apagar = new com.cobblemon.mod.common.api.pokemon.feature
+                    .FlagSpeciesFeature(otra.aspecto(), false);
+            pokemon.getFeatures().removeIf(f -> otra.aspecto().equals(f.getName()));
+            pokemon.getFeatures().add(apagar);
+            pokemon.markFeatureDirty(apagar);
+        }
+
+        var bandera = new com.cobblemon.mod.common.api.pokemon.feature
+                .FlagSpeciesFeature(pieza.aspecto(), true);
+        pokemon.getFeatures().removeIf(f -> pieza.aspecto().equals(f.getName()));
+        pokemon.getFeatures().add(bandera);
+        pokemon.markFeatureDirty(bandera);
+        pokemon.updateAspects();
+
+        return Resultado.si();
+    }
+
     private boolean tiene(Connection c, long playerId, String cosmeticId)
             throws SQLException {
         try (PreparedStatement ps = c.prepareStatement(

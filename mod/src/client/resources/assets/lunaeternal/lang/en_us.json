@@ -58,5 +58,7 @@
   "pokepad.lunaeternal.equipado": "EQUIPPED",
   "pokepad.lunaeternal.evento": "EVENT",
   "pokepad.lunaeternal.tuyo": "OWNED",
-  "pokepad.lunaeternal.sin_seleccion": "Pick a cosmetic"
+  "pokepad.lunaeternal.sin_seleccion": "Pick a cosmetic",
+  "pokepad.lunaeternal.sin_pokemon": "NOT OWNED",
+  "pokepad.lunaeternal.necesitas_pokemon": "You need a %s in your party to use this outfit."
 }

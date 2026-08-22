@@ -48,12 +48,22 @@ public record Cosmetico(
             return Estado.EQUIPADO;
         }
         if (poseido) {
-            return Estado.EQUIPAR;
+            // ⚠ Tenerlo no basta: hace falta el Pokemon al que ponerselo.
+            return MiEquipo.tienesLaEspecie(this) ? Estado.EQUIPAR : Estado.SIN_POKEMON;
         }
         return precio > 0 ? Estado.COMPRAR : Estado.DE_EVENTO;
     }
 
     public enum Estado {
+        /**
+         * Lo tienes, pero NO tienes en el equipo el Pokemon al que se le pone.
+         *
+         * <p>Existe porque un disfraz es de UNA especie: el de Charizard solo
+         * vale para Charizard. Sin este estado, el boton diria EQUIPAR y al
+         * pulsarlo no pasaria nada -- el servidor lo rechaza, con razon, pero el
+         * jugador ya habria pagado y no sabria por que.
+         */
+        SIN_POKEMON,
         /** No lo tienes y se vende. */
         COMPRAR,
         /** No lo tienes y NO se vende: solo sale en eventos (D-039). */

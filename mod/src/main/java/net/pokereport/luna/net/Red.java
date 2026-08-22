@@ -199,61 +199,42 @@ public class Red implements ModInitializer {
     }
 
     /**
-     * «Compra esto» o «ponte esto».
+     * «Compra esto» o «ponle el disfraz a este Pokemon».
      *
-     * <p>⚠ Viaja el <b>identificador</b> y nada más. Ni el precio, ni la
-     * categoría, ni si se puede pagar: todo eso lo tiene el servidor, y aceptar
-     * cualquiera de esos datos del cliente sería aceptar el precio que él diga.
+     * <p>⚠ Viaja el <b>identificador</b> del cosmetico y la <b>ranura</b> del
+     * equipo. Ni el precio, ni la categoria, ni si se puede pagar: todo eso lo
+     * tiene el servidor, y aceptar cualquiera de esos datos del cliente seria
+     * aceptar el precio que el diga.
      *
-     * @param equipar {@code true} = ponérselo; {@code false} = comprarlo
+     * <p>⚠⚠ Y VIAJA LA RANURA, NO EL UUID DEL POKEMON. Con el UUID, un cliente
+     * modificado podria mandar el de un Pokemon que no es suyo -- el de otro
+     * jugador, uno visto en un combate-- y habria que comprobar la propiedad a
+     * mano. La ranura se resuelve SIEMPRE contra el equipo de quien manda el
+     * paquete, asi que "de otro" no es un estado que se pueda expresar.
+     *
+     * @param ranura {@code < 0} = comprar. {@code 0..5} = ponerselo al Pokemon
+     *               de esa ranura del equipo
      */
-    public record AccionCosmetico(String id, boolean equipar) implements CustomPayload {
+    public record AccionCosmetico(String id, int ranura) implements CustomPayload {
         public static final Id<AccionCosmetico> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_cosmetico"));
         public static final PacketCodec<RegistryByteBuf, AccionCosmetico> CODEC =
                 PacketCodec.tuple(
                         PacketCodecs.STRING, AccionCosmetico::id,
-                        PacketCodecs.BOOL, AccionCosmetico::equipar,
+                        PacketCodecs.INTEGER, AccionCosmetico::ranura,
                         AccionCosmetico::new);
 
-        @Override
-        public Id<? extends CustomPayload> getId() {
-            return ID;
+        /** Comprar, en vez de equipar. */
+        public boolean esCompra() {
+            return ranura < 0;
         }
-    }
-
-    /**
-     * «Este jugador lleva puesta esta mascota». Va a TODO el mundo.
-     *
-     * <p>Es lo que convierte la tienda en algo que existe: un cosmetico que solo
-     * ve su dueño no vale nada, y {@code monetization.md} lo dice con esas
-     * palabras. Sin este paquete, comprar y equipar funcionan y no se nota.
-     *
-     * <p>⚠ Viaja <b>especie y aspecto</b>, no el identificador del catalogo. El
-     * cliente que lo recibe solo necesita saber QUE dibujar, y asi no hace falta
-     * que conozca el catalogo de otro jugador -- que ademas incluye precios y
-     * que no tiene por que ver.
-     *
-     * <p>Especie vacia significa <b>no lleva nada</b>. Es el mismo paquete para
-     * poner y para quitar: dos paquetes distintos permitirian que llegara el de
-     * poner y se perdiera el de quitar, y el cosmetico se quedaria pegado.
-     */
-    public record CosmeticoPuesto(java.util.UUID jugador, String especie, String aspecto)
-            implements CustomPayload {
-        public static final Id<CosmeticoPuesto> ID =
-                new Id<>(Identifier.of(LunaEternal.MOD_ID, "cosmetico_puesto"));
-        public static final PacketCodec<RegistryByteBuf, CosmeticoPuesto> CODEC =
-                PacketCodec.tuple(
-                        net.minecraft.util.Uuids.PACKET_CODEC, CosmeticoPuesto::jugador,
-                        PacketCodecs.STRING, CosmeticoPuesto::especie,
-                        PacketCodecs.STRING, CosmeticoPuesto::aspecto,
-                        CosmeticoPuesto::new);
 
         @Override
         public Id<? extends CustomPayload> getId() {
             return ID;
         }
     }
+
 
     @Override
     public void onInitialize() {
@@ -264,7 +245,6 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirCosmeticos.ID, PedirCosmeticos.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionCosmetico.ID, AccionCosmetico.CODEC);
         PayloadTypeRegistry.playS2C().register(Cosmeticos.ID, Cosmeticos.CODEC);
-        PayloadTypeRegistry.playS2C().register(CosmeticoPuesto.ID, CosmeticoPuesto.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -310,12 +290,6 @@ public class Red implements ModInitializer {
             });
         });
 
-        // ⚠ AL ENTRAR HAY QUE SINCRONIZAR EN LAS DOS DIRECCIONES, y es facil
-        // dejarse una: cada una funciona a medias y el fallo solo aparece con
-        // dos personas conectadas. Ver `Difusion.alEntrar`.
-        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
-                (manejador, remitente, servidor) ->
-                        net.pokereport.luna.cosmetics.Difusion.alEntrar(manejador.player));
 
         ServerPlayNetworking.registerGlobalReceiver(PedirCosmeticos.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -331,12 +305,8 @@ public class Red implements ModInitializer {
                     var svc = LunaEternal.cosmetics();
                     net.pokereport.luna.cosmetics.CosmeticsService.Resultado r;
 
-                    if (carga.equipar()) {
-                        var pieza = net.pokereport.luna.cosmetics.Catalogo.de(carga.id());
-                        r = pieza == null
-                                ? new net.pokereport.luna.cosmetics.CosmeticsService
-                                        .Resultado(false, "Ese cosmetico no existe.")
-                                : svc.equipar(id, pieza.categoria(), carga.id());
+                    if (!carga.esCompra()) {
+                        r = svc.disfrazar(jugador, id, carga.id(), carga.ranura());
                     } else {
                         // ⚠⚠ UUID NUEVO, Y NO UNA CLAVE DERIVADA DEL COSMETICO.
                         //
@@ -367,12 +337,6 @@ public class Red implements ModInitializer {
                     // forma de que la tienda del cliente vuelva a la verdad sin
                     // tener que adivinar que ha cambiado.
                     enviarCosmeticos(jugador);
-
-                    // Y si de verdad cambio lo que lleva puesto, se entera todo
-                    // el mundo. Solo al equipar: comprar no cambia tu aspecto.
-                    if (carga.equipar() && r.ok()) {
-                        net.pokereport.luna.cosmetics.Difusion.difundir(jugador);
-                    }
                 } catch (Exception e) {
                     LunaEternal.LOG.warn("Cosmetico {} de {} fallo: {}",
                             carga.id(), jugador.getName().getString(), e.toString());

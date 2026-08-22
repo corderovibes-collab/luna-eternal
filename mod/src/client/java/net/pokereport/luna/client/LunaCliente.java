@@ -46,29 +46,6 @@ public class LunaCliente implements ClientModInitializer {
         // compra: el servidor lo reenvia entero en vez de mandar cambios.
         ClientPlayNetworking.registerGlobalReceiver(Red.Cosmeticos.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
-        // Quien lleva que puesto. Llega para TODOS los jugadores, no solo para
-        // uno mismo: es lo que hace que un cosmetico se vea.
-        ClientPlayNetworking.registerGlobalReceiver(Red.CosmeticoPuesto.ID,
-                (carga, ctx) -> net.pokereport.luna.client.pokepad.MascotasPuestas
-                        .guardar(carga.jugador(), carga.especie(), carga.aspecto()));
-
-        // ⚠ La capa se añade al renderizador del JUGADOR, sin mixin. Es la via
-        //   que ofrece Fabric y la misma que usa Cobblemon para su Pokemon de
-        //   hombro: la mascota hereda la matriz del jugador, asi que le sigue
-        //   sin una linea de codigo de seguimiento.
-        net.fabricmc.fabric.api.client.rendering.v1
-                .LivingEntityFeatureRendererRegistrationCallback.EVENT.register(
-                (tipo, renderizador, ayuda, ctx) -> {
-                    // ⚠ Se registra por el AYUDANTE, no llamando a `addFeature`
-                    //   del renderizador: `addFeature` es del tipo concreto y
-                    //   los genericos no cuadran desde el callback, que entrega
-                    //   un `EntityRenderer<?, ?>`.
-                    if (renderizador instanceof net.minecraft.client.render.entity
-                            .PlayerEntityRenderer jugador) {
-                        ayuda.register(
-                                new net.pokereport.luna.client.pokepad.MascotaEnMundo(jugador));
-                    }
-                });
 
         // La voz de la Pokédex. Llega solo a quien ha escaneado; aquí solo se
         // reproduce, la decisión de a quién mandarla es del servidor.
@@ -82,11 +59,6 @@ public class LunaCliente implements ClientModInitializer {
         // la voz, que si no sigue sonando en la pantalla de servidores.
         ClientPlayConnectionEvents.DISCONNECT.register((manejador, cliente) -> {
             EstadoCliente.olvidar();
-            // ⚠ Y las mascotas puestas. Los UUID coinciden entre servidores,
-            //   asi que sin esto no saldrian mascotas ajenas al azar: saldrian
-            //   LAS DE LAS MISMAS PERSONAS en otro servidor, que es mucho mas
-            //   creible y por tanto mas dificil de reconocer como fallo.
-            net.pokereport.luna.client.pokepad.MascotasPuestas.olvidar();
             VozPokedex.callar();
         });
 

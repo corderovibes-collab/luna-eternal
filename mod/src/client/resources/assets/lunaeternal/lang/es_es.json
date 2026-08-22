@@ -58,5 +58,7 @@
   "pokepad.lunaeternal.equipado": "EQUIPADO",
   "pokepad.lunaeternal.evento": "EVENTO",
   "pokepad.lunaeternal.tuyo": "TUYO",
-  "pokepad.lunaeternal.sin_seleccion": "Elige un cosmético"
+  "pokepad.lunaeternal.sin_seleccion": "Elige un cosmético",
+  "pokepad.lunaeternal.sin_pokemon": "NO LO TIENES",
+  "pokepad.lunaeternal.necesitas_pokemon": "Necesitas un %s en tu equipo para ponerle este disfraz."
 }

@@ -1499,6 +1499,1006 @@
       }
     ]
   },
+  "pokedex.chikorita": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/chikorita",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.bayleef": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/bayleef",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.meganium": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/meganium",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.cyndaquil": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/cyndaquil",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.quilava": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/quilava",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.typhlosion": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/typhlosion",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.totodile": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/totodile",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.croconaw": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/croconaw",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.feraligatr": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/feraligatr",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.sentret": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/sentret",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.furret": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/furret",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.hoothoot": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/hoothoot",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.noctowl": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/noctowl",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.ledyba": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/ledyba",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.ledian": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/ledian",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.spinarak": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/spinarak",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.ariados": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/ariados",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.crobat": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/crobat",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.chinchou": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/chinchou",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.lanturn": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/lanturn",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.pichu": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/pichu",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.cleffa": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/cleffa",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.igglybuff": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/igglybuff",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.togepi": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/togepi",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.togetic": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/togetic",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.natu": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/natu",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.xatu": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/xatu",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.mareep": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/mareep",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.flaaffy": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/flaaffy",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.ampharos": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/ampharos",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.bellossom": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/bellossom",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.marill": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/marill",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.azumarill": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/azumarill",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.sudowoodo": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/sudowoodo",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.politoed": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/politoed",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.hoppip": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/hoppip",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.skiploom": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/skiploom",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.jumpluff": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/jumpluff",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.aipom": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/aipom",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.sunkern": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/sunkern",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.sunflora": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/sunflora",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.yanma": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/yanma",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.wooper": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/wooper",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.quagsire": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/quagsire",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.espeon": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/espeon",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.umbreon": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/umbreon",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.murkrow": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/murkrow",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.slowking": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/slowking",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.misdreavus": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/misdreavus",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.unown": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/unown",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.wobbuffet": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/wobbuffet",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.girafarig": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/girafarig",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.pineco": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/pineco",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.forretress": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/forretress",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.dunsparce": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/dunsparce",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.gligar": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/gligar",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.steelix": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/steelix",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.snubbull": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/snubbull",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.granbull": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/granbull",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.qwilfish": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/qwilfish",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.scizor": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/scizor",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.shuckle": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/shuckle",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.heracross": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/heracross",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.sneasel": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/sneasel",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.teddiursa": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/teddiursa",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.ursaring": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/ursaring",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.slugma": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/slugma",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.magcargo": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/magcargo",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.swinub": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/swinub",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.piloswine": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/piloswine",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.corsola": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/corsola",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.remoraid": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/remoraid",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.octillery": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/octillery",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.delibird": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/delibird",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.mantine": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/mantine",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.skarmory": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/skarmory",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.houndour": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/houndour",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.houndoom": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/houndoom",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.kingdra": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/kingdra",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.phanpy": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/phanpy",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.donphan": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/donphan",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.porygon2": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/porygon2",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.stantler": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/stantler",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.smeargle": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/smeargle",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.tyrogue": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/tyrogue",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.hitmontop": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/hitmontop",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.smoochum": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/smoochum",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.elekid": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/elekid",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.magby": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/magby",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.miltank": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/miltank",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.blissey": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/blissey",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.raikou": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/raikou",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.entei": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/entei",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.suicune": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/suicune",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.larvitar": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/larvitar",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.pupitar": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/pupitar",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.tyranitar": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/tyranitar",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.lugia": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/lugia",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.ho_oh": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/ho_oh",
+        "stream": true
+      }
+    ]
+  },
+  "pokedex.celebi": {
+    "category": "voice",
+    "subtitle": "subtitles.lunaeternal.pokedex.voz",
+    "sounds": [
+      {
+        "name": "lunaeternal:pokedex/celebi",
+        "stream": true
+      }
+    ]
+  },
   "pokedex.rattata_alola": {
     "category": "voice",
     "subtitle": "subtitles.lunaeternal.pokedex.voz",

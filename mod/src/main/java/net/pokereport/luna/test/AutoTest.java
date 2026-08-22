@@ -290,13 +290,28 @@ public final class AutoTest {
         check("sin forma se usa la especie",
             net.pokereport.luna.pokedex.VozService.clave("Ekans", "")
                 .equals("ekans"));
+        // Victreebel (dex 71) es la unica especie de Gen 1 sin grabar: se
+        // salto en la sesion de grabacion y queda como el caso real de
+        // "sin voz", en vez de uno inventado.
         check("una especie sin grabar no da clave",
-            net.pokereport.luna.pokedex.VozService.clave("Mewtwo", "").isEmpty());
-        check("hay las 39 voces del catalogo",
-            net.pokereport.luna.pokedex.VozService.cuantas() == 39);
+            net.pokereport.luna.pokedex.VozService.clave("Victreebel", "").isEmpty());
+        check("hay las 255 voces del catalogo (150 de Kanto sin Victreebel, "
+                + "100 de Johto, mas 5 formas de Alola)",
+            net.pokereport.luna.pokedex.VozService.cuantas() == 255);
+        // Johto entero, que es la otra generacion activa (D-017).
+        check("Chikorita, el inicial de Johto, tiene voz",
+            net.pokereport.luna.pokedex.VozService.tieneVoz("chikorita"));
+        // Ho-Oh lleva guion en el nombre y Porygon2 un digito: son los dos
+        // nombres de Johto que la normalizacion podia estropear en silencio.
+        check("Ho-Oh se normaliza como su fichero",
+            net.pokereport.luna.pokedex.VozService.clave("Ho-Oh", "")
+                .equals("ho_oh"));
+        check("Porygon2 conserva el digito",
+            net.pokereport.luna.pokedex.VozService.clave("Porygon2", "")
+                .equals("porygon2"));
         // Y lo importante al reves: una especie sin grabar NO manda paquete.
         check("una especie sin grabar no suena",
-            !net.pokereport.luna.pokedex.VozService.tieneVoz("mewtwo"));
+            !net.pokereport.luna.pokedex.VozService.tieneVoz("victreebel"));
         check("un nombre vacio no suena",
             !net.pokereport.luna.pokedex.VozService.tieneVoz(""));
         check("un nombre nulo no revienta",

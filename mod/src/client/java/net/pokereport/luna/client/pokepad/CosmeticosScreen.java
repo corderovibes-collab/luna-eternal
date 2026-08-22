@@ -257,7 +257,7 @@ public class CosmeticosScreen extends Screen {
         // ⚠ EL MODELO VA GRANDE. El previsualizador mide 299x465 pixeles del
         //   arte: con la escala de la celda, un Mewtwo se quedaba en un tercio
         //   del hueco y el panel parecia vacio.
-        Mascota3D.dibujar(ctx, enfocado, px(ax), py(ay), pl(aw), pl(ah), 105f * k, delta);
+        Mascota3D.dibujar(ctx, enfocado, px(ax), py(ay), pl(aw), pl(ah), 170f * k, delta, true);
 
         texto(ctx, Text.literal(nombreDe(enfocado)), ax + aw / 2, ay + ah - 34, 26,
                 ORO, true, false);
@@ -346,8 +346,10 @@ public class CosmeticosScreen extends Screen {
 
         // El 3D ocupa todo lo que no es el pie. Se dibuja ANTES que el nombre
         // para que el nombre quede por encima y siga leyendose.
+        // Solo se anima el que esta bajo el raton: ocho a la vez es ruido, y
+        // parados se aprecia mejor el disfraz, que es lo que se vende.
         Mascota3D.dibujar(ctx, c, x + pl(10), y + pl(6), w - pl(20), h - pl(PIE + 6),
-                34f * k, delta);
+                62f * k, delta, encima);
 
         texto(ctx, Text.literal(nombreDe(c)), ax + aw / 2, ay + ah - PIE - 24, 22,
                 TEXTO_OSCURO, true, true);
@@ -357,22 +359,48 @@ public class CosmeticosScreen extends Screen {
 
     private void dibujarPie(DrawContext ctx, Cosmetico c, int ax, int ay, int aw, int ah) {
         Cosmetico.Estado est = c.estado();
-        String clave = switch (est) {
-            case COMPRAR -> "comprar";
-            case DE_EVENTO -> "evento";
-            case EQUIPAR -> "equipar";
-            case EQUIPADO -> "equipado";
-        };
-        Text etiqueta = Text.translatable("pokepad.lunaeternal." + clave);
+        Text etiqueta = Text.translatable("pokepad.lunaeternal." + clave(est));
 
-        // ⚠⚠ EL BOTON SE MIDE, NO SE FIJA A OJO.
+        // ---- el precio primero, porque es el que NO se puede recortar
+        int altoPrecio = 18;
+        Text precio = est == Cosmetico.Estado.COMPRAR
+                ? Text.literal(String.valueOf(c.precio()))
+                : Text.translatable("pokepad.lunaeternal.tuyo");
+        int finPrecio = est == Cosmetico.Estado.COMPRAR
+                ? ax + 36 + anchoArte(precio, altoPrecio)
+                : ax + 10 + anchoArte(precio, 16);
+
+        // ---- y el boton se queda con lo que sobra
         //
-        // Con un ancho escrito a mano el precio se montaba encima y la tienda
-        // enseñaba "3.COMPRAR" donde ponia 2500 -- un precio DIEZ VECES MENOR.
-        // Se calcula del texto real y se deja siempre hueco para el precio.
-        int botonTexto = 18;
-        int bw = Math.min(aw - 74, anchoArte(etiqueta, botonTexto) + 20);
-        int bx = ax + aw - 10 - bw;
+        // ⚠⚠ ASI ES COMO SE ARREGLA DE VERDAD, Y NO RESERVANDO UN HUECO FIJO.
+        //
+        // Antes ponia `bw = min(aw - 74, ...)`: 74 pixeles de reserva a ojo. Un
+        // precio de cuatro cifras necesita mas, asi que el boton se comia el
+        // ultimo digito y la tienda enseñaba "250" donde ponia 2500 -- un precio
+        // DIEZ VECES MENOR, otra vez, y otra vez sin dar ningun error.
+        //
+        // Ahora el hueco se MIDE del precio real, y si lo que queda no da para
+        // "COMPRAR" a cuerpo 18, se encoge la LETRA del boton en vez de invadir
+        // el precio. El precio siempre gana: es el dato que no se puede mentir.
+        int bx = finPrecio + 10;
+        int bw = ax + aw - 10 - bx;
+        if (bw < 40) {
+            return;                       // celda absurda: mejor sin boton que encima del precio
+        }
+        int altoBoton = 18;
+        int necesita = anchoArte(etiqueta, altoBoton) + 14;
+        if (necesita > bw) {
+            altoBoton = Math.max(10, altoBoton * (bw - 14) / Math.max(1, anchoArte(etiqueta, altoBoton)));
+        }
+
+        if (est == Cosmetico.Estado.COMPRAR) {
+            int m = pl(22);
+            dibujarTextura(ctx, MONEDA, px(ax + 10), py(ay + ah / 2) - m / 2, m, m, 100, 100);
+            texto(ctx, precio, ax + 36, ay + ah / 2 - altoPrecio / 2, altoPrecio,
+                    TEXTO_OSCURO, false, true);
+        } else {
+            texto(ctx, precio, ax + 10, ay + ah / 2 - 8, 16, TEXTO_SUAVE, false, true);
+        }
 
         int relleno = switch (est) {
             case COMPRAR -> BORDE_ENCIMA;
@@ -381,20 +409,29 @@ public class CosmeticosScreen extends Screen {
             case EQUIPADO -> 0xFFCEDCF4;
         };
         int tinta = est == Cosmetico.Estado.EQUIPADO ? 0xFF185C34 : 0xFFFFFFFF;
-
-        if (est == Cosmetico.Estado.COMPRAR) {
-            int m = pl(22);
-            dibujarTextura(ctx, MONEDA, px(ax + 10), py(ay + ah / 2) - m / 2, m, m, 100, 100);
-            texto(ctx, Text.literal(String.valueOf(c.precio())),
-                    ax + 36, ay + ah / 2 - 10, 20, TEXTO_OSCURO, false, true);
-        } else {
-            texto(ctx, Text.translatable("pokepad.lunaeternal.tuyo"),
-                    ax + 10, ay + ah / 2 - 8, 16, TEXTO_SUAVE, false, true);
-        }
-
         ctx.fill(px(bx), py(ay + 4), px(bx + bw), py(ay + ah - 4), relleno);
-        texto(ctx, etiqueta, bx + bw / 2, ay + ah / 2 - botonTexto / 2, botonTexto,
+        texto(ctx, etiqueta, bx + bw / 2, ay + ah / 2 - altoBoton / 2, altoBoton,
                 tinta, true, false);
+    }
+
+    private static String clave(Cosmetico.Estado est) {
+        return switch (est) {
+            case COMPRAR -> "comprar";
+            case DE_EVENTO -> "evento";
+            case EQUIPAR -> "equipar";
+            case EQUIPADO -> "equipado";
+        };
+    }
+
+    /** El area del boton, CALCULADA IGUAL que al dibujarlo. Ver `dibujarPie`. */
+    private int botonX(Cosmetico c, int ax, int aw) {
+        Cosmetico.Estado est = c.estado();
+        Text precio = est == Cosmetico.Estado.COMPRAR
+                ? Text.literal(String.valueOf(c.precio()))
+                : Text.translatable("pokepad.lunaeternal.tuyo");
+        return (est == Cosmetico.Estado.COMPRAR
+                ? ax + 36 + anchoArte(precio, 18)
+                : ax + 10 + anchoArte(precio, 16)) + 10;
     }
 
     // ---- interacción -------------------------------------------------------
@@ -459,19 +496,13 @@ public class CosmeticosScreen extends Screen {
             // parte del artículo que además COBRA es cómo se gasta dinero sin
             // querer.
             enfocado = c;
-            // El area del boton se calcula IGUAL que al dibujarlo. Si las dos
-            // formulas se separan, el jugador pulsa donde ve el boton y no pasa
-            // nada -- o peor, compra pulsando al lado.
-            Text etiqueta = Text.translatable("pokepad.lunaeternal."
-                    + switch (c.estado()) {
-                        case COMPRAR -> "comprar";
-                        case DE_EVENTO -> "evento";
-                        case EQUIPAR -> "equipar";
-                        case EQUIPADO -> "equipado";
-                    });
-            int bw = Math.min(cw - 74, anchoArte(etiqueta, 18) + 20);
-            int bx = ax + cw - 10 - bw;
-            if (dentro(rx, ry, px(bx), py(ay + ch - PIE + 4), pl(bw), pl(PIE - 8))) {
+            // El area del boton se calcula IGUAL que al dibujarlo, con la
+            // misma funcion. Si las dos formulas se separan, el jugador pulsa
+            // donde ve el boton y no pasa nada -- o peor, compra pulsando al
+            // lado del precio.
+            int bx = botonX(c, ax, cw);
+            int bw = ax + cw - 10 - bx;
+            if (bw >= 40 && dentro(rx, ry, px(bx), py(ay + ch - PIE + 4), pl(bw), pl(PIE - 8))) {
                 accion(c);
             } else {
                 sonar(true);

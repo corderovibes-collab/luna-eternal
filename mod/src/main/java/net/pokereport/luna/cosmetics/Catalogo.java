@@ -50,6 +50,21 @@ public final class Catalogo {
      */
     public record Pieza(String id, String categoria, String especie,
                         String aspecto, int precio) {
+
+        /**
+         * ¿Es una criatura de Minecraft en vez de un Pokémon?
+         *
+         * <p>Se distingue por el <b>espacio de nombres</b> y no por una columna
+         * aparte: {@code minecraft:bee} y {@code cobblemon:eevee} ya llevan la
+         * respuesta dentro. Una bandera extra podría contradecir al
+         * identificador, y entonces habría dos verdades.
+         *
+         * <p>Importa porque las dibuja código distinto: las de Cobblemon con su
+         * renderizador de modelos, y estas con el de entidades de vanilla.
+         */
+        public boolean esDeMinecraft() {
+            return especie.startsWith("minecraft:");
+        }
     }
 
     public static final String MASCOTAS = "mascotas";
@@ -83,7 +98,29 @@ public final class Catalogo {
             new Pieza("carbink_royal", MASCOTAS, "cobblemon:carbink", "royal", 2800),
             new Pieza("blissey_easter", MASCOTAS, "cobblemon:blissey", "easter", 1600),
             new Pieza("drampa_newyear", MASCOTAS, "cobblemon:drampa", "newyear", 0),
-            new Pieza("gardevoir_icedragon", MASCOTAS, "cobblemon:gardevoir", "icedragon", 0)
+            new Pieza("gardevoir_icedragon", MASCOTAS, "cobblemon:gardevoir", "icedragon", 0),
+
+            // ---- criaturas de Minecraft ------------------------------------
+            //
+            // Peticion del usuario, y encaja mejor con la palabra "mascota" que
+            // un Charizard: son bichos PEQUEÑOS, no compiten con el Pokemon que
+            // llevas, y a nadie le confunden con jugabilidad.
+            //
+            // ⚠ Se eligen SOLO especies pequeñas. Una vaca o un Ravager caben
+            //   en el catalogo igual de bien, y en la celda taparian el precio;
+            //   en el mundo, andando detras de ti, serian un estorbo.
+            //
+            // ⚠ Y NINGUNA HOSTIL. Un Creeper de mascota es gracioso hasta que
+            //   alguien no distingue el tuyo de uno de verdad y muere por ello.
+            //   La regla: si su modelo se parece a algo que mata, fuera.
+            new Pieza("mc_bee", MASCOTAS, "minecraft:bee", "", 900),
+            new Pieza("mc_axolotl", MASCOTAS, "minecraft:axolotl", "", 1100),
+            new Pieza("mc_rabbit", MASCOTAS, "minecraft:rabbit", "", 700),
+            new Pieza("mc_cat", MASCOTAS, "minecraft:cat", "", 1300),
+            new Pieza("mc_fox", MASCOTAS, "minecraft:fox", "", 1400),
+            new Pieza("mc_parrot", MASCOTAS, "minecraft:parrot", "", 1200),
+            new Pieza("mc_frog", MASCOTAS, "minecraft:frog", "", 800),
+            new Pieza("mc_allay", MASCOTAS, "minecraft:allay", "", 2400)
     );
 
     private static final Map<String, Pieza> POR_ID =

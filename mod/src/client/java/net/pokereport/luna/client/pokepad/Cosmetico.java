@@ -64,8 +64,22 @@ public record Cosmetico(
         EQUIPADO
     }
 
-    /** Las mascotas se dibujan con el renderizador de Cobblemon; el resto, no. */
+    /** Tiene algo que dibujar en 3D. */
     public boolean esMascota() {
         return !especie.isEmpty();
+    }
+
+    /**
+     * Criatura de Minecraft en vez de Pokémon.
+     *
+     * <p>Se distingue por el <b>espacio de nombres</b>, no por una bandera
+     * aparte: {@code minecraft:bee} y {@code cobblemon:eevee} ya llevan la
+     * respuesta dentro, y una bandera extra podría contradecir al identificador.
+     *
+     * <p>Importa porque las dibuja código distinto: Cobblemon tiene su propio
+     * renderizador de modelos, y estas van por el de entidades de vanilla.
+     */
+    public boolean esDeMinecraft() {
+        return especie.startsWith("minecraft:");
     }
 }

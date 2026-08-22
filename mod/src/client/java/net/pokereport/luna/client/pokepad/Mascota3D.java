@@ -95,6 +95,11 @@ public final class Mascota3D {
     /**
      * Pinta el cosmético centrado en la caja dada, en coordenadas ya escaladas.
      *
+     * @param animar solo el que esta bajo el raton se anima. Es lo que hace el
+     *               PC de Cobblemon, y no es solo por rendimiento: ocho modelos
+     *               animandose a la vez en una rejilla es ruido visual, y con la
+     *               animacion parada se aprecia mejor el disfraz, que es lo que
+     *               se esta vendiendo
      * @param escala tamaño del modelo. No es el de la caja: un Wailord y un
      *               Joltik con el mismo número salen igual de altos, que es lo
      *               que se quiere en una rejilla — si cada uno saliera a su
@@ -102,12 +107,16 @@ public final class Mascota3D {
      */
     public static void dibujar(DrawContext ctx, Cosmetico c,
                                int x, int y, int ancho, int alto,
-                               float escala, float delta) {
+                               float escala, float delta, boolean animar) {
         if (!c.esMascota()) {
             return;
         }
         Identifier especie = Identifier.tryParse(c.especie());
         if (especie == null) {
+            return;
+        }
+        if (c.esDeMinecraft()) {
+            dibujarCriatura(ctx, c, especie, x, y, ancho, alto, escala);
             return;
         }
 
@@ -119,22 +128,6 @@ public final class Mascota3D {
                 ? Set.of()
                 : Set.of(c.aspecto()));
 
-        // ⚠⚠ VACIAR EL BUFER DE LA INTERFAZ ANTES DEL 3D. ESTO ES LO QUE QUITA
-        //    EL PARPADEO.
-        //
-        // `DrawContext` no dibuja al momento: acumula los rectangulos y texturas
-        // en un bufer y los vuelca al final. `drawProfilePokemon`, en cambio,
-        // dibuja YA, tocando la matriz y el estado de OpenGL por su cuenta.
-        //
-        // Mezclados, el orden de lo 2D y lo 3D cambia de un fotograma a otro
-        // segun cuando le toque volcar al bufer: los modelos aparecian delante
-        // y detras de las celdas alternativamente, y eso es lo que se ve como
-        // titileo. No es el modelo: es quien pinta primero.
-        //
-        // Vaciando antes y despues, cada cosa cae en su sitio y el orden deja
-        // de depender del azar.
-        ctx.draw();
-
         // ⚠ RECORTE. Sin él, un modelo alto se sale de su celda y se dibuja
         // encima de la de al lado — y como el 3D no respeta el orden de dibujado
         // de la interfaz, tapa también los precios.
@@ -142,9 +135,16 @@ public final class Mascota3D {
 
         MatrixStack m = ctx.getMatrices();
         m.push();
-        // Al centro de la caja, y un poco abajo: un modelo cuelga de su origen,
-        // así que centrarlo de verdad lo deja flotando en la mitad de arriba.
-        m.translate(x + ancho / 2.0, y + alto * 0.62, 100.0);
+        // ⚠⚠ Z = 0, NO 100. AQUI ESTABA EL TITILEO.
+        //
+        // Con z=100 el modelo se dibuja a una profundidad distinta de la de la
+        // interfaz, y la prueba de profundidad decide de forma inestable quien
+        // queda delante: el modelo aparecia y desaparecia entre fotogramas.
+        //
+        // El PC de Cobblemon --que dibuja una rejilla igual que esta-- traslada
+        // a z=0 y NO toca el bufer ni el estado de OpenGL. Se copia su receta en
+        // vez de inventar otra: la suya lleva años funcionando en produccion.
+        m.translate(x + ancho / 2.0, y + alto * 0.62, 0.0);
 
         try {
             PokemonGuiUtilsKt.drawProfilePokemon(
@@ -153,7 +153,7 @@ public final class Mascota3D {
                     GIRO,               // rotation
                     PoseType.PROFILE,   // poseType
                     estado,             // state
-                    delta,              // partialTicks
+                    animar ? delta : 0f, // partialTicks: ver `animar`
                     escala,             // scale
                     true,               // applyProfileTransform
                     false,              // applyBaseScale: ver el javadoc de `escala`
@@ -175,10 +175,62 @@ public final class Mascota3D {
             }
         } finally {
             m.pop();
-            // Y se vacia otra vez: lo que el modelo haya dejado en vuelo tiene
-            // que salir ANTES de que la interfaz siga dibujando encima.
-            ctx.draw();
             ctx.disableScissor();
         }
     }
+
+    /**
+     * Una criatura de Minecraft, con el renderizador de entidades de vanilla.
+     *
+     * <p>Peticion del usuario: "mascotas de verdad", bichos pequeños que no
+     * compiten con el Pokemon que llevas.
+     *
+     * <p>⚠ LA ENTIDAD SE GUARDA, NO SE CREA EN CADA FOTOGRAMA. Crear una
+     * entidad reserva memoria, registra sus datos rastreados y corre su
+     * constructor: hacerlo 60 veces por segundo y por celda es basura para el
+     * recolector a cambio de nada. Y ademas se perderia la pose, asi que la
+     * abeja no batiria las alas.
+     *
+     * <p>⚠ Se crean con el mundo del CLIENTE y no se añaden a el. Son una
+     * maqueta para dibujar: si entraran en el mundo, tendrian fisica, colisiones
+     * y saldrian en las estadisticas.
+     */
+    private static void dibujarCriatura(DrawContext ctx, Cosmetico c, Identifier id,
+                                        int x, int y, int ancho, int alto, float escala) {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        if (cliente.world == null) {
+            return;
+        }
+        net.minecraft.entity.LivingEntity ent = CRIATURAS.get(c.id());
+        if (ent == null) {
+            var tipo = net.minecraft.registry.Registries.ENTITY_TYPE.getOrEmpty(id).orElse(null);
+            if (tipo == null) {
+                if (FALLIDOS.add(c.id())) {
+                    LOG.warn("PokePad: la criatura {} no existe", c.especie());
+                }
+                return;
+            }
+            var creada = tipo.create(cliente.world);
+            if (!(creada instanceof net.minecraft.entity.LivingEntity viva)) {
+                if (FALLIDOS.add(c.id())) {
+                    LOG.warn("PokePad: {} no es una criatura viva", c.especie());
+                }
+                return;
+            }
+            ent = viva;
+            CRIATURAS.put(c.id(), ent);
+        }
+
+        // `drawEntity` recorta por si mismo con el rectangulo que se le pasa, y
+        // mira al raton -- pasandole el centro, la criatura mira de frente en vez
+        // de seguir el cursor por toda la pantalla.
+        int cx = x + ancho / 2, cy = y + alto / 2;
+        net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
+                ctx, x, y, x + ancho, y + alto,
+                Math.round(escala * 0.55f), 0.0f, cx, cy, ent);
+    }
+
+    /** Una criatura por cosmetico. Ver `dibujarCriatura`. */
+    private static final Map<String, net.minecraft.entity.LivingEntity> CRIATURAS =
+            new HashMap<>();
 }

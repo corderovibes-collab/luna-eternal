@@ -21,8 +21,8 @@ QUE ENSEÑA LA MAQUETA
 
   izquierda   arriba el previsualizador 3D del personaje, abajo el saldo de
               LunaCoins con su "+"
-  derecha     cuatro pestañas de categoria y una rejilla 5x2 de celdas, cada una
-              con su cosmetico y su precio
+  derecha     cuatro pestañas de categoria y una rejilla 4x2 de celdas, cada una
+              con su cosmetico, su precio y su boton de compra
 
   Se dibuja UNA celda con el raton encima y UNA ya equipada, que son los dos
   estados que no se pueden juzgar de otra forma.
@@ -78,22 +78,30 @@ from gen_pokepad import (  # noqa: E402
 # Las cuatro categorias decididas por el usuario.
 CATEGORIAS = ["MASCOTAS", "CAPAS", "SOMBREROS", "AURAS"]
 
-# La rejilla. 5x2 = 10 por pagina: con celdas mas grandes caben 8 y la pantalla
-# se ve vacia; con 6 columnas el 3D de dentro no se distingue.
-COLS, FILAS = 5, 2
+# La rejilla. 4x2 = 8 por pagina.
+#
+# ⚠ SE PROBO CON 5 Y NO VALIA. Con 5 columnas la celda mide 144 y el boton de
+#   compra obliga a apilar precio y boton, que cuesta 72 px de alto: el 3D se
+#   quedaba en 124x90 y un Charizard ahi no se distingue. A 4 columnas el pie
+#   cabe en UNA fila de 38 y el 3D sube a 163x147.
+COLS, FILAS = 4, 2
 AIRE = 14          # entre celdas
 MARGEN = 12        # de la rejilla al bisel de la pantalla
 PESTANA_ALTO = 56
 
-# El pie de cada celda: precio ARRIBA y boton ABAJO, apilados.
+# El pie de cada celda: precio y boton EN LA MISMA FILA.
 #
-# ⚠ No caben en la misma fila. La celda mide 144 de ancho y el precio con su
-#   moneda ya se lleva 80; lo que quedaria para el boton son 60 px, donde
-#   "COMPRAR" no entra ni a cuerpo 14. Apilados, el boton ocupa el ancho entero
-#   de la celda y se puede pulsar sin apuntar.
-PIE_PRECIO = 32
-PIE_BOTON = 34
-PIE = PIE_PRECIO + PIE_BOTON + 6
+# ⚠ ESTO SOLO CABE CON 4 COLUMNAS, Y ESE ES EL MOTIVO DE PASAR A 4.
+#
+#   Con 5 columnas la celda medía 144 de ancho: el precio con su moneda se
+#   llevaba 80 y quedaban 60 para el boton, donde "COMPRAR" no entra ni a cuerpo
+#   14. Habia que apilarlos, y apilarlos costaba 72 px de alto -- que salian del
+#   3D, dejandolo en 124x90. Un Charizard ahi se ve diminuto.
+#
+#   A 4 columnas la celda pasa a 183 y los dos caben en una fila de 38. El 3D
+#   recupera 34 px de alto. O sea que pasar a 4 columnas no gana solo anchura:
+#   gana la ALTURA que faltaba, que era el problema de verdad.
+PIE = 38
 
 # Los tres estados de una celda. Son los que hacen falta para que la pantalla se
 # entienda sin explicarla: si no distingues "comprado" de "puesto", la gente
@@ -323,28 +331,49 @@ def main() -> None:
         texto(d, (cx + cw // 2, cyy + (ch - PIE) // 2 + 14), var, fuente(16),
               color=(90, 102, 140, 255))
 
-        # ---- pie: el precio arriba y el boton abajo
+        # ---- pie: precio a la izquierda, boton a la derecha, misma fila
         estado = EQUIPADO if equipada else (EQUIPAR if i == 5 else COMPRAR)
-        py_precio = cyy + ch - PIE + PIE_PRECIO // 2
-        py_boton = cyy + ch - PIE_BOTON - 6
+        pie_cy = cyy + ch - PIE // 2 - 4
+        bw = 84                                   # ancho del boton
+        bx = cx + cw - 10 - bw
 
+        # ⚠⚠ EL PRECIO SE MIDE ANTES DE DIBUJARLO, Y SI NO CABE SE PARA.
+        #
+        # Con el boton a 96 de ancho, "1200" se salia por debajo y el boton se
+        # dibujaba encima: la maqueta enseñaba "120". En una pantalla de compra
+        # eso no es un fallo de maquetacion, es un precio DIEZ VECES MENOR del
+        # que se va a cobrar. Y no daba ningun error: quedaba bonito y mentia.
+        #
+        # Asi que no se confia en que quepa: se mide con la fuente real y se
+        # aborta si el texto invade el boton. Mejor no generar la maqueta que
+        # generar una que miente sobre dinero.
+        f_precio = fuente(19)
         if estado == COMPRAR:
-            im.alpha_composite(moneda.resize((26, 26), Image.LANCZOS),
-                               (cx + 14, py_precio - 13))
-            texto(d, (cx + 46, py_precio), "%d" % precio, fuente(21), anclaje="lm")
+            im.alpha_composite(moneda.resize((22, 22), Image.LANCZOS),
+                               (cx + 12, pie_cy - 11))
+            tx = cx + 38
+            ancho_txt = d.textlength("%d" % precio, font=f_precio)
+            if tx + ancho_txt + 6 > bx:
+                raise SystemExit(
+                    "celda %d: el precio %d no cabe junto al boton (necesita "
+                    "hasta x=%d y el boton empieza en %d). Sube COLS a menos "
+                    "columnas o baja el cuerpo de la fuente."
+                    % (i, precio, int(tx + ancho_txt + 6), bx)
+                )
+            texto(d, (tx, pie_cy), "%d" % precio, f_precio, anclaje="lm")
         else:
             # Ya es tuyo: enseñar el precio otra vez invita a pagarlo dos veces.
-            texto(d, (cx + cw // 2, py_precio), "EN TU COLECCION", fuente(15),
-                  color=(90, 102, 140, 255))
+            texto(d, (cx + 12, pie_cy), "TUYO", fuente(16),
+                  color=(90, 102, 140, 255), anclaje="lm")
 
         etiqueta, relleno, borde, tinta = {
             COMPRAR: ("COMPRAR", BORDE_ENCIMA, (255, 214, 92, 255), (255, 255, 255, 255)),
             EQUIPAR: ("EQUIPAR", (86, 122, 200, 255), (150, 180, 240, 255), (255, 255, 255, 255)),
             EQUIPADO: ("EQUIPADO", (206, 220, 244, 255), (120, 160, 110, 255), (24, 92, 52, 255)),
         }[estado]
-        d.rounded_rectangle([cx + 10, py_boton, cx + cw - 10, py_boton + PIE_BOTON],
+        d.rounded_rectangle([bx, pie_cy - 16, bx + bw, pie_cy + 16],
                             radius=8, fill=relleno, outline=borde, width=3)
-        texto(d, (cx + cw // 2, py_boton + PIE_BOTON // 2), etiqueta, fuente(19),
+        texto(d, (bx + bw // 2, pie_cy), etiqueta, fuente(15),
               color=tinta, contorno=(30, 40, 70, 160) if estado != EQUIPADO
               else TEXTO_CONTORNO)
 

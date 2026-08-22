@@ -217,6 +217,55 @@ def moneda_oro(origen: Path, destino: Path) -> Image.Image:
     return oro
 
 
+def boton_mas(lado: int = 58) -> Image.Image:
+    """El "+" de comprar LunaCoins, DIBUJADO y no cargado de un PNG.
+
+    ⚠ `boton_mas.png` existe (50x40) y no se usa. Es RECTANGULAR y pequeño: al
+      lado de una moneda de 40 y un saldo a cuerpo 34 queda desproporcionado y
+      pierde el peso que necesita el unico boton de la pantalla que lleva a
+      pagar dinero real.
+
+    Dibujarlo tiene dos ventajas sobre pedir arte nuevo. La primera es que sale
+    del mismo sitio que las celdas de la pantalla principal, que tambien se
+    dibujan por codigo: mismo origen, mismo aspecto. La segunda es que el tamaño
+    es un parametro -- si mañana el saldo cambia de cuerpo, el boton acompaña sin
+    volver a exportar nada.
+
+    Los colores son los del chasis, no unos inventados: el naranja del bisel y el
+    ambar de las lineas del marco, que es la pareja que ya usa toda la interfaz.
+    """
+    im = Image.new("RGBA", (lado, lado), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    r = lado // 4
+
+    # Sombra: un cuerpo identico desplazado hacia abajo. Sin ella el boton flota
+    # sobre el panel oscuro en vez de apoyarse en el.
+    d.rounded_rectangle([2, 4, lado - 2, lado - 1], radius=r, fill=(0, 0, 0, 110))
+    d.rounded_rectangle([2, 2, lado - 2, lado - 4], radius=r,
+                        fill=BORDE_ENCIMA, outline=(255, 214, 92, 255), width=3)
+
+    # Brillo superior: media altura mas clara. Es lo que separa un boton de un
+    # cuadrado de color.
+    brillo = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    ImageDraw.Draw(brillo).rounded_rectangle(
+        [6, 6, lado - 6, lado // 2], radius=r - 2, fill=(255, 255, 255, 46))
+    im.alpha_composite(brillo)
+
+    # La cruz. Se dibuja con dos rectangulos y no con texto: una fuente cambia de
+    # maquina a maquina, y este simbolo tiene que salir identico siempre.
+    g = max(4, lado // 8)               # grosor
+    largo = lado // 2
+    cx = cy = lado // 2 - 1
+    for x0, y0, x1, y1 in (
+        (cx - largo // 2, cy - g // 2, cx + largo // 2, cy + g // 2),
+        (cx - g // 2, cy - largo // 2, cx + g // 2, cy + largo // 2),
+    ):
+        d.rectangle([x0 + 1, y0 + 2, x1 + 1, y1 + 2], fill=(120, 40, 0, 150))
+        d.rectangle([x0, y0, x1, y1], fill=(255, 255, 255, 255))
+
+    return im
+
+
 def texto(d: ImageDraw.ImageDraw, xy, s, fuente, color=TEXTO_COLOR,
           contorno=TEXTO_CONTORNO, anclaje="mm"):
     """Texto con contorno, que es lo unico que se lee sobre el fondo casi blanco.
@@ -287,10 +336,12 @@ def main() -> None:
     texto(d, (px0 + 24 + MONEDA + 14, cy), "12.500", fuente(34),
           color=(255, 214, 92, 255), contorno=(20, 22, 28, 255), anclaje="lm")
 
-    # El "+" es el arte que YA EXISTE. Antes se dibujaba a mano aqui, teniendo
-    # `boton_mas.png` al lado: dos "+" distintos en la misma aplicacion.
-    mas = Image.open(BOTONES / "boton_mas.png").convert("RGBA")
-    im.alpha_composite(mas, (px1 - 24 - mas.width, cy - mas.height // 2))
+    SALIDA.mkdir(parents=True, exist_ok=True)
+    # El "+" se DIBUJA. Ver `boton_mas`: el PNG que hay es 50x40 y queda
+    # desproporcionado al lado de una moneda de 40 y un saldo a cuerpo 34.
+    mas = boton_mas(58)
+    im.alpha_composite(mas, (px1 - 22 - mas.width, cy - mas.height // 2))
+    mas.save(SALIDA / "_boton_mas.png")   # suelto, para llevarlo al mod
 
     # ------------------------------------------------------ pestañas
     ancho = sx1 - sx0 - 2 * MARGEN

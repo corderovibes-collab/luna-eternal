@@ -1,0 +1,38 @@
+{
+    "species": "cobblemon:vulpix",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "holiday"
+            ],
+            "model": "cobblemon:vulpix_holiday.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/vulpix/vulpix_holiday.png"
+        },
+        {
+            "aspects": [
+            "shiny",
+            "holiday"
+          ],
+            "model": "cobblemon:vulpix_holiday.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/vulpix/vulpix_holiday_shiny.png"
+        },
+        {
+            "aspects": [
+                "alolan",
+                "holiday"
+            ],
+            "model": "cobblemon:vulpix_alolan_holiday.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/vulpix/vulpix_alolan_holiday.png"
+        },
+        {
+            "aspects": [
+                "alolan",
+                "holiday",
+                "shiny"
+            ],
+            "model": "cobblemon:vulpix_alolan_holiday.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/vulpix/vulpix_alolan_holiday_shiny.png"
+        }
+    ]
+}

@@ -1,0 +1,71 @@
+{
+  "species": "cobblemon:pikachu",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "yellowhat"
+      ],
+      "poser": "cobblemon:pikachu_yellowhat",
+      "model": "cobblemon:pikachu_yellowhat.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pikachu/pikachu_yellowhat.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pikachu/pikachu_yellowhat_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "shiny"
+      ],
+      "model": "cobblemon:pikachu_yellowhat.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pikachu/pikachu_yellowhat_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pikachu/pikachu_yellowhat_shiny_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "female"
+      ],
+      "model": "cobblemon:pikachu_yellowhat_female.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pikachu/pikachu_yellowhat.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pikachu/pikachu_yellowhat_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "shiny",
+        "female"
+      ],
+      "model": "cobblemon:pikachu_yellowhat_female.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pikachu/pikachu_yellowhat_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pikachu/pikachu_yellowhat_shiny_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    }
+  ]
+}

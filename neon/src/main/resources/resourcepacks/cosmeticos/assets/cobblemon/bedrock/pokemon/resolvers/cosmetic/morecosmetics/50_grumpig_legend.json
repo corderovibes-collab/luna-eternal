@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:grumpig",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "legend"
+            ],
+            "model": "cobblemon:grumpig_legend.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/grumpig/grumpig_legend.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "legend"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/grumpig/grumpig_legend_shiny.png"
+        }
+    ]
+}

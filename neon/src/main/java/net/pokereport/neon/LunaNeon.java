@@ -138,6 +138,7 @@ public class LunaNeon implements ModInitializer {
                 Catalogo.MATERIALES.length, ORDEN_CIUDAD.size());
 
         registrarInterfazLuna();
+        registrarCosmeticos();
     }
 
     /**
@@ -215,6 +216,44 @@ public class LunaNeon implements ModInitializer {
      * narices: {@code cobblemon:gyaradosjump} y {@code cobblemon:regionbiasforms}
      * son packs incrustados en su jar, y por eso aparecen solos.
      */
+    /**
+     * Los modelos y texturas de los disfraces de Pokemon.
+     *
+     * <p>Van INCRUSTADOS aqui, con el mismo mecanismo que el revestido de la
+     * interfaz, porque es el unico que se ha demostrado que funciona en este
+     * proyecto: un `.zip` suelto en `resourcepacks/` depende de que el jugador
+     * lo active, y DEFAULT_ENABLED no sirve --el javadoc de Fabric dice que un
+     * resource pack no se puede activar por defecto--.
+     *
+     * <p>⚠ SOLO LOS ASSETS. El `data/` del mismo pack --que es donde se declara
+     * que objeto aplica que aspecto-- va como DATAPACK en el servidor. Meterlo
+     * tambien aqui lo cargaria dos veces.
+     *
+     * <p>⚠ Y ESTO ES LA MITAD DE LA FUNCION, NO UN EXTRA. Sin estos assets, el
+     * servidor aplica el aspecto correctamente y el cliente dibuja el Pokemon
+     * NORMAL: se cobra un disfraz y no se ve. Ya paso, y no dio ningun error.
+     *
+     * <p>CobblemonMoreCosmetics es MIT, asi que redistribuirlo esta permitido
+     * --al contrario que el pack de CobbleVerse (D-037), que solo se referencia--.
+     */
+    private static void registrarCosmeticos() {
+        try {
+            boolean ok = FabricLoader.getInstance().getModContainer(MOD_ID)
+                    .map(mod -> ResourceManagerHelper.registerBuiltinResourcePack(
+                            Identifier.of(MOD_ID, "cosmeticos"), mod,
+                            ResourcePackActivationType.ALWAYS_ENABLED))
+                    .orElse(false);
+            if (ok) {
+                LOG.info("Cosmeticos: modelos de disfraces activados");
+            } else {
+                LOG.warn("Cosmeticos: los modelos NO se registraron "
+                        + "(resourcepacks/cosmeticos) - los disfraces no se veran");
+            }
+        } catch (Throwable e) {
+            LOG.warn("Cosmeticos: no se pudieron registrar los modelos", e);
+        }
+    }
+
     private static void registrarInterfazLuna() {
         // En try/catch a propósito: esto es puramente cosmético y de cliente, y
         // el mismo jar corre en el servidor. Que falle aquí no puede llevarse

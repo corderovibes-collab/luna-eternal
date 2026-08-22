@@ -1,0 +1,15 @@
+{
+  "species": "cobblemon:smoliv",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [ "uva" ],
+      "model": "cobblemon:smoliv_uva.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/smoliv/smoliv_uva.png"
+    },
+    {
+      "aspects": [ "shiny", "uva" ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/smoliv/smoliv_uva_shiny.png"
+    }
+  ]
+}

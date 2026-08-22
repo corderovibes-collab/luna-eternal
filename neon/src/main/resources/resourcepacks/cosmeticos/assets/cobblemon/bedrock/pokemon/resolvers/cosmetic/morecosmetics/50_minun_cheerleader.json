@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:minun",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "cheerleader"
+            ],
+            "model": "cobblemon:minun_cheerleader.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/minun/minun_cheerleader.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "cheerleader"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/minun/minun_cheerleader_shiny.png"
+        }
+    ]
+}

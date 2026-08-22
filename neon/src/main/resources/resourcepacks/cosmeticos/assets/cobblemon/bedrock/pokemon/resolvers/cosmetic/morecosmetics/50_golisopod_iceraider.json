@@ -1,0 +1,21 @@
+{
+    "species": "cobblemon:golisopod",
+    "order": 50,
+    "variations": [
+        {
+          "aspects": [
+            "iceraider"
+          ],
+            "poser": "cobblemon:golisopod_iceraider",
+            "model": "cobblemon:golisopod_iceraider.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/golisopod/golisopod_iceraider.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "iceraider"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/golisopod/golisopod_iceraider_shiny.png"
+        }
+    ]
+}

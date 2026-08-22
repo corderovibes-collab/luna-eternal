@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:lopunny",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "easter"
+            ],
+            "model": "cobblemon:lopunny_easter.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/lopunny/lopunny_easter.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "easter"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/lopunny/lopunny_easter_shiny.png"
+        }
+    ]
+}

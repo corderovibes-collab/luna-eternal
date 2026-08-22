@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:jolteon",
+    "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "valentines"
+      ],
+      "model": "cobblemon:jolteon_valentines.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/jolteon/jolteon_valentines.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "valentines"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/jolteon/jolteon_valentines_shiny.png"
+    }
+  ]
+}

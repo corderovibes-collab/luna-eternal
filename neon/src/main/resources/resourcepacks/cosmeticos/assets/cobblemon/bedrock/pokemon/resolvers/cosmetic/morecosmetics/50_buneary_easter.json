@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:buneary",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "easter"
+            ],
+            "model": "cobblemon:buneary_easter.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/buneary/buneary_easter.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "easter"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/buneary/buneary_easter_shiny.png"
+        }
+    ]
+}

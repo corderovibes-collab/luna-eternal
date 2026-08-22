@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:blissey",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "easter"
+            ],
+            "model": "cobblemon:blissey_easter.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/blissey/blissey_easter.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "easter"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/blissey/blissey_easter_shiny.png"
+        }
+    ]
+}

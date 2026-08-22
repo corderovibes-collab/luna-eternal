@@ -1,0 +1,36 @@
+{
+    "species": "cobblemon:blaziken",
+    "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "magma"
+      ],
+      "model": "cobblemon:blaziken_magma.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/blaziken/blaziken_magma.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "magma"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/blaziken/blaziken_magma_shiny.png"
+    },
+    {
+      "aspects": [
+        "magma",
+        "female"
+      ],
+      "model": "cobblemon:blaziken_magma.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/blaziken/blaziken_magma.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "magma",
+        "female"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/blaziken/blaziken_magma_shiny.png"
+    }
+  ]
+}

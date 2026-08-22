@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:lucario",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "covert"
+            ],
+            "model": "cobblemon:lucario_covert.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/lucario/lucario_covert.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "covert"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/lucario/lucario_covert_shiny.png"
+        }
+    ]
+}

@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:plusle",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "cheerleader"
+            ],
+            "model": "cobblemon:plusle_cheerleader.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/plusle/plusle_cheerleader.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "cheerleader"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/plusle/plusle_cheerleader_shiny.png"
+        }
+    ]
+}

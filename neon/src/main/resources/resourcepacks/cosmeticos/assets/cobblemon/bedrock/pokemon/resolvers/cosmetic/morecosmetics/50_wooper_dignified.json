@@ -1,0 +1,53 @@
+{
+  "species": "cobblemon:wooper",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "dignified"
+      ],
+      "model": "cobblemon:wooper_dignified.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/wooper/wooper_dignified.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "dignified"
+      ],
+      "model": "cobblemon:wooper_dignified.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/wooper/wooper_dignified_shiny.png"
+    },
+    {
+      "aspects": [
+        "dignified",
+        "female"
+      ],
+      "model": "cobblemon:wooper_dignified_female.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/wooper/wooper_dignified_female.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "dignified",
+        "female"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/wooper/wooper_dignified_female_shiny.png"
+    },
+    {
+      "aspects": [
+        "paldean",
+        "dignified"
+      ],
+      "model": "cobblemon:wooper_paldean_dignified.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/wooper/wooper_paldean_dignified.png"
+    },
+    {
+      "aspects": [
+        "paldean",
+        "dignified",
+        "shiny"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/wooper/wooper_paldean_dignified_shiny.png"
+    }
+  ]
+}

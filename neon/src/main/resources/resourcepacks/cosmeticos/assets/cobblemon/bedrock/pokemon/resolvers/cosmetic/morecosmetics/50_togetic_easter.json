@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:togetic",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "easter"
+            ],
+            "model": "cobblemon:togetic_easter.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/togetic/togetic_easter.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "easter"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/togetic/togetic_easter_shiny.png"
+        }
+    ]
+}

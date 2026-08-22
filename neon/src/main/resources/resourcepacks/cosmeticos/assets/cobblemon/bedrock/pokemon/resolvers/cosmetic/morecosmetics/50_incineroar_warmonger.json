@@ -1,0 +1,36 @@
+{
+    "species": "cobblemon:incineroar",
+    "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "warmonger"
+      ],
+      "model": "cobblemon:incineroar_warmonger.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/incineroar/incineroar_warmonger.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/incineroar/incineroar_warmonger_emissive.png",
+          "translucent": true
+        }
+      ]
+    },
+      {
+        "aspects": [
+          "shiny",
+          "warmonger"
+        ],
+        "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/incineroar/incineroar_warmonger_shiny.png",
+        "layers": [
+          {
+            "name": "emissive",
+            "emissive": true,
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/incineroar/incineroar_warmonger_emissive.png",
+            "translucent": true
+          }
+        ]
+      }
+    ]
+}

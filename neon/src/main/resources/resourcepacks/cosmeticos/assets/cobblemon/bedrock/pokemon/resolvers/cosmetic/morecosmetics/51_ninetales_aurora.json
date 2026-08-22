@@ -1,0 +1,42 @@
+{
+    "species": "cobblemon:ninetales",
+    "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "alolan",
+        "aurora"
+      ],
+      "model": "cobblemon:ninetales_alolan_aurora.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ninetales/ninetales_alolan_aurora.png"
+    },
+    {
+      "aspects": [
+        "alolan",
+        "aurora",
+        "shiny"
+      ],
+      "model": "cobblemon:ninetales_alolan_aurora.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ninetales/ninetales_alolan_aurora_shiny.png"
+    },
+    {
+      "aspects": [
+        "alolan",
+        "aurora",
+        "altcolor"
+      ],
+      "model": "cobblemon:ninetales_alolan_aurora.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ninetales/ninetales_alolan_aurora_altcolor.png"
+    },
+    {
+      "aspects": [
+        "alolan",
+        "aurora",
+        "shiny",
+        "altcolor"
+      ],
+      "model": "cobblemon:ninetales_alolan_aurora.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ninetales/ninetales_alolan_aurora_shiny_altcolor.png"
+    }
+  ]
+}

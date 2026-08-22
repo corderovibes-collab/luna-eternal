@@ -1,0 +1,44 @@
+{
+    "portraitScale": 1.8,
+    "portraitTranslation": [-0.2, 1.5, 0],
+    "profileScale": 0.5,
+    "profileTranslation": [0, 1.0, 0],
+    "rootBone": "gardevoir_icedragon",
+    "animations": {
+      "cry": "q.bedrock_stateful('gardevoir_icedragon', 'cry')"
+    },
+    "poses": {
+      "battle-standing": {
+        "poseTypes": ["STAND"],
+        "isBattle": true,
+        "animations": [
+          "q.look('head')",
+          "q.bedrock('gardevoir_icedragon', 'battle_idle')"
+        ],
+        "quirks": ["q.bedrock_quirk('gardevoir_icedragon', 'blink')"]
+      },
+      "standing": {
+        "poseTypes": ["STAND", "NONE", "PORTRAIT", "PROFILE"],
+        "isBattle": false,
+        "animations": [
+          "q.look('head')",
+          "q.bedrock('gardevoir_icedragon', 'ground_idle')"
+        ],
+        "quirks": [
+          "q.bedrock_quirk('gardevoir_icedragon', 'blink')"
+        ]
+      },
+      "walking": {
+        "poseTypes": ["WALK"],
+        "animations": [
+          "q.look('head')",
+          "q.bedrock('gardevoir_icedragon', 'ground_walk')"
+        ],
+        "quirks": ["q.bedrock_quirk('gardevoir_icedragon', 'blink')"]
+      },
+      "sleep": {
+        "poseTypes": ["SLEEP"],
+        "animations": ["q.bedrock('gardevoir_icedragon', 'sleep')"]
+      }
+    }
+   }

@@ -1,0 +1,39 @@
+{
+    "species": "cobblemon:weavile",
+    "order": 50,
+    "variations": [
+      {
+        "aspects": [
+          "skier"
+        ],
+        "poser": "cobblemon:weavile_skier",
+        "model": "cobblemon:weavile_skier.geo",
+        "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/weavile/weavile_skier.png"
+      },
+      {
+        "aspects": [
+          "shiny",
+          "skier"
+        ],
+        "model": "cobblemon:weavile_skier.geo",
+        "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/weavile/weavile_skier_shiny.png"
+      },
+      {
+        "aspects": [
+          "female",
+          "skier"
+        ],
+        "model": "cobblemon:weavile_skier_female.geo",
+        "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/weavile/weavile_skier.png"
+      },
+      {
+        "aspects": [
+          "female",
+          "holiday",
+          "skier"
+        ],
+        "model": "cobblemon:weavile_skier_female.geo",
+        "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/weavile/weavile_skier_shiny.png"
+      }
+    ]
+}

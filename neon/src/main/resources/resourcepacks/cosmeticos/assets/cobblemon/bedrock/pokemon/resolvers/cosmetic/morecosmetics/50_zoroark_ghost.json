@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:zoroark",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "ghost"
+            ],
+            "model": "cobblemon:zoroark_ghost.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/zoroark/zoroark_ghost.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "ghost"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/zoroark/zoroark_ghost_shiny.png"
+        }
+    ]
+}

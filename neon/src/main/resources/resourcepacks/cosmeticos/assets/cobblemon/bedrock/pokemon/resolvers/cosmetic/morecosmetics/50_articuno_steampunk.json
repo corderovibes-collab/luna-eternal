@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:articuno",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "steampunk"
+            ],
+            "model": "cobblemon:articuno_steampunk.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/articuno/articuno_steampunk.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "steampunk"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/articuno/articuno_steampunk_shiny.png"
+        }
+    ]
+}

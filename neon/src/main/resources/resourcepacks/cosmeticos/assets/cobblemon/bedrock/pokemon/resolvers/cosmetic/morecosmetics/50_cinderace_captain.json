@@ -1,0 +1,35 @@
+{
+  "species": "cobblemon:cinderace",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [ "captain" ],
+      "poser": "cobblemon:cinderace_captain",
+      "model": "cobblemon:cinderace_captain.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/cinderace/cinderace_captain.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/cinderace/cinderace_captain_emissive.png",
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "shiny",
+        "captain"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/cinderace/cinderace_captain_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/cinderace/cinderace_captain_shiny_emissive.png",
+          "translucent": true
+        }
+      ]
+    }
+  ]
+}

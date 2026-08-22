@@ -1,0 +1,38 @@
+{
+    "species": "cobblemon:ninetales",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "holiday"
+            ],
+            "model": "cobblemon:ninetales_holiday.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ninetales/ninetales_holiday.png"
+        },
+        {
+            "aspects": [
+            "shiny",
+            "holiday"
+          ],
+            "model": "cobblemon:ninetales_holiday.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ninetales/ninetales_holiday_shiny.png"
+        },
+        {
+            "aspects": [
+                "alolan",
+                "holiday"
+            ],
+            "model": "cobblemon:ninetales_alolan_holiday.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ninetales/ninetales_alolan_holiday.png"
+        },
+        {
+            "aspects": [
+                "alolan",
+                "holiday",
+                "shiny"
+            ],
+            "model": "cobblemon:ninetales_alolan_holiday.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ninetales/ninetales_alolan_holiday_shiny.png"
+        }
+    ]
+}

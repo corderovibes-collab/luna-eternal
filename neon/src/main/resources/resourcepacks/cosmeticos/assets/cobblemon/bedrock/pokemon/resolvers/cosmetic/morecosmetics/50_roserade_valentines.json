@@ -1,0 +1,36 @@
+{
+    "species": "cobblemon:roserade",
+    "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "valentines"
+      ],
+      "model": "cobblemon:roserade_valentines.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/roserade/roserade_valentines.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "valentines"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/roserade/roserade_valentines_shiny.png"
+    },
+    {
+      "aspects": [
+        "valentines",
+        "female"
+      ],
+      "model": "cobblemon:roserade_valentines_female.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/roserade/roserade_valentines.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "valentines",
+        "female"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/roserade/roserade_valentines_shiny.png"
+    }
+  ]
+}

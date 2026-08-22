@@ -1,0 +1,32 @@
+{
+  "species": "cobblemon:hooh",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [ "steampunk" ],
+      "poser": "cobblemon:ho_oh_steampunk",
+      "model": "cobblemon:ho_oh_steampunk.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ho_oh/ho_oh_steampunk.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ho_oh/ho_oh_steampunk_emissive.png",
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [ "shiny", "steampunk" ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ho_oh/ho_oh_steampunk_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/ho_oh/ho_oh_steampunk_shiny_emissive.png",
+          "translucent": true
+        }
+      ]
+    }
+  ]
+}

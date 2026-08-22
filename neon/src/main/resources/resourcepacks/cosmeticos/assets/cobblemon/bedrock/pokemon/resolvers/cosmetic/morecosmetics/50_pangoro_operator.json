@@ -1,0 +1,19 @@
+{
+  "species": "cobblemon:pangoro",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [ "operator" ],
+      "poser": "cobblemon:pangoro_operator",
+      "model": "cobblemon:pangoro_operator.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pangoro/pangoro_operator.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "operator"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pangoro/pangoro_operator_shiny.png"
+    }
+  ]
+}

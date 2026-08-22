@@ -1,0 +1,68 @@
+{
+  "species": "cobblemon:pichu",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "yellowhat"
+      ],
+      "poser": "cobblemon:pichu_yellowhat",
+      "model": "cobblemon:pichu_yellowhat.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pichu/pichu_yellowhat.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pichu/pichu_yellowhat_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "shiny"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pichu/pichu_yellowhat_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pichu/pichu_yellowhat_shiny_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "female"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pichu/pichu_yellowhat.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pichu/pichu_yellowhat_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "shiny",
+        "female"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pichu/pichu_yellowhat_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/pichu/pichu_yellowhat_shiny_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    }
+  ]
+}

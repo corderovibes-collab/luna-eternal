@@ -1,0 +1,56 @@
+{
+  "species": "cobblemon:typhlosion",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [ "chef" ],
+      "model": "cobblemon:typhlosion_chef.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/typhlosion/typhlosion_chef.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/typhlosion/typhlosion_chef_emissive.png",
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [ "shiny", "chef" ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/typhlosion/typhlosion_chef_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/typhlosion/typhlosion_chef_emissive.png",
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [ "chef", "hisuian" ],
+      "model": "cobblemon:typhlosion_hisuian_chef.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/typhlosion/typhlosion_hisuian_chef.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/typhlosion/typhlosion_hisuian_chef_emissive.png",
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [ "shiny", "chef", "hisuian" ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/typhlosion/typhlosion_hisuian_chef_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/typhlosion/typhlosion_hisuian_chef_shiny_emissive.png",
+          "translucent": true
+        }
+      ]
+    }
+  ]
+}

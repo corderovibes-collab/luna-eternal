@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:togepi",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "easter"
+            ],
+            "model": "cobblemon:togepi_easter.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/togepi/togepi_easter.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "easter"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/togepi/togepi_easter_shiny.png"
+        }
+    ]
+}

@@ -1,0 +1,32 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "cobblemonarmory:item/dp_boots_default"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 6584
+      },
+      "model": "morearmors:item/greninja_boots"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 6588
+      },
+      "model": "morearmors:item/shiny_greninja_boots"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 7244
+      },
+      "model": "morearmors:item/decidueye_boots"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 7248
+      },
+      "model": "morearmors:item/shiny_decidueye_boots"
+    }
+  ]
+}

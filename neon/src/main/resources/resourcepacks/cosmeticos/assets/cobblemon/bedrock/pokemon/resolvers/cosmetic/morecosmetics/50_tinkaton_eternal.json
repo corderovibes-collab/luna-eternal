@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:tinkaton",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "eternal"
+            ],
+            "model": "cobblemon:tinkaton_eternal.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/tinkaton/tinkaton_eternal.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "eternal"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/tinkaton/tinkaton_eternal_shiny.png"
+        }
+    ]
+}

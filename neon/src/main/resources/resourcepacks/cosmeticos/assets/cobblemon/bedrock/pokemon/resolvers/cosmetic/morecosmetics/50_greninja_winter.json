@@ -1,0 +1,35 @@
+{
+    "species": "cobblemon:greninja",
+    "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "winter"
+      ],
+      "model": "cobblemon:greninja_winter.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/greninja/greninja_winter.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "winter"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/greninja/greninja_winter_shiny.png"
+    },
+    {
+      "aspects": [
+        "winter",
+        "altcolor"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/greninja/greninja_winter_altcolor.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "winter",
+        "altcolor"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/greninja/greninja_winter_shiny_altcolor.png"
+    }
+  ]
+}

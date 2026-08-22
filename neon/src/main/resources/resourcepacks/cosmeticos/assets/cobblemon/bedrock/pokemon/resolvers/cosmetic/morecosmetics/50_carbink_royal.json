@@ -1,0 +1,20 @@
+{
+  "species": "cobblemon:carbink",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "royal"
+            ],
+            "model": "cobblemon:carbink_royal.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/carbink/carbink_royal.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "royal"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/carbink/carbink_royal_shiny.png"
+        }
+    ]
+}

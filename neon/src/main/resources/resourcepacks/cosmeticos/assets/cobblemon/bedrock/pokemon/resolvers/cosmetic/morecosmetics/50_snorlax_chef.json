@@ -1,0 +1,21 @@
+{
+    "species": "cobblemon:snorlax",
+    "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "chef"
+      ],
+      "poser": "cobblemon:snorlax_chef",
+      "model": "cobblemon:snorlax_chef.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/snorlax/snorlax_chef.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "chef"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/snorlax/snorlax_chef_shiny.png"
+    }
+  ]
+}

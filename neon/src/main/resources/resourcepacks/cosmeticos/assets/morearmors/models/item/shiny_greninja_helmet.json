@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "morearmors:item/shiny_greninja_helmet"
+  }
+}

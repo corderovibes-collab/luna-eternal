@@ -1,0 +1,16 @@
+{
+  "species": "cobblemon:sawk",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [ "festival" ],
+      "poser": "cobblemon:sawk_festival",
+      "model": "cobblemon:sawk_festival.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/sawk/sawk_festival.png"
+    },
+    {
+      "aspects": [ "shiny", "festival" ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/sawk/sawk_festival_shiny.png"
+    }
+  ]
+}

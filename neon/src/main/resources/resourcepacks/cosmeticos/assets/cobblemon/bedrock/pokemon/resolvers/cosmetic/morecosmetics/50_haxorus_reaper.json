@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:haxorus",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "reaper"
+            ],
+            "model": "cobblemon:haxorus_reaper.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/haxorus/haxorus_reaper.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "reaper"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/haxorus/haxorus_reaper_shiny.png"
+        }
+    ]
+}

@@ -1,0 +1,32 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "cobblemonarmory:item/dp_leggings_default"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 6583
+      },
+      "model": "morearmors:item/greninja_leggings"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 6587
+      },
+      "model": "morearmors:item/shiny_greninja_leggings"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 7243
+      },
+      "model": "morearmors:item/decidueye_leggings"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 7247
+      },
+      "model": "morearmors:item/shiny_decidueye_leggings"
+    }
+  ]
+}

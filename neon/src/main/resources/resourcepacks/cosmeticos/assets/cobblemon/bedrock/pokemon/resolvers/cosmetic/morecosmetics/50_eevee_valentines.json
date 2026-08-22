@@ -1,0 +1,36 @@
+{
+    "species": "cobblemon:eevee",
+    "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "valentines"
+      ],
+      "model": "cobblemon:eevee_valentines.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/eevee/eevee_valentines.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "valentines"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/eevee/eevee_valentines_shiny.png"
+    },
+    {
+      "aspects": [
+        "valentines",
+        "female"
+      ],
+      "model": "cobblemon:eevee_valentines_female.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/eevee/eevee_valentines.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "valentines",
+        "female"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/eevee/eevee_valentines_shiny.png"
+    }
+  ]
+}

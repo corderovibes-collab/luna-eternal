@@ -1,0 +1,51 @@
+{
+  "species": "cobblemon:charizard",
+  "order": 101,
+  "variations": [
+    {
+      "aspects": [
+        "mega_y",
+        "knight"
+      ],
+      "model": "cobblemon:charizard_knight_mega_y.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/msd/charizard_knight_mega_y.png",
+      "layers": [
+        {
+          "name": "flame",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/msd/blank.png",
+          "emissive": true,
+          "translucent": true
+        },
+        {
+          "name": "glow",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/msd/charizard_mega_y_glow.png",
+          "emissive": true,
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "mega_y",
+        "knight",
+        "shiny"
+      ],
+      "model": "cobblemon:charizard_knight_mega_y.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/msd/charizard_knight_mega_y_shiny.png",
+      "layers": [
+        {
+          "name": "flame",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/msd/blank.png",
+          "emissive": true,
+          "translucent": true
+        },
+        {
+          "name": "glow",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/msd/charizard_mega_y_glow.png",
+          "emissive": true,
+          "translucent": true
+        }
+      ]
+    }
+  ]
+}

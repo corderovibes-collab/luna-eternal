@@ -1,0 +1,16 @@
+{
+  "species": "cobblemon:throh",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [ "festival" ],
+      "poser": "cobblemon:throh_festival",
+      "model": "cobblemon:throh_festival.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/throh/throh_festival.png"
+    },
+    {
+      "aspects": [ "shiny", "festival" ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/throh/throh_festival_shiny.png"
+    }
+  ]
+}

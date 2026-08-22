@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:cyclizar",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "ancient"
+            ],
+            "model": "cobblemon:cyclizar_ancient.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/cyclizar/cyclizar_ancient.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "ancient"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/cyclizar/cyclizar_ancient_shiny.png"
+        }
+    ]
+}

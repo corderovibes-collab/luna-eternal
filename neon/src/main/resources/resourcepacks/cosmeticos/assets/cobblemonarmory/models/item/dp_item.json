@@ -1,0 +1,14 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "cobblemonarmory:item/dp_item_default"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 69
+      },
+      "model": "namespace:item/charizard_scales"
+    }
+  ]
+}

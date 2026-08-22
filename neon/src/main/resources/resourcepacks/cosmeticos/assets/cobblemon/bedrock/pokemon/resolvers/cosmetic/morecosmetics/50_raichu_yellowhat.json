@@ -1,0 +1,103 @@
+{
+  "species": "cobblemon:raichu",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "yellowhat"
+      ],
+      "model": "cobblemon:raichu_yellowhat.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_yellowhat.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_yellowhat_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "shiny"
+      ],
+      "model": "cobblemon:raichu_yellowhat.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_yellowhat_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_yellowhat_shiny_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "female"
+      ],
+      "model": "cobblemon:raichu_yellowhat_female.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_yellowhat.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_yellowhat_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "shiny",
+        "female"
+      ],
+      "model": "cobblemon:raichu_yellowhat_female.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_yellowhat_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_yellowhat_shiny_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "alolan"
+      ],
+      "model": "cobblemon:raichu_alolan_yellowhat.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_alolan_yellowhat.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_alolan_yellowhat_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "yellowhat",
+        "shiny",
+        "alolan"
+      ],
+      "model": "cobblemon:raichu_alolan_yellowhat.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_alolan_yellowhat_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/raichu/raichu_alolan_yellowhat_shiny_emissive.png",
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    }
+  ]
+}

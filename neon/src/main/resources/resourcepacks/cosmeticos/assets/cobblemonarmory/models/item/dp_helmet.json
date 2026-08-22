@@ -1,0 +1,32 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "cobblemonarmory:item/dp_helmet_default"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 6581
+      },
+      "model": "morearmors:item/greninja_helmet"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 6585
+      },
+      "model": "morearmors:item/shiny_greninja_helmet"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 7241
+      },
+      "model": "morearmors:item/decidueye_helmet"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 7245
+      },
+      "model": "morearmors:item/shiny_decidueye_helmet"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "species": "cobblemon:umbreon",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [ "aurora" ],
+      "model": "cobblemon:umbreon_aurora.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/umbreon/umbreon_aurora.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/umbreon/umbreon_aurora_emissive.png",
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [ "shiny", "aurora" ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/umbreon/umbreon_aurora_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/umbreon/umbreon_aurora_shiny_emissive.png",
+          "translucent": true
+        }
+      ]
+    }
+  ]
+}

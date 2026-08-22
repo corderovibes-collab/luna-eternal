@@ -1,0 +1,74 @@
+{
+  "portraitScale": 2,
+  "portraitTranslation": [-0.09, 0.2, 0],
+  "profileScale": 0.75,
+  "profileTranslation": [0.03, 0.66, 0],
+  "rootBone": "golisopod_iceraider",
+  "animations": {
+    "cry": "q.bedrock_stateful('golisopod_iceraider', 'cry')"
+  },
+  "poses": {
+    "portrait": {
+      "poseName": "portrait",
+      "poseTypes": ["PORTRAIT"],
+      "animations": [
+        "q.bedrock('golisopod_iceraider', 'ground_idle')"
+      ],
+      "quirks": [
+        "q.bedrock_quirk('golisopod_iceraider', 'blink')"
+      ]
+    },
+    "battle-idle": {
+      "poseName": "battle-idle",
+      "isBattle": true,
+      "poseTypes": ["STAND"],
+      "animations": [
+        "q.look('head_ai')",
+        "q.bedrock('golisopod_iceraider', 'battle_idle')"
+
+      ]
+    },
+    "standing": {
+      "poseName": "standing",
+      "isBattle": false,
+      "poseTypes": ["STAND", "PROFILE", "NONE"],
+      "animations": [
+        "q.look('head_ai')",
+        "q.bedrock('golisopod_iceraider', 'ground_idle')"
+      ],
+      "quirks": [
+        "q.bedrock_quirk('golisopod_iceraider', 'blink')"
+      ]
+    },
+    "walk": {
+      "poseName": "walk",
+      "poseTypes": ["WALK"],
+      "condition": "!q.is_sprinting",
+      "animations": [
+        "q.look('head_ai')",
+        "q.bedrock('golisopod_iceraider', 'ground_walk')"
+      ],
+      "quirks": [
+        "q.bedrock_quirk('golisopod_iceraider', 'blink')"
+      ]
+    },
+    "sleep": {
+      "poseName": "sleep",
+      "poseTypes": ["SLEEP"],
+      "isBattle": false,
+      "animations": ["q.bedrock('golisopod_iceraider', 'sleep')"],
+      "namedAnimations": {
+        "cry": "q.bedrock_stateful('dummy', 'cry')"
+      }
+    },
+    "battle-sleep": {
+      "poseName": "battle-sleep",
+      "poseTypes": ["SLEEP"],
+      "isBattle": true,
+      "animations": ["q.bedrock('golisopod_iceraider', 'sleep')"],
+      "namedAnimations": {
+        "cry": "q.bedrock_stateful('dummy', 'cry')"
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "species": "cobblemon:cinderace",
+  "order": 51,
+  "variations": [
+    {
+      "aspects": [ "pastel" ],
+      "model": "cobblemon:cinderace_pastel.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/cinderace/cinderace_pastel.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/0815_cinderace/cinderace_emissive.png",
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "shiny",
+        "pastel"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/cinderace/cinderace_pastel_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/0815_cinderace/cinderace_emissive_shiny.png",
+          "translucent": true
+        }
+      ]
+    }
+  ]
+}

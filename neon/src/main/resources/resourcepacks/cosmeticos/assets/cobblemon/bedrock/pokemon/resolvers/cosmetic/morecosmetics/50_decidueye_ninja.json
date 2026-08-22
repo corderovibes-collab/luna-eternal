@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:decidueye",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "ninja"
+            ],
+            "model": "cobblemon:decidueye_ninja.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/decidueye/decidueye_ninja.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "ninja"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/decidueye/decidueye_ninja_shiny.png"
+        }
+    ]
+}

@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:mimikyu",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "pawmi"
+            ],
+            "model": "cobblemon:mimikyu_pawmi.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/mimikyu/mimikyu_pawmi.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "pawmi"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/mimikyu/mimikyu_pawmi_shiny.png"
+        }
+    ]
+}

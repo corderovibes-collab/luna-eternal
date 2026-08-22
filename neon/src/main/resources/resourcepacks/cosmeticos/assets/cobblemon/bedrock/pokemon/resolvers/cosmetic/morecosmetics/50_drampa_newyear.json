@@ -1,0 +1,20 @@
+{
+    "species": "cobblemon:drampa",
+    "order": 50,
+    "variations": [
+        {
+            "aspects": [
+                "newyear"
+            ],
+            "model": "cobblemon:drampa_newyear.geo",
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/drampa/drampa_newyear.png"
+        },
+        {
+            "aspects": [
+                "shiny",
+                "newyear"
+            ],
+            "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/drampa/drampa_newyear_shiny.png"
+        }
+    ]
+}

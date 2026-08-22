@@ -1,0 +1,21 @@
+{
+  "species": "cobblemon:mewtwo",
+    "order": 50,
+  "variations": [
+    {
+      "aspects": [
+        "covert"
+      ],
+      "poser": "cobblemon:mewtwo_covert",
+      "model": "cobblemon:mewtwo_covert.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/mewtwo/mewtwo_covert.png"
+    },
+    {
+      "aspects": [
+        "shiny",
+        "covert"
+      ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/mewtwo/mewtwo_covert_shiny.png"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+    "portraitScale": 1.5,
+    "portraitTranslation": [-0.13, 2.74, 0],
+    "profileScale": 0.40,
+    "profileTranslation": [0, 1.16, 0],
+    "rootBone": "cinderace_captain",
+    "animations": {
+      "faint": "q.bedrock_primary('cinderace_captain', math.random(0, 1) < 0.25 ? 'faint2' : 'faint', q.curve('one'))",
+      "cry": "q.bedrock_stateful('cinderace_captain', 'cry')",
+      "recoil": "q.bedrock_stateful('cinderace_captain', 'recoil')",
+      "physical": "q.bedrock_primary('cinderace_captain', 'physical', q.curve('symmetrical'))",
+      "special": "q.bedrock_primary('cinderace_captain', 'special', q.curve('symmetrical'))",
+      "status": "q.bedrock_primary('cinderace_captain', 'status', q.curve('symmetrical'))"
+    },
+    "poses": {
+      "battle-standing": {
+        "poseTypes": ["STAND"],
+        "isBattle": true,
+        "animations": [
+          "q.look('head')",
+          "q.bedrock('cinderace_captain', 'battle_idle')"
+        ],
+        "namedAnimations": {
+            "cry": "q.bedrock_primary('cinderace_captain', 'battle_cry', q.curve('one'))"
+          },
+        "quirks": ["q.bedrock_quirk('cinderace_captain', 'blink')"]
+      },
+      "standing": {
+        "poseTypes": ["STAND", "NONE", "PORTRAIT", "PROFILE"],
+        "isBattle": false,
+        "animations": [
+          "q.look('head')",
+          "q.bedrock('cinderace_captain', 'ground_idle')"
+        ],
+        "quirks": [
+          "q.bedrock_quirk('cinderace_captain', 'blink')"
+        ],
+        "transitions": {
+          "battle-standing": "q.bedrock_primary('cinderace_captain', 'battle_intro'), q.curve('symmetrical'))"
+        }
+      },
+      "walking": {
+        "poseTypes": ["WALK"],
+        "animations": [
+          "q.look('head')",
+          "q.bedrock('cinderace_captain', 'ground_walk')"
+        ],
+        "quirks": ["q.bedrock_quirk('cinderace_captain', 'blink')"]
+      },
+    "sleeping": {
+      "poseTypes": ["SLEEP"],
+      "namedAnimations": {
+        "cry": "q.bedrock_stateful('dummy', 'cry')"
+      },
+        "animations": ["q.bedrock('cinderace_captain', 'sleep')"]
+      }
+    }
+   }

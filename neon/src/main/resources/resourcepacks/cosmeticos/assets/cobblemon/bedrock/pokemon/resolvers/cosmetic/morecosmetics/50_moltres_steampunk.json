@@ -1,0 +1,31 @@
+{
+  "species": "cobblemon:moltres",
+  "order": 50,
+  "variations": [
+    {
+      "aspects": [ "steampunk" ],
+      "model": "cobblemon:moltres_steampunk.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/moltres/moltres_steampunk.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/moltres/moltres_steampunk_emissive.png",
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [ "shiny", "steampunk" ],
+      "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/moltres/moltres_steampunk_shiny.png",
+      "layers": [
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/morecosmetics/moltres/moltres_steampunk_shiny_emissive.png",
+          "translucent": true
+        }
+      ]
+    }
+  ]
+}

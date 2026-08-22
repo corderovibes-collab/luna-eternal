@@ -314,26 +314,29 @@ public class CosmeticsService {
             return Resultado.no("Ese disfraz no es para " + pokemon.getSpecies().getName() + ".");
         }
 
-        // ⚠ Se apagan los OTROS disfraces de la misma especie antes de encender
-        //   este. Si no, un Charizard podria acabar con `knight` y `pastel` a la
-        //   vez: dos banderas encendidas son dos aspectos, y el resultado
-        //   depende de cual gane en el resolutor -- o sea, impredecible.
-        for (Catalogo.Pieza otra : Catalogo.todas()) {
-            if (otra.aspecto().isEmpty() || otra.aspecto().equals(pieza.aspecto())) {
-                continue;
-            }
-            var apagar = new com.cobblemon.mod.common.api.pokemon.feature
-                    .FlagSpeciesFeature(otra.aspecto(), false);
-            pokemon.getFeatures().removeIf(f -> otra.aspecto().equals(f.getName()));
-            pokemon.getFeatures().add(apagar);
-            pokemon.markFeatureDirty(apagar);
+        // ⚠⚠ SE APLICA DANDO EL OBJETO, NO ENCENDIENDO UNA BANDERA.
+        //
+        // Estuvo escrito con `FlagSpeciesFeature`, leyendo el repositorio de
+        // GitHub -- que declara los cosmeticos como `species_features`. La
+        // version PUBLICADA del pack usa `cosmetic_items`, que es el sistema
+        // NATIVO de Cobblemon 1.7 y funciona distinto: le das un objeto al
+        // Pokemon y el motor le pone los aspectos.
+        //
+        // Encendiendo la bandera no pasaba nada: Cobblemon no conocia esa
+        // feature, `updateAspects()` no añadia el aspecto, y el jugador se
+        // quedaba con su Pokemon normal despues de pagar.
+        //
+        // `swapCosmeticItem` devuelve el que llevaba, si llevaba alguno. No se
+        // guarda: los disfraces son nuestros, no objetos del inventario, y
+        // devolverselo al jugador crearia un objeto de la nada.
+        var objeto = net.minecraft.registry.Registries.ITEM.getOrEmpty(
+                net.minecraft.util.Identifier.of(pieza.objeto())).orElse(null);
+        if (objeto == null) {
+            LunaEternal.LOG.warn("El cosmetico {} pide el objeto {}, que no existe",
+                    cosmeticId, pieza.objeto());
+            return Resultado.no("Ese cosmético no se puede aplicar ahora mismo.");
         }
-
-        var bandera = new com.cobblemon.mod.common.api.pokemon.feature
-                .FlagSpeciesFeature(pieza.aspecto(), true);
-        pokemon.getFeatures().removeIf(f -> pieza.aspecto().equals(f.getName()));
-        pokemon.getFeatures().add(bandera);
-        pokemon.markFeatureDirty(bandera);
+        pokemon.swapCosmeticItem(new net.minecraft.item.ItemStack(objeto), false);
         pokemon.updateAspects();
 
         return Resultado.si();

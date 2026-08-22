@@ -1,0 +1,26 @@
+{
+  "species": "cobblemon:raichu",
+  "order": 1,
+  "variations": [
+    {
+      "aspects": ["goldhat","alolan"],
+      "model": "cobblemon:raichu_alolan_goldcap.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["goldhat","shiny","alolan"],
+      "model": "cobblemon:raichu_alolan_goldcap.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    }
+  ]
+}

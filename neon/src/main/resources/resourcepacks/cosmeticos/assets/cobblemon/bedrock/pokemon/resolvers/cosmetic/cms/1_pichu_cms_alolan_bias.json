@@ -1,0 +1,26 @@
+{
+  "species": "cobblemon:pichu",
+  "order": 1,
+  "variations": [
+    {
+      "aspects": ["goldhat","region-bias-alola"],
+      "model": "cobblemon:pichu_goldcap_alola_bias.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["goldhat","shiny","region-bias-alola"],
+      "model": "cobblemon:pichu_goldcap_alola_bias.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    }
+  ]
+}

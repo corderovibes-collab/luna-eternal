@@ -1,0 +1,48 @@
+{
+  "species": "cobblemon:gardevoir",
+  "order": 0,
+  "variations": [
+    {
+      "aspects": ["Style"],
+      "model": "cobblemon:gardevoir_fashionable.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/cms/gardevoir/gardevoir_fashionable.png",
+      "layers": [
+        {
+          "name": "style",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/gardevoir/fashionable.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["Style", "shiny"],
+      "model": "cobblemon:gardevoir_fashionable.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/cms/gardevoir/gardevoir_fashionable_shiny.png",
+       "layers": [
+        {
+          "name": "style",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/gardevoir/fashionable.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["Style", "alpha"],
+      "layers": [
+        {
+          "name": "alpha_eyes",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/gardevoir/gardevoir_fashionable_alpha",
+          "emissive": true,
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": ["Style", "mega"],
+       "layers": [
+        {
+          "name": "style",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/gardevoir/texture.png"
+        }
+      ]
+    }
+  ]
+}

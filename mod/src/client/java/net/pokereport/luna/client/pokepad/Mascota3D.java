@@ -160,7 +160,7 @@ public final class Mascota3D {
             // especie. Se dibuja al propio jugador llevandolos puestos, que es lo
             // que se pedia desde el principio: «arriba va a estar un diseño 3D de
             // tu personaje».
-            dibujarJugador(ctx, x, y, ancho, alto);
+            dibujarJugador(ctx, c, x, y, ancho, alto);
             return;
         }
         Identifier especie = Identifier.tryParse(c.especie());
@@ -297,16 +297,31 @@ public final class Mascota3D {
      * <p>El aura NO se dibuja aqui: va en {@link #dibujarAura}, que se llama
      * desde la pasada 2D. Ver alli por que.
      */
-    private static void dibujarJugador(DrawContext ctx,
+    private static void dibujarJugador(DrawContext ctx, Cosmetico c,
                                        int x, int y, int ancho, int alto) {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
         if (cliente.player == null) {
             return;
         }
-        int cx = x + ancho / 2, cy = y + alto / 2;
-        net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
-                ctx, x, y, x + ancho, y + alto,
-                Math.round(Math.min(ancho, alto) * 0.34f), 0.0f, cx, cy, cliente.player);
+        // ⚠ SE PONE Y SE QUITA EN UN try/finally. El dibujado pasa por codigo de
+        //   vanilla que no admite parametros nuestros, asi que la pieza que se
+        //   esta probando viaja en una estatica; si una excepcion se llevara por
+        //   delante el `dejarDeProbar`, el jugador saldria al mundo llevando el
+        //   ultimo sombrero que miro en la tienda SIN HABERLO COMPRADO.
+        boolean probando = "sombreros".equals(c.categoria());
+        if (probando) {
+            net.pokereport.luna.client.Sombreros.probar(c.id());
+        }
+        try {
+            int cx = x + ancho / 2, cy = y + alto / 2;
+            net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
+                    ctx, x, y, x + ancho, y + alto,
+                    Math.round(Math.min(ancho, alto) * 0.34f), 0.0f, cx, cy, cliente.player);
+        } finally {
+            if (probando) {
+                net.pokereport.luna.client.Sombreros.dejarDeProbar();
+            }
+        }
     }
 
     /**

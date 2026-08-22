@@ -78,13 +78,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                     long id = players.resolve(profile.getId(), profile.getName());
                     net.pokereport.luna.gts.GtsDelivery.claimAll(player, id);
 
-                    // El aura, EN LAS DOS DIRECCIONES: la suya a todos y las de
-                    // todos a él. Ver `Red.difundirAura`. Va aquí dentro y no
-                    // fuera porque necesita el `player_id`, que es una consulta.
-                    String suya = cosmetics().equipados(id)
-                            .get(net.pokereport.luna.cosmetics.Catalogo.AURAS);
-                    server.execute(() -> net.pokereport.luna.net.Red
-                            .difundirAura(player, suya, true));
+                    // Los cosmeticos que ven los demas --auras, sombreros,
+                    // capas-- EN LAS DOS DIRECCIONES. Ver `Red.difundirTodo`.
+                    net.pokereport.luna.net.Red.difundirTodo(player);
                 } catch (Exception e) {
                     LOG.error("No se pudieron comprobar las entregas pendientes", e);
                 }

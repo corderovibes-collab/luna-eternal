@@ -151,7 +151,21 @@ public final class CatalogoLuna {
      */
     public static final List<Pieza> CAPAS = List.of();
 
-    public static final List<Pieza> SOMBREROS = List.of();
+    /**
+     * Los sombreros se GENERAN, al contrario que las auras y las capas.
+     *
+     * <p>Y por el mismo criterio que separa las otras dos mitades del catalogo:
+     * su arte viene de packs ajenos --CobbleHats y Cobblemon Accessories-- asi
+     * que la fuente de verdad son esos packs, no este fichero.
+     *
+     * <p>⚠ Se usan sus MODELOS, no su mecanismo. Los dos los aplican con un
+     * OBJETO en la cabeza (calabaza tallada con {@code CustomModelData} uno, CIT
+     * Resewn sobre un casco el otro), y un objeto se cae al morir, se comercia y
+     * <b>se regala</b> — con lo que el cosmetico dejaria de venir solo de
+     * LunaCoins o de eventos, que es lo que dice D-039. Aqui no existe objeto:
+     * el servidor dice quien lleva cual y el cliente lo dibuja.
+     */
+    public static final List<Pieza> SOMBREROS = CatalogoSombreros.PIEZAS;
 
     /** El aura de ese identificador, o {@code null}. */
     public static Aura auraDe(String id) {

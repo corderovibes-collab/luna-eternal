@@ -1,0 +1,46 @@
+{
+  "species": "cobblemon:lucario",
+  "order": 1,
+  "variations": [
+    {
+      "aspects": ["mega_glove"],
+      "poser": "cobblemon:lucario_megaglove",
+      "model": "cobblemon:lucario_mega_glove.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/cms/lucario_megaglove.png",
+       "layers": [
+        {
+          "name": "stone",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/lucario_megaglove_mega.png",
+          "emissive": true,
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": ["mega_glove", "shiny"],
+      "poser": "cobblemon:lucario_megaglove",
+      "model": "cobblemon:lucario_mega_glove.geo",
+      "texture": "cobblemon:textures/pokemon/cosmetic/cms/lucario_glove_shiny.png",
+      "layers": [
+        {
+          "name": "stone",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/lucario_megaglove_mega.png",
+          "emissive": true,
+          "translucent": true
+        }
+      ]
+    },
+     {
+      "aspects": ["mega_glove","mega"],
+      "model": "cobblemon:lucario_mega.geo",
+      "texture": "cobblemon:textures/pokemon/0448_lucario/lucario_mega.png",
+      "layers": []
+    },
+    {
+      "aspects": ["mega_glove","mega", "shiny"],
+      "model": "cobblemon:lucario_mega.geo",
+      "texture": "cobblemon:textures/pokemon/0448_lucario/lucario_mega_shiny.png",
+      "layers": []
+    }
+  ]
+}

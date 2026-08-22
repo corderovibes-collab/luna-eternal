@@ -1,0 +1,26 @@
+{
+  "species": "cobblemon:pichu",
+  "order": 0,
+  "variations": [
+    {
+      "aspects": ["goldhat"],
+      "model": "cobblemon:pichu_goldcap.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["goldhat","shiny"],
+      "model": "cobblemon:pichu_goldcap.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "head": "head",
+
+  "portraitScale": 2.29,
+  "portraitTranslation": [-0.23,2.66,0],
+
+  "profileScale": 0.46,
+  "profileTranslation": [0,1.04,0],
+
+  "animations": {
+
+    "faint": "q.bedrock_primary('lucario_mega_glove', 'faint', q.curve('one'))",
+
+    "cry": "q.bedrock_stateful('lucario_mega_glove', 'cry')",
+
+    "recoil": "q.bedrock_stateful('lucario_mega_glove', 'recoil')",
+
+    "physical": "q.bedrock_primary('lucario_mega_glove', 'physical', q.curve('symmetrical_wide'))",
+
+    "special": "q.bedrock_primary('lucario_mega_glove', 'special', q.curve('symmetrical_wide'))",
+
+    "status": "q.bedrock_primary('lucario_mega_glove', 'status', q.curve('symmetrical_wide'))"
+  },
+
+  "poses": {
+
+    "standing": {
+
+      "poseTypes": ["STAND", "NONE", "PORTRAIT", "PROFILE"],
+
+      "isBattle": false,
+
+      "animations": [
+
+        "q.look('head')",
+
+        "q.bedrock('lucario_mega_glove', 'ground_idle')",
+
+        {
+          "animation": "q.bedrock('lucario_mega_glove', 'item_hold')",
+          "condition": "q.is_holding_item"
+        }
+
+      ],
+
+      "quirks": [
+
+        "q.bedrock_quirk('lucario_mega_glove', 'blink')"
+
+      ]
+    },
+
+    "battle-standing": {
+
+      "poseTypes": ["STAND"],
+
+      "isBattle": true,
+
+      "animations": [
+
+        "q.look('head')",
+
+        "q.bedrock('lucario_mega_glove', 'battle_idle')",
+
+        {
+          "animation": "q.bedrock('lucario_mega_glove', 'item_hold')",
+          "condition": "q.is_holding_item"
+        }
+
+      ],
+
+      "quirks": [
+
+        "q.bedrock_quirk('lucario_mega_glove', 'blink')"
+
+      ]
+    },
+    "shoulder_left": {
+
+      "poseTypes": ["SHOULDER_LEFT"],
+
+      "animations": [
+        "q.look('head')",
+        "q.bedrock('lucario_mega_glove', 'shoulder_left')",
+         {
+          "animation": "q.bedrock('lucario_mega_glove', 'item_hold')",
+          "condition": "q.is_holding_item"
+        }
+      ],
+
+      "quirks": [
+        "q.bedrock_quirk('lucario_mega_glove', 'blink')"
+      ]
+    },
+
+    "shoulder_right": {
+
+      "poseTypes": ["SHOULDER_RIGHT"],
+
+      "animations": [
+        "q.look('head')",
+        "q.bedrock('lucario_mega_glove', 'shoulder_right')",
+         {
+          "animation": "q.bedrock('lucario_mega_glove', 'item_hold')",
+          "condition": "q.is_holding_item"
+        }
+      ],
+
+      "quirks": [
+        "q.bedrock_quirk('lucario_mega_glove', 'blink')"
+      ]
+    },
+    "walking": {
+
+  "poseTypes": ["WALK"],
+
+  "isBattle": false,
+
+  "animations": [
+
+    "q.look('head')",
+
+    "q.bedrock('lucario_mega_glove', 'ground_walk')",
+
+    {
+      "animation": "q.bedrock('lucario_mega_glove', 'item_hold')",
+      "condition": "q.is_holding_item"
+    }
+
+  ],
+
+  "quirks": [
+
+    "q.bedrock_quirk('lucario_mega_glove', 'blink')"
+
+  ]
+
+}
+
+  }
+}

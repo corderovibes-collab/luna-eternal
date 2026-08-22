@@ -1,0 +1,52 @@
+{
+  "species": "cobblemon:mewtwo",
+  "order": 3,
+  "variations": [
+    {
+      "aspects": ["mega_x","shadows"],
+      "poser": "cobblemon:mewtwo_shardow_x",
+      "model": "cobblemon:mewtwo_shardow_x.geo",
+      "texture": "cobblemon:textures/pokemon/0150_mewtwo/mewtwo_shardow_x.png",
+      "layers": [ 
+         {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/0150_mewtwo/mewtwo-shardow_x_emissive.png"
+        }
+      ]
+    },
+     {
+      "aspects": ["mega_x","shadows", "shiny"],
+      "layers": [ 
+         {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/0150_mewtwo/mewtwo-shardow_shiny_x_emissive.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["mega_x","shadows-c"],
+      "poser": "cobblemon:mewtwo_shardow_x",
+      "model": "cobblemon:mewtwo_shardow_x.geo",
+      "texture": "cobblemon:textures/pokemon/0150_mewtwo/mewtwo_shardow_x.png",
+      "layers": [ 
+         {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/0150_mewtwo/mewtwo-shardow_x_emissive.png"
+        }
+      ]
+    },
+     {
+      "aspects": ["mega_x","shadows-c", "shiny"],
+      "layers": [ 
+         {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/0150_mewtwo/mewtwo-shardow_shiny_x_emissive.png"
+        }
+      ]
+    }
+  ]
+}

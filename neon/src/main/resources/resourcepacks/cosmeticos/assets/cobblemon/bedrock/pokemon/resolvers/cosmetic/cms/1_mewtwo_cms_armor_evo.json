@@ -1,0 +1,98 @@
+{
+  "species": "cobblemon:mewtwo",
+  "order": 1,
+  "variations": [
+
+    {
+      "aspects": ["armor_evo"],
+      "model": "cobblemon:mewtwo_armor_evo.geo",
+      "texture":"cobblemon:textures/pokemon/cosmetic/cms/mewtwo_armor_evo.png",
+      "layers": [
+           {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/mewtwo_armor_evo_armor_emissive.png"
+        },
+        {
+          "name": "armor",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/mewtwo_armor_evo_armor.png"
+        },
+        {
+          "name": "lane",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/mewtwo_armor_evo_len.png",
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": ["armor_evo","shiny"],
+      "model": "cobblemon:mewtwo_armor_evo.geo",
+      "texture":"cobblemon:textures/pokemon/cosmetic/cms/mewtwo_armor_evo_shiny.png",
+      "layers": [
+           {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/mewtwo_armor_evo_armor_emissive.png"
+        },
+        {
+          "name": "armor",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/mewtwo_armor_evo_armor.png"
+        },
+        {
+          "name": "lane",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/mewtwo_armor_evo_len.png",
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": ["armor_evo","mega_x"],
+      "model": "cobblemon:mewtwo_x.geo",
+      "layers": [
+        {
+          "name": "armor",
+          "texture": "cobblemon:textures/pokemon/0150_mewtwo/mewtwo_armored_x.png"
+        },
+         {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/blank_layerpng.png"
+        },
+        {
+          "name": "armor",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/blank_layerpng.png"
+        },
+        {
+          "name": "lane",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/blank_layerpng.png",
+          "translucent": true
+        }
+      ]
+    },
+    
+    {
+      "aspects": ["armor_evo","mega_y"],
+      "model": "cobblemon:mewtwo_y.geo",
+      "layers": [
+        {
+          "name": "armor",
+            "texture": "cobblemon:textures/pokemon/0150_mewtwo/mewtwo_armored_x.png"
+        },
+        {
+          "name": "emissive",
+          "emissive": true,
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/blank_layerpng.png"
+        },
+        {
+          "name": "armor",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/blank_layerpng.png"
+        },
+        {
+          "name": "lane",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/blank_layerpng.png",
+          "translucent": true
+        }
+      ]
+    }
+  ]
+}

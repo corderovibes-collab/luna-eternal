@@ -172,6 +172,19 @@ public final class AutoTest {
         check("cada aura tiene su receta y es dibujable", aurasCompletas);
         check("cada aura esta en el catalogo y en su categoria", aurasEnCatalogo);
 
+        // ⚠ EL IDENTIFICADOR DE UN SOMBRERO ATA EL CATALOGO CON EL DIBUJADO.
+        //   `Sombreros.modeloDe` le quita el prefijo `sombrero_` para formar
+        //   `lunaeternal:sombreros/<nombre>`, que es donde el generador deja el
+        //   modelo. Un identificador sin ese prefijo apuntaria a otro sitio, no
+        //   se horneria, y saldria un CUBO MORADO Y NEGRO -- no una excepcion,
+        //   sino algo que parece un fallo de textura y se busca donde no es.
+        boolean sombrerosBienNombrados = todas.stream()
+                .filter(x -> net.pokereport.luna.cosmetics.Catalogo.SOMBREROS
+                        .equals(x.categoria()))
+                .allMatch(x -> x.id().startsWith("sombrero_") && !x.aspecto().isEmpty());
+        check("todo sombrero lleva el prefijo que espera el dibujado",
+              sombrerosBienNombrados);
+
         // Que exista al menos una que NO se vende. D-039 dice que los eventos son
         // «la mitad que hace funcionar la decision»: si todo fuera de pago, los
         // unicos con cosmetico serian los que pagan y el escaparate se apaga solo.

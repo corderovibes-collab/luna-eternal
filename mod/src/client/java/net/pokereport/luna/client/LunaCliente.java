@@ -47,11 +47,23 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(Red.Cosmeticos.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
-        // Quien lleva que aura. Llega al entrar (las de todos) y cada vez que
-        // alguien se pone o se quita una. Es lo que hace que un aura la vean los
-        // DEMAS y no solo su dueño en la tienda.
-        ClientPlayNetworking.registerGlobalReceiver(Red.AuraDe.ID,
-                (carga, ctx) -> Auras.recibir(carga.jugador(), carga.aura()));
+        // Quien lleva que. Llega al entrar --lo de todos-- y cada vez que
+        // alguien se pone o se quita algo. Es lo que hace que un cosmetico lo
+        // vean los DEMAS y no solo su dueño en la tienda.
+        //
+        // ⚠ UN SOLO PAQUETE PARA TODAS LAS CATEGORIAS. Empezo siendo `AuraDe` y
+        //   al llegar los sombreros habrian sido dos paquetes, dos receptores y
+        //   dos difusiones que mantener sincronizadas. La categoria viaja dentro,
+        //   asi que añadir capas es una linea en este switch.
+        ClientPlayNetworking.registerGlobalReceiver(Red.LlevaPuesto.ID, (carga, ctx) -> {
+            switch (carga.categoria()) {
+                case net.pokereport.luna.cosmetics.Catalogo.AURAS ->
+                        Auras.recibir(carga.jugador(), carga.cosmetico());
+                case net.pokereport.luna.cosmetics.Catalogo.SOMBREROS ->
+                        Sombreros.recibir(carga.jugador(), carga.cosmetico());
+                default -> { }
+            }
+        });
 
         // La voz de la Pokédex. Llega solo a quien ha escaneado; aquí solo se
         // reproduce, la decisión de a quién mandarla es del servidor.
@@ -61,13 +73,22 @@ public class LunaCliente implements ClientModInitializer {
         // El boton de voz dentro de la Pokedex de Cobblemon.
         BotonVoz.register();
 
+        // Los sombreros: hornear sus modelos y engancharlos al jugador.
+        // ⚠ EL ORDEN IMPORTA. `registrarModelos` tiene que correr ANTES de que el
+        //   juego cargue los recursos por primera vez, o sea en la inicializacion
+        //   y no perezosamente: un modelo que no se registro a tiempo no se
+        //   hornea, y sale el cubo morado y negro en vez de un error.
+        Sombreros.registrarModelos();
+        Sombreros.registrarDibujado();
+
         // Al salir del mundo se olvida: el saldo es de esa partida. Y se calla
         // la voz, que si no sigue sonando en la pantalla de servidores.
         ClientPlayConnectionEvents.DISCONNECT.register((manejador, cliente) -> {
             EstadoCliente.olvidar();
             VozPokedex.callar();
-            // Sin esto, entrar en otro mundo arrastra las auras del anterior.
+            // Sin esto, entrar en otro mundo arrastra los cosmeticos del anterior.
             Auras.olvidarTodo();
+            Sombreros.olvidarTodo();
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(cliente -> {

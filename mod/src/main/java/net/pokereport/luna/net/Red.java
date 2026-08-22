@@ -287,17 +287,19 @@ public class Red implements ModInitializer {
      * quitarse el aura se difundiera «no mandando nada», los demás seguirían
      * viéndosela hasta reconectar.
      */
-    public record AuraDe(java.util.UUID jugador, String aura) implements CustomPayload {
-        public static final Id<AuraDe> ID =
-                new Id<>(Identifier.of(LunaEternal.MOD_ID, "aura_de"));
-        public static final PacketCodec<RegistryByteBuf, AuraDe> CODEC =
+    public record LlevaPuesto(java.util.UUID jugador, String categoria, String cosmetico)
+            implements CustomPayload {
+        public static final Id<LlevaPuesto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "lleva_puesto"));
+        public static final PacketCodec<RegistryByteBuf, LlevaPuesto> CODEC =
                 PacketCodec.tuple(
                         // ⚠ Uuids.PACKET_CODEC, NO PacketCodecs.UUID: ese no
                         //   existe en 1.21.1 y el error de compilación no dice
                         //   cuál es el bueno.
-                        net.minecraft.util.Uuids.PACKET_CODEC, AuraDe::jugador,
-                        PacketCodecs.STRING, AuraDe::aura,
-                        AuraDe::new);
+                        net.minecraft.util.Uuids.PACKET_CODEC, LlevaPuesto::jugador,
+                        PacketCodecs.STRING, LlevaPuesto::categoria,
+                        PacketCodecs.STRING, LlevaPuesto::cosmetico,
+                        LlevaPuesto::new);
 
         @Override
         public Id<? extends CustomPayload> getId() {
@@ -306,51 +308,91 @@ public class Red implements ModInitializer {
     }
 
     /**
-     * Cuenta a todo el mundo el aura de un jugador, y a ese jugador las de todos.
+     * Las categorías que <b>ven los demás</b> y por tanto hay que difundir.
      *
-     * <p>⚠ Las DOS direcciones hacen falta y por motivos distintos. Al entrar,
-     * el recién llegado no sabe nada de nadie —se perdió las difusiones de antes—
-     * y los que ya estaban no saben nada de él. Mandar solo una deja un servidor
-     * donde cada uno ve un subconjunto distinto, que es peor que no verlas.
+     * <p>⚠ Las mascotas NO están, y no es un olvido: el disfraz de un Pokémon
+     * viaja <i>dentro del Pokémon</i> (es un aspecto suyo, y Cobblemon ya lo
+     * sincroniza). Difundirlo aquí sería mandar dos veces lo mismo y abrir la
+     * puerta a que las dos copias se contradigan.
      */
-    public static void difundirAura(net.minecraft.server.network.ServerPlayerEntity quien,
-                                    String aura, boolean tambienLasDemas) {
+    private static final List<String> DIFUNDIDAS = List.of(
+            net.pokereport.luna.cosmetics.Catalogo.AURAS,
+            net.pokereport.luna.cosmetics.Catalogo.SOMBREROS,
+            net.pokereport.luna.cosmetics.Catalogo.CAPAS);
+
+    /**
+     * Cuenta a todos lo que lleva un jugador, y a ese jugador lo de todos.
+     *
+     * <p>⚠⚠ ESTO ES LO QUE CONVIERTE UN COSMÉTICO EN UN PRODUCTO.
+     * {@code monetization.md} lo avisa: «un cosmético sin nadie que lo vea no
+     * vale nada». Un aura o un sombrero <b>no viajan con nada</b>: si esto no
+     * existe, solo los ve su dueño en la tienda — media función, y ya pasó una
+     * vez con las mascotas.
+     *
+     * <p>⚠ Las DOS direcciones hacen falta, y por motivos distintos. Al entrar,
+     * el recién llegado no sabe nada de nadie —se perdió las difusiones de
+     * antes— y los que ya estaban no saben nada de él. Mandar solo una deja un
+     * servidor donde cada uno ve un subconjunto distinto, que es peor que no
+     * verlas: dos jugadores no se pondrían de acuerdo sobre quién lleva qué.
+     *
+     * <p>Cadena vacía = <b>se lo ha quitado</b>. Hace falta un valor para eso: si
+     * quitárselo se difundiera «no mandando nada», los demás seguirían viéndolo
+     * hasta reconectar.
+     */
+    public static void difundir(net.minecraft.server.network.ServerPlayerEntity quien,
+                                String categoria, String cosmetico) {
         var servidor = quien.getServer();
         if (servidor == null) {
             return;
         }
-        var mio = new AuraDe(quien.getUuid(), aura == null ? "" : aura);
+        var mio = new LlevaPuesto(quien.getUuid(), categoria,
+                cosmetico == null ? "" : cosmetico);
         for (var otro : servidor.getPlayerManager().getPlayerList()) {
             ServerPlayNetworking.send(otro, mio);
         }
-        if (!tambienLasDemas) {
+    }
+
+    /** Todo lo de todos, para quien acaba de entrar; y lo suyo, para todos. */
+    public static void difundirTodo(net.minecraft.server.network.ServerPlayerEntity quien) {
+        var servidor = quien.getServer();
+        if (servidor == null) {
             return;
         }
         LunaEternal.submit(() -> {
             try {
                 var svc = LunaEternal.cosmetics();
-                var pendientes = new java.util.ArrayList<AuraDe>();
+                var paquetes = new ArrayList<LlevaPuesto>();
+                var paraTodos = new ArrayList<LlevaPuesto>();
                 for (var otro : servidor.getPlayerManager().getPlayerList()) {
-                    if (otro == quien) {
-                        continue;
-                    }
                     long id = LunaEternal.players()
                             .resolve(otro.getUuid(), otro.getName().getString());
-                    String suya = svc.equipados(id).get(
-                            net.pokereport.luna.cosmetics.Catalogo.AURAS);
-                    if (suya != null && !suya.isEmpty()) {
-                        pendientes.add(new AuraDe(otro.getUuid(), suya));
+                    var puestos = svc.equipados(id);
+                    for (String categoria : DIFUNDIDAS) {
+                        String suyo = puestos.get(categoria);
+                        if (suyo == null || suyo.isEmpty()) {
+                            continue;
+                        }
+                        var p = new LlevaPuesto(otro.getUuid(), categoria, suyo);
+                        (otro == quien ? paraTodos : paquetes).add(p);
                     }
                 }
                 servidor.execute(() -> {
-                    for (AuraDe a : pendientes) {
-                        ServerPlayNetworking.send(quien, a);
+                    // Lo de los demás, solo a él.
+                    for (LlevaPuesto p : paquetes) {
+                        ServerPlayNetworking.send(quien, p);
+                    }
+                    // Lo suyo, a todos (incluido él: el previsualizador lo usa).
+                    for (LlevaPuesto p : paraTodos) {
+                        for (var otro : servidor.getPlayerManager().getPlayerList()) {
+                            ServerPlayNetworking.send(otro, p);
+                        }
                     }
                 });
             } catch (Exception e) {
-                // Quedarse sin ver las auras de los demás es feo; que falle el
-                // login por eso sería mucho peor.
-                LunaEternal.LOG.warn("No se pudieron difundir las auras: {}", e.toString());
+                // Quedarse sin ver los cosméticos es feo; que falle el login por
+                // eso sería mucho peor.
+                LunaEternal.LOG.warn("No se pudieron difundir los cosmeticos: {}",
+                        e.toString());
             }
         });
     }
@@ -364,7 +406,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirCosmeticos.ID, PedirCosmeticos.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionCosmetico.ID, AccionCosmetico.CODEC);
         PayloadTypeRegistry.playS2C().register(Cosmeticos.ID, Cosmeticos.CODEC);
-        PayloadTypeRegistry.playS2C().register(AuraDe.ID, AuraDe.CODEC);
+        PayloadTypeRegistry.playS2C().register(LlevaPuesto.ID, LlevaPuesto.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -441,11 +483,10 @@ public class Red implements ModInitializer {
                         // respuesta valida.
                         r = svc.equipar(id, pieza.categoria(),
                                 carga.esQuitar() ? "" : carga.id());
-                        if (r.ok() && pieza.categoria()
-                                .equals(net.pokereport.luna.cosmetics.Catalogo.AURAS)) {
+                        if (r.ok() && DIFUNDIDAS.contains(pieza.categoria())) {
                             String ahora = carga.esQuitar() ? "" : carga.id();
                             jugador.getServer().execute(
-                                    () -> difundirAura(jugador, ahora, false));
+                                    () -> difundir(jugador, pieza.categoria(), ahora));
                         }
                     } else if (carga.esQuitar()) {
                         r = svc.desvestir(jugador, id, carga.id());

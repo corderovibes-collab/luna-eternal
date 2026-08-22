@@ -1,0 +1,28 @@
+{
+  "species": "cobblemon:sableye",
+  "order": 0,
+  "variations": [
+    {
+      "aspects": ["holoware"],
+      "model": "cobblemon:sableye_holoware.geo",
+      "texture": "cobblemon:textures/pokemon/0302_sableye/sableye_holoware.png",
+      "layers": [
+        {
+          "name": "holoware",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/holoware.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["holoware", "shiny"],
+      "model": "cobblemon:sableye_holoware.geo",
+      "texture": "cobblemon:textures/pokemon/0302_sableye/sableye_shiny_holoware.png",
+      "layers": [
+        {
+          "name": "holoware",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/holoware.png"
+        }
+      ]
+    }
+  ]
+}

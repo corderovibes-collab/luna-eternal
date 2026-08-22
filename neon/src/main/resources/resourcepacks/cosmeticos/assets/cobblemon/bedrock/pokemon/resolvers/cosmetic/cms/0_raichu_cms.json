@@ -1,0 +1,46 @@
+{
+  "species": "cobblemon:raichu",
+  "order": 0,
+  "variations": [
+    {
+      "aspects": ["goldhat"],
+      "model": "cobblemon:raichu_goldcap_male.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["goldhat", "female"],
+      "model": "cobblemon:raichu_goldcap_female.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["goldhat", "shiny"],
+      "model": "cobblemon:raichu_goldcap_male.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["goldhat", "shiny", "female"],
+      "model": "cobblemon:raichu_goldcap_female.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    }
+  ]
+}

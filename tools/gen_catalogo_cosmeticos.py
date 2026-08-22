@@ -1,50 +1,60 @@
-"""Genera `Catalogo.java` LEYENDO EL PACK INSTALADO.
+"""Genera el catalogo de cosmeticos y sus assets, LEYENDO LOS PACKS.
 
-    python tools/gen_catalogo_cosmeticos.py <ruta al zip de CobblemonMoreCosmetics>
+    python tools/gen_catalogo_cosmeticos.py
 
-⚠⚠ POR QUE EXISTE ESTO, Y NO ES COMODIDAD
+Sin argumentos: los packs, sus URLs y sus huellas estan en
+`tools/packs_cosmeticos.json`, y se bajan solos a `build/packs-cosmeticos/`.
 
-El catalogo estuvo escrito a mano, con los identificadores copiados de mirar el
-repositorio de GitHub. Fallo, y de la peor manera posible:
+Produce:
 
-  - El repositorio (HEAD) declara los cosmeticos como `species_features`.
-  - La version PUBLICADA los declara como `cosmetic_items`, que es el sistema
-    nativo de Cobblemon 1.7 y funciona distinto: se aplica dando un OBJETO al
-    Pokemon, no encendiendo una bandera.
-  - Y encima el pack no estaba instalado.
+    mod/.../cosmetics/CatalogoMascotas.java              los disfraces de Pokemon
+    mod/.../cosmetics/CatalogoSombreros.java             los sombreros del jugador
+    neon/src/main/resources/resourcepacks/cosmeticos/    los assets, incrustados
 
-Resultado: la tienda vendia disfraces que no existian. Se compraban, se cobraban,
-y salia el Pokemon normal. Sin error, sin aviso, sin nada en el log. El aviso de
-que esto podia pasar estaba ESCRITO en el propio `Catalogo.java` -- y aun asi
-paso, porque una advertencia en un comentario no comprueba nada.
+⚠⚠ POR QUE SE GENERA, Y NO ES COMODIDAD
 
-Generandolo del zip, el catalogo no puede prometer algo que el pack no tenga:
-si un cosmetico no esta en el pack, no llega al fichero.
+El catalogo estuvo escrito a mano y fallo TRES VECES SEGUIDAS. Las tres con el
+mismo sintoma --se cobraba el cosmetico y salia el Pokemon normal-- y por causas
+distintas, y ninguna dio el menor error:
 
-⚠ SE OMITEN LOS COSMETICOS DE VARIOS ASPECTOS a la vez. Algunos objetos aplican
-  `["icedragon", "altcolor"]`: son variantes de color de otro cosmetico, y
-  venderlas como piezas sueltas confundiria dos cosas distintas en la misma
-  rejilla. Cuando haya sitio para variantes, se recuperan de aqui.
+  1. Se copio del repositorio de GitHub (HEAD), que declara los cosmeticos como
+     `species_features`; la version PUBLICADA usa `cosmetic_items`.
+  2. `26sinnohbundle` declara seis cosmeticos cuyo arte SE VENDE APARTE, y
+     `pangoro_operator.json` pone `"pokemon": ["operator"]`, que es una errata.
+  3. `pangoro_operator` tenia resolver, modelo y textura pero NO POSER, y
+     Cobblemon no cae al poser de la especie: dibuja un bulto sin forma.
+
+Hoy se exige que existan TODAS las piezas, y lo que un pack declara pero no puede
+dibujar se imprime al terminar en vez de acabar en la tienda.
+
+⚠ EL data/ DE LOS PACKS NO SE INSTALA EN NINGUN SITIO, Y ES DELIBERADO. Ahi viven
+  las recetas y los `cosmetic_items`, que son las dos vias por las que un
+  cosmetico se conseguiria JUGANDO: craftear el objeto y darselo al Pokemon.
+  D-039 dice que solo se consiguen con LunaCoins o en eventos, asi que esa puerta
+  no se vigila -- se quita. Ver docs/ui/cosmeticos.md §5-ter.
 """
 
+import hashlib
 import json
-import re
-import sys
+import shutil
+import urllib.request
 import zipfile
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-DESTINO = (RAIZ / "mod" / "src" / "main" / "java" / "net" / "pokereport"
-           / "luna" / "cosmetics" / "CatalogoMascotas.java")
+FUENTES = RAIZ / "tools" / "packs_cosmeticos.json"
+CACHE = RAIZ / "build" / "packs-cosmeticos"
+JAVA = RAIZ / "mod" / "src" / "main" / "java" / "net" / "pokereport" / "luna" / "cosmetics"
+ASSETS = RAIZ / "neon" / "src" / "main" / "resources" / "resourcepacks" / "cosmeticos"
+
+# `dex/` y `msd/` son variantes del MISMO cosmetico para formas concretas
+# (megas). Contarlas daria tres Charizard `knight` en la rejilla.
+SUBCARPETAS_VARIANTES = ("dex", "msd")
 
 # Precios PROVISIONALES por tramos. CLAUDE.md dice que la economia se calibra con
 # datos reales; esto solo reparte para que la tienda no tenga todo al mismo
 # precio, que es lo unico que se sabe seguro que estaria mal.
-TRAMOS = {
-    "legendario": 4000,
-    "inicial": 2500,
-    "normal": 1500,
-}
+TRAMOS = {"legendario": 4000, "inicial": 2500, "normal": 1500, "sombrero": 1200}
 LEGENDARIOS = {
     "articuno", "zapdos", "moltres", "mewtwo", "mew", "raikou", "entei",
     "suicune", "lugia", "ho_oh", "ho-oh", "celebi", "rayquaza", "kyogre",
@@ -66,88 +76,53 @@ def precio(especie: str) -> int:
     return TRAMOS["normal"]
 
 
-RESOLVERS = "cosmetic/morecosmetics"
+# --------------------------------------------------------------- descarga
 
 
-def leer(zip_path: Path):
-    """Saca (especie, aspecto) de los RESOLVERS, que es lo que se puede DIBUJAR.
+def huella(fichero: Path) -> str:
+    return hashlib.sha1(fichero.read_bytes()).hexdigest()
 
-    Devuelve `(filas, declarados_sin_arte)`.
 
-    ⚠⚠ ANTES SE LEIA DE `cosmetic_items`, Y ESTABA MAL POR DOS SITIOS A LA VEZ:
+def bajar(pack: dict) -> Path:
+    """El zip del pack, de la cache o del CDN, con la huella comprobada.
 
-      1) `26sinnohbundle` declara SEIS cosmeticos --charizard, decidueye,
-         garchomp, gardevoir, greninja y lucario con el aspecto `sinnoh`-- cuyo
-         arte NO viene en el pack: es un paquete que se vende aparte. La tienda
-         los ofrecia, se cobraban, y salia el Pokemon NORMAL.
-
-      2) `pangoro_operator.json` pone `"pokemon": ["operator"]`, que es una
-         ERRATA suya: deberia decir `pangoro`. Ese cosmetico salia como una
-         celda en blanco, porque `cobblemon:operator` no existe.
-
-    Los resolvers no tienen ninguno de los dos problemas, porque un resolver ES
-    el dibujo: si esta, se puede pintar, y lleva la especie de verdad. Los seis
-    del `sinnohbundle` no tienen resolver, y el de `operator` dice `pangoro`.
-
-    ⚠ SOLO LA CARPETA RAIZ. `dex/` y `msd/` son variantes para formas concretas
-      --megas, sobre todo-- del MISMO cosmetico. Contarlas daria tres Charizard
-      `knight` distintos en la rejilla.
-
-    ⚠ SE EXIGE `model`. Una variacion sin modelo es un recoloreado (shiny,
-      hembra) que hereda el del cosmetico base, no un cosmetico aparte.
-      Comprobado: exigirlo no pierde ninguno --los 55 que tienen un solo aspecto
-      lo tienen--, asi que el filtro solo quita duplicados.
+    ⚠ LA HUELLA NO ES BUROCRACIA: es lo que hace REPRODUCIBLE el catalogo. Sin
+      ella, regenerar dentro de seis meses puede bajar otra version del pack,
+      producir un catalogo distinto, y que la diferencia parezca un cambio
+      nuestro. Se aborta en vez de seguir.
     """
-    z = zipfile.ZipFile(zip_path)
+    CACHE.mkdir(parents=True, exist_ok=True)
+    destino = CACHE / ("%s.zip" % pack["nombre"].replace(" ", "_"))
+    if destino.exists() and huella(destino) == pack["sha1"]:
+        return destino
 
-    # ⚠⚠ HAY QUE COMPROBAR EL POSER, Y NO ES PARANOIA: FALTA UNO.
-    #
-    #   `pangoro_operator` tiene su modelo y su textura, pero el resolver pide
-    #   `poser: cobblemon:pangoro_operator` y ESE FICHERO NO VIENE EN EL PACK.
-    #   Cobblemon no cae al poser base de la especie: dibuja un bulto verde sin
-    #   forma. El usuario lo vio antes que ninguna comprobacion nuestra --otra
-    #   vez--, y por eso ahora se mira.
-    #
-    #   Es la tercera vuelta de la misma leccion. Existir un resolver no basta:
-    #   tienen que existir LAS TRES PIEZAS que nombra.
-    posers = {n.rsplit("/", 1)[1][:-5] for n in z.namelist()
-              if "/posers/" in n and n.endswith(".json")}
+    print("  bajando %s %s..." % (pack["nombre"], pack["version"]))
+    peticion = urllib.request.Request(
+        pack["url"], headers={"User-Agent": "luna-eternal/0.1 (dev)"})
+    datos = urllib.request.urlopen(peticion, timeout=180).read()
+    real = hashlib.sha1(datos).hexdigest()
+    if real != pack["sha1"]:
+        raise SystemExit(
+            "La huella de %s no cuadra.\n"
+            "  esperada %s\n  recibida %s\n\n"
+            "O el pack ha cambiado en el CDN, o la descarga vino mal. Si es lo\n"
+            "primero, actualiza tools/packs_cosmeticos.json A CONCIENCIA: una\n"
+            "version nueva puede quitar cosmeticos que alguien YA HA COMPRADO."
+            % (pack["nombre"], pack["sha1"], real))
+    destino.write_bytes(datos)
+    return destino
 
-    filas = set()
-    sin_poser = []
-    for nombre in z.namelist():
-        if "/resolvers/" not in nombre or not nombre.endswith(".json"):
-            continue
-        if nombre.split("/resolvers/")[1].rsplit("/", 1)[0] != RESOLVERS:
-            continue
-        datos = json.loads(z.read(nombre))
-        especie = datos.get("species", "").split(":")[-1].strip().lower()
-        if not especie:
-            continue
-        for var in datos.get("variations", []):
-            aspectos = var.get("aspects", [])
-            # Un solo aspecto: los de varios son `["magma", "female"]` y demas,
-            # o sea el mismo cosmetico sobre otra forma.
-            if len(aspectos) != 1 or not var.get("model"):
-                continue
-            # El poser puede ser de Cobblemon (`cobblemon:pangoro`) o del pack.
-            # Solo se rechaza si el pack lo nombra dentro de SU espacio de
-            # cosmeticos y no lo trae: un poser del juego base siempre existe.
-            poser = (var.get("poser") or "").split(":")[-1]
-            if poser and poser not in posers and poser.endswith(aspectos[0]):
-                sin_poser.append((especie, aspectos[0]))
-                continue
-            filas.add((especie, aspectos[0]))
 
-    # Lo que el pack DECLARA pero no puede dibujar. No se usa para nada mas que
-    # para avisar: si un dia el numero cambia, es que el pack ha cambiado y hay
-    # que mirarlo, en vez de enterarnos porque un jugador compra un disfraz
-    # invisible.
+# --------------------------------------------------------------- mascotas
+
+
+def declarados_en(z) -> set:
+    """Lo que el pack DICE que tiene, para poder avisar de lo que no cumple."""
     declarados = set()
-    for nombre in z.namelist():
-        if "/cosmetic_items/" not in nombre or not nombre.endswith(".json"):
+    for n in z.namelist():
+        if "/cosmetic_items/" not in n or not n.endswith(".json"):
             continue
-        datos = json.loads(z.read(nombre))
+        datos = json.loads(z.read(n))
         for especie in datos.get("pokemon", []):
             # ⚠ Algunas vienen con calificador de forma:
             #   "articuno galarian=false". La especie es lo de antes del espacio.
@@ -155,49 +130,251 @@ def leer(zip_path: Path):
             for ci in datos.get("cosmeticItems", []):
                 if len(ci.get("aspects", [])) == 1 and especie:
                     declarados.add((especie, ci["aspects"][0]))
-
-    # Los que se caen por falta de poser se suman al aviso: son igual de
-    # invisibles para el jugador que los que no tienen arte ninguna.
-    return sorted(filas), sorted((declarados - filas) | set(sin_poser))
+    return declarados
 
 
-PLANTILLA = '''package net.pokereport.luna.cosmetics;
+def leer_mascotas(zips):
+    """(especie, aspecto) de los RESOLVERS. Devuelve `(filas, descartados)`.
+
+    Un resolver ES el dibujo: si esta, se puede pintar, y lleva la especie de
+    verdad. Es la unica fuente que no puede mentir sobre lo que el jugador vera.
+    """
+    filas, descartados = set(), []
+
+    for nombre, z in zips:
+        posers = {n.rsplit("/", 1)[-1][:-5] for n in z.namelist()
+                  if "/posers/" in n and n.endswith(".json")}
+        hojas = {n.rsplit("/", 1)[-1] for n in z.namelist()}
+        dibujables = set()
+
+        for n in z.namelist():
+            if "/resolvers/" not in n or not n.endswith(".json"):
+                continue
+            sub = n.split("/resolvers/")[1].rsplit("/", 1)[0]
+            if sub.rsplit("/", 1)[-1] in SUBCARPETAS_VARIANTES:
+                continue
+            datos = json.loads(z.read(n))
+            especie = datos.get("species", "").split(":")[-1].strip().lower()
+            if not especie:
+                continue
+            for var in datos.get("variations", []):
+                aspectos = var.get("aspects", [])
+                # Un solo aspecto: los de varios son `["magma","female"]`, o sea
+                # el mismo cosmetico sobre otra forma. Y con modelo: una variacion
+                # sin el es un recoloreado que hereda el del cosmetico base.
+                if len(aspectos) != 1 or not var.get("model"):
+                    continue
+                poser = (var.get("poser") or "").split(":")[-1]
+                # Solo se rechaza si el pack nombra un poser SUYO y no lo trae:
+                # uno del juego base siempre existe.
+                if poser and poser not in posers and poser.endswith(aspectos[0]):
+                    descartados.append((nombre, especie, aspectos[0], "sin poser"))
+                    continue
+                textura = (var.get("texture") or "").rsplit("/", 1)[-1]
+                if textura and (textura + ".png") not in hojas and textura not in hojas:
+                    descartados.append((nombre, especie, aspectos[0], "sin textura"))
+                    continue
+                dibujables.add((especie, aspectos[0]))
+
+        for especie, aspecto in sorted(declarados_en(z) - dibujables):
+            descartados.append((nombre, especie, aspecto, "sin arte"))
+        filas |= dibujables
+
+    return sorted(filas), descartados
+
+
+# -------------------------------------------------------------- sombreros
+
+
+def declarados_sombreros(z) -> set:
+    """Que modelos DECLARA el pack como sombrero ponible.
+
+    ⚠⚠ NO VALE COGER TODO JSON CON `elements`. Los packs traen SUBMODELOS --la
+       segunda capa de un sombrero, una pieza suelta-- que son json de modelo
+       perfectamente validos y NO son un sombrero. Cogiendolos salen `dawn_hat` y
+       `dawn_hat2` como dos articulos distintos, y el segundo es medio gorro.
+
+       Es la misma leccion de las mascotas, en su cuarta vuelta: hay que leer lo
+       que el pack DECLARA... y despues comprobar que se puede dibujar. Ninguna de
+       las dos cosas basta sola.
+
+    Cada pack lo declara a su manera:
+
+      CobbleHats    `carved_pumpkin.json`, con un `override` por sombrero
+      Accessories   un `.properties` de CIT Resewn por sombrero, con `model=./x`
+    """
+    declarados = set()
+
+    # CobbleHats: los overrides de la calabaza tallada.
+    for n in z.namelist():
+        if not n.endswith("/models/item/carved_pumpkin.json"):
+            continue
+        for ov in json.loads(z.read(n)).get("overrides", []):
+            modelo = str(ov.get("model", "")).rsplit("/", 1)[-1]
+            if modelo:
+                declarados.add(modelo)
+
+    # Accessories: los .properties de CIT Resewn.
+    for n in z.namelist():
+        if not n.endswith(".properties") or "/cit" not in n:
+            continue
+        for linea in z.read(n).decode("utf8", "ignore").splitlines():
+            if linea.strip().startswith("model="):
+                modelo = linea.split("=", 1)[1].strip().lstrip("./")
+                if modelo:
+                    declarados.add(modelo.rsplit("/", 1)[-1])
+    return declarados
+
+
+def leer_sombreros(zips):
+    """Los sombreros: su modelo json y su textura.
+
+    ⚠⚠ NINGUNO DE LOS DOS PACKS SE USA COMO SUS AUTORES LO PENSARON, Y ES A
+       PROPOSITO. CobbleHats los aplica con una CALABAZA TALLADA + CustomModelData
+       y Accessories con CIT Resewn sobre un casco; las dos formas son un OBJETO
+       que el jugador lleva encima, y eso significa:
+
+         - ocupa la ranura del casco (o sombrero, o proteccion)
+         - se cae al morir, se comercia, se pierde
+         - y sobre todo SE PUEDE REGALAR, asi que el cosmetico dejaria de venir
+           solo de LunaCoins o de eventos, que es lo que dice D-039
+
+       Lo que se aprovecha son sus MODELOS, que son json normales. El sombrero lo
+       dibuja el cliente sobre la cabeza y no existe objeto ninguno: el servidor
+       dice quien lleva cual, igual que con las auras.
+
+    Devuelve [(id, bytes_modelo, ruta_textura, bytes_textura, pack)].
+    """
+    salida, sin_modelo = [], []
+    for nombre, z in zips:
+        declarados = declarados_sombreros(z)
+        # ⚠ SOLO BAJO `models/` O `cit/`. El nombre de un modelo y el de SU RECETA
+        #   son el mismo --`models/block/custom/blaziken_cap.json` y
+        #   `data/crafting/recipe/blaziken_cap.json`-- asi que indexando por la
+        #   hoja del nombre, la receta PISA al modelo. El sintoma era "el modelo no
+        #   tiene geometria" en ocho sombreros que la tienen perfectamente: lo que
+        #   se estaba leyendo era la receta.
+        modelos = {}
+        for n in z.namelist():
+            if not n.endswith(".json"):
+                continue
+            if "/models/" not in n and "/cit" not in n:
+                continue
+            hoja = n.rsplit("/", 1)[-1][:-5]
+            if hoja in declarados:
+                modelos[hoja] = n
+
+        for ident in sorted(declarados):
+            n = modelos.get(ident)
+            if not n:
+                sin_modelo.append((nombre, ident, "el modelo no viene"))
+                continue
+            try:
+                datos = json.loads(z.read(n))
+            except Exception:
+                sin_modelo.append((nombre, ident, "el modelo no se puede leer"))
+                continue
+            if not datos.get("elements"):
+                sin_modelo.append((nombre, ident, "el modelo no tiene geometria"))
+                continue
+            tex = None
+            for valor in (datos.get("textures") or {}).values():
+                hoja = str(valor).rsplit("/", 1)[-1]
+                for x in z.namelist():
+                    if x.endswith("/" + hoja + ".png"):
+                        tex = x
+                        break
+                if tex:
+                    break
+            if not tex:
+                sin_modelo.append((nombre, ident, "sin textura"))
+                continue
+            salida.append((ident, z.read(n), tex, z.read(tex), nombre))
+
+    # Sin identificadores repetidos entre packs, y en orden estable para que el
+    # fichero generado no cambie de un dia para otro sin motivo.
+    vistos, unicos = set(), []
+    for s in sorted(salida, key=lambda x: x[0]):
+        if s[0] in vistos:
+            continue
+        vistos.add(s[0])
+        unicos.append(s)
+    return unicos, sin_modelo
+
+
+# ----------------------------------------------------------------- assets
+
+
+def copiar_assets(zips, sombreros):
+    """Los assets de los packs, al resource pack incrustado en `lunaneon`.
+
+    ⚠ SOLO `assets/`. El `data/` se queda fuera a proposito -- ver la cabecera.
+
+    ⚠ Los sombreros se reescriben a NUESTRO espacio de nombres. Sus modelos
+      apuntan a texturas de `minecraft:`, y dejarlos asi PISARIA texturas del
+      juego base: `assets/minecraft/textures/block/custom/...` no colisiona hoy,
+      pero un pack que use ese nombre repintaria un bloque de verdad. Bajo
+      `lunaeternal:` no puede pasar.
+    """
+    if ASSETS.exists():
+        shutil.rmtree(ASSETS)
+    ASSETS.mkdir(parents=True)
+
+    copiados = 0
+    for _, z in zips:
+        for n in z.namelist():
+            # Los de `minecraft:` son los sombreros y se tratan aparte, abajo.
+            if not n.startswith("assets/cobblemon/") or n.endswith("/"):
+                continue
+            destino = ASSETS / n
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            destino.write_bytes(z.read(n))
+            copiados += 1
+
+    base = ASSETS / "assets" / "lunaeternal"
+    for ident, modelo, ruta_tex, tex, _ in sombreros:
+        d = json.loads(modelo)
+        d["textures"] = {k: "lunaeternal:sombreros/" + ident
+                         for k in (d.get("textures") or {})}
+        # `parent` de estos modelos suele ser `block/block`, que existe en
+        # vanilla: se conserva.
+        (base / "models" / "sombreros").mkdir(parents=True, exist_ok=True)
+        (base / "models" / "sombreros" / (ident + ".json")).write_text(
+            json.dumps(d, indent=1), encoding="utf-8")
+        (base / "textures" / "sombreros").mkdir(parents=True, exist_ok=True)
+        (base / "textures" / "sombreros" / (ident + ".png")).write_bytes(tex)
+        copiados += 2
+
+    (ASSETS / "pack.mcmeta").write_text(json.dumps({
+        "pack": {"pack_format": 34,
+                 "description": "Cosmeticos de PokeReport Network"}
+    }, indent=2) + "\n", encoding="utf-8")
+    return copiados
+
+
+# --------------------------------------------------------------- plantillas
+
+
+CABECERA = '''package net.pokereport.luna.cosmetics;
 
 import java.util.List;
 
 import net.pokereport.luna.cosmetics.Catalogo.Pieza;
 
 /**
- * Los disfraces de Pokemon. <b>ESTE FICHERO SE GENERA:</b>
+ * %(titulo)s
  *
- * <pre>
- * python tools/gen_catalogo_cosmeticos.py &lt;zip de CobblemonMoreCosmetics&gt;
- * </pre>
+ * <p><b>ESTE FICHERO SE GENERA:</b> {@code python tools/gen_catalogo_cosmeticos.py}
  *
- * <p>Se genera <b>leyendo los RESOLVERS del pack</b>, que es lo unico que dice
- * la verdad sobre lo que se puede dibujar. Escribirlo a mano fallo tres veces
- * seguidas, y las tres con el mismo sintoma --se cobraba y salia el Pokemon
- * normal-- por tres causas distintas:
+ * <p>Se genera <b>leyendo los packs</b>, que es lo unico que dice la verdad sobre
+ * lo que se puede dibujar. Escribirlo a mano fallo tres veces, y las tres se
+ * cobro un cosmetico que no se veia. Ver la cabecera del generador.
  *
- * <ol>
- *   <li>Se copio del repositorio (HEAD), que declara los cosmeticos como
- *       {@code species_features}; la version publicada usa {@code cosmetic_items}.</li>
- *   <li>{@code 26sinnohbundle} declara seis cosmeticos cuyo arte se vende aparte,
- *       y {@code pangoro_operator.json} pone {@code "pokemon": ["operator"]},
- *       que es una errata suya.</li>
- *   <li>{@code pangoro_operator} tenia resolver, modelo y textura pero <b>no
- *       poser</b>, y Cobblemon no cae al de la especie: dibuja un bulto.</li>
- * </ol>
- *
- * <p>Hoy se exigen <b>las cuatro piezas</b>. Lo que el pack declara y no puede
- * dibujar se imprime al generar, en vez de acabar en la tienda.
- *
- * <p>⚠ Los precios son por tramos y <b>PROVISIONALES</b>: CLAUDE.md dice que
- * toda la economia se calibra con datos reales.
+ * <p>⚠ Los precios son por tramos y <b>PROVISIONALES</b>.
  */
-public final class CatalogoMascotas {
+public final class %(clase)s {
 
-    private CatalogoMascotas() {
+    private %(clase)s() {
     }
 
     static final List<Pieza> PIEZAS = List.of(
@@ -207,41 +384,73 @@ public final class CatalogoMascotas {
 '''
 
 
-def main() -> None:
-    if len(sys.argv) < 2:
-        raise SystemExit(__doc__)
-    zip_path = Path(sys.argv[1])
-    if not zip_path.exists():
-        raise SystemExit("no existe %s" % zip_path)
+def escribir(clase, titulo, lineas):
+    destino = JAVA / (clase + ".java")
+    destino.write_text(CABECERA % {
+        "clase": clase, "titulo": titulo, "piezas": ",\n".join(lineas),
+    }, encoding="utf-8")
+    return destino
 
-    filas, sin_arte = leer(zip_path)
+
+# ------------------------------------------------------------------- main
+
+
+def main() -> None:
+    fuentes = json.loads(FUENTES.read_text(encoding="utf-8"))["packs"]
+    zips = []
+    for pack in fuentes:
+        zips.append((pack["nombre"], zipfile.ZipFile(bajar(pack))))
+
+    de_mascotas = [(n, z) for (n, z), p in zip(zips, fuentes)
+                   if p["aporta"] == "mascotas"]
+    de_sombreros = [(n, z) for (n, z), p in zip(zips, fuentes)
+                    if p["aporta"] == "sombreros"]
+
+    filas, descartados = leer_mascotas(de_mascotas)
+    sombreros, sombreros_fuera = leer_sombreros(de_sombreros)
     if not filas:
         raise SystemExit(
-            "El zip no trae ningun resolver bajo %s. O no es el pack, o cambio "
-            "de estructura -- que ya paso una vez: el repositorio declara los "
+            "Ningun pack trae resolvers. O no son los packs, o cambiaron de "
+            "estructura -- que ya paso una vez: el repositorio declara los "
             "cosmeticos como `species_features` y la version publicada usa "
-            "`cosmetic_items`." % RESOLVERS)
+            "`cosmetic_items`.")
 
-    lineas = []
-    for especie, aspecto in filas:
-        ident = "%s_%s" % (especie, aspecto)
-        lineas.append(
-            '            new Pieza("%s", Catalogo.MASCOTAS, "cobblemon:%s", "%s", %d)'
-            % (ident, especie, aspecto, precio(especie)))
+    escribir("CatalogoMascotas", "Los disfraces de Pokemon.",
+             ['            new Pieza("%s_%s", Catalogo.MASCOTAS, "cobblemon:%s", "%s", %d)'
+              % (e, a, e, a, precio(e)) for e, a in filas])
 
-    DESTINO.write_text(
-        PLANTILLA % {"piezas": ",\n".join(lineas)}, encoding="utf-8")
+    escribir("CatalogoSombreros", "Los sombreros que lleva el JUGADOR.",
+             ['            new Pieza("sombrero_%s", Catalogo.SOMBREROS, "", "%s", %d)'
+              % (i, bonito(i), TRAMOS["sombrero"]) for i, _, _, _, _ in sombreros])
 
-    print("%d cosmeticos de %d especies" % (len(filas), len({f[0] for f in filas})))
-    print("-> %s" % DESTINO)
+    copiados = copiar_assets(zips, sombreros)
 
-    if sin_arte:
-        print("\nFUERA (%d): el pack los declara pero NO trae su arte." % len(sin_arte))
-        print("Se venderian y saldria el Pokemon normal, que es lo que ya paso.")
-        for especie, aspecto in sin_arte:
-            print("   %-16s %s" % (especie, aspecto))
+    print("mascotas   %3d  (%d especies)" % (len(filas), len({f[0] for f in filas})))
+    print("sombreros  %3d" % len(sombreros))
+    print("assets     %3d ficheros -> %s" % (copiados, ASSETS))
+
+    if descartados:
+        print("\nFUERA (%d): declarados pero NO dibujables." % len(descartados))
+        print("Se venderian y no se veria nada, que es lo que ya paso.")
+        for pack, especie, aspecto, motivo in descartados:
+            print("   %-30s %-14s %-14s %s" % (pack[:30], especie, aspecto, motivo))
+    if sombreros_fuera:
+        print("\nSOMBREROS FUERA (%d):" % len(sombreros_fuera))
+        for pack, ident, motivo in sombreros_fuera:
+            print("   %-30s %-24s %s" % (pack[:30], ident, motivo))
 
     print("\nAVISO: los precios son por tramos y PROVISIONALES.")
+
+
+def bonito(ident: str) -> str:
+    """`sylveonears` -> `Sylveonears`; `alolan_digglethat` -> `Alolan digglethat`.
+
+    No se intenta separar palabras pegadas: `sylveonears` no se puede partir sin
+    una lista de nombres, y una heuristica acertaria unas veces y otras no --que
+    es peor que ser consistente--.
+    """
+    s = ident.replace("_", " ").strip()
+    return s[:1].upper() + s[1:] if s else ident
 
 
 if __name__ == "__main__":

@@ -1,0 +1,46 @@
+{
+  "species": "cobblemon:pikachu",
+  "order": 0,
+  "variations": [
+    {
+      "aspects": ["goldhat"],
+      "model": "cobblemon:pikachu_goldcap_male.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["goldhat", "female"],
+      "model": "cobblemon:pikachu_goldcap_female.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["goldhat", "shiny"],
+      "model": "cobblemon:pikachu_goldcap_male.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    },
+    {
+      "aspects": ["goldhat", "shiny", "female"],
+      "model": "cobblemon:pikachu_goldcap_female.geo",
+      "layers": [
+        {
+          "name": "goldhat",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/goldcap.png"
+        }
+      ]
+    }
+  ]
+}

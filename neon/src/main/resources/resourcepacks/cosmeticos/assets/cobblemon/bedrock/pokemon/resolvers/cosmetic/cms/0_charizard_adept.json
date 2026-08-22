@@ -1,0 +1,66 @@
+{
+  "species": "cobblemon:charizard",
+  "order": 0,
+  "variations": [
+   {
+  "aspects": ["adept"],
+  "model": "cobblemon:charizard_adept.geo",
+   "layers": [
+        {
+          "name": "suit",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/adept.png"
+        }
+      ]
+},
+    {
+      "aspects": ["adept", "shiny"],
+      "model": "cobblemon:charizard_adept.geo",
+      "layers": [
+        {
+          "name": "suit",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/adept.png"
+        }
+      ]
+    },
+   {
+  "aspects": ["mega_x"],
+  "model": "cobblemon:charizard_adept.geo",
+   "layers": [
+        {
+          "name": "suit",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/adept_mega.png"
+        }
+      ]
+},
+    {
+      "aspects": ["mega_x", "shiny"],
+      "model": "cobblemon:charizard_adept.geo",
+      "layers": [
+        {
+          "name": "suit",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/adept_mega.png"
+        }
+      ]
+    },
+     {
+  "aspects": ["mega_y"],
+  "model": "cobblemon:charizard_adept.geo",
+   "layers": [
+        {
+          "name": "suit",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/adept_mega.png"
+        }
+      ]
+},
+    {
+      "aspects": ["mega_y", "shiny"],
+      "model": "cobblemon:charizard_adept.geo",
+      "layers": [
+        {
+          "name": "suit",
+          "texture": "cobblemon:textures/pokemon/cosmetic/cms/adept_mega.png"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "_comentario": [
+    "Los packs de los que sale el catalogo de cosmeticos.",
+    "",
+    "Se guardan URL y SHA1, NUNCA el fichero -- es la misma regla que el resto",
+    "del proyecto (D-036, D-037): el manifiesto del pack guarda origen y huella y",
+    "cada mod se baja del CDN de Modrinth. Aqui ademas hace falta porque los zips",
+    "suman megas y el repositorio no es un almacen de packs ajenos.",
+    "",
+    "El SHA1 NO es burocracia: es lo que hace que el catalogo generado sea",
+    "REPRODUCIBLE. Sin el, regenerar dentro de seis meses puede bajar otra version",
+    "del pack, producir un catalogo distinto, y que la diferencia se vea como un",
+    "cambio nuestro. El generador ABORTA si no cuadra.",
+    "",
+    "Los assets se incrustan en el jar de lunaneon (ver LunaNeon.registrarCosmeticos).",
+    "El data/ NO se instala en ninguno: ahi es donde viven las recetas y los",
+    "cosmetic_items, que son las dos vias por las que un cosmetico se conseguiria",
+    "JUGANDO -- y D-039 dice que solo con LunaCoins o en eventos."
+  ],
+  "packs": [
+    {
+      "nombre": "CobblemonMoreCosmetics",
+      "version": "1.1.71",
+      "licencia": "MIT",
+      "aporta": "mascotas",
+      "url": "https://cdn.modrinth.com/data/M4vjzYDD/versions/jN3II9NG/CobblemonMoreCosmetics%20Release%20v1.1.7-1.21.x.zip",
+      "sha1": "82745faed6e9c77c562ec2ac09e7ac9a12ec8960",
+      "nota": "54 disfraces dibujables de 52 especies. El pack DECLARA 62: seis del `26sinnohbundle` se venden aparte, `ninetales aurora` igual, `pangoro_operator` no trae poser y `operator` es una errata suya."
+    },
+    {
+      "nombre": "Cobblemon Cosmetic Expansion",
+      "version": "2.0",
+      "licencia": "CC-BY-NC-SA-4.0",
+      "aporta": "mascotas",
+      "url": "https://cdn.modrinth.com/data/qexPhrOF/versions/gTFs79qr/Cobblemon%20Cosmetic%20Expansion.zip",
+      "sha1": "9619244f3690a97169f6e5f033c5262cde08ac7a",
+      "nota": "16 disfraces mas, 9 especies. ⚠ NC: es la misma clausula que descarto CobbleVerse (D-006) y que choca con la venta de paquetes (D-007). Se incluye por ORDEN DEL USUARIO, que dice haberlo hablado con sus autores."
+    },
+    {
+      "nombre": "CobbleHats",
+      "version": "1.7.1",
+      "licencia": "MIT",
+      "aporta": "sombreros",
+      "url": "https://cdn.modrinth.com/data/frGHdTp1/versions/VT7hamBx/1.7.1%20fix.zip",
+      "sha1": "a0940d49cd2a56f8bc68a3902fe50edd457052c4",
+      "nota": "40 sombreros. El pack los aplica con una CALABAZA TALLADA + CustomModelData, o sea un OBJETO; nosotros usamos sus modelos y los dibujamos en la cabeza desde el cliente. Ver docs/ui/cosmeticos.md."
+    },
+    {
+      "nombre": "Cobblemon Accessories",
+      "version": "V1.1",
+      "licencia": "All Rights Reserved",
+      "aporta": "sombreros",
+      "url": "https://cdn.modrinth.com/data/QDwrKW1q/versions/NPZQO9Bx/Cobblemon%20AccessoriesV1.1.zip",
+      "sha1": "096fa28d510a5ff2cd888e60234af25402c2b37f",
+      "nota": "6 sombreros de entrenadores del anime. Van por CIT Resewn --que exige ese mod-- pero sus MODELOS son json normales, asi que dibujandolos nosotros no hace falta citresewn. ⚠ ARR: se incluye por orden del usuario."
+    }
+  ]
+}

@@ -119,6 +119,22 @@ public final class Mascota3D {
                 ? Set.of()
                 : Set.of(c.aspecto()));
 
+        // ⚠⚠ VACIAR EL BUFER DE LA INTERFAZ ANTES DEL 3D. ESTO ES LO QUE QUITA
+        //    EL PARPADEO.
+        //
+        // `DrawContext` no dibuja al momento: acumula los rectangulos y texturas
+        // en un bufer y los vuelca al final. `drawProfilePokemon`, en cambio,
+        // dibuja YA, tocando la matriz y el estado de OpenGL por su cuenta.
+        //
+        // Mezclados, el orden de lo 2D y lo 3D cambia de un fotograma a otro
+        // segun cuando le toque volcar al bufer: los modelos aparecian delante
+        // y detras de las celdas alternativamente, y eso es lo que se ve como
+        // titileo. No es el modelo: es quien pinta primero.
+        //
+        // Vaciando antes y despues, cada cosa cae en su sitio y el orden deja
+        // de depender del azar.
+        ctx.draw();
+
         // ⚠ RECORTE. Sin él, un modelo alto se sale de su celda y se dibuja
         // encima de la de al lado — y como el 3D no respeta el orden de dibujado
         // de la interfaz, tapa también los precios.
@@ -159,6 +175,9 @@ public final class Mascota3D {
             }
         } finally {
             m.pop();
+            // Y se vacia otra vez: lo que el modelo haya dejado en vuelo tiene
+            // que salir ANTES de que la interfaz siga dibujando encima.
+            ctx.draw();
             ctx.disableScissor();
         }
     }

@@ -238,59 +238,77 @@ public class CosmeticosScreen extends Screen {
         int cy = py(PANEL_Y + NAV_ALTO / 2);
         int aw = pl(60), ah = pl(48);
         dibujarTextura(ctx, ATRAS, px(PANEL_X + 18), cy - ah / 2, aw, ah, 60, 48);
-        ctx.drawTextWithShadow(textRenderer, Text.translatable("pokepad.lunaeternal.inicio"),
-                px(PANEL_X + 18) + aw + pl(10), cy - textRenderer.fontHeight / 2, 0xFFD2D8E8);
-
+        texto(ctx, Text.translatable("pokepad.lunaeternal.inicio"),
+                PANEL_X + 18 + 60 + 12, PANEL_Y + NAV_ALTO / 2 - 13, 26,
+                0xFFD2D8E8, false, false);
         int cw = pl(80), chh = pl(64);
         dibujarTextura(ctx, CERRAR, px(PANEL_X + PANEL_W - 18) - cw, cy - chh / 2, cw, chh, 80, 64);
     }
 
     private void dibujarPreview(DrawContext ctx, float delta) {
-        int bx = px(PANEL_X + 8);
-        int by = py(PANEL_Y + NAV_ALTO);
-        int bw = pl(PANEL_W - 16);
-        int bh = pl(PANEL_H - NAV_ALTO - SALDO_ALTO - 8);
+        int ax = PANEL_X + 8, ay = PANEL_Y + NAV_ALTO;
+        int aw = PANEL_W - 16, ah = PANEL_H - NAV_ALTO - SALDO_ALTO - 8;
 
         if (enfocado == null) {
-            ctx.drawCenteredTextWithShadow(textRenderer,
-                    Text.translatable("pokepad.lunaeternal.sin_seleccion"),
-                    bx + bw / 2, by + bh / 2, TEXTO_SUAVE);
+            texto(ctx, Text.translatable("pokepad.lunaeternal.sin_seleccion"),
+                    ax + aw / 2, ay + ah / 2, 24, TEXTO_SUAVE, true, false);
             return;
         }
-        // El previsualizador es grande: el modelo va al triple que en la celda.
-        Mascota3D.dibujar(ctx, enfocado, bx, by, bw, bh, 62f * k, delta);
+        // ⚠ EL MODELO VA GRANDE. El previsualizador mide 299x465 pixeles del
+        //   arte: con la escala de la celda, un Mewtwo se quedaba en un tercio
+        //   del hueco y el panel parecia vacio.
+        Mascota3D.dibujar(ctx, enfocado, px(ax), py(ay), pl(aw), pl(ah), 105f * k, delta);
 
-        ctx.drawCenteredTextWithShadow(textRenderer, Text.literal(enfocado.aspecto()),
-                bx + bw / 2, by + bh - textRenderer.fontHeight - pl(6), ORO);
+        texto(ctx, Text.literal(nombreDe(enfocado)), ax + aw / 2, ay + ah - 34, 26,
+                ORO, true, false);
+        texto(ctx, Text.literal(enfocado.aspecto()), ax + aw / 2, ay + ah - 6, 20,
+                TEXTO_SUAVE, true, false);
+    }
+
+    /**
+     * «Charizard» a partir de «cobblemon:charizard».
+     *
+     * <p>⚠ Antes la celda solo enseñaba el ASPECTO —«knight», «chef»— y no la
+     * especie, asi que la tienda era una lista de adjetivos sueltos: no se sabia
+     * de que Pokemon era cada uno sin mirar el dibujo.
+     */
+    private static String nombreDe(Cosmetico c) {
+        String s = c.especie();
+        int i = s.indexOf(':');
+        if (i >= 0) {
+            s = s.substring(i + 1);
+        }
+        if (s.isEmpty()) {
+            return c.id();
+        }
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     private void dibujarSaldo(DrawContext ctx, int rx, int ry) {
-        int cy = py(PANEL_Y + PANEL_H - SALDO_ALTO / 2);
+        int acy = PANEL_Y + PANEL_H - SALDO_ALTO / 2;
         int m = pl(40);
-        dibujarTextura(ctx, MONEDA, px(PANEL_X + 24), cy - m / 2, m, m, 100, 100);
-        ctx.drawTextWithShadow(textRenderer, Text.literal(String.format("%,d", lunacoins)),
-                px(PANEL_X + 24) + m + pl(14), cy - textRenderer.fontHeight / 2, ORO);
-
+        dibujarTextura(ctx, MONEDA, px(PANEL_X + 24), py(acy) - m / 2, m, m, 100, 100);
+        texto(ctx, Text.literal(String.format("%,d", lunacoins)),
+                PANEL_X + 24 + 40 + 14, acy - 17, 34, ORO, false, false);
         int mw = pl(58);
-        dibujarTextura(ctx, MAS, px(PANEL_X + PANEL_W - 22) - mw, cy - mw / 2, mw, mw, 58, 58);
+        dibujarTextura(ctx, MAS, px(PANEL_X + PANEL_W - 22) - mw, py(acy) - mw / 2, mw, mw, 58, 58);
     }
 
     private void dibujarPestanas(DrawContext ctx, int rx, int ry) {
         int anchoUtil = PANT_W - 2 * MARGEN;
         int pw = anchoUtil / CATEGORIAS.length;
         for (int i = 0; i < CATEGORIAS.length; i++) {
-            int x = px(PANT_X + MARGEN + i * pw);
-            int y = py(PANT_Y + MARGEN);
-            int w = pl(pw - 6), h = pl(PESTANA_ALTO);
+            int ax = PANT_X + MARGEN + i * pw, ay = PANT_Y + MARGEN;
+            int x = px(ax), y = py(ay), w = pl(pw - 6), h = pl(PESTANA_ALTO);
             boolean activa = i == pestana;
             boolean encima = dentro(rx, ry, x, y, w, h);
 
             ctx.fill(x, y, x + w, y + h, activa || encima ? CELDA_ENCIMA : CELDA_FONDO);
             marco(ctx, x, y, w, h, activa || encima ? BORDE_ENCIMA : CELDA_BORDE,
                     Math.max(1, pl(activa ? 4 : 2)));
-            ctx.drawCenteredTextWithShadow(textRenderer,
-                    Text.translatable("pokepad.lunaeternal.cat." + CATEGORIAS[i]),
-                    x + w / 2, y + h / 2 - textRenderer.fontHeight / 2, TEXTO_OSCURO);
+            texto(ctx, Text.translatable("pokepad.lunaeternal.cat." + CATEGORIAS[i]),
+                    ax + (pw - 6) / 2, ay + PESTANA_ALTO / 2 - 13, 26,
+                    TEXTO_OSCURO, true, true);
         }
     }
 
@@ -311,49 +329,50 @@ public class CosmeticosScreen extends Screen {
             Cosmetico c = lista.get(idx);
             int ax = PANT_X + MARGEN + (n % COLS) * (cw + AIRE);
             int ay = gy0 + (n / COLS) * (ch + AIRE);
-            dibujarCelda(ctx, c, px(ax), py(ay), pl(cw), pl(ch), rx, ry, delta);
+            dibujarCelda(ctx, c, ax, ay, cw, ch, rx, ry, delta);
         }
     }
 
-    private void dibujarCelda(DrawContext ctx, Cosmetico c, int x, int y, int w, int h,
+    private void dibujarCelda(DrawContext ctx, Cosmetico c, int ax, int ay, int aw, int ah,
                               int rx, int ry, float delta) {
+        int x = px(ax), y = py(ay), w = pl(aw), h = pl(ah);
         boolean encima = dentro(rx, ry, x, y, w, h);
         boolean elegido = enfocado != null && enfocado.id().equals(c.id());
+        boolean marcado = encima || elegido || c.equipado();
 
         ctx.fill(x, y, x + w, y + h, encima ? CELDA_ENCIMA : CELDA_FONDO);
-        marco(ctx, x, y, w, h,
-                encima || elegido || c.equipado() ? BORDE_ENCIMA : CELDA_BORDE,
-                Math.max(1, pl(encima || elegido || c.equipado() ? 4 : 2)));
+        marco(ctx, x, y, w, h, marcado ? BORDE_ENCIMA : CELDA_BORDE,
+                Math.max(1, pl(marcado ? 4 : 2)));
 
-        int pie = pl(PIE);
-        Mascota3D.dibujar(ctx, c, x + pl(10), y + pl(8), w - pl(20), h - pie - pl(8),
-                22f * k, delta);
+        // El 3D ocupa todo lo que no es el pie. Se dibuja ANTES que el nombre
+        // para que el nombre quede por encima y siga leyendose.
+        Mascota3D.dibujar(ctx, c, x + pl(10), y + pl(6), w - pl(20), h - pl(PIE + 6),
+                34f * k, delta);
 
-        // El nombre del aspecto va SOBRE el 3D y no encima de él: encima costaba
-        // 28 px de alto que el modelo necesita más.
-        ctx.drawCenteredTextWithShadow(textRenderer, Text.literal(c.aspecto()),
-                x + w / 2, y + h - pie - textRenderer.fontHeight - pl(4), TEXTO_SUAVE);
+        texto(ctx, Text.literal(nombreDe(c)), ax + aw / 2, ay + ah - PIE - 24, 22,
+                TEXTO_OSCURO, true, true);
 
-        dibujarPie(ctx, c, x, y + h - pie, w, pie);
+        dibujarPie(ctx, c, ax, ay + ah - PIE, aw, PIE);
     }
 
-    private void dibujarPie(DrawContext ctx, Cosmetico c, int x, int y, int w, int h) {
-        int cy = y + h / 2;
-        int bw = pl(84);
-        int bx = x + w - pl(10) - bw;
-
+    private void dibujarPie(DrawContext ctx, Cosmetico c, int ax, int ay, int aw, int ah) {
         Cosmetico.Estado est = c.estado();
-        if (est == Cosmetico.Estado.COMPRAR) {
-            int m = pl(22);
-            dibujarTextura(ctx, MONEDA, x + pl(12), cy - m / 2, m, m, 100, 100);
-            ctx.drawTextWithShadow(textRenderer, Text.literal(String.valueOf(c.precio())),
-                    x + pl(38), cy - textRenderer.fontHeight / 2, TEXTO_OSCURO);
-        } else {
-            // Ya es tuyo: enseñar el precio otra vez invita a pagarlo dos veces.
-            ctx.drawTextWithShadow(textRenderer,
-                    Text.translatable("pokepad.lunaeternal.tuyo"),
-                    x + pl(12), cy - textRenderer.fontHeight / 2, TEXTO_SUAVE);
-        }
+        String clave = switch (est) {
+            case COMPRAR -> "comprar";
+            case DE_EVENTO -> "evento";
+            case EQUIPAR -> "equipar";
+            case EQUIPADO -> "equipado";
+        };
+        Text etiqueta = Text.translatable("pokepad.lunaeternal." + clave);
+
+        // ⚠⚠ EL BOTON SE MIDE, NO SE FIJA A OJO.
+        //
+        // Con un ancho escrito a mano el precio se montaba encima y la tienda
+        // enseñaba "3.COMPRAR" donde ponia 2500 -- un precio DIEZ VECES MENOR.
+        // Se calcula del texto real y se deja siempre hueco para el precio.
+        int botonTexto = 18;
+        int bw = Math.min(aw - 74, anchoArte(etiqueta, botonTexto) + 20);
+        int bx = ax + aw - 10 - bw;
 
         int relleno = switch (est) {
             case COMPRAR -> BORDE_ENCIMA;
@@ -361,18 +380,21 @@ public class CosmeticosScreen extends Screen {
             case EQUIPAR -> 0xFF567AC8;
             case EQUIPADO -> 0xFFCEDCF4;
         };
-        String clave = switch (est) {
-            case COMPRAR -> "comprar";
-            case DE_EVENTO -> "evento";
-            case EQUIPAR -> "equipar";
-            case EQUIPADO -> "equipado";
-        };
         int tinta = est == Cosmetico.Estado.EQUIPADO ? 0xFF185C34 : 0xFFFFFFFF;
 
-        ctx.fill(bx, cy - pl(16), bx + bw, cy + pl(16), relleno);
-        ctx.drawCenteredTextWithShadow(textRenderer,
-                Text.translatable("pokepad.lunaeternal." + clave),
-                bx + bw / 2, cy - textRenderer.fontHeight / 2, tinta);
+        if (est == Cosmetico.Estado.COMPRAR) {
+            int m = pl(22);
+            dibujarTextura(ctx, MONEDA, px(ax + 10), py(ay + ah / 2) - m / 2, m, m, 100, 100);
+            texto(ctx, Text.literal(String.valueOf(c.precio())),
+                    ax + 36, ay + ah / 2 - 10, 20, TEXTO_OSCURO, false, true);
+        } else {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.tuyo"),
+                    ax + 10, ay + ah / 2 - 8, 16, TEXTO_SUAVE, false, true);
+        }
+
+        ctx.fill(px(bx), py(ay + 4), px(bx + bw), py(ay + ah - 4), relleno);
+        texto(ctx, etiqueta, bx + bw / 2, ay + ah / 2 - botonTexto / 2, botonTexto,
+                tinta, true, false);
     }
 
     // ---- interacción -------------------------------------------------------
@@ -437,10 +459,19 @@ public class CosmeticosScreen extends Screen {
             // parte del artículo que además COBRA es cómo se gasta dinero sin
             // querer.
             enfocado = c;
-            int py0 = py(ay) + pl(ch) - pl(PIE);
-            int bw = pl(84);
-            int bx = px(ax) + pl(cw) - pl(10) - bw;
-            if (dentro(rx, ry, bx, py0, bw, pl(PIE))) {
+            // El area del boton se calcula IGUAL que al dibujarlo. Si las dos
+            // formulas se separan, el jugador pulsa donde ve el boton y no pasa
+            // nada -- o peor, compra pulsando al lado.
+            Text etiqueta = Text.translatable("pokepad.lunaeternal."
+                    + switch (c.estado()) {
+                        case COMPRAR -> "comprar";
+                        case DE_EVENTO -> "evento";
+                        case EQUIPAR -> "equipar";
+                        case EQUIPADO -> "equipado";
+                    });
+            int bw = Math.min(cw - 74, anchoArte(etiqueta, 18) + 20);
+            int bx = ax + cw - 10 - bw;
+            if (dentro(rx, ry, px(bx), py(ay + ch - PIE + 4), pl(bw), pl(PIE - 8))) {
                 accion(c);
             } else {
                 sonar(true);
@@ -497,6 +528,60 @@ public class CosmeticosScreen extends Screen {
     }
 
     // ---- utilidades --------------------------------------------------------
+
+
+    /**
+     * Escribe una linea MEDIDA EN PIXELES DEL ARTE.
+     *
+     * <p>⚠⚠ ESTA ES LA REGLA QUE SE ME OLVIDO Y QUE HIZO QUE LA TIENDA SE VIERA
+     * ROTA EN EL JUEGO.
+     *
+     * La fuente de Minecraft mide 9 y se dibuja en unidades de interfaz, no en
+     * pixeles del arte. Dibujando con {@code drawText} a secas, el chasis
+     * encoge con {@code k} y <b>el texto no</b>: a tamaño real se ve bien, y en
+     * cuanto la ventana obliga a reducir, las letras se quedan enormes, se
+     * salen de su hueco y el precio se monta encima del boton -- que fue
+     * exactamente lo que paso ("3.COMPRAR" donde ponia 2500).
+     *
+     * <p>Escalando la matriz, el texto ocupa siempre {@code alto} pixeles del
+     * arte, y encaja pase lo que pase con el GUI Scale del jugador.
+     *
+     * <p>Contorno y no sombra: la sombra de Minecraft es una copia desplazada
+     * en diagonal, que sobre estas celdas CLARAS queda gris sobre claro e
+     * ilegible. En cruz y no en las ocho direcciones: cierra igual la letra y
+     * pesa la mitad.
+     */
+    private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,
+                       int color, boolean centrado, boolean contorno) {
+        float escala = alto * k / textRenderer.fontHeight;
+        if (escala <= 0) {
+            return;
+        }
+        var m = ctx.getMatrices();
+        m.push();
+        m.translate(x0, y0, 0);
+        m.scale(escala, escala, 1f);
+
+        int ancho = textRenderer.getWidth(linea);
+        int px = Math.round(cx * k / escala) - (centrado ? ancho / 2 : 0);
+        int py = Math.round(arriba * k / escala);
+
+        if (contorno) {
+            ctx.drawText(textRenderer, linea, px - 1, py, TEXTO_CONTORNO, false);
+            ctx.drawText(textRenderer, linea, px + 1, py, TEXTO_CONTORNO, false);
+            ctx.drawText(textRenderer, linea, px, py - 1, TEXTO_CONTORNO, false);
+            ctx.drawText(textRenderer, linea, px, py + 1, TEXTO_CONTORNO, false);
+        }
+        ctx.drawText(textRenderer, linea, px, py, color, false);
+        m.pop();
+    }
+
+    /** Ancho de un texto EN PIXELES DEL ARTE, para poder comprobar que cabe. */
+    private int anchoArte(Text linea, int alto) {
+        return Math.round(textRenderer.getWidth(linea) * alto / (float) textRenderer.fontHeight);
+    }
+
+    private static final int TEXTO_CONTORNO = 0xFFF2F6FF;
 
     private static boolean dentro(int rx, int ry, int x, int y, int w, int h) {
         return rx >= x && rx < x + w && ry >= y && ry < y + h;

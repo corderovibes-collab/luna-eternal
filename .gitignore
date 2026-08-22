@@ -64,6 +64,17 @@ arte-origen/
 # Rastro que deja `aqt` al instalar Qt. No es del proyecto.
 aqtinstall.log
 
-# Toolchain local del launcher Qt (Qt 6.10.2 + vcpkg, ~4 GB).
-# Se recupera con: python tools/toolchain.py
+# Toolchain local del launcher Qt: Qt 6.10.2 + vcpkg + JDK 17, ~4,5 GB.
+#
+# ⚠ `tools/toolchain.py` NO EXISTE. Aqui ponia que el toolchain se recuperaba
+#   con ese script; el 2026-08-21, con el PC recien formateado, resulto que no
+#   estaba y hubo que reconstruirlo a mano descubriendo pieza a pieza cual
+#   faltaba. Un puntero a un fichero inexistente es peor que ninguno: manda a
+#   buscar en vez de decir que hay que hacer.
+#
+# La receta de verdad esta en docs/technical/launcher-qt.md §1 y §9. Resumen:
+#   Qt      aqtinstall (necesita Python)      -> .toolchain\Qt
+#   vcpkg   git clone + bootstrap-vcpkg.bat   -> .toolchain\vcpkg
+#   JDK 17  zip de Temurin, NO 21             -> .toolchain\jdk
+#   MSVC    Visual Studio Build Tools, esto SI va al sistema (trae CMake y Ninja)
 .toolchain/

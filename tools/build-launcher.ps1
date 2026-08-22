@@ -22,19 +22,90 @@ param(
   #
   # Objetivos utiles: LunaManifest, LunaInstance, LunaSync, LunaDownload,
   # LunaApply, LunaConfig, LunaEternal (el ejecutable; ojo a las mayusculas).
-  [string]$Solo = ''
+  [string]$Solo = '',
+
+  # ⚠ NO COMPILAR LOS 27 EJECUTABLES DE PRUEBA. Es lo que hace utilizable el
+  #   ciclo "cambio algo -> quiero el instalador para probarlo".
+  #
+  # Prism trae 27 objetivos de test, y CADA UNO es un .exe que hay que enlazar
+  # contra `Launcher_logic`. Tocar un solo fichero de `launcher/luna/` los
+  # reenlaza los 27 aunque no se vayan a ejecutar. Para empaquetar no aportan
+  # nada: el instalador no los lleva.
+  #
+  #   .\build-launcher.ps1 -Instalador -SinPruebas    instalador, minutos
+  #   .\build-launcher.ps1                            todo, con pruebas
+  #
+  # ⚠ Y ENTONCES HAY QUE ACORDARSE DE CORRERLAS. Saltarselas al empaquetar esta
+  #   bien; saltarselas SIEMPRE es como no tenerlas. La regla: se compilan y se
+  #   pasan cuando se toca `launcher/luna/`, y se omiten en las tandas de
+  #   empaquetado posteriores al mismo cambio.
+  [switch]$SinPruebas
 )
 $ErrorActionPreference = 'Stop'
 
 $TC   = 'D:\pokereportversionmejorada\.toolchain'
 $SRC  = 'D:\luna-launcher'
-$VS   = 'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools'
 $QTVER= '6.10.2'
+
+# ---------------------------------------------------------------- Visual Studio
+#
+# ⚠ LA RUTA SE BUSCA, NO SE ESCRIBE. Aqui estuvo clavado
+#   '...\Microsoft Visual Studio\18\BuildTools' y el 2026-08-21 esa carpeta ya
+#   no existia: el toolchain se habia desinstalado de la maquina. El script
+#   moria en `cmake : no se reconoce`, un mensaje que apunta a CMake y no a lo
+#   que pasaba de verdad --que no habia compilador--, y que ademas es identico
+#   al que sale si Visual Studio simplemente esta en otra carpeta.
+#
+#   El numero de version va DENTRO de la ruta ('18', '2022', ...), asi que
+#   reinstalar una edicion distinta a la de quien escribio esta linea rompe la
+#   compilacion aunque todo lo demas este bien. Y no es hipotetico: la de este
+#   proyecto se reinstalo como 2022, que es ademas la que corresponde al Qt
+#   `msvc2022_64` de `.toolchain`.
+#
+#   `vswhere.exe` es la respuesta oficial de Microsoft a esto: se instala en una
+#   ruta FIJA con cualquier edicion --Community, Professional, Build Tools-- y
+#   sabe donde estan todas.
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+$VS = $null
+if (Test-Path $vswhere) {
+  # `-products *` incluye Build Tools, que NO sale en la busqueda por defecto.
+  # `-requires` filtra las instalaciones sin compilador de C++: una de solo
+  # .NET pasaria el filtro y luego no tendria `vcvars64.bat`.
+  $VS = & $vswhere -products * -latest -prerelease `
+                   -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+                   -property installationPath
+}
+if (-not $VS) {
+  # Sin vswhere queda rastrear a mano. Se ordena descendente para quedarse con
+  # la version mas alta ('2022' > '18' alfabeticamente no, pero por fecha de
+  # escritura si), y se exige `vcvars64.bat` para no elegir una instalacion
+  # incompleta.
+  $VS = Get-ChildItem @("${env:ProgramFiles(x86)}\Microsoft Visual Studio", "$env:ProgramFiles\Microsoft Visual Studio") `
+          -Directory -ErrorAction SilentlyContinue |
+        ForEach-Object { Get-ChildItem $_.FullName -Directory -ErrorAction SilentlyContinue } |
+        Where-Object { Test-Path (Join-Path $_.FullName 'VC\Auxiliary\Build\vcvars64.bat') } |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
+}
+if (-not $VS) {
+  throw @"
+No se encuentra Visual Studio con el compilador de C++.
+
+Instala Visual Studio Build Tools con la carga de trabajo de C++:
+  https://aka.ms/vs/17/release/vs_BuildTools.exe
+  --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended
+
+(Sin esto no hay cl.exe, ni CMake, ni Ninja: los tres vienen dentro.)
+"@
+}
+$vcvars = Join-Path $VS 'VC\Auxiliary\Build\vcvars64.bat'
+if (-not (Test-Path $vcvars)) { throw "Visual Studio esta en '$VS' pero le falta vcvars64.bat (instalacion incompleta)" }
+Write-Host "Visual Studio: $VS"
 
 # El entorno de MSVC no se hereda: `vcvars64.bat` exporta ~40 variables (INCLUDE,
 # LIB, PATH...) y sin ellas el compilador no encuentra ni <stdio.h>. Se ejecuta
 # en un cmd hijo y se importan las variables que deja.
-cmd /c "`"$VS\VC\Auxiliary\Build\vcvars64.bat`" >nul 2>&1 && set" | ForEach-Object {
+cmd /c "`"$vcvars`" >nul 2>&1 && set" | ForEach-Object {
   if ($_ -match '^([^=]+)=(.*)$') { Set-Item -Path "env:$($matches[1])" -Value $matches[2] }
 }
 
@@ -42,7 +113,57 @@ $env:VCPKG_ROOT       = "$TC\vcpkg"
 $env:CMAKE_PREFIX_PATH= "$TC\Qt\6.10.2\msvc2022_64"
 $env:ARTIFACT_NAME    = 'luna-launcher-win-x64'
 $env:BUILD_PLATFORM   = 'windows-msvc'
-$env:PATH             = "$TC\Qt\6.10.2\msvc2022_64\bin;$VS\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;$VS\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja;$env:PATH"
+$env:PATH             = "$TC\Qt\$QTVER\msvc2022_64\bin;$VS\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;$VS\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja;$env:PATH"
+
+# ⚠ SE COMPRUEBA QUE LAS HERRAMIENTAS ESTAN, Y SE DICE CUAL FALTA.
+#
+# Sin esto, faltar cualquiera de las tres da el mismo mensaje de PowerShell --
+# "el termino X no se reconoce" -- que suena a que X esta mal escrito y no a que
+# la instalacion de Visual Studio no incluyo la carga de C++. Media hora de
+# buscar en el sitio equivocado.
+foreach ($h in 'cl', 'cmake', 'ninja') {
+  if (-not (Get-Command $h -ErrorAction SilentlyContinue)) {
+    throw "Falta '$h'. Visual Studio esta en '$VS' pero sin la carga de trabajo de C++ completa (CMake y Ninja vienen con ella)."
+  }
+}
+if (-not (Test-Path "$TC\Qt\$QTVER\msvc2022_64\bin\windeployqt.exe")) {
+  throw "Falta Qt $QTVER en '$TC\Qt'. Recuperalo con aqtinstall -- receta en docs/technical/launcher-qt.md §1."
+}
+
+# ------------------------------------------------------------------------ JDK
+#
+# `libraries/launcher` es el trozo JAVA de Prism: el `NewLaunch.jar` que arranca
+# Minecraft de verdad. Su CMakeLists hace `project(launcher Java)` y
+# `find_package(Java 1.7 REQUIRED COMPONENTS Development)`, asi que sin `javac`
+# la CONFIGURACION entera se para -- antes de compilar una linea de C++.
+#
+# ⚠ TIENE QUE SER JDK 17, NO 21. Prism compila ese jar con `-source 7 -target 7`
+#   (libraries/launcher/CMakeLists.txt:7) y JDK 20 elimino el soporte de 7:
+#   con un 21 el error es "Source option 7 is no longer supported".
+#
+# ⚠ Y NO VALE EL JAVA QUE SE BAJA EL LAUNCHER. En
+#   %APPDATA%\LunaEternal\java\java-runtime-delta hay un javac 21 --tentador,
+#   porque ya esta ahi-- pero ademas de ser la version equivocada, esa carpeta
+#   la gestiona el propio launcher: puede borrarla o reemplazarla, y en un
+#   equipo recien montado no existe hasta que alguien juega. Una dependencia de
+#   compilacion no puede vivir ahi.
+#
+# Va en `.toolchain\jdk` como todo lo demas: git-ignorado y se borra con la
+# carpeta. Se busca el `jdk-*` de dentro en vez de fijar la version, para que
+# actualizarlo no obligue a tocar este fichero.
+$jdk = Get-ChildItem "$TC\jdk" -Directory -Filter 'jdk-*' -ErrorAction SilentlyContinue |
+       Sort-Object Name -Descending | Select-Object -First 1
+if (-not $jdk -or -not (Test-Path "$($jdk.FullName)\bin\javac.exe")) {
+  throw @"
+Falta el JDK en '$TC\jdk' (hace falta para el NewLaunch.jar de Prism).
+
+Descarga Temurin 17 (zip, NO 21: Prism compila con -source 7) y extraelo ahi:
+  https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jdk/hotspot/normal/eclipse
+"@
+}
+$env:JAVA_HOME = $jdk.FullName
+$env:PATH      = "$($jdk.FullName)\bin;$env:PATH"
+Write-Host "JDK: $($jdk.Name)"
 
 # ⚠ NO LANZAR DOS COMPILACIONES A LA VEZ.
 #
@@ -93,6 +214,10 @@ try {
   # que `-Publicar` habria producido EN SILENCIO un binario de publicacion sin
   # optimizar.
   $argLto = "-DENABLE_LTO=$lto"
+  # Mismo motivo que `$argLto`: PowerShell 5.1 no expande variables en un
+  # argumento suelto que empieza por `-` y lleva `=`.
+  $argTests = "-DBUILD_TESTING=$(if ($SinPruebas) { 'OFF' } else { 'ON' })"
+  if ($SinPruebas) { Write-Host "Pruebas: NO se compilan (27 ejecutables menos)" }
 
   # ⚠ LAS VARIABLES `CACHE` DE CMAKE NO SE PISAN DESDE EL CMakeLists.
   #
@@ -103,7 +228,7 @@ try {
   # cambiaba.
   #
   # Las que tienen que mandar desde el fuente se repiten aqui.
-  cmake --preset windows_msvc $argLto "-DLauncher_UPDATER_GITHUB_REPO=https://github.com/corderovibes-collab/luna-eternal-launcher"
+  cmake --preset windows_msvc $argLto $argTests "-DLauncher_UPDATER_GITHUB_REPO=https://github.com/corderovibes-collab/luna-eternal-launcher"
   if ($LASTEXITCODE -ne 0) { throw "cmake configure fallo ($LASTEXITCODE)" }
   if ($Solo) {
     cmake --build --preset windows_msvc --config Release --target $Solo
@@ -151,9 +276,29 @@ try {
     cmake --install (Join-Path $SRC 'build') --prefix $inst --config Release
     if ($LASTEXITCODE -ne 0) { throw "cmake --install fallo ($LASTEXITCODE)" }
 
-    $mk = @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe") |
-          Where-Object { Test-Path $_ } | Select-Object -First 1
-    if (-not $mk) { throw "Falta NSIS. Instalalo con: winget install --id NSIS.NSIS" }
+    # NSIS: primero el del toolchain --que es portable y va con el proyecto-- y
+    # solo despues el instalado en el sistema, si alguien lo tiene.
+    #
+    # ⚠ EL MENSAJE DE ANTES DECIA `winget install --id NSIS.NSIS`. En el equipo
+    #   recien formateado del 2026-08-21 NO HABIA WINGET, asi que la unica
+    #   instruccion que daba el error tampoco se podia seguir.
+    $mk = @(Get-ChildItem "$TC\nsis" -Recurse -Filter makensis.exe -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty FullName) +
+          @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe") |
+          Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    if (-not $mk) {
+      throw @"
+Falta NSIS (hace falta para generar el instalador).
+
+Bajalo en zip --no necesita instalarse-- y extraelo en '$TC\nsis':
+  https://downloads.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11.zip
+
+⚠ Descargalo con curl, NO con Invoke-WebRequest: el PowerShell 5.1 de Windows
+  se trae una pagina de SourceForge de 120 KB en vez del zip, y el fallo
+  aparece luego como "no se encuentra el registro de fin de directorio central".
+"@
+    }
+    Write-Host "NSIS: $mk"
 
     # ⚠ HAY QUE ESTAR DENTRO de la carpeta de instalacion: el .nsi coge los
     #   ficheros por ruta RELATIVA, y `-NOCD` le dice a makensis que no se mueva

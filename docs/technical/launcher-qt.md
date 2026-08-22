@@ -386,7 +386,267 @@ powershell tools/build-launcher.ps1 -Solo LunaSync      # una prueba
 > ⚠️ **El enlazado falla con `LNK1104` si el launcher está abierto.** Ciérralo
 > antes de compilar.
 
+## 8. Por qué la gente abandonaba la instalación (2026-08-21)
+
+Dos capturas de un jugador —«Múltiples subtareas fallidas / ¡Todos los intentos
+han fracasado!» ×3, y detrás «No se pudo poner el pack al día»— destaparon
+**tres fallos distintos**, ninguno de ellos el que parecía.
+
+### 8.1 · El pack no reintentaba NADA. Ni una vez
+
+`makeFileTask` montaba un `MultipleOptionsTask`, que prueba orígenes en
+secuencia hasta que uno contesta. Suena a reintento y **no lo es**:
+
+```
+159 ficheros en el manifiesto
+157 de ellos con UN SOLO origen   -> "varias opciones" = una = CERO reintentos
+  2 con un espejo de verdad       -> el failover cubria al 1,3 % del pack
+```
+
+Y `Net::Download` tampoco reintenta solo: su `AutoRetry` hay que encenderlo a
+mano —`makeFile` no lo hace— y además **solo cubre el HTTP 429**. Un corte de
+TLS, un DNS lento, un 503 del CDN o una descarga parada más de
+`RequestTimeout` (60 s) mataban el fichero al primer tropiezo.
+
+**La cuenta que lo convierte en un problema de producto:**
+
+| Fallo por fichero | Probabilidad de que la instalación ENTERA falle |
+|---|---|
+| 0,5 % | 55 % |
+| 1 % | 80 % |
+| **2 %** (wifi doméstico normal) | **96 %** |
+
+Con 3 de 159 fallando, el jugador de la captura estaba justo en ese 2 %. **No
+es mala suerte suya: es la tasa de abandono del launcher.**
+
+Y la lección ya estaba aprendida en el launcher de Electron —«se rendía
+demasiado pronto ante un 503: eran 4 reintentos con tope de 8 s… ahora 8 con
+tope de 30 s»—. **El fork no la heredó.** Es el patrón de esta migración: el
+motor se reescribió bien y las cicatrices se quedaron en el otro repositorio.
+
+Arreglado en `luna/LunaDownload.cpp`: `FileTask` alterna orígenes y reintenta
+con espera creciente (1 s, 2 s, 4 s…, tope 15 s), 4 intentos por origen. Un
+4xx —salvo 408 y 429— sigue siendo definitivo **para ese origen**, que era lo
+correcto del diseño anterior y se conserva.
+
+### 8.2 · El error no nombraba nada
+
+`MultipleOptionsTask` tira el error de debajo (`All attempts have failed!`) y
+`ConcurrentTask` resume N fallos en `Multiple failed tasks`. Resultado: una
+ventana que no dice **qué** fichero ni **de dónde** ni **por qué**.
+
+> Diagnosticar aquella captura exigió leer el fuente del launcher con el
+> manifiesto descargado al lado y probar las 159 URLs a mano. Eso no lo puede
+> hacer un jugador, y tampoco debería tener que hacerlo la siguiente sesión.
+
+Ahora el mensaje es `mods/x.jar - cdn.modrinth.com respondió HTTP 503 (4
+intentos)`, `UpdateTask` acumula un motivo por fichero, y el diálogo final de
+`MainWindow` **incluye el detalle y se puede seleccionar con el ratón** — antes
+salían dos ventanas y la que se podía fotografiar era la que no decía nada.
+
+### 8.3 · ⚠️⚠️ El instalador no traía el runtime de Visual C++
+
+Medido sobre los binarios de `install/`, no supuesto:
+
+```
+lunaeternal.exe   importa   VCRUNTIME140.dll  VCRUNTIME140_1.dll  MSVCP140.dll
+Qt6Core.dll       importa   además            MSVCP140_1.dll
+install/          contiene  NINGUNA de ellas
+win_install.nsi   instala   NINGUNA de ellas
+```
+
+Y no es un olvido de nadie: `launcher/CMakeLists.txt` **las excluye a
+propósito**, heredado de aguas arriba — `NO_COMPILER_RUNTIME`,
+`PRE_EXCLUDE_REGEXES "^vcruntime.*\.dll$"` y `POST_EXCLUDE_REGEXES "system32"`
+(que además se lleva `msvcp140.dll`, porque se resuelve desde ahí).
+
+**En un Windows sin el redistribuible, el doble clic no hace absolutamente
+nada.** Ni ventana, ni error, ni log: Windows no encuentra la DLL y abandona
+antes de que corra una línea nuestra. Indistinguible de «el launcher está
+roto», y sin rastro que el jugador pueda mandar.
+
+> ⚠️ `VCRUNTIME140_1.dll` es la que suele faltar: llegó con Visual Studio 2019.
+> Un equipo con redistribuibles antiguos tiene las otras dos y **no** esa — y
+> el síntoma es idéntico a no tener ninguna.
+
+Se arregla en **dos sitios, y hacen falta los dos**:
+
+| | |
+|---|---|
+| `launcher/CMakeLists.txt` | `InstallRequiredSystemLibraries` copia las DLL **junto al .exe**. Windows mira la carpeta del ejecutable antes que el sistema, así que **el launcher arranca sin permisos de administrador y sin descargar nada** (~600 KB) |
+| `luna/LunaPreflight` | Instala el redistribuible **del sistema**. Hace falta igualmente: los `natives` de LWJGL los carga **la JVM**, y a esos no les vale una copia junto a nuestro .exe |
+
+### 8.4 · La comprobación de requisitos existía y se perdió al cambiar de launcher
+
+El de Electron tenía `core/preflight.js`: Visual C++ (con instalación de un
+clic), drivers de gráfica, disco, RAM, versión de Windows. **El fork nació sin
+ello, y el fork es lo que la gente tiene instalado hoy.** No era una idea
+nueva que diseñar: era una funcionalidad que devolver.
+
+`luna/LunaPreflight.{h,cpp}` la reimplementa y `MainWindow::requisitosDelEquipo`
+la ejecuta **antes de bajar el pack** — descubrir que falta una DLL de 600 KB
+después de bajar 434 MB es gastarle a alguien media hora de conexión antes de
+darle la mala noticia.
+
+> **Avisar no es bloquear.** Solo `Nivel::Error` impide jugar. Con 6 GB de RAM
+> el pack va a tirones, y esa es una decisión del jugador. Los avisos salen
+> **una sola vez**, recordados por identificador: uno que sale en cada partida
+> deja de leerse a la segunda, y el día que diga algo nuevo tampoco se leerá.
+
+### 8.5 · Lo que se dio por hecho y NO era verdad
+
+| Se creía | Lo que hay |
+|---|---|
+| «Falta Git» | **No hay ni una llamada a Git** en ninguno de los dos launchers. Se descargó todo por HTTPS desde CDN. Si alguien vio ese error, viene de otro sitio y hace falta la captura |
+| «Falta Java» | El modo quiosco ya fuerza `AutomaticJavaDownload` y `AutomaticJavaSwitch`. El launcher se trae su propio Java |
+| «Las URLs del pack están caídas» | Las **159** contestan `206`. Comprobadas una a una el 2026-08-21 |
+| «Falta el runtime de Windows» | ✅ **Cierto, y es el único de la lista que lo era** |
+
+### 8.6 · ⚠️⚠️ `--launch` se saltaba la sincronización entera
+
+Encontrado al intentar automatizar una prueba. `Application::performMainStartupAction()`
+llamaba a `launch(inst, ...)` **directamente**: ese camino no pasa por
+`MainWindow::lanzarPoniendoAlDia`, así que **no ponía el pack al día ni miraba
+los requisitos**.
+
+No es un caso de laboratorio: **Prism ofrece «crear acceso directo» a la
+instancia en su propio menú** (`on_actionCreateInstanceShortcut_triggered`), y
+ese icono arranca por ahí. Quien lo usara se conectaba con el pack viejo, y lo
+que veía era al servidor echándole con un error que no explica nada — justo lo
+que el diálogo de Jugar existe para evitar.
+
+El agujero estaba abierto desde que se enchufó `UpdateTask`, **porque se enchufó
+en la ventana y no en el arranque**. La lección general: cuando algo es un
+invariante del producto («nunca se juega con el pack desactualizado»), ponerlo en
+*un* botón no basta — hay que ponerlo en **todos los caminos que arrancan el
+juego**, y conviene enumerarlos antes de darlo por hecho.
+
+### 8.7 · Qué está probado y qué no (2026-08-21)
+
+| | |
+|---|---|
+| Compila sin un solo aviso | ✅ y el proyecto usa *warnings as errors* |
+| 65/65 pruebas del motor | ✅ incluidas las 10 de `LunaDownload` con la API nueva |
+| Las 8 DLL del runtime en el instalador | ✅ `File *.dll` las empaqueta; +632 KB comprimidos |
+| Arranque, requisitos, sync 159/159, juego | ✅ verificado en vivo |
+| **Los reintentos, contra un fallo real** | ❌ **NO**. No hubo nada que descargar, así que `FileTask` no bajó ni un byte |
+| **El aviso de Visual C++** | ❌ **NO**. Este PC ya tiene el runtime; hace falta un Windows limpio |
+
+> ⚠️ **El arreglo del 96 % sigue sin demostrarse.** Está escrito, compilado y en
+> el binario, pero hasta que una descarga falle de verdad y se vea aguantar, es
+> una hipótesis bien fundada — no un hecho. La prueba barata: quitar 3 mods de
+> la instancia y darle a Jugar.
+
+## 9. El PC de desarrollo se formateó (2026-08-20) y qué costó eso
+
+**Windows se reinstaló el 2026-08-20 a las 22:23, desde una imagen de 22H2 de
+abril de 2023 (build 19045.2965).** Con el formateo se fueron Visual Studio
+Build Tools, Python, `winget` y `pwsh`; `.toolchain/` sobrevivió porque vive en
+`D:`, pero solo conserva **Qt 6.10.2 y vcpkg** — MSVC, CMake y Ninja venían
+dentro de Build Tools.
+
+Reinstalado el 2026-08-21: **Build Tools 2022, MSVC 14.44.35207**. Y encaja
+mejor que el v18 anterior — el Qt de `.toolchain` es `msvc2022_64`, compilado
+con ese mismo toolset.
+
+### ⚠️ `build-launcher.ps1` tenía la ruta de Visual Studio escrita a mano
+
+```powershell
+$VS = 'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools'
+```
+
+El número de versión va **dentro** de la ruta, así que reinstalar otra edición
+la rompe aunque todo lo demás esté bien — y aquí pasó: la reinstalación cayó en
+`2022`, no en `18`. Peor aún, el síntoma era
+
+```
+cmake : El término 'cmake' no se reconoce...
+```
+
+que apunta a CMake y **no** a que no hay compilador, y que además es idéntico al
+que sale si Visual Studio simplemente está en otra carpeta.
+
+Corregido: la ruta se busca con `vswhere.exe` —que se instala en una ruta fija
+con cualquier edición, Build Tools incluidas— con rastreo manual de respaldo. Y
+se comprueban `cl`, `cmake`, `ninja` y Qt **por separado**, para que faltar uno
+diga *cuál*.
+
+### ⚠️⚠️ Una imagen de 2023 en una CPU de 2025 no arranca programas .NET 9
+
+Con Build Tools ya instalado, la compilación seguía muriendo — **antes de
+compilar una sola línea nuestra**:
+
+```
+Detecting compiler hash for triplet x64-windows...
+error: ...\powershell-core-7.6.3-windows\pwsh.exe --version failed
+Fatal error.
+Your Windows doesn't fully support CET. Please install all available Windows updates.
+```
+
+**CET** (Control-flow Enforcement Technology) es la pila sombra por hardware. El
+**Ryzen 7 250** de este equipo la soporta y la anuncia; el Windows de abril de
+2023 **no tiene las APIs completas** para usarla. .NET 9 detecta el desacuerdo y
+aborta. Y `pwsh` 7.6.3 —que vcpkg exige, en esa versión exacta— es .NET 9.
+
+> **No es un problema del proyecto ni del launcher.** En ese equipo, tal como
+> estaba, **ningún** programa .NET 9 podía arrancar.
+
+**Y la solución era un reinicio.** `KB5066790` y `KB5066791` estaban instaladas
+desde el mismo 2026-08-21, pero el UBR seguía en `2965` porque el equipo no se
+había reiniciado desde el formateo. Las cuatro señales lo decían:
+
+```
+CBS RebootPending · WU RebootRequired · PackagesPending · PendingFileRenameOperations
+```
+
+> ⚠️ **Antes de dar por rota una cadena de herramientas en un equipo recién
+> formateado, mira si hay un reinicio pendiente.** `Get-HotFix` puede listar
+> parches de hoy mientras el `UBR` del registro sigue anclado en el de la
+> imagen: eso es exactamente esa situación, y se confunde con «las
+> actualizaciones no se instalan».
+
+### ⚠️ `-Publicar` NO CAMBIA NADA EN MSVC. Lo lento eran las pruebas
+
+Medido, no supuesto. Dos compilaciones seguidas, una con `LTO: OFF` y otra con
+`LTO: ON`, dieron **el mismo ejecutable de 16,4 MB en ~2,5 minutos las dos**. La
+causa está en el `CMakeLists.txt`, líneas 48-60:
+
+```cmake
+"$<$<COMPILE_LANGUAGE:C,CXX>:/LTCG;/MANIFEST:NO;/STACK:8388608>"   # enlazado
+add_compile_options("$<$<AND:$<CONFIG:Release,...>:/GL>")          # compilacion
+```
+
+**Ninguna de las dos está dentro de `if(ENABLE_LTO)`.** En MSVC, *toda*
+compilación Release lleva ya optimización de programa completo: verificado en
+`build/CMakeFiles/impl-Release.ninja`, con `/GL` en 493 compilaciones y `/LTCG`
+en los 3 enlazados. `ENABLE_LTO` solo activa `CMAKE_INTERPROCEDURAL_OPTIMIZATION`,
+que en MSVC añade exactamente esos mismos dos flags — es decir, nada nuevo.
+
+> Lo que hacía eterna la compilación no era el LTO: eran **27 ejecutables de
+> prueba**, cada uno enlazado con LTCG. Quitarlos con `-SinPruebas` bajó el ciclo
+> completo **de ~15 minutos a 2,4**, instalador incluido.
+
+`-Publicar` se queda porque en otros compiladores (Clang, GCC) sí hace algo, y
+porque el día que se compile fuera de MSVC volverá a importar. Pero **en Windows
+no hay que esperar por él**.
+
+### Lo que sigue faltando en el equipo
+
+**Python.** `tools/*.py` no corren: no hay intérprete, y
+`.toolchain/venv/Scripts/python.exe` apunta a `C:\Python314`, que se borró con
+el formateo. Afecta a `gen_manifest.py` (publicar el pack), `mods_servidor.py`
+(`INF-008`) y `gen_bloques.py`.
+
+**Windows 10 22H2 está fuera de soporte** desde octubre de 2025. El equipo
+admite Windows 11 de sobra. No bloquea nada hoy; conviene decidirlo antes de que
+sí lo haga.
+
 ## Last Decision
+
+**2026-08-21** — arreglados los tres fallos que hacían abandonar la
+instalación (§8): reintentos en las descargas del pack, errores que nombran el
+fichero y la causa, y el runtime de Visual C++ empaquetado y comprobado.
+**Escrito y revisado, sin compilar**: ver §9.
 
 **2026-08-18** — motor completo y probado (64 pruebas, 7 piezas). Nada
 enchufado a la interfaz todavía. Ver commits `23201dc45` … `c8fd670e7` en la
@@ -394,6 +654,11 @@ rama `luna`.
 
 ## Next Actions
 
-1. Enchufar `Luna::UpdateTask` al arranque de la aplicación
-2. Modo quiosco
-3. Diagnóstico y reparar
+1. **Reiniciar el equipo** para que se apliquen `KB5066790`/`KB5066791` (§9) —
+   sin eso vcpkg no arranca y no se puede compilar nada
+2. Compilar: `powershell tools/build-launcher.ps1` (sin LTO, rápido, para ver
+   si el código de §8 compila) y luego `-Publicar -Instalador`
+3. Verificar en un Windows **limpio**, que es el único sitio donde se ve §8.3
+4. Reinstalar Python — `tools/*.py` no corren (§9)
+5. Publicar y medir: cuántos llegan a la plaza sin pedir ayuda
+6. Diagnóstico y reparar (lo que el de Electron sí tiene)

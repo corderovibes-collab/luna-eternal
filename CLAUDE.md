@@ -211,8 +211,35 @@ Cosmeticos    LA PRIMERA SUB-PANTALLA YA EXISTE Y FUNCIONA EN EL JUEGO
               (2026-08-22, verificado por el usuario)
               detalle completo en docs/ui/cosmeticos.md
               4 pestañas · rejilla 4x2 · previsualizador 3D · saldo
-              12 Pokemon disfrazados (CobblemonMoreCosmetics, MIT) y
-              8 criaturas pequeñas de Minecraft
+              62 disfraces de 54 especies (CobblemonMoreCosmetics, MIT)
+              EL CATALOGO SE GENERA DEL ZIP, no se escribe:
+                python tools/gen_catalogo_cosmeticos.py <zip>
+              ⚠⚠ LA TIENDA VENDIO 62 DISFRACES QUE NO EXISTIAN. Se
+                 compraban, se cobraban, y salia el Pokemon NORMAL: sin
+                 error, sin aviso, sin nada en el log. Tres fallos, y
+                 cada uno bastaba solo para el mismo sintoma:
+                   1) el pack NO ESTABA INSTALADO en ningun sitio
+                   2) el catalogo se copio de GitHub (HEAD), que declara
+                      `species_features` -- una BANDERA. La version
+                      PUBLICADA usa `cosmetic_items`, el sistema nativo
+                      de Cobblemon 1.7, que se aplica dando un OBJETO:
+                      pokemon.swapCosmeticItem(objeto)
+                   3) y sin los assets el cliente dibuja el de siempre
+                 el aviso de que (2) podia pasar ESTABA ESCRITO en el
+                 propio Catalogo.java. Un comentario no comprueba nada;
+                 generarlo del zip si: no puede prometer lo que no hay
+              ⚠ EL PAR (especie, objeto) ES LO QUE IDENTIFICA UN
+                COSMETICO. `charizard_knight` no lo conoce Cobblemon: el
+                aplica el objeto y saca el aspecto. Dos de la misma
+                especie con el mismo objeto serian indistinguibles, y el
+                sintoma seria "a veces sale el equivocado". El generador
+                ABORTA si aparece uno
+              va en DOS SITIOS y son mitades distintas:
+                servidor  world/datapacks/  el data/  (objeto -> aspecto)
+                cliente   lunaneon.jar!/resourcepacks/cosmeticos/
+                          el assets/ (modelos), ALWAYS_ENABLED
+                solo assets en el jar: el data/ ya va de datapack
+                MIT, asi que redistribuirlo SI se puede (CobbleVerse no)
               D-039: NO se consiguen jugando. Solo LunaCoins o eventos
               V011 aplicada · autotest 136/136 tras ella
               ⚠⚠ EL MOD TIENE DOS DESTINOS Y SE OLVIDA EL SEGUNDO:
@@ -233,10 +260,12 @@ Cosmeticos    LA PRIMERA SUB-PANTALLA YA EXISTE Y FUNCIONA EN EL JUEGO
                  esta es la REGLA 6 de docs/ui/dibujado.md
               ⚠ vendor/cobblemon es HEAD, NO 1.7.3 (clon --depth 1).
                 Para una firma concreta: javap sobre el jar instalado
-              LO QUE FALTA: que el cosmetico SE VEA EN EL MUNDO. El
-              servidor ya difunde quien lleva que; falta dibujarlo en
-              el cliente (decidido: solo cliente, SIN entidad). Hoy
-              solo lo ve su dueño, y eso es media funcion
+              VERSE EN EL MUNDO SALE GRATIS, y no por casualidad:
+              `cosmetic_items` guarda el aspecto EN EL POKEMON, no en
+              una tabla nuestra, asi que al sacarlo lo dibuja Cobblemon
+              y lo ven todos. Era el trabajo mas grande que quedaba y se
+              resolvio dejando de inventar un sistema paralelo
+              ⚠ SIN VERIFICAR EN EL JUEGO todavia
 PokePad       LA PANTALLA PRINCIPAL ESTA TERMINADA (2026-08-15)
               verificada en el juego por el usuario. Tecla B
               mod/src/client/ · lunaeternal vuelve a tener cliente
@@ -513,11 +542,20 @@ Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
                    sitios distintos:
                      launcher Qt  .toolchain/jdk        JDK 17
                      mod          Eclipse Adoptium 21   JDK 21
-                   la ruta del 21 esta ESCRITA A MANO en mod/build.sh, y
-                   el 2026-08-22 apuntaba al JDK de PrismLauncher, que ya
-                   no existe tras el formateo: `bash build.sh` abortaba
-                   con "no hay JDK 21" y el mod no se podia compilar
                    winget install EclipseAdoptium.Temurin.21.JDK
+                 ⚠⚠ LA BUSQUEDA DEL JDK 21 ESTABA DUPLICADA, y por eso el
+                    MISMO fallo se arreglo DOS VECES con seis dias entre
+                    medias. mod/build.sh y neon/build.sh llevaban la ruta
+                    escrita a mano --uno con la revision dentro
+                    (`jdk-21.0.12.101-hotspot`), el otro apuntando al JDK
+                    de PrismLauncher--, y el formateo del 2026-08-20 se
+                    llevo las dos carpetas. Se arreglo el de `mod` en
+                    cuanto fallo; el de `neon` siguio roto hasta que toco
+                    compilarlo. El error decia "no hay JDK 21 en <ruta>",
+                    que suena a que falta Java cuando lo que faltaba era
+                    ESA revision
+                    hoy los dos leen tools/jdk21.sh y aceptan cualquier
+                    revision: .toolchain/jdk21, Adoptium o Java
               ⚠ el enlazado falla con LNK1104 si el launcher esta ABIERTO
               ⚠ QtTest en Windows NO escribe por la tuberia: hace falta
                 `-o fichero,txt`. Un `exit 0` mudo NO significa que no

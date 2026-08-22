@@ -40,9 +40,9 @@ que la pantalla parecía funcionar.
 ```
 pantalla       CosmeticosScreen.java        4 pestañas · rejilla 4x2 · preview
 3D             Mascota3D.java               Cobblemon + criaturas de Minecraft
-catálogo       cosmetics/Catalogo.java      12 Pokémon + 8 criaturas
+catálogo       cosmetics/Catalogo.java      GENERADO · 62 piezas · 54 especies
 compra         cosmetics/CosmeticsService   transacción + idempotencia
-difusión       cosmetics/Difusion.java      quién lleva qué, a todos
+disfraces      CobblemonMoreCosmetics       datapack (servidor) + assets (jar)
 tablas         V011__cosmeticos.sql         aplicada · autotest 136/136
 arte           arte/pokepad/fondo_cosmeticos.png
 maqueta        tools/gen_cosmeticos.py
@@ -199,14 +199,90 @@ debe, que es lo que despista.
 
 ---
 
+## 5-bis. ⚠️⚠️ El disfraz se aplica en TRES sitios, y faltaban los tres
+
+La tienda vendía 62 disfraces, los cobraba, y salía el Pokémon **normal**. Sin
+error, sin aviso, sin nada en el log. Eran tres fallos encadenados, y cada uno
+por sí solo bastaba para producir exactamente el mismo síntoma:
+
+| Dónde | Qué faltaba |
+|---|---|
+| **El pack** | `CobblemonMoreCosmetics` **no estaba instalado en ningún sitio** |
+| **El catálogo** | Prometía cosméticos declarados de una forma que la versión publicada no usa |
+| **El cliente** | Aunque el servidor aplicara bien el aspecto, sin los modelos dibuja el Pokémon de siempre |
+
+### El catálogo se GENERA, y ese es el arreglo de verdad
+
+Estaba escrito a mano, con los identificadores copiados de mirar el repositorio.
+Y el repositorio miente sobre la versión publicada:
+
+```
+GitHub (HEAD)      species_features   se aplica encendiendo una BANDERA
+release publicada  cosmetic_items     se aplica dando un OBJETO al Pokemon
+```
+
+Son sistemas distintos. `cosmetic_items` es el nativo de Cobblemon 1.7, y se usa
+con `pokemon.swapCosmeticItem(objeto)`.
+
+> **El aviso de que esto podía pasar estaba escrito en el propio
+> `Catalogo.java`** —`vendor/cobblemon` es HEAD, no 1.7.3— y aun así pasó. Un
+> comentario advirtiendo de algo no comprueba nada. Generándolo del zip, el
+> catálogo **no puede** prometer un disfraz que el pack no tenga.
+
+```
+python tools/gen_catalogo_cosmeticos.py <zip de CobblemonMoreCosmetics>
+```
+
+### ⚠️ El par (especie, objeto) es lo que identifica un cosmético
+
+El identificador que inventamos aquí —`charizard_knight`— **no lo conoce
+Cobblemon**. Él aplica el objeto y saca el aspecto. Así que dos cosméticos de la
+misma especie con el mismo objeto serían indistinguibles: comprar uno aplicaría
+el otro la mitad de las veces.
+
+Hoy no hay ninguno de los 62, y **el generador aborta** si algún día lo hay. El
+síntoma sería «a veces sale el cosmético equivocado», que nadie relacionaría con
+esto.
+
+### Los assets van DENTRO del jar de lunaneon
+
+Mismo mecanismo que el revestido de la interfaz, y por el mismo motivo: es **el
+único que ha funcionado en este proyecto**. Un `.zip` suelto en `resourcepacks/`
+depende de que el jugador lo active, y `DEFAULT_ENABLED` no existe para resource
+packs — lo dice el javadoc de Fabric.
+
+```
+servidor   world/datapacks/CobblemonMoreCosmetics.zip   el data/  (que objeto -> que aspecto)
+cliente    lunaneon.jar!/resourcepacks/cosmeticos/      el assets/ (modelos y texturas)
+```
+
+**Solo los assets** van al jar: el `data/` ya viaja como datapack, y meterlo en
+los dos sitios lo cargaría dos veces.
+
+Es **MIT**, así que redistribuirlo está permitido — al contrario que el pack de
+CobbleVerse (D-037), del que solo se guardan URL y hash.
+
+> **Verificado en el log del arranque**, que es lo que dice que está puesto de
+> verdad y no solo subido:
+> ```
+> Registered the cobblemon:cosmetic_items registry
+> Cosmeticos: modelos de disfraces activados
+> 46 data pack(s) enabled: ... [file/CobblemonMoreCosmetics.zip (world)]
+> ```
+
+---
+
 ## 6. Lo que falta
 
-1. **Que el cosmético se vea en el mundo.** El servidor ya difunde quién lleva
-   qué (`Difusion.java`); falta el dibujado en el cliente. **Es lo que convierte
-   esto en producto**: hoy solo lo ve su dueño, en la tienda, y
-   `monetization.md` avisa de que «un cosmético sin nadie que lo vea no vale
-   nada». Decisión tomada: **solo cliente, sin entidad** — cero coste de tick y
-   cero interferencia con combates y capturas.
+1. ~~Que el cosmético se vea en el mundo.~~ ✅ **Sale gratis, y no por
+   casualidad.** `cosmetic_items` guarda el aspecto **en el Pokémon**, no en una
+   tabla nuestra: cuando sale de su Poké Ball lo dibuja Cobblemon con su aspecto,
+   y lo ven todos los que tengan el resource pack — que es todo el mundo, porque
+   va incrustado en un jar del pack. **Esto era el punto 1 de esta lista y era el
+   trabajo más grande que quedaba**; se resolvió al dejar de inventarnos un
+   sistema paralelo y usar el que Cobblemon ya tiene. `monetization.md` avisa de
+   que «un cosmético sin nadie que lo vea no vale nada», y ese riesgo se cierra.
+   **Falta verlo en el juego.**
 2. ~~Probar una compra de verdad.~~ ✅ **Hecho el 2026-08-22**, ver *Current
    Status*. Para dar saldo: `/luna dar REPORTCOIN <cantidad>` desde el juego
    (nivel 3). **Falta probar el caso de saldo insuficiente**, que es el que

@@ -6,6 +6,10 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.pokereport.luna.client.EstadoCliente;
+import net.pokereport.luna.net.Red;
+
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import java.util.ArrayList;
@@ -35,9 +39,14 @@ import java.util.List;
  * si los cosméticos <b>solo</b> se consiguen comprándolos o en un evento, un
  * cliente que pudiera concederse uno sería la única forma de saltárselo.
  *
- * <p>⚠ <b>Hoy el catálogo es de relleno</b> y está marcado como tal en
- * {@link #catalogoProvisional()}. Falta el protocolo; hasta que exista, esta
- * pantalla enseña una muestra para poder juzgarla en el juego.
+ * <p>El catálogo llega en {@code Red.Cosmeticos} y se relee <b>en cada
+ * fotograma</b> desde {@code EstadoCliente}: llega de forma asíncrona y además
+ * el servidor lo reenvía entero tras cada compra, así que sin releerlo el botón
+ * seguiría diciendo COMPRAR después de haber comprado.
+ *
+ * <p>⚠ Que el catálogo sea {@code null} <b>no es un error, es «todavía no»</b>.
+ * Enseñar una tienda vacía mientras el paquete está en vuelo hace creer que no
+ * hay nada a la venta.
  *
  * <h2>Antes de tocar el dibujado</h2>
  *
@@ -112,39 +121,47 @@ public class CosmeticosScreen extends Screen {
 
     @Override
     protected void init() {
-        catalogo = catalogoProvisional();
-        lunacoins = 12500;
         recalcular();
-        // Se enfoca lo que ya llevas puesto: abrir la tienda con el
-        // previsualizador vacío haría creer que no tienes nada.
-        enfocado = catalogo.stream().filter(Cosmetico::equipado).findFirst().orElse(null);
+        // Se pide al abrir. Si ya habia catalogo de una visita anterior se
+        // dibuja mientras llega el nuevo: enseñar lo de antes un instante es
+        // mejor que enseñar una tienda vacia que luego se llena de golpe.
+        leerDelServidor();
+        ClientPlayNetworking.send(new Red.PedirCosmeticos());
     }
 
     /**
-     * Muestra de relleno mientras no hay protocolo.
+     * Trae lo ultimo que mando el servidor.
      *
-     * <p>⚠ <b>Los precios NO son precios.</b> CLAUDE.md dice que la economía se
-     * calibra con datos reales y que hasta que alguien juegue todo son
-     * estimaciones. Estos números sirven para ver si la pantalla se lee, no
-     * para cobrarlos.
-     *
-     * <p>Las especies y aspectos sí son reales: salen de
-     * {@code CobblemonMoreCosmetics} (MIT), que declara sus cosméticos como
-     * aspectos de Cobblemon.
+     * <p>⚠ Se llama en cada fotograma, no solo al abrir. El catalogo llega de
+     * forma asincrona y ademas se reenvia tras cada compra: sin releerlo, el
+     * boton seguiria diciendo COMPRAR despues de haber comprado.
      */
-    private static List<Cosmetico> catalogoProvisional() {
-        List<Cosmetico> l = new ArrayList<>();
-        l.add(new Cosmetico("mascotas", "charizard_knight", "cobblemon:charizard", "knight", 2500, true, true));
-        l.add(new Cosmetico("mascotas", "eevee_valentines", "cobblemon:eevee", "valentines", 1200, false, false));
-        l.add(new Cosmetico("mascotas", "snorlax_chef", "cobblemon:snorlax", "chef", 1800, false, false));
-        l.add(new Cosmetico("mascotas", "mewtwo_boundary", "cobblemon:mewtwo", "boundary", 4000, false, false));
-        l.add(new Cosmetico("mascotas", "articuno_steampunk", "cobblemon:articuno", "steampunk", 3500, false, false));
-        l.add(new Cosmetico("mascotas", "gardevoir_icedragon", "cobblemon:gardevoir", "icedragon", 0, true, false));
-        l.add(new Cosmetico("mascotas", "decidueye_ninja", "cobblemon:decidueye", "ninja", 2200, false, false));
-        l.add(new Cosmetico("mascotas", "cinderace_captain", "cobblemon:cinderace", "captain", 2000, false, false));
-        l.add(new Cosmetico("mascotas", "weavile_skier", "cobblemon:weavile", "skier", 1500, false, false));
-        l.add(new Cosmetico("mascotas", "carbink_royal", "cobblemon:carbink", "royal", 2800, false, false));
-        return l;
+    private void leerDelServidor() {
+        Red.Cosmeticos c = EstadoCliente.cosmeticos();
+        if (c == null) {
+            return;
+        }
+        lunacoins = (int) Math.min(Integer.MAX_VALUE, c.lunacoins());
+        List<Cosmetico> lista = new ArrayList<>(c.piezas().size());
+        for (Red.PiezaCosmetica p : c.piezas()) {
+            lista.add(new Cosmetico(
+                    p.categoria(), p.id(), p.especie(), p.aspecto(), p.precio(),
+                    (p.banderas() & Red.PiezaCosmetica.POSEIDO) != 0,
+                    (p.banderas() & Red.PiezaCosmetica.EQUIPADO) != 0));
+        }
+        catalogo = lista;
+
+        // Se reengancha el enfoque POR IDENTIFICADOR, no por referencia: la
+        // lista se reconstruye entera en cada paquete, asi que el objeto que
+        // tenia el previsualizador ya no esta en ella. Sin esto, comprar lo que
+        // estabas mirando vaciaba el previsualizador.
+        if (enfocado != null) {
+            String id = enfocado.id();
+            enfocado = lista.stream().filter(x -> x.id().equals(id)).findFirst().orElse(null);
+        }
+        if (enfocado == null) {
+            enfocado = lista.stream().filter(Cosmetico::equipado).findFirst().orElse(null);
+        }
     }
 
     private void recalcular() {
@@ -206,6 +223,7 @@ public class CosmeticosScreen extends Screen {
     public void render(DrawContext ctx, int ratonX, int ratonY, float delta) {
         super.render(ctx, ratonX, ratonY, delta);
         recalcular();
+        leerDelServidor();
 
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
 
@@ -445,9 +463,22 @@ public class CosmeticosScreen extends Screen {
      * preferible a fingir una compra que no ha ocurrido.
      */
     private void accion(Cosmetico c) {
-        sonar(c.estado() != Cosmetico.Estado.DE_EVENTO);
-        // TODO(protocolo): mandar COMPRAR o EQUIPAR al servidor y esperar su
-        // respuesta antes de cambiar nada en pantalla.
+        Cosmetico.Estado est = c.estado();
+        if (est == Cosmetico.Estado.EQUIPADO || est == Cosmetico.Estado.DE_EVENTO) {
+            // Ya lo llevas, o no esta a la venta. Suena a bloqueado en vez de
+            // mandar una peticion que el servidor va a rechazar igual.
+            sonar(false);
+            return;
+        }
+        sonar(true);
+        // ⚠ NO SE CAMBIA NADA EN PANTALLA AQUI. Se manda y se espera: el
+        // servidor cobra, comprueba y responde con el catalogo entero, y
+        // `leerDelServidor` lo recoge en el siguiente fotograma.
+        //
+        // Pintar la compra antes de que ocurra es lo que hace que un fallo de
+        // saldo se vea como un cosmetico comprado que desaparece al reabrir.
+        ClientPlayNetworking.send(
+                new Red.AccionCosmetico(c.id(), est == Cosmetico.Estado.EQUIPAR));
     }
 
     private void volver() {

@@ -42,6 +42,10 @@ public class LunaCliente implements ClientModInitializer {
                 (carga, ctx) -> EstadoCliente.guardar(carga));
         ClientPlayNetworking.registerGlobalReceiver(Red.Ficha.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
+        // El catalogo de cosmeticos. Llega al abrir la tienda y despues de cada
+        // compra: el servidor lo reenvia entero en vez de mandar cambios.
+        ClientPlayNetworking.registerGlobalReceiver(Red.Cosmeticos.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
 
         // La voz de la Pokédex. Llega solo a quien ha escaneado; aquí solo se
         // reproduce, la decisión de a quién mandarla es del servidor.

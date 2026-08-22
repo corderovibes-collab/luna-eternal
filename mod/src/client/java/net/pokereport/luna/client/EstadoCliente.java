@@ -18,6 +18,7 @@ public final class EstadoCliente {
 
     private static Red.Saldo saldo;
     private static Red.Ficha ficha;
+    private static Red.Cosmeticos cosmeticos;
 
     private EstadoCliente() {}
 
@@ -39,9 +40,28 @@ public final class EstadoCliente {
         return saldo;
     }
 
+    public static void guardar(Red.Cosmeticos nuevos) {
+        cosmeticos = nuevos;
+    }
+
+    /**
+     * El catalogo de cosmeticos, o {@code null} si aun no ha llegado.
+     *
+     * <p>⚠ Que sea {@code null} NO es un error: es "todavia no". La tienda tiene
+     * que saber distinguirlo de "no tienes nada", porque enseñar una tienda
+     * vacia mientras el paquete esta en vuelo hace creer que no hay nada a la
+     * venta.
+     */
+    public static Red.Cosmeticos cosmeticos() {
+        return cosmeticos;
+    }
+
     /** Al salir del mundo se olvida: el saldo es de esa partida, no del cliente. */
     public static void olvidar() {
         saldo = null;
         ficha = null;
+        // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo
+        // entre partidas enseñaria en el servidor B lo que se compro en el A.
+        cosmeticos = null;
     }
 }

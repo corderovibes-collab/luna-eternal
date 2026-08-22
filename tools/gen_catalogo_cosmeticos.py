@@ -42,6 +42,8 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
+from PIL import Image
+
 
 
 
@@ -355,8 +357,27 @@ def leer_sombreros(zips):
             if not tex:
                 fuera.append((nombre, ident, "sin textura"))
                 continue
+            # ⚠⚠ EL .mcmeta VIAJA CON SU TEXTURA O LA TEXTURA DEJA DE ESTARLO.
+            #
+            #   76 de estos sombreros llevan textura ANIMADA: el png es una tira
+            #   vertical de fotogramas --`clockface` son 100, 64x6400-- y el
+            #   .mcmeta dice cuantos son y a que velocidad. Sin el, Minecraft
+            #   trata la tira como UNA imagen y el modelo mapea los 100
+            #   fotogramas a la vez: el sombrero sale estirado y deformado.
+            #
+            #   No da ningun error. El usuario lo describio como "el modelo se
+            #   distorsiona", y la mayoria estaban bien porque la mayoria no son
+            #   animadas.
+            #
+            #   ⚠ Y ESTO YA HABIA PASADO EN ESTE PROYECTO, con el item de la
+            #     Pokedex: CLAUDE.md lo tiene escrito desde entonces. Volvio a
+            #     pasar porque la leccion estaba en la documentacion y no en el
+            #     codigo que copia ficheros.
+            meta = None
+            if tex + ".mcmeta" in z.namelist():
+                meta = z.read(tex + ".mcmeta")
             salida.append((ident, d, z.read(tex),
-                           nombres.get(ident) or bonito(ident), nombre))
+                           nombres.get(ident) or bonito(ident), nombre, meta))
 
     # Sin identificadores repetidos entre packs, y en orden estable para que el
     # fichero generado no cambie de un dia para otro sin motivo.
@@ -428,7 +449,7 @@ def copiar_assets(zips, sombreros, padres):
             json.dumps(d, indent=1), encoding="utf-8")
         copiados += 1
 
-    for ident, modelo, tex, _, _ in sombreros:
+    for ident, modelo, tex, _, _, meta in sombreros:
         d = dict(modelo)
         # ⚠⚠ LA TEXTURA TIENE QUE VIVIR BAJO `textures/item/`, Y NO ES ESTILO.
         #
@@ -489,12 +510,55 @@ def copiar_assets(zips, sombreros, padres):
         (base / "textures" / "item" / "sombreros").mkdir(parents=True, exist_ok=True)
         (base / "textures" / "item" / "sombreros" / (ident + ".png")).write_bytes(tex)
         copiados += 2
+        if meta:
+            (base / "textures" / "item" / "sombreros"
+             / (ident + ".png.mcmeta")).write_bytes(meta)
+            copiados += 1
+
+    comprobar_animadas(sombreros, base)
 
     (ASSETS / "pack.mcmeta").write_text(json.dumps({
         "pack": {"pack_format": 34,
                  "description": "Cosmeticos de PokeReport Network"}
     }, indent=2) + "\n", encoding="utf-8")
     return copiados
+
+
+def comprobar_animadas(sombreros, base):
+    """Aborta si una textura ALTA se quedo sin su `.mcmeta`.
+
+    ⚠⚠ ESTA COMPROBACION EXISTE PORQUE YA FALLO DOS VECES, Y LAS DOS EN SILENCIO.
+
+    Una textura animada es una TIRA VERTICAL de fotogramas --`clockface` son
+    100, o sea 64x6400-- y el `.mcmeta` dice cuantos hay. Sin el, Minecraft trata
+    la tira como una sola imagen y el modelo mapea los 100 fotogramas de golpe:
+    el sombrero sale estirado.
+
+    La primera vez fue el ITEM de la Pokedex y quedo escrito en CLAUDE.md. Volvio
+    a pasar aqui, con 76 sombreros, porque la leccion vivia en la documentacion y
+    no en el codigo que copia los ficheros. Ahora vive aqui.
+
+    La regla: si el alto de la textura no es proporcional al `texture_size` que
+    declara el modelo, ESO ES una tira de fotogramas y necesita su `.mcmeta`.
+    """
+    rotos = []
+    for ident, modelo, _, _, _, _ in sombreros:
+        ts = modelo.get("texture_size") or [16, 16]
+        png = base / "textures" / "item" / "sombreros" / (ident + ".png")
+        if not png.exists() or not ts[0] or not ts[1]:
+            continue
+        w, h = Image.open(png).size
+        if abs((w / ts[0]) - (h / ts[1])) < 1e-6:
+            continue                       # proporcion correcta: no es una tira
+        if (png.parent / (ident + ".png.mcmeta")).exists():
+            continue                       # es una tira Y lleva su meta: correcto
+        rotos.append("%s  declara %s, textura %dx%d" % (ident, ts, w, h))
+
+    if rotos:
+        raise SystemExit(
+            "Estas texturas son tiras de fotogramas y NO llevan su .mcmeta." + '\n'
+            + "Sin el saldran estiradas, sin dar ningun error:" + '\n  '
+            + '\n  '.join(rotos))
 
 
 # --------------------------------------------------------------- plantillas
@@ -570,7 +634,7 @@ def main() -> None:
     escribir("CatalogoSombreros", "Los sombreros que lleva el JUGADOR.",
              ['            new Pieza("sombrero_%s", Catalogo.SOMBREROS, "", "%s", %d)'
               % (i, nom.replace('"', "'"), TRAMOS["sombrero"])
-              for i, _, _, nom, _ in sombreros])
+              for i, _, _, nom, _, _ in sombreros])
 
     copiados = copiar_assets(zips, sombreros, padres)
 

@@ -112,7 +112,6 @@ public final class Catalogo {
             new Pieza("minun_cheerleader", MASCOTAS, "cobblemon:minun", "cheerleader", 1500),
             new Pieza("moltres_steampunk", MASCOTAS, "cobblemon:moltres", "steampunk", 4000),
             new Pieza("ninetales_holiday", MASCOTAS, "cobblemon:ninetales", "holiday", 1500),
-            new Pieza("pangoro_operator", MASCOTAS, "cobblemon:pangoro", "operator", 1500),
             new Pieza("pichu_yellowhat", MASCOTAS, "cobblemon:pichu", "yellowhat", 1500),
             new Pieza("pikachu_yellowhat", MASCOTAS, "cobblemon:pikachu", "yellowhat", 1500),
             new Pieza("plusle_cheerleader", MASCOTAS, "cobblemon:plusle", "cheerleader", 1500),

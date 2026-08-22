@@ -99,7 +99,22 @@ def leer(zip_path: Path):
       lo tienen--, asi que el filtro solo quita duplicados.
     """
     z = zipfile.ZipFile(zip_path)
+
+    # ⚠⚠ HAY QUE COMPROBAR EL POSER, Y NO ES PARANOIA: FALTA UNO.
+    #
+    #   `pangoro_operator` tiene su modelo y su textura, pero el resolver pide
+    #   `poser: cobblemon:pangoro_operator` y ESE FICHERO NO VIENE EN EL PACK.
+    #   Cobblemon no cae al poser base de la especie: dibuja un bulto verde sin
+    #   forma. El usuario lo vio antes que ninguna comprobacion nuestra --otra
+    #   vez--, y por eso ahora se mira.
+    #
+    #   Es la tercera vuelta de la misma leccion. Existir un resolver no basta:
+    #   tienen que existir LAS TRES PIEZAS que nombra.
+    posers = {n.rsplit("/", 1)[1][:-5] for n in z.namelist()
+              if "/posers/" in n and n.endswith(".json")}
+
     filas = set()
+    sin_poser = []
     for nombre in z.namelist():
         if "/resolvers/" not in nombre or not nombre.endswith(".json"):
             continue
@@ -113,8 +128,16 @@ def leer(zip_path: Path):
             aspectos = var.get("aspects", [])
             # Un solo aspecto: los de varios son `["magma", "female"]` y demas,
             # o sea el mismo cosmetico sobre otra forma.
-            if len(aspectos) == 1 and var.get("model"):
-                filas.add((especie, aspectos[0]))
+            if len(aspectos) != 1 or not var.get("model"):
+                continue
+            # El poser puede ser de Cobblemon (`cobblemon:pangoro`) o del pack.
+            # Solo se rechaza si el pack lo nombra dentro de SU espacio de
+            # cosmeticos y no lo trae: un poser del juego base siempre existe.
+            poser = (var.get("poser") or "").split(":")[-1]
+            if poser and poser not in posers and poser.endswith(aspectos[0]):
+                sin_poser.append((especie, aspectos[0]))
+                continue
+            filas.add((especie, aspectos[0]))
 
     # Lo que el pack DECLARA pero no puede dibujar. No se usa para nada mas que
     # para avisar: si un dia el numero cambia, es que el pack ha cambiado y hay
@@ -133,7 +156,9 @@ def leer(zip_path: Path):
                 if len(ci.get("aspects", [])) == 1 and especie:
                     declarados.add((especie, ci["aspects"][0]))
 
-    return sorted(filas), sorted(declarados - filas)
+    # Los que se caen por falta de poser se suman al aviso: son igual de
+    # invisibles para el jugador que los que no tienen arte ninguna.
+    return sorted(filas), sorted((declarados - filas) | set(sin_poser))
 
 
 PLANTILLA = '''package net.pokereport.luna.cosmetics;

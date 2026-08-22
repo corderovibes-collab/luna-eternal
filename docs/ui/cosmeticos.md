@@ -40,7 +40,7 @@ que la pantalla parecía funcionar.
 ```
 pantalla       CosmeticosScreen.java        4 pestañas · rejilla 4x2 · preview
 3D             Mascota3D.java               Cobblemon + criaturas de Minecraft
-catálogo       cosmetics/Catalogo.java      GENERADO de los resolvers · 55 · 53 especies
+catálogo       cosmetics/Catalogo.java      GENERADO de los resolvers · 54 · 52 especies
 compra         cosmetics/CosmeticsService   transacción + idempotencia
 disfraces      CobblemonMoreCosmetics       SOLO assets (en lunaneon) · NADA de datapack
 tablas         V011__cosmeticos.sql         aplicada · autotest 136/136
@@ -403,7 +403,7 @@ verdad. Los seis del bundle no tienen resolver, y el de `operator` dice
 `pangoro`. Los dos problemas se caen solos.
 
 ```
-62 declarados  ->  55 dibujables  (53 especies)
+62 declarados  ->  54 dibujables  (52 especies)
 ```
 
 Dos filtros, y los dos con motivo medido:
@@ -414,6 +414,23 @@ Dos filtros, y los dos con motivo medido:
 - **Se exige `model`.** Una variación sin modelo es un recoloreado (shiny,
   hembra) que hereda el del cosmético base. **Comprobado que no pierde ninguno**:
   los 55 de un solo aspecto tienen modelo.
+
+### ⚠️ Y hubo una tercera vuelta: faltaba un *poser*
+
+`pangoro_operator` **sí** tenía resolver, modelo y textura — y aun así salía como
+un bulto verde sin forma. El resolver pide `poser: cobblemon:pangoro_operator`, y
+**ese fichero no viene en el pack**. Cobblemon no cae al poser base de la
+especie: dibuja el modelo sin postura.
+
+```
+existe el resolver     no basta
+existe el modelo       no basta
+existe la textura      no basta
+existe el POSER        <- la cuarta pieza, y era la que faltaba
+```
+
+Lo vio el usuario antes que ninguna comprobación nuestra, **otra vez**. Ahora el
+generador exige las cuatro. `54 dibujables`.
 
 Y el generador **imprime los que quedan fuera** en vez de callárselos: si un día
 ese número cambia, es que el pack ha cambiado — y nos enteramos ahí, no porque
@@ -473,6 +490,27 @@ contador, que es el texto más grande de la pantalla.
 de `drawText`, que va a un píxel *de pantalla*. **No sustituye a `texto()`**: el
 tamaño final no es exactamente el pedido, y para algo que tiene que caber en un
 hueco medido eso importa. Para una etiqueta suelta, no.
+
+---
+
+## 5-octies. A Rotom le faltaba la boca
+
+En el PokePad principal sale sonriendo; en la pantalla de cosméticos, la cabeza
+era un blanco liso. `pokepad_cosmeticos.png` se derivó del chasis **sin ese
+trozo**.
+
+Se recuperó **midiendo la diferencia entre los dos chasis**, no recortando a ojo:
+
+```
+diferencia en la zona de la cabeza  ->  x = 827..882,  y = 184..221   (55x37)
+```
+
+Y antes de pegarla se comprobó que **el blanco de alrededor fuera idéntico** en
+las dos imágenes —0 píxeles distintos en un marco de 6 px—, porque un parche con
+borde visible no aparece en una comparación de `sha1`, solo en la pantalla.
+
+> El arte y la textura del mod son **el mismo fichero byte a byte**, así que se
+> escriben los dos. Si algún día dejan de serlo, esto se rompe en silencio.
 
 ---
 

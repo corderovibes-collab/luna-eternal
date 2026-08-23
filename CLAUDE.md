@@ -423,17 +423,44 @@ Oficios       MINAR, PESCAR Y COSECHAR DAN PLATA (2026-08-23, V012)
               /luna via <VIA> <xp> (nivel 3) para probar
 
 Tienda        COMPRAR Y VENDER, POR CATEGORIAS (2026-08-23)
-              5 categorias . 90 articulos . SIN migracion: la logica
+              2 categorias . 9 articulos . SIN migracion: la logica
               (ShopService, ShopCatalog) llevaba escrita desde PHASE 3 y
               lo unico que faltaba era la pantalla
-              ⚠⚠ SOLO COBBLEMON, NI UN OBJETO DE MINECRAFT (orden del
-                 usuario): "lo que sea de Minecraft ellos en la
-                 exploracion lo pueden conseguir"
-                 y encaja con lo que ya habia: las BAYAS y las BELLOTAS
-                 son justo lo que da XP al oficio AGRICULTOR, y la madera
-                 y la piedra lo del MINERO. Venderlas competiria con los
-                 oficios. El autotest lo comprueba: es la clase de regla
-                 que se cae sola cuando alguien edita el JSON un martes
+              ⚠⚠ ES UNA TIENDA DE PRIMEROS AUXILIOS, NO UN CATALOGO.
+                 Orden del usuario, en dos pasos el mismo dia:
+                   1) "solo articulos de Cobblemon, lo de Minecraft lo
+                      consiguen explorando"
+                   2) "items basicos, los necesarios. En Poke Ball LA
+                      NORMAL. Item de curar entre 20% y 50%. Items que
+                      se requieren para craftear cosas basicas. Lo otro
+                      lo tienen que conseguir explorando"
+                 paso de 90 articulos a NUEVE, y el segundo paso es el
+                 que manda: las otras 20 balls, las piedras evolutivas,
+                 los objetos de combate y las vitaminas SE JUEGAN
+                 ⚠ una tienda completa VACIA EL MUNDO: si todo se compra,
+                   explorar solo sirve para conseguir dinero
+                 y encaja con lo de ayer: las BAYAS y las BELLOTAS son
+                 justo lo que da XP al oficio AGRICULTOR, y la madera y
+                 la piedra lo del MINERO. Venderlas competiria con ellos
+                 el autotest comprueba lo de Cobblemon: es la clase de
+                 regla que se cae sola cuando alguien edita el JSON
+              LO QUE HAY, Y POR QUE ESE Y NO OTRO:
+                esencial  poke_ball    la normal, dicho por el usuario
+                          max_revive   NO es un objeto de combate, es un
+                                       MATERIAL: la MAQUINA CURATIVA se
+                                       craftea con cobre + hierro +
+                                       redstone + UN MAX REVIVE, y el Max
+                                       Revive no se craftea, sale de
+                                       cofres. Verificado en su receta
+                cuidado   potion       20 PS
+                          super_potion 60 PS
+                          5 curaestados
+              ⚠ LOS PS SALEN DE SUS DATOS, no de memoria:
+                data/cobblemon/mechanics/potions.json dice 20/60/120.
+                Sobre un Pokemon de nivel medio (80-130 PS) son ~20% y
+                ~50%, que es la banda que pidio el usuario. LA
+                HIPERPOCION (120) cura una barra entera de casi
+                cualquiera: por eso no esta, y esa es la linea
               EL CATALOGO SE GENERA DEL JAR, no se escribe:
                 python tools/gen_tienda.py
                 python tools/gen_tienda.py --buscar stone
@@ -445,21 +472,22 @@ Tienda        COMPRAR Y VENDER, POR CATEGORIAS (2026-08-23)
               ⚠⚠ LOS PRECIOS SON PROVISIONALES Y A PROPOSITO (orden del
                  usuario): "mas adelante definimos precios porque
                  necesitamos un analisis general de la economia"
-                 por eso NO hay 90 precios a mano: hay CINCO ESCALONES
-                 (200 . 400 . 900 . 3.000 . 10.000) y cada articulo dice a
-                 cual pertenece. Retocar la economia entera es cambiar
-                 CINCO cifras en gen_tienda.py, no revisar 90 lineas
+                 por eso los precios no se escriben uno a uno: hay CINCO
+                 ESCALONES (200 . 400 . 600 . 900 . 3.000) y cada articulo
+                 dice a cual pertenece. Aplicar el analisis sera cambiar
+                 CINCO cifras en gen_tienda.py
                  los anclajes vienen de la config real de produccion:
                  Poke Ball 400 . Pocion 600 . Superpocion 900 . Revivir 3000
                  la recompra es un PORCENTAJE (10 %) y no un numero suelto,
                  para que el no-arbitraje no pueda romperse tecleando mal
-              ⚠ FUERA DEL CATALOGO A PROPOSITO: master_ball, beast_ball,
-                cherish_ball, park_ball y las ancient_* (se ganan, no se
-                compran), y las bayas/bellotas/mulch (son de los oficios)
-              ⚠ `rare_candy`, `exp_candy_*` y `lucky_egg` SI se venden, y
-                solo por PLATA. Si algun dia se vendieran por LunaCoins
-                seria comprar progresion con dinero real: T4, la linea
-                roja de D-007 y D-014
+              ⚠ FUERA A PROPOSITO: TODO LO DEMAS. Las otras 20 balls, las
+                10 piedras evolutivas, los objetos de combate, las
+                vitaminas, los caramelos EXP y la Poke Caña. Se juegan
+              ⚠ Y SI ALGUN DIA VUELVEN, que no sea por LunaCoins:
+                `rare_candy`, `exp_candy_*` y `lucky_egg` por moneda
+                premium seria comprar progresion con dinero real -- T4, la
+                linea roja de D-007 y D-014. Por Plata son un sink y estan
+                bien
               LAS CATEGORIAS VAN EN EL PANEL IZQUIERDO, no en pestañas
               arriba: llevan icono + nombre + una frase que explica para
               que sirven, y eso en una pestaña de 150 px no entra. Es la
@@ -976,7 +1004,7 @@ Interfaz      SIETE PANTALLAS. Cinco verificadas en el juego:
                 Misiones    2026-08-23   arbol de 28 en 6 cadenas
                 Inicial     2026-08-23   se abre SOLA al entrar
                 Clan        2026-08-23   SIN VERIFICAR (pide 2 cuentas)
-                Tienda      2026-08-23   SIN VERIFICAR . 90 articulos
+                Tienda      2026-08-23   SIN VERIFICAR . 9 articulos
               6 de los 15 iconos abren algo: pokedex (la de Cobblemon),
               cosmeticos, trabajos, misiones, clan y tienda
               SIGUEN SIN PANTALLA, con la logica viva y probada:
@@ -1291,7 +1319,7 @@ estimaciones:
 
 | Número | Hoy | Se calibra con |
 |---|---|---|
-| Escalones de la tienda | 200 · 400 · 900 · 3.000 · 10.000 | ingreso mediano por hora de juego |
+| Escalones de la tienda | 200 · 400 · 600 · 900 · 3.000 | ingreso mediano por hora de juego |
 | Recompra al banco | 10 % plano | cuánto se recicla frente a lo que se produce |
 | Margen de expedición | 1,5-2× supuesto | ingreso mediano diario |
 | Tope de kits | 6 000/día | ≤25 % del ingreso diario |

@@ -14,15 +14,24 @@ asi que un identificador mal escrito no da error: da una tienda con un hueco.
 Generarlo del jar no puede prometer lo que no hay. Si un identificador no
 existe, ESTE SCRIPT ABORTA y no se publica nada.
 
-SOLO COBBLEMON
---------------
-Decision del usuario (2026-08-23): «en la tienda solo van a ver articulos de
-Cobblemon, ya lo que sea de Minecraft ellos en la exploracion lo pueden
-conseguir».
+SOLO COBBLEMON, Y SOLO LO IMPRESCINDIBLE
+---------------------------------------
+Dos decisiones del usuario del mismo dia (2026-08-23), y la segunda es la que
+manda:
 
-Y encaja con lo que ya habia: las bayas y las bellotas NO se venden porque
-son justo lo que da XP al oficio AGRICULTOR, y la madera y la piedra son lo
-del MINERO. Vender lo que los oficios producen seria competir con ellos.
+  1. «en la tienda solo van a ver articulos de Cobblemon, ya lo que sea de
+     Minecraft ellos en la exploracion lo pueden conseguir»
+  2. «items basicos, los necesarios. En Poke Ball la normal. Item de curar al
+     Pokemon entre 20 % a un 50 %. Items que se requieren para craftear cosas
+     basicas del Pokemon. Lo otro ellos tienen que conseguirlo explorando»
+
+O sea que esto NO es un catalogo: son PRIMEROS AUXILIOS. Nueve articulos.
+
+Y encaja con lo que ya estaba construido: las bayas y las bellotas son justo
+lo que da XP al oficio AGRICULTOR, y la madera y la piedra lo del MINERO.
+Vender lo que producen los oficios seria competir con ellos. Y una tienda
+completa vacia el mundo: si todo se compra, explorar solo sirve para
+conseguir dinero.
 
 LOS PRECIOS SON PROVISIONALES, Y A PROPOSITO
 --------------------------------------------
@@ -30,11 +39,10 @@ Tambien decision del usuario: «mas adelante definimos precios porque
 necesitamos hacer un analisis general de la economia para que todo quede bien
 equilibrado».
 
-Por eso NO hay 80 precios escritos a mano: hay CINCO ESCALONES y cada articulo
-dice a cual pertenece. Retocar la economia entera es cambiar los cinco numeros
-de ESCALONES, no revisar ochenta lineas. Los cuatro anclajes que vienen de la
-configuracion real de produccion (Poke Ball 400, Pocion 600, Superpocion 900,
-Revivir 3000) se conservan como referencia de los escalones.
+Por eso los precios no se escriben articulo a articulo: hay CINCO ESCALONES y
+cada uno dice a cual pertenece. Aplicar el analisis sera cambiar cinco cifras.
+Los anclajes salen de la configuracion real de produccion: Poke Ball 400,
+Pocion 600, Superpocion 900, Revivir 3000.
 """
 
 import argparse
@@ -55,158 +63,69 @@ SALIDA = RAIZ / "mod" / "src" / "main" / "resources" / "data" / "lunaeternal" / 
 # asi el invariante de no-arbitraje (vender por mas de lo que cuesta = dinero
 # infinito) no puede romperse por un despiste al teclear.
 ESCALONES = {
-    "basico":    200,
-    "comun":     400,     # <- ancla: Poke Ball, de la config de produccion
-    "bueno":     900,     # <- ancla: Superpocion
-    "raro":      3_000,   # <- ancla: Revivir
-    "muy_raro": 10_000,
+    "basico":  200,
+    "comun":   400,     # <- ancla: Poke Ball, de la config real de produccion
+    "medio":   600,     # <- ancla: Pocion
+    "bueno":   900,     # <- ancla: Superpocion
+    "raro":  3_000,     # <- ancla: Revivir
 }
 RECOMPRA = 0.10          # el banco paga el 10 % . tambien provisional
 
 # ------------------------------------------------------------- LAS CATEGORIAS
 #
-# ⚠ CINCO COMO MAXIMO. No es una preferencia: la pantalla las dibuja en una
-#   lista vertical de tarjetas de 94 px en un panel que acaba en 762, y la
-#   SEXTA se dibujaria fuera del marco -- invisible e impulsable. El autotest
-#   lo comprueba (`las categorias caben en el panel`).
+# ⚠⚠ LA TIENDA ES DELIBERADAMENTE DIMINUTA. Orden del usuario (2026-08-23):
+#    «items basicos, los necesarios, los que necesitarian. En Poke Ball la
+#    normal. Item de curar al Pokemon entre 20 % a un 50 %. Items que se
+#    requieren para craftear cosas basicas del Pokemon. Lo otro ellos tienen
+#    que conseguirlo explorando».
 #
-# ⚠ Y DIECIOCHO ARTICULOS COMO MAXIMO por categoria: caben 6 por pagina y el
-#   autotest no deja pasar de 3 paginas. Una lista mas larga se recorre con
-#   flechas que nadie pulsa hasta el final.
+#    Es una tienda de PRIMEROS AUXILIOS, no un catalogo. Todo lo demas --las
+#    otras 20 balls, las piedras evolutivas, los objetos de combate, las
+#    vitaminas-- se consigue jugando, y eso es lo que hace que jugar valga la
+#    pena. Una tienda completa vacia el mundo: si todo se compra, explorar solo
+#    sirve para conseguir dinero.
+#
+# ⚠ CINCO CATEGORIAS COMO MAXIMO (la pantalla las dibuja en una lista vertical
+#   que acaba en 762; la sexta caeria fuera del marco). Hoy son dos.
 CATEGORIAS = [
     {
-        "id": "captura",
-        "nombre": "§cCaptura",
+        "id": "esencial",
+        "nombre": "§cLo esencial",
         "icono": "poke_ball",
-        "descripcion": "Balls, caña y cebo. Lo que hace falta para atrapar.",
+        "descripcion": "La Poké Ball normal y poco más. Lo demás se encuentra.",
         "articulos": [
+            # ⚠ SOLO LA NORMAL. Ni Great, ni Ultra, ni las de bellota: esas se
+            #   craftean con bellotas --que es justo lo que da XP al oficio
+            #   AGRICULTOR-- o se encuentran. Venderlas competiria con jugar.
             ("poke_ball", "comun", None),
-            ("great_ball", "comun", None),
-            ("ultra_ball", "bueno", None),
-            ("premier_ball", "comun", None),
-            ("heal_ball", "bueno", None),
-            ("net_ball", "bueno", None),
-            ("nest_ball", "bueno", None),
-            ("dive_ball", "bueno", None),
-            ("dusk_ball", "bueno", None),
-            ("timer_ball", "bueno", None),
-            ("quick_ball", "bueno", None),
-            ("repeat_ball", "bueno", None),
-            ("luxury_ball", "bueno", None),
-            ("level_ball", "bueno", None),
-            ("lure_ball", "bueno", None),
-            # ⚠ LA BALL DEL SERVIDOR. Su efectividad sube con la luna llena, y
-            #   eso es NATIVO de Cobblemon, no un invento nuestro. Recompensa
-            #   saber CUANDO salir, que es el pilar de la vision -- por eso
-            #   lleva etiqueta propia y escalon alto: se usa la noche buena, no
-            #   todas.
-            ("moon_ball", "raro", "§bMoon Ball §8· mejor con luna llena"),
-            ("poke_rod", "bueno", "§ePoké Caña §8· para el oficio de PESCADOR"),
-            ("poke_bait", "basico", None),
+            # ⚠ ESTO NO ES UN OBJETO DE COMBATE, ES UN MATERIAL. La MAQUINA
+            #   CURATIVA se craftea con cobre, hierro, redstone y UN MAX REVIVE
+            #   (verificado en su receta), y el Max Revive NO se craftea: sale
+            #   de cofres. Sin el, montarse la base es cuestion de suerte.
+            #   Es exactamente el caso que pedia el usuario: «items que se
+            #   requieren para craftear cosas basicas del Pokemon».
+            ("max_revive", "raro", "§fMáx. Revivir §8· para la Máquina Curativa"),
         ],
     },
     {
-        "id": "medicina",
-        "nombre": "§aMedicina",
+        "id": "cuidado",
+        "nombre": "§aCuidado",
         "icono": "potion",
-        "descripcion": "Curar, revivir y quitar estados. Lo que salva un combate.",
+        "descripcion": "Curar un poco y quitar estados. Lo del día a día.",
         "articulos": [
-            ("potion", "comun", None),
-            ("super_potion", "bueno", None),
-            ("hyper_potion", "bueno", None),
-            ("max_potion", "raro", None),
-            ("full_restore", "raro", None),
-            ("revive", "raro", None),
-            ("max_revive", "muy_raro", None),
-            ("full_heal", "bueno", None),
+            # ⚠ LOS DOS QUE CAEN EN LA BANDA QUE PIDIO EL USUARIO (20-50 %), y
+            #   los numeros salen de SUS DATOS, no de memoria:
+            #   data/cobblemon/mechanics/potions.json dice 20 / 60 / 120 PS.
+            #   Sobre un Pokemon de nivel medio (80-130 PS) eso es ~20 % y ~50 %.
+            #   La HIPERPOCION (120) cura una barra entera de casi cualquiera:
+            #   por eso NO esta, y esa es la linea.
+            ("potion", "medio", "§fPoción §8· cura 20 PS"),
+            ("super_potion", "bueno", "§fSuperpoción §8· cura 60 PS"),
             ("antidote", "basico", None),
             ("burn_heal", "basico", None),
             ("ice_heal", "basico", None),
             ("paralyze_heal", "basico", None),
             ("awakening", "basico", None),
-            ("ether", "bueno", None),
-            ("max_ether", "raro", None),
-            ("elixir", "bueno", None),
-            ("max_elixir", "raro", None),
-            ("revival_herb", "bueno", None),
-        ],
-    },
-    {
-        "id": "evolucion",
-        "nombre": "§dEvolución",
-        "icono": "fire_stone",
-        "descripcion": "Piedras y objetos que hacen evolucionar.",
-        "articulos": [
-            ("fire_stone", "raro", None),
-            ("water_stone", "raro", None),
-            ("thunder_stone", "raro", None),
-            ("leaf_stone", "raro", None),
-            ("moon_stone", "raro", None),
-            ("sun_stone", "raro", None),
-            ("shiny_stone", "raro", None),
-            ("dusk_stone", "raro", None),
-            ("dawn_stone", "raro", None),
-            ("ice_stone", "raro", None),
-            ("link_cable", "raro", None),
-            ("metal_coat", "raro", None),
-            ("kings_rock", "raro", None),
-            ("dragon_scale", "raro", None),
-            ("upgrade", "raro", None),
-            ("dubious_disc", "raro", None),
-            ("razor_claw", "raro", None),
-            ("razor_fang", "raro", None),
-        ],
-    },
-    {
-        "id": "combate",
-        "nombre": "§6Combate",
-        "icono": "choice_band",
-        "descripcion": "Objetos equipados. Cambian cómo pelea tu equipo.",
-        "articulos": [
-            ("leftovers", "muy_raro", None),
-            ("focus_sash", "raro", None),
-            ("focus_band", "bueno", None),
-            ("choice_band", "muy_raro", None),
-            ("choice_scarf", "muy_raro", None),
-            ("choice_specs", "muy_raro", None),
-            ("life_orb", "muy_raro", None),
-            ("assault_vest", "muy_raro", None),
-            ("eviolite", "raro", None),
-            ("rocky_helmet", "raro", None),
-            ("black_sludge", "bueno", None),
-            ("expert_belt", "raro", None),
-            ("muscle_band", "raro", None),
-            ("wise_glasses", "raro", None),
-            ("scope_lens", "raro", None),
-            ("quick_claw", "raro", None),
-            ("air_balloon", "raro", None),
-            ("heavy_duty_boots", "raro", None),
-        ],
-    },
-    {
-        "id": "entrenamiento",
-        "nombre": "§bEntrenamiento",
-        "icono": "rare_candy",
-        "descripcion": "Vitaminas y caramelos. Suben a tu equipo, no a ti.",
-        "articulos": [
-            ("hp_up", "raro", None),
-            ("protein", "raro", None),
-            ("iron", "raro", None),
-            ("calcium", "raro", None),
-            ("zinc", "raro", None),
-            ("carbos", "raro", None),
-            ("pp_up", "raro", None),
-            ("pp_max", "muy_raro", None),
-            ("exp_share", "raro", None),
-            ("lucky_egg", "muy_raro", None),
-            ("exp_candy_xs", "basico", None),
-            ("exp_candy_s", "comun", None),
-            ("exp_candy_m", "bueno", None),
-            ("exp_candy_l", "raro", None),
-            ("exp_candy_xl", "muy_raro", None),
-            ("rare_candy", "muy_raro", None),
-            ("ability_capsule", "muy_raro", None),
-            ("ability_patch", "muy_raro", None),
         ],
     },
 ]

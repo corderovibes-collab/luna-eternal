@@ -21,6 +21,7 @@ public final class EstadoCliente {
     private static Red.Cosmeticos cosmeticos;
     private static Red.Trabajos trabajos;
     private static Red.Misiones misiones;
+    private static Red.Iniciales iniciales;
 
     private EstadoCliente() {}
 
@@ -72,6 +73,15 @@ public final class EstadoCliente {
         return misiones;
     }
 
+    public static void guardar(Red.Iniciales nuevos) {
+        iniciales = nuevos;
+    }
+
+    /** Los iniciales y si ya se eligio. {@code null} hasta que contesta. */
+    public static Red.Iniciales iniciales() {
+        return iniciales;
+    }
+
     public static Red.Cosmeticos cosmeticos() {
         return cosmeticos;
     }
@@ -80,6 +90,7 @@ public final class EstadoCliente {
     public static void olvidar() {
         trabajos = null;
         misiones = null;
+        iniciales = null;
         saldo = null;
         ficha = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo

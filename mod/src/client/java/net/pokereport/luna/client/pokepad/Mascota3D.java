@@ -172,14 +172,33 @@ public final class Mascota3D {
             return;
         }
 
-        FloatingState estado = ESTADOS.computeIfAbsent(ranura + ":" + c.id(),
-                k -> new FloatingState());
+        dibujarEspecie(ctx, especie, ranura + ":" + c.id(), c.aspecto(),
+                x, y, ancho, alto, origenY, delta, animar);
+    }
+
+    /**
+     * Un Pokemon cualquiera, sin pasar por el catalogo de cosmeticos.
+     *
+     * <p>⚠ Se saco de {@code dibujar} al llegar la pantalla del INICIAL, que
+     * necesita pintar seis especies que no son cosmeticos de nada. Lo que se
+     * comparte es lo unico que importa aqui —el anclaje, la escala y la regla del
+     * cuaternion— y eso no se puede duplicar: cada copia se equivocaria por su
+     * cuenta, y esas tres cosas costaron cuatro intentos de depurar.
+     *
+     * @param clave identifica el estado de animacion. Dos sitios que dibujen la
+     *              MISMA especie tienen que usar claves distintas, o comparten
+     *              {@code FloatingState} y se pisan la orientacion
+     */
+    public static void dibujarEspecie(DrawContext ctx, Identifier especie, String clave,
+                                      String aspecto, int x, int y, int ancho, int alto,
+                                      float origenY, float delta, boolean animar) {
+        FloatingState estado = ESTADOS.computeIfAbsent(clave, k -> new FloatingState());
         // El aspecto es lo que convierte un Charizard en `charizard_knight`.
         // Se reasigna en cada fotograma a propósito: es barato, y así un cambio
         // de aspecto se ve sin tener que invalidar el estado.
-        estado.setCurrentAspects(c.aspecto().isEmpty()
+        estado.setCurrentAspects(aspecto == null || aspecto.isEmpty()
                 ? Set.of()
-                : Set.of(c.aspecto()));
+                : Set.of(aspecto));
 
         // ⚠ RECORTE. Sin él, un modelo alto se sale de su celda y se dibuja
         // encima de la de al lado — y como el 3D no respeta el orden de dibujado
@@ -224,8 +243,8 @@ public final class Mascota3D {
             // Y se avisa UNA VEZ por cosmético, no en cada fotograma: a 60 fps
             // un fallo llenaría el log con miles de líneas iguales y taparía
             // cualquier otra cosa que hubiera pasado.
-            if (FALLIDOS.add(c.id())) {
-                LOG.warn("PokePad: no se pudo dibujar el cosmético {}", c.id(), e);
+            if (FALLIDOS.add(clave)) {
+                LOG.warn("PokePad: no se pudo dibujar {}", clave, e);
             }
         } finally {
             m.pop();

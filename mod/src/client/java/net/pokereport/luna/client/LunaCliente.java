@@ -27,6 +27,24 @@ public class LunaCliente implements ClientModInitializer {
 
     private static KeyBinding abrirPad;
 
+    /**
+     * Abre la eleccion de inicial cuando el jugador puede verla.
+     *
+     * <p>⚠ Se comprueba {@code currentScreen == null} y no «esta en el mundo»:
+     * lo que hay que respetar es que no se le arranque de golpe otra pantalla que
+     * ya tenia abierta --su inventario, un menu de Cobblemon--. Si la tiene, se
+     * abrira en el siguiente tick en el que la cierre.
+     */
+    private static void abrirInicialSiToca(net.minecraft.client.MinecraftClient cliente) {
+        if (cliente.player == null || cliente.currentScreen != null) {
+            return;
+        }
+        var datos = EstadoCliente.iniciales();
+        if (datos != null && !datos.yaEligio() && !datos.opciones().isEmpty()) {
+            cliente.setScreen(new net.pokereport.luna.client.pokepad.InicialScreen());
+        }
+    }
+
     @Override
     public void onInitializeClient() {
         abrirPad = KeyBindingHelper.registerKeyBinding(new KeyBinding(
@@ -56,6 +74,23 @@ public class LunaCliente implements ClientModInitializer {
                     net.minecraft.text.Text.literal(carga.titulo()),
                     net.minecraft.text.Text.literal(carga.detalle()),
                     carga.objeto()));
+        });
+
+        // ⚠⚠ LOS INICIALES, Y LA PANTALLA SE ABRE SOLA. Es lo que arregla el
+        //   bloqueo circular que llevaba meses abierto: un jugador nuevo no tenia
+        //   ningun Pokemon, y sin Pokemon no servia nada de lo construido.
+        //
+        //   Un icono mas en el PokePad NO habria bastado: quien acaba de entrar
+        //   no sabe que el PokePad existe.
+        //
+        //   ⚠ Solo se abre si NO hay ya una pantalla abierta. Si el jugador esta
+        //     en su inventario o en un menu de Cobblemon, arrancarselo de golpe
+        //     es peor que esperar: se le abrira en el siguiente paquete.
+        ClientPlayNetworking.registerGlobalReceiver(Red.Iniciales.ID, (carga, ctx) -> {
+            EstadoCliente.guardar(carga);
+            // No se abre AQUI. Ver `abrirInicialSiToca`: al llegar este paquete
+            // el jugador suele estar todavia en la pantalla de carga, y ese es
+            // justo el momento en el que no se puede abrir nada.
         });
 
         // El arbol de misiones. Llega al abrir la pantalla y despues de cada
@@ -113,8 +148,12 @@ public class LunaCliente implements ClientModInitializer {
         //
         //   Preguntar en vez de esperar quita la ventana entera: el unico que
         //   sabe cuando esta listo es el cliente.
-        ClientPlayConnectionEvents.JOIN.register((manejador, remitente, cliente) ->
-                ClientPlayNetworking.send(new Red.PedirLlevados()));
+        ClientPlayConnectionEvents.JOIN.register((manejador, remitente, cliente) -> {
+            ClientPlayNetworking.send(new Red.PedirLlevados());
+            // Y si no ha elegido inicial, el servidor lo dira y la pantalla
+            // se abrira sola. Ver el receptor de `Iniciales`.
+            ClientPlayNetworking.send(new Red.PedirInicial());
+        });
 
         ClientPlayConnectionEvents.DISCONNECT.register((manejador, cliente) -> {
             EstadoCliente.olvidar();
@@ -125,6 +164,19 @@ public class LunaCliente implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(cliente -> {
+            // ⚠⚠ EL INICIAL SE ABRE DESDE EL TICK, NO AL RECIBIR EL PAQUETE.
+            //
+            //   Al llegar `Iniciales` el jugador esta casi siempre en la pantalla
+            //   de carga del terreno, asi que `currentScreen == null` es falso y
+            //   la apertura se perdia -- el mismo tipo de carrera que dejaba los
+            //   cosmeticos sin verse al reconectar, y con el mismo sintoma:
+            //   nada, sin error.
+            //
+            //   Comprobarlo cada tick no cuesta nada --dos comparaciones-- y se
+            //   abre en cuanto hay hueco de verdad. Deja de comprobarse solo:
+            //   una vez abierta, `currentScreen` ya no es null.
+            abrirInicialSiToca(cliente);
+
             // Las partículas de las auras. Va lo PRIMERO del tick y fuera del
             // bucle de la tecla: si se colara dentro, solo se dibujarían mientras
             // hay pulsaciones en la cola, o sea casi nunca.

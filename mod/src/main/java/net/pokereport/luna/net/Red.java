@@ -336,6 +336,73 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «¿Tengo que elegir inicial?». Lo pregunta el cliente al entrar. */
+    public record PedirInicial() implements CustomPayload {
+        public static final Id<PedirInicial> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_inicial"));
+        public static final PacketCodec<RegistryByteBuf, PedirInicial> CODEC =
+                PacketCodec.unit(new PedirInicial());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Elijo este». */
+    public record ElegirInicial(String especie) implements CustomPayload {
+        public static final Id<ElegirInicial> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "elegir_inicial"));
+        public static final PacketCodec<RegistryByteBuf, ElegirInicial> CODEC =
+                PacketCodec.tuple(PacketCodecs.STRING, ElegirInicial::especie,
+                        ElegirInicial::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record OpcionInicial(String especie, String nombre, String region,
+                                String tipo, String consejo) {
+        public static final PacketCodec<RegistryByteBuf, OpcionInicial> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, OpcionInicial::especie,
+                        PacketCodecs.STRING, OpcionInicial::nombre,
+                        PacketCodecs.STRING, OpcionInicial::region,
+                        PacketCodecs.STRING, OpcionInicial::tipo,
+                        PacketCodecs.STRING, OpcionInicial::consejo,
+                        OpcionInicial::new);
+    }
+
+    /**
+     * Los iniciales, y si ya se eligió.
+     *
+     * <p>⚠ {@code yaEligio} viaja aunque las opciones también, y no sobra: es lo
+     * que decide si la pantalla <b>se abre sola</b> al entrar. Calcularlo en el
+     * cliente («¿tengo algún Pokémon?») daría falsos positivos —alguien puede
+     * soltar su equipo en el PC— y falsos negativos, y las dos formas de
+     * equivocarse son malas: una le niega el inicial a quien no lo tiene, y la
+     * otra abre la pantalla a quien ya eligió.
+     *
+     * <p>La verdad está en {@code kit_claim}, y es del servidor.
+     */
+    public record Iniciales(List<OpcionInicial> opciones, boolean yaEligio)
+            implements CustomPayload {
+        public static final Id<Iniciales> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "iniciales"));
+        public static final PacketCodec<RegistryByteBuf, Iniciales> CODEC =
+                PacketCodec.tuple(
+                        OpcionInicial.CODEC.collect(PacketCodecs.toList()), Iniciales::opciones,
+                        PacketCodecs.BOOL, Iniciales::yaEligio,
+                        Iniciales::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /**
      * «Dime quién lleva qué». <b>Lo pide el CLIENTE al entrar.</b>
      *
@@ -639,6 +706,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirTrabajos.ID, PedirTrabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(Trabajos.ID, Trabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(AvisoLogro.ID, AvisoLogro.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirInicial.ID, PedirInicial.CODEC);
+        PayloadTypeRegistry.playC2S().register(ElegirInicial.ID, ElegirInicial.CODEC);
+        PayloadTypeRegistry.playS2C().register(Iniciales.ID, Iniciales.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirLlevados.ID, PedirLlevados.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirMisiones.ID, PedirMisiones.CODEC);
         PayloadTypeRegistry.playC2S().register(ReclamarMision.ID, ReclamarMision.CODEC);
@@ -692,6 +762,32 @@ public class Red implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(PedirCosmeticos.ID, (carga, ctx) -> {
             var jugador = ctx.player();
             LunaEternal.submit(() -> enviarCosmeticos(jugador));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirInicial.ID, (carga, ctx) ->
+                enviarIniciales(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(ElegirInicial.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                try {
+                    long id = LunaEternal.players()
+                            .resolve(jugador.getUuid(), jugador.getName().getString());
+                    // ⚠ AQUI NO SE COMPRUEBA NADA. `conceder` marca primero y
+                    //   entrega despues, con vuelta atras si la entrega falla, y
+                    //   `claimOnce` es lo que impide elegir dos veces. Repetir la
+                    //   comprobacion aqui invita a que las dos se separen -- y la
+                    //   que manda es la de alla, que ademas es atomica.
+                    net.pokereport.luna.starter.StarterService.conceder(
+                            jugador, id, carga.especie());
+                } catch (Exception e) {
+                    LunaEternal.LOG.warn("No se pudo entregar el inicial a {}: {}",
+                            jugador.getName().getString(), e.toString());
+                }
+                // Se reenvia el estado: la pantalla se cierra sola al ver que ya
+                // eligio, en vez de fiarse de haber pulsado.
+                enviarIniciales(jugador);
+            });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirLlevados.ID, (carga, ctx) -> {
@@ -876,6 +972,31 @@ public class Red implements ModInitializer {
      * cobrado: cobrar es del jugador, y dejar la cadena parada porque a alguien se
      * le olvidó pulsar el botón sería castigar por no mirar la pantalla.
      */
+    private static void enviarIniciales(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                boolean ya = net.pokereport.luna.starter.StarterService.yaEligio(id);
+                List<OpcionInicial> ops = new ArrayList<>(6);
+                for (var lista : List.of(
+                        net.pokereport.luna.starter.StarterService.KANTO,
+                        net.pokereport.luna.starter.StarterService.JOHTO)) {
+                    for (var i : lista) {
+                        ops.add(new OpcionInicial(i.especie(), i.nombre(), i.region(),
+                                i.tipo(), i.consejo()));
+                    }
+                }
+                var carga = new Iniciales(ops, ya);
+                jugador.getServer().execute(
+                        () -> ServerPlayNetworking.send(jugador, carga));
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudieron enviar los iniciales a {}: {}",
+                        jugador.getName().getString(), e.toString());
+            }
+        });
+    }
+
     private static void enviarMisiones(net.minecraft.server.network.ServerPlayerEntity jugador) {
         LunaEternal.submit(() -> {
             try {

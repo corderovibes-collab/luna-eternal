@@ -952,9 +952,36 @@ Backups       ⚠⚠ EL PLAN DA **CERO** RANURAS DE BACKUP EN EL PANEL.
                 BD: 14 tablas, 252 filas, 30 KB
               ⚠ NO se copian los jars: 400 MB que ya estan en el
                 manifiesto publicado y se rebajan solos
-              ⚠⚠ Y SIGUEN EN LA MISMA MAQUINA QUE EL PROYECTO. Una copia
-                 en el mismo disco no protege de que muera el disco: hay
-                 que sacarlas fuera. INF-002 no esta cerrado hasta eso
+              ✅ AUTOMATIZADO Y FUERA DE LA MAQUINA (2026-08-23)
+              python tools/backup_auto.py           el ciclo entero
+              python tools/backup_auto.py --probar  ¿esta todo listo?
+              python tools/backup_auto.py --inventario
+              tarea de Windows `LunaEternal-Backup`
+                LUNES · MIERCOLES · VIERNES · DOMINGO a las 03:30
+                si el PC esta apagado a esa hora, se ejecuta al encender
+              Drive: rclone remoto `luna-drive`, 5 TiB libres
+                LunaEternal-Backups/AAAA/AAAA-MM/AAAA-MM-DD_dia/
+                    mundo.tar.gz  bd.sql  jars/  RESUMEN.txt
+              retencion: 21 dias en local, 365 en Drive
+                se borra por la FECHA DEL NOMBRE, no por la del fichero:
+                copiar o mover cambia la mtime y se borraria lo que no toca
+              ⚠ EL PERMISO ES `drive.file`, A PROPOSITO: rclone solo ve los
+                ficheros que EL crea. Para un proceso que corre solo cada
+                dos noches, es la diferencia entre romper una copia y
+                vaciarte el Drive
+              ⚠ CADA SUBIDA SE VERIFICA POR HASH (`rclone check`). Subir no
+                es lo mismo que haber subido: una copia que llego a medias
+                pesa distinto y no lo dice nadie
+              ⚠ RESUMEN.txt se escribe MIRANDO DENTRO del tar: cuenta las
+                regiones por dimension y las filas por tabla. Sirve para
+                elegir que copia restaurar sin bajarse varias de 47 MB, y
+                para notar que una salio a medias
+              ⚠⚠ CADUCA EN 2026: rclone usa su client_id COMPARTIDO de
+                 Google y Google lo esta retirando este ano. Cuando deje de
+                 funcionar, la copia fallara y hay que crear un client_id
+                 propio en Google Cloud Console. Ver docs y el aviso que
+                 imprime rclone en cada ejecucion
+              medido 2026-08-23: 92,1 MB por copia, ciclo de 75 s
 Servidor      allow-flight=true (lo exige Axiom; revertir al abrir)
               enforce-secure-profile=false · require-resource-pack=false
 ```

@@ -83,3 +83,6 @@ aqtinstall.log
 #   JDK 17  zip de Temurin, NO 21             -> .toolchain\jdk
 #   MSVC    Visual Studio Build Tools, esto SI va al sistema (trae CMake y Ninja)
 .toolchain/
+
+# Credenciales de rclone (token de Google Drive). NUNCA al repositorio.
+rclone.conf

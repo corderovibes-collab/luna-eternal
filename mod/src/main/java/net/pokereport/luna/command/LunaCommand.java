@@ -121,6 +121,10 @@ public final class LunaCommand {
                                 com.mojang.brigadier.arguments.LongArgumentType
                                         .getLong(ctx, "xp"))))))
 
+            .then(literal("reiniciarinicial")
+                .requires(s -> s.hasPermissionLevel(4))
+                .executes(ctx -> reiniciarInicial(ctx.getSource())))
+
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> autotest(ctx.getSource())))
@@ -465,6 +469,39 @@ public final class LunaCommand {
                         + " (" + tiene + " XP)"), false));
             } catch (Exception e) {
                 LunaEternal.LOG.warn("No se pudo dar XP de via: {}", e.toString());
+            }
+        });
+        return 1;
+    }
+
+    /**
+     * Borra la marca de «ya elegiste inicial». <b>Solo para probar.</b>
+     *
+     * <p>⚠ Nivel 4 --el mas alto-- y no 3 como los demas. Los otros comandos de
+     * prueba dan cosas; este PERMITE VOLVER A COGER UN POKEMON GRATIS. No es lo
+     * mismo, y la diferencia importa: un constructor con nivel 2 o un moderador
+     * con nivel 3 no deberian poder repartir iniciales.
+     *
+     * <p>⚠ Y NO quita el Pokemon que ya se entrego. Borra solo la marca, asi que
+     * quien lo use se queda con los dos. Es correcto para probar y seria un
+     * agujero en produccion: por eso el nivel.
+     */
+    private static int reiniciarInicial(ServerCommandSource origen) {
+        var jugador = origen.getPlayer();
+        if (jugador == null) {
+            origen.sendError(Text.literal("Este comando se escribe desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                LunaEternal.kitService().undoOnce(id,
+                        net.pokereport.luna.starter.StarterService.CLAVE);
+                origen.getServer().execute(() -> origen.sendFeedback(() -> Text.literal(
+                        "§aMarca borrada. Vuelve a entrar y saldra la pantalla."), false));
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo reiniciar el inicial: {}", e.toString());
             }
         });
         return 1;

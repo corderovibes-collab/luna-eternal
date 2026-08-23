@@ -1,0 +1,8 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Fundamentos", "x": 0, "y": 0, "w": 1120, "h": 1420 },
+    { "file": "Componentes.dc.html", "title": "Componentes", "x": 1240, "y": 0, "w": 1120, "h": 1760 },
+    { "file": "Ventana.dc.html", "title": "Ventana montada", "x": 2480, "y": 0, "w": 1000, "h": 640 }
+  ],
+  "launch": { "view": "canvas" }
+}

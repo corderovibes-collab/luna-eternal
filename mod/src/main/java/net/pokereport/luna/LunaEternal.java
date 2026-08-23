@@ -42,6 +42,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.pokedex.PokedexService pokedex;
     private static net.pokereport.luna.kit.KitCatalog kits;
     private static net.pokereport.luna.kit.KitService kitService;
+    private static net.pokereport.luna.clan.ClanService clans;
     private static net.pokereport.luna.quest.QuestService quests;
     private static net.pokereport.luna.economy.EconomyStats stats;
     private static net.pokereport.luna.hunt.HuntService hunts;
@@ -69,6 +70,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             var player = handler.getPlayer();
             Tablist.onJoin(server, player);
+            // La etiqueta del clan, que va en el mismo equipo que el rango.
+            Tablist.refrescarClan(server, player);
             PlayerCache.refresh(player);
 
             // Entregas pendientes del GTS: compras sin entregar, listados
@@ -165,6 +168,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // Valida el tope diario. Si un kit inyecta de mas, NO arranca.
             kits = net.pokereport.luna.kit.KitCatalog.load();
             kitService = new net.pokereport.luna.kit.KitService(database);
+            clans = new net.pokereport.luna.clan.ClanService(database);
             quests = new net.pokereport.luna.quest.QuestService(database);
             stats = new net.pokereport.luna.economy.EconomyStats(database);
             hunts = new net.pokereport.luna.hunt.HuntService(database);
@@ -225,6 +229,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }
     public static net.pokereport.luna.kit.KitCatalog kits() { return kits; }
     public static net.pokereport.luna.kit.KitService kitService() { return kitService; }
+    public static net.pokereport.luna.clan.ClanService clans() { return clans; }
     public static net.pokereport.luna.quest.QuestService quests() { return quests; }
     public static net.pokereport.luna.economy.EconomyStats stats() { return stats; }
 }

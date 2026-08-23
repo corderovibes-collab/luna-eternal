@@ -336,6 +336,177 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «Dame el estado de mi clan», al abrir la pantalla. */
+    public record PedirClan() implements CustomPayload {
+        public static final Id<PedirClan> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_clan"));
+        public static final PacketCodec<RegistryByteBuf, PedirClan> CODEC =
+                PacketCodec.unit(new PedirClan());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Una acción sobre el clan. <b>Un solo paquete para todas.</b>
+     *
+     * <p>⚠ Podrían ser doce paquetes —fundar, invitar, aceptar, rechazar, salir,
+     * echar, ascender, degradar, traspasar, disolver, aportar, sacar— y sería
+     * peor: doce registros, doce receptores y doce sitios donde olvidarse de
+     * comprobar los permisos. Con uno, <b>la comprobación vive en un solo
+     * sitio</b>, que es donde tiene que estar en un sistema social.
+     *
+     * <p>Los campos sobran en casi todas las acciones y no pasa nada: una cadena
+     * vacía y un cero ocupan un byte cada uno. Lo que <b>no</b> se hace es mandar
+     * un mapa o un JSON: entonces el formato dejaría de estar declarado y el
+     * servidor tendría que fiarse de las claves que le manden.
+     */
+    public record AccionClan(String accion, String texto, String texto2,
+                             long objetivo, long cantidad) implements CustomPayload {
+        public static final Id<AccionClan> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_clan"));
+        public static final PacketCodec<RegistryByteBuf, AccionClan> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, AccionClan::accion,
+                        PacketCodecs.STRING, AccionClan::texto,
+                        PacketCodecs.STRING, AccionClan::texto2,
+                        PacketCodecs.VAR_LONG, AccionClan::objetivo,
+                        PacketCodecs.VAR_LONG, AccionClan::cantidad,
+                        AccionClan::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record MiembroClan(long playerId, String nombre, String rol, boolean conectado) {
+        public static final PacketCodec<RegistryByteBuf, MiembroClan> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_LONG, MiembroClan::playerId,
+                        PacketCodecs.STRING, MiembroClan::nombre,
+                        PacketCodecs.STRING, MiembroClan::rol,
+                        PacketCodecs.BOOL, MiembroClan::conectado,
+                        MiembroClan::new);
+    }
+
+    public record ClanResumen(long id, String nombre, String etiqueta, String color,
+                              String descripcion, long tesoro, int miembros,
+                              String lider) {
+        // ⚠ A MANO. `PacketCodec.tuple` llega a SEIS campos en 1.21.1 y aquí
+        //   hay ocho; el error que da no dice cuál es el límite, solo que «no
+        //   hay método adecuado». Escribirlo así además quita el techo.
+        public static final PacketCodec<RegistryByteBuf, ClanResumen> CODEC =
+                PacketCodec.ofStatic(ClanResumen::escribir, ClanResumen::leer);
+
+        private static void escribir(RegistryByteBuf buf, ClanResumen c) {
+            buf.writeVarLong(c.id);
+            buf.writeString(c.nombre);
+            buf.writeString(c.etiqueta);
+            buf.writeString(c.color);
+            buf.writeString(c.descripcion);
+            buf.writeVarLong(c.tesoro);
+            buf.writeVarInt(c.miembros);
+            buf.writeString(c.lider);
+        }
+
+        private static ClanResumen leer(RegistryByteBuf buf) {
+            return new ClanResumen(buf.readVarLong(), buf.readString(), buf.readString(),
+                    buf.readString(), buf.readString(), buf.readVarLong(),
+                    buf.readVarInt(), buf.readString());
+        }
+    }
+
+    public record InvitacionClan(long clanId, String nombre, String etiqueta,
+                                 String color, String invitadoPor) {
+        public static final PacketCodec<RegistryByteBuf, InvitacionClan> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_LONG, InvitacionClan::clanId,
+                        PacketCodecs.STRING, InvitacionClan::nombre,
+                        PacketCodecs.STRING, InvitacionClan::etiqueta,
+                        PacketCodecs.STRING, InvitacionClan::color,
+                        PacketCodecs.STRING, InvitacionClan::invitadoPor,
+                        InvitacionClan::new);
+    }
+
+    /**
+     * Todo el estado del clan de un jugador.
+     *
+     * <p>⚠ Va <b>completo</b> y se reenvía entero tras cada acción, igual que el
+     * catálogo de cosméticos y el árbol de misiones. Mandar diferencias en un
+     * sistema donde varios jugadores cambian el mismo estado a la vez —dos
+     * oficiales invitando, alguien saliendo— es cómo se acaba con dos clientes
+     * enseñando listas distintas del mismo clan.
+     *
+     * <p>⚠ {@code miRol} lo decide el SERVIDOR. El cliente podría deducirlo de la
+     * lista de miembros, y entonces la regla de quién puede echar a quién
+     * viviría en dos sitios.
+     */
+    public record EstadoClan(long miClanId, ClanResumen mio, List<MiembroClan> miembros,
+                             String miRol, List<InvitacionClan> invitaciones,
+                             List<ClanResumen> otros, long costeFundar)
+            implements CustomPayload {
+        public static final Id<EstadoClan> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_clan"));
+
+        // ⚠ A MANO: `PacketCodec.tuple` no admite un campo opcional, y `mio` lo
+        //   es. Se escribe un booleano delante y se lee igual.
+        public static final PacketCodec<RegistryByteBuf, EstadoClan> CODEC =
+                PacketCodec.ofStatic(EstadoClan::escribir, EstadoClan::leer);
+
+        private static void escribir(RegistryByteBuf buf, EstadoClan e) {
+            buf.writeVarLong(e.miClanId);
+            buf.writeBoolean(e.mio != null);
+            if (e.mio != null) {
+                ClanResumen.CODEC.encode(buf, e.mio);
+            }
+            buf.writeVarInt(e.miembros.size());
+            for (MiembroClan m : e.miembros) {
+                MiembroClan.CODEC.encode(buf, m);
+            }
+            buf.writeString(e.miRol == null ? "" : e.miRol);
+            buf.writeVarInt(e.invitaciones.size());
+            for (InvitacionClan i : e.invitaciones) {
+                InvitacionClan.CODEC.encode(buf, i);
+            }
+            buf.writeVarInt(e.otros.size());
+            for (ClanResumen c : e.otros) {
+                ClanResumen.CODEC.encode(buf, c);
+            }
+            buf.writeVarLong(e.costeFundar);
+        }
+
+        private static EstadoClan leer(RegistryByteBuf buf) {
+            long id = buf.readVarLong();
+            ClanResumen mio = buf.readBoolean() ? ClanResumen.CODEC.decode(buf) : null;
+            int n = buf.readVarInt();
+            List<MiembroClan> miembros = new ArrayList<>(n);
+            for (int i = 0; i < n; i++) {
+                miembros.add(MiembroClan.CODEC.decode(buf));
+            }
+            String rol = buf.readString();
+            int ni = buf.readVarInt();
+            List<InvitacionClan> invs = new ArrayList<>(ni);
+            for (int i = 0; i < ni; i++) {
+                invs.add(InvitacionClan.CODEC.decode(buf));
+            }
+            int no = buf.readVarInt();
+            List<ClanResumen> otros = new ArrayList<>(no);
+            for (int i = 0; i < no; i++) {
+                otros.add(ClanResumen.CODEC.decode(buf));
+            }
+            return new EstadoClan(id, mio, List.copyOf(miembros), rol,
+                    List.copyOf(invs), List.copyOf(otros), buf.readVarLong());
+        }
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «¿Tengo que elegir inicial?». Lo pregunta el cliente al entrar. */
     public record PedirInicial() implements CustomPayload {
         public static final Id<PedirInicial> ID =
@@ -706,6 +877,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirTrabajos.ID, PedirTrabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(Trabajos.ID, Trabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(AvisoLogro.ID, AvisoLogro.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirClan.ID, PedirClan.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionClan.ID, AccionClan.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoClan.ID, EstadoClan.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirInicial.ID, PedirInicial.CODEC);
         PayloadTypeRegistry.playC2S().register(ElegirInicial.ID, ElegirInicial.CODEC);
         PayloadTypeRegistry.playS2C().register(Iniciales.ID, Iniciales.CODEC);
@@ -742,7 +916,26 @@ public class Red implements ModInitializer {
                     // inventar un valor: el Pad dibuja un guión, que dice «esto
                     // aún no», mientras que un «Sin clan» dice «ya funciona y no
                     // tienes ninguno» — que no es verdad.
-                    var ficha = new Ficha(vias, "", "", "", 0);
+                    // ⚠ EL CLAN YA NO VA VACIO. D-038 dejo este campo
+                    //   viajando con la cadena vacia a proposito y escribio que
+                    //   "encenderlos seria rellenar tres lineas en vez de tocar
+                    //   paquete, codec, cache y dibujado". Fue exacto: es esta.
+                    //
+                    //   Se manda "[TAG] Nombre" ya compuesto, para que el Pad no
+                    //   tenga que saber como se escribe un clan.
+                    String clan = "";
+                    try {
+                        var c = LunaEternal.clans().clanDe(id);
+                        if (c != null) {
+                            clan = "\u00a7" + c.color() + "[" + c.etiqueta() + "] \u00a7f"
+                                    + c.nombre();
+                        }
+                    } catch (Exception e) {
+                        // Sin clan en la ficha es un guion; que falle la consulta
+                        // no puede dejar al jugador sin saldo ni sin vias.
+                        LunaEternal.LOG.debug("Sin clan para la ficha: {}", e.toString());
+                    }
+                    var ficha = new Ficha(vias, clan, "", "", 0);
                     // Volver al hilo del servidor para enviar: la red no es
                     // segura desde un hilo cualquiera.
                     jugador.getServer().execute(() -> {
@@ -762,6 +955,83 @@ public class Red implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(PedirCosmeticos.ID, (carga, ctx) -> {
             var jugador = ctx.player();
             LunaEternal.submit(() -> enviarCosmeticos(jugador));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirClan.ID, (carga, ctx) ->
+                enviarClan(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionClan.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                try {
+                    long id = LunaEternal.players()
+                            .resolve(jugador.getUuid(), jugador.getName().getString());
+                    var svc = LunaEternal.clans();
+                    net.pokereport.luna.clan.ClanService.Resultado r;
+
+                    // ⚠ TODA la comprobación de permisos está DENTRO del
+                    //   servicio, no aquí. Este switch solo traduce el nombre de
+                    //   la acción a una llamada: si repartiera comprobaciones
+                    //   entre los dos sitios, tarde o temprano una acción nueva
+                    //   se añadiría solo en uno.
+                    switch (carga.accion()) {
+                        case "fundar" -> r = svc.fundar(id, carga.texto().trim(),
+                                carga.texto2().trim(), 'b', "",
+                                java.util.UUID.randomUUID().toString());
+                        case "invitar" -> {
+                            // ⚠ Viaja el NOMBRE, no el player_id: el cliente no
+                            //   conoce identificadores internos y no tiene por
+                            //   qué. Se resuelve aquí, y si no existe se dice.
+                            Long otro = LunaEternal.players()
+                                    .resolveByName(carga.texto().trim());
+                            r = otro == null
+                                    ? new net.pokereport.luna.clan.ClanService.Resultado(
+                                            false, "No conozco a nadie con ese nombre.")
+                                    : svc.invitar(id, otro);
+                        }
+                        case "aceptar" -> r = svc.aceptar(id, carga.objetivo());
+                        case "rechazar" -> r = svc.rechazar(id, carga.objetivo());
+                        case "salir" -> r = svc.salir(id);
+                        case "echar" -> r = svc.echar(id, carga.objetivo());
+                        case "ascender" -> r = svc.cambiarRol(id, carga.objetivo(),
+                                net.pokereport.luna.clan.ClanService.Rol.OFICIAL);
+                        case "degradar" -> r = svc.cambiarRol(id, carga.objetivo(),
+                                net.pokereport.luna.clan.ClanService.Rol.MIEMBRO);
+                        case "traspasar" -> r = svc.traspasar(id, carga.objetivo());
+                        case "disolver" -> r = svc.disolver(id);
+                        case "aportar" -> r = svc.aportar(id, carga.cantidad(),
+                                java.util.UUID.randomUUID().toString());
+                        case "sacar" -> r = svc.sacar(id, carga.cantidad(),
+                                java.util.UUID.randomUUID().toString());
+                        default -> r = new net.pokereport.luna.clan.ClanService.Resultado(
+                                false, "Acción desconocida.");
+                    }
+
+                    final var res = r;
+                    jugador.getServer().execute(() -> jugador.sendMessage(
+                            net.minecraft.text.Text.literal(
+                                    (res.ok() ? "\u00a7a" : "\u00a7c") + res.mensaje()), true));
+
+                    // ⚠ SE REENVÍA A TODO EL CLAN, no solo a quien actuó. Echar a
+                    //   alguien, ascenderlo o sacar del tesoro cambia lo que ven
+                    //   los DEMÁS, y si no se les avisa siguen con su copia hasta
+                    //   reabrir la pantalla. Es la lección del día, otra vez.
+                    refrescarClanDe(jugador, id);
+
+                    // ⚠ Y LA ETIQUETA, que vive en el marcador y no en un
+                    //   paquete. Sin esto, quien funda o abandona un clan sigue
+                    //   con la etiqueta anterior en el chat y sobre la cabeza
+                    //   hasta reconectar -- el mismo fallo, otra vez.
+                    jugador.getServer().execute(() ->
+                            net.pokereport.luna.ui.Tablist.refrescarClan(
+                                    jugador.getServer(), jugador));
+
+                } catch (Exception e) {
+                    LunaEternal.LOG.warn("Fallo en la accion de clan {}: {}",
+                            carga.accion(), e.toString());
+                    enviarClan(jugador);
+                }
+            });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirInicial.ID, (carga, ctx) ->
@@ -991,6 +1261,125 @@ public class Red implements ModInitializer {
      */
     public static void refrescarInicial(net.minecraft.server.network.ServerPlayerEntity jugador) {
         enviarIniciales(jugador);
+    }
+
+    /**
+     * Manda el estado del clan a un jugador.
+     *
+     * <p>⚠ Va por el executor de E/S: son cuatro consultas y ninguna puede
+     * ocurrir en el hilo del servidor.
+     */
+    private static void enviarClan(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                var carga = componerClan(jugador, id);
+                jugador.getServer().execute(
+                        () -> ServerPlayNetworking.send(jugador, carga));
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo enviar el clan a {}: {}",
+                        jugador.getName().getString(), e.toString());
+            }
+        });
+    }
+
+    /**
+     * Reenvía el estado a TODOS los miembros conectados del clan.
+     *
+     * <p>⚠⚠ Esto es lo que separa un sistema social de una pantalla personal: el
+     * estado no es de quien lo mira, es <b>compartido</b>. Si alguien echa a un
+     * miembro y solo se refresca a sí mismo, los demás siguen viendo al echado en
+     * la lista —y el echado sigue creyendo que está dentro— hasta que reabran.
+     *
+     * <p>Se llama <b>desde el hilo de E/S</b>, con el clan ya conocido.
+     */
+    private static void refrescarClanDe(
+            net.minecraft.server.network.ServerPlayerEntity quien, long playerId) {
+        var servidor = quien.getServer();
+        if (servidor == null) {
+            return;
+        }
+        try {
+            var clan = LunaEternal.clans().clanDe(playerId);
+            var destinos = new ArrayList<net.minecraft.server.network.ServerPlayerEntity>();
+            destinos.add(quien);
+            if (clan != null) {
+                // Los miembros que estén conectados. Los que no, lo verán al
+                // entrar: la pantalla lo pide al abrirse.
+                for (var m : LunaEternal.clans().miembros(clan.id())) {
+                    var otro = servidor.getPlayerManager().getPlayerList().stream()
+                            .filter(x -> {
+                                try {
+                                    return LunaEternal.players().resolve(
+                                            x.getUuid(), x.getName().getString()) == m.playerId();
+                                } catch (Exception e) {
+                                    return false;
+                                }
+                            })
+                            .findFirst().orElse(null);
+                    if (otro != null && !destinos.contains(otro)) {
+                        destinos.add(otro);
+                    }
+                }
+            }
+            for (var destino : destinos) {
+                enviarClan(destino);
+            }
+        } catch (Exception e) {
+            LunaEternal.LOG.warn("No se pudo refrescar el clan: {}", e.toString());
+        }
+    }
+
+    /** Junta las cuatro consultas en el paquete. Se llama desde el hilo de E/S. */
+    private static EstadoClan componerClan(
+            net.minecraft.server.network.ServerPlayerEntity jugador, long playerId)
+            throws Exception {
+        var svc = LunaEternal.clans();
+        var clan = svc.clanDe(playerId);
+        var servidor = jugador.getServer();
+
+        List<MiembroClan> miembros = new ArrayList<>();
+        ClanResumen mio = null;
+        String miRol = "";
+        if (clan != null) {
+            var rol = svc.rolDe(playerId);
+            miRol = rol == null ? "" : rol.name();
+            String lider = "";
+            for (var m : svc.miembros(clan.id())) {
+                boolean conectado = servidor != null
+                        && servidor.getPlayerManager().getPlayer(m.nombre()) != null;
+                miembros.add(new MiembroClan(m.playerId(), m.nombre(),
+                        m.rol().name(), conectado));
+                if (m.playerId() == clan.liderId()) {
+                    lider = m.nombre();
+                }
+            }
+            mio = new ClanResumen(clan.id(), clan.nombre(), clan.etiqueta(),
+                    String.valueOf(clan.color()), clan.descripcion(), clan.tesoro(),
+                    clan.miembros(), lider);
+        }
+
+        List<InvitacionClan> invs = new ArrayList<>();
+        for (var i : svc.invitaciones(playerId)) {
+            invs.add(new InvitacionClan(i.clanId(), i.clanNombre(), i.clanEtiqueta(),
+                    String.valueOf(i.color()), i.invitadoPor()));
+        }
+
+        // ⚠ La lista de OTROS clanes solo se manda si NO tienes clan. Quien ya
+        //   está en uno no la necesita, y son 25 filas más en cada refresco de
+        //   cada miembro cada vez que alguien aporta al tesoro.
+        List<ClanResumen> otros = new ArrayList<>();
+        if (clan == null) {
+            for (var c : svc.listar(25)) {
+                otros.add(new ClanResumen(c.id(), c.nombre(), c.etiqueta(),
+                        String.valueOf(c.color()), c.descripcion(), 0, c.miembros(), ""));
+            }
+        }
+
+        return new EstadoClan(clan == null ? 0 : clan.id(), mio, List.copyOf(miembros),
+                miRol, List.copyOf(invs), List.copyOf(otros),
+                net.pokereport.luna.clan.ClanService.COSTE_FUNDAR);
     }
 
     private static void enviarIniciales(net.minecraft.server.network.ServerPlayerEntity jugador) {

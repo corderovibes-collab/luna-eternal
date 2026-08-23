@@ -683,7 +683,123 @@ modelos, 230 texturas. `.toolchain/venv` es un resto muerto — apuntaba a
 admite Windows 11 de sobra. No bloquea nada hoy; conviene decidirlo antes de que
 sí lo haga.
 
+> ⚠️ **Node.js tampoco estaba** (2026-08-23). Es el **cuarto** que se llevó el
+> formateo, después de JDK 21, ffmpeg y `gh`, y hacía falta para dos cosas
+> distintas: las **37 pruebas del launcher de Electron** (`npm test`) y las
+> herramientas de diseño. Instalado con
+> `winget install OpenJS.NodeJS.LTS` (24.19.0).
+> Misma trampa de siempre: **winget cambia el PATH pero no el de la terminal ya
+> abierta**, así que la primera vez hay que llamarlo por ruta completa
+> (`C:\Program Files\nodejs\node.exe`).
+
+---
+
+## 10. El bucle de actualización (2026-08-23)
+
+**El síntoma que reportó el usuario:** el launcher avisaba de que había una
+versión nueva **teniendo ya la última instalada**, y al pulsar *Actualizar*
+salía un error. Las dos cosas a la vez, en cada arranque.
+
+Eran **tres fallos independientes**, y los tres nacen del **mismo carácter**:
+la `v` con la que empiezan las etiquetas de git.
+
+### 10.1 · ⚠️⚠️ `Version("v0.2.0")` es MAYOR que `Version("0.2.0")`. Siempre
+
+`Version` parte la cadena en tramos y los compara de uno en uno. El primer tramo
+de `v0.2.0` es la letra **`v`** —de tipo *texto*— y el de `0.2.0` es el **`0`**
+—de tipo *número*—. Con tipos distintos, `Version::Section::operator<=>` cae a
+comparar **código de carácter**:
+
+```
+'v' = 0x76        '0' = 0x30        0x76 > 0x30
+```
+
+Y ahí se acaba la comparación: devuelve *mayor* sin llegar a mirar ni un solo
+dígito. `Version("v0.1.0") > Version("9.9.9")` es **cierto**.
+
+Como `parseReleasePage()` hacía `release.version = Version(release.tag_name)`, y
+la versión instalada es `0.2.0` sin `v`, **toda release del repositorio parecía
+más nueva que cualquier cosa instalada**. El jugador actualizaba, arrancaba, y
+se le volvía a ofrecer la misma actualización.
+
+**Ni un error en el log**, porque desde dentro todo funcionaba exactamente como
+estaba escrito.
+
+Arreglado con `Version::fromTag()` (en `launcher/Version.h`, que es donde se
+puede probar), y la `v` **se quita solo para comparar**: `tag_name` se sigue
+enseñando tal cual en el diálogo y en el fichero de bloqueo.
+
+> ⚠️ La `v` se quita **solo si va seguida de un dígito**. Una etiqueta que de
+> verdad empiece por esa letra —`voyager-1`— tiene que sobrevivir entera, y hay
+> prueba que lo fija.
+
+### 10.2 · ⚠️⚠️ El instalador no se llamaba como el actualizador buscaba
+
+`validReleaseArtifacts()` recorre los ficheros de la release y **se queda solo
+con los que llevan `Launcher_BUILD_ARTIFACT` en el nombre**:
+
+```cpp
+bool for_platform = !platform.isEmpty() && asset_name.contains(platform);
+```
+
+`Launcher_BUILD_ARTIFACT` vale `luna-launcher-win-x64` (lo pone la CI). Y NSIS
+llamaba al instalador **`LunaEternal-Setup.exe`**, que sale de
+`Launcher_CommonName` en `program_info/CMakeLists.txt`.
+
+Los dos nombres eran correctos **por separado**, y no se parecían en nada. La
+release se publicaba entera y bien, el launcher veía que había versión nueva, y
+al pulsar *Actualizar* **no encontraba ni un fichero que instalar**. El error no
+nombraba ni el fichero ni el motivo; el «platforms do not match» solo sale en el
+log.
+
+Arreglado en `luna-release.yml`: el instalador **se renombra** a
+`luna-launcher-win-x64-Setup.exe` y el paso **falla** si el nombre no contiene
+la cadena. Y `ARTIFACT_NAME` **sube al `env` del job**, porque ahora la usan dos
+pasos que tienen que decir lo mismo: el que *configura* (lo que el actualizador
+busca) y el que *renombra* (lo que encuentra). Escrita dos veces, un día una
+cambia y la otra no.
+
+> ⚠️ El nombre no es libre. El mismo filtro descarta lo que contenga
+> `portable`, lo que acabe en `.zip`/`.tar.gz`, lo que contenga `arm64` y lo que
+> case con `-qt<número>`. `x64` sí vale: lo que descarta es `arm64`.
+
+### 10.3 · ⚠️ Y el launcher se llamaba a sí mismo `0.2.0-1a2b3c4d`
+
+La misma `v`, por el otro lado. `printableVersionString()` pega el canal detrás
+cuando la compilación no es una release:
+
+```cpp
+if (VERSION_CHANNEL != "stable" && GIT_TAG != vstr)
+```
+
+`GIT_TAG` es `v0.2.0` y `vstr` es `0.2.0`, así que **nunca eran iguales** y a
+*toda* compilación etiquetada —o sea, a todas las que se reparten— se le pegaba
+el hash del commit detrás. No era solo feo en el «Acerca de»: **esa es la cadena
+con la que el actualizador se compara**.
+
+### 10.4 · Lo que impide que vuelva
+
+| | |
+|---|---|
+| `tests/Version_test.cpp` | **62 pruebas, 0 fallos.** Dos nuevas: una fija el comportamiento crudo (`Version("v0.2.0") > Version("9.9.9")`, que **no cambia**) y comprueba que `fromTag` lo neutraliza sin romper el orden entre versiones de verdad; la otra fija que una versión con canal no pide actualizar a la misma |
+| `luna-release.yml` | Un paso nuevo **compara la versión de `CMakeLists.txt` con la etiqueta y aborta si no cuadran** — y aborta *antes* de gastar 35 minutos compilando. Estaba avisado en `CLAUDE.md` desde el 21-ago y aun así dependía de que alguien se acordara |
+| `luna-release.yml` | El paso del instalador **falla** si el `.exe` no lleva `ARTIFACT_NAME` en el nombre |
+
+> ⚠️ **Nada de esto se ha visto todavía en el juego.** Compila
+> (`Version` y `LunaEternal_updater`) y las pruebas pasan, pero el ciclo de
+> verdad —release nueva, launcher viejo, actualizar— **solo se puede comprobar
+> publicando**. Y para comprobarlo hace falta subir a `0.2.1`: contra `v0.2.0`
+> el launcher arreglado dirá, correctamente, que no hay nada que actualizar.
+
 ## Last Decision
+
+**2026-08-23 · EL BUCLE DE ACTUALIZACIÓN, CERRADO** — tres fallos, y los tres
+salían del **mismo carácter**: la `v` de las etiquetas de git (§10). El launcher
+ofrecía actualizar a la versión que ya estaba instalada, y al aceptar no
+encontraba nada que instalar. `Version::fromTag()` + renombrado del instalador
+en la CI + dos guardias nuevas que hacen fallar la publicación en vez de
+publicar algo que no se puede instalar. 62 pruebas de `Version`, 0 fallos.
+**Sin verificar de punta a punta**: eso pide publicar una `0.2.1`.
 
 **2026-08-21 · v0.2.0 PUBLICADA** — arreglados los tres fallos que hacían
 abandonar la instalación (§8) más el `--launch` que se saltaba la sincronización

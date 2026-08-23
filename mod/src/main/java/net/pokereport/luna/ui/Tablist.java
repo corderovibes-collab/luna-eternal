@@ -78,6 +78,90 @@ public final class Tablist {
     }
 
     /**
+     * Pone la etiqueta del clan delante del nombre, EN LOS TRES SITIOS A LA VEZ:
+     * el chat, el tablist y encima de la cabeza.
+     *
+     * <p>Lo pidió el usuario: <i>«que se vea si tiene clan y en qué clan está»</i>.
+     * Y la forma nativa de conseguirlo es un <b>equipo de marcador</b>: su prefijo
+     * lo pinta vanilla en los tres sitios sin que el cliente necesite nada. Un
+     * paquete propio solo lo verían los que tuvieran el mod.
+     *
+     * <h2>⚠⚠ Un jugador solo puede estar en UN equipo, y el rango ya usaba uno</h2>
+     *
+     * Por eso el equipo pasa a ser <b>por jugador</b> ({@code luna_&lt;nombre&gt;})
+     * y su prefijo lleva <b>rango + clan</b> juntos. La alternativa —un equipo por
+     * cada combinación de rango y clan— multiplica los equipos por los clanes que
+     * haya y hay que crearlos y borrarlos a mano.
+     *
+     * <p>Un equipo por jugador suena a mucho y no lo es: son diez jugadores como
+     * máximo en este servidor, y un equipo de marcador es una fila en memoria.
+     *
+     * <p>⚠ Los equipos se llaman por el NOMBRE del jugador, que es lo que acepta
+     * el marcador de vanilla. Con {@code online-mode=false} un nombre no es una
+     * identidad estable, y aquí no importa: si alguien se cambia el nombre, entra
+     * en un equipo nuevo y el viejo se queda vacío. Nada económico depende de
+     * esto (D-010).
+     */
+    public static void applyClanTag(MinecraftServer server, ServerPlayerEntity player,
+                                    Rank rank, String etiqueta, char color) {
+        var scoreboard = server.getScoreboard();
+        String nombre = player.getGameProfile().getName();
+        // ⚠ El nombre del equipo va acotado a 16: es el máximo del marcador, y
+        //   pasarse lanza. Un nombre de Minecraft son 16 como mucho, así que el
+        //   prefijo `luna_` ya no cabe entero -- se usa un hash corto y estable.
+        String equipo = "luna" + Integer.toHexString(nombre.hashCode() & 0xFFFFFF);
+
+        Team team = scoreboard.getTeam(equipo);
+        if (team == null) {
+            team = scoreboard.addTeam(equipo);
+        }
+        String prefijo = rank.tag + " ";
+        if (etiqueta != null && !etiqueta.isEmpty()) {
+            prefijo += "\u00a7" + color + "[" + etiqueta + "] ";
+        }
+        team.setPrefix(plain(prefijo + rank.nameColor));
+        team.setSuffix(plain(""));
+        scoreboard.addScoreHolderToTeam(nombre, team);
+    }
+
+    /**
+     * Lee el clan del jugador y le pone la etiqueta. <b>Va por el hilo de E/S.</b>
+     *
+     * <p>Se llama al entrar y cada vez que su clan cambia. Sin lo segundo, quien
+     * funde o abandone un clan seguiría con la etiqueta anterior hasta reconectar
+     * — que es exactamente el fallo que este proyecto ha pagado cuatro veces hoy.
+     */
+    public static void refrescarClan(MinecraftServer server, ServerPlayerEntity player) {
+        var uuid = player.getUuid();
+        var nombre = player.getName().getString();
+        Rank rango = rankOf(server, player);
+        net.pokereport.luna.LunaEternal.submit(() -> {
+            String etiqueta = "";
+            char color = 'b';
+            try {
+                long id = net.pokereport.luna.LunaEternal.players().resolve(uuid, nombre);
+                var clan = net.pokereport.luna.LunaEternal.clans().clanDe(id);
+                if (clan != null) {
+                    etiqueta = clan.etiqueta();
+                    color = clan.color();
+                }
+            } catch (Exception e) {
+                // Sin etiqueta se ve el nombre a secas. Que falle esto no puede
+                // costarle a nadie la entrada al servidor.
+                net.pokereport.luna.LunaEternal.LOG.debug(
+                        "Sin etiqueta de clan para {}: {}", nombre, e.toString());
+            }
+            final String et = etiqueta;
+            final char co = color;
+            server.execute(() -> {
+                if (!player.isRemoved()) {
+                    applyClanTag(server, player, rango, et, co);
+                }
+            });
+        });
+    }
+
+    /**
      * Rango del jugador. Provisional: hasta que exista el sistema de rangos
      * (PHASE 10) todo el mundo es JUGADOR salvo los operadores.
      */

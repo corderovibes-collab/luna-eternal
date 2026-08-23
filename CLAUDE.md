@@ -620,6 +620,52 @@ Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
                 del jar de Iris. §2-quinquies
 Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
               ---------------------------------------------------------
+              EL BUCLE DE ACTUALIZACION, CERRADO (2026-08-23)
+              detalle completo en docs/technical/launcher-qt.md §10
+              el sintoma eran DOS cosas a la vez, en cada arranque:
+              avisaba de version nueva TENIENDO YA LA ULTIMA, y al
+              pulsar Actualizar daba error. Y eran TRES fallos, todos
+              nacidos DEL MISMO CARACTER: la `v` de las etiquetas
+              ⚠⚠⚠ `Version("v0.2.0")` ES MAYOR QUE `Version("0.2.0")`.
+                 SIEMPRE, mire los numeros que mire. Version parte la
+                 cadena en tramos: el primero de `v0.2.0` es la letra
+                 `v` (TEXTO) y el de `0.2.0` es el `0` (NUMERO), y con
+                 tipos distintos se comparan POR CODIGO DE CARACTER --
+                 0x76 contra 0x30. Ahi se acaba la comparacion, sin
+                 llegar a mirar un solo digito:
+                   Version("v0.1.0") > Version("9.9.9")  es CIERTO
+                 hoy `Version::fromTag()`, y la `v` se quita SOLO para
+                 comparar: el dialogo sigue enseñando la etiqueta real
+              ⚠⚠ EL INSTALADOR NO SE LLAMABA COMO EL ACTUALIZADOR
+                 BUSCA. NSIS lo saca de `Launcher_CommonName`
+                 (`LunaEternal-Setup.exe`) y el actualizador solo acepta
+                 ficheros que CONTENGAN `Launcher_BUILD_ARTIFACT`
+                 (`luna-launcher-win-x64`). Los dos nombres correctos
+                 por separado, y sin una letra en comun: la release se
+                 publicaba entera y bien, y al aceptar la actualizacion
+                 NO HABIA NI UN FICHERO QUE INSTALAR
+                 ⚠ el nombre no es libre: el mismo filtro descarta
+                   `portable`, `.zip`/`.tar.gz`, `arm64` y `-qt<n>`.
+                   `x64` si vale, lo que descarta es `arm64`
+              ⚠ Y EL LAUNCHER SE LLAMABA A SI MISMO `0.2.0-1a2b3c4d`:
+                misma `v` por el otro lado. `GIT_TAG` (`v0.2.0`) nunca
+                era igual a `versionString()` (`0.2.0`), asi que a toda
+                compilacion etiquetada se le pegaba el canal detras. No
+                era solo feo: ESA es la cadena con la que el
+                actualizador se compara
+              LO QUE IMPIDE QUE VUELVA, y es lo que importa:
+                Version_test  62 pruebas, 0 fallos (eran 60)
+                CI            aborta si CMakeLists.txt y la etiqueta no
+                              dicen lo mismo -- y aborta ANTES de
+                              compilar 35 min
+                CI            aborta si el instalador no lleva
+                              ARTIFACT_NAME en el nombre
+              ⚠ SIN VERIFICAR DE PUNTA A PUNTA. Compila y las pruebas
+                pasan, pero el ciclo de verdad --release nueva, launcher
+                viejo, actualizar-- solo se comprueba PUBLICANDO, y hace
+                falta subir a 0.2.1: contra v0.2.0 el launcher arreglado
+                dira, con razon, que no hay nada que actualizar
+              ---------------------------------------------------------
               EL QUE SE REPARTE:  Qt 0.2.0 "Ciudadela" (2026-08-21)
                 D:\luna-launcher · rama `luna`
                 repo PUBLICO github.com/corderovibes-collab/luna-eternal-launcher

@@ -104,6 +104,23 @@ public final class LunaCommand {
                 .then(literal("huerfanos")
                     .executes(ctx -> huerfanos(ctx.getSource()))))
 
+            .then(literal("via")
+                .requires(s -> s.hasPermissionLevel(3))
+                .then(argument("via", com.mojang.brigadier.arguments.StringArgumentType.word())
+                    .suggests((c, b) -> {
+                        for (var v : net.pokereport.luna.progression.Path.values()) {
+                            b.suggest(v.name());
+                        }
+                        return b.buildFuture();
+                    })
+                    .then(argument("xp", com.mojang.brigadier.arguments.LongArgumentType
+                            .longArg(1, 1_000_000))
+                        .executes(ctx -> darVia(ctx.getSource(),
+                                com.mojang.brigadier.arguments.StringArgumentType
+                                        .getString(ctx, "via"),
+                                com.mojang.brigadier.arguments.LongArgumentType
+                                        .getLong(ctx, "xp"))))))
+
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> autotest(ctx.getSource())))
@@ -381,6 +398,58 @@ public final class LunaCommand {
                 });
             } catch (Exception e) {
                 LunaEternal.LOG.warn("No se pudieron buscar los huerfanos: {}", e.toString());
+            }
+        });
+        return 1;
+    }
+
+    /**
+     * Dar XP de una Via. <b>Solo para probar la pantalla de Trabajos.</b>
+     *
+     * <p>⚠ La XP de Vias se gana JUGANDO --capturas, combates, ventas--, asi que
+     * sin esto no habia forma de ver una barra a medias ni un nivel distinto de
+     * cero sin echar horas. Con las barras siempre a cero no se puede juzgar si
+     * la pantalla dibuja bien, que es justo lo que hay que comprobar.
+     *
+     * <p>⚠⚠ ESTO INYECTA PROGRESION, y la progresion NO SE VENDE NI SE REGALA
+     * (P4, D-014). Va a nivel 3 --el mismo que `/luna dar`-- y queda anotado en
+     * el libro de la Via como cualquier otra concesion, para que una prueba no se
+     * confunda despues con progresion jugada.
+     */
+    private static int darVia(ServerCommandSource origen, String nombre, long xp) {
+        var jugador = origen.getPlayer();
+        if (jugador == null) {
+            origen.sendError(Text.literal("Este comando se escribe desde el juego."));
+            return 0;
+        }
+        net.pokereport.luna.progression.Path via = null;
+        for (var v : net.pokereport.luna.progression.Path.values()) {
+            if (v.name().equalsIgnoreCase(nombre)) {
+                via = v;
+            }
+        }
+        if (via == null) {
+            // Se dicen las que HAY, en vez de "via desconocida". Un error que no
+            // ofrece la salida obliga a ir a buscarla al codigo.
+            var sb = new StringBuilder("Vias: ");
+            for (var v : net.pokereport.luna.progression.Path.values()) {
+                sb.append(v.name()).append(' ');
+            }
+            origen.sendError(Text.literal(sb.toString().trim()));
+            return 0;
+        }
+        final var elegida = via;
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                var estado = LunaEternal.progression().grant(id, elegida, xp);
+                origen.getServer().execute(() -> origen.sendFeedback(() -> Text.literal(
+                        "§a" + elegida.displayName + " -> nivel "
+                        + net.pokereport.luna.progression.Path.roman(estado.level())
+                        + " (" + estado.xp() + " XP)"), false));
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo dar XP de via: {}", e.toString());
             }
         });
         return 1;

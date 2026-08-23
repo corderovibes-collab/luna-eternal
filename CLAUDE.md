@@ -5,9 +5,40 @@
 
 **Última actualización:** 2026-08-23
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela)
-**Estado:** PHASE 0 y PHASE 1 completadas. 26 documentos, decisiones D-001 a
-D-038. **El mod está desplegado y funcionando contra MariaDB:** economía de
-tres monedas, cinco vías de progresión, y las interfaces base operativas.
+**Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
+D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
+tres monedas, ocho vías de progresión, y **siete pantallas** en el PokePad.
+Autotest **217/217** en vivo.
+
+> **2026-08-23 (tarde) — CLANES Y TIENDA. Ya se puede comprar una Poké Ball.**
+> Dos sistemas más y el PokePad pasa de 5 pantallas a **7**. Los **clanes** son
+> el primer sistema social del proyecto (D-040): fundar por 5.000 de Plata, 30
+> miembros, 3 roles y un tesoro común, con la etiqueta visible **en el chat, el
+> tablist y encima de la cabeza**. La **tienda** llevaba la lógica escrita desde
+> PHASE 3 y solo le faltaba la pantalla. Autotest 156 → **217**.
+>
+> ⚠⚠ **La lección de los clanes: EL ESTADO NO ES DE QUIEN LO MIRA.** Todo lo
+> anterior —cosméticos, misiones, oficios— era información de un jugador sobre
+> sí mismo. Un clan lo comparten treinta personas: si alguien echa a un miembro
+> y solo se refresca a sí mismo, **los demás siguen viendo al echado y el echado
+> se cree dentro**. Por eso se reenvía a todo el clan. Y por eso «un jugador, un
+> clan» **no lo dice una columna sino la CLAVE PRIMARIA**: así falla en la base
+> venga de donde venga la petición.
+>
+> ⚠⚠ **Y el autotest se ganó el sueldo en su primera ejecución en vivo.** Siete
+> fallos que eran **uno con seis consecuencias**: `cambiarRol(..., LIDER)`
+> delegaba en `traspasar`, o sea que «cambiar el rango de alguien» era en
+> realidad **«regalarle el clan»**. Ninguna revisión de código lo habría visto,
+> porque delegar *era seguro*: transacción correcta, sin dos líderes, sin
+> excepción, sin traza. Lo que había era **un método que hacía algo mucho más
+> grande de lo que promete su nombre**.
+>
+> ⚠ **La tienda acabó con NUEVE artículos, y ese número es la decisión.** El
+> usuario la recortó dos veces —«solo Cobblemon» y luego «solo lo básico»— y
+> pasó de 28 a 90 a 9. **Una tienda completa vacía el mundo**: si todo se
+> compra, explorar solo sirve para conseguir dinero. Los precios quedan
+> **provisionales a propósito**, en cinco escalones, hasta el análisis general
+> de economía. Detalle en `docs/economy/tienda.md` y `docs/social/clanes.md`.
 
 > **2026-08-23 — EL RECORRIDO DEL JUGADOR NUEVO ESTA CERRADO, POR FIN.** La
 > pantalla que faltaba era **la del inicial**, y lo que le faltaba a ella no era
@@ -1117,14 +1148,17 @@ Bloques       UN SOLO generador para las SEIS familias:
               que no encaja no se nota en el editor sino en la fachada
               detalle en docs/world/bloques.md
 Herramientas  LO QUE TIENE QUE ESTAR EN LA MAQUINA, y que el formateo
-              del 2026-08-20 se llevo. Los tres fallaron el 22-ago y
+              del 2026-08-20 se llevo. Los CUATRO fallaron al usarlos y
               cada uno paro el trabajo hasta instalarlo:
                 JDK 21    compilar el mod       Temurin (ver arriba)
                 ffmpeg    convertir las voces   Gyan.FFmpeg
                 gh        publicar el pack      GitHub.cli
-              winget install EclipseAdoptium.Temurin.21.JDK Gyan.FFmpeg GitHub.cli
+                node      launcher Electron     OpenJS.NodeJS.LTS
+                          (npm test) y las herramientas de diseño
+              winget install EclipseAdoptium.Temurin.21.JDK Gyan.FFmpeg GitHub.cli OpenJS.NodeJS.LTS
               ⚠ winget MODIFICA EL PATH PERO NO EL SHELL YA ABIERTO: hay
                 que usar la ruta completa o abrir otra terminal
+                node: C:\Program Files\nodejs\node.exe
               ⚠ `gh` necesita login aparte, y el token que git tiene
                 cacheado NO SIRVE: le falta el permiso `read:org` y
                 `gh auth login --with-token` lo rechaza. Va por
@@ -1299,12 +1333,26 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 
 > **El bloqueo circular se cerró el 2026-08-23.** Lo que faltaba no era lógica:
 > `StarterService` llevaba meses escrito y probado, y **`conceder()` no lo
-> llamaba nadie**. Hoy el jugador entra, elige inicial, captura, y el árbol de
-> misiones le dice qué hacer a continuación.
+> llamaba nadie**. Hoy el jugador entra, elige inicial, captura, **compra Poké
+> Balls**, sube oficios, funda un clan, y el árbol de misiones le dice qué hacer
+> a continuación.
 >
-> **Lo que queda es la TIENDA y CURAR**, y se nota: se captura, pero no se pueden
-> comprar Poké Balls ni curar el equipo. Cuatro misiones del árbol —`t4_tienda`,
-> `t5_gts`, `m1_comprar`, `m2_vender`— no se pueden completar por eso.
+> **Lo único básico que queda es CURAR**, y es la pantalla más pequeña de todas:
+> `HealService` ya tiene la curación gratuita y su cooldown de 10 minutos. Solo
+> `t5_gts` sigue sin poder completarse, porque el GTS no tiene pantalla.
+
+### ⏭ POR AQUÍ SE SIGUE (2026-08-23, fin de sesión)
+
+| | |
+|---|---|
+| **1. Verificar en el juego** | Clanes (**hacen falta 2 cuentas**) y tienda. Son lo único de hoy sin comprobar en vivo |
+| **2. La pantalla de CURAR** | La más pequeña que queda. `HealService` está escrito y probado |
+| **3. El análisis de economía** | Lo pidió el usuario. **No se puede hacer sin gente jugando.** Los números y dónde se tocan, en [tienda.md §5](docs/economy/tienda.md) |
+| **4. La ciudadela** | Sigue siendo el foco no-técnico, y nada la bloquea |
+
+> ⚠ **Al retomar, lo primero es probar con dos cuentas.** Todo lo de clanes que
+> importa —invitar, aceptar, echar, ascender— cambia el estado que ven *otros*, y
+> eso es justo lo que no se puede comprobar solo.
 
 ### Y cuando haya interfaz: calibrar con datos reales
 
@@ -1636,6 +1684,7 @@ docs/architecture/                 ← decisiones estructurales
 docs/technical/                    ← infraestructura, modelo de datos
 docs/game-design/                  ← visión, core loop
 docs/economy/ · progression/ · trading/ · ui/ · social/
+                                     economy/tienda.md  ·  social/clanes.md
 docs/roadmap/backlog.md            ← tareas con estado
 mod/                               ← el mod de servidor (D-011)
 neon/                              ← el mod de bloques de neón (D-029)

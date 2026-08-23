@@ -62,7 +62,9 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 156/156 correctos (2026-08-23, en vivo)
+Autotest      /luna autotest -> 207 comprobaciones (2026-08-23)
+              eran 156 antes de clanes: +51, y la mayoria son de LO QUE
+              NO SE PUEDE HACER (ver el bloque Clanes)
               eran 136 el 22-ago: +8 de cosmeticos, +6 del arbol de
               misiones, +5 de oficios y +1 del prefijo de sombreros
               eran 112 el 12-ago; las nuevas cubren las voces
@@ -408,6 +410,51 @@ Oficios       MINAR, PESCAR Y COSECHAR DAN PLATA (2026-08-23, V012)
                 mira. Y el ENUM guarda el INDICE: reordenar los cinco
                 viejos convertiria a los Exploradores en Entrenadores
               /luna via <VIA> <xp> (nivel 3) para probar
+
+Clanes        EL PRIMER SISTEMA SOCIAL (2026-08-23, V013)
+              detalle completo en docs/social/clanes.md
+              fundar 5.000 de Plata . 30 miembros . 3 roles . tesoro comun
+              se entra POR INVITACION (no hay boton de "pedir entrar")
+              la etiqueta sale en CHAT + TABLIST + ENCIMA DE LA CABEZA
+              ⚠⚠ EL ESTADO NO ES DE QUIEN LO MIRA, y eso cambia todo. Si
+                 alguien echa a un miembro y solo se refresca a si mismo,
+                 los demas siguen viendo al echado --y el echado se cree
+                 dentro-- hasta que reabran. Se reenvia A TODO EL CLAN
+              ⚠⚠ UN JUGADOR, UN CLAN, Y NO LO DICE UNA COLUMNA: lo dice la
+                 CLAVE PRIMARIA de clan_member (player_id). Asi, entrar en
+                 un segundo clan FALLA EN LA BASE venga de donde venga --
+                 dos clicks rapidos en dos invitaciones, o un cliente
+                 modificado. En Java se comprueba tambien, para dar un
+                 mensaje que se entienda, pero la que manda es esa
+              ⚠⚠ EL LIDER NO PUEDE SALIR mientras quede alguien: el clan
+                 quedaria VIVO Y SIN GOBIERNO para siempre. Y nadie puede
+                 ASCENDER a otro a LIDER --eso es `traspasar`, que ademas
+                 BAJA al anterior; si fuera un rol mas habria dos lideres
+              ⚠ el indice unico va sobre la version en MINUSCULAS. Sin el,
+                «Luna» y «LUNA» son dos clanes que EN EL CHAT SE VEN IGUAL
+              ⚠ el nombre solo admite letras, numeros y espacios, y el que
+                importa es el §: con un codigo de color dentro la etiqueta
+                pintaria el resto de la linea del chat de TODO EL MUNDO
+              ⚠ UN EQUIPO DE MARCADOR POR JUGADOR (`luna<hash>`), no uno
+                por rango: un jugador solo puede estar en UNO y el rango ya
+                usaba el suyo. El prefijo lleva rango + clan juntos. Se hace
+                con marcador y no con un paquete nuestro porque el prefijo
+                lo pinta VANILLA: un paquete propio solo lo verian los que
+                tengan el mod, y esto tiene que verlo todo el mundo
+              ⚠ EL TESORO ES DINERO: applyInTransaction, misma Connection
+                que la fila del clan (R3) y clave de idempotencia (R4). El
+                autotest comprueba SUMA CERO --aportado == sacado + tesoro--
+                porque es el unico invariante que caza dinero creado
+              ⚠ UN CLAN NO DA NINGUNA VENTAJA, a proposito: identidad y un
+                sitio donde juntar dinero. Un bono de clan es una FUENTE (P3)
+                y ademas castiga a quien juegue solo
+              ⚠ 51 comprobaciones nuevas y la mayoria son de LO QUE NO SE
+                PUEDE HACER: una regla de permiso no falla ruidosamente,
+                falla dejando que alguien vacie el tesoro
+              D-038 CUMPLIDA: `Ficha` llevaba el campo `clan` vacio desde el
+              17-ago y decia que encenderlo seria "rellenar tres lineas".
+              Fue exacto
+              ⚠ SIN VERIFICAR EN EL JUEGO todavia: hacen falta DOS cuentas
 
 Avisos        ui/Aviso.java centraliza como se anuncia un logro
               TOAST (esquina, con el marco de los logros de vanilla) +
@@ -839,14 +886,15 @@ Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
                 jugador conectado; desde consola solo consta que el
                 datapack carga sin errores. Es el mismo PKM-004 de
                 siempre
-Interfaz      CINCO PANTALLAS, todas verificadas en el juego:
+Interfaz      SEIS PANTALLAS. Cinco verificadas en el juego:
                 PokePad     2026-08-16   la principal, 15 iconos
                 Cosmeticos  2026-08-22   4 pestanias
                 Trabajos    2026-08-23   8 Vias y oficios, paginado
                 Misiones    2026-08-23   arbol de 28 en 6 cadenas
                 Inicial     2026-08-23   se abre SOLA al entrar
-              4 de los 15 iconos abren algo: pokedex (la de Cobblemon),
-              cosmeticos, trabajos y misiones
+                Clan        2026-08-23   SIN VERIFICAR (pide 2 cuentas)
+              5 de los 15 iconos abren algo: pokedex (la de Cobblemon),
+              cosmeticos, trabajos, misiones y clan
               SIGUEN SIN PANTALLA, con la logica viva y probada:
                 tienda . curar . GTS . kits . cazas . viaje
               tienda y curar son las que mas se notan: hoy un jugador
@@ -1420,6 +1468,7 @@ documentación · migración · rollback.
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
 | D-037 | 2026-08-17 | **La base del pack pasa a ser COBBLEVERSE, quitandole la generacion de estructuras y la musica.** Revoca D-031 | **Orden del usuario, dada despues de que le enseñara las licencias** — `cobbleverse` es All Rights Reserved y `cobbleverse-badges` es CC-BY-NC-ND-4.0, que es la clausula por la que D-006 lo habia descartado. Queda escrito aqui para que quien lo lea dentro de seis meses vea **el dato y la decision**, no solo la decision. **Lo que si se hace bien:** el manifiesto guarda URL y hash y nunca el jar, asi que cada mod se descarga del CDN de Modrinth — no redistribuimos nada suyo, igual que con los shaders (D-030). Se les quita lo que el usuario no queria: **generacion de estructuras** (4 mods) y **421 MB de musica**, que multiplicaba por cinco la descarga de un jugador nuevo (P10). El pack pasa de 185 a **434 MB**. Tres cosas que solo se ven haciendolo: **el slug de Modrinth no es el nombre del jar** y una exclusion mal escrita no surte efecto *sin avisar*; **su configuracion son 155 ficheros** y sueltos eran 155 peticiones a `raw`, o sea el 429 de D-036 otra vez (van en un zip por carpeta con `keepExisting`); y **`continuity:default` cambia 42 bloques de construir** — lo reporto el usuario en vivo con la ciudadela ya empezada, y se apaga |
 | D-038 | 2026-08-17 | **El PokePad enseña datos de sesion —Plata, LunaCoins, Clan, Trabajo, Division y Medallas— en vez de la tarjeta de entrenador** | **Decision del usuario.** La tarjeta enseñaba el nivel de las cinco Vias en estrellas; lo que el queria bajo la cara es lo que se mira a diario. Dos cosas quedan escritas porque no son obvias: **las 16 medallas se referencian por identificador al mod de CobbleVerse y NO se copian sus texturas** — el mod va instalado en el cliente, asi que apuntarlas cuesta cero bytes, no redistribuye nada de un CC-BY-NC-ND y el dibujo lo sigue mandando su autor; y **clan, trabajo y division viajan en el paquete aunque no exista el sistema**, mandando cadena vacia para que el Pad pinte un guion. Un «Sin clan» diria «ya funciona y no tienes ninguno», que no es verdad; y tenerlos ya en el protocolo hace que encenderlos sea rellenar tres lineas en vez de tocar paquete, codec, cache y dibujado |
+| D-040 | 2026-08-23 | **Los clanes son un sistema propio, no un mod adoptado, y NO dan ninguna ventaja de juego** | **Petición del usuario** («si hay algún mod de clan sería excelente… tipo Albion»). Se buscó: lo que hay para Fabric 1.21.1 son **facciones con terreno** (reclamar chunks, guerra, PvP) o **equipos de chat**, y ninguna de las dos cosas es esto — la ciudadela es una isla que construimos nosotros, así que no hay territorio que repartir. P5 pone «mod maduro» antes que «sistema propio», pero **solo cuando el mod resuelve el problema**. **Lo que decide la cuestión es el tesoro:** un mod ajeno guardaría el dinero en su propio almacén, y entonces habría **dos economías** — la nuestra, con libro de asientos, idempotencia y auditoría (R3, R4), y la suya. Todo lo económico de este proyecto pasa por `applyInTransaction`, y un mod externo no puede pasar por ahí. **Y un clan no desbloquea nada:** da identidad (la etiqueta junto al nombre) y un sitio donde juntar dinero, y se queda ahí. Por diseño, porque una ventaja de clan convierte «tener amigos» en una estadística y castiga a quien juegue solo; y por economía, porque **un bono de clan es una fuente** (P3) y este proyecto tiene el problema contrario. Si algún día se le añade algo, la pregunta de P2 que hay que responder primero es la octava: *cómo se abusa* |
 | D-039 | 2026-08-22 | **Los cosmeticos NO se consiguen jugando: solo con LunaCoins o en eventos que organicemos** | **Decision del usuario.** No caen de un cofre, no se craftean, no los suelta un jefe. Dos consecuencias que no son obvias. **La primera es tecnica y es un invariante, no una preferencia:** si no hay ninguna via de mundo, el servidor es la UNICA fuente y el cliente jamas concede un cosmetico -- solo dibuja lo que le mandan (P6). Eso simplifica el anti-abuso a un solo punto: la compra, que va con clave de idempotencia como todo lo economico (R4). **La segunda es de producto, y el propio `monetization.md` la avisa:** «un cosmetico sin nadie que lo vea no vale nada». Si TODO fuera de pago, los unicos que llevarian cosmeticos serian los que pagan, y el escaparate se apaga solo. Los **eventos son los que sostienen eso**: son la via gratuita, y por eso no son un adorno de la decision sino la mitad que la hace funcionar. Conviene que salga algo en cada evento, aunque sea poco. Los cosmeticos siguen siendo **T1 · identidad**, que es venta libre en su propio marco |
 | D-035 | 2026-08-17 | **El launcher se rehace como fork de FreesmLauncher** (C++/Qt6, GPL-3.0), en repositorio propio y publico | **Decision del usuario, tomada tras leer el analisis en contra.** Mi recomendacion fue reestructurar el Electron actual: de los cinco riesgos que rompen al crecer —distribucion, identidad, firma, observabilidad, vuelta atras— el fork **no arregla ninguno**, y su funcionalidad estrella (jugar sin cuenta de Microsoft) ya la tenia el nuestro en 25 lineas. El usuario decidio el fork igualmente. **Dos consecuencias que no son opcionales y quedan escritas aqui para que nadie las descubra tarde:** (1) **GPL-3.0 obliga a publicar el codigo fuente completo** del fork, incluido cualquier anti-abuso o capa de identidad que se le añada encima — con tienda de pago (D-007), eso no es gratis; (2) hay que renombrar la marca (GPL §7.c/e, y Prism lo exige a sus forks). Ganancia real medida: instalador de **28,8 MB frente a 95**. Coste: rehacer perfiles, diagnostico, reparar e interfaz en español, y una cadena Qt6+CMake+MSVC+vcpkg en vez de `npm run dist`. Toolchain ya montado en `.toolchain/` (git-ignorado), fork clonado en `D:\luna-launcher` |
 | D-036 | 2026-08-17 | **El manifiesto del pack deja de servirse desde `raw` y se resuelve por un PUNTERO inmutable, y cada fichero admite varios origenes** | Tres fallos que solo se ven con gente dentro. `raw.githubusercontent` limita por peticiones y era **la primera peticion del arranque**: ya costo media mañana de «a mi me funciona y a ellos no». `manifest.json` se sobrescribia, asi que una publicacion mala rompia a todo el mundo a la vez y arreglarlo era republicar 185 MB **con el pack roto mientras tanto**. Y cada fichero tenia una sola URL: si el origen cae, no hay a donde ir. Ahora `latest.json` son 250 bytes servidos por el CDN de descargas y **es lo unico mutable de la cadena**; los manifiestos llevan la huella en el nombre y no se tocan jamas. **Volver atras = subir 250 bytes** (`--volver-a <huella>`). El launcher **verifica el sha1 del manifiesto** antes de fiarse: ese fichero elige de que URL salen los 185 MB que se ejecutan en la maquina del jugador. Ficheros que dependian de `raw`: **5 → 0**. Detalle en [distribucion.md](docs/technical/distribucion.md) |
@@ -1467,7 +1516,7 @@ docs/analysis/                     ← auditorías (qué existe)
 docs/architecture/                 ← decisiones estructurales
 docs/technical/                    ← infraestructura, modelo de datos
 docs/game-design/                  ← visión, core loop
-docs/economy/ · progression/ · trading/ · ui/
+docs/economy/ · progression/ · trading/ · ui/ · social/
 docs/roadmap/backlog.md            ← tareas con estado
 mod/                               ← el mod de servidor (D-011)
 neon/                              ← el mod de bloques de neón (D-029)

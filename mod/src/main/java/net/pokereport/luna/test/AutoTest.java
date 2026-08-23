@@ -76,6 +76,7 @@ public final class AutoTest {
             testCosmeticos();
             testOficios();
             testArbolMisiones();
+            testClanes(a, b);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -970,6 +971,12 @@ public final class AutoTest {
                 // Orden inverso a las claves ajenas: primero se sueltan las
                 // referencias al comprador, luego se borran los listados.
                 for (String sql : List.of(
+                    "DELETE cm FROM clan_member cm JOIN player p "
+                        + "ON p.player_id = cm.player_id WHERE p.mc_uuid = ?",
+                    "DELETE ci FROM clan_invite ci JOIN player p "
+                        + "ON p.player_id = ci.player_id WHERE p.mc_uuid = ?",
+                    "DELETE cl FROM clan cl JOIN player p "
+                        + "ON p.player_id = cl.leader_id WHERE p.mc_uuid = ?",
                     "DELETE hp FROM hunt_progress hp JOIN player p "
                         + "ON p.player_id = hp.player_id WHERE p.mc_uuid = ?",
                     "DELETE qp FROM quest_progress qp JOIN player p "
@@ -1005,6 +1012,142 @@ public final class AutoTest {
                 c.setAutoCommit(true);
             }
         }
+    }
+
+    /**
+     * CLANES: quien manda, quien no, y que el tesoro cuadre.
+     *
+     * <p>&#9888;&#9888; Un sistema social es <b>reglas de permiso</b>, y una regla
+     * de permiso no falla ruidosamente: falla dejando que alguien haga algo que no
+     * debia. No hay excepcion, no hay traza en el log, y el sintoma llega en forma
+     * de jugador enfadado porque le han vaciado el tesoro. Por eso aqui se
+     * comprueba sobre todo <b>lo que NO se puede hacer</b>.
+     *
+     * <p>&#9888; Y el tesoro es dinero: pasa por {@code applyInTransaction} como
+     * todo lo demas (R3, R4), asi que la comprobacion que de verdad importa es la
+     * de <b>suma cero</b> -- lo que sale del bolsillo entra en el tesoro, ni un
+     * PokeDolar aparece ni desaparece por el camino.
+     */
+    private void testClanes(long a, long b) throws Exception {
+        var svc = new net.pokereport.luna.clan.ClanService(db);
+        long coste = net.pokereport.luna.clan.ClanService.COSTE_FUNDAR;
+
+        // --- el nombre, antes de tocar la base
+        check("un nombre corto se rechaza",
+                !svc.fundar(a, "ab", "AB", 'b', "", clave()).ok());
+        check("una etiqueta larga se rechaza",
+                !svc.fundar(a, "Clan de Prueba", "DEMASIADO", 'b', "", clave()).ok());
+        // El § es el que importa: con un codigo de color dentro, la
+        // etiqueta pintaria el resto de la linea del chat de TODO el mundo.
+        check("una etiqueta con codigo de color se rechaza",
+                !svc.fundar(a, "Clan de Prueba", "\u00a7cX", 'b', "", clave()).ok());
+
+        // --- sin dinero no se funda, y no queda rastro
+        long vaciar = economy.balance(a, Currency.POKEDOLLAR);
+        if (vaciar > 0) {
+            economy.debit(a, Currency.POKEDOLLAR, vaciar, "autotest_clan_vaciar", clave());
+        }
+        check("sin Plata suficiente NO se funda",
+                !svc.fundar(a, "Clan de Prueba", "PRB", 'b', "", clave()).ok());
+        check("el intento fallido no deja clan", svc.clanDe(a) == null);
+
+        // --- con dinero si, y cobra exactamente el coste
+        economy.credit(a, Currency.POKEDOLLAR, coste * 3, "autotest_clan", clave());
+        long antes = economy.balance(a, Currency.POKEDOLLAR);
+        check("con Plata se funda",
+                svc.fundar(a, "Clan de Prueba", "PRB", 'b', "", clave()).ok());
+        check("fundar cobra exactamente el coste",
+                economy.balance(a, Currency.POKEDOLLAR) == antes - coste);
+
+        var clan = svc.clanDe(a);
+        check("el clan existe tras fundarlo", clan != null);
+        check("el fundador es el LIDER",
+                svc.rolDe(a) == net.pokereport.luna.clan.ClanService.Rol.LIDER);
+        check("el clan nace con un solo miembro", clan != null && clan.miembros() == 1);
+        check("el clan nace con el tesoro vacio", clan != null && clan.tesoro() == 0);
+
+        // --- uno y solo uno
+        check("no se puede fundar un segundo clan estando en uno",
+                !svc.fundar(a, "Otro Clan", "OTR", 'b', "", clave()).ok());
+        // El choque es contra un indice unico sobre la version en MINUSCULAS.
+        // Sin el, "Clan de Prueba" y "CLAN DE PRUEBA" serian dos clanes que en
+        // el chat se ven igual, que es como se suplanta a un clan.
+        economy.credit(b, Currency.POKEDOLLAR, coste * 3, "autotest_clan", clave());
+        check("el nombre no se puede repetir cambiando mayusculas",
+                !svc.fundar(b, "CLAN DE PRUEBA", "XYZ", 'b', "", clave()).ok());
+        check("la etiqueta no se puede repetir cambiando mayusculas",
+                !svc.fundar(b, "Clan Distinto", "prb", 'b', "", clave()).ok());
+
+        // --- invitar, aceptar
+        check("un desconocido no puede invitar por el clan", !svc.invitar(b, a).ok());
+        check("el lider invita", svc.invitar(a, b).ok());
+        check("la invitacion le llega al invitado", svc.invitaciones(b).size() == 1);
+        check("no se puede aceptar una invitacion que no existe",
+                !svc.aceptar(b, clan.id() + 9999).ok());
+        check("el invitado acepta", svc.aceptar(b, clan.id()).ok());
+        check("el que acepta entra como MIEMBRO",
+                svc.rolDe(b) == net.pokereport.luna.clan.ClanService.Rol.MIEMBRO);
+        check("el clan pasa a dos miembros", svc.clanDe(a).miembros() == 2);
+        check("aceptar consume la invitacion", svc.invitaciones(b).isEmpty());
+
+        // --- LO QUE NO SE PUEDE HACER. Es el corazon de la prueba.
+        check("un miembro raso NO puede invitar", !svc.invitar(b, a).ok());
+        check("un miembro raso NO puede echar a nadie", !svc.echar(b, a).ok());
+        check("un miembro raso NO puede ascender a nadie",
+                !svc.cambiarRol(b, b, net.pokereport.luna.clan.ClanService.Rol.OFICIAL).ok());
+        check("un miembro raso NO puede disolver el clan", !svc.disolver(b).ok());
+        check("el lider NO puede echarse a si mismo", !svc.echar(a, a).ok());
+        // Si el lider pudiera salir, el clan se quedaria sin nadie que pueda
+        // invitar, echar ni disolverlo: vivo y sin gobierno para siempre.
+        check("el lider NO puede salir mientras quede alguien", !svc.salir(a).ok());
+        check("tras los intentos, el clan sigue con sus dos miembros",
+                svc.clanDe(a).miembros() == 2);
+
+        // --- el tesoro
+        long bolsilloAntes = economy.balance(b, Currency.POKEDOLLAR);
+        check("un miembro raso SI puede aportar", svc.aportar(b, 1_000, clave()).ok());
+        check("aportar sale del bolsillo",
+                economy.balance(b, Currency.POKEDOLLAR) == bolsilloAntes - 1_000);
+        check("aportar entra en el tesoro", svc.clanDe(b).tesoro() == 1_000);
+        check("un miembro raso NO puede sacar del tesoro", !svc.sacar(b, 100, clave()).ok());
+        check("el rechazo no toca el tesoro", svc.clanDe(b).tesoro() == 1_000);
+        // El CHECK de la columna es la ultima red: aunque el codigo dejara
+        // pasar el descubierto, la base lo rechaza.
+        check("no se puede sacar mas de lo que hay", !svc.sacar(a, 5_000, clave()).ok());
+        check("un descubierto no deja el tesoro negativo", svc.clanDe(a).tesoro() == 1_000);
+        long liderAntes = economy.balance(a, Currency.POKEDOLLAR);
+        check("el lider saca", svc.sacar(a, 600, clave()).ok());
+        check("sacar baja el tesoro", svc.clanDe(a).tesoro() == 400);
+        check("sacar llega al bolsillo",
+                economy.balance(a, Currency.POKEDOLLAR) == liderAntes + 600);
+        check("nada se crea ni se pierde: aportado == sacado + tesoro",
+                600 + svc.clanDe(a).tesoro() == 1_000);
+
+        // --- ascender, degradar, echar
+        check("el lider asciende a oficial",
+                svc.cambiarRol(a, b, net.pokereport.luna.clan.ClanService.Rol.OFICIAL).ok());
+        check("un oficial SI puede sacar del tesoro",
+                svc.rolDe(b).manda() && svc.sacar(b, 100, clave()).ok());
+        check("un oficial NO puede echar al lider", !svc.echar(b, a).ok());
+        check("un oficial NO puede disolver", !svc.disolver(b).ok());
+        // Nadie puede ascender a otro a LIDER: eso es `traspasar`, que ademas
+        // BAJA al anterior. Si fuera un cambio de rol, habria dos lideres.
+        check("no se puede nombrar a otro LIDER cambiandole el rol",
+                !svc.cambiarRol(a, b, net.pokereport.luna.clan.ClanService.Rol.LIDER).ok());
+        check("el lider echa al oficial", svc.echar(a, b).ok());
+        check("el echado se queda sin clan", svc.clanDe(b) == null);
+        check("el clan vuelve a un miembro", svc.clanDe(a).miembros() == 1);
+
+        // --- disolver
+        check("el lider ya solo SI puede disolver", svc.disolver(a).ok());
+        check("disolver borra el clan", svc.clanDe(a) == null);
+        check("y no queda en el listado",
+                svc.listar(50).stream().noneMatch(c -> "Clan de Prueba".equals(c.nombre())));
+    }
+
+    /** Cada operacion economica necesita la suya (R4). */
+    private static String clave() {
+        return "autotest_clan_" + UUID.randomUUID();
     }
 
     private void check(String name, boolean ok) {

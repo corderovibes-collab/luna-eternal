@@ -60,6 +60,7 @@ public final class Apps {
             case "cosmeticos" -> abrirCosmeticos();
             case "trabajos" -> abrirTrabajos();
             case "misiones" -> abrirMisiones();
+            case "clan" -> abrirClan();
             default -> false;
         };
     }
@@ -72,6 +73,13 @@ public final class Apps {
      * volver -- si volviera creando un PokePadScreen nuevo, se perderia en que
      * pagina de aplicaciones estaba el jugador.
      */
+    /** Los clanes. Misma regla que las demas: NUESTRA pantalla, sin reflexion. */
+    private static boolean abrirClan() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new ClanScreen(cliente.currentScreen));
+        return true;
+    }
+
     private static boolean abrirMisiones() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
         cliente.setScreen(new MisionesScreen(cliente.currentScreen));

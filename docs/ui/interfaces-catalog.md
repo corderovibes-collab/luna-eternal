@@ -83,7 +83,7 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 14 | **Tesoros** | ⬜ | 🟡 | decisión de `treasures.md` §2 |
 | 15 | **Oficios** | ✅ **hecho** (2026-08-23) — minar, pescar, cosechar y criar dan Plata | — | — |
 | 16 | **Cosméticos** | ✅ **hecha** (2026-08-22) — 65 disfraces, 378 sombreros, 11 auras | — | — |
-| 17 | **Clan** | ⬜ | 🟡 | sistema social |
+| 17 | **Clan** | ✅ **hecha** (2026-08-23, V013 — ver [clanes.md](../social/clanes.md)) | ✅ | sistema social |
 | 18 | **Caja (PC)** | ⬜ | 🟡 | integración Cobblemon |
 | 19 | **Criadero** | ⬜ | ⚪ | cría |
 | 20 | **Explorar / mapa** | ⬜ | ⚪ | zonas |

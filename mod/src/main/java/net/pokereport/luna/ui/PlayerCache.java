@@ -70,6 +70,12 @@ public final class PlayerCache {
                 snap.tieneInicial = StarterService.yaEligio(id);
                 snap.recent = LunaEternal.economy().recentEntries(id, 14);
 
+                // El clan, para quien dibuje la ficha. Va aqui y no en cada
+                // pantalla por la regla de la clase: los menus NO consultan la
+                // base, se les pasa todo resuelto.
+                var clan = LunaEternal.clans().clanDe(id);
+                snap.clan = clan == null ? "" : "[" + clan.etiqueta() + "] " + clan.nombre();
+
                 var dominant = LunaEternal.progression().dominant(id);
                 if (dominant != null && dominant.level() > 0) {
                     snap.dominantPath = dominant.path().displayName;

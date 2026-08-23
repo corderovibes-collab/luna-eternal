@@ -27,7 +27,7 @@ public record App(String id, boolean abierta) {
         new App("trabajos",   true),
         new App("misiones",   true),
         new App("warps",      false),
-        new App("clan",       false),
+        new App("clan",       true),
         new App("gts",        false),
         new App("tienda",     false),
         new App("tesoros",    false),

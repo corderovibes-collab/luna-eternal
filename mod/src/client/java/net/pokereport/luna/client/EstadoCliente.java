@@ -22,6 +22,7 @@ public final class EstadoCliente {
     private static Red.Trabajos trabajos;
     private static Red.Misiones misiones;
     private static Red.Iniciales iniciales;
+    private static Red.EstadoClan clan;
 
     private EstadoCliente() {}
 
@@ -82,6 +83,22 @@ public final class EstadoCliente {
         return iniciales;
     }
 
+    public static void guardar(Red.EstadoClan nuevo) {
+        clan = nuevo;
+    }
+
+    /**
+     * El clan y lo que le rodea. {@code null} hasta que contesta el servidor.
+     *
+     * <p>⚠ Que sea {@code null} y que {@code mio()} sea {@code null} son cosas
+     * DISTINTAS: lo primero es «todavía no lo sé», lo segundo es «no tienes
+     * clan». Confundirlas enseñaría el formulario de fundar durante el medio
+     * segundo que tarda la respuesta, aunque el jugador lleve meses en un clan.
+     */
+    public static Red.EstadoClan clan() {
+        return clan;
+    }
+
     public static Red.Cosmeticos cosmeticos() {
         return cosmeticos;
     }
@@ -91,6 +108,7 @@ public final class EstadoCliente {
         trabajos = null;
         misiones = null;
         iniciales = null;
+        clan = null;
         saldo = null;
         ficha = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo

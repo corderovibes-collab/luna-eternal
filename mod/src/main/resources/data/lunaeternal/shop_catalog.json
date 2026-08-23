@@ -1,91 +1,513 @@
 {
   "_comment": [
-    "Catálogo de la tienda NPC. Ver docs/economy/economy-overview.md.",
+    "GENERADO POR tools/gen_tienda.py — NO SE EDITA A MANO.",
     "",
-    "INVARIANTE: ningún objeto puede venderse al banco por más de lo que",
-    "cuesta comprarlo. Es el error clásico que genera dinero infinito, y el",
-    "arranque del servidor lo comprueba: si falla, no arranca.",
+    "SOLO ARTICULOS DE COBBLEMON (decision del usuario, 2026-08-23). Lo de",
+    "Minecraft se consigue explorando, y las bayas y bellotas son justo lo que",
+    "da XP al oficio AGRICULTOR: venderlas competiria con el.",
     "",
-    "Los objetos que no existan (por ejemplo los de Cobblemon si aún no está",
-    "instalado) se omiten con un aviso en el log, no rompen nada. Así el mismo",
-    "catálogo vale antes y después de instalar Cobblemon.",
+    "LOS PRECIOS SON PROVISIONALES. Salen de CINCO escalones definidos en el",
+    "generador, no de ochenta numeros escritos a mano, precisamente para que el",
+    "analisis de economia que falta sea cambiar cinco cifras. Los anclajes",
+    "vienen de la configuracion real de produccion: Poke Ball 400, Pocion 600,",
+    "Superpocion 900, Revivir 3000.",
     "",
-    "Precios de partida tomados de la configuración real de producción:",
-    "Poké Ball 400 · Poción 600/50 · Superpoción 900/175 · Revivir 3000/500."
+    "INVARIANTE: ningun objeto se vende al banco por mas de lo que cuesta.",
+    "El arranque lo comprueba y el autotest tambien. La recompra es un",
+    "PORCENTAJE del precio, no un numero suelto, para que no pueda romperse",
+    "por un despiste al teclear."
   ],
-
   "categories": [
     {
       "id": "captura",
       "name": "§cCaptura",
-      "icon": "minecraft:snowball",
-      "description": "Lo que necesitas para atrapar Pokémon.",
+      "icon": "cobblemon:poke_ball",
+      "description": "Balls, caña y cebo. Lo que hace falta para atrapar.",
       "entries": [
-        { "item": "cobblemon:poke_ball",   "buy": 400,  "sell": 40  },
-        { "item": "cobblemon:great_ball",  "buy": 750,  "sell": 75  },
-        { "item": "cobblemon:ultra_ball",  "buy": 1500, "sell": 150 },
-
-        { "_comment": "La Moon Ball mejora cuanto más llena está la luna (nativo de Cobblemon). Es la ball temática del servidor: recompensa saber CUÁNDO salir, que es el pilar de la visión. Precio alto a propósito: se usa la noche buena, no todas.",
-          "item": "cobblemon:moon_ball",   "buy": 2200, "sell": 200,
-          "label": "§bMoon Ball §8· mejor con luna llena" },
-
-        { "item": "cobblemon:heal_ball",   "buy": 900,  "sell": 90  },
-        { "item": "cobblemon:dusk_ball",   "buy": 1800, "sell": 180 },
-        { "item": "minecraft:snowball",    "buy": 25,   "sell": 2   }
+        {
+          "item": "cobblemon:poke_ball",
+          "buy": 400,
+          "sell": 40
+        },
+        {
+          "item": "cobblemon:great_ball",
+          "buy": 400,
+          "sell": 40
+        },
+        {
+          "item": "cobblemon:ultra_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:premier_ball",
+          "buy": 400,
+          "sell": 40
+        },
+        {
+          "item": "cobblemon:heal_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:net_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:nest_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:dive_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:dusk_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:timer_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:quick_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:repeat_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:luxury_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:level_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:lure_ball",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:moon_ball",
+          "buy": 3000,
+          "sell": 300,
+          "label": "§bMoon Ball §8· mejor con luna llena"
+        },
+        {
+          "item": "cobblemon:poke_rod",
+          "buy": 900,
+          "sell": 90,
+          "label": "§ePoké Caña §8· para el oficio de PESCADOR"
+        },
+        {
+          "item": "cobblemon:poke_bait",
+          "buy": 200,
+          "sell": 20
+        }
       ]
     },
     {
-      "id": "cuidado",
-      "name": "§aCuidado",
-      "icon": "minecraft:golden_apple",
-      "description": "Curar y recuperar a tu equipo.",
+      "id": "medicina",
+      "name": "§aMedicina",
+      "icon": "cobblemon:potion",
+      "description": "Curar, revivir y quitar estados. Lo que salva un combate.",
       "entries": [
-        { "item": "cobblemon:potion",       "buy": 600,  "sell": 50  },
-        { "item": "cobblemon:super_potion", "buy": 900,  "sell": 175 },
-        { "item": "cobblemon:hyper_potion", "buy": 1600, "sell": 375 },
-        { "item": "cobblemon:revive",       "buy": 3000, "sell": 500 },
-        { "item": "minecraft:golden_apple", "buy": 1200, "sell": 200 },
-        { "item": "minecraft:cooked_beef",  "buy": 40,   "sell": 6   }
+        {
+          "item": "cobblemon:potion",
+          "buy": 400,
+          "sell": 40
+        },
+        {
+          "item": "cobblemon:super_potion",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:hyper_potion",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:max_potion",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:full_restore",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:revive",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:max_revive",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:full_heal",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:antidote",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:burn_heal",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:ice_heal",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:paralyze_heal",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:awakening",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:ether",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:max_ether",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:elixir",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:max_elixir",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:revival_herb",
+          "buy": 900,
+          "sell": 90
+        }
       ]
     },
     {
-      "id": "expedicion",
-      "name": "§6Expedición",
-      "icon": "minecraft:torch",
-      "description": "Para salir al mundo y volver entero.",
+      "id": "evolucion",
+      "name": "§dEvolución",
+      "icon": "cobblemon:fire_stone",
+      "description": "Piedras y objetos que hacen evolucionar.",
       "entries": [
-        { "item": "minecraft:torch",          "buy": 10,   "sell": 1    },
-        { "item": "minecraft:iron_pickaxe",   "buy": 350,  "sell": 45   },
-        { "item": "minecraft:iron_axe",       "buy": 350,  "sell": 45   },
-        { "item": "minecraft:fishing_rod",    "buy": 500,  "sell": 60   },
-        { "item": "minecraft:ender_pearl",    "buy": 900,  "sell": 120  },
-        { "item": "minecraft:oak_boat",       "buy": 150,  "sell": 20   }
+        {
+          "item": "cobblemon:fire_stone",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:water_stone",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:thunder_stone",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:leaf_stone",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:moon_stone",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:sun_stone",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:shiny_stone",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:dusk_stone",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:dawn_stone",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:ice_stone",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:link_cable",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:metal_coat",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:kings_rock",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:dragon_scale",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:upgrade",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:dubious_disc",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:razor_claw",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:razor_fang",
+          "buy": 3000,
+          "sell": 300
+        }
       ]
     },
     {
-      "id": "materiales",
-      "name": "§7Materiales",
-      "icon": "minecraft:oak_log",
-      "description": "Para construir en el Mundo Hogar.",
+      "id": "combate",
+      "name": "§6Combate",
+      "icon": "cobblemon:choice_band",
+      "description": "Objetos equipados. Cambian cómo pelea tu equipo.",
       "entries": [
-        { "item": "minecraft:oak_log",     "buy": 30,   "sell": 4   },
-        { "item": "minecraft:cobblestone", "buy": 8,    "sell": 1   },
-        { "item": "minecraft:glass",       "buy": 45,   "sell": 6   },
-        { "item": "minecraft:white_wool",  "buy": 60,   "sell": 8   },
-        { "item": "minecraft:iron_ingot",  "buy": 180,  "sell": 25  },
-        { "item": "minecraft:diamond",     "buy": 2500, "sell": 400 }
+        {
+          "item": "cobblemon:leftovers",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:focus_sash",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:focus_band",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:choice_band",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:choice_scarf",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:choice_specs",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:life_orb",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:assault_vest",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:eviolite",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:rocky_helmet",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:black_sludge",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:expert_belt",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:muscle_band",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:wise_glasses",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:scope_lens",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:quick_claw",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:air_balloon",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:heavy_duty_boots",
+          "buy": 3000,
+          "sell": 300
+        }
       ]
     },
     {
-      "id": "premium",
-      "name": "§eBoutique",
-      "icon": "minecraft:sunflower",
-      "description": "Identidad y comodidad. No afecta al juego.",
-      "currency": "REPORTCOIN",
+      "id": "entrenamiento",
+      "name": "§bEntrenamiento",
+      "icon": "cobblemon:rare_candy",
+      "description": "Vitaminas y caramelos. Suben a tu equipo, no a ti.",
       "entries": [
-        { "item": "minecraft:player_head",   "buy": 50,  "sell": 0, "label": "§eSombrero cosmético" },
-        { "item": "minecraft:firework_star", "buy": 30,  "sell": 0, "label": "§eEfecto de captura" },
-        { "item": "minecraft:name_tag",      "buy": 80,  "sell": 0, "label": "§eTítulo personalizado" }
+        {
+          "item": "cobblemon:hp_up",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:protein",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:iron",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:calcium",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:zinc",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:carbos",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:pp_up",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:pp_max",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:exp_share",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:lucky_egg",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:exp_candy_xs",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:exp_candy_s",
+          "buy": 400,
+          "sell": 40
+        },
+        {
+          "item": "cobblemon:exp_candy_m",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:exp_candy_l",
+          "buy": 3000,
+          "sell": 300
+        },
+        {
+          "item": "cobblemon:exp_candy_xl",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:rare_candy",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:ability_capsule",
+          "buy": 10000,
+          "sell": 1000
+        },
+        {
+          "item": "cobblemon:ability_patch",
+          "buy": 10000,
+          "sell": 1000
+        }
       ]
     }
   ]

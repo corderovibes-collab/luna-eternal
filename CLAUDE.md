@@ -423,9 +423,43 @@ Oficios       MINAR, PESCAR Y COSECHAR DAN PLATA (2026-08-23, V012)
               /luna via <VIA> <xp> (nivel 3) para probar
 
 Tienda        COMPRAR Y VENDER, POR CATEGORIAS (2026-08-23)
-              5 categorias . 28 articulos . SIN migracion: la logica
+              5 categorias . 90 articulos . SIN migracion: la logica
               (ShopService, ShopCatalog) llevaba escrita desde PHASE 3 y
               lo unico que faltaba era la pantalla
+              ⚠⚠ SOLO COBBLEMON, NI UN OBJETO DE MINECRAFT (orden del
+                 usuario): "lo que sea de Minecraft ellos en la
+                 exploracion lo pueden conseguir"
+                 y encaja con lo que ya habia: las BAYAS y las BELLOTAS
+                 son justo lo que da XP al oficio AGRICULTOR, y la madera
+                 y la piedra lo del MINERO. Venderlas competiria con los
+                 oficios. El autotest lo comprueba: es la clase de regla
+                 que se cae sola cuando alguien edita el JSON un martes
+              EL CATALOGO SE GENERA DEL JAR, no se escribe:
+                python tools/gen_tienda.py
+                python tools/gen_tienda.py --buscar stone
+              ⚠ misma leccion que los 62 cosmeticos que no existian: un
+                catalogo escrito a mano PROMETE cosas. ShopCatalog.load()
+                se salta lo que no exista con un aviso QUE NADIE MIRA, asi
+                que un identificador mal escrito no da error: da un hueco
+                el generador ABORTA en vez de publicar el hueco
+              ⚠⚠ LOS PRECIOS SON PROVISIONALES Y A PROPOSITO (orden del
+                 usuario): "mas adelante definimos precios porque
+                 necesitamos un analisis general de la economia"
+                 por eso NO hay 90 precios a mano: hay CINCO ESCALONES
+                 (200 . 400 . 900 . 3.000 . 10.000) y cada articulo dice a
+                 cual pertenece. Retocar la economia entera es cambiar
+                 CINCO cifras en gen_tienda.py, no revisar 90 lineas
+                 los anclajes vienen de la config real de produccion:
+                 Poke Ball 400 . Pocion 600 . Superpocion 900 . Revivir 3000
+                 la recompra es un PORCENTAJE (10 %) y no un numero suelto,
+                 para que el no-arbitraje no pueda romperse tecleando mal
+              ⚠ FUERA DEL CATALOGO A PROPOSITO: master_ball, beast_ball,
+                cherish_ball, park_ball y las ancient_* (se ganan, no se
+                compran), y las bayas/bellotas/mulch (son de los oficios)
+              ⚠ `rare_candy`, `exp_candy_*` y `lucky_egg` SI se venden, y
+                solo por PLATA. Si algun dia se vendieran por LunaCoins
+                seria comprar progresion con dinero real: T4, la linea
+                roja de D-007 y D-014
               LAS CATEGORIAS VAN EN EL PANEL IZQUIERDO, no en pestañas
               arriba: llevan icono + nombre + una frase que explica para
               que sirven, y eso en una pestaña de 150 px no entra. Es la
@@ -942,7 +976,7 @@ Interfaz      SIETE PANTALLAS. Cinco verificadas en el juego:
                 Misiones    2026-08-23   arbol de 28 en 6 cadenas
                 Inicial     2026-08-23   se abre SOLA al entrar
                 Clan        2026-08-23   SIN VERIFICAR (pide 2 cuentas)
-                Tienda      2026-08-23   SIN VERIFICAR . 5 categorias
+                Tienda      2026-08-23   SIN VERIFICAR . 90 articulos
               6 de los 15 iconos abren algo: pokedex (la de Cobblemon),
               cosmeticos, trabajos, misiones, clan y tienda
               SIGUEN SIN PANTALLA, con la logica viva y probada:
@@ -1250,8 +1284,15 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 hasta que alguien juegue de verdad todos los números siguen siendo
 estimaciones:
 
+> ⚠ **Y ahora hay un sitio concreto donde tocar.** Los 90 precios de la tienda
+> salen de **cinco escalones** en `tools/gen_tienda.py`, no de 90 números
+> escritos a mano — así que el análisis pendiente se aplica cambiando cinco
+> cifras y reejecutando el generador.
+
 | Número | Hoy | Se calibra con |
 |---|---|---|
+| Escalones de la tienda | 200 · 400 · 900 · 3.000 · 10.000 | ingreso mediano por hora de juego |
+| Recompra al banco | 10 % plano | cuánto se recicla frente a lo que se produce |
 | Margen de expedición | 1,5-2× supuesto | ingreso mediano diario |
 | Tope de kits | 6 000/día | ≤25 % del ingreso diario |
 | Tramos del impuesto GTS | 5-18 % | reparto P50/P99 |

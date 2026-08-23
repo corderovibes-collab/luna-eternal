@@ -685,6 +685,46 @@ public final class AutoTest {
                 nombresConColor = false;
             }
         }
+        // ⚠⚠ SOLO ARTICULOS DE COBBLEMON. Decision del usuario (2026-08-23):
+        //    lo de Minecraft se consigue explorando. Y encaja con lo que ya
+        //    habia: las bayas y las bellotas son justo lo que da XP al oficio
+        //    AGRICULTOR, y la madera y la piedra lo del MINERO -- venderlas
+        //    competiria con los oficios que acabamos de construir.
+        //
+        //    Se comprueba aqui porque es la clase de regla que se cae sola: el
+        //    catalogo se genera, pero alguien puede editarlo a mano un martes.
+        boolean soloCobblemon = true;
+        boolean iconosCobblemon = true;
+        for (var c : catalog.categories()) {
+            if (!net.minecraft.registry.Registries.ITEM.getId(c.icon())
+                    .getNamespace().equals("cobblemon")) {
+                iconosCobblemon = false;
+            }
+            for (var e : c.entries()) {
+                if (!net.minecraft.registry.Registries.ITEM.getId(e.item())
+                        .getNamespace().equals("cobblemon")) {
+                    soloCobblemon = false;
+                }
+            }
+        }
+        check("todo articulo de la tienda es de Cobblemon", soloCobblemon);
+        check("todo icono de categoria es de Cobblemon", iconosCobblemon);
+
+        // ⚠ NINGUN ARTICULO EN DOS CATEGORIAS. El servidor busca por
+        //   (categoria, objeto), asi que dos precios para el mismo objeto se
+        //   veria como "el precio cambia segun por donde entres".
+        java.util.Set<String> articulos = new java.util.HashSet<>();
+        boolean sinRepetidos = true;
+        for (var c : catalog.categories()) {
+            for (var e : c.entries()) {
+                if (!articulos.add(
+                        net.minecraft.registry.Registries.ITEM.getId(e.item()).toString())) {
+                    sinRepetidos = false;
+                }
+            }
+        }
+        check("ningun articulo esta en dos categorias", sinRepetidos);
+
         check("ningun identificador de categoria se repite", idsUnicos);
         check("toda categoria tiene al menos un articulo", todasConArticulos);
         check("todo icono de categoria es un objeto real", iconosReales);

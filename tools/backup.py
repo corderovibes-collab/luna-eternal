@@ -158,6 +158,46 @@ def listar():
     print(f"  {'TOTAL':<46} {mb(total):>12}")
 
 
+def nuestros_jars():
+    """Baja los dos jars que hemos escrito nosotros.
+
+    POR QUE ESTOS DOS Y NO LOS 57
+
+    Los 55 de terceros se rebajan del CDN de Modrinth con la URL y el hash que
+    guarda el manifiesto, asi que copiarlos seria guardar 400 MB de algo que no
+    es nuestro.
+
+    ⚠ PERO ESO NO ES GRATIS: el manifiesto guarda URL Y HASH, NO EL JAR. Si una
+      version desaparece de Modrinth, el pack no se puede reconstruir tal cual
+      estaba. Ya paso en este proyecto -- `letmedespawn` empezo a dar 404 y el
+      manifiesto dejo de generarse. Es un riesgo asumido a conciencia, no un
+      descuido: si algun dia importa, se copia `mods/` entero.
+
+    Los nuestros son otra cosa: su fuente esta en git, pero el jar CONSTRUIDO
+    no. Y una compilacion no es reproducible byte a byte (Loom remapea, el
+    orden del zip varia), asi que tener el artefacto exacto que corre en el
+    servidor vale para comparar cuando algo no cuadre.
+    """
+    marca = time.strftime("%Y-%m-%d-%H%M")
+    destino = DESTINO / f"jars-propios-{marca}"
+    destino.mkdir(parents=True, exist_ok=True)
+    print("=" * 60)
+    print("  JARS PROPIOS")
+    print("=" * 60)
+    jars = [n for n, _, f in ptero.listar("/mods")
+            if f and n.startswith(("lunaeternal", "lunaneon"))]
+    if not jars:
+        print("  no hay ningun jar nuestro en /mods")
+        return
+    for jar in sorted(jars):
+        url = url_descarga("mods/" + jar)
+        d = destino / jar
+        leido = descargar(url, d, 0)
+        print(f"  {jar:<34} {mb(leido)}")
+    print("")
+    print("  -> " + str(destino))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--solo-mundo", action="store_true",
@@ -165,10 +205,16 @@ def main():
     ap.add_argument("--sin-congelar", action="store_true",
                     help="NO congela el mundo. Arriesga chunks corruptos")
     ap.add_argument("--listar", action="store_true")
+    ap.add_argument("--nuestros-jars", action="store_true",
+                    help="baja SOLO lunaeternal.jar y lunaneon.jar")
     args = ap.parse_args()
 
     if args.listar:
         listar()
+        return
+
+    if args.nuestros_jars:
+        nuestros_jars()
         return
 
     rutas = RUTAS_MUNDO if args.solo_mundo else RUTAS_COMPLETO

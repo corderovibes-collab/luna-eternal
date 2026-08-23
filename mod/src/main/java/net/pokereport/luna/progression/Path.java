@@ -56,7 +56,7 @@ public enum Path {
         "Cañas y cebos, pagas mayores"),
 
     AGRICULTOR("Agricultor", "§2", Items.WHEAT,
-        "Cosechar bayas y bellotas",
+        "Cosechar bayas, bellotas y cultivos",
         "Semillas raras, pagas mayores");
 
     public static final int MAX_LEVEL = 5;

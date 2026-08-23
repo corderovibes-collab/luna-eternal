@@ -54,6 +54,7 @@ public final class OficiosListener {
     private static final long XP_PESCA = 12;
     private static final long XP_BAYA = 10;
     private static final long XP_BELLOTA = 10;
+    private static final long XP_CULTIVO = 3;
     private static final long XP_ECLOSION = 40;
 
     public static void register() {
@@ -82,12 +83,22 @@ public final class OficiosListener {
                 return;
             }
             try {
+                // ⚠ UN BLOQUE PUEDE VALER PARA UN OFICIO O PARA OTRO, NUNCA PARA
+                //   LOS DOS. Se comprueba el cultivo primero porque es el caso
+                //   estrecho; la piedra es el ancho. Si algun dia se solaparan,
+                //   picar daria XP de dos oficios a la vez y eso es una fuente de
+                //   Plata al doble sin que nada lo delate.
+                long cultivo = valorCultivo(estado);
+                if (cultivo > 0) {
+                    OficiosService.ganarAsync(sp, Path.AGRICULTOR, cultivo);
+                    return;
+                }
                 long xp = valorDe(estado.getBlock());
                 if (xp > 0) {
                     OficiosService.ganarAsync(sp, Path.MINERO, xp);
                 }
             } catch (Throwable t) {
-                LunaEternal.LOG.error("Error anotando mineria", t);
+                LunaEternal.LOG.error("Error anotando mineria o cultivo", t);
             }
         });
     }
@@ -117,6 +128,40 @@ public final class OficiosListener {
                 || estado.isIn(BlockTags.BASE_STONE_NETHER)
                 || estado.isIn(BlockTags.DEEPSLATE_ORE_REPLACEABLES)) {
             return XP_PIEDRA;
+        }
+        return 0;
+    }
+
+    /**
+     * Cuánto vale cosechar ese bloque. <b>0 si no es un cultivo, o si no está
+     * maduro.</b>
+     *
+     * <p>⚠⚠ SOLO CUENTA SI ESTÁ MADURO, y sin eso el oficio sería un exploit
+     * obvio: plantar y arrancar al segundo siguiente daría XP infinita sin
+     * esperar a que creciera nada. Cosechar es esperar; eso es el oficio.
+     *
+     * <p>⚠ {@code CROPS} cubre trigo, zanahoria, patata, remolacha y las
+     * verrugas del Nether —y lo que añada un mod que use la etiqueta—, pero
+     * <b>no</b> melón, calabaza, caña ni cacao, que no son {@code CropBlock} y no
+     * tienen edad. Esos se nombran aparte, y es la excepción a «usar etiquetas y
+     * no listas»: aquí no hay etiqueta que los agrupe.
+     *
+     * <p>⚠ Y la caña <b>no cuenta</b>: crece sola, se corta sin replantar, y una
+     * granja automática de caña convertiría el oficio en un temporizador. Melón y
+     * calabaza sí, porque su tallo hay que plantarlo.
+     */
+    private static long valorCultivo(net.minecraft.block.BlockState estado) {
+        var bloque = estado.getBlock();
+        if (bloque instanceof net.minecraft.block.CropBlock cultivo) {
+            return cultivo.isMature(estado) ? XP_CULTIVO : 0;
+        }
+        if (bloque == net.minecraft.block.Blocks.MELON
+                || bloque == net.minecraft.block.Blocks.PUMPKIN) {
+            return XP_CULTIVO;
+        }
+        if (bloque instanceof net.minecraft.block.CocoaBlock) {
+            return estado.get(net.minecraft.block.CocoaBlock.AGE)
+                    >= net.minecraft.block.CocoaBlock.MAX_AGE ? XP_CULTIVO : 0;
         }
         return 0;
     }

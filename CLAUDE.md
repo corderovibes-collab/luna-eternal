@@ -1075,10 +1075,20 @@ Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
                 launcher de Electron
                 ⚠ MOD_ID NO se toca: es identidad de registro, datapacks y
                   assets. Cambiarlo rompe el mundo guardado
-                ⚠ SIN DESPLEGAR: el mod compilado y el pack regenerado no
-                  se han publicado todavia
-              lo que el fork NO tiene todavia: diagnostico de cierres
-              ni boton de reparar, que el de Electron SI tiene
+                ✅ DESPLEGADO (2026-08-23, LOS DOS DESTINOS):
+                  servidor  mod + neon subidos . Done (9,377 s)
+                            autotest 217/217 tras el renombrado
+                  clientes  manifiesto 443f2cff9c publicado y servido
+                            servers.dat con «§6PokeReport §bNetwork»
+                  ⚠ se aviso a los 2 jugadores conectados antes de
+                    reiniciar. Un mod nuevo NO se carga en caliente
+                  ⚠ queda una linea de log del servidor que dice
+                    "Interfaz: revestido de luna activado". NO la ve
+                    ningun jugador; se cambia cuando toque recompilar
+              lo que el fork NO tiene todavia: el BOTON GRANDE DE JUGAR.
+              Es lo ultimo del modo quiosco y es un rediseño de la
+              ventana, no un ajuste. Diagnostico y reparar YA los tiene
+              (2026-08-23), asi que ya no va por detras del de Electron
               ---- el de Electron sigue siendo el que se reparte -----
               launcher/ · Electron 43 · 1.0.2 · 37/37 (npm test)
               ⚠⚠ EL FETCH DE NODE NO TIENE TIEMPO LIMITE POR DEFECTO.

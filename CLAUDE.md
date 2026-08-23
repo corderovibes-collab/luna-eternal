@@ -933,10 +933,17 @@ Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
                    `x64` si vale, lo que descarta es `arm64`
               ⚠ Y EL LAUNCHER SE LLAMABA A SI MISMO `0.2.0-1a2b3c4d`:
                 misma `v` por el otro lado. `GIT_TAG` (`v0.2.0`) nunca
-                era igual a `versionString()` (`0.2.0`), asi que a toda
-                compilacion etiquetada se le pegaba el canal detras. No
-                era solo feo: ESA es la cadena con la que el
-                actualizador se compara
+                era igual a `versionString()` (`0.2.0`), asi que se le
+                pegaba el canal detras
+                ⚠⚠ CORREGIDO EL 23-ago LEYENDO EL LOG DE LA CI: aqui
+                   ponia que le pasaba a TODAS las que se reparten, y ES
+                   FALSO. En la CI el refspec sale VACIO, y eso dispara
+                   el respaldo "assume stable" de BuildConfig, que
+                   sobrescribe GIT_TAG y pone el canal en `stable`: la
+                   version sale limpia. Solo pasaba en las
+                   compilaciones LOCALES, que van desde una rama
+                   el arreglo sigue siendo correcto, pero NO era uno de
+                   los que afectaban al jugador. Esos son los otros dos
               LO QUE IMPIDE QUE VUELVA, y es lo que importa:
                 Version_test  62 pruebas, 0 fallos (eran 60)
                 CI            aborta si CMakeLists.txt y la etiqueta no

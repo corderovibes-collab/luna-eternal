@@ -803,10 +803,31 @@ cuando la compilación no es una release:
 if (VERSION_CHANNEL != "stable" && GIT_TAG != vstr)
 ```
 
-`GIT_TAG` es `v0.2.0` y `vstr` es `0.2.0`, así que **nunca eran iguales** y a
-*toda* compilación etiquetada —o sea, a todas las que se reparten— se le pegaba
-el hash del commit detrás. No era solo feo en el «Acerca de»: **esa es la cadena
-con la que el actualizador se compara**.
+`GIT_TAG` es `v0.2.0` y `vstr` es `0.2.0`, así que **nunca eran iguales** y se le
+pegaba el canal detrás.
+
+> **⚠️⚠️ CORRECCIÓN (2026-08-23, leída del log de la CI de `v0.2.2`): esto NO
+> afectaba a los binarios que se reparten.** Aquí se escribió que le pasaba «a
+> toda compilación etiquetada, o sea a todas las que se reparten». **Es falso**, y
+> el dato que lo desmiente estaba a un `grep` de distancia:
+>
+> ```
+> -- Git tag: v0.2.2
+> -- Git refspec:            <- VACÍO
+> ```
+>
+> Con el refspec vacío salta el respaldo *«assume that builds outside of Git
+> repos are stable»* de `BuildConfig.cpp.in`, que **sobrescribe `GIT_TAG` con
+> `versionString()` y pone el canal en `stable`** — así que la condición de
+> arriba ni se evalúa y la versión sale limpia.
+>
+> **Dónde sí pasaba: en las compilaciones locales**, que van desde una rama y
+> tienen refspec `refs/heads/luna`. De ahí salía el `0.2.0-luna` que se vio en la
+> barra de título al probar.
+>
+> El arreglo **sigue siendo correcto** —la comparación estaba mal escrita— pero
+> **no era uno de los que afectaban al jugador**. Los que sí: el §10.1 (la `v` en
+> la comparación de versiones) y el §10.2 (el nombre del instalador).
 
 ### 10.4 · Lo que impide que vuelva
 

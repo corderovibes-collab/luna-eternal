@@ -73,7 +73,7 @@ function createWindow() {
     show: false,
     backgroundColor: '#0b0f1d',
     autoHideMenuBar: true,
-    title: 'Luna Eternal',
+    title: 'PokeReport Network',
     webPreferences: {
       preload: path.join(dir, '..', 'preload', 'preload.cjs'),
       contextIsolation: true,

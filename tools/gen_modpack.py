@@ -39,7 +39,14 @@ SALIDA = RAIZ / "build"
 UA = {"User-Agent": "PokeReport-LunaEternal/0.1 (dev)"}
 
 MC = "1.21.1"
-SERVIDOR = ("§6PokeReport §f: §bLuna Eternal", "s12.mia.us.tarohosting.lat:33043")
+# El nombre que sale en la lista de multijugador (MARCA-001, 2026-08-23).
+#
+# ⚠ SOLO LO VE QUIEN INSTALE DE CERO. `servers.dat` va marcado `once` en el
+#   manifiesto --se escribe si falta y no se pisa nunca--, para no borrarle a
+#   nadie los servidores que se haya añadido el. Quien ya lo tenga seguira
+#   viendo el nombre viejo hasta que borre esa entrada, y es correcto: su
+#   lista de servidores es suya.
+SERVIDOR = ("§6PokeReport §bNetwork", "s12.mia.us.tarohosting.lat:33043")
 
 # Version minima del cargador. Cobblemon 1.7.3 la exige y no arranca sin ella:
 # "requires version 0.17.2 or later of mod 'Fabric Loader'". Estaba escrita a
@@ -317,7 +324,7 @@ SHADERS = ["complementary-unbound", "makeup-ultra-fast-shaders"]
 # `once` (se escribe si falta y no se pisa nunca), para que quede explicito y
 # para que la eleccion del jugador sobreviva a las actualizaciones.
 IRIS_PROPERTIES = (
-    "# PokeReport : Luna Eternal\n"
+    "# PokeReport Network\n"
     "# Los shaders vienen INSTALADOS y APAGADOS. Se activan en\n"
     "# Opciones > Graficos > Shader Packs.\n"
     "enableShaders=false\n"
@@ -807,10 +814,10 @@ def construir(nombre_pack, extra, sufijo, resumen):
 def main():
     print(f"BASE: {PACK_BASE}")
     print("\nPACK DE JUGADOR")
-    construir("PokeReport: Luna Eternal", EXTRA_JUGADOR, "",
+    construir("PokeReport Network", EXTRA_JUGADOR, "",
               "Cliente oficial, sobre el modpack oficial de Cobblemon.")
     print("PACK DE CONSTRUCTOR")
-    construir("PokeReport: Luna Eternal (Constructor)",
+    construir("PokeReport Network (Constructor)",
               EXTRA_JUGADOR + EXTRA_CONSTRUCTOR, "-Constructor",
               "Como el oficial, mas WorldEdit CUI, Axiom y Litematica.")
 

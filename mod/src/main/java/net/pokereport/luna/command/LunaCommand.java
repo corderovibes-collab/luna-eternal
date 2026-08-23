@@ -612,7 +612,7 @@ public final class LunaCommand {
 
     private static int status(ServerCommandSource src) {
         src.sendFeedback(() -> Text.literal(
-            "§6Luna Eternal §7· jugadores en cache: §f"
+            "§6" + LunaEternal.NOMBRE + " §7· jugadores en cache: §f"
                 + LunaEternal.players().cachedCount()), false);
         return 1;
     }

@@ -955,8 +955,33 @@ Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
               ⚠⚠ TODO EL DETALLE EN docs/technical/launcher-qt.md
                  -- decisiones, siete trampas de la cadena de
                  herramientas, y por donde seguir. LEERLO ANTES DE TOCAR
-              ⚠ PENDIENTE MARCA-001: el servidor pasa a llamarse
-                PokeReport Network. Alcance completo en launcher-qt.md
+              ✅ MARCA-001 APLICADA (2026-08-23): el servidor se llama
+                PokeReport Network. Detalle en launcher-qt.md §7
+                ⚠⚠ EL AVISO QUE HABIA ESTABA EN LA VARIABLE EQUIVOCADA:
+                   lo que mueve la carpeta de datos NO es `Launcher_AppID`
+                   sino `Launcher_CommonName` --Application.cpp hace
+                   setOrganizationName(LAUNCHER_NAME)--, y eso cambia el
+                   trabajo entero, porque son DOS variables distintas:
+                     DisplayName  TODO lo que el jugador ve. CAMBIADO
+                     CommonName   %APPDATA%, carpeta, registro. IGUAL
+                   asi que nadie vuelve a descargar 450 MB
+                ⚠⚠ PERO EL NOMBRE DE LA INSTANCIA SI HABIA QUE MIGRARLO:
+                   findInstance() la busca POR NOMBRE, asi que cambiarlo a
+                   secas le crea una SEGUNDA instancia a quien ya la tenga
+                   --otros 450 MB, y la suya al lado con pinta de perdida.
+                   Hoy `instanceNamesAntiguos()` y findInstance() RENOMBRA
+                ⚠ y el instalador borra el acceso directo viejo: se llama
+                  como el DisplayName, o sea que NO se sobrescribe solo
+                ⚠ los 15 `tr("Luna Eternal")` leen ya del BuildConfig. Un
+                  nombre a mano en 15 sitios es un renombrado que se queda
+                  a medias SIN DAR NINGUN ERROR
+                fuera del fork: gen_modpack.py (servidor y mrpack), el mod
+                (LunaEternal.NOMBRE y PREFIJO, en UN sitio), neon y el
+                launcher de Electron
+                ⚠ MOD_ID NO se toca: es identidad de registro, datapacks y
+                  assets. Cambiarlo rompe el mundo guardado
+                ⚠ SIN DESPLEGAR: el mod compilado y el pack regenerado no
+                  se han publicado todavia
               lo que el fork NO tiene todavia: diagnostico de cierres
               ni boton de reparar, que el de Electron SI tiene
               ---- el de Electron sigue siendo el que se reparte -----
@@ -1489,7 +1514,7 @@ Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 | **`WLD-006`** | ⏰ **Pedir la whitelist de SERVIDOR de Axiom** en `#whitelist-request` de su Discord. **Fecha límite ~2026-09-10.** Lo que funciona hoy es una cortesía automática de 30 días — ver [construccion.md §3-bis](docs/world/construccion.md) |
 | `LNC-003` | **Certificado de firma de codigo — DIFERIDO a proposito (decision del usuario, 2026-08-17).** No tiene NADA que ver con las cuentas no premium: eso ya funciona y es gratis (`online-mode=false` + cuentas offline). Lo que arregla es que Windows deje de acusar al INSTALADOR de ser un virus — la pantalla azul de «Windows protegio su PC» que sale en cada instalacion limpia y que una parte de la gente no se atreve a saltar. **No rompe nada no tenerlo**: el launcher se reparte sin firmar desde siempre. Lo unico que se pierde es la autoactualizacion en macOS, que sin firma no puede aplicarse (en Windows si funciona). ~120 $/año que con 20 personas no compensan; se revisa cuando explicar donde hay que pulsar cueste mas que el certificado. Ver [distribucion.md §6](docs/technical/distribucion.md) |
 | ~~`INF-008`~~ | ✅ **RESUELTO, verificado contra el panel el 2026-08-21.** Se midio jar a jar el servidor contra el manifiesto del cliente: **0 ficheros con el mismo nombre y distinto tamaño, y 0 mods con la misma familia y distinta version**. `fabric-api`, `lithium` y `lunaeternal` ya coinciden; los 141 KB de diferencia de `lunaeternal` no existen. `python tools/mods_servidor.py` dice «nada que hacer», y ahora sabemos que dice la verdad. **Lo que quedo aprendido:** solo hay **2 jars en el servidor que no estan en el cliente** —`EasyAuth-3.4.4` y `worldedit-mod-7.3.8`—, y **eso es correcto**. La regla de §0 («el servidor tiene que ser subconjunto del cliente») es mas estricta que la realidad: lo que echa gente con «Registry remapping failed» es un desajuste en registros **que se sincronizan** (bloques, objetos, entidades). Un mod de servidor que solo añade comandos y autenticacion no registra nada de eso. La regla util es la otra que ya esta escrita: *un mod que registre algo que se sincroniza tiene que estar en los dos lados* |
-| **`MARCA-001`** | ⏰ **El servidor pasa a llamarse «PokeReport Network», no «Luna Eternal»** (decision del usuario, 2026-08-20). NO aplicado todavia: recompilar el fork entero cuesta mucho y no se hizo justo antes de repartir la primera version. **El alcance completo esta en [launcher-qt.md](docs/technical/launcher-qt.md)** — son siete sitios solo en el fork, mas `servers.dat`, el launcher de Electron y el mod. ⚠ Cambiar el `AppID` MUEVE LA CARPETA DE DATOS: quien ya lo tenga instalado se encontraria una instalacion vacia y volveria a bajar 450 MB |
+| ~~`MARCA-001`~~ | ✅ **APLICADA el 2026-08-23.** El servidor se llama **PokeReport Network** (decision del usuario, 2026-08-20). Detalle en [launcher-qt.md §7](docs/technical/launcher-qt.md). **Lo que hizo que costara mucho menos de lo anotado: el aviso estaba en la variable equivocada.** Lo que mueve la carpeta de datos **no es `Launcher_AppID`, es `Launcher_CommonName`** — `Application.cpp` hace `setOrganizationName(LAUNCHER_NAME)`, comprobado leyendolo. Y las dos cosas estan separadas: `Launcher_DisplayName` es **todo lo que el jugador ve** (instalador, menu Inicio, escritorio, «Agregar o quitar programas», titulo de ventana, «Acerca de») y `Launcher_CommonName` es la identidad. Cambiando solo el primero, **el jugador ve el nombre nuevo en todas partes y nadie vuelve a descargar 450 MB**. ⚠⚠ **Lo que si habia que migrar era el nombre de la instancia**: `findInstance()` la busca POR NOMBRE, asi que cambiarlo a secas le crea una **segunda** a quien ya la tenga; hoy `findInstance()` reconoce los nombres viejos y **renombra**. Fuera del fork: `gen_modpack.py`, el mod (`LunaEternal.NOMBRE`/`PREFIJO`, en un solo sitio), `neon` y el launcher de Electron. **`MOD_ID` no se toca**: cambiarlo rompe el mundo guardado. ⚠ **Sin desplegar todavia** |
 | ~~`GPL-001`~~ | ✅ **CUMPLIDO, comprobado por la API el 2026-08-21.** `corderovibes-collab/luna-eternal-launcher` es **publico y GPL-3.0**, y el binario se distribuye desde ese mismo repositorio: el fuente completo del fork viaja con el, que es lo que exige la licencia (D-035). **Sigue siendo una obligacion viva, no una casilla marcada:** cualquier cosa que se le añada encima --anti-abuso, capa de identidad, lo que sea-- hay que publicarla tambien. Y con tienda de pago (D-007) eso no es gratis |
 | **`LNC-002`** | Crear el token `PACK_TOKEN` para que el launcher publique sus releases — ver [launcher.md §2](docs/technical/launcher.md) |
 | **`ART-002`** | Enviar el arte de la interfaz nueva: fondos, botones, iconos (D-026) |

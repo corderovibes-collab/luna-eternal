@@ -147,7 +147,7 @@ public final class StarterService {
                     }
 
                     player.sendMessage(Text.literal(
-                        "§8[§6Luna Eternal§8] §f" + op.nombre()
+                        LunaEternal.PREFIJO + op.nombre()
                         + " §7se une a tu equipo."), false);
 
                     // Elegir compañero es el primer paso de la vía Entrenador.

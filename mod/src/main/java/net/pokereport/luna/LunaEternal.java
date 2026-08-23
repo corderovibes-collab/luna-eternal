@@ -33,6 +33,25 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static final String MOD_ID = "lunaeternal";
     public static final Logger LOG = LoggerFactory.getLogger("LunaEternal");
 
+    /**
+     * El nombre del servidor tal y como lo lee el jugador (MARCA-001).
+     *
+     * <p>⚠ NO ES {@link #MOD_ID}, Y NO PUEDE SERLO. {@code MOD_ID} es
+     * identidad: lo usan el registro de Fabric, los espacios de nombres de
+     * datapacks y resource packs, y la ruta de los assets. Cambiarlo rompe el
+     * mundo guardado. Este es solo texto, y cambia cuando cambie la marca.
+     *
+     * <p>⚠⚠ Y VA AQUI, EN UN SOLO SITIO, porque escrito a mano se queda a
+     * medias: el 2026-08-23 el nombre estaba repetido en el prefijo del chat,
+     * en un comando y en dos ficheros de idioma, y renombrar el servidor
+     * significaba encontrarlos todos. Uno que se escape no da ningun error --
+     * simplemente hay una pantalla que sigue diciendo el nombre viejo.
+     */
+    public static final String NOMBRE = "PokeReport Network";
+
+    /** El prefijo de chat del servidor, con sus colores ya puestos. */
+    public static final String PREFIJO = "§8[§6" + NOMBRE + "§8] §f";
+
     private static Database database;
     private static PlayerService players;
     private static EconomyService economy;

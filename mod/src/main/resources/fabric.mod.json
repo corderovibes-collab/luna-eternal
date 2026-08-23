@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "lunaeternal",
   "version": "${version}",
-  "name": "PokeReport: Luna Eternal",
+  "name": "PokeReport Network",
   "description": "Sistemas propios del servidor: progresion, economia, coleccion y mercado. Y el PokePad, que es su cara en el cliente.",
   "authors": [
     "PokeReport"

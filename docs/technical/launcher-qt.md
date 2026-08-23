@@ -327,36 +327,67 @@ más general:
 «manifiesto a medias» en «instalación destruida».** Una función que limpia bien
 es una función que borra bien.
 
-### ⏰ PENDIENTE: el servidor pasa a llamarse **PokeReport Network**
+### ✅ APLICADO (2026-08-23): el servidor se llama **PokeReport Network**
 
-**Decisión del usuario, 2026-08-20.** «Luna Eternal» deja de ser el nombre del
-servidor. Está anotado aquí y **no aplicado a propósito**: recompilar el fork
-entero cuesta mucho, y no se hace de madrugada justo antes de repartir la
-primera versión.
+**Decisión del usuario, 2026-08-20**, aplicada el 2026-08-23. «Luna Eternal»
+deja de ser el nombre del servidor.
 
-Cuando toque, hay que mirar **todos** estos sitios — es la lección de esta
-sesión: la marca vive en más lugares de los que uno recuerda.
+**Y resultó costar mucho menos de lo que decía esta sección**, porque el aviso
+que había aquí estaba **atribuido a la variable equivocada**:
+
+> ⚠️⚠️ **NO es `Launcher_AppID` lo que mueve la carpeta de datos: es
+> `Launcher_CommonName`.** Se comprobó leyendo `Application.cpp`, no de memoria:
+> `setOrganizationName(BuildConfig.LAUNCHER_NAME)` y `LAUNCHER_NAME` sale de
+> `Launcher_CommonName`, así que de ahí salen `%APPDATA%\LunaEternal`, la
+> carpeta de instalación y las claves del registro. `Launcher_AppID` solo se usa
+> en el `.desktop` y el `.metainfo` de Linux y en el bundle de macOS.
+
+Eso cambia el trabajo entero, porque **los dos nombres están separados**:
+
+| Variable | Qué es | Se cambió |
+|---|---|---|
+| `Launcher_DisplayName` | **Todo lo que el jugador ve**: título del instalador, acceso directo del menú Inicio, acceso directo del escritorio, «Agregar o quitar programas», título de la ventana, «Acerca de», `ProductName` del `.exe` | ✅ → `PokeReport Network` |
+| `Launcher_CommonName` | **Identidad**: `%APPDATA%`, carpeta de instalación, registro, clave de desinstalar | ❌ se queda `LunaEternal` |
+| `Launcher_APP_BINARY_NAME` | El nombre del `.exe`, que el actualizador reemplaza fichero a fichero | ❌ se queda `lunaeternal` |
+| `Launcher_AppID` | `.desktop` / `.metainfo` / bundle de macOS | ❌ se queda |
+
+**El jugador ve «PokeReport Network» en todas partes y nadie vuelve a descargar
+nada.** Lo único que sigue diciendo `LunaEternal` son rutas y el nombre del
+`.exe`, que solo se ven yendo a buscarlas.
+
+#### Dos cosas que sí había que migrar
+
+**1 · El nombre de la instancia.** `findInstance()` la busca **por nombre**, así
+que cambiarlo a secas le habría creado una **segunda instancia** a todo el que
+ya lo tuviera: otros 450 MB, y su instancia de siempre —con sus partidas y sus
+ajustes— ahí al lado, con pinta de haberse perdido. Ahora existe
+`instanceNamesAntiguos()` y `findInstance()` **renombra** la que encuentra, así
+que la migración pasa una sola vez y sola. Hay prueba que lo fija.
+
+**2 · Los accesos directos.** Se llaman como el `DisplayName`, así que el viejo
+no se sobrescribe: se quedaría al lado apuntando al mismo `.exe`. El instalador
+borra `Luna Eternal.lnk` del menú Inicio y del escritorio antes de crear el
+suyo, y el desinstalador también.
+
+#### Los títulos de diálogo ya no llevan el nombre escrito a mano
+
+Había **quince** `tr("Luna Eternal")` repartidos por `MainWindow.cpp` y
+`Application.cpp`. Ahora leen `BuildConfig.LAUNCHER_DISPLAYNAME`. Un nombre
+escrito a mano en quince sitios es un renombrado que se queda a medias sin dar
+ningún error: simplemente hay una pantalla que sigue diciendo el nombre viejo.
+
+#### Fuera del fork
 
 | Dónde | Qué |
 |---|---|
-| `program_info/CMakeLists.txt` | `Launcher_CommonName`, `Launcher_DisplayName`, `Launcher_AppID`, `Launcher_Domain`, `Launcher_Authors` |
-| `CMakeLists.txt` (raíz) | `Launcher_APP_BINARY_NAME` |
-| `program_info/*` | 18 ficheros con el nombre dentro (`lunaeternal.*`, `net.pokereport.LunaEternal.*`) |
-| `launcher/luna/LunaInstance.cpp` | `instanceName()` — el nombre de la instancia |
-| `launcher/main.cpp` | `Q_INIT_RESOURCE(lunaeternal)` |
-| `tests/LunaInstance_test.cpp` | fija el nombre de la instancia |
-| `luna-release.yml` | nada, usa `${{ github.repository }}` |
+| `tools/gen_modpack.py` | El nombre en la lista de multijugador (`§6PokeReport §bNetwork`), el nombre de los dos `.mrpack` y la cabecera de `iris.properties`. ⚠️ `servers.dat` va marcado `once`, así que **solo lo ve quien instale de cero** — a quien ya lo tenga no se le toca su lista de servidores, y es lo correcto |
+| `mod/` | Constantes `LunaEternal.NOMBRE` y `LunaEternal.PREFIJO`, **en un solo sitio**, y las usan el prefijo de chat del inicial y `/luna status`. Más la categoría de controles (`lang/*.json`) y el nombre del mod (`fabric.mod.json`) |
+| `neon/` | El nombre del mod en su `fabric.mod.json` |
+| `launcher/` (Electron) | `productName`, `shortcutName`, título de ventana y de la página. ⚠️ **`appId` NO se toca**: es la identidad con la que su autoactualizador reconoce la instalación. Su carpeta de datos está escrita a mano en `plataforma.js` (`.lunaeternal`) y no depende del `productName`, así que renombrar no la mueve |
 
-> ⚠️ **Cambiar `Launcher_AppID` mueve la carpeta de datos.** Quien ya tenga el
-> launcher instalado se encontraría con una instalación «vacía» y volvería a
-> bajar los 450 MB. Si hay gente usándolo, hay que migrar o avisar.
-
-> ⚠️ **Y el nombre de la instancia es cómo `findInstance()` la encuentra.**
-> Cambiarlo sin más crea una segunda instancia al lado en vez de renombrar la
-> existente.
-
-Afecta también, fuera del fork: el nombre visible del servidor en `servers.dat`
-(lo genera `gen_modpack.py`), el launcher de Electron, y el propio mod.
+> ⚠️ **`MOD_ID` no se toca ni se tocará.** Es identidad: registro de Fabric,
+> espacios de nombres de datapacks y resource packs, y la ruta de los assets.
+> Cambiarlo rompe el mundo guardado.
 
 ### Lo que falta para poder repartirlo
 

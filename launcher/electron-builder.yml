@@ -1,5 +1,5 @@
 appId: com.pokereport.lunaeternal
-productName: Luna Eternal
+productName: PokeReport Network
 copyright: Uso privado
 
 directories:
@@ -45,7 +45,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Luna Eternal
+  shortcutName: PokeReport Network
   # Genera el .blockmap con el que electron-updater baja SOLO los bloques que
   # cambian. Una actualización típica son unos pocos MB en vez de 95.
   differentialPackage: true
@@ -65,7 +65,7 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
-    NSNetworkVolumesUsageDescription: Luna Eternal descarga el modpack desde internet.
+    NSNetworkVolumesUsageDescription: PokeReport Network descarga el modpack desde internet.
 
 dmg:
   artifactName: LunaEternal-${version}-${arch}.${ext}

@@ -157,5 +157,5 @@ export function adoptium() {
  * Dock y en la barra de menús mientras se juega.
  */
 export function flagsDeSistema() {
-  return ES_MAC ? ['-Dapple.awt.application.name=Luna Eternal'] : [];
+  return ES_MAC ? ['-Dapple.awt.application.name=PokeReport Network'] : [];
 }

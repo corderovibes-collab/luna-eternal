@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "lunaneon",
   "version": "${version}",
-  "name": "Luna Eternal · Neon",
+  "name": "PokeReport Network · Neon",
   "description": "Bloques de neon para la ciudadela: 16 colores en bloque, losa, escalera, pilar, panel y tubo. Se dibujan a brillo maximo y la luz que sueltan se regula bloque a bloque.",
   "authors": [
     "PokeReport"

@@ -1,12 +1,12 @@
 {
   "name": "luna-eternal-launcher",
-  "productName": "Luna Eternal",
+  "productName": "PokeReport Network",
   "version": "1.1.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/corderovibes-collab/luna-eternal-pack.git"
   },
-  "description": "Launcher del servidor PokeReport: Luna Eternal",
+  "description": "Launcher del servidor PokeReport Network",
   "private": true,
   "type": "module",
   "main": "src/main/main.js",

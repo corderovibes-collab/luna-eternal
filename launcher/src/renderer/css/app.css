@@ -1,5 +1,5 @@
 /* =============================================================================
-   Luna Eternal — "terminal nocturno"
+   PokeReport Network — "terminal nocturno"
    La ventana es un aparato: carcasa índigo con los mandos a la izquierda y una
    pantalla hundida donde vive el contenido. Compromiso deliberado con un único
    mundo visual oscuro; no es una omisión, es lo que pide un launcher de juego.
@@ -789,7 +789,7 @@ input[type="range"] { flex: 1; accent-color: var(--shell-hi); }
 }
 
 /* =============================================================================
-   Añadidos de Luna Eternal: aviso de actualización, perfiles y diagnóstico.
+   Añadidos de PokeReport Network: aviso de actualización, perfiles y diagnóstico.
    ========================================================================== */
 
 /* Aviso de actualización DEL LAUNCHER. Va pegado al borde superior de la

@@ -20,7 +20,7 @@ el que **el estado no es de quien lo mira**, y eso cambia casi todas las reglas.
 
 ## Current Status
 
-**Implementado y compilando. Migración `V013` aplicada, autotest ampliado.**
+**Desplegado el 2026-08-23.** `V013` aplicada, `Done (9,2 s)`, **207/207** en el autotest.
 
 ```
 mod/src/main/java/net/pokereport/luna/clan/ClanService.java   el sistema
@@ -384,6 +384,32 @@ el tesoro     aportar sale del bolsillo Y entra en el tesoro
               SUMA CERO: aportado == sacado + tesoro
 disolver      borra el clan y lo saca del listado
 ```
+
+### 9.1 Lo que cazó en su primera ejecución
+
+**Siete fallos, y era uno con seis consecuencias.**
+
+`cambiarRol(lider, otro, LIDER)` **delegaba en `traspasar`**. O sea que «cambiar
+el rango de alguien» era en realidad **«regalarle el clan»**. A partir de ahí la
+prueba seguía tratando al objetivo como oficial cuando ya era el líder, y todo
+lo que venía detrás caía en cadena.
+
+> ⚠⚠ **Ninguna revisión de código lo habría visto, porque delegar era *seguro*.**
+> `traspasar` es transaccional y baja al anterior: no quedan dos líderes, no hay
+> excepción, no hay nada en el log. Lo que había era **un método que hacía algo
+> mucho más grande de lo que promete su nombre**.
+>
+> Y ese es el fallo peligroso de verdad: el día que una pantalla nueva, un
+> comando o una migración pasen `LIDER` creyendo que asciende a un segundo
+> mando, el líder se queda sin clan — y «sin líder» no se arregla desde dentro.
+
+Hoy lo **rechaza** y dice dónde está el método que sí lo hace. El invariante que
+este documento ya afirmaba en §3 pasa a ser cierto **en el código** y no solo en
+el papel.
+
+**Es exactamente para esto que MOD-006 exige escribir el autotest antes de
+desplegar**: el fallo no estaba en el camino feliz, estaba en un camino que
+funcionaba *demasiado bien*.
 
 ---
 

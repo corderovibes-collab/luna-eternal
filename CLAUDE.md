@@ -62,9 +62,20 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 207 comprobaciones (2026-08-23)
+Autotest      /luna autotest -> 207/207 correctos (2026-08-23, en vivo)
               eran 156 antes de clanes: +51, y la mayoria son de LO QUE
               NO SE PUEDE HACER (ver el bloque Clanes)
+              ⚠⚠ Y EN SU PRIMERA EJECUCION EN VIVO CAZO UNO. Fueron 7
+                 fallos y era UNO con seis consecuencias:
+                 cambiarRol(lider, otro, LIDER) DELEGABA en `traspasar`,
+                 asi que "cambiar el rango de alguien" era en realidad
+                 "REGALARLE EL CLAN"
+                 ⚠ NINGUNA REVISION DE CODIGO LO HABRIA VISTO, porque
+                   delegar era SEGURO: traspasar es transaccional y baja
+                   al anterior, asi que no quedan dos lideres, no hay
+                   excepcion y no hay traza. Lo que habia era un metodo
+                   que hacia algo MUCHO MAS GRANDE que su nombre
+                 hoy se RECHAZA y remite a `traspasar`
               eran 136 el 22-ago: +8 de cosmeticos, +6 del arbol de
               misiones, +5 de oficios y +1 del prefijo de sombreros
               eran 112 el 12-ago; las nuevas cubren las voces
@@ -455,6 +466,7 @@ Clanes        EL PRIMER SISTEMA SOCIAL (2026-08-23, V013)
               17-ago y decia que encenderlo seria "rellenar tres lineas".
               Fue exacto
               ⚠ SIN VERIFICAR EN EL JUEGO todavia: hacen falta DOS cuentas
+              desplegado y V013 aplicada (2026-08-23) . Done (9,2 s)
 
 Avisos        ui/Aviso.java centraliza como se anuncia un logro
               TOAST (esquina, con el marco de los logros de vanilla) +

@@ -707,6 +707,96 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «Dame el estado de mi equipo», al abrir la pantalla de curar. */
+    public record PedirCura() implements CustomPayload {
+        public static final Id<PedirCura> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cura"));
+        public static final PacketCodec<RegistryByteBuf, PedirCura> CODEC =
+                PacketCodec.unit(new PedirCura());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Un Pokémon del equipo, tal y como se dibuja en la pantalla de curar.
+     *
+     * <p>⚠ VIAJA LA VIDA, NO «ESTÁ HERIDO». Una barra de vida dice <i>cuánto</i>
+     * te queda; un booleano solo dice que algo pasa. Y son los mismos bytes.
+     *
+     * <p>⚠ Y viaja el ESTADO como cadena («psn», «brn», …) y no como número:
+     * los identificadores de estado los pone Cobblemon y pueden crecer. Un
+     * número obligaría a mantener aquí una tabla que se queda vieja en silencio.
+     * Cadena vacía = sano.
+     */
+    public record PokemonCura(String especie, String apodo, int nivel,
+                              int vida, int vidaMax, String estado) {
+        public static final PacketCodec<RegistryByteBuf, PokemonCura> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, PokemonCura::especie,
+                        PacketCodecs.STRING, PokemonCura::apodo,
+                        PacketCodecs.VAR_INT, PokemonCura::nivel,
+                        PacketCodecs.VAR_INT, PokemonCura::vida,
+                        PacketCodecs.VAR_INT, PokemonCura::vidaMax,
+                        PacketCodecs.STRING, PokemonCura::estado,
+                        PokemonCura::new);
+    }
+
+    /**
+     * El equipo y cuánto falta para poder curar.
+     *
+     * <p>⚠ {@code segundos} lo calcula el SERVIDOR y viaja ya restado. El
+     * cliente solo lo cuenta hacia atrás para dibujarlo: si mandáramos la marca
+     * de tiempo de la última cura, cada reloj mal puesto daría una espera
+     * distinta, y uno adelantado dejaría curar antes de tiempo en la pantalla —
+     * el servidor lo rechazaría igual, pero el jugador vería un botón encendido
+     * que no funciona, que es peor que uno apagado.
+     *
+     * <p>⚠ {@code haceFalta} también lo decide el servidor, y no sobra: sirve
+     * para no gastar el cooldown curando a un equipo que está sano. El cliente
+     * podría deducirlo de las barras, pero entonces la regla viviría en dos
+     * sitios y un día dejarían de decir lo mismo.
+     */
+    public record EstadoCura(List<PokemonCura> equipo, long segundos,
+                             boolean haceFalta) implements CustomPayload {
+        public static final Id<EstadoCura> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_cura"));
+        public static final PacketCodec<RegistryByteBuf, EstadoCura> CODEC =
+                PacketCodec.tuple(
+                        PokemonCura.CODEC.collect(PacketCodecs.toList()),
+                        EstadoCura::equipo,
+                        PacketCodecs.VAR_LONG, EstadoCura::segundos,
+                        PacketCodecs.BOOL, EstadoCura::haceFalta,
+                        EstadoCura::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Cura mi equipo».
+     *
+     * <p>⚠ NO LLEVA NADA DENTRO, y es lo correcto: qué se cura y si toca lo
+     * decide el servidor entero (P6). Un paquete que dijera «cura esta ranura»
+     * sería una superficie más que validar sin ganar nada — aquí se cura el
+     * equipo o no se cura.
+     */
+    public record Curar() implements CustomPayload {
+        public static final Id<Curar> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "curar"));
+        public static final PacketCodec<RegistryByteBuf, Curar> CODEC =
+                PacketCodec.unit(new Curar());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame mis misiones», al abrir la pantalla. */
     public record PedirMisiones() implements CustomPayload {
         public static final Id<PedirMisiones> ID =
@@ -987,6 +1077,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(ElegirInicial.ID, ElegirInicial.CODEC);
         PayloadTypeRegistry.playS2C().register(Iniciales.ID, Iniciales.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirLlevados.ID, PedirLlevados.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirCura.ID, PedirCura.CODEC);
+        PayloadTypeRegistry.playC2S().register(Curar.ID, Curar.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoCura.ID, EstadoCura.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirMisiones.ID, PedirMisiones.CODEC);
         PayloadTypeRegistry.playC2S().register(ReclamarMision.ID, ReclamarMision.CODEC);
         PayloadTypeRegistry.playS2C().register(Misiones.ID, Misiones.CODEC);
@@ -1047,6 +1140,25 @@ public class Red implements ModInitializer {
             } else {
                 net.pokereport.luna.shop.ShopService.sell(jugador, laEntrada, cantidad, luego);
             }
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirCura.ID, (carga, ctx) ->
+                enviarCura(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(Curar.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            // ⚠ TODA la regla vive en HealService: el cooldown, si hace falta
+            //   curar y el mensaje. Aqui no se comprueba nada -- repartir la
+            //   comprobacion entre el manejador y el servicio es como acaban
+            //   existiendo dos reglas que un dia dejan de decir lo mismo.
+            net.pokereport.luna.heal.HealService.curar(jugador);
+
+            // ⚠ Y SE REENVIA EL ESTADO, siempre, tanto si curo como si no.
+            //   El servidor acaba de cambiar algo que la pantalla dibuja --las
+            //   barras de vida y el reloj-- y si no lo reenvia, el jugador ve
+            //   el equipo herido hasta que reabra. Es la leccion del 23-ago,
+            //   que salio cuatro veces con cuatro caras distintas.
+            enviarCura(jugador);
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirClan.ID, (carga, ctx) ->
@@ -1456,6 +1568,46 @@ public class Red implements ModInitializer {
                     List.copyOf(entradas)));
         }
         return new Tienda(List.copyOf(salida));
+    }
+
+    /**
+     * Manda el equipo y el reloj de la curación.
+     *
+     * <p>⚠ <b>Esto NO va por el executor de E/S</b>, al contrario que casi todo
+     * lo demás de aquí, y es a propósito: no toca la base de datos ni una vez.
+     * El equipo lo tiene Cobblemon en memoria y el cooldown es un mapa en
+     * memoria ({@code HealService}). Mandarlo al executor solo añadiría un salto
+     * de hilo —y leer el equipo de Cobblemon fuera del hilo del servidor es
+     * justo lo que no se debe hacer.
+     */
+    private static void enviarCura(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        List<PokemonCura> equipo = new java.util.ArrayList<>();
+        try {
+            for (var p : com.cobblemon.mod.common.Cobblemon.INSTANCE.getStorage().getParty(jugador)) {
+                if (p == null) {
+                    continue;
+                }
+                var estado = p.getStatus();
+                equipo.add(new PokemonCura(
+                        p.getSpecies().getName(),
+                        // El apodo puede no existir; entonces se dibuja la especie.
+                        p.getNickname() == null ? "" : p.getNickname().getString(),
+                        p.getLevel(),
+                        p.getCurrentHealth(),
+                        p.getMaxHealth(),
+                        estado == null ? "" : estado.getStatus().getShowdownName()));
+            }
+        } catch (Throwable t) {
+            // ⚠ SE MANDA EL PAQUETE IGUAL, con el equipo vacio. Si no se manda
+            //   nada, la pantalla se queda en «cargando» para siempre y el
+            //   jugador no sabe si es lento o esta roto.
+            LunaEternal.LOG.error("No se pudo leer el equipo para la pantalla de curar", t);
+        }
+
+        ServerPlayNetworking.send(jugador, new EstadoCura(
+                List.copyOf(equipo),
+                net.pokereport.luna.heal.HealService.restante(jugador),
+                net.pokereport.luna.heal.HealService.necesitaCura(jugador)));
     }
 
     /**

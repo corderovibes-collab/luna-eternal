@@ -77,6 +77,7 @@ public final class AutoTest {
             testOficios();
             testArbolMisiones();
             testClanes(a, b);
+            testCura();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -1050,6 +1051,51 @@ public final class AutoTest {
         var lineas = new ArrayList<String>();
         net.pokereport.luna.command.EconomyReport.render(stats, 24, lineas::add);
         check("el informe se genera sin errores", lineas.size() > 10);
+    }
+
+    /**
+     * La curación: el reloj y lo que la pantalla necesita para dibujarse.
+     *
+     * <p>⚠ NO se cura a nadie aquí. Curar necesita un jugador conectado y un
+     * equipo de Cobblemon, y el autotest corre desde consola. Lo que sí se puede
+     * comprobar —y es donde están los fallos que no se ven— es el <b>contrato</b>:
+     * que el cooldown sea un número de segundos coherente, que el enum de estado
+     * que viaja al cliente exista de verdad, y que la pantalla quepa.
+     */
+    private void testCura() {
+        // ⚠ EL COOLDOWN NO PUEDE SER 0 NI NEGATIVO. A 0 la curación deja de ser
+        //   un recurso: se cura entre turno y turno y el combate deja de tener
+        //   consecuencia, que es justo lo que el cooldown existe para evitar.
+        check("la curacion tiene cooldown y es positivo",
+            net.pokereport.luna.heal.HealService.COOLDOWN_MIN > 0);
+
+        // ⚠ Y TAMPOCO PUEDE PASARSE. Diez minutos es lo diseñado; una hora
+        //   convertiría «gratis» en «gratis pero inservible», que es cobrar por
+        //   curar por la puerta de atrás (P4).
+        check("el cooldown de curar sigue siendo el diseñado (10 min)",
+            net.pokereport.luna.heal.HealService.COOLDOWN_MIN == 10);
+
+        // ⚠⚠ LO QUE VIAJA AL CLIENTE ES EL NOMBRE DE SHOWDOWN DEL ESTADO, y la
+        //    pantalla lo traduce a color. Si Cobblemon renombrara uno, aquí no
+        //    fallaría nada: la pantalla dibujaría el estado en gris «no sé qué
+        //    es esto» y nadie lo notaría hasta que alguien envenenado viera su
+        //    Pokémon como sano.
+        //
+        //    Se comprueban los cinco que la pantalla pinta, contra los que
+        //    Cobblemon registra de verdad.
+        java.util.Set<String> registrados = new java.util.HashSet<>();
+        try {
+            for (var s : com.cobblemon.mod.common.api.pokemon.status.Statuses.INSTANCE
+                    .getPersistentStatuses()) {
+                registrados.add(s.getShowdownName());
+            }
+        } catch (Throwable t) {
+            fail("no se pudieron leer los estados de Cobblemon", t.toString());
+        }
+        for (String estado : new String[] {"psn", "brn", "par", "slp", "frz"}) {
+            check("el estado '" + estado + "' que dibuja la pantalla existe en Cobblemon",
+                registrados.contains(estado));
+        }
     }
 
     // ------------------------------------------------------------ auxiliares

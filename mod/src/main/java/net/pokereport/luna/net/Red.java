@@ -981,6 +981,18 @@ public class Red implements ModInitializer {
      * cobrado: cobrar es del jugador, y dejar la cadena parada porque a alguien se
      * le olvidó pulsar el botón sería castigar por no mirar la pantalla.
      */
+    /**
+     * Vuelve a mandarle el estado del inicial.
+     *
+     * <p>⚠ Existe porque {@code /luna reiniciarinicial} borraba la marca y NO
+     * PASABA NADA: el cliente guarda la ultima respuesta, asi que seguia
+     * pensando que ya habia elegido hasta reconectar. Borrar en la base no
+     * cambia lo que el cliente ya cree.
+     */
+    public static void refrescarInicial(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        enviarIniciales(jugador);
+    }
+
     private static void enviarIniciales(net.minecraft.server.network.ServerPlayerEntity jugador) {
         LunaEternal.submit(() -> {
             try {

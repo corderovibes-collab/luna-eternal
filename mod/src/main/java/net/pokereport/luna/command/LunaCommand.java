@@ -498,8 +498,13 @@ public final class LunaCommand {
                         .resolve(jugador.getUuid(), jugador.getName().getString());
                 LunaEternal.kitService().undoOnce(id,
                         net.pokereport.luna.starter.StarterService.CLAVE);
+                // ⚠ SE REENVIA EL ESTADO, y sin esto el comando "no servia":
+                //   borraba la fila y no pasaba nada visible, porque el cliente
+                //   guarda la ultima respuesta y seguia creyendo que ya habia
+                //   elegido. Borrar en la base no cambia lo que el cliente cree.
+                net.pokereport.luna.net.Red.refrescarInicial(jugador);
                 origen.getServer().execute(() -> origen.sendFeedback(() -> Text.literal(
-                        "§aMarca borrada. Vuelve a entrar y saldra la pantalla."), false));
+                        "§aMarca borrada. La pantalla se abrira sola."), false));
             } catch (Exception e) {
                 LunaEternal.LOG.warn("No se pudo reiniciar el inicial: {}", e.toString());
             }

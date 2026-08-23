@@ -74,6 +74,7 @@ public final class AutoTest {
             testCazas(a);
             testVozPokedex();
             testCosmeticos();
+            testOficios();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -96,6 +97,67 @@ public final class AutoTest {
     }
 
     // ------------------------------------------------------------ pruebas
+
+    /**
+     * Los invariantes de los OFICIOS.
+     *
+     * <p>⚠ El primero es el que importa: <b>el nombre de cada Via tiene que estar
+     * en el ENUM de la base</b>. La columna `player_path.path` es un ENUM de
+     * MariaDB, no un VARCHAR, y meter un valor que no esta en la lista NO da un
+     * error claro: MariaDB guarda la cadena VACIA y suelta un aviso que nadie
+     * mira. El oficio se "guardaria" y al leerlo no existiria.
+     *
+     * <p>Añadir una Via al enum de Java sin su migracion es exactamente eso, y es
+     * un cambio de una linea que parece inofensivo.
+     */
+    private void testOficios() throws Exception {
+        // Se prueba CONTRA LA BASE, no contra una lista escrita aqui: lo que hay
+        // que comprobar es que la columna acepta el valor, y eso solo lo sabe la
+        // base. Una lista nuestra se desincronizaria igual que el enum.
+        long p = players.resolve(T1, N1);
+        var prog = LunaEternal.progression();
+        boolean todasCaben = true;
+        for (var via : net.pokereport.luna.progression.Path.values()) {
+            try {
+                prog.grant(p, via, 1);
+            } catch (Exception e) {
+                todasCaben = false;
+            }
+        }
+        check("la base acepta todas las Vias declaradas", todasCaben);
+
+        // Solo los oficios pagan. Si una Via normal pagara, subir de nivel seria
+        // una fuente de ingresos y P3 dice sumideros antes que fuentes.
+        boolean soloOficiosPagan = true;
+        boolean oficiosPaganTodo = true;
+        for (var via : net.pokereport.luna.progression.Path.values()) {
+            for (int n = 1; n <= net.pokereport.luna.progression.Path.MAX_LEVEL; n++) {
+                long paga = via.plataPorNivel(n);
+                if (!via.esOficio() && paga != 0) {
+                    soloOficiosPagan = false;
+                }
+                if (via.esOficio() && paga <= 0) {
+                    oficiosPaganTodo = false;
+                }
+            }
+        }
+        check("solo los oficios pagan Plata", soloOficiosPagan);
+        check("todo nivel de oficio paga algo", oficiosPaganTodo);
+        check("hay al menos un oficio",
+              !net.pokereport.luna.progression.Path.oficios().isEmpty());
+
+        // La paga CRECE con el nivel: el salto de IV a V cuesta 75 veces mas XP
+        // que el de 0 a I, y pagar lo mismo haria que nadie pasara del segundo.
+        boolean creciente = true;
+        for (var via : net.pokereport.luna.progression.Path.oficios()) {
+            for (int n = 2; n <= net.pokereport.luna.progression.Path.MAX_LEVEL; n++) {
+                if (via.plataPorNivel(n) <= via.plataPorNivel(n - 1)) {
+                    creciente = false;
+                }
+            }
+        }
+        check("la paga de un oficio crece con el nivel", creciente);
+    }
 
     /**
      * Los invariantes del catalogo de cosmeticos.

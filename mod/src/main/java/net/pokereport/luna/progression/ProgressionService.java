@@ -70,7 +70,26 @@ public final class ProgressionService {
      *
      * @return el estado resultante
      */
+    /**
+     * Una concesión de XP, con el nivel que había ANTES.
+     *
+     * <p>⚠ El nivel anterior sale de la MISMA transacción que la subida, y eso no
+     * es un lujo: para pagar por subir hay que saber si se ha subido, y leerlo
+     * fuera abriría una ventana en la que dos concesiones a la vez veen el mismo
+     * «antes» y <b>pagan el mismo nivel dos veces</b>. Aquí sale del
+     * {@code SELECT ... FOR UPDATE} que ya bloqueaba la fila.
+     */
+    public record Subida(PathState estado, int nivelAnterior) {
+        public boolean subio() {
+            return estado.level() > nivelAnterior;
+        }
+    }
+
     public PathState grant(long playerId, Path path, long amount) throws SQLException {
+        return grantDetallado(playerId, path, amount).estado();
+    }
+
+    public Subida grantDetallado(long playerId, Path path, long amount) throws SQLException {
         if (amount <= 0) throw new IllegalArgumentException("La XP debe ser positiva");
 
         try (Connection c = db.connection()) {
@@ -92,6 +111,7 @@ public final class ProgressionService {
                     }
                 }
 
+                int nivelAntes = level;
                 xp += amount;
                 while (level < Path.MAX_LEVEL && xp >= Path.xpForNextLevel(level)) {
                     xp -= Path.xpForNextLevel(level);
@@ -110,7 +130,7 @@ public final class ProgressionService {
                 }
 
                 c.commit();
-                return new PathState(path, level, xp);
+                return new Subida(new PathState(path, level, xp), nivelAntes);
 
             } catch (Exception e) {
                 c.rollback();

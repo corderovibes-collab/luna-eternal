@@ -61,6 +61,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             Tablist.setup(server);
             // Se suscribe cuando Cobblemon ya esta cargado del todo.
             net.pokereport.luna.pokedex.CaptureListener.register();
+            // Los OFICIOS: mineria, pesca, cultivo y cria.
+            net.pokereport.luna.progression.OficiosListener.register();
             net.pokereport.luna.pokedex.ScanListener.register();
         });
 

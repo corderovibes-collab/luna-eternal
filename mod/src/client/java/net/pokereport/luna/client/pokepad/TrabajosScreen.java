@@ -90,7 +90,22 @@ public class TrabajosScreen extends Screen {
     private static final int SEPARADOR = 0xFF3C4250;
 
     private static final int MARGEN = 14, AIRE = 8;
+    /** Filas por pagina. Con ocho oficios salen dos paginas. */
     private static final int FILAS = 5;
+
+    // ---- las flechas de pagina, en la banda naranja de abajo ---------------
+    //
+    // ⚠ Las mismas medidas que en la pantalla de cosmeticos, y NO por comodidad:
+    //   salieron de recorrer el PNG --banda calida y=698..745, adornos en
+    //   x=732..744, 763..774, 936..947 y 966..978-- y el chasis es el mismo.
+    //   Volver a medirlas seria repetir el trabajo para llegar al mismo sitio;
+    //   escribirlas a ojo seria repetir el error que ese chasis ya provoco cuatro
+    //   veces.
+    private static final int PAG_W = 50, PAG_H = 40;
+    private static final int PAG_Y = 698 + (745 - 698 - PAG_H) / 2;
+    private static final int PAG_SEP = 215;
+    private static final Identifier ADELANTE =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/boton_adelante.png");
 
     // ---- paleta, la misma de las otras pantallas ---------------------------
     private static final int FILA_FONDO = 0xFFBFCBE8;
@@ -108,6 +123,7 @@ public class TrabajosScreen extends Screen {
     private float k;
     private int ancho, alto, x0, y0;
     private List<Red.ViaEstado> vias = List.of();
+    private int pagina = 0;
 
     public TrabajosScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.trabajos"));
@@ -199,6 +215,7 @@ public class TrabajosScreen extends Screen {
         dibujarNavegacion(ctx, ratonX, ratonY);
         dibujarResumen(ctx);
         dibujarFilas(ctx, ratonX, ratonY);
+        dibujarPaginas(ctx, ratonX, ratonY);
 
         ctx.draw();
 
@@ -298,7 +315,7 @@ public class TrabajosScreen extends Screen {
         separador(ctx, TOTAL_Y - 16);
         texto(ctx, Text.translatable("pokepad.lunaeternal.nivel_total"),
                 PANEL_X + PANEL_W / 2, TOTAL_Y, 20, TEXTO_SUAVE, true, false);
-        texto(ctx, Text.literal(suma + " / " + (FILAS * Path.MAX_LEVEL)),
+        texto(ctx, Text.literal(suma + " / " + (Path.values().length * Path.MAX_LEVEL)),
                 PANEL_X + PANEL_W / 2, TOTAL_Y + 24, 34, 0xFFFFFFFF, true, false);
     }
 
@@ -343,13 +360,65 @@ public class TrabajosScreen extends Screen {
         int anchoUtil = PANT_W - 2 * MARGEN;
         int altoUtil = PANT_H - 2 * MARGEN;
         int fh = (altoUtil - (FILAS - 1) * AIRE) / FILAS;
+        int desde = pagina * FILAS;
 
-        for (int i = 0; i < todas.length && i < FILAS; i++) {
-            Path via = todas[i];
+        for (int n = 0; n < FILAS; n++) {
+            int idx = desde + n;
+            if (idx >= todas.length) {
+                break;
+            }
+            Path via = todas[idx];
             int ax = PANT_X + MARGEN;
-            int ay = PANT_Y + MARGEN + i * (fh + AIRE);
+            int ay = PANT_Y + MARGEN + n * (fh + AIRE);
             dibujarFila(ctx, via, buscar(via), ax, ay, anchoUtil, fh, rx, ry);
         }
+    }
+
+    /** Cuantas paginas hacen falta para las Vias y oficios que haya. */
+    private int paginas() {
+        return Math.max(1, (Path.values().length + FILAS - 1) / FILAS);
+    }
+
+    /**
+     * Las flechas de pagina.
+     *
+     * <p>Se dibujan <b>apagadas en los extremos, no escondidas</b>: una flecha que
+     * desaparece mueve la que queda y deja al jugador sin saber si ha llegado al
+     * final o si algo ha dejado de funcionar.
+     */
+    private void dibujarPaginas(DrawContext ctx, int rx, int ry) {
+        int total = paginas();
+        if (total <= 1) {
+            return;
+        }
+        int cx = PANT_X + PANT_W / 2;
+        dibujarFlecha(ctx, ATRAS, cx - PAG_SEP - PAG_W / 2, rx, ry, pagina > 0);
+        dibujarFlecha(ctx, ADELANTE, cx + PAG_SEP - PAG_W / 2, rx, ry, pagina < total - 1);
+        // ⚠ A ESCALA ENTERA. La fuente de Minecraft es un mapa de bits: a escala
+        //   fraccionaria cada pixel de letra cae entre dos de pantalla y el
+        //   contador se ve emborronado. Es la misma correccion que en cosmeticos.
+        float escala = Math.max(1f, Math.round(18 * k / textRenderer.fontHeight));
+        var m = ctx.getMatrices();
+        m.push();
+        m.translate(x0, y0, 0);
+        m.scale(escala, escala, 1f);
+        Text etiqueta = Text.literal((pagina + 1) + " / " + total);
+        ctx.drawText(textRenderer, etiqueta,
+                Math.round(cx * k / escala) - textRenderer.getWidth(etiqueta) / 2,
+                Math.round((PAG_Y + PAG_H / 2) * k / escala) - textRenderer.fontHeight / 2,
+                0xFFFFFFFF, true);
+        m.pop();
+    }
+
+    private void dibujarFlecha(DrawContext ctx, Identifier tex, int ax,
+                               int rx, int ry, boolean viva) {
+        if (viva && dentro(rx, ry, px(ax), py(PAG_Y), pl(PAG_W), pl(PAG_H))) {
+            marco(ctx, px(ax) - 2, py(PAG_Y) - 2, pl(PAG_W) + 4, pl(PAG_H) + 4,
+                    BORDE_ENCIMA, 2);
+        }
+        ctx.setShaderColor(1f, 1f, 1f, viva ? 1f : 0.4f);
+        dibujarTextura(ctx, tex, px(ax), py(PAG_Y), pl(PAG_W), pl(PAG_H), 120, 96);
+        ctx.setShaderColor(1f, 1f, 1f, 1f);
     }
 
     private void dibujarFila(DrawContext ctx, Path via, Red.ViaEstado estado,
@@ -385,6 +454,17 @@ public class TrabajosScreen extends Screen {
         // Qué desbloquea. Siempre visible: es la promesa, y una promesa escondida
         // no motiva a nadie.
         texto(ctx, Text.literal(via.unlocks), tx, ay + ah - 26, 18, TEXTO_SUAVE, false, true);
+
+        // ⚠ EN UN OFICIO SE ENSEÑA LO QUE PAGA EL SIGUIENTE NIVEL, y esa es toda
+        //   la diferencia entre una Via y un oficio: una desbloquea contenido y el
+        //   otro da dinero. Sin la cifra, las ocho filas parecerian lo mismo.
+        if (via.esOficio() && nivel < Path.MAX_LEVEL) {
+            long paga = via.plataPorNivel(nivel + 1);
+            if (paga > 0) {
+                texto(ctx, Text.literal("+" + String.format("%,d", paga)),
+                        ax + aw - 40, ay + ah - 28, 20, 0xFF2E7D46, true, true);
+            }
+        }
     }
 
     private void dibujarBarra(DrawContext ctx, Red.ViaEstado estado, Path via,
@@ -454,7 +534,29 @@ public class TrabajosScreen extends Screen {
             close();
             return true;
         }
+        int total = paginas();
+        if (total > 1) {
+            int pcx = PANT_X + PANT_W / 2;
+            if (dentro(rx, ry, px(pcx - PAG_SEP - PAG_W / 2), py(PAG_Y), pl(PAG_W), pl(PAG_H))) {
+                return cambiarPagina(-1);
+            }
+            if (dentro(rx, ry, px(pcx + PAG_SEP - PAG_W / 2), py(PAG_Y), pl(PAG_W), pl(PAG_H))) {
+                return cambiarPagina(+1);
+            }
+        }
         return super.mouseClicked(mx, my, boton);
+    }
+
+    /** ⚠ NO da la vuelta al llegar al final: saltar de la ultima a la primera
+     *  hace que el jugador no sepa cuantas hay. */
+    private boolean cambiarPagina(int paso) {
+        int destino = pagina + paso;
+        if (destino < 0 || destino >= paginas()) {
+            return true;
+        }
+        pagina = destino;
+        sonar();
+        return true;
     }
 
     private void sonar() {

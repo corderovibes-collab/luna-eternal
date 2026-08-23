@@ -976,11 +976,20 @@ Backups       ⚠⚠ EL PLAN DA **CERO** RANURAS DE BACKUP EN EL PANEL.
                 regiones por dimension y las filas por tabla. Sirve para
                 elegir que copia restaurar sin bajarse varias de 47 MB, y
                 para notar que una salio a medias
-              ⚠⚠ CADUCA EN 2026: rclone usa su client_id COMPARTIDO de
-                 Google y Google lo esta retirando este ano. Cuando deje de
-                 funcionar, la copia fallara y hay que crear un client_id
-                 propio en Google Cloud Console. Ver docs y el aviso que
-                 imprime rclone en cada ejecucion
+              ✅ CLIENT_ID PROPIO (2026-08-23). rclone usaba el client_id
+                 COMPARTIDO de Google, que lo estaban retirando durante 2026:
+                 la copia habria empezado a fallar de madrugada y sin que
+                 nadie mirase. Hoy usa uno del proyecto de Google Cloud
+                 `luna-eternal-backups`, y el aviso ya no sale
+              ⚠ `drive.file` SOLO VE LO QUE CREO ESE MISMO CLIENTE OAUTH.
+                Al cambiar de client_id, las copias hechas con el anterior
+                DEJAN DE VERSE desde rclone -- siguen en Drive y se abren
+                por la web, pero `lsl` dice "directory not found". No es que
+                se pierdan; es que las gestiona otro cliente. Si algun dia
+                hay que rotar el client_id otra vez, contar con ello
+              ⚠ el consentimiento esta en modo PRUEBA y solo admite los
+                correos de la lista de usuarios de prueba. Anadir a alguien
+                = Google Cloud Console -> Audiencia -> Usuarios de prueba
               medido 2026-08-23: 92,1 MB por copia, ciclo de 75 s
 Servidor      allow-flight=true (lo exige Axiom; revertir al abrir)
               enforce-secure-profile=false · require-resource-pack=false

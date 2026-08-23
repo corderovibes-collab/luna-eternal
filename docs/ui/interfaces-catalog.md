@@ -55,25 +55,34 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 
 ## 1. Estado y prioridad
 
+> **2026-08-23 — cinco pantallas hechas y el recorrido del jugador nuevo
+> cerrado.** Falta añadir a esta tabla la **pantalla del inicial**, que no estaba
+> en la lista de Diosesmon porque ellos no la tienen como app: se abre sola al
+> entrar. Ver [`misiones.md`](misiones.md) §2.
+>
+> **Lo siguiente que más se nota es la TIENDA**: hoy un jugador captura pero no
+> puede comprar Poké Balls ni curar su equipo, y cuatro misiones del árbol no se
+> pueden completar por eso.
+
 | # | Pantalla | Estado | Prioridad | Depende de |
 |---|---|---|---|---|
 | 1 | **LunaPad** (principal) | ⬜ **rehacer** | 🔴 | — |
 | 2 | **Barra lateral** | ⬜ **rehacer** | 🔴 | — |
 | 2b | **Tablist** (cabecera, pie, rangos) | ⬜ **rehacer** | 🔴 | — |
 | 3 | **Cartera** | ⬜ **rehacer** | 🔴 | — |
-| 4 | **Vías** | ⬜ **rehacer** | 🔴 | — |
+| 4 | **Vías** | ✅ **hecha** (2026-08-23, `TrabajosScreen`) | — | — |
 | 5 | **Puerta del mundo** | ⬜ **rehacer** | 🔴 | — |
 | 6 | **Viajes / LunaTaxi** | ⬜ | 🟠 | ciudadela construida |
 | 7 | **Tienda** | ⬜ **rehacer** | 🔴 | — |
 | 8 | **GTS** | ⬜ **rehacer** | 🔴 | Pokémon cuando haya Cobblemon |
 | 9 | **Pokédex** | ⬜ **rehacer** | 🔴 | — |
 | 10 | **Kits** | ⬜ **rehacer** | 🔴 | rangos, para los de rango |
-| 11 | **Misiones** | ⬜ | 🟡 | sistema de quests |
+| 11 | **Misiones** | ✅ **hecha** (2026-08-23, árbol de 28 en 6 cadenas) | — | — |
 | 12 | **Cazas** | ⬜ | 🟡 | rotación |
 | 13 | **Medallas** | ⬜ | 🟡 | gimnasios |
 | 14 | **Tesoros** | ⬜ | 🟡 | decisión de `treasures.md` §2 |
-| 15 | **Oficios** | ⬜ | 🟡 | sistema de trabajos |
-| 16 | **Cosméticos** | ⬜ | 🟡 | catálogo |
+| 15 | **Oficios** | ✅ **hecho** (2026-08-23) — minar, pescar, cosechar y criar dan Plata | — | — |
+| 16 | **Cosméticos** | ✅ **hecha** (2026-08-22) — 65 disfraces, 378 sombreros, 11 auras | — | — |
 | 17 | **Clan** | ⬜ | 🟡 | sistema social |
 | 18 | **Caja (PC)** | ⬜ | 🟡 | integración Cobblemon |
 | 19 | **Criadero** | ⬜ | ⚪ | cría |

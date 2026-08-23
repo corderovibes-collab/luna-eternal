@@ -3,11 +3,30 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-08-22
+**Última actualización:** 2026-08-23
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela)
 **Estado:** PHASE 0 y PHASE 1 completadas. 26 documentos, decisiones D-001 a
 D-038. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, cinco vías de progresión, y las interfaces base operativas.
+
+> **2026-08-23 — EL RECORRIDO DEL JUGADOR NUEVO ESTA CERRADO, POR FIN.** La
+> pantalla que faltaba era **la del inicial**, y lo que le faltaba a ella no era
+> lógica: `StarterService` llevaba meses escrito y probado, pero **`conceder()`
+> no lo llamaba nadie** desde que D-026 borró la interfaz vieja. El PokePad pasa
+> de 2 pantallas a 5 —**Trabajos**, **Misiones** e **Inicial** son nuevas— y con
+> ellas entran los **OFICIOS** (minar, pescar y cosechar dan Plata) y un **árbol
+> de 28 misiones en 6 cadenas**. Autotest 136 → **156**.
+>
+> ⚠⚠ **Y la lección del día, que salió CUATRO veces con cuatro caras distintas:**
+> *un lado cambia algo y el otro no se entera.* Los cosméticos no volvían al
+> reconectar (el servidor empujó antes de que el cliente estuviera listo); la
+> pantalla del inicial dejaba **atrapado** al jugador (esperaba una confirmación
+> que ya había pasado, porque `conceder` es asíncrono y **parece síncrono**); el
+> comando de reinicio «no servía» (borraba la fila y el cliente seguía con su
+> copia); y reiniciar el inicial dejaba la misión puesta (son **dos tablas**).
+> **La regla que queda: si el servidor cambia un estado que el cliente dibuja, el
+> servidor lo reenvía.** Y si es el cliente quien sabe cuándo está listo, que
+> pregunte él.
 
 > **2026-08-22 — Kanto y Johto, de verdad y en las dos direcciones.** Las
 > **256 voces** de la Pokédex están completas (`docs/pokemon/voces-pokedex.md`)
@@ -43,7 +62,9 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 136/136 correctos (2026-08-22, en vivo)
+Autotest      /luna autotest -> 156/156 correctos (2026-08-23, en vivo)
+              eran 136 el 22-ago: +8 de cosmeticos, +6 del arbol de
+              misiones, +5 de oficios y +1 del prefijo de sombreros
               eran 112 el 12-ago; las nuevas cubren las voces
               y antes 125: los 13 de fondos se fueron con el resource pack
 Voces         256 VOCES DE LA POKEDEX · KANTO Y JOHTO COMPLETOS
@@ -301,6 +322,107 @@ Cosmeticos    LA PRIMERA SUB-PANTALLA YA EXISTE Y FUNCIONA EN EL JUEGO
               y lo ven todos. Era el trabajo mas grande que quedaba y se
               resolvio dejando de inventar un sistema paralelo
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
+Inicial       LA PANTALLA QUE DESBLOQUEA EL PROYECTO (2026-08-23)
+              6 iniciales (Kanto + Johto) en 3D . se abre SOLA al entrar
+              ninguna cadena de misiones avanzaba sin esto
+              ⚠⚠ EL BLOQUEO LLEVABA MESES ABIERTO Y NO ERA LOGICA.
+                 feature-gap-analysis.md lo describia: un jugador nuevo
+                 NO TENIA NINGUN POKEMON, y sin Pokemon no servia nada de
+                 lo construido. StarterService estaba escrito y probado
+                 DESDE EL PRINCIPIO --marca primero, entrega despues,
+                 deshace si falla, da XP y avanza la mision-- y lo unico
+                 que faltaba era QUIEN LLAMARA a conceder()
+              ⚠ SE ABRE SOLA porque un icono mas no habria servido: QUIEN
+                ACABA DE ENTRAR NO SABE QUE EL POKEPAD EXISTE
+              ⚠ Y LO DECIDE EL SERVIDOR (kit_claim), no "?tengo algun
+                Pokemon?" -- eso daria falso positivo con quien guarde su
+                equipo en el PC
+              ⚠⚠ SE ABRE DESDE EL TICK, NO AL RECIBIR EL PAQUETE. Al
+                 llegar, el jugador esta en la pantalla de CARGA y
+                 currentScreen == null es falso: la apertura se perdia
+              ⚠⚠ Y DEJO ATRAPADO A UN JUGADOR. conceder() es ASINCRONO y
+                 PARECE SINCRONO: encola y vuelve, asi que preguntar justo
+                 despues leia el estado ANTERIOR. La pantalla se quedaba
+                 en ENTREGANDO y no se puede cerrar sin elegir.
+                 Hoy avisa al terminar EN LOS TRES CAMINOS, y ademas hay
+                 SALIDA a los 6 s: UNA PANTALLA QUE NO SE PUEDE CERRAR
+                 TIENE QUE TENER SIEMPRE UNA SALIDA
+              /luna reiniciarinicial (nivel 4) para volver a verla
+                borra la marca Y la mision: son DOS TABLAS distintas
+                (kit_claim y quest_progress), y borrar una sola dejaba
+                el estado A MEDIAS, que es peor que cualquiera de las dos
+
+Misiones      EL ARBOL, CON SUS RAMAS Y SUS CANDADOS (2026-08-23)
+              28 misiones . 6 cadenas . tutorial, entrenador,
+              coleccionista, oficios, comercio, diaria
+              ⚠ EL MODELO YA ERA UN ARBOL desde PHASE 5 y nadie lo habia
+                visto: Quest tiene chain (pestania), requires (arista) y
+                order. El tutorial ya branchea
+              el reparto se CALCULA --la columna es la PROFUNDIDAD, no el
+              campo order-- y el arbol SE ENCOGE SOLO si no cabe: con el
+              nodo a 72 la cadena oficios pedia 754 px en 698, y la
+              version anterior NO LO DETECTABA: dibujaba fuera del marco,
+              que desde dentro se ve como "faltan misiones"
+              ⚠ el nodo lleva ICONO segun el tipo de objetivo y el nombre
+                DEBAJO: dentro solo cabia partido en dos lineas de letra
+                diminuta, y eran cajas grises indistinguibles
+              ⚠ 6 invariantes, y los 3 que importan cazan fallos
+                INVISIBLES del JSON: un requires a algo que no existe, uno
+                que cruza de cadena, y un CICLO. Ninguno da error al
+                cargar, y un ciclo cuelga EL DIBUJADO
+              /luna reiniciarmision <id> (nivel 4, autocompleta)
+              ⚠ t4_tienda, t5_gts, m1_comprar y m2_vender NO SE PUEDEN
+                COMPLETAR todavia: piden tienda o GTS, que no tienen
+                pantalla
+
+Oficios       MINAR, PESCAR Y COSECHAR DAN PLATA (2026-08-23, V012)
+              5 Vias -> 8 . MINERO, PESCADOR, AGRICULTOR
+              UNA VIA DESBLOQUEA CONTENIDO, UN OFICIO DA DINERO: por eso
+              solo los oficios pagan. Si subir de Via tambien pagara, la
+              progresion seria una fuente de ingresos (P3)
+                nivel  50 . 150 . 400 . 1.000 . 2.500 de Plata
+                los tres al maximo -> 100 LunaCoins, UNA VEZ
+              ⚠ SE BAJO DIEZ VECES tras calibrar contra la tienda (de 8 a
+                3.000): la escala vieja daba 41.000 por oficio, o sea
+                TRECE Revivir. EL DINERO DE MINAR SON LAS MENAS, NO EL
+                BONO -- un extra que supera a la actividad deja de serlo
+              ⚠ CON 100 LUNACOINS NO SE COMPRA NINGUN COSMETICO (el mas
+                barato son 1.200). No es un error, pero TRASLADA TODO EL
+                PESO A LOS EVENTOS: D-039 decia que eran "la mitad" y con
+                esta cifra son practicamente la unica via gratuita
+              ⚠ LA MINERIA EXCLUYE EL CREATIVO: un constructor con Axiom
+                haria de la ciudadela la mina mas rentable del servidor, y
+                ahora mismo el trabajo del proyecto ES construirla
+              ⚠ Y el evento es AFTER, no BEFORE: el "antes" se dispara
+                aunque el bloque no llegue a romperse
+              ⚠ el valor de un bloque se decide por ETIQUETAS, no por una
+                lista: un mineral nuevo entra solo
+              ⚠ COCINA NO ESTA, y es deliberado: Cobblemon 1.7 tiene olla
+                (CookingPotMenu, CookingPotRecipe) pero NO PUBLICA NINGUN
+                EVENTO --se revisaron sus 98-- y engancharla pide un mixin
+                dentro de su codigo. Declarar el oficio sin enganche
+                dejaria uno que NUNCA da XP
+              ⚠ V012 hizo falta para TRES NOMBRES: player_path.path es un
+                ENUM de MariaDB, no un VARCHAR. Insertar 'MINERO' en el
+                enum viejo guarda la CADENA VACIA con un aviso que nadie
+                mira. Y el ENUM guarda el INDICE: reordenar los cinco
+                viejos convertiria a los Exploradores en Entrenadores
+              /luna via <VIA> <xp> (nivel 3) para probar
+
+Avisos        ui/Aviso.java centraliza como se anuncia un logro
+              TOAST (esquina, con el marco de los logros de vanilla) +
+              BARRA DE ACCION + CHAT + sonido, y las tres hacen falta:
+                toast  se ve estes donde estes
+                barra  sale donde ya miras al picar
+                chat   PERSISTE: lo unico que se puede releer
+              ⚠ EL TOAST SOLO LLEGA A QUIEN TIENE EL MOD. El chat y la
+                barra son de vanilla, asi que quien no lo tenga se entera
+                igual. Por eso no se manda solo el toast
+              ⚠ CADA TOAST LLEVA SU PROPIO TIPO: con el de por defecto dos
+                subidas seguidas se pisan y solo se ve la ultima
+              ⚠ VIAJA EL TEXTO YA COMPUESTO, no las piezas: si no, el
+                formato viviria en el servidor y en el cliente a la vez
+
 PokePad       LA PANTALLA PRINCIPAL ESTA TERMINADA (2026-08-15)
               verificada en el juego por el usuario. Tecla B
               mod/src/client/ · lunaeternal vuelve a tener cliente
@@ -671,12 +793,18 @@ Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
                 jugador conectado; desde consola solo consta que el
                 datapack carga sin errores. Es el mismo PKM-004 de
                 siempre
-Interfaz      YA HAY DOS PANTALLAS, y las dos verificadas en el juego:
-              el PokePad (2026-08-16) y COSMETICOS (2026-08-22)
-              D-026 borro la vieja para rehacerla con arte real, y eso
-              es lo que se hizo. El resto de servicios --economia,
-              tienda, GTS, kits, misiones, cazas, viaje-- SIGUEN SIN
-              PANTALLA: la logica esta viva y probada, falta la cara
+Interfaz      CINCO PANTALLAS, todas verificadas en el juego:
+                PokePad     2026-08-16   la principal, 15 iconos
+                Cosmeticos  2026-08-22   4 pestanias
+                Trabajos    2026-08-23   8 Vias y oficios, paginado
+                Misiones    2026-08-23   arbol de 28 en 6 cadenas
+                Inicial     2026-08-23   se abre SOLA al entrar
+              4 de los 15 iconos abren algo: pokedex (la de Cobblemon),
+              cosmeticos, trabajos y misiones
+              SIGUEN SIN PANTALLA, con la logica viva y probada:
+                tienda . curar . GTS . kits . cazas . viaje
+              tienda y curar son las que mas se notan: hoy un jugador
+              captura pero no puede comprar Poke Balls ni curar
 Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
               solo captura las avanza; crianza cuenta al ECLOSIONAR
 Repos         luna-eternal (privado) · luna-eternal-pack (publico)
@@ -888,11 +1016,23 @@ Pokémon nada de lo construido servía. El sistema se resolvió y **sigue
 resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 
 ```
-1. Elige inicial (Kanto o Johto)   ✅ StarterService · ⬜ falta pantalla
-2. Captura                          ✅ funciona solo, sin interfaz
-3. Cura gratis                      ✅ HealService · ⬜ falta pantalla
-4. Compra, vende, comercia          ✅ servicios · ⬜ falta pantalla
+1. Elige inicial (Kanto o Johto)   ✅ RESUELTO 2026-08-23 · se abre sola
+2. Captura                          ✅ funciona
+3. Registra en la Pokedex           ✅ funciona, con aviso de logro
+4. Sube oficios y vias              ✅ RESUELTO 2026-08-23
+5. Misiones que le guian            ✅ RESUELTO 2026-08-23 · 28 en 6 cadenas
+6. Cura gratis                      ✅ HealService · ⬜ FALTA PANTALLA
+7. Compra, vende, comercia          ✅ servicios   · ⬜ FALTA PANTALLA
 ```
+
+> **El bloqueo circular se cerró el 2026-08-23.** Lo que faltaba no era lógica:
+> `StarterService` llevaba meses escrito y probado, y **`conceder()` no lo
+> llamaba nadie**. Hoy el jugador entra, elige inicial, captura, y el árbol de
+> misiones le dice qué hacer a continuación.
+>
+> **Lo que queda es la TIENDA y CURAR**, y se nota: se captura, pero no se pueden
+> comprar Poké Balls ni curar el equipo. Cuatro misiones del árbol —`t4_tienda`,
+> `t5_gts`, `m1_comprar`, `m2_vender`— no se pueden completar por eso.
 
 ### Y cuando haya interfaz: calibrar con datos reales
 

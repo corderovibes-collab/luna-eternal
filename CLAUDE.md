@@ -1194,6 +1194,13 @@ Backups       ⚠⚠ EL PLAN DA **CERO** RANURAS DE BACKUP EN EL PANEL.
                 manifiesto publicado y se rebajan solos
               ✅ AUTOMATIZADO Y FUERA DE LA MAQUINA (2026-08-23)
               python tools/backup_auto.py           el ciclo entero
+              ⚠ A MANO HAY QUE FIJAR UTF-8 O REVIENTA A MEDIAS:
+                  PYTHONUTF8=1 python tools/backup_auto.py
+                sin eso muere imprimiendo la salida del hijo
+                (UnicodeEncodeError, cp1252) y puede dejar el mundo
+                CONGELADO -- el finally de save-on es del HIJO, no del
+                padre que acaba de morir. La tarea programada NO tiene
+                este problema: backup_auto.cmd ya fija UTF-8 (63afbc5)
               python tools/backup_auto.py --probar  ¿esta todo listo?
               python tools/backup_auto.py --inventario
               tarea de Windows `LunaEternal-Backup`

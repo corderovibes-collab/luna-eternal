@@ -1018,6 +1018,16 @@ public class Red implements ModInitializer {
         });
     }
 
+    /**
+     * Vuelve a mandarle el arbol.
+     *
+     * <p>Misma razon que {@code refrescarInicial}: cambiar la base no cambia lo
+     * que el cliente ya tiene dibujado.
+     */
+    public static void refrescarMisiones(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        enviarMisiones(jugador);
+    }
+
     private static void enviarMisiones(net.minecraft.server.network.ServerPlayerEntity jugador) {
         LunaEternal.submit(() -> {
             try {

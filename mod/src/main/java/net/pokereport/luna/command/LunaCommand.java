@@ -121,6 +121,19 @@ public final class LunaCommand {
                                 com.mojang.brigadier.arguments.LongArgumentType
                                         .getLong(ctx, "xp"))))))
 
+            .then(literal("reiniciarmision")
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(argument("id", com.mojang.brigadier.arguments.StringArgumentType.word())
+                    .suggests((c, b) -> {
+                        for (var q : LunaEternal.quests().catalogo()) {
+                            b.suggest(q.id());
+                        }
+                        return b.buildFuture();
+                    })
+                    .executes(ctx -> reiniciarMision(ctx.getSource(),
+                            com.mojang.brigadier.arguments.StringArgumentType
+                                    .getString(ctx, "id")))))
+
             .then(literal("reiniciarinicial")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> reiniciarInicial(ctx.getSource())))
@@ -486,6 +499,39 @@ public final class LunaCommand {
      * quien lo use se queda con los dos. Es correcto para probar y seria un
      * agujero en produccion: por eso el nivel.
      */
+    /**
+     * Borra el progreso de una mision concreta. <b>Solo para probar.</b>
+     *
+     * <p>⚠ Nivel 4, como el del inicial, y por lo mismo: NO devuelve la
+     * recompensa ya cobrada, asi que quien reinicie una mision pagada se queda
+     * con el dinero y puede volver a cobrarla. Es un agujero deliberado y por eso
+     * esta donde esta.
+     */
+    private static int reiniciarMision(ServerCommandSource origen, String questId) {
+        var jugador = origen.getPlayer();
+        if (jugador == null) {
+            origen.sendError(Text.literal("Este comando se escribe desde el juego."));
+            return 0;
+        }
+        if (LunaEternal.quests().byId(questId) == null) {
+            origen.sendError(Text.literal("No existe la mision '" + questId + "'."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                int n = LunaEternal.quests().reiniciar(id, questId);
+                net.pokereport.luna.net.Red.refrescarMisiones(jugador);
+                origen.getServer().execute(() -> origen.sendFeedback(() -> Text.literal(
+                        "§a" + questId + ": " + n + " fila(s) borradas."), false));
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo reiniciar la mision: {}", e.toString());
+            }
+        });
+        return 1;
+    }
+
     private static int reiniciarInicial(ServerCommandSource origen) {
         var jugador = origen.getPlayer();
         if (jugador == null) {
@@ -498,13 +544,33 @@ public final class LunaCommand {
                         .resolve(jugador.getUuid(), jugador.getName().getString());
                 LunaEternal.kitService().undoOnce(id,
                         net.pokereport.luna.starter.StarterService.CLAVE);
+
+                // ⚠⚠ Y LA MISION TAMBIEN. Son DOS TABLAS distintas --`kit_claim`
+                //    y `quest_progress`-- y borrar una dejaba la otra puesta: el
+                //    usuario se encontraba la pantalla otra vez pero la mision
+                //    «Un compañero» seguia completa y cobrada. Ni volvia a
+                //    empezar ni se quedaba como estaba: quedaba a medias, que es
+                //    peor que cualquiera de las dos.
+                //
+                //    Se buscan las misiones POR OBJETIVO y no por identificador:
+                //    escribir "t1_inicial" aqui ataria este comando al nombre que
+                //    tiene hoy una fila de un JSON.
+                int misiones = 0;
+                for (var q : LunaEternal.quests().catalogo()) {
+                    if (q.objective().type()
+                            == net.pokereport.luna.quest.Quest.Objective.Type.STARTER) {
+                        misiones += LunaEternal.quests().reiniciar(id, q.id());
+                    }
+                }
+                final int borradas = misiones;
                 // ⚠ SE REENVIA EL ESTADO, y sin esto el comando "no servia":
                 //   borraba la fila y no pasaba nada visible, porque el cliente
                 //   guarda la ultima respuesta y seguia creyendo que ya habia
                 //   elegido. Borrar en la base no cambia lo que el cliente cree.
                 net.pokereport.luna.net.Red.refrescarInicial(jugador);
                 origen.getServer().execute(() -> origen.sendFeedback(() -> Text.literal(
-                        "§aMarca borrada. La pantalla se abrira sola."), false));
+                        "§aReiniciado: marca del inicial y " + borradas
+                        + " mision(es). La pantalla se abrira sola."), false));
             } catch (Exception e) {
                 LunaEternal.LOG.warn("No se pudo reiniciar el inicial: {}", e.toString());
             }

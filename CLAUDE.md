@@ -925,6 +925,36 @@ Herramientas  LO QUE TIENE QUE ESTAR EN LA MAQUINA, y que el formateo
                 navegador: gh auth login --web
               python: .toolchain/python/python.exe (el `python` del PATH
               es el alias de la Store y NO funciona)
+Backups       ⚠⚠ EL PLAN DA **CERO** RANURAS DE BACKUP EN EL PANEL.
+              `feature_limits.backups = 0`: no hay boton, no hay red de
+              seguridad, y todo lo construido vive en un solo disco ajeno
+              python tools/backup.py          mundo + config -> backups/
+              python tools/backup_bd.py       la BD -> backups/*.sql
+              python tools/backup.py --listar
+              LAS DOS SON LA MISMA COPIA PARTIDA EN DOS y se hacen juntas:
+                el disco tiene las CONSTRUCCIONES
+                la BD tiene monedas, vias, Pokedex, kits, misiones, GTS
+                y cosmeticos (D-009). Restaurar solo una deja un servidor
+                con las obras intactas y a todo el mundo sin nada
+              ⚠⚠ EL MUNDO SE CONGELA ANTES DE COPIAR (save-off +
+                 save-all flush). Comprimir un mundo VIVO captura ficheros
+                 de region a medio escribir: la copia pesa lo que debe, se
+                 descomprime bien, y tiene chunks corruptos que no se ven
+                 hasta que alguien camina hasta alli semanas despues
+                 `save-on` va en un `finally`: si el script muriera con el
+                 mundo congelado, el servidor seguiria funcionando SIN
+                 GUARDAR NADA, que es peor que no haber copiado
+              ⚠ PRODUCCION (2a0a48ff) NO SE PUEDE COPIAR CON ESTA CLAVE:
+                la API devuelve 404. Solo se respalda desarrollo
+              medido 2026-08-23: 46,9 MB comprimido · 431 ficheros
+                ciudadela 58 regiones (54,1 MB)  <- las construcciones
+                salvaje 12 · overworld 12 · lobby 8
+                BD: 14 tablas, 252 filas, 30 KB
+              ⚠ NO se copian los jars: 400 MB que ya estan en el
+                manifiesto publicado y se rebajan solos
+              ⚠⚠ Y SIGUEN EN LA MISMA MAQUINA QUE EL PROYECTO. Una copia
+                 en el mismo disco no protege de que muera el disco: hay
+                 que sacarlas fuera. INF-002 no esta cerrado hasta eso
 Servidor      allow-flight=true (lo exige Axiom; revertir al abrir)
               enforce-secure-profile=false · require-resource-pack=false
 ```

@@ -1018,6 +1018,57 @@ líneas y tira el resto según lee, en vez de cargar el fichero entero.
 Y **el botón de abrir la carpeta de registros se ofrece siempre**, también cuando
 sabemos la causa: es lo que hay que mandar por Discord si el arreglo no funciona.
 
+## 13. El primer arranque (2026-08-23)
+
+Dos cosas que **solo se ven instalando de cero**, y por eso llevaban ahí desde
+el principio sin que nadie las notara.
+
+### 13.1 · La página de cuentas de Prism ya no sale
+
+Era **la primera pantalla** que veía alguien recién instalado, y ofrecía cuatro
+opciones —Microsoft, Ely.by, sin conexión, personalizada— de las que aquí **solo
+vale una**. Tres de cada cuatro caminos son trampas.
+
+Y era redundante: `MainWindow::pedirNombreSiHaceFalta()` ya pregunta el nombre
+con la ventana delante, valida el formato, y explica lo que ningún asistente de
+Prism puede explicar — que **el nombre es la identidad**, porque con
+`online-mode=false` el UUID se calcula a partir de él y cambiarlo más tarde es
+empezar de cero.
+
+> ⚠️ **Se deja `login = false` en vez de quitar la página de la lista.** Quitando
+> solo la página saldría un **asistente vacío** cuando la cuenta fuera el único
+> motivo por el que iba a salir.
+
+**Efecto lateral bueno**: las cadenas de Freesm que ninguna traducción cubre —las
+de Ely.by— vivían justo en esa pantalla.
+
+> **Y aquí se corrige lo que decía §6:** la traducción al español **no está a
+> medias**. Se comprobó en una instalación limpia: el launcher descarga
+> `mmc_es.qm` (360 KB) y las cadenas de Prism salen en español. Lo que quedaba
+> en inglés era sobre todo esa pantalla.
+
+### 13.2 · La instancia queda seleccionada sola
+
+Prism guarda cuál estaba elegida la última vez; en un arranque nuevo ese ajuste
+está vacío, así que la ventana abría con **«No hay una instancia seleccionada»** y
+con Lanzar, Editar y Carpeta **apagados**.
+
+Aquí hay **una** instancia: no hay nada que elegir, y pedirle al jugador que la
+pulse antes de poder jugar es un paso que no decide nada.
+
+> ⚠️ Va **después** de restaurar la guardada, a propósito: si tenía una elegida,
+> esa manda. Esto solo rellena el hueco.
+
+### 13.3 · Lo que sigue faltando del modo quiosco
+
+Lo que ya está: las acciones de crear, copiar, borrar, exportar y renombrar
+instancias están ocultas; la página de cuentas fuera; la instancia seleccionada
+sola.
+
+Lo que no: **el botón grande de Jugar**. Hoy se lanza desde el panel de la
+derecha, que es la disposición de Prism. Eso es un rediseño de la ventana, no un
+ajuste.
+
 ## Last Decision
 
 **2026-08-23 · DIAGNÓSTICO Y REPARAR** — el fork deja de estar por detrás del

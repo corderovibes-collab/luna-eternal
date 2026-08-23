@@ -485,8 +485,17 @@ public final class ClanService {
         if (suyo == null || suyo.id() != clan.id()) {
             return Resultado.no("Esa persona no está en tu clan.");
         }
+        // No delega en `traspasar`, lo RECHAZA. Y la diferencia importa.
+        //
+        // Delegar era seguro --`traspasar` es transaccional y baja al anterior--
+        // pero convertia «cambiar el rango de alguien» en «regalarle el clan»
+        // sin que nadie lo pidiera. El dia que una pantalla nueva, un comando o
+        // una migracion pasen LIDER creyendo que asciende a un segundo mando, el
+        // lider se queda sin clan y no hay forma de deshacerlo desde dentro.
+        //
+        // Pasar el mando es una decision aparte y tiene su propio metodo.
         if (nuevo == Rol.LIDER) {
-            return traspasar(lider, objetivo);
+            return Resultado.no("Para nombrar a otro líder, pasa el mando.");
         }
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement(

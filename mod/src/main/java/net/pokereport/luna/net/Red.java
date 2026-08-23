@@ -336,6 +336,39 @@ public class Red implements ModInitializer {
         }
     }
 
+    /**
+     * «Dime quién lleva qué». <b>Lo pide el CLIENTE al entrar.</b>
+     *
+     * <p>⚠⚠ EXISTE PORQUE EMPUJAR NO BASTABA, Y EL FALLO ERA EXACTAMENTE EL QUE
+     * DESCRIBIO EL USUARIO: <i>«cuando me desconecto y me conecto yo no veo
+     * nuevamente los cosméticos, pero los otros sí»</i>.
+     *
+     * <p>El servidor difundía al recibir {@code JOIN}, que es <b>su</b> idea de
+     * «ya está dentro». Pero entre eso y que el cliente tenga mundo, entidades y
+     * renderizadores listos hay una ventana, y un paquete que llega dentro de esa
+     * ventana se pierde sin dar error. Los demás sí lo veían porque <i>ellos</i>
+     * llevaban rato conectados: el paquete llegaba a un cliente ya despierto.
+     *
+     * <p>La solución no es empujar más tarde —¿cuánto más tarde?— sino <b>dejar
+     * que pregunte quien sabe cuándo está listo</b>. Es el mismo trato que ya
+     * tienen el saldo, el catálogo de cosméticos y las misiones: se piden.
+     *
+     * <p>El empujón del {@code JOIN} se mantiene, y no sobra: es lo que hace que
+     * <b>los demás</b> vean al recién llegado. Las dos direcciones tienen dueños
+     * distintos y por eso hacen falta las dos.
+     */
+    public record PedirLlevados() implements CustomPayload {
+        public static final Id<PedirLlevados> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_llevados"));
+        public static final PacketCodec<RegistryByteBuf, PedirLlevados> CODEC =
+                PacketCodec.unit(new PedirLlevados());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame mis misiones», al abrir la pantalla. */
     public record PedirMisiones() implements CustomPayload {
         public static final Id<PedirMisiones> ID =
@@ -606,6 +639,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirTrabajos.ID, PedirTrabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(Trabajos.ID, Trabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(AvisoLogro.ID, AvisoLogro.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirLlevados.ID, PedirLlevados.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirMisiones.ID, PedirMisiones.CODEC);
         PayloadTypeRegistry.playC2S().register(ReclamarMision.ID, ReclamarMision.CODEC);
         PayloadTypeRegistry.playS2C().register(Misiones.ID, Misiones.CODEC);
@@ -658,6 +692,41 @@ public class Red implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(PedirCosmeticos.ID, (carga, ctx) -> {
             var jugador = ctx.player();
             LunaEternal.submit(() -> enviarCosmeticos(jugador));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirLlevados.ID, (carga, ctx) -> {
+            // Todo lo de TODOS, a quien pregunta -- incluido lo suyo, que es
+            // justo lo que se perdia.
+            var jugador = ctx.player();
+            var servidor = jugador.getServer();
+            if (servidor == null) {
+                return;
+            }
+            LunaEternal.submit(() -> {
+                try {
+                    var svc = LunaEternal.cosmetics();
+                    var salida = new ArrayList<LlevaPuesto>();
+                    for (var otro : servidor.getPlayerManager().getPlayerList()) {
+                        long id = LunaEternal.players()
+                                .resolve(otro.getUuid(), otro.getName().getString());
+                        var puestos = svc.equipados(id);
+                        for (String categoria : DIFUNDIDAS) {
+                            String suyo = puestos.get(categoria);
+                            if (suyo != null && !suyo.isEmpty()) {
+                                salida.add(new LlevaPuesto(otro.getUuid(), categoria, suyo));
+                            }
+                        }
+                    }
+                    servidor.execute(() -> {
+                        for (LlevaPuesto p : salida) {
+                            ServerPlayNetworking.send(jugador, p);
+                        }
+                    });
+                } catch (Exception e) {
+                    LunaEternal.LOG.warn("No se pudo contestar a PedirLlevados: {}",
+                            e.toString());
+                }
+            });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirMisiones.ID, (carga, ctx) ->

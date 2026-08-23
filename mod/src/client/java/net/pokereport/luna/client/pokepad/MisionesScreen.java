@@ -65,8 +65,63 @@ public class MisionesScreen extends Screen {
     private static final int NAV_ALTO = 72;
     private static final int MARGEN = 12, PESTANA_ALTO = 52;
 
-    /** El nodo del árbol. Cuadrado a propósito: es un icono, no una tarjeta. */
-    private static final int NODO = 84, SEP_X = 152, SEP_Y = 100;
+    /**
+     * El nodo: un CUADRO CON ICONO, y el nombre debajo.
+     *
+     * <p>⚠⚠ ANTES EL NOMBRE IBA DENTRO, y era el problema. En 84 px caben dos
+     * líneas de letra diminuta —«Un compañero» partido en dos— y el resultado son
+     * cajas grises indistinguibles: hay que <i>leer</i> cada una para saber qué
+     * es. Que es exactamente lo contrario de lo que un árbol tiene que conseguir.
+     *
+     * <p>FTB Quests lo resuelve con un icono grande por nodo, y funciona porque
+     * <b>un icono se reconoce sin leerlo</b>. Aquí el icono sale del TIPO DE
+     * OBJETIVO —un pico para minar, una caña para pescar, una Poké Ball para
+     * capturar— así que dos misiones parecidas se parecen, y eso también informa.
+     *
+     * <p>El nombre va debajo, fuera del cuadro, donde hay ancho de sobra.
+     */
+    private static final int NODO_BASE = 72, ICONO_BASE = 40;
+    private static final int SEP_X_BASE = 170, SEP_Y_BASE = 118;
+    /** Lo que se reserva bajo cada nodo para su nombre: dos líneas. */
+    private static final int NOMBRE_ALTO = 34;
+
+    /**
+     * ⚠⚠ EL ARBOL SE ENCOGE SOLO SI NO CABE, y hace falta de verdad.
+     *
+     * <p>Con el nodo a 72 y el nombre debajo, la cadena «oficios» —cuatro
+     * misiones a la misma profundidad— pedía 754 px de alto en una pantalla de
+     * 698. La primera versión no lo detectaba: dibujaba la cuarta fila fuera del
+     * marco, y desde dentro del juego eso se ve como «faltan misiones».
+     *
+     * <p>Recortar el diseño hasta que quepa lo de hoy sería arreglar el caso y no
+     * el problema: la cadena siguiente con cinco ramas volvería a salirse. Se
+     * calcula un factor por pestaña y ya.
+     *
+     * <p>Con tope inferior: por debajo de 0,55 el icono deja de reconocerse, y un
+     * árbol ilegible no es mejor que uno cortado. Si alguna vez se llega ahí, lo
+     * que hay que hacer es partir la cadena en dos, no seguir encogiendo.
+     */
+    private float escalaArbol = 1f;
+
+    private int nodo() {
+        return Math.round(NODO_BASE * escalaArbol);
+    }
+
+    private int icono() {
+        return Math.round(ICONO_BASE * escalaArbol);
+    }
+
+    private int sepX() {
+        return Math.round(SEP_X_BASE * escalaArbol);
+    }
+
+    private int sepY() {
+        return Math.round(SEP_Y_BASE * escalaArbol);
+    }
+
+    private int nombreAlto() {
+        return Math.round(NOMBRE_ALTO * escalaArbol);
+    }
 
     // ---- las flechas de pestaña, MEDIDAS sobre la banda naranja ------------
     private static final int PAG_W = 50, PAG_H = 40;
@@ -80,7 +135,8 @@ public class MisionesScreen extends Screen {
     private static final int NODO_COBRABLE = 0xFFFFD65C;
     private static final int BORDE = 0xFF7C89B4;
     private static final int BORDE_ENCIMA = 0xFFF35C0C;
-    private static final int LINEA = 0xFF6F7B9E;
+    /** Azul pizarra oscuro: tiene que verse sobre el fondo claro de la pantalla. */
+    private static final int LINEA = 0xFF495270;
     private static final int LINEA_HECHA = 0xFF4E9E63;
     private static final int TEXTO_OSCURO = 0xFF16203A;
     private static final int TEXTO_SUAVE = 0xFF5A668C;
@@ -221,13 +277,24 @@ public class MisionesScreen extends Screen {
             }
             porColumna.computeIfAbsent(prof, x -> new ArrayList<>()).add(q);
         }
+        int maxCol = 0, maxFil = 0;
         for (var e : porColumna.entrySet()) {
             var col = e.getValue();
             col.sort(java.util.Comparator.comparingInt(Red.MisionEstado::orden));
+            maxCol = Math.max(maxCol, e.getKey());
+            maxFil = Math.max(maxFil, col.size());
             for (int i = 0; i < col.size(); i++) {
                 sitio.put(col.get(i).id(), new int[] { e.getKey(), i });
             }
         }
+
+        // Lo que hay, contra lo que pide. Ver el comentario de `escalaArbol`.
+        int anchoUtil = PANT_W - 2 * MARGEN - 56;
+        int altoUtil = PANT_H - MARGEN - PESTANA_ALTO - 26 - MARGEN;
+        int pideAncho = maxCol * SEP_X_BASE + NODO_BASE;
+        int pideAlto = Math.max(0, maxFil - 1) * SEP_Y_BASE + NODO_BASE + NOMBRE_ALTO;
+        escalaArbol = (float) Math.max(0.55, Math.min(1.0,
+                Math.min(anchoUtil / (double) pideAncho, altoUtil / (double) pideAlto)));
     }
 
     // ---- dibujado ----------------------------------------------------------
@@ -366,8 +433,18 @@ public class MisionesScreen extends Screen {
                     activa ? 0xFFFFF0DC : (encima ? 0xFFD3DCF2 : NODO_ABIERTO));
             marco(ctx, px(x), py(PANT_Y + MARGEN), pl(pw - 6), pl(PESTANA_ALTO),
                     activa ? BORDE_ENCIMA : BORDE, Math.max(1, pl(activa ? 3 : 2)));
-            texto(ctx, Text.translatable("pokepad.lunaeternal.cadena." + cadenas.get(i)),
-                    x + (pw - 6) / 2, PANT_Y + MARGEN + 16, 20, TEXTO_OSCURO, true, false);
+            // ⚠⚠ EL TEXTO SE ENCOGE HASTA CABER, y sin esto se salia. Con seis
+            //   pestañas cada una mide 129 px, y «COLECCIONISTA» a cuerpo 20
+            //   ocupa 160: se veian «ENTRENADO» y «COLECCIONIST» pegadas, sin
+            //   que nada fallara. Un texto que no cabe no se recorta solo.
+            Text nombre = Text.translatable("pokepad.lunaeternal.cadena." + cadenas.get(i));
+            int alto = 20;
+            while (alto > 11 && anchoArte(nombre.getString(), alto) > pw - 20) {
+                alto--;
+            }
+            texto(ctx, nombre, x + (pw - 6) / 2,
+                    PANT_Y + MARGEN + (PESTANA_ALTO - alto) / 2 - 2, alto,
+                    TEXTO_OSCURO, true, false);
         }
     }
 
@@ -404,7 +481,10 @@ public class MisionesScreen extends Screen {
             // Una diagonal cruzaría por encima de otros nodos en cuanto la rama
             // tenga tres hijos.
             int medio = (a[0] + b[0]) / 2;
-            int grosor = Math.max(1, pl(4));
+            // ⚠ Mas gruesa y mas oscura que antes: la anterior era 0xFF6F7B9E
+            //   sobre un fondo azul claro, y practicamente no se veia. Un arbol
+            //   sin aristas visibles es una cuadricula.
+            int grosor = Math.max(2, pl(6));
             ctx.fill(px(Math.min(a[0], medio)), py(a[1]) - grosor / 2,
                     px(Math.max(a[0], medio)), py(a[1]) + grosor / 2,
                     padre.completada() ? LINEA_HECHA : LINEA);
@@ -423,44 +503,82 @@ public class MisionesScreen extends Screen {
         }
     }
 
-    /** El centro de un nodo, en píxeles del arte. */
+    /**
+     * El centro de un nodo, en píxeles del arte.
+     *
+     * <p>⚠ El árbol va CENTRADO en el hueco que queda bajo las pestañas. Sin eso,
+     * una cadena de una sola fila —«comercio»— se queda pegada arriba con 300 px
+     * vacíos debajo, que es lo que se veía y lo que hacía que la pantalla
+     * pareciera a medio hacer.
+     */
     private int[] centro(int[] rejilla) {
-        int gx = PANT_X + MARGEN + 28 + rejilla[0] * SEP_X;
-        int gy = PANT_Y + MARGEN + PESTANA_ALTO + 26 + rejilla[1] * SEP_Y;
-        return new int[] { gx + NODO / 2, gy + NODO / 2 };
+        int arriba = PANT_Y + MARGEN + PESTANA_ALTO + 26;
+        int altoUtil = PANT_H - MARGEN - PESTANA_ALTO - 26 - MARGEN;
+        int filas = 1;
+        for (int[] r : sitio.values()) {
+            filas = Math.max(filas, r[1] + 1);
+        }
+        int usado = (filas - 1) * sepY() + nodo() + nombreAlto();
+        int gy = arriba + Math.max(0, (altoUtil - usado) / 2) + rejilla[1] * sepY();
+        int gx = PANT_X + MARGEN + 28 + rejilla[0] * sepX();
+        return new int[] { gx + nodo() / 2, gy + nodo() / 2 };
     }
 
     private void dibujarNodo(DrawContext ctx, Red.MisionEstado q, int[] rejilla,
                              int rx, int ry) {
         int[] c = centro(rejilla);
-        int ax = c[0] - NODO / 2, ay = c[1] - NODO / 2;
-        int x = px(ax), y = py(ay), w = pl(NODO), h = pl(NODO);
+        int lado = nodo();
+        int ax = c[0] - lado / 2, ay = c[1] - lado / 2;
+        int x = px(ax), y = py(ay), w = pl(lado), h = pl(lado);
         boolean encima = dentro(rx, ry, x, y, w, h);
         boolean puesta = elegida != null && elegida.id().equals(q.id());
+        boolean resaltada = encima || puesta;
 
         int fondo = !q.desbloqueada() ? NODO_BLOQUEADO
                 : q.cobrable() ? NODO_COBRABLE
                 : q.completada() ? NODO_HECHO : NODO_ABIERTO;
+
+        // ⚠ SOMBRA BAJO EL NODO. Sin ella los cuadros se funden con el fondo
+        //   claro de la pantalla y el arbol parece una cuadricula plana. Dos
+        //   pixeles bastan: es profundidad, no decoracion.
+        ctx.fill(x + pl(3), y + pl(3), x + w + pl(3), y + h + pl(3), 0x40000000);
         ctx.fill(x, y, x + w, y + h, fondo);
-        marco(ctx, x, y, w, h, encima || puesta ? BORDE_ENCIMA : BORDE,
-                Math.max(1, pl(encima || puesta ? 4 : 2)));
+        // Un brillo arriba y una sombra abajo, DENTRO del cuadro: es lo que hace
+        // que se lea como un boton y no como un rectangulo pintado.
+        ctx.fill(x, y, x + w, y + pl(3), 0x35FFFFFF);
+        ctx.fill(x, y + h - pl(3), x + w, y + h, 0x30000000);
+        marco(ctx, x, y, w, h, resaltada ? BORDE_ENCIMA : BORDE,
+                Math.max(1, pl(resaltada ? 4 : 3)));
 
         if (!q.desbloqueada()) {
-            int m = pl(40);
+            int m = pl(34);
+            ctx.setShaderColor(1f, 1f, 1f, 0.75f);
             dibujarTextura(ctx, CANDADO, x + (w - m) / 2, y + (h - m) / 2, m, m, 100, 100);
-            return;
+            ctx.setShaderColor(1f, 1f, 1f, 1f);
+        } else {
+            // ⚠ EL ICONO EN LUGAR DEL NOMBRE. Ver el comentario de NODO: un icono
+            //   se reconoce sin leerlo, y dos misiones del mismo tipo se parecen.
+            dibujarObjeto(ctx, iconoDe(q.objetivo()),
+                    ax + (lado - icono()) / 2, ay + (lado - icono()) / 2, icono());
         }
 
-        // El nombre, partido, dentro del cuadro. Es lo único que cabe: el resto
-        // vive en el panel de la izquierda.
-        var lineas = partir(limpiar(q.nombre()), NODO - 10, 15);
-        int ty = ay + NODO / 2 - (lineas.size() * 17) / 2;
-        for (String linea : lineas) {
-            texto(ctx, Text.literal(linea), c[0], ty, 15, TEXTO_OSCURO, true, true);
-            ty += 17;
-        }
+        // Marca de estado en la esquina: un tilde si esta hecha, una admiracion
+        // si se puede cobrar. Se ve antes que el color de fondo.
         if (q.cobrable()) {
-            texto(ctx, Text.literal("!"), ax + NODO - 12, ay + 4, 22, 0xFFB03000, true, true);
+            texto(ctx, Text.literal("!"), ax + lado - 13, ay + 2, 24, 0xFFB03000, true, true);
+        } else if (q.completada()) {
+            texto(ctx, Text.literal("✔"), ax + lado - 14, ay + 4, 20,
+                    0xFF1F6B36, true, true);
+        }
+
+        // ⚠ EL NOMBRE VA DEBAJO Y FUERA. Dentro solo cabia partido en dos lineas
+        //   de letra diminuta; aqui hay SEP_X de ancho para el.
+        var lineas = partir(limpiar(q.nombre()), sepX() - 16, 16);
+        int ty = ay + lado + 6;
+        for (int i = 0; i < lineas.size() && i < 2; i++) {
+            texto(ctx, Text.literal(lineas.get(i)), c[0], ty, 16,
+                    q.desbloqueada() ? TEXTO_OSCURO : TEXTO_SUAVE, true, true);
+            ty += 18;
         }
     }
 
@@ -559,7 +677,8 @@ public class MisionesScreen extends Screen {
                 continue;
             }
             int[] c = centro(r);
-            if (dentro(rx, ry, px(c[0] - NODO / 2), py(c[1] - NODO / 2), pl(NODO), pl(NODO))) {
+            if (dentro(rx, ry, px(c[0] - nodo() / 2), py(c[1] - nodo() / 2),
+                    pl(nodo()), pl(nodo()))) {
                 // Una misión bloqueada TAMBIÉN se puede mirar: ver a dónde lleva
                 // la cadena es la mitad de para qué existe el árbol.
                 elegida = q;
@@ -588,6 +707,52 @@ public class MisionesScreen extends Screen {
                     ? SoundEvents.UI_BUTTON_CLICK.value()
                     : SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.6f, 1.0f);
         }
+    }
+
+    /**
+     * El objeto que representa un objetivo.
+     *
+     * <p>⚠ Se elige por TIPO y no por misión: dos misiones de picar tienen que
+     * verse iguales. Es lo que convierte el árbol en algo que se lee de un
+     * vistazo — «esta rama es de minar»— sin una sola palabra.
+     */
+    private static net.minecraft.item.ItemStack iconoDe(String objetivo) {
+        var item = switch (objetivo) {
+            case "STARTER" -> net.minecraft.registry.Registries.ITEM
+                    .get(Identifier.of("cobblemon", "poke_ball"));
+            case "CATCH" -> net.minecraft.registry.Registries.ITEM
+                    .get(Identifier.of("cobblemon", "ultra_ball"));
+            case "POKEDEX", "POKEDEX_NEW" -> net.minecraft.registry.Registries.ITEM
+                    .get(Identifier.of("cobblemon", "pokedex_red"));
+            case "SHOP_BUY" -> net.minecraft.item.Items.EMERALD;
+            case "GTS_SELL" -> net.minecraft.item.Items.GOLD_INGOT;
+            case "PATH_LEVEL" -> net.minecraft.item.Items.EXPERIENCE_BOTTLE;
+            case "EARN" -> net.minecraft.item.Items.GOLD_NUGGET;
+            case "MINE" -> net.minecraft.item.Items.IRON_PICKAXE;
+            case "FISH" -> net.minecraft.item.Items.FISHING_ROD;
+            case "HARVEST" -> net.minecraft.item.Items.WHEAT;
+            case "HATCH" -> net.minecraft.item.Items.TURTLE_EGG;
+            case "BATTLE_WIN" -> net.minecraft.item.Items.IRON_SWORD;
+            default -> net.minecraft.item.Items.PAPER;
+        };
+        // ⚠ Un identificador que Cobblemon no tenga devuelve el AIRE, no null.
+        //   Con aire `drawItem` no pinta nada y el nodo sale vacio -- que parece
+        //   un fallo de arte y no lo es.
+        return item == net.minecraft.item.Items.AIR
+                ? new net.minecraft.item.ItemStack(net.minecraft.item.Items.PAPER)
+                : new net.minecraft.item.ItemStack(item);
+    }
+
+    /** Un objeto a un tamaño distinto de 16: `drawItem` no escala por su cuenta. */
+    private void dibujarObjeto(DrawContext ctx, net.minecraft.item.ItemStack pila,
+                               int ax, int ay, int lado) {
+        float escala = pl(lado) / 16f;
+        MatrixStack m = ctx.getMatrices();
+        m.push();
+        m.translate(px(ax), py(ay), 0);
+        m.scale(escala, escala, 1f);
+        ctx.drawItem(pila, 0, 0);
+        m.pop();
     }
 
     // ---- utilidades --------------------------------------------------------

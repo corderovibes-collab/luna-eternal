@@ -104,6 +104,18 @@ public class LunaCliente implements ClientModInitializer {
 
         // Al salir del mundo se olvida: el saldo es de esa partida. Y se calla
         // la voz, que si no sigue sonando en la pantalla de servidores.
+        // ⚠ SE PIDE AL ENTRAR, y esto arregla "no veo mis cosmeticos al
+        //   reconectar". El servidor difundia al recibir su JOIN, que es SU idea
+        //   de "ya esta dentro"; entre eso y que el cliente tenga mundo y
+        //   renderizadores hay una ventana, y el paquete que cae ahi se pierde
+        //   sin error. Los demas si lo veian porque ELLOS ya llevaban rato
+        //   conectados.
+        //
+        //   Preguntar en vez de esperar quita la ventana entera: el unico que
+        //   sabe cuando esta listo es el cliente.
+        ClientPlayConnectionEvents.JOIN.register((manejador, remitente, cliente) ->
+                ClientPlayNetworking.send(new Red.PedirLlevados()));
+
         ClientPlayConnectionEvents.DISCONNECT.register((manejador, cliente) -> {
             EstadoCliente.olvidar();
             VozPokedex.callar();

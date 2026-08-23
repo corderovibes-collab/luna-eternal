@@ -1172,6 +1172,26 @@ Interfaz      SIETE PANTALLAS. Cinco verificadas en el juego:
                 curar . GTS . kits . cazas . viaje
               CURAR es la que mas se nota: ya se compran Poke Balls, pero
               el equipo sigue sin poder curarse desde el Pad
+              ⚠⚠ CURAR ESTA A MEDIAS Y APARCADO A PROPOSITO (2026-08-23,
+                 decision del usuario: "eso lo hacemos despues").
+                 QUE HAY YA, compilado y commiteado:
+                   PedirCura / EstadoCura / Curar en Red.java
+                   el manejador del servidor (enviarCura)
+                   +7 comprobaciones en el autotest
+                 QUE FALTA:
+                   1) EL ICONO. `curar.png` de 100x100, con el prompt de
+                      docs/ui/prompts-arte-pokepad.md. Es ART-002 y es
+                      del usuario
+                   2) la pantalla CurarScreen
+                   3) la entrada en App.TODAS
+                 ⚠ NO HAY QUE QUITAR NINGUNA CELDA: la rejilla YA PAGINA
+                   y reordena (OrdenPad), asi que curar entra como la 16a
+                   y cae en la pagina 2. Las 15 actuales se quedan
+                 ⚠⚠ LOS PAQUETES ESTAN EN EL JAR COMPILADO PERO **NO
+                    DESPLEGADOS**: el servidor corre el jar de las 18:46,
+                    que no los lleva. Son inertes sin pantalla, asi que no
+                    se reinicio para no echar a nadie. El proximo
+                    despliegue los sube solos
 Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
               solo captura las avanza; crianza cuenta al ECLOSIONAR
 Repos         luna-eternal (privado) · luna-eternal-pack (publico)

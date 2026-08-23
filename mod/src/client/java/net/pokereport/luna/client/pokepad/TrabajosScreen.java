@@ -50,8 +50,12 @@ import net.pokereport.luna.progression.Path;
  */
 public class TrabajosScreen extends Screen {
 
+    // ⚠ El de COSMETICOS, no el del menu principal. El principal trae la ranura
+    //   de la cara --181x182-- y con ella el personaje se queda pequeño y el
+    //   resto del panel vacio. Este no tiene ranura, asi que el panel entero es
+    //   nuestro y el jugador cabe al doble.
     private static final Identifier CHASIS =
-            Identifier.of("lunaeternal", "textures/gui/pokepad/pokepad.png");
+            Identifier.of("lunaeternal", "textures/gui/pokepad/pokepad_cosmeticos.png");
 
     private static final Identifier ATRAS =
             Identifier.of("lunaeternal", "textures/gui/pokepad/boton_atras.png");
@@ -64,8 +68,26 @@ public class TrabajosScreen extends Screen {
     private static final int PANEL_X = 63, PANEL_Y = 70, PANEL_W = 315, PANEL_H = 692;
     private static final int PANT_X = 460, PANT_Y = 204, PANT_W = 801, PANT_H = 494;
     private static final int NAV_ALTO = 72;
-    /** La ranura de la cara del chasis principal. Medida, no escrita. */
-    private static final int CARA_X = 134, CARA_Y = 136, CARA_LADO = 168;
+    // ---- el reparto del panel izquierdo, de arriba abajo -------------------
+    //
+    // Sin ranura de cara, el panel util va de PANEL_Y+NAV_ALTO (142) a
+    // PANEL_Y+PANEL_H (762): 620 px de alto y 315 de ancho.
+    // ⚠ ESTAS CUATRO CIFRAS SE SUMAN A MANO, ASI QUE AQUI ESTA LA CUENTA. La
+    //   primera version solapaba por DOS pixeles --el romano acababa en 586 y el
+    //   bloque siguiente empezaba en 584-- y dos pixeles no se ven en una captura:
+    //   se ven cuando alguien tiene la Via al maximo y el texto se pisa.
+    //
+    //     panel util        142 .. 762
+    //     previsualizador   152 .. 442
+    //     via               446 .. 570   (separador, titulo, nombre, romano)
+    //     como se sube      574 .. 658   (separador, titulo, hasta 2 lineas)
+    //     nivel total       660 .. 734
+    private static final int PREV_Y = 152, PREV_ALTO = 290;
+    private static final int VIA_Y = 464;
+    private static final int SUBE_Y = 590;
+    private static final int TOTAL_Y = 676;
+    /** Las lineas finas que separan bloques dentro del panel oscuro. */
+    private static final int SEPARADOR = 0xFF3C4250;
 
     private static final int MARGEN = 14, AIRE = 8;
     private static final int FILAS = 5;
@@ -212,12 +234,19 @@ public class TrabajosScreen extends Screen {
     }
 
     /**
-     * El panel izquierdo: quién eres y en qué destacas.
+     * El panel izquierdo: quién eres, en qué destacas y qué hacer para subirlo.
+     *
+     * <p>⚠ <b>La línea de «cómo se sube» está aquí y no en las filas de la
+     * derecha, y es deliberado.</b> Cada Vía tiene dos textos —{@code howToRaise}
+     * y {@code unlocks}— y meter los dos en cada fila daría cinco filas de cuatro
+     * líneas: un muro que no se lee. Las filas enseñan <b>qué ganas</b>, que es lo
+     * que hace comparar; el panel enseña <b>qué hacer</b>, pero solo de la Vía en
+     * la que ya vas por delante. Ese es el consejo que sirve.
      *
      * <p>⚠ La <b>Vía dominante</b> se calcula aquí, en el cliente, y es correcto:
-     * es una forma de ORDENAR datos que el servidor ya mandó, no un permiso ni un
-     * saldo. P6 habla de validación económica; ningún cliente gana nada
-     * mintiéndose sobre cuál es su vía más alta.
+     * es ordenar datos que el servidor ya mandó, no un permiso ni un saldo. P6
+     * habla de validación económica; nadie gana nada mintiéndose sobre cuál es su
+     * vía más alta.
      */
     private void dibujarResumen(DrawContext ctx) {
         Red.ViaEstado mejor = null;
@@ -229,33 +258,84 @@ public class TrabajosScreen extends Screen {
                 mejor = v;
             }
         }
-
-        int y = CARA_Y + CARA_LADO + 26;
-        texto(ctx, Text.translatable("pokepad.lunaeternal.via_principal"),
-                PANEL_X + PANEL_W / 2, y, 22, TEXTO_SUAVE, true, false);
-
         Path via = mejor == null ? null : porNombre(mejor.id());
-        // Sin datos todavía, o todo a cero: se dice, no se deja en blanco. Un
-        // hueco vacío parece que algo falló; «Ninguna todavía» dice que estás al
-        // principio, que es la verdad.
-        texto(ctx, via == null || mejor.nivel() == 0
-                        ? Text.translatable("pokepad.lunaeternal.via_ninguna")
-                        : Text.literal(via.displayName),
-                PANEL_X + PANEL_W / 2, y + 30, 32,
-                via == null || mejor.nivel() == 0 ? TEXTO_SUAVE : color(via), true, false);
+        boolean empezado = via != null && (mejor.nivel() > 0 || mejor.xp() > 0);
 
-        if (via != null && mejor.nivel() > 0) {
+        separador(ctx, VIA_Y - 18);
+        texto(ctx, Text.translatable("pokepad.lunaeternal.via_principal"),
+                PANEL_X + PANEL_W / 2, VIA_Y, 20, TEXTO_SUAVE, true, false);
+
+        // Sin datos, o todo a cero: se DICE, no se deja en blanco. Un hueco vacío
+        // parece que algo falló; «Ninguna todavía» dice que estás al principio,
+        // que es la verdad.
+        texto(ctx, empezado ? Text.literal(via.displayName)
+                        : Text.translatable("pokepad.lunaeternal.via_ninguna"),
+                PANEL_X + PANEL_W / 2, VIA_Y + 26, 32,
+                empezado ? color(via) : TEXTO_SUAVE, true, false);
+
+        if (empezado && mejor.nivel() > 0) {
             texto(ctx, Text.literal(Path.roman(mejor.nivel())),
-                    PANEL_X + PANEL_W / 2, y + 70, 40, ORO, true, false);
+                    PANEL_X + PANEL_W / 2, VIA_Y + 64, 42, ORO, true, false);
         }
 
-        // El total, abajo del panel. Es el número que resume una cuenta de un
-        // vistazo, y el único que sirve para compararse con otro jugador.
-        int base = PANEL_Y + PANEL_H - 92;
+        if (empezado) {
+            separador(ctx, SUBE_Y - 16);
+            texto(ctx, Text.translatable("pokepad.lunaeternal.como_se_sube"),
+                    PANEL_X + PANEL_W / 2, SUBE_Y, 18, TEXTO_SUAVE, true, false);
+            // ⚠ SE PARTE EN LÍNEAS MIDIENDO, no cortando por un número de
+            //   caracteres: «Descubrimientos, biomas y rutas» y «Cría, IV/EV y
+            //   linajes» no ocupan lo mismo aunque tengan letras parecidas.
+            int y = SUBE_Y + 24;
+            for (String linea : partir(via.howToRaise, PANEL_W - 40, 19)) {
+                texto(ctx, Text.literal(linea), PANEL_X + PANEL_W / 2, y, 19,
+                        0xFFD4DCEC, true, false);
+                y += 22;
+            }
+        }
+
+        // El total, abajo. Es el número que resume una cuenta de un vistazo, y el
+        // único que sirve para compararse con otro jugador.
+        separador(ctx, TOTAL_Y - 16);
         texto(ctx, Text.translatable("pokepad.lunaeternal.nivel_total"),
-                PANEL_X + PANEL_W / 2, base, 20, TEXTO_SUAVE, true, false);
+                PANEL_X + PANEL_W / 2, TOTAL_Y, 20, TEXTO_SUAVE, true, false);
         texto(ctx, Text.literal(suma + " / " + (FILAS * Path.MAX_LEVEL)),
-                PANEL_X + PANEL_W / 2, base + 26, 34, 0xFFFFFFFF, true, false);
+                PANEL_X + PANEL_W / 2, TOTAL_Y + 24, 34, 0xFFFFFFFF, true, false);
+    }
+
+    /** Una línea fina de lado a lado del panel. Separa sin meter una caja más. */
+    private void separador(DrawContext ctx, int artY) {
+        ctx.fill(px(PANEL_X + 28), py(artY), px(PANEL_X + PANEL_W - 28),
+                py(artY) + Math.max(1, pl(2)), SEPARADOR);
+    }
+
+    /**
+     * Parte un texto en líneas que quepan en {@code anchoArte} píxeles del arte.
+     *
+     * <p>Se mide con el {@code textRenderer} en vez de cortar por un número de
+     * caracteres: la fuente de Minecraft no es de ancho fijo, así que contar
+     * letras deja unas líneas cortas y otras salidas del panel.
+     */
+    private List<String> partir(String texto, int anchoArte, int altoArte) {
+        List<String> salida = new java.util.ArrayList<>();
+        StringBuilder actual = new StringBuilder();
+        for (String palabra : texto.split(" ")) {
+            String prueba = actual.isEmpty() ? palabra : actual + " " + palabra;
+            if (anchoArte(Text.literal(prueba), altoArte) > anchoArte && !actual.isEmpty()) {
+                salida.add(actual.toString());
+                actual = new StringBuilder(palabra);
+            } else {
+                actual = new StringBuilder(prueba);
+            }
+        }
+        if (!actual.isEmpty()) {
+            salida.add(actual.toString());
+        }
+        return salida;
+    }
+
+    /** Ancho de un texto EN PIXELES DEL ARTE, para poder comprobar que cabe. */
+    private int anchoArte(Text linea, int alto) {
+        return Math.round(textRenderer.getWidth(linea) * alto / (float) textRenderer.fontHeight);
     }
 
     private void dibujarFilas(DrawContext ctx, int rx, int ry) {
@@ -342,10 +422,15 @@ public class TrabajosScreen extends Screen {
         if (client == null || client.player == null) {
             return;
         }
-        int x = px(CARA_X), y = py(CARA_Y), lado = pl(CARA_LADO);
-        int cx = x + lado / 2, cy = y + lado / 2;
-        InventoryScreen.drawEntity(ctx, x, y, x + lado, y + lado,
-                Math.round(lado * 0.38f), 0.0f, cx, cy, client.player);
+        // ⚠ La caja es ALTA Y ESTRECHA (299x306), asi que la escala se saca del
+        //   LADO MENOR. Con el mayor, el personaje se sale por arriba y por
+        //   abajo -- y `drawEntity` recorta, asi que se veria decapitado en vez
+        //   de dar un error.
+        int x = px(PANEL_X + 8), y = py(PREV_Y);
+        int w = pl(PANEL_W - 16), h = pl(PREV_ALTO);
+        int cx = x + w / 2, cy = y + h / 2;
+        InventoryScreen.drawEntity(ctx, x, y, x + w, y + h,
+                Math.round(Math.min(w, h) * 0.40f), 0.0f, cx, cy, client.player);
     }
 
     // ---- interacción -------------------------------------------------------

@@ -110,7 +110,21 @@ public enum Path {
      * 7.500 XP y el de 0 a I cuesta 100. Pagar lo mismo por los dos haría que
      * nadie pasara del segundo nivel.
      *
-     * <p><b>Cifras sin calibrar</b>, como toda la economía: son un punto de
+     * <h2>⚠ Las cifras se BAJARON diez veces, y con motivo medido</h2>
+     *
+     * Estaban en 500·1.500·4.000·10.000·25.000, o sea <b>41.000 de Plata por
+     * exprimir un oficio</b>. Puesto al lado del catálogo de la tienda —que va de
+     * 8 (roca) a 3.000 (Revivir)— eso son <b>trece Revivir por oficio</b>, y
+     * treinta y nueve por los tres. Decisión del usuario, y es la correcta:
+     *
+     * <p><b>El dinero de minar son las menas, no el bono.</b> Lo que se lleva un
+     * jugador por picar ya está en lo que pica; esto es un extra por constancia,
+     * y un extra que supera a la actividad deja de ser un extra.
+     *
+     * <p>Con la escala nueva, los tres oficios al máximo dan <b>12.300 de
+     * Plata</b>: cuatro Revivir. Un buen incentivo, no una nómina.
+     *
+     * <p><b>Siguen sin calibrar</b>, como toda la economía: son un punto de
      * partida. {@code /luna economia} dirá si sobra o falta cuando alguien juegue.
      */
     public long plataPorNivel(int nivelAlcanzado) {
@@ -118,11 +132,11 @@ public enum Path {
             return 0;
         }
         return switch (nivelAlcanzado) {
-            case 1 -> 500;
-            case 2 -> 1_500;
-            case 3 -> 4_000;
-            case 4 -> 10_000;
-            case 5 -> 25_000;
+            case 1 -> 50;
+            case 2 -> 150;
+            case 3 -> 400;
+            case 4 -> 1_000;
+            case 5 -> 2_500;
             default -> 0;
         };
     }

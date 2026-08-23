@@ -35,6 +35,25 @@ public final class OficiosService {
     }
 
     /**
+     * Lo que se paga por tener TODOS los oficios al máximo. <b>Una vez.</b>
+     *
+     * <p>⚠⚠ BAJO DE 250 A 100 POR DECISION DEL USUARIO, y hay que decir en voz
+     * alta lo que eso significa: <b>con 100 no se compra ningún cosmético</b>. El
+     * más barato del catálogo es un sombrero a 1.200.
+     *
+     * <p>Eso no lo convierte en un error —es una decisión de producto, y una
+     * moneda premium escasa es defendible— pero sí <b>traslada todo el peso a los
+     * eventos</b>. D-039 ya dice que los eventos son «la mitad que hace funcionar
+     * la decisión»; con este número, dejan de ser la mitad y pasan a ser
+     * prácticamente la única vía gratuita real.
+     *
+     * <p>Si algún día se quiere que completar los oficios baste para <i>algo</i>,
+     * hay dos palancas: subir esto a ~1.200, o bajar el precio de algún cosmético
+     * de entrada. Las dos son decisiones de producto, no de código.
+     */
+    private static final long PREMIO_LUNACOINS = 100;
+
+    /**
      * Da XP de un oficio y paga si con eso ha subido de nivel.
      *
      * <p>⚠ <b>Se llama YA DESDE el hilo de E/S</b>, no lo cambia de hilo por su
@@ -94,16 +113,11 @@ public final class OficiosService {
     /**
      * Si TODOS los oficios están al máximo, paga las LunaCoins una vez.
      *
-     * <p>⚠⚠ <b>Esto es la única forma de conseguir LunaCoins sin pagar</b>, y por
-     * eso la cantidad es deliberadamente pequeña: 250. D-013 y D-014 dicen que la
-     * moneda premium no se compra con moneda del juego <i>en ninguna dirección</i>;
-     * un logro que la reparte a chorro sería esa conversión por la puerta de
-     * atrás, solo que más lenta.
-     *
-     * <p>Lo que sí hace bien: da a alguien que no paga una forma de tener
-     * <i>algún</i> cosmético. {@code monetization.md} avisa de que «un cosmético
-     * sin nadie que lo vea no vale nada», y si los únicos con cosméticos fueran
-     * los que pagan, el escaparate se apaga solo. 250 da para un sombrero.
+     * <p>⚠⚠ <b>Es la única forma de conseguir LunaCoins sin pagar.</b> D-013 y
+     * D-014 dicen que la moneda premium no se compra con moneda del juego <i>en
+     * ninguna dirección</i>; un logro que la reparte a chorro sería esa conversión
+     * por la puerta de atrás, solo que más lenta. Ver {@link #PREMIO_LUNACOINS}
+     * para lo que implica la cifra actual.
      *
      * <p>⚠ La clave de idempotencia va derivada del jugador, sin nivel ni fecha, y
      * <b>es correcta aquí</b>: los niveles no bajan, así que «completar todos los
@@ -120,7 +134,7 @@ public final class OficiosService {
             }
         }
         try {
-            LunaEternal.economy().credit(playerId, Currency.REPORTCOIN, 250,
+            LunaEternal.economy().credit(playerId, Currency.REPORTCOIN, PREMIO_LUNACOINS,
                     "oficios_completos", "oficios_completos:" + playerId);
         } catch (net.pokereport.luna.economy.EconomyException e) {
             // Ya se pagó. No es un fallo: es exactamente lo que la clave existe
@@ -129,7 +143,7 @@ public final class OficiosService {
             return;
         }
         net.pokereport.luna.ui.Aviso.logro(jugador, "OFICIOS COMPLETOS",
-                "+250 LunaCoins", "minecraft:nether_star",
+                "+" + PREMIO_LUNACOINS + " LunaCoins", "minecraft:nether_star",
                 net.minecraft.sound.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0f);
     }
 

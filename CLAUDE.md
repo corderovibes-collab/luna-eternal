@@ -809,6 +809,63 @@ Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
                 del jar de Iris. §2-quinquies
 Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
               ---------------------------------------------------------
+              EL TEMA DE LA CASA (2026-08-23) . launcher-qt.md §11
+              VERIFICADO EN LA VENTANA, con instalacion aislada
+              LOS COLORES SALEN DEL LOGO, no de un gusto: se muestrearon
+              los dos PNG que mando el usuario
+                #FFC420 oro       LO UNICO que dice "pulsame"
+                #FFE04F oro claro el amarillo alto de las letras
+                #F86800 naranja   el borde del rotulo y las llamas
+                #5C1210 granate   la banda de detras de las letras
+                #E8189B magenta   el neon de la ball. SELECCION
+              EL ORO ES INVITACION Y EL MAGENTA ES ESTADO, por eso no
+              compiten: con el mismo color, pasar el raton por una lista
+              parece que va cambiando lo que tienes elegido
+              ⚠ los grises tiran a CALIDOS: sobre un gris azulado el oro
+                vira a mostaza y el logo deja de pegar con su interfaz
+              ⚠ EL ORO Y EL AMBAR DE AVISO SON LA MISMA FAMILIA, y es el
+                precio de que la marca sea dorada. Se separan POR FORMA:
+                la accion principal es un DEGRADADO con texto oscuro; el
+                aviso es PLANO y siempre con icono. No hay botones de aviso
+              ⚠ la tipografia del logo NO se usa en la interfaz: es de
+                pixeles y a 13 px seria ilegible. Vive en el rotulo
+              EL QSS ES UN FICHERO, no un literal de C++: el de Freesm va
+              concatenado en ~40 trozos dentro del .cpp y cambiar un color
+              aparece en el commit como una linea de 4.000 caracteres
+              ⚠⚠⚠ Y HUBO QUE INICIAR EL RECURSO A MANO. Launcher_logic es
+                 una libreria ESTATICA: el enlazador tira el inicializador
+                 que genera `rcc` porque no lo referencia nadie, asi que la
+                 hoja NO ESTABA en el binario -- sin un solo error de
+                 compilacion, y la ventana salia con el gris de Qt
+                 Y NO SIRVE PONERLO EN main.cpp con los demas, que es lo
+                 primero que uno prueba: esa lista corre DESPUES de
+                 construir Application, y el tema se aplica DENTRO de ese
+                 constructor
+                 lo que hizo que costara minutos y no una tarde fue el
+                 qWarning escrito para ese caso: nombro el fichero Y el
+                 CMakeLists. Devolver cadena vacia en silencio habria
+                 mandado a buscar el fallo en los colores
+              ⚠⚠ EL FONDO POR DEFECTO ERA UN MEME DE TYPESCRIPT heredado
+                 de Freesm, y ocupa la PANTALLA ENTERA: es lo primero que
+                 se ve al abrir. Ahora la ball y el rotulo al 40% de alfa
+                 ⚠ CatPainter lo ancla ABAJO A LA DERECHA: con 20 px de
+                   margen el rotulo salia CORTADO. Son 90
+              ⚠⚠ "Ciudadela" y "-luna" se colaban en la BARRA DE TITULO, y
+                 salian de dos sitios que nadie tenia fichados: el nombre
+                 en clave de la version y el CANAL, que es el nombre de la
+                 rama de git. Orden del usuario: solo la marca y el numero
+                 hoy el titulo es `PokeReport Network 0.2.0`; la version
+                 completa sigue en "Acerca de" y en el actualizador
+              ⚠ SOLO LO VE QUIEN NO TENGA AJUSTES TODAVIA. registerSetting
+                pone el valor POR DEFECTO y a quien ya lo haya abierto se
+                le respeta el tema guardado (correcto: nadie quiere que le
+                cambien la interfaz al actualizar). Para verlo hay que
+                entrar UNA VEZ a Ajustes > Apariencia
+              el arte de origen VA AL REPO (program_info/*.source.png) y
+              los tres PNG derivados se generan: launcher/resources/
+              pokereport/COMO-SE-GENERAN.md
+              PokeReportTheme 7/7 . LunaInstance 9/9 . Version 62/62
+              ---------------------------------------------------------
               EL BUCLE DE ACTUALIZACION, CERRADO (2026-08-23)
               detalle completo en docs/technical/launcher-qt.md §10
               el sintoma eran DOS cosas a la vez, en cada arranque:

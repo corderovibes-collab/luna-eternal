@@ -822,7 +822,119 @@ con la que el actualizador se compara**.
 > publicando**. Y para comprobarlo hace falta subir a `0.2.1`: contra `v0.2.0`
 > el launcher arreglado dirá, correctamente, que no hay nada que actualizar.
 
+## 11. El tema visual (2026-08-23)
+
+**Petición del usuario:** *«que se vea más bonito, más estilo Pokémon, con el
+logo del server… algo bien diseñado y optimizado pero que se vea bellísimo».*
+
+### 11.1 · Los colores salen del logo, no de un gusto
+
+El usuario envió dos PNG: la **Poké Ball en llamas** y el **rótulo POKEREPORT
+NETWORK**. Se muestrearon los dos y de ahí salen los cinco colores que mandan:
+
+| | | De dónde |
+|---|---|---|
+| `#FFC420` | oro | El color de la casa. **Lo único que dice «púlsame»** |
+| `#FFE04F` | oro claro | El amarillo alto de las letras |
+| `#F86800` | naranja | El borde del rótulo y las llamas |
+| `#5C1210` | granate | La banda de detrás de las letras |
+| `#E8189B` | magenta | El neón del botón de la ball. **Selección** |
+
+> **El oro es invitación y el magenta es estado**, y por eso no compiten. Con el
+> mismo color para las dos cosas, pasar el ratón por una lista parece que va
+> cambiando lo que tienes elegido.
+
+Los grises tiran a **cálidos** a propósito: sobre un gris azulado el oro vira a
+mostaza y el logo deja de pegar con su propia interfaz.
+
+> ⚠️ **El oro y el ámbar de aviso son la misma familia de color**, y es el precio
+> de que la marca sea dorada. Se separan **por forma, no por color**: la acción
+> principal es un **degradado** oro→naranja con texto oscuro; el aviso es
+> **plano**, sin relleno, y siempre con icono y texto. **No hay botones de
+> aviso.**
+
+> ⚠️ **La tipografía del logo NO se usa en la interfaz.** Es de píxeles y a 13 px
+> sería ilegible. Vive en el rótulo y solo ahí; el resto es Segoe UI Variable
+> Text, la del sistema.
+
+### 11.2 · El QSS es un fichero, no un literal de C++
+
+`FreesmTheme::appStyleSheet()` devuelve su hoja **concatenada en ~40 trozos de
+cadena dentro del `.cpp`**. No se puede leer, y en un commit cambiar un color
+aparece como una línea de 4.000 caracteres.
+
+El nuestro vive en `:/pokereport/pokereport.qss`, dentro del recurso Qt, y se
+edita como lo que es.
+
+### 11.3 · ⚠️⚠️ Y hubo que iniciar el recurso a mano
+
+**El primer intento salió con el gris de Qt**, sin ningún error de compilación.
+
+`Launcher_logic` es una **librería estática**. El enlazador tira todo objeto al
+que nadie referencia, y al inicializador que genera `rcc` **no lo referencia
+nadie**: el `.qss` sencillamente no estaba dentro del binario.
+
+Y **no sirve ponerlo en `main.cpp`** con los demás `Q_INIT_RESOURCE`, que es lo
+primero que uno prueba: esa lista se ejecuta **después** de construir
+`Application`, y el tema se aplica **dentro** de ese constructor. Llegaría tarde.
+
+Hoy lo llama el propio tema (`iniciarRecursoPokeReport()`), que es idempotente.
+
+> **Lo que hizo que costara minutos y no una tarde:** el `qWarning` que se
+> escribió para ese caso. En el log salió literalmente *«no se pudo abrir
+> :/pokereport/pokereport.qss … comprueba que pokereport.qrc está en
+> `qt_add_resources()`»*. Devolver la cadena vacía en silencio habría mandado a
+> buscar el fallo en los colores.
+
+### 11.4 · El fondo por defecto era un meme de TypeScript
+
+Heredado de Freesm, y **ocupa la pantalla entera del launcher**: es lo primero
+que ve alguien al abrirlo, y no dice nada de este servidor.
+
+Ahora es la ball y el rótulo **al 40 % de alfa** — fondo, no protagonista.
+
+> ⚠️ **`CatPainter` lo ancla abajo a la derecha**, así que lo que esté pegado al
+> borde del lienzo queda pegado al borde de la ventana. Con 20 px de margen el
+> rótulo salía **cortado**; son 90.
+
+### 11.5 · «Ciudadela» y «-luna» se colaban en la barra de título
+
+**Orden del usuario:** *«no debe decir nada de ciudadela ni luna, solo PokeReport
+Network»*. Salían de **dos sitios que nadie tenía fichados**:
+
+```
+setApplicationDisplayName(DISPLAYNAME + VERSION_CODENAME + printableVersionString())
+                                        ^ "Ciudadela"      ^ "0.2.0-luna"
+```
+
+El segundo es el **canal**, que es **el nombre de la rama de git**. Hoy el título
+es `PokeReport Network 0.2.0` y la versión completa sigue donde hace falta: en
+«Acerca de», en el registro y en lo que compara el actualizador. Los temas
+heredados dejan de llamarse «Luna oscuro/claro».
+
+### 11.6 · Qué está verificado
+
+| | |
+|---|---|
+| `PokeReportTheme` | **7 pruebas, 0 fallos.** La que importa comprueba que **la hoja viaja dentro del binario** — si `pokereport.qrc` se cae del CMakeLists, todo sigue compilando y la ventana sale gris |
+| `LunaInstance` · `Version` | 9/9 y 62/62 |
+| **En la ventana** | ✅ Verificado con una instalación aislada (`--dir`): título limpio, rótulo en la barra, fondo propio, botón principal dorado |
+
+> ⚠️ **Solo lo ve quien no tenga ajustes todavía.** `registerSetting` pone el
+> valor **por defecto**: a quien ya haya abierto el launcher se le respeta el
+> tema guardado. Es lo correcto —nadie quiere que le cambien la interfaz al
+> actualizar— pero significa que **para verlo hay que entrar una vez a Ajustes ▸
+> Apariencia**.
+
 ## Last Decision
+
+**2026-08-23 · TEMA DE LA CASA** — la interfaz del launcher sale del logo
+(§11): cinco colores muestreados del arte, QSS como fichero de verdad, rótulo en
+la barra y fondo propio en vez del meme de TypeScript que venía de Freesm.
+Verificado en la ventana. **La trampa que costó el primer intento**: el recurso
+Qt vive en una librería estática y el enlazador se lleva su inicializador — y
+ponerlo en `main.cpp` llega tarde, porque el tema se aplica dentro del
+constructor de `Application`.
 
 **2026-08-23 · EL BUCLE DE ACTUALIZACIÓN, CERRADO** — tres fallos, y los tres
 salían del **mismo carácter**: la `v` de las etiquetas de git (§10). El launcher

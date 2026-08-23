@@ -8,131 +8,166 @@
 <x-dc>
 <helmet>
   <style>
-    body { margin: 0; background: #0B0B14; }
-    a { color: #4FD6E0; } a:hover { color: #7FE6EE; }
+    body { margin: 0; background: #0D0B0C; }
   </style>
 </helmet>
 
-<div style="font-family: Segoe UI Variable Text, Segoe UI, system-ui, sans-serif; background: #0B0B14; color: #E8E8F2; padding: 40px 44px; display: flex; flex-direction: column; gap: 38px;">
+<div style="font-family: Segoe UI Variable Text, Segoe UI, system-ui, sans-serif; background: #0D0B0C; color: #F3EEEA; padding: 40px 44px; display: flex; flex-direction: column; gap: 38px;">
 
-  <div style="display: flex; flex-direction: column; gap: 8px;">
-    <div style="font-size: 12px; letter-spacing: 2.4px; text-transform: uppercase; color: #4FD6E0; font-weight: 600;">PokeReport Network</div>
-    <div style="font-size: 34px; font-weight: 600; letter-spacing: -0.5px; line-height: 1.1;">Tema del launcher</div>
-    <div style="font-size: 14px; color: #9A9AB4; max-width: 620px; line-height: 1.55;">Noche permanente y neón, como la ciudadela. Fondos profundos, una sola familia de acento y contraste alto en el texto. Cada valor de aquí se traduce directo a QSS.</div>
+  <div style="display: flex; align-items: center; gap: 26px;">
+    <img src="pokeball.png" style="width: 104px; height: auto; flex-shrink: 0;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <img src="letras.png" style="width: 300px; height: auto;">
+      <div style="font-size: 14px; color: #A79FA4; max-width: 560px; line-height: 1.55;">Tema del launcher, sacado del logo y no inventado: oro y naranja de las letras, granate de la banda, y el magenta del neón de la ball. Cada valor de aquí se traduce directo a QSS.</div>
+    </div>
   </div>
 
   <div style="display: flex; flex-direction: column; gap: 16px;">
-    <div style="font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase; color: #9A9AB4; font-weight: 600;">Superficies</div>
+    <div style="font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase; color: #A79FA4; font-weight: 600;">La marca — de dónde sale cada color</div>
     <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px;">
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 76px; border-radius: 6px; background: #0B0B14; border: 1px solid #2A2A3D;"></div>
+        <div style="height: 76px; border-radius: 6px; background: #FFE04F;"></div>
+        <div style="font-size: 12px; font-weight: 600;">Oro claro</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#FFE04F</div>
+        <div style="font-size: 11px; color: #6B6469; line-height: 1.4;">El amarillo alto de POKEREPORT</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 76px; border-radius: 6px; background: #FFC420;"></div>
+        <div style="font-size: 12px; font-weight: 600;">Oro</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#FFC420</div>
+        <div style="font-size: 11px; color: #6B6469; line-height: 1.4;">El color de la casa. Acción principal</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 76px; border-radius: 6px; background: #F86800;"></div>
+        <div style="font-size: 12px; font-weight: 600;">Naranja</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#F86800</div>
+        <div style="font-size: 11px; color: #6B6469; line-height: 1.4;">El borde del rótulo y las llamas</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 76px; border-radius: 6px; background: #5C1210;"></div>
+        <div style="font-size: 12px; font-weight: 600;">Granate</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#5C1210</div>
+        <div style="font-size: 11px; color: #6B6469; line-height: 1.4;">La banda de detrás de las letras</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 76px; border-radius: 6px; background: #E8189B;"></div>
+        <div style="font-size: 12px; font-weight: 600;">Magenta</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#E8189B</div>
+        <div style="font-size: 11px; color: #6B6469; line-height: 1.4;">El neón del botón de la ball</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 14px; align-items: stretch; background: #171416; border: 1px solid #383236; border-radius: 8px; padding: 16px 18px;">
+      <div style="width: 3px; border-radius: 2px; background: #FFC420; flex-shrink: 0;"></div>
+      <div style="font-size: 13px; color: #A79FA4; line-height: 1.6;">El <span style="color: #FFC420; font-weight: 600;">oro</span> es lo único que marca «esto se pulsa». El <span style="color: #E8189B; font-weight: 600;">magenta</span> marca «esto es lo que tienes seleccionado», y por eso nunca compiten: uno es invitación, el otro es estado. El <span style="color: #F86800; font-weight: 600;">naranja</span> y el <span style="color: #C4524E; font-weight: 600;">granate</span> no se usan en controles — son el fondo de la cabecera, donde vive el logo.</div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <div style="font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase; color: #A79FA4; font-weight: 600;">Superficies — noche permanente, como la ciudadela</div>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="height: 68px; border-radius: 6px; background: #0D0B0C; border: 1px solid #383236;"></div>
         <div style="font-size: 12px; font-weight: 600;">Fondo</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #9A9AB4;">#0B0B14</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#0D0B0C</div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 76px; border-radius: 6px; background: #14141F; border: 1px solid #2A2A3D;"></div>
+        <div style="height: 68px; border-radius: 6px; background: #171416; border: 1px solid #383236;"></div>
         <div style="font-size: 12px; font-weight: 600;">Superficie</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #9A9AB4;">#14141F</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#171416</div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 76px; border-radius: 6px; background: #1C1C2B; border: 1px solid #2A2A3D;"></div>
+        <div style="height: 68px; border-radius: 6px; background: #211D20; border: 1px solid #383236;"></div>
         <div style="font-size: 12px; font-weight: 600;">Elevada</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #9A9AB4;">#1C1C2B</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#211D20</div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 76px; border-radius: 6px; background: #24243A; border: 1px solid #2A2A3D;"></div>
+        <div style="height: 68px; border-radius: 6px; background: #2B262A; border: 1px solid #383236;"></div>
         <div style="font-size: 12px; font-weight: 600;">Hover</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #9A9AB4;">#24243A</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#2B262A</div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 76px; border-radius: 6px; background: #2A2A3D; border: 1px solid #37374F;"></div>
+        <div style="height: 68px; border-radius: 6px; background: #383236; border: 1px solid #4A434A;"></div>
         <div style="font-size: 12px; font-weight: 600;">Borde</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #9A9AB4;">#2A2A3D</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#383236</div>
       </div>
     </div>
+    <div style="font-size: 13px; color: #A79FA4; line-height: 1.55; max-width: 720px;">Son grises <span style="color: #F3EEEA;">tirando a cálidos</span>, no azulados. Sobre un gris azul el oro vira a mostaza y el logo deja de pegar con su propia interfaz — se probó, y es la clase de cosa que no se nota hasta verla junta.</div>
   </div>
 
   <div style="display: flex; flex-direction: column; gap: 16px;">
-    <div style="font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase; color: #9A9AB4; font-weight: 600;">Acento y estados</div>
-    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px;">
+    <div style="font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase; color: #A79FA4; font-weight: 600;">Estados</div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 76px; border-radius: 6px; background: #4FD6E0;"></div>
-        <div style="font-size: 12px; font-weight: 600;">Acento</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #9A9AB4;">#4FD6E0</div>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 76px; border-radius: 6px; background: #E85D9E;"></div>
-        <div style="font-size: 12px; font-weight: 600;">Realce</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #9A9AB4;">#E85D9E</div>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 76px; border-radius: 6px; background: #5BD97F;"></div>
+        <div style="height: 64px; border-radius: 6px; background: #4ADE80;"></div>
         <div style="font-size: 12px; font-weight: 600;">Correcto</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #9A9AB4;">#5BD97F</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#4ADE80</div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 76px; border-radius: 6px; background: #F5B942;"></div>
+        <div style="height: 64px; border-radius: 6px; background: #FFA000;"></div>
         <div style="font-size: 12px; font-weight: 600;">Aviso</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #9A9AB4;">#F5B942</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#FFA000</div>
       </div>
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="height: 76px; border-radius: 6px; background: #EF4B5B;"></div>
+        <div style="height: 64px; border-radius: 6px; background: #FF4D5B;"></div>
         <div style="font-size: 12px; font-weight: 600;">Peligro</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #9A9AB4;">#EF4B5B</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #A79FA4;">#FF4D5B</div>
       </div>
     </div>
-    <div style="font-size: 13px; color: #9A9AB4; line-height: 1.55; max-width: 660px;">El cian es el color de la casa y el único que marca lo interactivo. El rosa se reserva a la selección activa, para que nunca compitan. Rojo y ámbar solo comunican estado, jamás decoran.</div>
+    <div style="display: flex; gap: 14px; align-items: stretch; background: #171416; border: 1px solid #FFA000; border-radius: 8px; padding: 16px 18px;">
+      <div style="width: 3px; border-radius: 2px; background: #FFA000; flex-shrink: 0;"></div>
+      <div style="font-size: 13px; color: #A79FA4; line-height: 1.6;"><span style="color: #FFA000; font-weight: 600;">Aviso y acción principal son los dos ámbar, y hay que separarlos a propósito.</span> Es el precio de que la marca sea dorada. Se separan por forma, no por color: <span style="color: #F3EEEA;">la acción principal es un degradado</span> oro→naranja con texto oscuro; <span style="color: #F3EEEA;">el aviso es plano</span>, sin relleno, y siempre lleva icono y texto. Nunca hay un botón de aviso.</div>
+    </div>
   </div>
 
   <div style="display: flex; flex-direction: column; gap: 16px;">
-    <div style="font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase; color: #9A9AB4; font-weight: 600;">Texto</div>
-    <div style="display: flex; flex-direction: column; gap: 14px; background: #14141F; border: 1px solid #2A2A3D; border-radius: 8px; padding: 24px 26px;">
+    <div style="font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase; color: #A79FA4; font-weight: 600;">Texto</div>
+    <div style="display: flex; flex-direction: column; gap: 14px; background: #171416; border: 1px solid #383236; border-radius: 8px; padding: 24px 26px;">
       <div style="display: flex; align-items: baseline; gap: 20px;">
-        <div style="font-size: 26px; font-weight: 600; color: #E8E8F2; min-width: 300px;">Título de sección</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #5A5A70;">26 / 600 / #E8E8F2</div>
+        <div style="font-size: 26px; font-weight: 600; color: #F3EEEA; min-width: 300px;">Título de sección</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #6B6469;">26 / 600 / #F3EEEA</div>
       </div>
       <div style="display: flex; align-items: baseline; gap: 20px;">
-        <div style="font-size: 15px; font-weight: 600; color: #E8E8F2; min-width: 300px;">Encabezado de lista</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #5A5A70;">15 / 600 / #E8E8F2</div>
+        <div style="font-size: 15px; font-weight: 600; color: #F3EEEA; min-width: 300px;">Encabezado de lista</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #6B6469;">15 / 600 / #F3EEEA</div>
       </div>
       <div style="display: flex; align-items: baseline; gap: 20px;">
-        <div style="font-size: 13px; color: #E8E8F2; min-width: 300px;">Texto normal de interfaz</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #5A5A70;">13 / 400 / #E8E8F2</div>
+        <div style="font-size: 13px; color: #F3EEEA; min-width: 300px;">Texto normal de interfaz</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #6B6469;">13 / 400 / #F3EEEA</div>
       </div>
       <div style="display: flex; align-items: baseline; gap: 20px;">
-        <div style="font-size: 13px; color: #9A9AB4; min-width: 300px;">Texto secundario y descripciones</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #5A5A70;">13 / 400 / #9A9AB4</div>
+        <div style="font-size: 13px; color: #A79FA4; min-width: 300px;">Texto secundario y descripciones</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #6B6469;">13 / 400 / #A79FA4</div>
       </div>
       <div style="display: flex; align-items: baseline; gap: 20px;">
-        <div style="font-size: 13px; color: #5A5A70; min-width: 300px;">Texto deshabilitado</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #5A5A70;">13 / 400 / #5A5A70</div>
+        <div style="font-size: 13px; color: #6B6469; min-width: 300px;">Texto deshabilitado</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #6B6469;">13 / 400 / #6B6469</div>
       </div>
       <div style="display: flex; align-items: baseline; gap: 20px;">
-        <div style="font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; font-weight: 600; color: #4FD6E0; min-width: 300px;">Etiqueta de grupo</div>
-        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #5A5A70;">11 / 600 / +1.8px</div>
+        <div style="font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; font-weight: 600; color: #FFC420; min-width: 300px;">Etiqueta de grupo</div>
+        <div style="font-family: Cascadia Mono, Consolas, ui-monospace, monospace; font-size: 11px; color: #6B6469;">11 / 600 / +1.8px</div>
       </div>
     </div>
-    <div style="font-size: 13px; color: #9A9AB4; line-height: 1.55; max-width: 660px;">La familia es <span style="color: #E8E8F2;">Segoe UI Variable Text</span>, la misma que ya usa el launcher: es la del sistema en Windows, se ve nativa y no hay que empaquetar nada. Para cifras y rutas, <span style="color: #E8E8F2;">Cascadia Mono</span>.</div>
+    <div style="font-size: 13px; color: #A79FA4; line-height: 1.55; max-width: 720px;">La familia es <span style="color: #F3EEEA;">Segoe UI Variable Text</span>, la misma que ya usa el launcher: es la del sistema en Windows, se ve nativa y no hay que empaquetar nada. Para cifras y rutas, <span style="color: #F3EEEA;">Cascadia Mono</span>. <span style="color: #F3EEEA;">La tipografía del logo NO se usa en la interfaz</span> — es de píxeles y a 13 px sería ilegible; vive en el rótulo y solo ahí.</div>
   </div>
 
   <div style="display: flex; flex-direction: column; gap: 12px;">
-    <div style="font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase; color: #9A9AB4; font-weight: 600;">Geometría</div>
+    <div style="font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase; color: #A79FA4; font-weight: 600;">Geometría</div>
     <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
-      <div style="background: #14141F; border: 1px solid #2A2A3D; border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;">
-        <div style="font-size: 20px; font-weight: 600; color: #4FD6E0;">6 px</div>
-        <div style="font-size: 12px; color: #9A9AB4;">Radio de botones y campos</div>
+      <div style="background: #171416; border: 1px solid #383236; border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 20px; font-weight: 600; color: #FFC420;">6 px</div>
+        <div style="font-size: 12px; color: #A79FA4;">Radio de botones y campos</div>
       </div>
-      <div style="background: #14141F; border: 1px solid #2A2A3D; border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;">
-        <div style="font-size: 20px; font-weight: 600; color: #4FD6E0;">8 px</div>
-        <div style="font-size: 12px; color: #9A9AB4;">Radio de paneles y diálogos</div>
+      <div style="background: #171416; border: 1px solid #383236; border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 20px; font-weight: 600; color: #FFC420;">8 px</div>
+        <div style="font-size: 12px; color: #A79FA4;">Radio de paneles y diálogos</div>
       </div>
-      <div style="background: #14141F; border: 1px solid #2A2A3D; border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;">
-        <div style="font-size: 20px; font-weight: 600; color: #4FD6E0;">7 / 20</div>
-        <div style="font-size: 12px; color: #9A9AB4;">Relleno de botón, ya el actual</div>
+      <div style="background: #171416; border: 1px solid #383236; border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 20px; font-weight: 600; color: #FFC420;">7 / 20</div>
+        <div style="font-size: 12px; color: #A79FA4;">Relleno de botón, ya el actual</div>
       </div>
-      <div style="background: #14141F; border: 1px solid #2A2A3D; border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;">
-        <div style="font-size: 20px; font-weight: 600; color: #4FD6E0;">1 px</div>
-        <div style="font-size: 12px; color: #9A9AB4;">Todo borde, nunca más grueso</div>
+      <div style="background: #171416; border: 1px solid #383236; border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 20px; font-weight: 600; color: #FFC420;">1 px</div>
+        <div style="font-size: 12px; color: #A79FA4;">Todo borde, nunca más grueso</div>
       </div>
     </div>
   </div>

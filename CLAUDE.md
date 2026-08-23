@@ -809,6 +809,44 @@ Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
                 del jar de Iris. §2-quinquies
 Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
               ---------------------------------------------------------
+              DIAGNOSTICO Y REPARAR (2026-08-23) . launcher-qt.md §12
+              eran LO UNICO que el fork habia perdido respecto al de
+              Electron. Ya las tiene las dos
+              ⚠ REPARAR NO ES "ACTUALIZAR OTRA VEZ", y por eso es una
+                accion aparte: actualizar SE FIA del estado guardado, asi
+                que un fichero que se corrompio DESPUES de instalarse
+                sigue apuntado como correcto y sobrevive a CUALQUIER
+                numero de actualizaciones. Reparar recalcula el sha1 de
+                todo lo que hay en disco
+                el motor YA lo sabia hacer (Luna::Mode::Repair, probado
+                desde que se escribio LunaSync). Faltaba el boton
+              ⚠ va al MENU y no a la barra: es la accion de cuando algo va
+                mal, y en la barra invitaria a pulsarla sin motivo
+              CADA REGLA DEL DIAGNOSTICO ES UN FALLO REAL: jar corrupto,
+              sin memoria, mods que no encajan, Java equivocado, dos mods
+              que se pisan, la grafica, la conexion
+              ⚠ EL REGISTRO MANDA SOBRE EL CODIGO DE SALIDA. Un juego
+                puede morir con codigo 1 por cualquier cosa; si el log
+                dice la causa, esa es la que se enseña
+              ⚠ PERO EL CODIGO HACE FALTA IGUAL: los dos cierres de golpe
+                de Windows (0xC0000005 y 0xC0000409) matan el proceso sin
+                que Java escriba UNA SOLA LINEA. Por eso se plumbeo
+                LaunchTask::setExitCode
+              ⚠⚠ EL FALSO POSITIVO QUE SE HEREDA, y es la prueba que mas
+                 vale: el patron de la grafica llevaba `OpenGL 3.2` A
+                 SECAS, y Minecraft escribe esa cadena en una linea de
+                 EXITO ("Supports OpenGL 3.2.0"). Saltaba en CADA arranque
+                 correcto. UN DIAGNOSTICO QUE SE EQUIVOCA SIEMPRE ES PEOR
+                 QUE NO TENERLO: enseña a ignorar los avisos, y el dia que
+                 haya uno de verdad tampoco lo van a leer
+              ⚠ el aviso va POR SEÑAL: Application no tiene ventana donde
+                colgar un dialogo y el boton de Reparar vive en MainWindow.
+                Y `Accion` viaja COMO INT -- la conexion puede ser en cola
+                y un enum sin registrar se pierde SIN DAR NINGUN ERROR
+              ⚠ el orden importa en controllerFinished: se diagnostica
+                ANTES de `extras.controller.reset()`, que se lleva la
+                tarea de la que sale el codigo de salida
+              ---------------------------------------------------------
               EL TEMA DE LA CASA (2026-08-23) . launcher-qt.md §11
               VERIFICADO EN LA VENTANA, con instalacion aislada
               LOS COLORES SALEN DEL LOGO, no de un gusto: se muestrearon

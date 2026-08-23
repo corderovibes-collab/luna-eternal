@@ -926,7 +926,105 @@ heredados dejan de llamarse «Luna oscuro/claro».
 > actualizar— pero significa que **para verlo hay que entrar una vez a Ajustes ▸
 > Apariencia**.
 
+## 12. Diagnóstico y reparar (2026-08-23)
+
+Eran **lo único que el fork había perdido** respecto al launcher de Electron que
+ya se repartía. Ahora las tiene las dos.
+
+### 12.1 · Por qué existe el diagnóstico
+
+Cuando Minecraft se cae, **lo que ve el jugador es una ventana que desaparece**.
+Lo que ve quien da soporte es algo como
+`java.util.zip.ZipException: ZipFile invalid LOC header`, dentro de una pila de
+netty que **no se parece en nada a la causa** — ese caso concreto ya costó una
+sesión entera en este proyecto.
+
+`launcher/luna/LunaDiagnostico.cpp` traduce el cierre a una frase, y **cada regla
+es un fallo que ya ha ocurrido de verdad**: jar corrupto, sin memoria, mods que
+no encajan, Java equivocado, dos mods que se pisan, la gráfica, la conexión.
+
+> ⚠️ **El registro manda sobre el código de salida.** Un juego puede morir con
+> código 1 por cualquier motivo; si el log dice «invalid LOC header», eso es lo
+> que pasó y eso es lo que se enseña.
+
+> ⚠️ **Pero el código hace falta igual**, y por eso se plumbeó
+> (`LaunchTask::setExitCode`). Los dos cierres de golpe de Windows —`0xC0000005`
+> y `0xC0000409`— matan el proceso dentro del controlador de la gráfica o del
+> propio sistema, **sin que Java escriba una sola línea**. Sin el código, esos
+> dos casos se quedan en «se cerró y no se sabe por qué».
+
+#### ⚠️⚠️ El falso positivo que se hereda, y que es la prueba más valiosa
+
+El patrón de la gráfica llevaba `OpenGL 3.2` **a secas**. Minecraft escribe esa
+cadena en una línea de **éxito**:
+
+```
+GPU: Intel(R) UHD Graphics 620 (Supports OpenGL 3.2.0 - Build 31.0.101.2135)
+```
+
+O sea: **saltaba en cada arranque correcto**.
+
+> **Un diagnóstico que se equivoca siempre es peor que no tenerlo**: enseña a la
+> gente a ignorar los avisos, y el día que haya uno de verdad tampoco lo van a
+> leer. Hay una prueba dedicada a esa línea exacta.
+
+### 12.2 · Reparar no es «actualizar otra vez»
+
+Y esta distinción es la razón de que sea una acción aparte:
+
+| | |
+|---|---|
+| **Actualizar** | Se fía del estado guardado (`installed.json`). Un fichero que se corrompió **después** de instalarse sigue apuntado como correcto y **sobrevive a cualquier número de actualizaciones** |
+| **Reparar** | No se fía de nada: recalcula el **sha1 de todo lo que hay en disco** |
+
+**El motor ya lo soportaba** — `Luna::Mode::Repair` existe y está probado desde
+que se escribió `LunaSync`. Lo que faltaba era el botón.
+
+> ⚠️ **Se avisa de que tarda, y no es cortesía**: son 159 ficheros, algunos de
+> decenas de MB. Sin el aviso la barra parece colgada y el jugador cierra el
+> launcher a medias.
+
+> ⚠️ **Va al menú y no a la barra.** Es la acción de cuando algo va mal; en la
+> barra invitaría a pulsarla sin motivo. Se llega también desde el propio aviso.
+
+### 12.3 · Dónde vive cada cosa
+
+```
+luna/LunaDiagnostico.{h,cpp}   la decisión. Función pura, sin interfaz
+launch/LaunchTask.h            +setExitCode/exitCode
+minecraft/launch/
+  LauncherPartLaunch.cpp       lo registra al morir el proceso
+Application.cpp                diagnostica y EMITE una señal
+ui/MainWindow.cpp              dibuja el aviso y ofrece el botón
+```
+
+> ⚠️ **Va por señal a propósito.** `Application` no tiene ventana a la que colgar
+> un diálogo, y el botón que a veces hace falta —Reparar— vive en `MainWindow`.
+> Allí solo se sabe **qué** pasó; qué hacer con ello es cosa de la interfaz. Y
+> `Accion` viaja **como int**: la conexión puede ser en cola, y un enum sin
+> registrar en el sistema de metatipos se perdería por el camino **sin dar
+> ningún error**.
+
+> ⚠️ **El orden importa en `controllerFinished`**: el diagnóstico se hace
+> **antes** de `extras.controller.reset()`, que se lleva por delante la tarea de
+> la que sale el código de salida.
+
+### 12.4 · El registro se lee del final
+
+Un log de Minecraft son miles de líneas y **la excepción que mató al juego está
+siempre al final**. `colaDelRegistro()` mantiene una ventana de las últimas N
+líneas y tira el resto según lee, en vez de cargar el fichero entero.
+
+Y **el botón de abrir la carpeta de registros se ofrece siempre**, también cuando
+sabemos la causa: es lo que hay que mandar por Discord si el arreglo no funciona.
+
 ## Last Decision
+
+**2026-08-23 · DIAGNÓSTICO Y REPARAR** — el fork deja de estar por detrás del
+launcher de Electron (§12). El motor ya sabía reparar (`Mode::Repair`); lo que
+faltaba era el botón. El diagnóstico es nuevo y **cada regla es un fallo real**,
+con una prueba dedicada al falso positivo de la GPU — porque un diagnóstico que
+se equivoca siempre enseña a ignorar los avisos.
 
 **2026-08-23 · TEMA DE LA CASA** — la interfaz del launcher sale del logo
 (§11): cinco colores muestreados del arte, QSS como fichero de verdad, rótulo en

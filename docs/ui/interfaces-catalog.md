@@ -73,7 +73,7 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 4 | **Vías** | ✅ **hecha** (2026-08-23, `TrabajosScreen`) | — | — |
 | 5 | **Puerta del mundo** | ⬜ **rehacer** | 🔴 | — |
 | 6 | **Viajes / LunaTaxi** | ⬜ | 🟠 | ciudadela construida |
-| 7 | **Tienda** | ⬜ **rehacer** | 🔴 | — |
+| 7 | **Tienda** | ✅ **hecha** (2026-08-23, 5 categorías) | ✅ | — |
 | 8 | **GTS** | ⬜ **rehacer** | 🔴 | Pokémon cuando haya Cobblemon |
 | 9 | **Pokédex** | ⬜ **rehacer** | 🔴 | — |
 | 10 | **Kits** | ⬜ **rehacer** | 🔴 | rangos, para los de rango |

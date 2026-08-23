@@ -336,6 +336,106 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «Dame el catalogo», al abrir la tienda. */
+    public record PedirTienda() implements CustomPayload {
+        public static final Id<PedirTienda> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_tienda"));
+        public static final PacketCodec<RegistryByteBuf, PedirTienda> CODEC =
+                PacketCodec.unit(new PedirTienda());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Un articulo.
+     *
+     * <p>⚠ Viaja el IDENTIFICADOR del objeto, no un indice. Un indice ata al
+     * cliente al orden exacto del JSON: cambiar el catalogo mientras alguien
+     * tiene la tienda abierta le haria comprar el articulo de al lado.
+     *
+     * <p>⚠ Y NO viaja «cuantos tengo»: eso lo cuenta el cliente de su propio
+     * inventario, que ya esta sincronizado. Mandarlo obligaria a reenviar el
+     * catalogo entero cada vez que el jugador recoge algo del suelo.
+     */
+    public record EntradaTienda(String item, String etiqueta, long compra,
+                                long venta, String moneda) {
+        public static final PacketCodec<RegistryByteBuf, EntradaTienda> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, EntradaTienda::item,
+                        PacketCodecs.STRING, EntradaTienda::etiqueta,
+                        PacketCodecs.VAR_LONG, EntradaTienda::compra,
+                        PacketCodecs.VAR_LONG, EntradaTienda::venta,
+                        PacketCodecs.STRING, EntradaTienda::moneda,
+                        EntradaTienda::new);
+    }
+
+    public record CategoriaTienda(String id, String nombre, String icono,
+                                  String descripcion, List<EntradaTienda> entradas) {
+        public static final PacketCodec<RegistryByteBuf, CategoriaTienda> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, CategoriaTienda::id,
+                        PacketCodecs.STRING, CategoriaTienda::nombre,
+                        PacketCodecs.STRING, CategoriaTienda::icono,
+                        PacketCodecs.STRING, CategoriaTienda::descripcion,
+                        EntradaTienda.CODEC.collect(PacketCodecs.toList()),
+                        CategoriaTienda::entradas,
+                        CategoriaTienda::new);
+    }
+
+    /**
+     * El catalogo entero, con sus categorias.
+     *
+     * <p>⚠ Se manda COMPLETO y una sola vez al abrir. Son 28 articulos en 5
+     * categorias: cabe de sobra en un paquete, y a cambio cambiar de categoria
+     * es instantaneo en vez de una ida y vuelta por pestaña.
+     */
+    public record Tienda(List<CategoriaTienda> categorias) implements CustomPayload {
+        public static final Id<Tienda> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "tienda"));
+        public static final PacketCodec<RegistryByteBuf, Tienda> CODEC =
+                PacketCodec.tuple(
+                        CategoriaTienda.CODEC.collect(PacketCodecs.toList()),
+                        Tienda::categorias,
+                        Tienda::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Comprar o vender.
+     *
+     * <p>⚠ El precio NO viaja. Lo pone el servidor mirando SU catalogo (P6): si
+     * viniera del cliente, un cliente modificado compraria Revivir por 1.
+     *
+     * <p>⚠ La categoria viaja ademas del objeto porque el mismo objeto podria
+     * estar en dos categorias con precios distintos algun dia. Hoy no pasa, y
+     * mandarla cuesta veinte bytes.
+     */
+    public record AccionTienda(String categoria, String item, int cantidad,
+                               boolean comprar) implements CustomPayload {
+        public static final Id<AccionTienda> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_tienda"));
+        public static final PacketCodec<RegistryByteBuf, AccionTienda> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, AccionTienda::categoria,
+                        PacketCodecs.STRING, AccionTienda::item,
+                        PacketCodecs.VAR_INT, AccionTienda::cantidad,
+                        PacketCodecs.BOOL, AccionTienda::comprar,
+                        AccionTienda::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+
     /** «Dame el estado de mi clan», al abrir la pantalla. */
     public record PedirClan() implements CustomPayload {
         public static final Id<PedirClan> ID =
@@ -877,6 +977,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirTrabajos.ID, PedirTrabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(Trabajos.ID, Trabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(AvisoLogro.ID, AvisoLogro.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirTienda.ID, PedirTienda.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionTienda.ID, AccionTienda.CODEC);
+        PayloadTypeRegistry.playS2C().register(Tienda.ID, Tienda.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirClan.ID, PedirClan.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionClan.ID, AccionClan.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoClan.ID, EstadoClan.CODEC);
@@ -888,73 +991,62 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(ReclamarMision.ID, ReclamarMision.CODEC);
         PayloadTypeRegistry.playS2C().register(Misiones.ID, Misiones.CODEC);
 
-        ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
-            var jugador = ctx.player();
-            // A la base de datos NUNCA desde el hilo del servidor. Se responde
-            // desde el executor de E/S y se envía cuando el dato ya está.
-            LunaEternal.submit(() -> {
-                try {
-                    long id = LunaEternal.players()
-                            .resolve(jugador.getUuid(), jugador.getName().getString());
-                    var eco = LunaEternal.economy();
-                    var saldo = new Saldo(
-                            eco.balance(id, Currency.POKEDOLLAR),
-                            eco.balance(id, Currency.MARK),
-                            eco.balance(id, Currency.REPORTCOIN));
-                    // La tarjeta viaja en la MISMA peticion. Podria ser otro
-                    // paquete con su propio viaje, pero se abren juntos y se
-                    // dibujan juntos: dos idas y vueltas para pintar un mismo
-                    // panel son dos formas de que llegue medio.
-                    var niveles = LunaEternal.progression().all(id);
-                    List<Integer> vias = new ArrayList<>(Path.values().length);
-                    for (Path via : Path.values()) {
-                        var estado = niveles.get(via);
-                        vias.add(estado == null ? 0 : estado.level());
-                    }
-                    // Clan, trabajo, división y medallas todavía no tienen
-                    // sistema detrás. Se mandan vacíos a propósito en vez de
-                    // inventar un valor: el Pad dibuja un guión, que dice «esto
-                    // aún no», mientras que un «Sin clan» dice «ya funciona y no
-                    // tienes ninguno» — que no es verdad.
-                    // ⚠ EL CLAN YA NO VA VACIO. D-038 dejo este campo
-                    //   viajando con la cadena vacia a proposito y escribio que
-                    //   "encenderlos seria rellenar tres lineas en vez de tocar
-                    //   paquete, codec, cache y dibujado". Fue exacto: es esta.
-                    //
-                    //   Se manda "[TAG] Nombre" ya compuesto, para que el Pad no
-                    //   tenga que saber como se escribe un clan.
-                    String clan = "";
-                    try {
-                        var c = LunaEternal.clans().clanDe(id);
-                        if (c != null) {
-                            clan = "\u00a7" + c.color() + "[" + c.etiqueta() + "] \u00a7f"
-                                    + c.nombre();
-                        }
-                    } catch (Exception e) {
-                        // Sin clan en la ficha es un guion; que falle la consulta
-                        // no puede dejar al jugador sin saldo ni sin vias.
-                        LunaEternal.LOG.debug("Sin clan para la ficha: {}", e.toString());
-                    }
-                    var ficha = new Ficha(vias, clan, "", "", 0);
-                    // Volver al hilo del servidor para enviar: la red no es
-                    // segura desde un hilo cualquiera.
-                    jugador.getServer().execute(() -> {
-                        ServerPlayNetworking.send(jugador, saldo);
-                        ServerPlayNetworking.send(jugador, ficha);
-                    });
-                } catch (Exception e) {
-                    // Que no se pueda leer el saldo no es motivo para echar a
-                    // nadie: el Pad se queda con guiones donde iría el número.
-                    LunaEternal.LOG.warn("No se pudo leer la ficha de {}: {}",
-                            jugador.getName().getString(), e.toString());
-                }
-            });
-        });
+        ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) ->
+                enviarSaldo(ctx.player()));
 
 
         ServerPlayNetworking.registerGlobalReceiver(PedirCosmeticos.ID, (carga, ctx) -> {
             var jugador = ctx.player();
             LunaEternal.submit(() -> enviarCosmeticos(jugador));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirTienda.ID, (carga, ctx) ->
+                ServerPlayNetworking.send(ctx.player(), componerTienda()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionTienda.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var catalogo = LunaEternal.shop();
+            if (catalogo == null) {
+                return;
+            }
+            var categoria = catalogo.category(carga.categoria());
+            if (categoria == null) {
+                return;
+            }
+            // ⚠ SE BUSCA LA ENTRADA EN EL CATALOGO DEL SERVIDOR. El paquete solo
+            //   dice CUAL; el precio, la moneda y si se puede vender salen de
+            //   aqui. Es la diferencia entre una tienda y un formulario de
+            //   deseos (P6).
+            net.pokereport.luna.shop.ShopCatalog.Entry entrada = null;
+            for (var e : categoria.entries()) {
+                if (net.minecraft.registry.Registries.ITEM.getId(e.item())
+                        .toString().equals(carga.item())) {
+                    entrada = e;
+                    break;
+                }
+            }
+            if (entrada == null) {
+                return;
+            }
+            // ⚠ LA CANTIDAD SE ACOTA AQUI. Llega del cliente, y un 2.000 millones
+            //   en `entry.buy() * amount` DESBORDA el long y sale NEGATIVO: cobrar
+            //   una cantidad negativa es INGRESAR dinero. Se acota antes de
+            //   multiplicar, que es el unico sitio donde sirve de algo.
+            int cantidad = Math.max(1, Math.min(64, carga.cantidad()));
+            final var laEntrada = entrada;
+            java.util.function.Consumer<net.pokereport.luna.shop.ShopService.Result> luego =
+                    r -> {
+                        jugador.sendMessage(net.minecraft.text.Text.literal(r.message()), false);
+                        // El saldo cambia con cada operacion, y la pantalla lo
+                        // dibuja. Si el servidor no lo reenvia, el jugador ve el
+                        // numero viejo hasta que reabra -- la leccion del 23-ago.
+                        enviarSaldo(jugador);
+                    };
+            if (carga.comprar()) {
+                net.pokereport.luna.shop.ShopService.buy(jugador, laEntrada, cantidad, luego);
+            } else {
+                net.pokereport.luna.shop.ShopService.sell(jugador, laEntrada, cantidad, luego);
+            }
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirClan.ID, (carga, ctx) ->
@@ -1261,6 +1353,109 @@ public class Red implements ModInitializer {
      */
     public static void refrescarInicial(net.minecraft.server.network.ServerPlayerEntity jugador) {
         enviarIniciales(jugador);
+    }
+
+    /**
+     * Manda el saldo y la ficha a un jugador.
+     *
+     * <p>Se llama al abrir el Pad y <b>cada vez que el saldo cambia por algo que
+     * el jugador acaba de hacer</b> --comprar, vender, aportar al tesoro--.
+     *
+     * <p>⚠ Existe como metodo y no copiado dentro de cada manejador porque
+     * compone DOS cosas (saldo y ficha) y la ficha ya ha crecido una vez: el dia
+     * que crezca otra, dos copias dejarian una pantalla enseñando el clan y otra
+     * no.
+     */
+    public static void enviarSaldo(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        // A la base de datos NUNCA desde el hilo del servidor. Se responde
+        // desde el executor de E/S y se envía cuando el dato ya está.
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                var eco = LunaEternal.economy();
+                var saldo = new Saldo(
+                        eco.balance(id, Currency.POKEDOLLAR),
+                        eco.balance(id, Currency.MARK),
+                        eco.balance(id, Currency.REPORTCOIN));
+                // La tarjeta viaja en la MISMA peticion. Podria ser otro
+                // paquete con su propio viaje, pero se abren juntos y se
+                // dibujan juntos: dos idas y vueltas para pintar un mismo
+                // panel son dos formas de que llegue medio.
+                var niveles = LunaEternal.progression().all(id);
+                List<Integer> vias = new ArrayList<>(Path.values().length);
+                for (Path via : Path.values()) {
+                    var estado = niveles.get(via);
+                    vias.add(estado == null ? 0 : estado.level());
+                }
+                // Trabajo, división y medallas todavía no tienen sistema
+                // detrás. Se mandan vacíos a propósito en vez de inventar un
+                // valor: el Pad dibuja un guión, que dice «esto aún no»,
+                // mientras que un «Sin clan» diría «ya funciona y no tienes
+                // ninguno» — que no sería verdad.
+                // ⚠ EL CLAN YA NO VA VACIO. D-038 dejo este campo
+                //   viajando con la cadena vacia a proposito y escribio que
+                //   "encenderlos seria rellenar tres lineas en vez de tocar
+                //   paquete, codec, cache y dibujado". Fue exacto: es esta.
+                //
+                //   Se manda "[TAG] Nombre" ya compuesto, para que el Pad no
+                //   tenga que saber como se escribe un clan.
+                String clan = "";
+                try {
+                    var c = LunaEternal.clans().clanDe(id);
+                    if (c != null) {
+                        clan = "\u00a7" + c.color() + "[" + c.etiqueta() + "] \u00a7f"
+                                + c.nombre();
+                    }
+                } catch (Exception e) {
+                    // Sin clan en la ficha es un guion; que falle la consulta
+                    // no puede dejar al jugador sin saldo ni sin vias.
+                    LunaEternal.LOG.debug("Sin clan para la ficha: {}", e.toString());
+                }
+                var ficha = new Ficha(vias, clan, "", "", 0);
+                // Volver al hilo del servidor para enviar: la red no es
+                // segura desde un hilo cualquiera.
+                jugador.getServer().execute(() -> {
+                    ServerPlayNetworking.send(jugador, saldo);
+                    ServerPlayNetworking.send(jugador, ficha);
+                });
+            } catch (Exception e) {
+                // Que no se pueda leer el saldo no es motivo para echar a
+                // nadie: el Pad se queda con guiones donde iría el número.
+                LunaEternal.LOG.warn("No se pudo leer la ficha de {}: {}",
+                        jugador.getName().getString(), e.toString());
+            }
+        });
+    }
+
+    /**
+     * El catalogo de la tienda, tal y como lo tiene el servidor.
+     *
+     * <p>No toca la base de datos: {@code ShopCatalog} se carga del JSON al
+     * arrancar y se valida entonces. Por eso se puede componer aqui mismo, en el
+     * hilo del servidor, sin pasar por el executor.
+     */
+    private static Tienda componerTienda() {
+        var catalogo = LunaEternal.shop();
+        List<CategoriaTienda> salida = new ArrayList<>();
+        if (catalogo == null) {
+            return new Tienda(List.of());
+        }
+        for (var c : catalogo.categories()) {
+            List<EntradaTienda> entradas = new ArrayList<>();
+            for (var e : c.entries()) {
+                entradas.add(new EntradaTienda(
+                        net.minecraft.registry.Registries.ITEM.getId(e.item()).toString(),
+                        e.label() == null ? "" : e.label(),
+                        e.buy(), e.sell(), e.currency().name()));
+            }
+            salida.add(new CategoriaTienda(c.id(), c.name(),
+                    net.minecraft.registry.Registries.ITEM.getId(c.icon()).toString(),
+                    c.description() == null ? "" : c.description(),
+                    List.copyOf(entradas)));
+        }
+        return new Tienda(List.copyOf(salida));
     }
 
     /**

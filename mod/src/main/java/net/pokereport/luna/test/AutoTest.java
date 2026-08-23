@@ -657,6 +657,73 @@ public final class AutoTest {
             }
         }
         check("la moneda premium no se puede recomprar", premiumBuyback == 0);
+
+        // ------------------------------------------------ lo que pide la PANTALLA
+        //
+        // Lo de arriba comprueba la ECONOMIA del catalogo. Esto comprueba que se
+        // pueda DIBUJAR, que es un problema distinto y que ya mordio una vez: la
+        // cadena `oficios` del arbol de misiones pedia 754 px en un hueco de 698
+        // y la version anterior no lo detectaba -- dibujaba fuera del marco, y
+        // desde dentro eso se ve como "faltan misiones".
+
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        boolean idsUnicos = true;
+        boolean todasConArticulos = true;
+        boolean iconosReales = true;
+        boolean nombresConColor = true;
+        for (var c : catalog.categories()) {
+            if (!ids.add(c.id())) idsUnicos = false;
+            if (c.entries().isEmpty()) todasConArticulos = false;
+            // Un icono que no exista sale como AIRE, y `drawItem` con aire no
+            // dibuja NADA: ni hueco, ni cubo morado. La categoria pareceria un
+            // boton en blanco y nada avisaria.
+            if (c.icon() == net.minecraft.item.Items.AIR) iconosReales = false;
+            // La pantalla QUITA los codigos de color del nombre --sobre el panel
+            // claro un §f seria invisible--, asi que un nombre que sea SOLO color
+            // se quedaria vacio.
+            if (c.name() == null || c.name().replaceAll("\u00a7.", "").isBlank()) {
+                nombresConColor = false;
+            }
+        }
+        check("ningun identificador de categoria se repite", idsUnicos);
+        check("toda categoria tiene al menos un articulo", todasConArticulos);
+        check("todo icono de categoria es un objeto real", iconosReales);
+        check("todo nombre de categoria queda legible sin sus codigos de color",
+                nombresConColor);
+
+        // ⚠ LAS CATEGORIAS TIENEN QUE CABER EN EL PANEL. Van en una lista
+        //   vertical de tarjetas de 86+8 px que empieza en 156, y debajo van el
+        //   separador y el saldo (~110). El panel acaba en 762.
+        //
+        //   Hoy son 5 y sobran 26 px. La SEXTA no cabria, y el sintoma no seria
+        //   un error: seria una categoria dibujada fuera del marco -- invisible,
+        //   e imposible de pulsar. Que se entere aqui y no un jugador.
+        int alto = 156 + catalog.categories().size() * (86 + 8) + 110;
+        check("las categorias caben en el panel (" + alto + " de 762)", alto <= 762);
+
+        // ⚠ Y LOS ARTICULOS TIENEN QUE CABER EN SU PAGINA. La pantalla pagina
+        //   sola, asi que esto no puede desbordar -- pero si una categoria
+        //   creciera hasta necesitar mas de 9 paginas, las flechas seguirian
+        //   funcionando y nadie llegaria nunca al final por pereza.
+        int mayor = 0;
+        for (var c : catalog.categories()) {
+            mayor = Math.max(mayor, c.entries().size());
+        }
+        int porPagina = (494 - 2 * 14 - 58) / (62 + 6);
+        check("ninguna categoria pasa de 3 paginas (" + mayor + " articulos, "
+                + porPagina + " por pagina)", mayor <= porPagina * 3);
+
+        // ⚠ EL DESBORDE DEL PRECIO. La pantalla multiplica precio x cantidad y
+        //   la cantidad la elige el CLIENTE. El servidor la acota a 64 antes de
+        //   multiplicar; esto comprueba que con ese tope el producto sigue siendo
+        //   un numero, y no un long que da la vuelta y se convierte en un INGRESO.
+        boolean sinDesborde = true;
+        for (var c : catalog.categories()) {
+            for (var e : c.entries()) {
+                if (e.buy() > Long.MAX_VALUE / 64) sinDesborde = false;
+            }
+        }
+        check("precio x 64 no desborda el long", sinDesborde);
     }
 
     /**

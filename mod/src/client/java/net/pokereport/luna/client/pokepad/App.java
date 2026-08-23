@@ -29,7 +29,7 @@ public record App(String id, boolean abierta) {
         new App("warps",      false),
         new App("clan",       true),
         new App("gts",        false),
-        new App("tienda",     false),
+        new App("tienda",     true),
         new App("tesoros",    false),
         new App("wiki",       false),
         new App("cazas",      false),

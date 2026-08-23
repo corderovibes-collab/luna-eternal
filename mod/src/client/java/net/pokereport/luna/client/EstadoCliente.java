@@ -23,6 +23,7 @@ public final class EstadoCliente {
     private static Red.Misiones misiones;
     private static Red.Iniciales iniciales;
     private static Red.EstadoClan clan;
+    private static Red.Tienda tienda;
 
     private EstadoCliente() {}
 
@@ -99,6 +100,21 @@ public final class EstadoCliente {
         return clan;
     }
 
+    public static void guardar(Red.Tienda nueva) {
+        tienda = nueva;
+    }
+
+    /**
+     * El catalogo de la tienda. {@code null} hasta que contesta el servidor.
+     *
+     * <p>⚠ Y una tienda VACIA no es lo mismo que «todavia no lo se». Enseñar
+     * cero articulos mientras el paquete esta en vuelo hace creer que no hay
+     * nada a la venta -- el mismo aviso que ya lleva el catalogo de cosmeticos.
+     */
+    public static Red.Tienda tienda() {
+        return tienda;
+    }
+
     public static Red.Cosmeticos cosmeticos() {
         return cosmeticos;
     }
@@ -109,6 +125,7 @@ public final class EstadoCliente {
         misiones = null;
         iniciales = null;
         clan = null;
+        tienda = null;
         saldo = null;
         ficha = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo

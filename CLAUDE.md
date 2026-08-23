@@ -384,9 +384,9 @@ Misiones      EL ARBOL, CON SUS RAMAS Y SUS CANDADOS (2026-08-23)
                 que cruza de cadena, y un CICLO. Ninguno da error al
                 cargar, y un ciclo cuelga EL DIBUJADO
               /luna reiniciarmision <id> (nivel 4, autocompleta)
-              ⚠ t4_tienda, t5_gts, m1_comprar y m2_vender NO SE PUEDEN
-                COMPLETAR todavia: piden tienda o GTS, que no tienen
-                pantalla
+              ⚠ t5_gts NO SE PUEDE COMPLETAR todavia: pide el GTS, que no
+                tiene pantalla. t4_tienda, m1_comprar y m2_vender se
+                desbloquearon con la tienda (2026-08-23)
 
 Oficios       MINAR, PESCAR Y COSECHAR DAN PLATA (2026-08-23, V012)
               5 Vias -> 8 . MINERO, PESCADOR, AGRICULTOR
@@ -421,6 +421,43 @@ Oficios       MINAR, PESCAR Y COSECHAR DAN PLATA (2026-08-23, V012)
                 mira. Y el ENUM guarda el INDICE: reordenar los cinco
                 viejos convertiria a los Exploradores en Entrenadores
               /luna via <VIA> <xp> (nivel 3) para probar
+
+Tienda        COMPRAR Y VENDER, POR CATEGORIAS (2026-08-23)
+              5 categorias . 28 articulos . SIN migracion: la logica
+              (ShopService, ShopCatalog) llevaba escrita desde PHASE 3 y
+              lo unico que faltaba era la pantalla
+              LAS CATEGORIAS VAN EN EL PANEL IZQUIERDO, no en pestañas
+              arriba: llevan icono + nombre + una frase que explica para
+              que sirven, y eso en una pestaña de 150 px no entra. Es la
+              primera pantalla que usa el panel para algo de verdad
+              cantidades x1 . x8 . x64 (un mazo son 64: comprar Poke Balls
+              de una en una son 64 clics)
+              ⚠ EL PRECIO NO VIAJA EN EL PAQUETE. Va el IDENTIFICADOR del
+                articulo y el servidor busca el precio en SU catalogo. Si
+                viniera del cliente, un cliente modificado compraria
+                Revivir por 1 (P6)
+              ⚠ NI UN INDICE: un indice ata al cliente al orden exacto del
+                JSON, y cambiar el catalogo con la tienda abierta le haria
+                comprar el articulo de al lado
+              ⚠⚠ LA CANTIDAD SE ACOTA ANTES DE MULTIPLICAR. Llega del
+                 cliente, y un 2.000 millones en `precio * cantidad`
+                 DESBORDA el long y sale NEGATIVO: cobrar en negativo es
+                 INGRESAR dinero. Acotar despues no sirve de nada
+              ⚠ "cuantos tengo" lo cuenta el CLIENTE de su inventario, que
+                ya esta sincronizado. Mandarlo obligaria a reenviar el
+                catalogo cada vez que alguien recoge algo del suelo
+              ⚠ el saldo se REENVIA tras cada compra (`enviarSaldo`, que se
+                extrajo del manejador de PedirSaldo). Sin eso el jugador ve
+                el numero viejo hasta reabrir -- la leccion del 23-ago
+              ⚠ los botones se APAGAN, no desaparecen: que un articulo
+                exista y no puedas pagarlo es INFORMACION; que no exista es
+                un catalogo distinto
+              +7 comprobaciones, y son de DIBUJADO, no de economia:
+                las 5 categorias caben en el panel (736 de 762). LA SEXTA
+                NO CABRIA, y el sintoma no seria un error sino una
+                categoria fuera del marco: invisible e impulsable
+                mismo fallo que la cadena `oficios` del arbol de misiones
+              ⚠ SIN VERIFICAR EN EL JUEGO todavia
 
 Clanes        EL PRIMER SISTEMA SOCIAL (2026-08-23, V013)
               detalle completo en docs/social/clanes.md
@@ -898,19 +935,20 @@ Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
                 jugador conectado; desde consola solo consta que el
                 datapack carga sin errores. Es el mismo PKM-004 de
                 siempre
-Interfaz      SEIS PANTALLAS. Cinco verificadas en el juego:
+Interfaz      SIETE PANTALLAS. Cinco verificadas en el juego:
                 PokePad     2026-08-16   la principal, 15 iconos
                 Cosmeticos  2026-08-22   4 pestanias
                 Trabajos    2026-08-23   8 Vias y oficios, paginado
                 Misiones    2026-08-23   arbol de 28 en 6 cadenas
                 Inicial     2026-08-23   se abre SOLA al entrar
                 Clan        2026-08-23   SIN VERIFICAR (pide 2 cuentas)
-              5 de los 15 iconos abren algo: pokedex (la de Cobblemon),
-              cosmeticos, trabajos, misiones y clan
+                Tienda      2026-08-23   SIN VERIFICAR . 5 categorias
+              6 de los 15 iconos abren algo: pokedex (la de Cobblemon),
+              cosmeticos, trabajos, misiones, clan y tienda
               SIGUEN SIN PANTALLA, con la logica viva y probada:
-                tienda . curar . GTS . kits . cazas . viaje
-              tienda y curar son las que mas se notan: hoy un jugador
-              captura pero no puede comprar Poke Balls ni curar
+                curar . GTS . kits . cazas . viaje
+              CURAR es la que mas se nota: ya se compran Poke Balls, pero
+              el equipo sigue sin poder curarse desde el Pad
 Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
               solo captura las avanza; crianza cuenta al ECLOSIONAR
 Repos         luna-eternal (privado) · luna-eternal-pack (publico)

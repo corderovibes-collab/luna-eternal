@@ -773,20 +773,29 @@ public class Red implements ModInitializer {
                 try {
                     long id = LunaEternal.players()
                             .resolve(jugador.getUuid(), jugador.getName().getString());
-                    // ⚠ AQUI NO SE COMPRUEBA NADA. `conceder` marca primero y
-                    //   entrega despues, con vuelta atras si la entrega falla, y
-                    //   `claimOnce` es lo que impide elegir dos veces. Repetir la
-                    //   comprobacion aqui invita a que las dos se separen -- y la
-                    //   que manda es la de alla, que ademas es atomica.
+                    // ⚠ AQUI NO SE COMPRUEBA SI YA ELIGIO. `conceder` marca
+                    //   primero y entrega despues, con vuelta atras si la entrega
+                    //   falla, y `claimOnce` es lo unico que impide elegir dos
+                    //   veces -- porque es atomico. Repetir la comprobacion aqui
+                    //   invita a que las dos se separen.
+                    //
+                    // ⚠⚠ SE LE PASA UN AVISO, Y ESO ERA LO QUE FALTABA.
+                    //    `conceder` es ASINCRONO: encola trabajo y vuelve al
+                    //    instante. Antes se llamaba a `enviarIniciales` justo
+                    //    despues, y leia el estado ANTERIOR --yaEligio false--,
+                    //    asi que la pantalla se quedaba en ENTREGANDO para
+                    //    siempre. Y como no se puede cerrar sin elegir, el
+                    //    jugador se quedaba ATRAPADO.
                     net.pokereport.luna.starter.StarterService.conceder(
-                            jugador, id, carga.especie());
+                            jugador, id, carga.especie(), () -> enviarIniciales(jugador));
                 } catch (Exception e) {
                     LunaEternal.LOG.warn("No se pudo entregar el inicial a {}: {}",
                             jugador.getName().getString(), e.toString());
+                    // Si ni siquiera se llego a llamar a `conceder`, el aviso no
+                    // va a llegar nunca: se manda el estado aqui para que la
+                    // pantalla salga de ENTREGANDO en vez de colgarse.
+                    enviarIniciales(jugador);
                 }
-                // Se reenvia el estado: la pantalla se cierra sola al ver que ya
-                // eligio, en vez de fiarse de haber pulsado.
-                enviarIniciales(jugador);
             });
         });
 

@@ -65,8 +65,26 @@ public class InicialScreen extends Screen {
     private int ancho, alto, x0, y0;
     private List<Red.OpcionInicial> opciones = List.of();
     private Red.OpcionInicial elegida;
-    /** Se pone al pulsar y no se quita: impide mandar dos veces por doble clic. */
+    /** Se pone al pulsar: impide mandar dos veces por doble clic. */
     private boolean enviado;
+    /** Cuándo se pulsó, para no esperar eternamente. Ver `render`. */
+    private long pulsadoEn;
+    private boolean falloEntrega;
+
+    /**
+     * Lo que se espera a una respuesta antes de rendirse.
+     *
+     * <p>⚠⚠ ESTO EXISTE PORQUE LA PANTALLA DEJO A UN JUGADOR ATRAPADO. El
+     * servidor no contestaba —{@code conceder} es asíncrono y se le preguntaba
+     * antes de tiempo— y aquí se quedaba «ENTREGANDO…» para siempre, sin poder
+     * cerrarse.
+     *
+     * <p>La causa está arreglada, y aun así esto se queda: <b>una pantalla que no
+     * se puede cerrar tiene que tener siempre una salida.</b> El fallo de hoy era
+     * mío, pero el siguiente puede ser un corte de red, y el resultado para quien
+     * está dentro es el mismo — se queda mirando una palabra.
+     */
+    private static final long ESPERA_MAX_MS = 6000;
 
     public InicialScreen() {
         super(Text.translatable("pokepad.lunaeternal.inicial.titulo"));
@@ -101,10 +119,16 @@ public class InicialScreen extends Screen {
         return false;
     }
 
-    /** Ver el comentario de la clase: sin inicial no hay partida. */
+    /**
+     * Ver el comentario de la clase: sin inicial no hay partida.
+     *
+     * <p>⚠ Pero SÍ se puede cerrar si la entrega ha fallado. Encerrar a alguien
+     * con un botón que no responde no le acerca a tener un inicial: solo le quita
+     * también la opción de salir y volver a entrar.
+     */
     @Override
     public boolean shouldCloseOnEsc() {
-        return false;
+        return falloEntrega;
     }
 
     private int px(int a) {
@@ -131,6 +155,15 @@ public class InicialScreen extends Screen {
 
         // ⚠ PRIMERA PASADA: todo lo plano. Ver dibujado.md — mezclar 2D y 3D deja
         //   el orden al azar y los modelos titilan.
+        // ⚠ Si se pulsó y no llega respuesta, se suelta el botón y se dice. El
+        //   servidor tiene que contestar en todos los caminos --entregado, ya
+        //   elegido o fallo-- así que pasar de aquí significa que algo se perdió.
+        if (enviado && !falloEntrega
+                && System.currentTimeMillis() - pulsadoEn > ESPERA_MAX_MS) {
+            enviado = false;
+            falloEntrega = true;
+        }
+
         dibujarPanel(ctx, rx, ry);
         dibujarRejilla(ctx, rx, ry);
 
@@ -164,8 +197,11 @@ public class InicialScreen extends Screen {
         int cx = PANEL_X + PANEL_W / 2;
         texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.titulo"),
                 cx, PANEL_Y + 30, 26, 0xFFFFFFFF, true, false);
-        texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.aviso"),
-                cx, PANEL_Y + 62, 17, TEXTO_SUAVE, true, false);
+        texto(ctx, Text.translatable(falloEntrega
+                        ? "pokepad.lunaeternal.inicial.fallo"
+                        : "pokepad.lunaeternal.inicial.aviso"),
+                cx, PANEL_Y + 62, 17,
+                falloEntrega ? 0xFFE06060 : TEXTO_SUAVE, true, false);
 
         if (elegida == null) {
             return;
@@ -277,6 +313,8 @@ public class InicialScreen extends Screen {
             //   Cerrar al pulsar dejaria sin Pokemon y sin pantalla a quien se
             //   encuentre un fallo de entrega.
             enviado = true;
+            falloEntrega = false;
+            pulsadoEn = System.currentTimeMillis();
             sonar(true);
             ClientPlayNetworking.send(new Red.ElegirInicial(elegida.especie()));
             return true;

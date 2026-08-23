@@ -78,20 +78,48 @@ public final class StarterService {
      * se manda al de E/S y la parte que toca el mundo vuelve al del servidor.
      */
     public static void conceder(ServerPlayerEntity player, long playerId, String especie) {
+        conceder(player, playerId, especie, null);
+    }
+
+    /**
+     * Igual, pero avisando al terminar.
+     *
+     * <p>⚠⚠ EL AVISO NO ES UN EXTRA: ES LO QUE FALTABA Y DEJABA COLGADA LA
+     * PANTALLA. {@code conceder} <b>encola trabajo y vuelve al instante</b> —la
+     * marca y la entrega ocurren después, en otros hilos—, así que quien la
+     * llamaba y preguntaba a continuación «¿ya eligió?» leía el estado ANTERIOR.
+     * La pantalla del inicial se quedaba en «ENTREGANDO…» para siempre, y como no
+     * se puede cerrar sin elegir, <b>el jugador se quedaba atrapado</b>.
+     *
+     * <p>Que un método asíncrono parezca síncrono es la trampa: no da error, no
+     * tarda, y devuelve. Por eso ahora avisa, y avisa <b>en todos los caminos</b>
+     * —entregado, ya elegido antes, o fallo— porque quien espera necesita saberlo
+     * en los tres.
+     *
+     * @param alTerminar se ejecuta en el hilo de E/S cuando ya se sabe el
+     *                   resultado. Puede ser {@code null}
+     */
+    public static void conceder(ServerPlayerEntity player, long playerId, String especie,
+                                Runnable alTerminar) {
         Inicial op = porEspecie(especie);
         if (op == null) {
             LunaEternal.LOG.warn("{} pidió un inicial que no existe: {}",
                 player.getGameProfile().getName(), especie);
+            avisar(alTerminar);
             return;
         }
         var server = player.getServer();
-        if (server == null) return;
+        if (server == null) {
+            avisar(alTerminar);
+            return;
+        }
 
         LunaEternal.submit(() -> {
             try {
                 if (!LunaEternal.kitService().claimOnce(playerId, CLAVE)) {
                     server.execute(() -> player.sendMessage(Text.literal(
                         "§7Ya elegiste tu primer compañero."), false));
+                    avisar(alTerminar);
                     return;
                 }
 
@@ -111,6 +139,10 @@ public final class StarterService {
                         deshacer(playerId);
                         player.sendMessage(Text.literal(
                             "§cNo se pudo entregar. Inténtalo otra vez."), false);
+                        // ⚠ TAMBIEN se avisa al fallar, y va DESPUES de `deshacer`
+                        //   para que quien pregunte lea la marca ya retirada. Si
+                        //   no, la pantalla se cerraria creyendo que hubo suerte.
+                        avisar(alTerminar);
                         return;
                     }
 
@@ -127,14 +159,31 @@ public final class StarterService {
                         } catch (Exception e) {
                             LunaEternal.LOG.error("No se pudo dar XP del inicial", e);
                         }
+                        // El aviso va aqui, al final del todo: para entonces la
+                        // marca esta puesta y el Pokemon entregado, asi que quien
+                        // pregunte lee la verdad.
+                        avisar(alTerminar);
                     });
                 });
 
             } catch (Exception e) {
                 LunaEternal.LOG.error("Error entregando el inicial", e);
                 deshacer(playerId);
+                avisar(alTerminar);
             }
         });
+    }
+
+    /** Nunca deja que un fallo del que avisa se lleve por delante la entrega. */
+    private static void avisar(Runnable alTerminar) {
+        if (alTerminar == null) {
+            return;
+        }
+        try {
+            alTerminar.run();
+        } catch (Throwable t) {
+            LunaEternal.LOG.warn("Fallo avisando del inicial: {}", t.toString());
+        }
     }
 
     private static void deshacer(long playerId) {

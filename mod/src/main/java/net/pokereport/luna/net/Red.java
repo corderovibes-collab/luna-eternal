@@ -307,6 +307,35 @@ public class Red implements ModInitializer {
         }
     }
 
+    /**
+     * Un LOGRO: sube a la esquina como un toast, y suena.
+     *
+     * <p>⚠ Viaja el TEXTO YA COMPUESTO y no las piezas. Podría mandarse
+     * «MINERO, nivel 3, 4000 de Plata» y dejar que el cliente lo redacte, pero
+     * entonces el formato viviría en dos sitios: el chat lo compone el servidor y
+     * el toast el cliente, y el día que cambie una frase cambiaría en uno solo.
+     *
+     * <p>⚠ Y el <b>objeto</b> es un identificador, no una textura: el cliente
+     * dibuja el objeto de verdad con su modelo. Así un oficio nuevo no necesita
+     * arte, y el icono es el mismo que sale en la pantalla de Trabajos.
+     */
+    public record AvisoLogro(String titulo, String detalle, String objeto)
+            implements CustomPayload {
+        public static final Id<AvisoLogro> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "aviso_logro"));
+        public static final PacketCodec<RegistryByteBuf, AvisoLogro> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, AvisoLogro::titulo,
+                        PacketCodecs.STRING, AvisoLogro::detalle,
+                        PacketCodecs.STRING, AvisoLogro::objeto,
+                        AvisoLogro::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame mis Vías», al abrir la pantalla de Trabajos. */
     public record PedirTrabajos() implements CustomPayload {
         public static final Id<PedirTrabajos> ID =
@@ -470,6 +499,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(LlevaPuesto.ID, LlevaPuesto.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirTrabajos.ID, PedirTrabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(Trabajos.ID, Trabajos.CODEC);
+        PayloadTypeRegistry.playS2C().register(AvisoLogro.ID, AvisoLogro.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
             var jugador = ctx.player();

@@ -47,6 +47,17 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(Red.Cosmeticos.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
+        // Los LOGROS: suben a la esquina como un toast. Van aqui y no en una
+        // pantalla porque tienen que verse ESTES DONDE ESTES -- picando, pescando
+        // o mirando el mundo.
+        ClientPlayNetworking.registerGlobalReceiver(Red.AvisoLogro.ID, (carga, ctx) -> {
+            var cliente = ctx.client();
+            cliente.getToastManager().add(new ToastLuna(cliente,
+                    net.minecraft.text.Text.literal(carga.titulo()),
+                    net.minecraft.text.Text.literal(carga.detalle()),
+                    carga.objeto()));
+        });
+
         // Las cinco Vias. Llegan al abrir Trabajos, no antes: nadie las mira
         // el resto del tiempo.
         ClientPlayNetworking.registerGlobalReceiver(Red.Trabajos.ID,

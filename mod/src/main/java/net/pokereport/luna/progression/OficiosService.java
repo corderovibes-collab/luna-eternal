@@ -75,16 +75,18 @@ public final class OficiosService {
                     "oficio_nivel", clave);
         }
 
-        final long pagado = total;
-        final int nivel = subida.estado().level();
-        jugador.getServer().execute(() -> {
-            jugador.sendMessage(Text.literal(
-                    "§6" + oficio.displayName + " §f" + Path.roman(nivel)
-                    + (pagado > 0 ? "  §a+" + String.format("%,d", pagado) + " Plata" : "")),
-                    false);
-            jugador.playSound(net.minecraft.sound.SoundEvents.ENTITY_PLAYER_LEVELUP,
-                    0.7f, 1.2f);
-        });
+        // ⚠ EL ICONO ES EL DE LA VIA, el mismo que sale en la pantalla de
+        //   Trabajos. Que el aviso y la pantalla enseñen lo mismo es lo que hace
+        //   que uno lleve al otro sin explicarlo.
+        String objeto = net.minecraft.registry.Registries.ITEM
+                .getId(oficio.icon).toString();
+        String detalle = total > 0
+                ? String.format("Nivel %s  ·  +%,d Plata",
+                        Path.roman(subida.estado().level()), total)
+                : "Nivel " + Path.roman(subida.estado().level());
+        net.pokereport.luna.ui.Aviso.logro(
+                jugador, oficio.displayName.toUpperCase(java.util.Locale.ROOT),
+                detalle, objeto);
 
         comprobarCompletos(jugador, playerId);
     }
@@ -126,8 +128,9 @@ public final class OficiosService {
             // cada vez que se sube un nivel estando ya al tope--.
             return;
         }
-        jugador.getServer().execute(() -> jugador.sendMessage(Text.literal(
-                "§d§lTODOS LOS OFICIOS AL MAXIMO  §f+250 LunaCoins"), false));
+        net.pokereport.luna.ui.Aviso.logro(jugador, "OFICIOS COMPLETOS",
+                "+250 LunaCoins", "minecraft:nether_star",
+                net.minecraft.sound.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0f);
     }
 
     /** Atajo para los enganches: resuelve el jugador y concede, en el hilo de E/S. */

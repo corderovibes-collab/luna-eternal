@@ -443,11 +443,26 @@ public final class LunaCommand {
             try {
                 long id = LunaEternal.players()
                         .resolve(jugador.getUuid(), jugador.getName().getString());
-                var estado = LunaEternal.progression().grant(id, elegida, xp);
+                // ⚠⚠ POR `OficiosService`, NO POR `progression().grant()`.
+                //
+                //   Estaba llamando a `grant` directamente, que solo escribe la
+                //   fila: SIN PAGO, SIN AVISO Y SIN SONIDO. Y yo le dije al
+                //   usuario que probara con este comando, asi que probo justo el
+                //   unico camino que no hace nada de lo que se acababa de
+                //   construir. Su reporte fue exacto: "cuando subes de nivel no
+                //   da plata ni nada".
+                //
+                //   Un comando de prueba que no recorre el mismo camino que el
+                //   juego no prueba nada; solo da la falsa sensacion de haberlo
+                //   probado.
+                net.pokereport.luna.progression.OficiosService.ganar(jugador, id, elegida, xp);
+                var estado = LunaEternal.progression().all(id).get(elegida);
+                final int nivel = estado == null ? 0 : estado.level();
+                final long tiene = estado == null ? 0 : estado.xp();
                 origen.getServer().execute(() -> origen.sendFeedback(() -> Text.literal(
                         "§a" + elegida.displayName + " -> nivel "
-                        + net.pokereport.luna.progression.Path.roman(estado.level())
-                        + " (" + estado.xp() + " XP)"), false));
+                        + net.pokereport.luna.progression.Path.roman(nivel)
+                        + " (" + tiene + " XP)"), false));
             } catch (Exception e) {
                 LunaEternal.LOG.warn("No se pudo dar XP de via: {}", e.toString());
             }

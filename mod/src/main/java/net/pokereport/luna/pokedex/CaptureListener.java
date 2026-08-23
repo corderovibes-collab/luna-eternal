@@ -158,15 +158,28 @@ public final class CaptureListener {
                 if (server != null) {
                     server.execute(() -> {
                         if (player.isRemoved()) return;
+                        // ⚠ REGISTRAR UNA ESPECIE NUEVA ES UN LOGRO, no una linea
+                        //   de chat. Ocurre 251 veces en toda la partida --una por
+                        //   especie-- asi que un toast no satura, y es de lo poco
+                        //   que un jugador quiere ver que ha conseguido.
+                        //
+                        //   Capturar una que YA tienes no avisa: eso si pasa mil
+                        //   veces, y un toast por captura seria una cortina.
                         if (nueva) {
-                            player.sendMessage(Text.literal(
-                                "§8[§bPokédex§8] §f#" + dex + " " + name
-                                + " §aregistrado por primera vez §8(+"
-                                + MARCAS_ESPECIE_NUEVA + " Marcas)"), false);
+                            net.pokereport.luna.ui.Aviso.logro(player,
+                                    "POKEDEX  #" + dex,
+                                    name + "  ·  +" + MARCAS_ESPECIE_NUEVA + " Marcas",
+                                    "cobblemon:poke_ball",
+                                    net.minecraft.sound.SoundEvents.ENTITY_PLAYER_LEVELUP,
+                                    1.4f);
                         }
                         if (shiny) {
-                            player.sendMessage(Text.literal(
-                                "§8[§bPokédex§8] §e✦ Variocolor registrado ✦"), false);
+                            net.pokereport.luna.ui.Aviso.logro(player,
+                                    "VARIOCOLOR",
+                                    name + " registrado",
+                                    "cobblemon:shiny_stone",
+                                    net.minecraft.sound.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
+                                    1.0f);
                         }
                         // El saldo y las vías han cambiado: refrescar la caché
                         // para que la barra lateral no muestre datos viejos.

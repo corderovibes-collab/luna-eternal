@@ -75,6 +75,7 @@ public final class AutoTest {
             testVozPokedex();
             testCosmeticos();
             testOficios();
+            testArbolMisiones();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -97,6 +98,83 @@ public final class AutoTest {
     }
 
     // ------------------------------------------------------------ pruebas
+
+    /**
+     * El ARBOL de misiones: que se pueda dibujar y recorrer.
+     *
+     * <p>⚠ El catalogo es un JSON que se edita a mano, y sus tres fallos posibles
+     * son <b>los tres invisibles</b>:
+     *
+     * <ul>
+     *   <li>Un {@code requires} que apunta a una mision que no existe: la pantalla
+     *       dibuja una linea hacia la nada y la mision no se desbloquea jamas.</li>
+     *   <li>Un {@code requires} a <b>otra cadena</b>: la pestaña dibujaria una
+     *       arista hacia un nodo que no esta en ella.</li>
+     *   <li>Un <b>ciclo</b>: A pide B y B pide A. Ninguna de las dos se desbloquea,
+     *       y el calculo de profundidad se cuelga en un bucle infinito.</li>
+     * </ul>
+     *
+     * <p>Ninguno da error al cargar --el catalogo entra en un mapa y ya-- asi que
+     * el sintoma es «esta mision no se puede hacer», semanas despues.
+     */
+    private void testArbolMisiones() {
+        var quests = LunaEternal.quests().catalogo();
+        check("hay misiones en el catalogo", !quests.isEmpty());
+
+        var porId = new java.util.HashMap<String, net.pokereport.luna.quest.Quest>();
+        boolean idsUnicos = true;
+        for (var q : quests) {
+            if (porId.put(q.id(), q) != null) {
+                idsUnicos = false;
+            }
+        }
+        check("ningun identificador de mision se repite", idsUnicos);
+
+        boolean aristasSanas = true;
+        boolean mismaCadena = true;
+        for (var q : quests) {
+            String r = q.requires();
+            if (r == null || r.isEmpty()) {
+                continue;
+            }
+            var padre = porId.get(r);
+            if (padre == null) {
+                aristasSanas = false;
+            } else if (!padre.chain().equals(q.chain())) {
+                mismaCadena = false;
+            }
+        }
+        check("todo `requires` apunta a una mision que existe", aristasSanas);
+        check("ningun `requires` cruza de cadena", mismaCadena);
+
+        // Ciclos: se recorre hacia arriba con un limite. Sin limite esto SE
+        // CUELGA, que es peor que fallar.
+        boolean sinCiclos = true;
+        for (var q : quests) {
+            var actual = q;
+            for (int saltos = 0; actual != null; saltos++) {
+                if (saltos > quests.size()) {
+                    sinCiclos = false;
+                    break;
+                }
+                String r = actual.requires();
+                actual = (r == null || r.isEmpty()) ? null : porId.get(r);
+            }
+        }
+        check("el arbol de misiones no tiene ciclos", sinCiclos);
+
+        // Y que cada cadena tenga al menos una RAIZ, o entera es inalcanzable.
+        var conRaiz = new java.util.HashSet<String>();
+        var cadenas = new java.util.HashSet<String>();
+        for (var q : quests) {
+            cadenas.add(q.chain());
+            if (q.requires() == null || q.requires().isEmpty()) {
+                conRaiz.add(q.chain());
+            }
+        }
+        check("toda cadena tiene al menos una mision inicial",
+              conRaiz.containsAll(cadenas));
+    }
 
     /**
      * Los invariantes de los OFICIOS.

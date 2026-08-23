@@ -62,6 +62,76 @@ public final class OficiosListener {
         pescador();
         agricultor();
         criador();
+        combatiente();
+    }
+
+    /**
+     * Avanza el oficio Y la mision correspondiente, en el mismo sitio.
+     *
+     * <p>⚠ Van juntos a proposito. Si las misiones se avanzaran desde otro
+     * listener, el dia que alguien cambie de que evento cuelga la pesca lo
+     * cambiaria en uno solo, y el otro se quedaria mirando un evento que ya no
+     * ocurre — sin dar ningun error, como siempre.
+     *
+     * <p>{@code oficio} puede ser {@code null}: hay cosas que cuentan para una
+     * mision y no para ningun oficio, como ganar un combate.
+     */
+    private static void anotar(ServerPlayerEntity jugador, Path oficio,
+                               long xp, net.pokereport.luna.quest.Quest.Objective.Type mision,
+                               long cuantas) {
+        if (jugador == null) {
+            return;
+        }
+        if (oficio != null && xp > 0) {
+            OficiosService.ganarAsync(jugador, oficio, xp);
+        }
+        if (mision != null && cuantas > 0) {
+            var uuid = jugador.getUuid();
+            var nombre = jugador.getName().getString();
+            LunaEternal.submit(() -> {
+                try {
+                    long id = LunaEternal.players().resolve(uuid, nombre);
+                    LunaEternal.quests().advance(id, mision, cuantas);
+                } catch (Exception e) {
+                    LunaEternal.LOG.warn("No se pudo avanzar la mision {}: {}",
+                            mision, e.toString());
+                }
+            });
+        }
+    }
+
+    /** Ganar combates. No da oficio --no es un trabajo-- pero si mision. */
+    private static void combatiente() {
+        try {
+            CobblemonEvents.BATTLE_VICTORY.subscribe(evento -> {
+                try {
+                    // ⚠ UN `BattleActor` NO ES UN JUGADOR. Puede ser una IA, un
+                    //   entrenador NPC o un jugador, y lo unico que da son los
+                    //   UUID de los jugadores que hay detras --puede haber varios
+                    //   en un combate doble--. Se resuelve cada uno contra el
+                    //   servidor; los que no esten conectados se ignoran solos.
+                    var servidor = evento.getBattle().getPlayers().isEmpty()
+                            ? null : evento.getBattle().getPlayers().get(0).getServer();
+                    if (servidor == null) {
+                        return;
+                    }
+                    for (var ganador : evento.getWinners()) {
+                        for (var uuid : ganador.getPlayerUUIDs()) {
+                            var sp = servidor.getPlayerManager().getPlayer(uuid);
+                            if (sp != null) {
+                                anotar(sp, null, 0,
+                                       net.pokereport.luna.quest.Quest.Objective.Type.BATTLE_WIN,
+                                       1);
+                            }
+                        }
+                    }
+                } catch (Throwable t) {
+                    LunaEternal.LOG.error("Error anotando victoria", t);
+                }
+            });
+        } catch (Throwable t) {
+            LunaEternal.LOG.error("COMBATES: sin enganche de victoria", t);
+        }
     }
 
     /**
@@ -90,12 +160,14 @@ public final class OficiosListener {
                 //   Plata al doble sin que nada lo delate.
                 long cultivo = valorCultivo(estado);
                 if (cultivo > 0) {
-                    OficiosService.ganarAsync(sp, Path.AGRICULTOR, cultivo);
+                    anotar(sp, Path.AGRICULTOR, cultivo,
+                           net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1);
                     return;
                 }
                 long xp = valorDe(estado.getBlock());
                 if (xp > 0) {
-                    OficiosService.ganarAsync(sp, Path.MINERO, xp);
+                    anotar(sp, Path.MINERO, xp,
+                           net.pokereport.luna.quest.Quest.Objective.Type.MINE, 1);
                 }
             } catch (Throwable t) {
                 LunaEternal.LOG.error("Error anotando mineria o cultivo", t);
@@ -179,7 +251,8 @@ public final class OficiosListener {
             CobblemonEvents.POKEROD_REEL.subscribe(evento -> {
                 try {
                     if (evento.getPlayer() instanceof ServerPlayerEntity sp) {
-                        OficiosService.ganarAsync(sp, Path.PESCADOR, XP_PESCA);
+                        anotar(sp, Path.PESCADOR, XP_PESCA,
+                               net.pokereport.luna.quest.Quest.Objective.Type.FISH, 1);
                     }
                 } catch (Throwable t) {
                     LunaEternal.LOG.error("Error anotando pesca", t);
@@ -199,7 +272,8 @@ public final class OficiosListener {
         try {
             CobblemonEvents.BERRY_HARVEST.subscribe(evento -> {
                 try {
-                    OficiosService.ganarAsync(evento.getPlayer(), Path.AGRICULTOR, XP_BAYA);
+                    anotar(evento.getPlayer(), Path.AGRICULTOR, XP_BAYA,
+                           net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1);
                 } catch (Throwable t) {
                     LunaEternal.LOG.error("Error anotando cosecha de bayas", t);
                 }
@@ -210,7 +284,8 @@ public final class OficiosListener {
         try {
             CobblemonEvents.APRICORN_HARVESTED.subscribe(evento -> {
                 try {
-                    OficiosService.ganarAsync(evento.getPlayer(), Path.AGRICULTOR, XP_BELLOTA);
+                    anotar(evento.getPlayer(), Path.AGRICULTOR, XP_BELLOTA,
+                           net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1);
                 } catch (Throwable t) {
                     LunaEternal.LOG.error("Error anotando cosecha de bellotas", t);
                 }
@@ -230,7 +305,8 @@ public final class OficiosListener {
         try {
             CobblemonEvents.HATCH_EGG_POST.subscribe(evento -> {
                 try {
-                    OficiosService.ganarAsync(evento.getPlayer(), Path.CRIADOR, XP_ECLOSION);
+                    anotar(evento.getPlayer(), Path.CRIADOR, XP_ECLOSION,
+                           net.pokereport.luna.quest.Quest.Objective.Type.HATCH, 1);
                 } catch (Throwable t) {
                     LunaEternal.LOG.error("Error anotando eclosion", t);
                 }

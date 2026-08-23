@@ -336,6 +336,112 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «Dame mis misiones», al abrir la pantalla. */
+    public record PedirMisiones() implements CustomPayload {
+        public static final Id<PedirMisiones> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_misiones"));
+        public static final PacketCodec<RegistryByteBuf, PedirMisiones> CODEC =
+                PacketCodec.unit(new PedirMisiones());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Cobro la recompensa de esta». El servidor decide si puede. */
+    public record ReclamarMision(String id) implements CustomPayload {
+        public static final Id<ReclamarMision> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "reclamar_mision"));
+        public static final PacketCodec<RegistryByteBuf, ReclamarMision> CODEC =
+                PacketCodec.tuple(PacketCodecs.STRING, ReclamarMision::id,
+                        ReclamarMision::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Una misión con su estado.
+     *
+     * <p>⚠ Viaja {@code requires} porque <b>el árbol se dibuja con él</b>: es la
+     * arista. Sin eso el cliente tendría una lista de nodos sueltos y no podría
+     * saber qué cuelga de qué — que es justo lo que distingue esta pantalla de
+     * una lista.
+     *
+     * <p>⚠ Y viaja {@code desbloqueada} <b>ya decidida por el servidor</b>. El
+     * cliente podría calcularla —«mi padre está completo»— pero entonces la regla
+     * viviría en dos sitios, y el día que se añada una condición (nivel mínimo,
+     * fecha) el cliente enseñaría desbloqueado lo que el servidor rechaza.
+     */
+    public record MisionEstado(String id, String cadena, int orden, String requiere,
+                               String nombre, String descripcion,
+                               String objetivo, long meta, long progreso,
+                               boolean completada, boolean cobrada, boolean desbloqueada,
+                               long plata, long marcas, String via, long xp) {
+        public static final PacketCodec<RegistryByteBuf, MisionEstado> CODEC =
+                PacketCodec.ofStatic(MisionEstado::escribir, MisionEstado::leer);
+
+        // ⚠ A MANO Y NO CON `PacketCodec.tuple`: esa fábrica llega hasta 16
+        //   campos en 1.21.1 y aquí hay 16 justos, pero el día que se añada uno
+        //   deja de compilar con un error que no dice por qué. Escribirlo así
+        //   quita ese techo de golpe.
+        private static void escribir(RegistryByteBuf buf, MisionEstado m) {
+            buf.writeString(m.id);
+            buf.writeString(m.cadena);
+            buf.writeVarInt(m.orden);
+            buf.writeString(m.requiere == null ? "" : m.requiere);
+            buf.writeString(m.nombre);
+            buf.writeString(m.descripcion);
+            buf.writeString(m.objetivo);
+            buf.writeVarLong(m.meta);
+            buf.writeVarLong(m.progreso);
+            buf.writeBoolean(m.completada);
+            buf.writeBoolean(m.cobrada);
+            buf.writeBoolean(m.desbloqueada);
+            buf.writeVarLong(m.plata);
+            buf.writeVarLong(m.marcas);
+            buf.writeString(m.via == null ? "" : m.via);
+            buf.writeVarLong(m.xp);
+        }
+
+        private static MisionEstado leer(RegistryByteBuf buf) {
+            return new MisionEstado(
+                    buf.readString(), buf.readString(), buf.readVarInt(), buf.readString(),
+                    buf.readString(), buf.readString(), buf.readString(),
+                    buf.readVarLong(), buf.readVarLong(),
+                    buf.readBoolean(), buf.readBoolean(), buf.readBoolean(),
+                    buf.readVarLong(), buf.readVarLong(), buf.readString(), buf.readVarLong());
+        }
+
+        public boolean cobrable() {
+            return completada && !cobrada;
+        }
+    }
+
+    /**
+     * Todas las misiones del jugador.
+     *
+     * <p>⚠ Van TODAS, incluidas las bloqueadas. Enseñar solo las disponibles
+     * escondería el árbol entero: lo que hace que una cadena se entienda es ver a
+     * dónde lleva, no solo el siguiente paso.
+     */
+    public record Misiones(List<MisionEstado> misiones) implements CustomPayload {
+        public static final Id<Misiones> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "misiones"));
+        public static final PacketCodec<RegistryByteBuf, Misiones> CODEC =
+                PacketCodec.tuple(
+                        MisionEstado.CODEC.collect(PacketCodecs.toList()), Misiones::misiones,
+                        Misiones::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame mis Vías», al abrir la pantalla de Trabajos. */
     public record PedirTrabajos() implements CustomPayload {
         public static final Id<PedirTrabajos> ID =
@@ -500,6 +606,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirTrabajos.ID, PedirTrabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(Trabajos.ID, Trabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(AvisoLogro.ID, AvisoLogro.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirMisiones.ID, PedirMisiones.CODEC);
+        PayloadTypeRegistry.playC2S().register(ReclamarMision.ID, ReclamarMision.CODEC);
+        PayloadTypeRegistry.playS2C().register(Misiones.ID, Misiones.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -549,6 +658,37 @@ public class Red implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(PedirCosmeticos.ID, (carga, ctx) -> {
             var jugador = ctx.player();
             LunaEternal.submit(() -> enviarCosmeticos(jugador));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirMisiones.ID, (carga, ctx) ->
+                enviarMisiones(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(ReclamarMision.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                try {
+                    long id = LunaEternal.players()
+                            .resolve(jugador.getUuid(), jugador.getName().getString());
+                    var mision = LunaEternal.quests().byId(carga.id());
+                    // ⚠ EL SERVIDOR DECIDE. `claim` comprueba que este completa y
+                    //   sin cobrar, y paga en su propia transaccion. Aqui no se
+                    //   comprueba nada: hacerlo dos veces invita a que las dos
+                    //   comprobaciones se separen, y la que manda es la de alla.
+                    if (mision != null && LunaEternal.quests().claim(id, mision)) {
+                        String detalle = mision.rewards().pokedollar() > 0
+                                ? String.format("+%,d Plata", mision.rewards().pokedollar())
+                                : "Recompensa cobrada";
+                        net.pokereport.luna.ui.Aviso.logro(jugador, "MISION COMPLETA",
+                                detalle, "minecraft:written_book");
+                    }
+                } catch (Exception e) {
+                    LunaEternal.LOG.warn("No se pudo cobrar la mision {}: {}",
+                            carga.id(), e.toString());
+                }
+                // Se reenvia SIEMPRE, saliera bien o mal: es la forma de que la
+                // pantalla vuelva a la verdad sin tener que adivinar que cambio.
+                enviarMisiones(jugador);
+            });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirTrabajos.ID, (carga, ctx) -> {
@@ -659,6 +799,52 @@ public class Red implements ModInitializer {
      * enviar: consultar la base desde el hilo principal congela a todo el mundo,
      * y enviar desde un hilo cualquiera no es seguro.
      */
+    /**
+     * Manda el árbol entero con su estado.
+     *
+     * <p>⚠ <b>El desbloqueo se decide AQUI</b>, no en el cliente. Una misión está
+     * desbloqueada si no pide nada, o si lo que pide está <i>completo</i> —no
+     * cobrado: cobrar es del jugador, y dejar la cadena parada porque a alguien se
+     * le olvidó pulsar el botón sería castigar por no mirar la pantalla.
+     */
+    private static void enviarMisiones(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                var estados = LunaEternal.quests().allStates(id);
+
+                var completas = new java.util.HashSet<String>();
+                for (var e : estados) {
+                    if (e.completed()) {
+                        completas.add(e.quest().id());
+                    }
+                }
+
+                List<MisionEstado> salida = new ArrayList<>(estados.size());
+                for (var e : estados) {
+                    var q = e.quest();
+                    String req = q.requires() == null ? "" : q.requires();
+                    boolean abierta = req.isEmpty() || completas.contains(req);
+                    salida.add(new MisionEstado(
+                            q.id(), q.chain(), q.order(), req,
+                            q.name(), q.description(),
+                            q.objective().type().name(), q.objective().amount(),
+                            e.progress(), e.completed(), e.claimed(), abierta,
+                            q.rewards().pokedollar(), q.rewards().mark(),
+                            q.rewards().path() == null ? "" : q.rewards().path().name(),
+                            q.rewards().xp()));
+                }
+                var carga = new Misiones(salida);
+                jugador.getServer().execute(
+                        () -> ServerPlayNetworking.send(jugador, carga));
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudieron enviar las misiones a {}: {}",
+                        jugador.getName().getString(), e.toString());
+            }
+        });
+    }
+
     private static void enviarCosmeticos(net.minecraft.server.network.ServerPlayerEntity jugador) {
         try {
             long id = LunaEternal.players()

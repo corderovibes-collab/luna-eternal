@@ -25,7 +25,7 @@ public record App(String id, boolean abierta) {
         new App("pokedex",    true),
         new App("cosmeticos", true),
         new App("trabajos",   true),
-        new App("misiones",   false),
+        new App("misiones",   true),
         new App("warps",      false),
         new App("clan",       false),
         new App("gts",        false),

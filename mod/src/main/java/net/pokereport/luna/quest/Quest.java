@@ -32,7 +32,26 @@ public record Quest(String id, String chain, int order, String requires,
             /** Alcanzar nivel N en cualquier vía. */
             PATH_LEVEL,
             /** Ganar N PokéDólares en total. */
-            EARN;
+            EARN,
+
+            // ---- los que llegaron con los OFICIOS ------------------------
+            //
+            // ⚠ AÑADIR UN TIPO NO NECESITA MIGRACION, y conviene saber por que:
+            //   `quest_progress` guarda `quest_id VARCHAR(48)` y el progreso, y
+            //   NO el tipo de objetivo. El tipo vive solo en el catalogo JSON.
+            //   (Al reves de `player_path.path`, que SI es un ENUM de SQL y
+            //   costo la migracion V012 por tres nombres.)
+
+            /** Picar N bloques que cuenten para Minero. */
+            MINE,
+            /** Recoger la caña N veces. */
+            FISH,
+            /** Cosechar N bayas, bellotas o cultivos. */
+            HARVEST,
+            /** Eclosionar N huevos. */
+            HATCH,
+            /** Ganar N combates. */
+            BATTLE_WIN;
 
             /**
              * ¿El progreso es acumulativo o se consulta al vuelo?
@@ -43,7 +62,11 @@ public record Quest(String id, String chain, int order, String requires,
              */
             public boolean acumulativo() {
                 return this == CATCH || this == SHOP_BUY || this == GTS_SELL
-                    || this == EARN || this == POKEDEX_NEW;
+                    || this == EARN || this == POKEDEX_NEW
+                    // Los oficios cuentan HECHOS, uno a uno, igual que CATCH:
+                    // cada bloque picado suma. No son una foto de un total.
+                    || this == MINE || this == FISH || this == HARVEST
+                    || this == HATCH || this == BATTLE_WIN;
             }
         }
     }

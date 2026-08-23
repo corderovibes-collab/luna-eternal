@@ -58,6 +58,11 @@ public class LunaCliente implements ClientModInitializer {
                     carga.objeto()));
         });
 
+        // El arbol de misiones. Llega al abrir la pantalla y despues de cada
+        // cobro: el servidor lo reenvia ENTERO en vez de mandar cambios.
+        ClientPlayNetworking.registerGlobalReceiver(Red.Misiones.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
         // Las cinco Vias. Llegan al abrir Trabajos, no antes: nadie las mira
         // el resto del tiempo.
         ClientPlayNetworking.registerGlobalReceiver(Red.Trabajos.ID,

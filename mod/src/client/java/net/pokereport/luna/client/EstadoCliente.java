@@ -20,6 +20,7 @@ public final class EstadoCliente {
     private static Red.Ficha ficha;
     private static Red.Cosmeticos cosmeticos;
     private static Red.Trabajos trabajos;
+    private static Red.Misiones misiones;
 
     private EstadoCliente() {}
 
@@ -62,6 +63,15 @@ public final class EstadoCliente {
         return trabajos;
     }
 
+    public static void guardar(Red.Misiones nuevas) {
+        misiones = nuevas;
+    }
+
+    /** El arbol. {@code null} hasta que llega la respuesta a `PedirMisiones`. */
+    public static Red.Misiones misiones() {
+        return misiones;
+    }
+
     public static Red.Cosmeticos cosmeticos() {
         return cosmeticos;
     }
@@ -69,6 +79,7 @@ public final class EstadoCliente {
     /** Al salir del mundo se olvida: el saldo es de esa partida, no del cliente. */
     public static void olvidar() {
         trabajos = null;
+        misiones = null;
         saldo = null;
         ficha = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo

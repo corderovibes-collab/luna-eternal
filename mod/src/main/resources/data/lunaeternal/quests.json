@@ -19,70 +19,128 @@
     "  PATH_LEVEL     alcanzar nivel N en una via",
     "  EARN           ganar N PokeDolares en total"
   ],
-
   "quests": [
     {
       "id": "t1_inicial",
-      "chain": "tutorial", "order": 1,
+      "chain": "tutorial",
+      "order": 1,
       "name": "§aUn compañero",
       "description": "Nadie empieza solo. Elige tu primer Pokémon.",
-      "objective": { "type": "STARTER", "amount": 1 },
-      "rewards": { "pokedollar": 500, "mark": 3, "path": "ENTRENADOR", "xp": 20 }
+      "objective": {
+        "type": "STARTER",
+        "amount": 1
+      },
+      "rewards": {
+        "pokedollar": 500,
+        "mark": 3,
+        "path": "ENTRENADOR",
+        "xp": 20
+      }
     },
     {
       "id": "t2_captura",
-      "chain": "tutorial", "order": 2,
+      "chain": "tutorial",
+      "order": 2,
       "requires": "t1_inicial",
       "name": "§aTu primera captura",
       "description": "Sal al Mundo Salvaje y atrapa a alguien.",
-      "objective": { "type": "CATCH", "amount": 1 },
-      "rewards": { "pokedollar": 800, "mark": 5, "path": "COLECCIONISTA", "xp": 40 }
+      "objective": {
+        "type": "CATCH",
+        "amount": 1
+      },
+      "rewards": {
+        "pokedollar": 800,
+        "mark": 5,
+        "path": "COLECCIONISTA",
+        "xp": 40
+      }
     },
     {
       "id": "t3_pokedex",
-      "chain": "tutorial", "order": 3,
+      "chain": "tutorial",
+      "order": 3,
       "requires": "t2_captura",
       "name": "§aConoce el mundo",
       "description": "Registra 5 especies distintas. Fíjate en dónde y cuándo salen.",
-      "objective": { "type": "POKEDEX", "amount": 5 },
-      "rewards": { "pokedollar": 1500, "mark": 10, "path": "EXPLORADOR", "xp": 60 }
+      "objective": {
+        "type": "POKEDEX",
+        "amount": 5
+      },
+      "rewards": {
+        "pokedollar": 1500,
+        "mark": 10,
+        "path": "EXPLORADOR",
+        "xp": 60
+      }
     },
     {
       "id": "t4_tienda",
-      "chain": "tutorial", "order": 4,
+      "chain": "tutorial",
+      "order": 4,
       "requires": "t2_captura",
       "name": "§6Prepara la expedición",
       "description": "Compra algo en la tienda. Salir sin balls es salir a mirar.",
-      "objective": { "type": "SHOP_BUY", "amount": 1 },
-      "rewards": { "pokedollar": 400, "mark": 3, "path": "COMERCIANTE", "xp": 20 }
+      "objective": {
+        "type": "SHOP_BUY",
+        "amount": 1
+      },
+      "rewards": {
+        "pokedollar": 400,
+        "mark": 3,
+        "path": "COMERCIANTE",
+        "xp": 20
+      }
     },
     {
       "id": "t5_gts",
-      "chain": "tutorial", "order": 5,
+      "chain": "tutorial",
+      "order": 5,
       "requires": "t4_tienda",
       "name": "§6Tu primer trato",
       "description": "Vende algo en el GTS. Lo que a ti te sobra, a otro le falta.",
-      "objective": { "type": "GTS_SELL", "amount": 1 },
-      "rewards": { "pokedollar": 1000, "mark": 8, "path": "COMERCIANTE", "xp": 50 }
+      "objective": {
+        "type": "GTS_SELL",
+        "amount": 1
+      },
+      "rewards": {
+        "pokedollar": 1000,
+        "mark": 8,
+        "path": "COMERCIANTE",
+        "xp": 50
+      }
     },
     {
       "id": "t6_via",
-      "chain": "tutorial", "order": 6,
+      "chain": "tutorial",
+      "order": 6,
       "requires": "t3_pokedex",
       "name": "§dElige quién eres",
       "description": "Alcanza el nivel I en cualquier vía.",
-      "objective": { "type": "PATH_LEVEL", "amount": 1 },
-      "rewards": { "pokedollar": 2000, "mark": 15 }
+      "objective": {
+        "type": "PATH_LEVEL",
+        "amount": 1
+      },
+      "rewards": {
+        "pokedollar": 2000,
+        "mark": 15
+      }
     },
-
     {
       "id": "d_captura",
       "chain": "diaria",
       "period": "DAY",
       "name": "§eCacería del día",
       "description": "Captura 10 Pokémon.",
-      "objective": { "type": "CATCH", "amount": 10 },
-      "rewards": { "pokedollar": 1200, "mark": 2, "path": "COLECCIONISTA", "xp": 30 }
+      "objective": {
+        "type": "CATCH",
+        "amount": 10
+      },
+      "rewards": {
+        "pokedollar": 1200,
+        "mark": 2,
+        "path": "COLECCIONISTA",
+        "xp": 30
+      }
     },
     {
       "id": "d_especies",
@@ -90,8 +148,370 @@
       "period": "DAY",
       "name": "§eOjo nuevo",
       "description": "Registra 3 especies que no tuvieras.",
-      "objective": { "type": "POKEDEX_NEW", "amount": 3 },
-      "rewards": { "pokedollar": 1500, "mark": 4, "path": "EXPLORADOR", "xp": 40 }
+      "objective": {
+        "type": "POKEDEX_NEW",
+        "amount": 3
+      },
+      "rewards": {
+        "pokedollar": 1500,
+        "mark": 4,
+        "path": "EXPLORADOR",
+        "xp": 40
+      }
+    },
+    {
+      "id": "e1_primer_combate",
+      "chain": "entrenador",
+      "order": 1,
+      "name": "§cTu primer combate",
+      "description": "Gana un combate. Da igual contra quien: lo que cuenta es empezar.",
+      "objective": {
+        "type": "BATTLE_WIN",
+        "amount": 1
+      },
+      "rewards": {
+        "pokedollar": 200,
+        "mark": 2,
+        "path": "ENTRENADOR",
+        "xp": 30
+      }
+    },
+    {
+      "id": "e2_diez",
+      "chain": "entrenador",
+      "order": 2,
+      "name": "§cCuriosidad por pelear",
+      "description": "Gana 10 combates.",
+      "objective": {
+        "type": "BATTLE_WIN",
+        "amount": 10
+      },
+      "rewards": {
+        "pokedollar": 600,
+        "mark": 5,
+        "path": "ENTRENADOR",
+        "xp": 80
+      },
+      "requires": "e1_primer_combate"
+    },
+    {
+      "id": "e3_cincuenta",
+      "chain": "entrenador",
+      "order": 3,
+      "name": "§cVeterano",
+      "description": "Gana 50 combates.",
+      "objective": {
+        "type": "BATTLE_WIN",
+        "amount": 50
+      },
+      "rewards": {
+        "pokedollar": 2000,
+        "mark": 12,
+        "path": "ENTRENADOR",
+        "xp": 250
+      },
+      "requires": "e2_diez"
+    },
+    {
+      "id": "e4_equipo",
+      "chain": "entrenador",
+      "order": 3,
+      "name": "§cSeis buenos amigos",
+      "description": "Captura 30 Pokemon: un buen equipo se construye eligiendo.",
+      "objective": {
+        "type": "CATCH",
+        "amount": 30
+      },
+      "rewards": {
+        "pokedollar": 1200,
+        "mark": 8,
+        "path": "ENTRENADOR",
+        "xp": 150
+      },
+      "requires": "e2_diez"
+    },
+    {
+      "id": "e5_via",
+      "chain": "entrenador",
+      "order": 4,
+      "name": "§cCamino del entrenador",
+      "description": "Alcanza el nivel III en cualquier Via.",
+      "objective": {
+        "type": "PATH_LEVEL",
+        "amount": 3
+      },
+      "rewards": {
+        "pokedollar": 2500,
+        "mark": 15,
+        "path": "ENTRENADOR",
+        "xp": 300
+      },
+      "requires": "e3_cincuenta"
+    },
+    {
+      "id": "c1_diez",
+      "chain": "coleccionista",
+      "order": 1,
+      "name": "§bLos diez primeros",
+      "description": "Registra 10 especies en la Pokedex.",
+      "objective": {
+        "type": "POKEDEX",
+        "amount": 10
+      },
+      "rewards": {
+        "pokedollar": 300,
+        "mark": 5,
+        "path": "COLECCIONISTA",
+        "xp": 50
+      }
+    },
+    {
+      "id": "c2_cincuenta",
+      "chain": "coleccionista",
+      "order": 2,
+      "name": "§bMedio centenar",
+      "description": "Registra 50 especies.",
+      "objective": {
+        "type": "POKEDEX",
+        "amount": 50
+      },
+      "rewards": {
+        "pokedollar": 1000,
+        "mark": 15,
+        "path": "COLECCIONISTA",
+        "xp": 200
+      },
+      "requires": "c1_diez"
+    },
+    {
+      "id": "c3_kanto",
+      "chain": "coleccionista",
+      "order": 3,
+      "name": "§bKanto entero",
+      "description": "Registra 151 especies. Es la mitad del camino.",
+      "objective": {
+        "type": "POKEDEX",
+        "amount": 151
+      },
+      "rewards": {
+        "pokedollar": 3000,
+        "mark": 40,
+        "path": "COLECCIONISTA",
+        "xp": 600
+      },
+      "requires": "c2_cincuenta"
+    },
+    {
+      "id": "c4_johto",
+      "chain": "coleccionista",
+      "order": 4,
+      "name": "§bJohto tambien",
+      "description": "Registra las 251. Ya no queda ninguna por ver.",
+      "objective": {
+        "type": "POKEDEX",
+        "amount": 251
+      },
+      "rewards": {
+        "pokedollar": 6000,
+        "mark": 80,
+        "path": "COLECCIONISTA",
+        "xp": 1200
+      },
+      "requires": "c3_kanto"
+    },
+    {
+      "id": "c5_captura",
+      "chain": "coleccionista",
+      "order": 2,
+      "name": "§bCazador paciente",
+      "description": "Captura 100 Pokemon.",
+      "objective": {
+        "type": "CATCH",
+        "amount": 100
+      },
+      "rewards": {
+        "pokedollar": 900,
+        "mark": 10,
+        "path": "COLECCIONISTA",
+        "xp": 150
+      },
+      "requires": "c1_diez"
+    },
+    {
+      "id": "o1_picar",
+      "chain": "oficios",
+      "order": 1,
+      "name": "§7La primera veta",
+      "description": "Pica 100 bloques que cuenten para Minero.",
+      "objective": {
+        "type": "MINE",
+        "amount": 100
+      },
+      "rewards": {
+        "pokedollar": 150,
+        "mark": 2,
+        "path": "MINERO",
+        "xp": 40
+      }
+    },
+    {
+      "id": "o2_minero",
+      "chain": "oficios",
+      "order": 2,
+      "name": "§7Bajo tierra",
+      "description": "Pica 1.000 bloques.",
+      "objective": {
+        "type": "MINE",
+        "amount": 1000
+      },
+      "rewards": {
+        "pokedollar": 500,
+        "mark": 6,
+        "path": "MINERO",
+        "xp": 150
+      },
+      "requires": "o1_picar"
+    },
+    {
+      "id": "o3_pescar",
+      "chain": "oficios",
+      "order": 1,
+      "name": "§9Algo pica",
+      "description": "Recoge la caña Poke 25 veces.",
+      "objective": {
+        "type": "FISH",
+        "amount": 25
+      },
+      "rewards": {
+        "pokedollar": 200,
+        "mark": 3,
+        "path": "PESCADOR",
+        "xp": 60
+      }
+    },
+    {
+      "id": "o4_pescador",
+      "chain": "oficios",
+      "order": 2,
+      "name": "§9Paciencia de pescador",
+      "description": "Recoge la caña 200 veces.",
+      "objective": {
+        "type": "FISH",
+        "amount": 200
+      },
+      "rewards": {
+        "pokedollar": 700,
+        "mark": 8,
+        "path": "PESCADOR",
+        "xp": 200
+      },
+      "requires": "o3_pescar"
+    },
+    {
+      "id": "o5_cosechar",
+      "chain": "oficios",
+      "order": 1,
+      "name": "§2La primera cosecha",
+      "description": "Cosecha 50 bayas, bellotas o cultivos.",
+      "objective": {
+        "type": "HARVEST",
+        "amount": 50
+      },
+      "rewards": {
+        "pokedollar": 150,
+        "mark": 2,
+        "path": "AGRICULTOR",
+        "xp": 50
+      }
+    },
+    {
+      "id": "o6_agricultor",
+      "chain": "oficios",
+      "order": 2,
+      "name": "§2Manos en la tierra",
+      "description": "Cosecha 500.",
+      "objective": {
+        "type": "HARVEST",
+        "amount": 500
+      },
+      "rewards": {
+        "pokedollar": 600,
+        "mark": 7,
+        "path": "AGRICULTOR",
+        "xp": 180
+      },
+      "requires": "o5_cosechar"
+    },
+    {
+      "id": "o7_criar",
+      "chain": "oficios",
+      "order": 3,
+      "name": "§dQue nazca uno",
+      "description": "Eclosiona 5 huevos.",
+      "objective": {
+        "type": "HATCH",
+        "amount": 5
+      },
+      "rewards": {
+        "pokedollar": 400,
+        "mark": 6,
+        "path": "CRIADOR",
+        "xp": 120
+      },
+      "requires": "o5_cosechar"
+    },
+    {
+      "id": "m1_comprar",
+      "chain": "comercio",
+      "order": 1,
+      "name": "§6Primera compra",
+      "description": "Compra 5 veces en la tienda.",
+      "objective": {
+        "type": "SHOP_BUY",
+        "amount": 5
+      },
+      "rewards": {
+        "pokedollar": 200,
+        "mark": 3,
+        "path": "COMERCIANTE",
+        "xp": 40
+      }
+    },
+    {
+      "id": "m2_vender",
+      "chain": "comercio",
+      "order": 2,
+      "name": "§6Primer trato",
+      "description": "Vende 3 veces en el GTS.",
+      "objective": {
+        "type": "GTS_SELL",
+        "amount": 3
+      },
+      "rewards": {
+        "pokedollar": 400,
+        "mark": 5,
+        "path": "COMERCIANTE",
+        "xp": 80
+      },
+      "requires": "m1_comprar"
+    },
+    {
+      "id": "m3_fortuna",
+      "chain": "comercio",
+      "order": 3,
+      "name": "§6Fondo de reserva",
+      "description": "Gana 25.000 de Plata en total.",
+      "objective": {
+        "type": "EARN",
+        "amount": 25000
+      },
+      "rewards": {
+        "pokedollar": 1500,
+        "mark": 12,
+        "path": "COMERCIANTE",
+        "xp": 250
+      },
+      "requires": "m2_vender"
     }
   ]
 }

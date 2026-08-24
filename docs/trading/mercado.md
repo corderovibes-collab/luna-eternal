@@ -20,7 +20,8 @@ sin migrar datos de dinero.
 
 ## Current Status
 
-**Diseño. Fase 1 en implementación.**
+**Fases 1 y 2 en vivo** (2026-08-24). `V015` aplicada, **297/297** en el
+autotest. Sin verificar en el juego con dos cuentas.
 
 ## Last Decision
 
@@ -171,6 +172,48 @@ pagando lo que el comprador no tenía.
 Al cancelar o caducar, se devuelve lo no ejecutado. **Siempre**, y por el mismo
 camino de entrega diferida que ya existe (`GtsDelivery`), porque el dueño puede
 estar desconectado.
+
+---
+
+## 4-bis. ⚠⚠ De dónde tiene que salir lo que se vende
+
+**Orden del usuario (2026-08-24), y son dos reglas distintas porque son dos
+cosas distintas:**
+
+| | Dónde tiene que estar | Por qué |
+|---|---|---|
+| **Objetos** | **En el inventario**, y solo ahí | Hay que sacarlos para retenerlos, y solo se puede sacar de donde el jugador los tenga encima |
+| **Pokémon** | **Equipo o PC, da igual** | Un Pokémon no ocupa inventario: vive en un almacén del servidor, y el PC es tan «suyo» como el equipo |
+
+### Los objetos: la barra rápida SÍ cuenta
+
+`PlayerInventory.main` son **36 huecos, y los nueve primeros son la barra
+rápida**. Así que lo que llevas en la mano cuenta igual que lo que llevas en la
+mochila — no hay que moverlo a ningún sitio para venderlo.
+
+> ⚠ **Lo que hoy NO cuenta es la mano secundaria** (`offHand`), y queda anotado
+> porque es un hueco visible: si llevas 64 Poké Balls en la mano izquierda y las
+> intentas vender, el mercado dice «no tienes tantos».
+>
+> **No es un fallo de custodia** —contar y sacar miran exactamente el mismo
+> sitio, así que no se puede vender lo que no se retira— pero sí es confuso.
+> Arreglarlo es sumar la mano secundaria en `cuantos` **y** en `sacar`, las dos
+> a la vez: cambiar solo una rompe la custodia justo por donde no debe.
+
+### Los Pokémon: el PC cuenta
+
+Es la diferencia que importa para la **fase 3**. Un objeto hay que retirarlo del
+inventario porque *está* en el inventario; un Pokémon está en un almacén del
+servidor, y el PC es parte de ese almacén.
+
+> ⚠ Obligar a sacarlo al equipo antes de venderlo sería fricción por nada: el
+> jugador tendría que hacer sitio en un equipo de seis para poder listar algo
+> que no va a usar. Y con el equipo lleno, sencillamente **no podría vender**.
+
+**La custodia sigue siendo la misma regla**, eso no cambia: al listarlo, el
+Pokémon sale del equipo *o del PC* y pasa a vivir en `gts_listing`. Lo listado
+no puede estar en poder del vendedor — si siguiera en su PC podría seguir
+operando con él mientras se vende, y ese es el vector de duplicación número uno.
 
 ---
 
@@ -336,6 +379,7 @@ poner orden de compra / de venta . mis ordenes
 reutiliza gts_listing, que ya esta hecho
 filtros: especie, nivel, shiny, IVs
 pestaña propia en la misma pantalla
+⚠ SE PUEDE LISTAR DESDE EL EQUIPO O DESDE EL PC (§4-bis)
 ```
 
 ### FASE 4 — El índice y el histórico

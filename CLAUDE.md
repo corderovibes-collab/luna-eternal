@@ -93,7 +93,7 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 207/207 correctos (2026-08-23, en vivo)
+Autotest      /luna autotest -> 297/297 correctos (2026-08-24, en vivo)
               eran 156 antes de clanes: +51, y la mayoria son de LO QUE
               NO SE PUEDE HACER (ver el bloque Clanes)
               ⚠⚠ Y EN SU PRIMERA EJECUCION EN VIVO CAZO UNO. Fueron 7
@@ -480,6 +480,54 @@ Curar        LA ULTIMA PANTALLA BASICA (2026-08-23)
               VERIFICADO EN EL JUEGO (2026-08-23) tras arreglar dos fallos
               que salieron al instalarlo. Los dos abajo, y los dos son de la
               misma familia: ALGO QUE CUADRABA POR CASUALIDAD
+
+Mercado       EL LIBRO DE ORDENES, ESTILO ALBION (2026-08-24, V015)
+              detalle y las 5 fases en docs/trading/mercado.md
+              fases 1 y 2 EN VIVO . 297/297 . icono GTS
+              ordenes de COMPRA y de VENTA . llenado parcial . historial
+              ⚠⚠ SON DOS MERCADOS Y NO UNO (D-041). Un libro de ordenes solo
+                 funciona con cosas INTERCAMBIABLES: "pago 500 por un
+                 Charizard" es una orden SIN SENTIDO --recibirias el peor del
+                 servidor, porque es el que cualquier vendedor racional te
+                 daria--. Objetos al LIBRO, Pokemon a gts_listing, que ya
+                 estaba hecho y es justo el mecanismo que les toca
+              ⚠⚠⚠ LA CUSTODIA ES DOBLE: la venta retiene los OBJETOS y la
+                  compra retiene el DINERO. La segunda es la que se olvida y
+                  la que crea dinero de la nada -- el vendedor YA ENTREGO, asi
+                  que cobra si o si, y ese dinero sale de ningun sitio
+              ⚠⚠ SE EJECUTA AL PRECIO DE LA ORDEN QUE YA ESTABA. Pujas 900,
+                 hay oferta a 500: pagas 500 y la diferencia vuelve EN EL ACTO.
+                 Al reves, poner una orden generosa seria un castigo y nadie
+                 pondria ordenes por encima del minimo -- que es lo que mata
+                 la liquidez
+              ⚠⚠ DE DONDE SALE LO QUE SE VENDE (orden del usuario, 24-ago):
+                 objetos  DEL INVENTARIO y solo de ahi. La BARRA RAPIDA cuenta
+                          (son los 9 primeros huecos de `main`)
+                 Pokemon  DEL EQUIPO O DEL PC, da igual: un Pokemon no ocupa
+                          inventario, vive en un almacen del servidor. Obligar
+                          a sacarlo al equipo seria friccion por nada -- y con
+                          el equipo lleno directamente NO PODRIA VENDER
+                 ⚠ la MANO SECUNDARIA hoy NO cuenta. No rompe la custodia
+                   --contar y sacar miran el mismo sitio-- pero confunde.
+                   Arreglarlo es sumarla en `cuantos` Y en `sacar`, LAS DOS:
+                   cambiar solo una rompe la custodia por donde no debe
+              ⚠ solo objetos SIN datos propios: `item_id` + cantidad describe
+                la mercancia POR COMPLETO. Una picoleta encantada NO es
+                fungible y va por el GTS. Es la misma regla que protege tu
+                pico con nombre cuando vendes "un pico de hierro"
+              ⚠ los objetos comprados NO se meten en el inventario al cruzar:
+                van a market_claim y se entregan al entrar. Un mercado es
+                ASINCRONO y tu orden se llena cuando tu no estas
+              ⚠ si la orden NO sale, LOS OBJETOS VUELVEN. Es la unica parte de
+                la custodia que no puede vivir en una transaccion --un
+                inventario no es una tabla-- asi que se deshace a mano
+              ⚠ nadie se cruza consigo mismo: va en el WHERE del cruce Y en un
+                CHECK de la base. Cruzarte contigo fija el precio que va a
+                alimentar el indice de inflacion de TODO el servidor
+              LO QUE FALTA: fase 3 Pokemon . fase 4 el INDICE DE PRECIOS .
+              fase 5 las conexiones (tesoro del clan, misiones, avisos)
+              ⚠ EL INDICE NO SIRVE DE NADA HASTA QUE HAYA OPERACIONES REALES:
+                mediria el ruido de dos personas probando. La fase 3 va antes
 
 Tienda        COMPRAR Y VENDER, POR CATEGORIAS (2026-08-23)
               2 categorias . 9 articulos . SIN migracion: la logica
@@ -1253,7 +1301,7 @@ Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
                 jugador conectado; desde consola solo consta que el
                 datapack carga sin errores. Es el mismo PKM-004 de
                 siempre
-Interfaz      OCHO PANTALLAS. Siete verificadas en el juego:
+Interfaz      NUEVE PANTALLAS. Siete verificadas en el juego:
                 PokePad     2026-08-16   la principal, 15 iconos
                 Cosmeticos  2026-08-22   4 pestanias
                 Trabajos    2026-08-23   8 Vias y oficios, paginado
@@ -1262,14 +1310,15 @@ Interfaz      OCHO PANTALLAS. Siete verificadas en el juego:
                 Clan        2026-08-23   verificado con 2 cuentas
                 Tienda      2026-08-23   SIN VERIFICAR . 9 articulos
                 Curar       2026-08-23   la 16a celda, pagina 2
-              7 de los 16 iconos abren algo: pokedex (la de Cobblemon),
-              cosmeticos, trabajos, misiones, clan, tienda y curar
+                Mercado     2026-08-24   SIN VERIFICAR . libro de ordenes
+              8 de los 16 iconos abren algo: pokedex (la de Cobblemon),
+              cosmeticos, trabajos, misiones, clan, tienda, curar y mercado
               SIGUEN SIN PANTALLA, con la logica viva y probada:
-                GTS . kits . cazas . viaje
-              EL GTS es el siguiente que importa, y OJO: es el otro sistema
-              donde el estado lo comparten DOS personas. Cuando A compra el
-              listado de B, B tiene que enterarse -- hay que arrancarlo ya
-              con el patron de `Resultado.afectados()` de los clanes
+                kits . cazas . viaje
+              ⚠ el MERCADO ya usa el patron de `Resultado.afectados()` desde
+                el primer dia, que es la leccion de los clanes aplicada antes
+                de que doliera: cuando tu orden se llena contra la mia, MI
+                pantalla y MI dinero han cambiado sin que yo pulse nada
               ⚠ CURAR YA ESTA (2026-08-23, tarde). Ver el bloque Curar
 Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
               solo captura las avanza; crianza cuenta al ECLOSIONAR
@@ -1605,7 +1654,8 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 5. Misiones que le guian            ✅ RESUELTO 2026-08-23 · 28 en 6 cadenas
 6. Cura gratis                      ✅ RESUELTO 2026-08-23
 7. Compra y vende                   ✅ RESUELTO 2026-08-23
-8. Comercia (GTS)                   ✅ servicios   · ⬜ FALTA PANTALLA
+8. Comercia (mercado)               ✅ RESUELTO 2026-08-24 · objetos
+9. Comercia Pokemon (GTS)           ✅ servicios   · ⬜ FALTA PANTALLA
 ```
 
 > **El bloqueo circular se cerró el 2026-08-23.** Lo que faltaba no era lógica:
@@ -1619,16 +1669,17 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 > seguir el árbol de misiones. Lo único que no se puede completar es `t5_gts`,
 > porque el GTS sigue sin pantalla.
 
-### ⏭ POR AQUÍ SE SIGUE (2026-08-23, fin de sesión)
+### ⏭ POR AQUÍ SE SIGUE (2026-08-24)
 
 | | |
 |---|---|
-| **1. El GTS** | Lo último de la lógica ya construida sin pantalla, y lo que desbloquea `t5_gts`. ⚠ **Arrancarlo con el patrón de `Resultado.afectados()`**: es el otro sistema donde el estado lo comparten dos personas, así que tendrá el bug del clan si se hace de la forma obvia |
-| **2. Verificar la tienda** | Es lo único de ayer sin comprobar en vivo |
-| **3. El análisis de economía** | Lo pidió el usuario. **No se puede hacer sin gente jugando.** Los números y dónde se tocan, en [tienda.md §5](docs/economy/tienda.md) |
-| **4. La ciudadela** | Sigue siendo el foco no-técnico, y nada la bloquea |
+| **1. Verificar el mercado con dos cuentas** | Es lo único de hoy sin comprobar en vivo, y lo que hay que mirar es el **cruce**: que al llenarse tu orden contra la mía, **mi pantalla cambie sin que yo toque nada** |
+| **2. Fase 3 — el mercado de Pokémon** | Reutiliza `gts_listing`, que ya está hecho. ⚠ Se lista **desde el equipo o desde el PC** (mercado.md §4-bis) |
+| **3. La mano secundaria** | Hoy no cuenta para vender. No rompe la custodia, pero confunde. Se arregla en `cuantos` **y** en `sacar`, las dos a la vez |
+| **4. Fase 4 — el índice de precios** | ⚠ **Va después de la 3 a propósito**: hoy mediría el ruido de dos personas probando. Necesita días de gente comerciando |
+| **5. La ciudadela** | Sigue siendo el foco no-técnico, y nada la bloquea |
 
-> ⚠ **Lo que más caro salió hoy fue lo que “cuadraba por casualidad”.** La
+> ⚠ **Lo que más caro salió el 23-ago fue lo que “cuadraba por casualidad”.** La
 > rejilla funcionaba con quince aplicaciones porque 15 = 5×3 exactamente; el
 > borrado de un generador funcionaba porque nadie había metido nada ajeno en su
 > carpeta. **Ninguno de los dos daba error**, y los dos se rompieron el día que
@@ -1966,6 +2017,7 @@ docs/technical/                    ← infraestructura, modelo de datos
 docs/game-design/                  ← visión, core loop
 docs/economy/ · progression/ · trading/ · ui/ · social/
                                      economy/tienda.md  ·  social/clanes.md
+                                     trading/mercado.md
 docs/roadmap/backlog.md            ← tareas con estado
 mod/                               ← el mod de servidor (D-011)
 neon/                              ← el mod de bloques de neón (D-029)

@@ -1511,8 +1511,12 @@ public final class AutoTest {
                 economy.balance(b, Currency.POKEDOLLAR) == antesCancel);
         check("cancelar dos veces la misma orden se rechaza",
                 !svc.cancelar(b, orden).ok());
+        // ⚠ El jugador B intentando cancelar la orden de A. La primera version
+        //   decia A --o sea, su PROPIA orden-- y comprobaba que fallara, que es
+        //   justo lo contrario de lo que tiene que pasar. Lo cazo el autotest en
+        //   su primera ejecucion: la prueba estaba mal, el codigo bien.
         check("no se puede cancelar la orden de otro",
-                !svc.cancelar(a, ordenDe(svc, a, VENTA)).ok());
+                !svc.cancelar(b, ordenDe(svc, a, VENTA)).ok());
 
         // --- los topes, que son lo que impide reventar la base y el long
         check("la cantidad se acota: 2.000 millones no entra tal cual",

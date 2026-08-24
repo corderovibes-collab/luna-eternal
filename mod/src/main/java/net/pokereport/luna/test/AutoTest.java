@@ -1072,8 +1072,8 @@ public final class AutoTest {
         // ⚠ Y TAMPOCO PUEDE PASARSE. Diez minutos es lo diseñado; una hora
         //   convertiría «gratis» en «gratis pero inservible», que es cobrar por
         //   curar por la puerta de atrás (P4).
-        check("el cooldown de curar sigue siendo el diseñado (10 min)",
-            net.pokereport.luna.heal.HealService.COOLDOWN_MIN == 10);
+        check("el cooldown de curar sigue siendo el diseñado (30 min)",
+            net.pokereport.luna.heal.HealService.COOLDOWN_MIN == 30);
 
         // ⚠⚠ LO QUE VIAJA AL CLIENTE ES EL NOMBRE DE SHOWDOWN DEL ESTADO, y la
         //    pantalla lo traduce a color. Si Cobblemon renombrara uno, aquí no

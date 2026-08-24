@@ -169,7 +169,7 @@ Reordenadas según §3.
 | | Tarea | Por qué |
 |---|---|---|
 | A1 | ~~Elección de inicial~~ ✅ | **Hecho.** Kanto/Johto, una sola vez |
-| A2 | ~~Curar~~ ✅ | **Hecho.** Gratis, con cooldown de 10 min |
+| A2 | ~~Curar~~ ✅ | **Hecho.** Gratis, con cooldown de 30 min |
 | A3 | **Caja (PC)** | Requiere `PCLink` con bloque físico: llega con la ciudadela |
 | A4 | Libro de bienvenida | Que el jugador sepa qué hacer |
 

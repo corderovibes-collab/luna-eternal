@@ -454,7 +454,7 @@ Oficios       MINAR, PESCAR Y COSECHAR DAN PLATA (2026-08-23, V012)
               /luna via <VIA> <xp> (nivel 3) para probar
 
 Curar        LA ULTIMA PANTALLA BASICA (2026-08-23)
-              equipo 2x3 con barras de vida . boton . reloj de 10 min
+              equipo 2x3 con barras de vida . boton . reloj de 30 min
               GRATIS, y el cooldown es lo que lo hace sostenible
               SIN migracion y SIN protocolo nuevo: HealService, PedirCura,
               EstadoCura y Curar llevaban escritos desde el 23-ago por la
@@ -1523,7 +1523,7 @@ que es lo único que no se podía volver a escribir mirando la pantalla:
 | Nuevo servicio | Qué salvó |
 |---|---|
 | `starter/StarterService` | El catálogo de iniciales y la entrega **idempotente con vuelta atrás**: se marca antes de entregar, porque entregar dos es un exploit permanente y no entregar uno se arregla |
-| `heal/HealService` | La curación gratuita y su cooldown de 10 minutos |
+| `heal/HealService` | La curación gratuita y su cooldown de 30 minutos |
 
 Consecuencias, verificadas:
 

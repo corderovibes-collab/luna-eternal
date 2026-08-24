@@ -96,6 +96,24 @@ public class PokePadScreen extends Screen {
     private static final int COLS = 5;
 
     /**
+     * Filas de la rejilla, y con COLS lo que de verdad importa: <b>cuántas
+     * celdas caben en una página</b>.
+     *
+     * <h2>⚠⚠ No tenerlo escrito costó una celda dibujada FUERA del marco</h2>
+     *
+     * El bucle recorría {@code orden.length} entero, así que con quince
+     * aplicaciones cuadraba por casualidad —tres filas justas— y a la
+     * decimosexta le tocaba la fila 4, que no existe: se dibujó suelta debajo
+     * de la rejilla, encima del chasis.
+     *
+     * <p>Y no dio ningún error: {@code i / COLS} devuelve 3 tan tranquilo. La
+     * rejilla «ya paginaba» en el sentido de que había un botón de página, pero
+     * <b>nadie troceaba la lista</b>.
+     */
+    private static final int REJ_FILAS = 3;
+    private static final int POR_PAGINA = COLS * REJ_FILAS;
+
+    /**
      * El nombre de cada aplicación, debajo de su icono.
      *
      * <p><b>El alto va en píxeles del arte, no en unidades de interfaz.</b> Es
@@ -358,7 +376,19 @@ public class PokePadScreen extends Screen {
      * <b>Enseñar que hay más sitio es información</b>; no enseñar nada haría
      * creer que el Pad se acaba en quince.
      */
-    private static final int PAGINAS = 2;
+    /**
+     * Páginas que hay.
+     *
+     * <p>⚠ <b>Se calcula, no se escribe.</b> Estaba a 2 a mano, y con dieciséis
+     * aplicaciones eso seguía valiendo por casualidad; con veintiuna habría
+     * dejado cinco inalcanzables sin decir nada. Es el mismo fallo que tuvo la
+     * paginación de Cosméticos, donde 54 de 62 no se podían ver.
+     *
+     * <p>El mínimo de 2 es deliberado: la segunda página enseña los candados de
+     * «Próximamente», que es lo que dice que el Pad va a crecer.
+     */
+    private static final int PAGINAS = Math.max(2,
+            (App.TODAS.length + POR_PAGINA - 1) / POR_PAGINA);
 
     /** Un solo candado repetido, no quince distintos: lo que dice es «aquí no
      *  hay nada todavía», y quince dibujos distintos dirían que hay quince
@@ -505,9 +535,14 @@ public class PokePadScreen extends Screen {
         int mordida = Math.max(1, Math.round(MORDIDA * k));
 
         App bajoElRaton = null;
-        for (int i = 0; i < orden.length; i++) {
-            boolean apps = pagina == 0;
-            App app = apps ? orden[i] : null;
+        // ⚠ SIEMPRE POR_PAGINA celdas, ni una más. `i` es la RANURA dentro de la
+        //   página (0..14) y `real` el índice en la lista completa. Antes se
+        //   usaba el mismo número para las dos cosas, y por eso la aplicación
+        //   número 16 se dibujaba en una cuarta fila inexistente.
+        for (int i = 0; i < POR_PAGINA; i++) {
+            int real = pagina * POR_PAGINA + i;
+            App app = real < orden.length ? orden[real] : null;
+            boolean apps = app != null;
             int cx = celdaX(i), cy = celdaY(i);
             boolean encima = ratonX >= cx && ratonX < cx + celda
                     && ratonY >= cy && ratonY < cy + celda;
@@ -518,7 +553,10 @@ public class PokePadScreen extends Screen {
             // La celda cogida se queda resaltada aunque el ratón se haya ido:
             // es la que estás moviendo, y perderla de vista al apartar el ratón
             // haría dudar de si el clic contó.
-            boolean marcada = encima || (ordenando && i == cogida);
+            // ⚠ Se compara con `real` y no con la ranura: `cogida` es un índice
+            //   de la lista completa, así que en la página 2 la ranura 0 sería
+            //   la 15 — y se habría resaltado la celda equivocada.
+            boolean marcada = encima || (ordenando && real == cogida);
             int fondo = marcada ? CELDA_ENCIMA
                     : app != null && app.abierta() ? CELDA_FONDO : CELDA_CERRADA;
             int borde = marcada ? BORDE_ENCIMA
@@ -624,22 +662,29 @@ public class PokePadScreen extends Screen {
             return true;
         }
         if (boton == 0) {
-            for (int i = 0; i < orden.length; i++) {
+            for (int i = 0; i < POR_PAGINA; i++) {
                 int cx = celdaX(i), cy = celdaY(i);
                 if (ratonX < cx || ratonX >= cx + celda
                         || ratonY < cy || ratonY >= cy + celda) {
                     continue;
                 }
-                if (ordenando && pagina == 0) {
-                    intercambiar(i);
-                } else if (pagina == 0) {
+                // ⚠ MISMA CUENTA QUE AL DIBUJAR, y por eso está escrita igual:
+                //   si el clic y el dibujado calcularan la ranura de dos formas
+                //   distintas, pulsar un icono abriría el de al lado -- y en la
+                //   página 2 abriría algo estando sobre un candado.
+                int real = pagina * POR_PAGINA + i;
+                if (real >= orden.length) {
+                    sonar(false);
+                    return true;
+                }
+                if (ordenando) {
+                    intercambiar(real);
+                } else {
                     // El sonido lo decide si LLEGÓ a abrirse, no si la
                     // aplicación se declara abierta: si Cobblemon cambia y la
                     // Pokédex no abre, el clic tiene que sonar a bloqueado en
                     // vez de mentir con el sonido de "hecho".
-                    sonar(Apps.abrir(orden[i]));
-                } else {
-                    sonar(false);
+                    sonar(Apps.abrir(orden[real]));
                 }
                 return true;
             }

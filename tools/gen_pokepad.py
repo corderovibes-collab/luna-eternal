@@ -1085,8 +1085,43 @@ def main() -> None:
     args = ap.parse_args()
 
     SALIDA.mkdir(parents=True, exist_ok=True)
+
+    # ⚠⚠⚠ ESTE BORRADO SE LLEVO POR DELANTE TRES TEXTURAS QUE NO SON SUYAS, Y
+    #     DEJO SEIS PANTALLAS EN MAGENTA (2026-08-23).
+    #
+    #     Borraba `*.png` a secas, y en esta carpeta no vive solo lo que genera
+    #     este script: `pokepad_cosmeticos.png`, `lunacoin_oro.png` y
+    #     `boton_mas_luna.png` las pone otra mano. Al regenerar para añadir el
+    #     icono de curar, desaparecieron -- y con ellas el chasis de Cosmeticos,
+    #     Clan, Tienda, Misiones, Trabajos e Inicial, que lo comparten.
+    #
+    #     ⚠ Y NO DIO NINGUN ERROR. Compilo, se desplego y solo se vio al abrir
+    #       una pantalla en el juego: fondo magenta, que es la textura ausente
+    #       de Minecraft.
+    #
+    #     Es exactamente la trampa que ya estaba documentada de `gen_neon.py`
+    #     («empezaba borrando assets/lunaneon ENTERO»). Se repitio porque la
+    #     leccion estaba escrita para OTRO script.
+    #
+    #     Hoy solo se borra LO QUE ESTE SCRIPT SABE GENERAR. Lo demas se queda,
+    #     y si sobra algo se dice en vez de borrarlo.
+    mias = {"pokepad.png"}
+    mias.update(f"{n}.png" for n in ORDEN)
+    mias.update(f"boton_{n}.png" for n in BOTONES)
+    mias.update((CANDADO + ".png", "estrella.png", "estrella_vacia.png",
+                 "plata.png", "lunacoin.png",
+                 "fila_clan.png", "fila_trabajo.png", "fila_division.png"))
+    mias.update({m + ".mcmeta" for m in list(mias)})
+
+    ajenas = []
     for viejo in list(SALIDA.glob("*.png")) + list(SALIDA.glob("*.mcmeta")):
-        viejo.unlink()
+        if viejo.name in mias:
+            viejo.unlink()
+        else:
+            ajenas.append(viejo.name)
+    if ajenas:
+        print("  CONSERVADAS (no las genera este script):",
+              ", ".join(sorted(n for n in ajenas if not n.endswith(".mcmeta"))))
 
     print("POKEPAD")
     chasis = quitar_carita(Image.open(ARTE / "fondo_base.png").convert("RGBA"))

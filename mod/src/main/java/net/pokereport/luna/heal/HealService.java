@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class HealService {
 
     /** Minutos entre curaciones gratuitas. */
-    public static final int COOLDOWN_MIN = 10;
+    public static final int COOLDOWN_MIN = 30;
 
     /**
      * Cooldown en memoria, y aquí sí es correcto.

@@ -39,7 +39,14 @@ param(
   #   bien; saltarselas SIEMPRE es como no tenerlas. La regla: se compilan y se
   #   pasan cuando se toca `launcher/luna/`, y se omiten en las tandas de
   #   empaquetado posteriores al mismo cambio.
-  [switch]$SinPruebas
+  [switch]$SinPruebas,
+
+  # Cuantas tareas de compilacion a la vez. 0 = se calcula de la RAM.
+  #
+  # ⚠ NO LO SUBAS "porque tienes nucleos". Lo que se agota enlazando es la
+  #   MEMORIA: cada `link.exe` de MSVC pide 1-2 GB, y pasarse cuelga el equipo
+  #   entero en vez de dar un error.
+  [int]$Trabajos = 0
 )
 $ErrorActionPreference = 'Stop'
 
@@ -219,6 +226,34 @@ try {
   $argTests = "-DBUILD_TESTING=$(if ($SinPruebas) { 'OFF' } else { 'ON' })"
   if ($SinPruebas) { Write-Host "Pruebas: NO se compilan (27 ejecutables menos)" }
 
+  # ------------------------------------------------------------ PARALELISMO
+  #
+  # ⚠⚠⚠ SIN ESTE TOPE, COMPILAR ESTO TUMBA EL PC. No es una exageracion: paso
+  #     el 2026-08-23 y hubo que apagar a lo bruto.
+  #
+  #     Ninja lanza por defecto tantas tareas como nucleos. Al llegar a los
+  #     ejecutables de PRUEBA --27, cada uno enlazado por separado-- eso son 17
+  #     `link.exe` a la vez, y el enlazador de MSVC se come 1-2 GB CADA UNO.
+  #     Diecisiete por dos son 34 GB en una maquina de 13,7: el sistema se
+  #     queda sin memoria y se lleva por delante lo que pillo.
+  #
+  #     Y NO SE MANIFIESTA COMO UN ERROR DE COMPILACION. Se manifiesta como
+  #     "esto va lentisimo" y despues como un PC congelado, que no manda a
+  #     nadie a mirar los ajustes del build.
+  #
+  # ⚠ Se calcula de la RAM TOTAL y no de los nucleos: lo que se agota es la
+  #   memoria, no la CPU. Un cuarto de la RAM en GB deja ~4 GB de margen para
+  #   Windows y para lo que el usuario tenga abierto -- que en esa maquina era
+  #   el navegador, Minecraft y el propio launcher.
+  if ($Trabajos -le 0) {
+    $ramGB = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 1)
+    $Trabajos = [math]::Max(2, [math]::Min([Environment]::ProcessorCount, [math]::Floor($ramGB / 4)))
+    Write-Host ("Paralelismo: {0} tareas  (RAM {1} GB, {2} nucleos)" -f $Trabajos, $ramGB, [Environment]::ProcessorCount)
+  } else {
+    Write-Host "Paralelismo: $Trabajos tareas (forzado)"
+  }
+  $argJ = "-j$Trabajos"
+
   # ⚠ LAS VARIABLES `CACHE` DE CMAKE NO SE PISAN DESDE EL CMakeLists.
   #
   # Cambiar un `set(... CACHE ...)` en el fichero NO cambia nada si ya hay valor
@@ -231,7 +266,7 @@ try {
   cmake --preset windows_msvc $argLto $argTests "-DLauncher_UPDATER_GITHUB_REPO=https://github.com/corderovibes-collab/luna-eternal-launcher"
   if ($LASTEXITCODE -ne 0) { throw "cmake configure fallo ($LASTEXITCODE)" }
   if ($Solo) {
-    cmake --build --preset windows_msvc --config Release --target $Solo
+    cmake --build --preset windows_msvc --config Release $argJ --target $Solo
     if ($LASTEXITCODE -ne 0) { throw "cmake build de '$Solo' fallo ($LASTEXITCODE)" }
     "BUILD OK  ·  solo $Solo"
     # Sin ejecutable principal no hay nada que empaquetar, y empaquetar es lo
@@ -240,7 +275,7 @@ try {
     return
   }
 
-  cmake --build --preset windows_msvc --config Release
+  cmake --build --preset windows_msvc --config Release $argJ
   if ($LASTEXITCODE -ne 0) { throw "cmake build fallo ($LASTEXITCODE)" }
   'BUILD OK'
 

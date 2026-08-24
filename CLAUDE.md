@@ -7,8 +7,8 @@
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela)
 **Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
 D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
-tres monedas, ocho vías de progresión, y **siete pantallas** en el PokePad.
-Autotest **217/217** en vivo.
+tres monedas, ocho vías de progresión, y **ocho pantallas** en el PokePad.
+Autotest **269/269** en vivo. **El recorrido del jugador nuevo está completo.**
 
 > **2026-08-23 (tarde) — CLANES Y TIENDA. Ya se puede comprar una Poké Ball.**
 > Dos sistemas más y el PokePad pasa de 5 pantallas a **7**. Los **clanes** son
@@ -477,7 +477,9 @@ Curar        LA ULTIMA PANTALLA BASICA (2026-08-23)
                 otro idioma no toca el protocolo
               ⚠ un equipo VACIO es un estado real (lo guardaste todo en el PC)
                 y se dice, en vez de dejar la pantalla en blanco
-              ⚠ SIN VERIFICAR EN EL JUEGO todavia
+              VERIFICADO EN EL JUEGO (2026-08-23) tras arreglar dos fallos
+              que salieron al instalarlo. Los dos abajo, y los dos son de la
+              misma familia: ALGO QUE CUADRABA POR CASUALIDAD
 
 Tienda        COMPRAR Y VENDER, POR CATEGORIAS (2026-08-23)
               2 categorias . 9 articulos . SIN migracion: la logica
@@ -1251,15 +1253,15 @@ Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
                 jugador conectado; desde consola solo consta que el
                 datapack carga sin errores. Es el mismo PKM-004 de
                 siempre
-Interfaz      OCHO PANTALLAS. Seis verificadas en el juego:
+Interfaz      OCHO PANTALLAS. Siete verificadas en el juego:
                 PokePad     2026-08-16   la principal, 15 iconos
                 Cosmeticos  2026-08-22   4 pestanias
                 Trabajos    2026-08-23   8 Vias y oficios, paginado
                 Misiones    2026-08-23   arbol de 28 en 6 cadenas
                 Inicial     2026-08-23   se abre SOLA al entrar
-                Clan        2026-08-23   SIN VERIFICAR (pide 2 cuentas)
+                Clan        2026-08-23   verificado con 2 cuentas
                 Tienda      2026-08-23   SIN VERIFICAR . 9 articulos
-                Curar       2026-08-23   SIN VERIFICAR . la 16a celda
+                Curar       2026-08-23   la 16a celda, pagina 2
               7 de los 16 iconos abren algo: pokedex (la de Cobblemon),
               cosmeticos, trabajos, misiones, clan, tienda y curar
               SIGUEN SIN PANTALLA, con la logica viva y probada:
@@ -1374,6 +1376,46 @@ Bloques       UN SOLO generador para las SEIS familias:
               es la unica forma de ver si encaja consigo misma, y una
               que no encaja no se nota en el editor sino en la fachada
               detalle en docs/world/bloques.md
+Generadores   ⚠⚠⚠ UN GENERADOR NO PUEDE BORRAR LO QUE NO SABE HACER.
+              (2026-08-23) Ejecutar gen_pokepad.py para instalar UN icono
+              dejo SEIS PANTALLAS EN MAGENTA. Empezaba borrando `*.png` de
+              su carpeta de salida, y ahi no vive solo lo suyo:
+                pokepad_cosmeticos.png   el chasis de 6 pantallas
+                lunacoin_oro.png . boton_mas_luna.png
+              las pone otra mano, y desaparecieron sin un solo error.
+              Compilo, se desplego, y solo se vio ABRIENDO una pantalla
+              ⚠⚠ Y NINGUNA DE LAS TRES ESTABA EN GIT. Se recuperaron de un
+                 jar publicado (build/pack/*.jar las conserva). Un clon
+                 limpio del repo TAMPOCO habria podido construir un cliente
+                 que funcionara, y nadie lo habria sabido
+                 hoy estan versionadas: eso es lo que de verdad lo impide
+              ⚠⚠ LA LECCION YA ESTABA ESCRITA, PERO PARA OTRO SCRIPT: el
+                 aviso de gen_neon.py ("empezaba borrando assets/lunaneon
+                 ENTERO") lleva dias en este documento. No sirvio porque
+                 estaba redactado como anecdota de UN generador y no como
+                 REGLA. Aqui queda como regla:
+                   un generador borra SOLO lo que sabe generar,
+                   y DICE por pantalla lo que conserva
+                 gen_pokepad ahora imprime "CONSERVADAS (no las genera este
+                 script): ..." -- que es lo que hace que el siguiente se
+                 entere sin leer el codigo
+Rejilla       ⚠⚠ "YA PAGINA" NO ERA VERDAD, y lo escribi yo (2026-08-23).
+              Habia un boton de pagina, pero NADIE TROCEABA LA LISTA: el
+              bucle recorria `orden.length` entero. Con QUINCE aplicaciones
+              cuadraba por casualidad --5 columnas x 3 filas justas-- y la
+              DECIMOSEXTA (curar) cayo en una fila 4 que no existe: se
+              dibujo suelta debajo del marco, encima del chasis
+              ⚠ `i / COLS` devuelve 3 tan tranquilo. Ni error ni aviso
+              hoy la rejilla tiene TAMAÑO declarado (POR_PAGINA = COLS x
+              REJ_FILAS), y el dibujado y el clic calculan la ranura IGUAL:
+              si cada uno la calculara a su manera, pulsar un icono abriria
+              el de al lado -- y en la pagina 2, algo estando sobre un
+              candado
+              ⚠ PAGINAS SE CALCULA, no se escribe. Estaba a 2 a mano y con
+                dieciseis seguia valiendo por casualidad; con veintiuna
+                habria dejado cinco INALCANZABLES sin decir nada. Es
+                exactamente lo que ya paso en Cosmeticos, donde 54 de 62
+                eran inalcanzables porque nada cambiaba `pagina`
 Herramientas  LO QUE TIENE QUE ESTAR EN LA MAQUINA, y que el formateo
               del 2026-08-20 se llevo. Los CUATRO fallaron al usarlos y
               cada uno paro el trabajo hasta instalarlo:
@@ -1581,14 +1623,17 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 
 | | |
 |---|---|
-| **1. Verificar en el juego** | Clanes (**hacen falta 2 cuentas**) y tienda. Son lo único de hoy sin comprobar en vivo |
-| **2. El GTS** | Es lo último de la lógica ya construida sin pantalla. ⚠ **Arrancarlo con el patrón de `afectados()`**: es el otro sistema donde el estado lo comparten dos personas |
+| **1. El GTS** | Lo último de la lógica ya construida sin pantalla, y lo que desbloquea `t5_gts`. ⚠ **Arrancarlo con el patrón de `Resultado.afectados()`**: es el otro sistema donde el estado lo comparten dos personas, así que tendrá el bug del clan si se hace de la forma obvia |
+| **2. Verificar la tienda** | Es lo único de ayer sin comprobar en vivo |
 | **3. El análisis de economía** | Lo pidió el usuario. **No se puede hacer sin gente jugando.** Los números y dónde se tocan, en [tienda.md §5](docs/economy/tienda.md) |
 | **4. La ciudadela** | Sigue siendo el foco no-técnico, y nada la bloquea |
 
-> ⚠ **Al retomar, lo primero es probar con dos cuentas.** Todo lo de clanes que
-> importa —invitar, aceptar, echar, ascender— cambia el estado que ven *otros*, y
-> eso es justo lo que no se puede comprobar solo.
+> ⚠ **Lo que más caro salió hoy fue lo que “cuadraba por casualidad”.** La
+> rejilla funcionaba con quince aplicaciones porque 15 = 5×3 exactamente; el
+> borrado de un generador funcionaba porque nadie había metido nada ajeno en su
+> carpeta. **Ninguno de los dos daba error**, y los dos se rompieron el día que
+> cambió una cifra. Al añadir cualquier cosa a una lista —iconos, categorías,
+> pestañas— la pregunta es *¿esto cabía por diseño o por suerte?*
 
 ### Y cuando haya interfaz: calibrar con datos reales
 

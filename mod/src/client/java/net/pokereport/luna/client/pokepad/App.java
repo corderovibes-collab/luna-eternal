@@ -37,6 +37,9 @@ public record App(String id, boolean abierta) {
         new App("mochila",    false),
         new App("gyms",       false),
         new App("explorar",   false),
+        // ⚠ LA DECIMOSEXTA, y por eso cae en la PAGINA 2. No hubo que
+        //   quitar ninguna: la rejilla ya pagina y reordena (OrdenPad).
+        new App("curar",      true),
     };
 
     /** La aplicación con ese identificador, o {@code null} si no existe. */

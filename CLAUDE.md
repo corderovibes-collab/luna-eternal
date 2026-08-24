@@ -453,6 +453,32 @@ Oficios       MINAR, PESCAR Y COSECHAR DAN PLATA (2026-08-23, V012)
                 viejos convertiria a los Exploradores en Entrenadores
               /luna via <VIA> <xp> (nivel 3) para probar
 
+Curar        LA ULTIMA PANTALLA BASICA (2026-08-23)
+              equipo 2x3 con barras de vida . boton . reloj de 10 min
+              GRATIS, y el cooldown es lo que lo hace sostenible
+              SIN migracion y SIN protocolo nuevo: HealService, PedirCura,
+              EstadoCura y Curar llevaban escritos desde el 23-ago por la
+              mañana. Lo unico que faltaba era el ICONO y la pantalla
+              ⚠ ES LA 16a CELDA y cae en la PAGINA 2. NO se quito ninguna:
+                la rejilla ya paginaba y reordenaba (OrdenPad)
+              ⚠ `haceFalta` LO DECIDE EL SERVIDOR, no las barras. El cliente
+                podria deducirlo --si alguna barra no esta llena-- y entonces
+                la regla viviria en dos sitios: bastaria con que el servidor
+                contara tambien los PP para que el boton se apagara cuando SI
+                tocaba curar
+              ⚠ el boton se apaga mientras vuela el paquete, CON SALIDA a los
+                1,5 s. Sin la salida, un paquete perdido deja el boton muerto
+                y hay que reabrir -- la leccion de la pantalla del inicial
+              ⚠ las barras van por TRAMOS (verde >50%, ambar >20%, rojo), no
+                por degradado: lo que hay que saber de un vistazo es si ese
+                Pokemon aguanta otro combate
+              ⚠ los estados llegan en formato Showdown (brn, par, slp...) y se
+                traducen EN EL CLIENTE: es presentacion, asi que enseñarlo en
+                otro idioma no toca el protocolo
+              ⚠ un equipo VACIO es un estado real (lo guardaste todo en el PC)
+                y se dice, en vez de dejar la pantalla en blanco
+              ⚠ SIN VERIFICAR EN EL JUEGO todavia
+
 Tienda        COMPRAR Y VENDER, POR CATEGORIAS (2026-08-23)
               2 categorias . 9 articulos . SIN migracion: la logica
               (ShopService, ShopCatalog) llevaba escrita desde PHASE 3 y
@@ -1225,7 +1251,7 @@ Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
                 jugador conectado; desde consola solo consta que el
                 datapack carga sin errores. Es el mismo PKM-004 de
                 siempre
-Interfaz      SIETE PANTALLAS. Cinco verificadas en el juego:
+Interfaz      OCHO PANTALLAS. Seis verificadas en el juego:
                 PokePad     2026-08-16   la principal, 15 iconos
                 Cosmeticos  2026-08-22   4 pestanias
                 Trabajos    2026-08-23   8 Vias y oficios, paginado
@@ -1233,32 +1259,16 @@ Interfaz      SIETE PANTALLAS. Cinco verificadas en el juego:
                 Inicial     2026-08-23   se abre SOLA al entrar
                 Clan        2026-08-23   SIN VERIFICAR (pide 2 cuentas)
                 Tienda      2026-08-23   SIN VERIFICAR . 9 articulos
-              6 de los 15 iconos abren algo: pokedex (la de Cobblemon),
-              cosmeticos, trabajos, misiones, clan y tienda
+                Curar       2026-08-23   SIN VERIFICAR . la 16a celda
+              7 de los 16 iconos abren algo: pokedex (la de Cobblemon),
+              cosmeticos, trabajos, misiones, clan, tienda y curar
               SIGUEN SIN PANTALLA, con la logica viva y probada:
-                curar . GTS . kits . cazas . viaje
-              CURAR es la que mas se nota: ya se compran Poke Balls, pero
-              el equipo sigue sin poder curarse desde el Pad
-              ⚠⚠ CURAR ESTA A MEDIAS Y APARCADO A PROPOSITO (2026-08-23,
-                 decision del usuario: "eso lo hacemos despues").
-                 QUE HAY YA, compilado y commiteado:
-                   PedirCura / EstadoCura / Curar en Red.java
-                   el manejador del servidor (enviarCura)
-                   +7 comprobaciones en el autotest
-                 QUE FALTA:
-                   1) EL ICONO. `curar.png` de 100x100, con el prompt de
-                      docs/ui/prompts-arte-pokepad.md. Es ART-002 y es
-                      del usuario
-                   2) la pantalla CurarScreen
-                   3) la entrada en App.TODAS
-                 ⚠ NO HAY QUE QUITAR NINGUNA CELDA: la rejilla YA PAGINA
-                   y reordena (OrdenPad), asi que curar entra como la 16a
-                   y cae en la pagina 2. Las 15 actuales se quedan
-                 ⚠⚠ LOS PAQUETES ESTAN EN EL JAR COMPILADO PERO **NO
-                    DESPLEGADOS**: el servidor corre el jar de las 18:46,
-                    que no los lleva. Son inertes sin pantalla, asi que no
-                    se reinicio para no echar a nadie. El proximo
-                    despliegue los sube solos
+                GTS . kits . cazas . viaje
+              EL GTS es el siguiente que importa, y OJO: es el otro sistema
+              donde el estado lo comparten DOS personas. Cuando A compra el
+              listado de B, B tiene que enterarse -- hay que arrancarlo ya
+              con el patron de `Resultado.afectados()` de los clanes
+              ⚠ CURAR YA ESTA (2026-08-23, tarde). Ver el bloque Curar
 Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
               solo captura las avanza; crianza cuenta al ECLOSIONAR
 Repos         luna-eternal (privado) · luna-eternal-pack (publico)
@@ -1551,8 +1561,9 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 3. Registra en la Pokedex           ✅ funciona, con aviso de logro
 4. Sube oficios y vias              ✅ RESUELTO 2026-08-23
 5. Misiones que le guian            ✅ RESUELTO 2026-08-23 · 28 en 6 cadenas
-6. Cura gratis                      ✅ HealService · ⬜ FALTA PANTALLA
-7. Compra, vende, comercia          ✅ servicios   · ⬜ FALTA PANTALLA
+6. Cura gratis                      ✅ RESUELTO 2026-08-23
+7. Compra y vende                   ✅ RESUELTO 2026-08-23
+8. Comercia (GTS)                   ✅ servicios   · ⬜ FALTA PANTALLA
 ```
 
 > **El bloqueo circular se cerró el 2026-08-23.** Lo que faltaba no era lógica:
@@ -1561,16 +1572,17 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 > Balls**, sube oficios, funda un clan, y el árbol de misiones le dice qué hacer
 > a continuación.
 >
-> **Lo único básico que queda es CURAR**, y es la pantalla más pequeña de todas:
-> `HealService` ya tiene la curación gratuita y su cooldown de 10 minutos. Solo
-> `t5_gts` sigue sin poder completarse, porque el GTS no tiene pantalla.
+> **El recorrido básico está COMPLETO desde el 2026-08-23 por la tarde**: entrar,
+> elegir inicial, capturar, comprar, curar, subir oficios, fundar un clan y
+> seguir el árbol de misiones. Lo único que no se puede completar es `t5_gts`,
+> porque el GTS sigue sin pantalla.
 
 ### ⏭ POR AQUÍ SE SIGUE (2026-08-23, fin de sesión)
 
 | | |
 |---|---|
 | **1. Verificar en el juego** | Clanes (**hacen falta 2 cuentas**) y tienda. Son lo único de hoy sin comprobar en vivo |
-| **2. La pantalla de CURAR** | La más pequeña que queda. `HealService` está escrito y probado |
+| **2. El GTS** | Es lo último de la lógica ya construida sin pantalla. ⚠ **Arrancarlo con el patrón de `afectados()`**: es el otro sistema donde el estado lo comparten dos personas |
 | **3. El análisis de economía** | Lo pidió el usuario. **No se puede hacer sin gente jugando.** Los números y dónde se tocan, en [tienda.md §5](docs/economy/tienda.md) |
 | **4. La ciudadela** | Sigue siendo el foco no-técnico, y nada la bloquea |
 

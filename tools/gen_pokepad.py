@@ -156,9 +156,13 @@ TEXTO_SOLAPE = TEXTO_ALTO // 2
 # ensenaba una pantalla que NO es la que ve el jugador. Como la maqueta existe
 # para aprobar el diseno antes de desplegar, eso la hacia inutil justo para lo
 # unico que sirve. Si cambia el orden en App.java, cambia aqui.
+# ⚠ CURAR ES EL DECIMOSEXTO, y por eso cae en la PAGINA 2 de la rejilla.
+#   No hay que quitar ninguna celda: la rejilla ya pagina y reordena (OrdenPad),
+#   asi que las quince de siempre se quedan donde estaban.
 ORDEN = ["pokedex", "cosmeticos", "trabajos", "misiones", "warps",
          "clan", "gts", "tienda", "tesoros", "wiki",
-         "cazas", "kits", "mochila", "gyms", "explorar"]
+         "cazas", "kits", "mochila", "gyms", "explorar",
+         "curar"]
 
 # El grosor del borde de la celda y el tamano de la esquina mordida, tambien
 # x4. A 1 px sobre una celda de 124 ninguno de los dos se ve.
@@ -173,6 +177,7 @@ NOMBRES = {
     "gts": "GTS",           "tienda": "Tienda",         "tesoros": "Tesoros",
     "wiki": "Wiki",         "cazas": "Cazas",           "kits": "Kits",
     "mochila": "Mochila",   "gyms": "Gimnasios",        "explorar": "Explorar",
+    "curar": "Curar",
 }
 
 # El tamano al que se DIBUJAN los botones, que no es el que llega.

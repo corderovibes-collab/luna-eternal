@@ -24,6 +24,7 @@ public final class EstadoCliente {
     private static Red.Iniciales iniciales;
     private static Red.EstadoClan clan;
     private static Red.Tienda tienda;
+    private static Red.EstadoCura cura;
 
     private EstadoCliente() {}
 
@@ -115,6 +116,20 @@ public final class EstadoCliente {
         return tienda;
     }
 
+    public static void guardar(Red.EstadoCura nueva) {
+        cura = nueva;
+    }
+
+    /**
+     * El equipo y el reloj de la cura. {@code null} hasta que contesta.
+     *
+     * <p>⚠ Y un equipo VACIO no es lo mismo que «todavia no lo se»: guardar
+     * todo en el PC es un estado real. La pantalla lo distingue.
+     */
+    public static Red.EstadoCura cura() {
+        return cura;
+    }
+
     public static Red.Cosmeticos cosmeticos() {
         return cosmeticos;
     }
@@ -126,6 +141,7 @@ public final class EstadoCliente {
         iniciales = null;
         clan = null;
         tienda = null;
+        cura = null;
         saldo = null;
         ficha = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo

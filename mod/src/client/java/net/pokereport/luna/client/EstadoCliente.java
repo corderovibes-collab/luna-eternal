@@ -25,6 +25,7 @@ public final class EstadoCliente {
     private static Red.EstadoClan clan;
     private static Red.Tienda tienda;
     private static Red.EstadoCura cura;
+    private static Red.EstadoMercado mercado;
 
     private EstadoCliente() {}
 
@@ -130,6 +131,15 @@ public final class EstadoCliente {
         return cura;
     }
 
+    public static void guardar(Red.EstadoMercado nuevo) {
+        mercado = nuevo;
+    }
+
+    /** El libro de ordenes. {@code null} hasta que contesta el servidor. */
+    public static Red.EstadoMercado mercado() {
+        return mercado;
+    }
+
     public static Red.Cosmeticos cosmeticos() {
         return cosmeticos;
     }
@@ -142,6 +152,7 @@ public final class EstadoCliente {
         clan = null;
         tienda = null;
         cura = null;
+        mercado = null;
         saldo = null;
         ficha = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo

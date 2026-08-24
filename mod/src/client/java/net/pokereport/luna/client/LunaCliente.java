@@ -100,6 +100,9 @@ public class LunaCliente implements ClientModInitializer {
 
         // Las cinco Vias. Llegan al abrir Trabajos, no antes: nadie las mira
         // el resto del tiempo.
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoMercado.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoCura.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 

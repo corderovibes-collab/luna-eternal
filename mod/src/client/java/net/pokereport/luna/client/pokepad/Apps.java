@@ -63,6 +63,7 @@ public final class Apps {
             case "clan" -> abrirClan();
             case "tienda" -> abrirTienda();
             case "curar" -> abrirCurar();
+            case "gts" -> abrirMercado();
             default -> false;
         };
     }
@@ -75,6 +76,13 @@ public final class Apps {
      * volver -- si volviera creando un PokePadScreen nuevo, se perderia en que
      * pagina de aplicaciones estaba el jugador.
      */
+    /** El mercado. Misma regla que las demas: NUESTRA pantalla, sin reflexion. */
+    private static boolean abrirMercado() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new MercadoScreen(cliente.currentScreen));
+        return true;
+    }
+
     /** Curar. Misma regla que las demas: NUESTRA pantalla, sin reflexion. */
     private static boolean abrirCurar() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();

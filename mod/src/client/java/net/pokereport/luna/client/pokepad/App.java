@@ -28,7 +28,10 @@ public record App(String id, boolean abierta) {
         new App("misiones",   true),
         new App("warps",      false),
         new App("clan",       true),
-        new App("gts",        false),
+        // ⚠ EL MERCADO VA EN EL ICONO `gts`, que ya existe y ya esta
+        //   dibujado: dos Poke Balls intercambiandose con una gema en
+        //   medio. Es literalmente lo que hace esta pantalla.
+        new App("gts",        true),
         new App("tienda",     true),
         new App("tesoros",    false),
         new App("wiki",       false),

@@ -85,6 +85,22 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // Los OFICIOS: mineria, pesca, cultivo y cria.
             net.pokereport.luna.progression.OficiosListener.register();
             net.pokereport.luna.pokedex.ScanListener.register();
+
+            // ⚠ Las ordenes vencidas se cierran AL ARRANCAR y se devuelve lo
+            //   retenido. Y las consultas del libro filtran ademas por
+            //   expires_at, para que una vencida no se pueda cruzar aunque el
+            //   barrido no haya pasado: una tarea periodica es otra cosa que
+            //   puede no estar corriendo.
+            submit(() -> {
+                try {
+                    int n = market.caducar();
+                    if (n > 0) {
+                        LOG.info("Mercado: {} ordenes caducadas, lo retenido devuelto", n);
+                    }
+                } catch (Exception e) {
+                    LOG.error("No se pudieron caducar las ordenes del mercado", e);
+                }
+            });
         });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
@@ -102,6 +118,11 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                 try {
                     long id = players.resolve(profile.getId(), profile.getName());
                     net.pokereport.luna.gts.GtsDelivery.claimAll(player, id);
+
+                    // Y lo que le deba el MERCADO: lo comprado mientras estaba
+                    // desconectado, y lo devuelto de ordenes canceladas o
+                    // caducadas. Ver MarketDelivery.
+                    net.pokereport.luna.market.MarketDelivery.entregarTodo(player, id);
 
                     // Los cosmeticos que ven los demas --auras, sombreros,
                     // capas-- EN LAS DOS DIRECCIONES. Ver `Red.difundirTodo`.

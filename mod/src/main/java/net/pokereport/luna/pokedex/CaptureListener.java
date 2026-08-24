@@ -130,9 +130,23 @@ public final class CaptureListener {
                 if (nueva) {
                     // Las Marcas no se comercian, así que premiar aquí no
                     // infla nada (ECO-001 §2).
+                    //
+                    // ⚠⚠ LA CLAVE SE DERIVA DE (jugador, especie) Y NO ES UN
+                    //    UUID NUEVO. Un UUID recién generado NO PUEDE COINCIDIR
+                    //    CON NADA, así que como clave de idempotencia no protege
+                    //    de nada: es idempotencia de adorno.
+                    //
+                    //    Y aquí sí protege de algo real. `recordCapture` decide
+                    //    si la especie es nueva, y el executor de E/S tiene DOS
+                    //    hilos: dos capturas de la misma especie a la vez podían
+                    //    contestar «nueva» las dos y cobrar dos veces. Con esta
+                    //    clave, la segunda se rechaza aunque todo lo demás falle.
+                    //
+                    //    Es R4 aplicada como estaba escrita: la clave identifica
+                    //    LA OPERACIÓN, no la llamada.
                     LunaEternal.economy().credit(id, Currency.MARK,
                         MARCAS_ESPECIE_NUEVA, "pokedex_nueva",
-                        UUID.randomUUID().toString());
+                        "pokedex_nueva:" + id + ":" + name.toLowerCase());
                 }
 
                 // Misiones, TODO en una sola llamada. Antes eran cuatro, y

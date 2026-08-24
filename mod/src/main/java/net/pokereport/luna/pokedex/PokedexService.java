@@ -42,47 +42,113 @@ public final class PokedexService {
      *
      * @return {@code true} si es la primera captura de esa especie
      */
+    /**
+     * Anota una captura. Devuelve {@code true} <b>si es la primera</b>.
+     *
+     * <h2>⚠⚠ Lo decide una ESCRITURA, no una lectura previa</h2>
+     *
+     * La versión anterior hacía {@code SELECT caught} y después el
+     * {@code INSERT}, y entre las dos cabe otra captura: con el executor de E/S
+     * a <b>dos hilos</b>, dos capturas de la misma especie leían las dos «no la
+     * tienes» y las dos contestaban «nueva». Eso paga las Marcas dos veces, da
+     * la XP de especie nueva dos veces y avanza dos veces la misión de registrar
+     * especies.
+     *
+     * <p>Hoy la respuesta sale del <b>número de filas afectadas</b>, que sí es
+     * atómico:
+     *
+     * <ul>
+     *   <li>El {@code INSERT IGNORE} entra una sola vez: de dos simultáneos,
+     *       uno afecta a 1 fila y el otro a 0.</li>
+     *   <li>Si la fila ya estaba, el {@code UPDATE ... WHERE caught = 0}
+     *       distingue «vista pero no capturada» de «ya capturada» — y bloquea la
+     *       fila, así que el segundo la reevalúa ya con {@code caught = 1} y
+     *       afecta a 0.</li>
+     * </ul>
+     *
+     * <p>⚠ Que las Marcas lleven además clave de idempotencia derivada no
+     * sobra: son <b>dos redes independientes</b>, y la de la economía es la que
+     * aguanta si algún día alguien vuelve a tocar esto.
+     */
     public boolean recordCapture(long playerId, String species, int dexNumber,
                                  boolean shiny, int level, int moonPhase)
             throws SQLException {
 
-        boolean first;
         try (Connection c = db.connection()) {
-            try (PreparedStatement ps = c.prepareStatement(
-                    "SELECT caught FROM pokedex_entry WHERE player_id=? AND species=?")) {
-                ps.setLong(1, playerId);
-                ps.setString(2, species);
-                try (ResultSet rs = ps.executeQuery()) {
-                    first = !rs.next() || !rs.getBoolean(1);
-                }
-            }
+            c.setAutoCommit(false);
+            try {
+                boolean first;
 
-            try (PreparedStatement ps = c.prepareStatement("""
-                    INSERT INTO pokedex_entry
-                      (player_id, species, dex_number, seen, caught, shiny_caught,
-                       caught_count, best_level, first_caught_at, first_moon_phase)
-                    VALUES (?,?,?,1,1,?,1,?,CURRENT_TIMESTAMP(3),?)
-                    ON DUPLICATE KEY UPDATE
-                      seen         = 1,
-                      caught       = 1,
-                      shiny_caught = GREATEST(shiny_caught, VALUES(shiny_caught)),
-                      caught_count = caught_count + 1,
-                      best_level   = GREATEST(COALESCE(best_level,0), VALUES(best_level)),
-                      -- La primera captura no se sobrescribe: es la que cuenta
-                      -- la historia de cuándo y con qué luna.
-                      first_caught_at  = COALESCE(first_caught_at, VALUES(first_caught_at)),
-                      first_moon_phase = COALESCE(first_moon_phase, VALUES(first_moon_phase))
-                    """)) {
-                ps.setLong(1, playerId);
-                ps.setString(2, species);
-                ps.setInt(3, dexNumber);
-                ps.setBoolean(4, shiny);
-                ps.setInt(5, level);
-                ps.setInt(6, moonPhase);
-                ps.executeUpdate();
+                int insertadas;
+                try (PreparedStatement ps = c.prepareStatement("""
+                        INSERT IGNORE INTO pokedex_entry
+                          (player_id, species, dex_number, seen, caught, shiny_caught,
+                           caught_count, best_level, first_caught_at, first_moon_phase)
+                        VALUES (?,?,?,1,1,?,1,?,CURRENT_TIMESTAMP(3),?)
+                        """)) {
+                    ps.setLong(1, playerId);
+                    ps.setString(2, species);
+                    ps.setInt(3, dexNumber);
+                    ps.setBoolean(4, shiny);
+                    ps.setInt(5, level);
+                    ps.setInt(6, moonPhase);
+                    insertadas = ps.executeUpdate();
+                }
+
+                if (insertadas == 1) {
+                    // Nadie la tenía. Es nueva, y la fila ya queda completa.
+                    first = true;
+                } else {
+                    // La fila existía: solo es «primera captura» si estaba VISTA
+                    // pero no capturada, y eso lo decide el WHERE, no un if.
+                    try (PreparedStatement ps = c.prepareStatement("""
+                            UPDATE pokedex_entry SET
+                              seen = 1, caught = 1,
+                              shiny_caught = GREATEST(shiny_caught, ?),
+                              caught_count = caught_count + 1,
+                              best_level = GREATEST(COALESCE(best_level, 0), ?),
+                              first_caught_at = COALESCE(first_caught_at,
+                                                         CURRENT_TIMESTAMP(3)),
+                              first_moon_phase = COALESCE(first_moon_phase, ?)
+                            WHERE player_id = ? AND species = ? AND caught = 0
+                            """)) {
+                        ps.setBoolean(1, shiny);
+                        ps.setInt(2, level);
+                        ps.setInt(3, moonPhase);
+                        ps.setLong(4, playerId);
+                        ps.setString(5, species);
+                        first = ps.executeUpdate() == 1;
+                    }
+                    if (!first) {
+                        // Recaptura normal: suben el contador, el shiny y el
+                        // nivel máximo, pero la primera vez no se toca -- es la
+                        // que cuenta la historia de cuándo y con qué luna.
+                        try (PreparedStatement ps = c.prepareStatement("""
+                                UPDATE pokedex_entry SET
+                                  seen = 1, caught = 1,
+                                  shiny_caught = GREATEST(shiny_caught, ?),
+                                  caught_count = caught_count + 1,
+                                  best_level = GREATEST(COALESCE(best_level, 0), ?)
+                                WHERE player_id = ? AND species = ?
+                                """)) {
+                            ps.setBoolean(1, shiny);
+                            ps.setInt(2, level);
+                            ps.setLong(3, playerId);
+                            ps.setString(4, species);
+                            ps.executeUpdate();
+                        }
+                    }
+                }
+
+                c.commit();
+                return first;
+            } catch (Exception e) {
+                c.rollback();
+                throw e instanceof SQLException s ? s : new SQLException(e);
+            } finally {
+                c.setAutoCommit(true);
             }
         }
-        return first;
     }
 
     /** Anota que se ha visto una especie, sin capturarla. */

@@ -809,6 +809,66 @@ Shaders       INSTALADOS y APAGADOS · client-pack.md §2-quater
                 del jar de Iris. §2-quinquies
 Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
               ---------------------------------------------------------
+              LA PANTALLA DEL JUGADOR (2026-08-23) . launcher-qt.md §14
+              VERIFICADA EN LA VENTANA . v0.2.3
+              la ventana deja de ser la rejilla de instancias de Prism:
+                PERFILES a la izquierda (Jugador / Constructor)
+                el logo centrado
+                un boton JUGAR grande, y es la accion de la pantalla
+                tarjeta del servidor: si esta en linea y que pack tienes
+              ⚠⚠ CORRIGE UN RUMBO: se enseño una maqueta con esta
+                 disposicion y se entrego SOLO el tema sobre la ventana de
+                 Prism. El alcance decia "sin tocar la estructura de
+                 ventanas", pero la maqueta se dibujo ignorando eso.
+                 Enseñar una imagen y entregar otra cosa es un fallo
+              ⚠ SE OCULTA, NO SE BORRA: `view` sigue creado con su modelo
+                y sus conexiones. Borrarlo obligaria a desenredar medio
+                MainWindow y a mantenerlo en cada merge con upstream
+              ⚠ las barras de la derecha se ocultan DESPUES de
+                setVisibilityState: instanceToolBar es un WideBar y
+                RESTAURA SU PROPIA VISIBILIDAD desde los ajustes
+              ⚠⚠ "Comprobando..." TIENE QUE RESOLVERSE. Un estado que se
+                 queda ahi para siempre es peor que no enseñar nada: el
+                 jugador no sabe si el servidor esta caido o si el
+                 launcher se ha colgado
+              ⚠ NO ES UN PING DE MINECRAFT y no se vende como tal. Es una
+                conexion TCP: si el puerto acepta, hay algo escuchando. Es
+                menos informacion pero es VERDADERA -- enseñar "12
+                jugadores" inventado seria peor que no enseñar nada
+              ⚠ hace falta un reloj de 4 s: un puerto filtrado por un
+                cortafuegos NO RECHAZA, se calla, y Windows esperaria ~20 s
+              ⚠ si falla el manifiesto se dice "sin conexion" y NO
+                "servidor caido": lo que falla entonces es la red del
+                jugador o nuestro CDN
+              ⚠⚠ Y MATO EL LAUNCHER AL ARRANCAR: el texto del pie se puso
+                 donde `m_statusLeft` TODAVIA NO EXISTE (se crea mas abajo
+                 en el mismo constructor). El log terminaba en "applying
+                 catpack" sin decir una palabra del motivo
+              lo que queda del modo quiosco: el navegador de mods, al que
+              todavia se llega desde "Editar"
+              ---------------------------------------------------------
+              ⚠⚠⚠ COMPILAR ESTO TUMBA EL PC SI NO SE LIMITA (2026-08-23).
+                 Paso de verdad y hubo que apagar a lo bruto.
+                 Ninja lanza UNA TAREA POR NUCLEO. En la maquina del
+                 usuario son 16 nucleos y 13,7 GB de RAM, y al llegar a
+                 los 27 EJECUTABLES DE PRUEBA --cada uno enlazado por
+                 separado-- eso son 17 `link.exe` a la vez. El enlazador
+                 de MSVC pide 1-2 GB CADA UNO: 17-34 GB sobre 13,7
+                 ⚠ NO SE MANIFIESTA COMO UN ERROR. Se manifiesta como
+                   "esto va lentisimo" y despues como un equipo
+                   congelado, que no manda a nadie a mirar el build. Los
+                   17 link.exe se llegaron a VER y se leyeron como "va
+                   bien, solo tarda"
+                 ARREGLADO EN build-launcher.ps1: el tope se calcula de la
+                 RAM TOTAL y no de los nucleos --lo que se agota es la
+                 memoria--, un cuarto de la RAM en GB, minimo 2. En esa
+                 maquina son 3 en vez de 16
+                 ⚠ hay `-Trabajos N` para forzarlo, pero NO SE SUBE
+                   "porque tienes nucleos"
+                 ⚠ y se compila SOLO LO AFECTADO con `-Solo`: se estaban
+                   compilando las 29 suites para verificar cambios que
+                   tocan dos ficheros
+              ---------------------------------------------------------
               DIAGNOSTICO Y REPARAR (2026-08-23) . launcher-qt.md §12
               eran LO UNICO que el fork habia perdido respecto al de
               Electron. Ya las tiene las dos

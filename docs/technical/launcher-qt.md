@@ -1090,7 +1090,91 @@ Lo que no: **el botón grande de Jugar**. Hoy se lanza desde el panel de la
 derecha, que es la disposición de Prism. Eso es un rediseño de la ventana, no un
 ajuste.
 
+## 14. La pantalla del jugador (2026-08-23)
+
+**Y por qué hizo falta corregir el rumbo.** Se le enseñó al usuario una maqueta
+con esta disposición —perfiles a la izquierda, logo centrado, botón JUGAR
+grande— y después se entregó **solo el tema** sobre la ventana de Prism tal
+cual. El alcance acordado decía «sin tocar la estructura de ventanas», pero la
+maqueta se dibujó ignorando esa restricción: **enseñar una imagen y entregar
+otra cosa es un fallo**, aunque el texto del alcance diga otra cosa.
+
+### 14.1 · Qué sustituye
+
+Prism es un **gestor multi-instancia**: rejilla de instancias, barra lateral de
+acciones (Lanzar · Forzar cierre · Editar · Carpeta) y panel de noticias. Eso
+sirve a quien administra varios modpacks.
+
+Aquí hay **un** servidor y **una** instancia: la rejilla enseña siempre lo mismo
+y «Lanzar» es un enlace de texto de doce píxeles.
+
+> ⚠️ **Se oculta, no se borra.** `view` sigue creado, con su modelo y sus
+> conexiones: la selección, el menú contextual y las acciones siguen
+> funcionando. Borrarlo obligaría a desenredar medio `MainWindow` y a mantener
+> ese desenredo en cada merge con upstream.
+
+> ⚠️ **Las dos barras de la derecha se ocultan DESPUÉS de `setVisibilityState`.**
+> `instanceToolBar` es un `WideBar` y **restaura su propia visibilidad** desde
+> los ajustes del jugador; ocultarla antes no sirve de nada, y desde fuera se ve
+> como que la línea no existe.
+
+> ⚠️ **La pantalla no decide nada.** Emite dos señales —`jugarPulsado`,
+> `perfilElegido`— y el trabajo lo hace lo que ya estaba (`lanzarPoniendoAlDia`,
+> `onCambiarPerfilLuna`). Si se tirara mañana, no se perdería ni una regla.
+
+### 14.2 · La tarjeta del servidor dice la verdad
+
+> ⚠️⚠️ **«Comprobando…» tiene que resolverse.** Un estado que se queda ahí para
+> siempre es **peor que no enseñar nada**: el jugador no sabe si el servidor está
+> caído o si el launcher se colgó.
+
+Se trae el manifiesto —una sola petición llena la tarjeta entera: versión,
+número de ficheros y dirección— y después se abre una **conexión TCP** al
+servidor.
+
+> ⚠️ **No es un ping de Minecraft, y no se vende como tal.** El ping de verdad
+> devuelve nombre, versión y cuánta gente hay dentro, pero exige hablar su
+> protocolo (handshake con varints, petición de estado, JSON de vuelta). Aquí
+> solo se comprueba que el puerto acepte. **Es menos información pero es
+> verdadera** —enseñar «12 jugadores» inventado sería peor que no enseñar nada—
+> y responde lo que importa antes de pulsar JUGAR: *¿está arriba?*
+
+> ⚠️ **Hace falta un reloj de 4 s.** Un puerto filtrado por un cortafuegos **no
+> rechaza: se calla**, y `QTcpSocket` esperaría el tiempo del sistema — en
+> Windows, ~20 segundos. La tarjeta se quedaría en «Comprobando…» todo ese rato,
+> que es justo lo que esto viene a evitar.
+
+> ⚠️ **Si falla el manifiesto se dice «sin conexión», no «servidor caído».** Lo
+> que está mal entonces es la red del jugador o nuestro CDN; acusar al servidor
+> sería una acusación sin pruebas.
+
+### 14.3 · Dos fallos propios, anotados en el código
+
+**1 · El launcher moría al arrancar sin dibujar nada.** El texto del pie se puso
+donde `m_statusLeft` **todavía no existe** —se crea más abajo en el mismo
+constructor—, así que era escribir sobre un puntero nulo. El log terminaba en
+`applying catpack` y **no decía una palabra del motivo**.
+
+**2 · El icono de la fila de perfil salía como una rayita.** Se probó con el
+glifo `U+25D2`: la fuente del sistema lo dibuja diminuto y descentrado dentro de
+su caja. Ahora se dibuja con `QPainter`.
+
+> ⚠️ **El texto del pie hay que cambiarlo en LOS DOS SITIOS**: `selectionBad()` y
+> `retranslateUi()`. El segundo corre al arrancar y al cambiar de idioma, y
+> deshacía el primero sin que se notara dónde.
+
+### 14.4 · Lo que sigue faltando del modo quiosco
+
+Ya está: acciones de instancia ocultas, página de cuentas fuera, instancia
+seleccionada sola, y ahora la pantalla. **Queda el navegador de mods**, al que
+todavía se llega desde «Editar».
+
 ## Last Decision
+
+**2026-08-23 · LA PANTALLA DEL JUGADOR** — la ventana deja de ser la rejilla de
+Prism (§14). Corrige un rumbo: se enseñó una maqueta y se entregó solo el tema.
+La tarjeta del servidor comprueba de verdad con una conexión TCP, y **no** finge
+ser un ping de Minecraft.
 
 **2026-08-23 · DIAGNÓSTICO Y REPARAR** — el fork deja de estar por detrás del
 launcher de Electron (§12). El motor ya sabía reparar (`Mode::Repair`); lo que

@@ -99,6 +99,10 @@ public class ClanScreen extends Screen {
     protected void init() {
         recalcular();
         ClientPlayNetworking.send(new Red.PedirClan());
+        // ⚠ El saldo hace falta AQUI: fundar cuesta 5.000 y aportar sale de tu
+        //   bolsillo. Sin el numero delante, la decisión se toma a ciegas y el
+        //   único aviso llega en forma de rechazo.
+        ClientPlayNetworking.send(new Red.PedirSaldo());
 
         // ⚠ Los cuatro se crean SIEMPRE, aunque solo se usen dos a la vez. Lo
         //   que cambia es cuáles se dibujan: crearlos según el caso obligaría a
@@ -189,6 +193,10 @@ public class ClanScreen extends Screen {
         if (tengoClan()) {
             p.add("miembros");
             p.add("tesoro");
+            // ⚠ EL REGISTRO LO VE TODO EL CLAN, no solo quien manda. Un registro
+            //   que solo pueden leer los que podrían robar no vigila a nadie:
+            //   lo que lo hace útil es que lo vean los demás.
+            p.add("registro");
         } else {
             p.add("invitaciones");
             p.add("clanes");
@@ -221,6 +229,7 @@ public class ClanScreen extends Screen {
         switch (cual) {
             case "miembros" -> dibujarMiembros(ctx, rx, ry);
             case "tesoro" -> dibujarTesoro(ctx, rx, ry);
+            case "registro" -> dibujarRegistro(ctx, rx, ry);
             case "invitaciones" -> dibujarInvitaciones(ctx, rx, ry);
             case "clanes" -> dibujarClanes(ctx, rx, ry);
             default -> { }
@@ -272,8 +281,19 @@ public class ClanScreen extends Screen {
         texto(ctx, Text.literal(String.format("%,d", coste)),
                 cx, PANEL_Y + 380, 30, ORO, true, false);
 
+        // Tu Plata, justo debajo del coste. Los dos números juntos contestan
+        // la única pregunta que se hace aquí: ¿me llega?
+        var s = EstadoCliente.saldo();
+        long tengo = s == null ? -1 : s.pokedolares();
+        texto(ctx, Text.translatable("pokepad.lunaeternal.clan.tienes_tu"),
+                cx, PANEL_Y + 420, 15, TEXTO_SUAVE, true, false);
+        texto(ctx, Text.literal(tengo < 0 ? "—" : String.format("%,d", tengo)),
+                cx, PANEL_Y + 440, 22,
+                tengo >= 0 && tengo < coste ? ROJO : 0xFFFFFFFF, true, false);
+
         boton(ctx, rx, ry, PANEL_X + 40, PANEL_Y + PANEL_H - 76, PANEL_W - 80, 46,
-                Text.translatable("pokepad.lunaeternal.clan.fundar_btn"), true);
+                Text.translatable("pokepad.lunaeternal.clan.fundar_btn"),
+                tengo < 0 || tengo >= coste);
     }
 
     /** Con clan: quién eres dentro y qué puedes hacer. */
@@ -311,6 +331,13 @@ public class ClanScreen extends Screen {
         separador(ctx, y);
         texto(ctx, Text.translatable("pokepad.lunaeternal.clan.rol." + estado.miRol()),
                 cx, y + 14, 20, soyLider() ? ORO : 0xFF9FD0F0, true, false);
+
+        var saldo = EstadoCliente.saldo();
+        texto(ctx, Text.translatable("pokepad.lunaeternal.clan.tienes_tu"),
+                cx, y + 44, 15, TEXTO_SUAVE, true, false);
+        texto(ctx, Text.literal(saldo == null ? "—"
+                        : String.format("%,d", saldo.pokedolares())),
+                cx, y + 62, 20, 0xFFFFFFFF, true, false);
 
         // ⚠ El líder ve DISOLVER y no SALIR, y no es un detalle: salir le está
         //   prohibido —dejaría el clan sin quien lo dirija— así que enseñárselo
@@ -406,28 +433,161 @@ public class ClanScreen extends Screen {
         }
     }
 
+    /**
+     * El tesoro: cuánto hay, mover dinero y <b>quién lo ha movido</b>.
+     *
+     * <p>⚠ El historial va en la MISMA pestaña que los botones, y a propósito:
+     * es lo que se mira justo antes de sacar y justo después de que falte algo.
+     * En una pestaña aparte se consultaría cuando ya es tarde.
+     */
     private void dibujarTesoro(DrawContext ctx, int rx, int ry) {
         int cx = PANT_X + PANT_W / 2;
+        int y = primeraFilaY();
+
         texto(ctx, Text.translatable("pokepad.lunaeternal.clan.tesoro"),
-                cx, primeraFilaY() + 20, 22, TEXTO_SUAVE, true, false);
+                cx, y, 18, TEXTO_SUAVE, true, false);
         texto(ctx, Text.literal(String.format("%,d", estado.mio().tesoro())),
-                cx, primeraFilaY() + 52, 48, ORO, true, false);
+                cx, y + 24, 40, ORO, true, false);
 
         texto(ctx, Text.translatable("pokepad.lunaeternal.clan.cantidad"),
                 PANEL_X + 28, PANEL_Y + 446, 16, TEXTO_SUAVE, false, false);
         campoCantidad.render(ctx, rx, ry, 0);
 
-        int by = primeraFilaY() + 140;
-        botonPeq(ctx, rx, ry, cx - 260, by, 240, 46,
+        int by = y + 76;
+        botonPeq(ctx, rx, ry, cx - 250, by, 230, 40,
                 Text.translatable("pokepad.lunaeternal.clan.aportar"));
         if (mando()) {
-            botonPeq(ctx, rx, ry, cx + 20, by, 240, 46,
+            botonPeq(ctx, rx, ry, cx + 20, by, 230, 40,
                     Text.translatable("pokepad.lunaeternal.clan.sacar"));
         }
-        texto(ctx, Text.translatable(mando()
-                        ? "pokepad.lunaeternal.clan.tesoro_ayuda_mando"
-                        : "pokepad.lunaeternal.clan.tesoro_ayuda"),
-                cx, by + 66, 16, TEXTO_SUAVE, true, false);
+
+        // ---- EL TOPE. Es la pieza de seguridad, así que se enseña siempre,
+        //      también a los miembros: saber que existe es la mitad de para qué
+        //      sirve.
+        int ty = by + 48;
+        separadorPantalla(ctx, ty);
+        if (soyLider()) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.clan.tope",
+                            String.format("%,d", estado.topeOficial())),
+                    PANT_X + MARGEN, ty + 12, 16, TEXTO_SUAVE, false, true);
+            botonPeq(ctx, rx, ry, PANT_X + PANT_W - MARGEN - 190, ty + 8, 178, 30,
+                    Text.translatable("pokepad.lunaeternal.clan.cambiar_tope"));
+        } else if (mando()) {
+            // Un oficial ve lo que le queda hoy. Enterarte del tope cuando te lo
+            // rechazan es la peor forma de enterarte.
+            long libre = Math.max(0, estado.topeOficial() - estado.sacadoHoy());
+            texto(ctx, Text.translatable("pokepad.lunaeternal.clan.te_queda",
+                            String.format("%,d", libre),
+                            String.format("%,d", estado.topeOficial())),
+                    PANT_X + MARGEN, ty + 14, 16,
+                    libre <= 0 ? ROJO : TEXTO_SUAVE, false, true);
+        } else {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.clan.tesoro_ayuda"),
+                    PANT_X + MARGEN, ty + 14, 16, TEXTO_SUAVE, false, true);
+        }
+
+        // ---- EL HISTORIAL
+        int hy = ty + 44;
+        texto(ctx, Text.translatable("pokepad.lunaeternal.clan.historial"),
+                PANT_X + MARGEN, hy, 17, TEXTO_SUAVE, false, true);
+        hy += 22;
+        var movs = estado.movimientos();
+        if (movs.isEmpty()) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.clan.sin_movimientos"),
+                    cx, hy + 20, 16, TEXTO_SUAVE, true, false);
+            return;
+        }
+        int caben = (PANT_Y + PANT_H - MARGEN - hy) / 22;
+        for (int i = 0; i < movs.size() && i < caben; i++) {
+            var m = movs.get(i);
+            int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
+            if (i % 2 == 0) {
+                ctx.fill(px(ax), py(hy - 2), px(ax + aw), py(hy + 18), 0x22FFFFFF);
+            }
+            boolean entra = m.delta() > 0;
+            // ⚠ El signo va DELANTE y con color. Una lista de cantidades sin
+            //   signo obliga a leer el motivo para saber si el dinero entró o
+            //   salió, y esta lista se lee buscando justo eso.
+            texto(ctx, Text.literal((entra ? "+" : "-")
+                            + String.format("%,d", Math.abs(m.delta()))),
+                    ax + 4, hy, 16, entra ? VERDE : ROJO, false, true);
+            texto(ctx, Text.literal(m.quien()), ax + 130, hy, 16, TEXTO_OSCURO,
+                    false, true);
+            texto(ctx, Text.literal(hace(m.cuando())), ax + aw - 150, hy, 15,
+                    TEXTO_SUAVE, false, true);
+            hy += 22;
+        }
+    }
+
+    /**
+     * El registro: quién entró, quién echó a quién, quién ascendió.
+     *
+     * <p>Es lo que convierte «me han echado y no sé por qué» en una línea con
+     * nombre y hora.
+     */
+    private void dibujarRegistro(DrawContext ctx, int rx, int ry) {
+        var lineas = estado.registro();
+        if (lineas.isEmpty()) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.clan.sin_registro"),
+                    PANT_X + PANT_W / 2, PANT_Y + PANT_H / 2, 20, TEXTO_SUAVE,
+                    true, false);
+            return;
+        }
+        int y = primeraFilaY();
+        int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
+        int caben = (PANT_Y + PANT_H - MARGEN - y) / 24;
+        for (int i = 0; i < lineas.size() && i < caben; i++) {
+            var l = lineas.get(i);
+            if (i % 2 == 0) {
+                ctx.fill(px(ax), py(y - 2), px(ax + aw), py(y + 20), 0x22FFFFFF);
+            }
+            texto(ctx, Text.translatable("pokepad.lunaeternal.clan.log." + l.accion()),
+                    ax + 4, y, 16, colorAccion(l.accion()), false, true);
+            String quien = l.aQuien().isEmpty()
+                    ? l.quien()
+                    : l.quien() + " \u2192 " + l.aQuien();
+            texto(ctx, Text.literal(quien), ax + 190, y, 16, TEXTO_OSCURO, false, true);
+            texto(ctx, Text.literal(hace(l.cuando())), ax + aw - 150, y, 15,
+                    TEXTO_SUAVE, false, true);
+            y += 24;
+        }
+    }
+
+    /** Rojo lo que quita, verde lo que suma, ámbar lo que cambia el mando. */
+    private static int colorAccion(String accion) {
+        return switch (accion) {
+            case "ECHAR", "SALIR", "DISOLVER" -> ROJO;
+            case "FUNDAR", "ENTRAR", "ASCENDER" -> VERDE;
+            case "TRASPASAR", "TOPE", "DEGRADAR" -> 0xFFA07800;
+            default -> TEXTO_SUAVE;
+        };
+    }
+
+    /**
+     * «hace 5 min». No una fecha.
+     *
+     * <p>⚠ Una fecha obliga a restar mentalmente para saber si algo pasó antes o
+     * después de que te fueras a dormir, que es la única pregunta que se le hace
+     * a un registro de clan. Y evita el lío de zonas horarias entre el servidor y
+     * quien mira.
+     */
+    private static String hace(long cuando) {
+        long s = Math.max(0, (System.currentTimeMillis() - cuando) / 1000);
+        if (s < 60) {
+            return "ahora";
+        }
+        if (s < 3600) {
+            return "hace " + (s / 60) + " min";
+        }
+        if (s < 86400) {
+            return "hace " + (s / 3600) + " h";
+        }
+        return "hace " + (s / 86400) + " d";
+    }
+
+    private void separadorPantalla(DrawContext ctx, int artY) {
+        ctx.fill(px(PANT_X + MARGEN), py(artY), px(PANT_X + PANT_W - MARGEN),
+                py(artY) + Math.max(1, pl(2)), 0x44000000);
     }
 
     private void dibujarInvitaciones(DrawContext ctx, int rx, int ry) {
@@ -583,9 +743,9 @@ public class ClanScreen extends Screen {
 
     private boolean clicTesoro(int rx, int ry) {
         int cx = PANT_X + PANT_W / 2;
-        int by = primeraFilaY() + 140;
+        int by = primeraFilaY() + 76;
         long cantidad = leerCantidad();
-        if (dentro(rx, ry, px(cx - 260), py(by), pl(240), pl(46))) {
+        if (dentro(rx, ry, px(cx - 250), py(by), pl(230), pl(40))) {
             if (cantidad <= 0) {
                 aviso = "Escribe una cantidad.";
                 sonar();
@@ -594,13 +754,28 @@ public class ClanScreen extends Screen {
             mandar("aportar", "", "", 0, cantidad);
             return true;
         }
-        if (mando() && dentro(rx, ry, px(cx + 20), py(by), pl(240), pl(46))) {
+        if (mando() && dentro(rx, ry, px(cx + 20), py(by), pl(230), pl(40))) {
             if (cantidad <= 0) {
                 aviso = "Escribe una cantidad.";
                 sonar();
                 return true;
             }
             mandar("sacar", "", "", 0, cantidad);
+            return true;
+        }
+        // El tope: solo el líder, y usa el mismo campo de cantidad.
+        int ty = by + 48;
+        if (soyLider() && dentro(rx, ry, px(PANT_X + PANT_W - MARGEN - 190),
+                py(ty + 8), pl(178), pl(30))) {
+            // ⚠ Aquí el 0 SÍ es válido: significa «que no saquen nada». Por eso
+            //   no se rechaza como en aportar y sacar -- y por eso el texto del
+            //   botón lo dice.
+            if (campoCantidad.getText().trim().isEmpty()) {
+                aviso = "Escribe el tope en el campo de cantidad.";
+                sonar();
+                return true;
+            }
+            mandar("tope", "", "", 0, cantidad);
             return true;
         }
         return false;

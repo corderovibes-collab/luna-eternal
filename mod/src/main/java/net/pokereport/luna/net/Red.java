@@ -531,6 +531,32 @@ public class Red implements ModInitializer {
                         InvitacionClan::new);
     }
 
+    /** Un movimiento del tesoro. `delta` con signo: + entra, - sale. */
+    public record MovimientoClan(String quien, long delta, long saldoDespues,
+                                 String motivo, long cuando) {
+        public static final PacketCodec<RegistryByteBuf, MovimientoClan> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, MovimientoClan::quien,
+                        PacketCodecs.VAR_LONG, MovimientoClan::delta,
+                        PacketCodecs.VAR_LONG, MovimientoClan::saldoDespues,
+                        PacketCodecs.STRING, MovimientoClan::motivo,
+                        PacketCodecs.VAR_LONG, MovimientoClan::cuando,
+                        MovimientoClan::new);
+    }
+
+    /** Una linea del registro de acciones. */
+    public record AnotacionClan(String quien, String aQuien, String accion,
+                                String detalle, long cuando) {
+        public static final PacketCodec<RegistryByteBuf, AnotacionClan> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.STRING, AnotacionClan::quien,
+                        PacketCodecs.STRING, AnotacionClan::aQuien,
+                        PacketCodecs.STRING, AnotacionClan::accion,
+                        PacketCodecs.STRING, AnotacionClan::detalle,
+                        PacketCodecs.VAR_LONG, AnotacionClan::cuando,
+                        AnotacionClan::new);
+    }
+
     /**
      * Todo el estado del clan de un jugador.
      *
@@ -546,7 +572,10 @@ public class Red implements ModInitializer {
      */
     public record EstadoClan(long miClanId, ClanResumen mio, List<MiembroClan> miembros,
                              String miRol, List<InvitacionClan> invitaciones,
-                             List<ClanResumen> otros, long costeFundar)
+                             List<ClanResumen> otros, long costeFundar,
+                             List<MovimientoClan> movimientos,
+                             List<AnotacionClan> registro,
+                             long topeOficial, long sacadoHoy)
             implements CustomPayload {
         public static final Id<EstadoClan> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_clan"));
@@ -576,6 +605,16 @@ public class Red implements ModInitializer {
                 ClanResumen.CODEC.encode(buf, c);
             }
             buf.writeVarLong(e.costeFundar);
+            buf.writeVarInt(e.movimientos.size());
+            for (MovimientoClan m : e.movimientos) {
+                MovimientoClan.CODEC.encode(buf, m);
+            }
+            buf.writeVarInt(e.registro.size());
+            for (AnotacionClan a : e.registro) {
+                AnotacionClan.CODEC.encode(buf, a);
+            }
+            buf.writeVarLong(e.topeOficial);
+            buf.writeVarLong(e.sacadoHoy);
         }
 
         private static EstadoClan leer(RegistryByteBuf buf) {
@@ -597,8 +636,21 @@ public class Red implements ModInitializer {
             for (int i = 0; i < no; i++) {
                 otros.add(ClanResumen.CODEC.decode(buf));
             }
+            long coste = buf.readVarLong();
+            int nm = buf.readVarInt();
+            List<MovimientoClan> movs = new ArrayList<>(nm);
+            for (int i = 0; i < nm; i++) {
+                movs.add(MovimientoClan.CODEC.decode(buf));
+            }
+            int nr = buf.readVarInt();
+            List<AnotacionClan> reg = new ArrayList<>(nr);
+            for (int i = 0; i < nr; i++) {
+                reg.add(AnotacionClan.CODEC.decode(buf));
+            }
             return new EstadoClan(id, mio, List.copyOf(miembros), rol,
-                    List.copyOf(invs), List.copyOf(otros), buf.readVarLong());
+                    List.copyOf(invs), List.copyOf(otros), coste,
+                    List.copyOf(movs), List.copyOf(reg),
+                    buf.readVarLong(), buf.readVarLong());
         }
 
         @Override
@@ -1166,6 +1218,10 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(AccionClan.ID, (carga, ctx) -> {
             var jugador = ctx.player();
+            var servidor = jugador.getServer();
+            if (servidor == null) {
+                return;
+            }
             LunaEternal.submit(() -> {
                 try {
                     long id = LunaEternal.players()
@@ -1190,7 +1246,8 @@ public class Red implements ModInitializer {
                                     .resolveByName(carga.texto().trim());
                             r = otro == null
                                     ? new net.pokereport.luna.clan.ClanService.Resultado(
-                                            false, "No conozco a nadie con ese nombre.")
+                                            false, "No conozco a nadie con ese nombre.",
+                                            java.util.Set.of())
                                     : svc.invitar(id, otro);
                         }
                         case "aceptar" -> r = svc.aceptar(id, carga.objetivo());
@@ -1207,28 +1264,45 @@ public class Red implements ModInitializer {
                                 java.util.UUID.randomUUID().toString());
                         case "sacar" -> r = svc.sacar(id, carga.cantidad(),
                                 java.util.UUID.randomUUID().toString());
+                        case "tope" -> r = svc.cambiarTope(id, carga.cantidad());
                         default -> r = new net.pokereport.luna.clan.ClanService.Resultado(
-                                false, "Acción desconocida.");
+                                false, "Acción desconocida.", java.util.Set.of());
                     }
 
                     final var res = r;
-                    jugador.getServer().execute(() -> jugador.sendMessage(
+                    servidor.execute(() -> jugador.sendMessage(
                             net.minecraft.text.Text.literal(
                                     (res.ok() ? "\u00a7a" : "\u00a7c") + res.mensaje()), true));
 
-                    // ⚠ SE REENVÍA A TODO EL CLAN, no solo a quien actuó. Echar a
-                    //   alguien, ascenderlo o sacar del tesoro cambia lo que ven
-                    //   los DEMÁS, y si no se les avisa siguen con su copia hasta
-                    //   reabrir la pantalla. Es la lección del día, otra vez.
-                    refrescarClanDe(jugador, id);
-
-                    // ⚠ Y LA ETIQUETA, que vive en el marcador y no en un
-                    //   paquete. Sin esto, quien funda o abandona un clan sigue
-                    //   con la etiqueta anterior en el chat y sobre la cabeza
-                    //   hasta reconectar -- el mismo fallo, otra vez.
-                    jugador.getServer().execute(() ->
-                            net.pokereport.luna.ui.Tablist.refrescarClan(
-                                    jugador.getServer(), jugador));
+                    // ⚠⚠ A QUIÉN SE AVISA LO DICE EL SERVICIO, NO EL CLAN.
+                    //
+                    //    Aquí estuvo el bug que reportó el usuario: «cuando sacas
+                    //    a alguien del clan, al jugador le sigue apareciendo la
+                    //    etiqueta». La versión anterior calculaba los destinatarios
+                    //    mirando los miembros DE DESPUÉS -- y el echado ya no está
+                    //    ahí. Se quedaba con la etiqueta puesta, con la pantalla
+                    //    mintiéndole y creyéndose dentro.
+                    //
+                    //    El conjunto correcto es «miembros de antes ∪ miembros de
+                    //    después ∪ el objetivo», y quien lo sabe es el servicio,
+                    //    que acaba de hacer el trabajo. Por eso viaja en el
+                    //    Resultado: así no se puede volver a olvidar.
+                    // ⚠ REGLA UNIFORME: lo que mueve dinero reenvía el saldo.
+                    //   Fundar cuesta 5.000, aportar y sacar mueven el bolsillo,
+                    //   y la pantalla del clan enseña ese número. Sin esto se ve
+                    //   el saldo viejo hasta reabrir -- que es literalmente la
+                    //   lección que ya costó cuatro fallos el 23-ago.
+                    if (res.ok() && MUEVEN_DINERO.contains(carga.accion())) {
+                        enviarSaldo(jugador);
+                    }
+                    if (!res.afectados().isEmpty()) {
+                        refrescarA(servidor, res.afectados());
+                    } else {
+                        // Un rechazo no cambia nada de nadie, pero el que lo
+                        // intentó merece ver la verdad otra vez por si su
+                        // pantalla iba retrasada.
+                        enviarClan(jugador);
+                    }
 
                 } catch (Exception e) {
                     LunaEternal.LOG.warn("Fallo en la accion de clan {}: {}",
@@ -1336,6 +1410,12 @@ public class Red implements ModInitializer {
                 // Se reenvia SIEMPRE, saliera bien o mal: es la forma de que la
                 // pantalla vuelva a la verdad sin tener que adivinar que cambio.
                 enviarMisiones(jugador);
+                // Y el saldo, porque cobrar una mision PAGA. Hoy la pantalla de
+                // misiones no enseña el saldo, asi que no se nota -- pero la
+                // regla es «lo que mueve dinero reenvia el saldo», y una regla
+                // que solo se aplica donde hoy se nota deja de aplicarse el dia
+                // que se añada el numero a la pantalla.
+                enviarSaldo(jugador);
             });
         });
 
@@ -1641,44 +1721,90 @@ public class Red implements ModInitializer {
      *
      * <p>Se llama <b>desde el hilo de E/S</b>, con el clan ya conocido.
      */
-    private static void refrescarClanDe(
-            net.minecraft.server.network.ServerPlayerEntity quien, long playerId) {
-        var servidor = quien.getServer();
-        if (servidor == null) {
-            return;
-        }
-        try {
-            var clan = LunaEternal.clans().clanDe(playerId);
-            var destinos = new ArrayList<net.minecraft.server.network.ServerPlayerEntity>();
-            destinos.add(quien);
-            if (clan != null) {
-                // Los miembros que estén conectados. Los que no, lo verán al
-                // entrar: la pantalla lo pide al abrirse.
-                for (var m : LunaEternal.clans().miembros(clan.id())) {
-                    var otro = servidor.getPlayerManager().getPlayerList().stream()
-                            .filter(x -> {
-                                try {
-                                    return LunaEternal.players().resolve(
-                                            x.getUuid(), x.getName().getString()) == m.playerId();
-                                } catch (Exception e) {
-                                    return false;
-                                }
-                            })
-                            .findFirst().orElse(null);
-                    if (otro != null && !destinos.contains(otro)) {
-                        destinos.add(otro);
-                    }
+    /**
+     * Acciones de clan que tocan el bolsillo del jugador.
+     *
+     * <p>⚠ Va como conjunto y no como un {@code if} con tres {@code ||} porque
+     * la lista crece: el día que exista «comprar mejora de clan», olvidarse de
+     * añadirla aquí se ve como un saldo que no baja, y eso se lee como un fallo
+     * de la economía y no del dibujado.
+     */
+    private static final java.util.Set<String> MUEVEN_DINERO =
+            java.util.Set.of("fundar", "aportar", "sacar");
+
+    /**
+     * Refresca a TODOS los afectados por un cambio de clan: pantalla y etiqueta.
+     *
+     * <h2>⚠⚠ Por qué recibe una lista y no un clan</h2>
+     *
+     * Porque <b>los afectados por un cambio no son los miembros que quedan</b>.
+     * Al echar a alguien, al salirse alguien o al disolverse el clan, la gente
+     * que más necesita enterarse es justo la que ya no aparece si preguntas por
+     * los miembros. Ese fue el bug: el echado se quedaba con la etiqueta y con la
+     * pantalla diciéndole que seguía dentro.
+     *
+     * <p>La lista la calcula {@code ClanService} —que acaba de hacer el trabajo y
+     * sabe a quién ha tocado— y viaja en el {@code Resultado}.
+     *
+     * <h2>Se hacen las DOS cosas, y por eso están juntas</h2>
+     *
+     * El paquete arregla la pantalla; la etiqueta arregla el chat, el tablist y
+     * lo que se ve sobre la cabeza. Estaban en dos sitios distintos y por eso una
+     * se hacía y la otra no. Ahora quien refresca, refresca las dos.
+     *
+     * <p>⚠ Se llama <b>desde el hilo de E/S</b>: resuelve identificadores.
+     */
+    private static void refrescarA(net.minecraft.server.MinecraftServer servidor,
+                                   java.util.Set<Long> afectados) {
+        // Una sola pasada por los conectados. La versión anterior resolvía el
+        // identificador de cada jugador DENTRO del bucle de miembros: con 30
+        // miembros y 10 conectados eran 300 consultas para refrescar una lista.
+        var porId = new java.util.HashMap<Long,
+                net.minecraft.server.network.ServerPlayerEntity>();
+        for (var jugador : servidor.getPlayerManager().getPlayerList()) {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                if (afectados.contains(id)) {
+                    porId.put(id, jugador);
                 }
+            } catch (Exception e) {
+                LunaEternal.LOG.debug("No se pudo resolver a {} para refrescar: {}",
+                        jugador.getName().getString(), e.toString());
             }
-            for (var destino : destinos) {
-                enviarClan(destino);
+        }
+        // A quien no esté conectado no hay que avisarle: la pantalla pide el
+        // estado al abrirse y la etiqueta se pone al entrar (LunaEternal.JOIN).
+        for (var entrada : porId.entrySet()) {
+            var jugador = entrada.getValue();
+            try {
+                var carga = componerClan(jugador, entrada.getKey());
+                var clan = LunaEternal.clans().clanDe(entrada.getKey());
+                String etiqueta = clan == null ? "" : clan.etiqueta();
+                char color = clan == null ? 'b' : clan.color();
+                servidor.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    ServerPlayNetworking.send(jugador, carga);
+                    net.pokereport.luna.ui.Tablist.aplicarEtiqueta(
+                            servidor, jugador, etiqueta, color);
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo refrescar el clan de {}: {}",
+                        jugador.getName().getString(), e.toString());
             }
-        } catch (Exception e) {
-            LunaEternal.LOG.warn("No se pudo refrescar el clan: {}", e.toString());
         }
     }
 
-    /** Junta las cuatro consultas en el paquete. Se llama desde el hilo de E/S. */
+
+    /**
+     * Junta el estado del clan en el paquete. Se llama desde el hilo de E/S.
+     *
+     * <p>⚠ El historial y el registro <b>solo se mandan si estás dentro</b>. No
+     * es ahorro de bytes: son quién metió dinero y quién echó a quién, y eso no
+     * es asunto de alguien que solo está mirando la lista de clanes.
+     */
     private static EstadoClan componerClan(
             net.minecraft.server.network.ServerPlayerEntity jugador, long playerId)
             throws Exception {
@@ -1687,8 +1813,13 @@ public class Red implements ModInitializer {
         var servidor = jugador.getServer();
 
         List<MiembroClan> miembros = new ArrayList<>();
+        List<MovimientoClan> movimientos = new ArrayList<>();
+        List<AnotacionClan> registro = new ArrayList<>();
         ClanResumen mio = null;
         String miRol = "";
+        long tope = 0;
+        long sacadoHoy = 0;
+
         if (clan != null) {
             var rol = svc.rolDe(playerId);
             miRol = rol == null ? "" : rol.name();
@@ -1705,6 +1836,21 @@ public class Red implements ModInitializer {
             mio = new ClanResumen(clan.id(), clan.nombre(), clan.etiqueta(),
                     String.valueOf(clan.color()), clan.descripcion(), clan.tesoro(),
                     clan.miembros(), lider);
+
+            // ⚠ EL HISTORIAL LO VE TODO EL CLAN, no solo quien manda. Un
+            //   registro que solo pueden leer los que podrían robar no vigila a
+            //   nadie: lo que lo hace útil es que lo vean los demás.
+            int n = net.pokereport.luna.clan.ClanService.HISTORIAL;
+            for (var mv : svc.historial(clan.id(), n)) {
+                movimientos.add(new MovimientoClan(mv.quien(), mv.delta(),
+                        mv.saldoDespues(), mv.motivo(), mv.cuando()));
+            }
+            for (var an : svc.registro(clan.id(), n)) {
+                registro.add(new AnotacionClan(an.quien(), an.aQuien(),
+                        an.accion(), an.detalle(), an.cuando()));
+            }
+            tope = clan.topeOficial();
+            sacadoHoy = svc.sacadoHoy(clan.id(), playerId);
         }
 
         List<InvitacionClan> invs = new ArrayList<>();
@@ -1726,7 +1872,8 @@ public class Red implements ModInitializer {
 
         return new EstadoClan(clan == null ? 0 : clan.id(), mio, List.copyOf(miembros),
                 miRol, List.copyOf(invs), List.copyOf(otros),
-                net.pokereport.luna.clan.ClanService.COSTE_FUNDAR);
+                net.pokereport.luna.clan.ClanService.COSTE_FUNDAR,
+                List.copyOf(movimientos), List.copyOf(registro), tope, sacadoHoy);
     }
 
     private static void enviarIniciales(net.minecraft.server.network.ServerPlayerEntity jugador) {

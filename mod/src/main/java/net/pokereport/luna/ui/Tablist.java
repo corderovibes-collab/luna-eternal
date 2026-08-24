@@ -65,56 +65,49 @@ public final class Tablist {
         }
     }
 
-    /** Asigna el rango de un jugador. */
-    public static void applyRank(MinecraftServer server, ServerPlayerEntity player, Rank rank) {
-        var scoreboard = server.getScoreboard();
-        Team team = scoreboard.getTeam(rank.teamName);
-        if (team == null) {
-            setup(server);
-            team = scoreboard.getTeam(rank.teamName);
-            if (team == null) return;
-        }
-        scoreboard.addScoreHolderToTeam(player.getGameProfile().getName(), team);
-    }
-
     /**
-     * Pone la etiqueta del clan delante del nombre, EN LOS TRES SITIOS A LA VEZ:
-     * el chat, el tablist y encima de la cabeza.
+     * Pone el prefijo del jugador: <b>rango + clan, juntos</b>.
      *
-     * <p>Lo pidió el usuario: <i>«que se vea si tiene clan y en qué clan está»</i>.
-     * Y la forma nativa de conseguirlo es un <b>equipo de marcador</b>: su prefijo
-     * lo pinta vanilla en los tres sitios sin que el cliente necesite nada. Un
-     * paquete propio solo lo verían los que tuvieran el mod.
+     * <h2>⚠⚠ Antes eran DOS funciones peleándose por el mismo hueco</h2>
      *
-     * <h2>⚠⚠ Un jugador solo puede estar en UN equipo, y el rango ya usaba uno</h2>
+     * Un jugador solo puede estar en <b>un</b> equipo de marcador, y había dos
+     * sitios metiéndole en uno: {@code applyRank} en el equipo de su rango y
+     * {@code applyClanTag} en el suyo propio. Ganaba el último que corriera —
+     * que es una forma elegante de decir que dependía del orden de dos llamadas
+     * asíncronas. Si {@code applyRank} llegaba después, <b>la etiqueta del clan
+     * desaparecía sin que nada fallara</b>.
      *
-     * Por eso el equipo pasa a ser <b>por jugador</b> ({@code luna_&lt;nombre&gt;})
-     * y su prefijo lleva <b>rango + clan</b> juntos. La alternativa —un equipo por
-     * cada combinación de rango y clan— multiplica los equipos por los clanes que
-     * haya y hay que crearlos y borrarlos a mano.
+     * <p>Hoy hay una sola función y un solo equipo <b>por jugador</b>, y el
+     * prefijo lleva las dos cosas. Un equipo por combinación de rango y clan
+     * multiplicaría los equipos por los clanes que haya, y habría que crearlos y
+     * borrarlos a mano cada vez que se funda o se disuelve uno.
      *
      * <p>Un equipo por jugador suena a mucho y no lo es: son diez jugadores como
      * máximo en este servidor, y un equipo de marcador es una fila en memoria.
      *
-     * <p>⚠ Los equipos se llaman por el NOMBRE del jugador, que es lo que acepta
-     * el marcador de vanilla. Con {@code online-mode=false} un nombre no es una
-     * identidad estable, y aquí no importa: si alguien se cambia el nombre, entra
-     * en un equipo nuevo y el viejo se queda vacío. Nada económico depende de
-     * esto (D-010).
+     * <p>⚠ Se hace con marcador y no con un paquete nuestro porque el prefijo lo
+     * pinta <b>vanilla</b> en los tres sitios a la vez —chat, tablist y sobre la
+     * cabeza—. Un paquete propio solo lo verían los que tengan el mod.
+     *
+     * @param etiqueta la del clan, o cadena vacía si no tiene. <b>Vacía es un
+     *                 valor, no una ausencia</b>: es como se le quita a quien
+     *                 acaban de echar.
      */
-    public static void applyClanTag(MinecraftServer server, ServerPlayerEntity player,
-                                    Rank rank, String etiqueta, char color) {
+    public static void aplicarEtiqueta(MinecraftServer server, ServerPlayerEntity player,
+                                       String etiqueta, char color) {
         var scoreboard = server.getScoreboard();
         String nombre = player.getGameProfile().getName();
-        // ⚠ El nombre del equipo va acotado a 16: es el máximo del marcador, y
-        //   pasarse lanza. Un nombre de Minecraft son 16 como mucho, así que el
-        //   prefijo `luna_` ya no cabe entero -- se usa un hash corto y estable.
+
+        // ⚠ El nombre del equipo va acotado a 16: es el máximo del marcador y
+        //   pasarse lanza. Un nombre de Minecraft ya son 16, así que no cabe
+        //   entero con un prefijo -- se usa un hash corto y estable.
         String equipo = "luna" + Integer.toHexString(nombre.hashCode() & 0xFFFFFF);
 
         Team team = scoreboard.getTeam(equipo);
         if (team == null) {
             team = scoreboard.addTeam(equipo);
         }
+        Rank rank = rankOf(server, player);
         String prefijo = rank.tag + " ";
         if (etiqueta != null && !etiqueta.isEmpty()) {
             prefijo += "\u00a7" + color + "[" + etiqueta + "] ";
@@ -127,14 +120,17 @@ public final class Tablist {
     /**
      * Lee el clan del jugador y le pone la etiqueta. <b>Va por el hilo de E/S.</b>
      *
-     * <p>Se llama al entrar y cada vez que su clan cambia. Sin lo segundo, quien
-     * funde o abandone un clan seguiría con la etiqueta anterior hasta reconectar
-     * — que es exactamente el fallo que este proyecto ha pagado cuatro veces hoy.
+     * <p>Se usa al entrar. Para los cambios en vivo —fundar, entrar, salir, que
+     * te echen— quien refresca es {@code Red.refrescarA}, que ya sabe el clan y
+     * no necesita volver a consultarlo.
+     *
+     * <p>⚠ Si la consulta falla, se pone la etiqueta <b>vacía</b> en vez de no
+     * poner nada. No poner nada deja el prefijo anterior, y el prefijo anterior
+     * de un jugador que acaba de entrar es el que dejó otro con el mismo hash.
      */
     public static void refrescarClan(MinecraftServer server, ServerPlayerEntity player) {
         var uuid = player.getUuid();
         var nombre = player.getName().getString();
-        Rank rango = rankOf(server, player);
         net.pokereport.luna.LunaEternal.submit(() -> {
             String etiqueta = "";
             char color = 'b';
@@ -155,7 +151,7 @@ public final class Tablist {
             final char co = color;
             server.execute(() -> {
                 if (!player.isRemoved()) {
-                    applyClanTag(server, player, rango, et, co);
+                    aplicarEtiqueta(server, player, et, co);
                 }
             });
         });
@@ -197,7 +193,11 @@ public final class Tablist {
 
     /** Todo lo del tablist para un jugador que acaba de entrar. */
     public static void onJoin(MinecraftServer server, ServerPlayerEntity player) {
-        applyRank(server, player, rankOf(server, player));
+        // ⚠ Se pone el prefijo SIN clan de entrada, y `refrescarClan` lo
+        //   completa cuando la base conteste. Así, entre que entra y que llega
+        //   la respuesta se ve su rango en vez de no verse nada -- y sobre todo
+        //   no se ve el prefijo que dejó otro jugador con el mismo hash.
+        aplicarEtiqueta(server, player, "", 'b');
         updateHeaderFooter(server);
     }
 

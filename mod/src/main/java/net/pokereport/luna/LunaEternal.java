@@ -62,6 +62,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.kit.KitCatalog kits;
     private static net.pokereport.luna.kit.KitService kitService;
     private static net.pokereport.luna.clan.ClanService clans;
+    private static net.pokereport.luna.market.MarketService market;
     private static net.pokereport.luna.quest.QuestService quests;
     private static net.pokereport.luna.economy.EconomyStats stats;
     private static net.pokereport.luna.hunt.HuntService hunts;
@@ -188,6 +189,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             kits = net.pokereport.luna.kit.KitCatalog.load();
             kitService = new net.pokereport.luna.kit.KitService(database);
             clans = new net.pokereport.luna.clan.ClanService(database);
+            market = new net.pokereport.luna.market.MarketService(database);
             quests = new net.pokereport.luna.quest.QuestService(database);
             stats = new net.pokereport.luna.economy.EconomyStats(database);
             hunts = new net.pokereport.luna.hunt.HuntService(database);
@@ -242,6 +244,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         return progression;
     }
     public static net.pokereport.luna.shop.ShopCatalog shop() { return shop; }
+    public static net.pokereport.luna.market.MarketService market() { return market; }
     public static net.pokereport.luna.hunt.HuntService hunts() { return hunts; }
     public static net.pokereport.luna.cosmetics.CosmeticsService cosmetics() { return cosmetics; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }

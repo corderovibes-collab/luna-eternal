@@ -77,6 +77,7 @@ public final class AutoTest {
             testOficios();
             testArbolMisiones();
             testClanes(a, b);
+            testMercado(a, b);
             testCura();
 
         } catch (Exception e) {
@@ -1124,6 +1125,14 @@ public final class AutoTest {
                 // Orden inverso a las claves ajenas: primero se sueltan las
                 // referencias al comprador, luego se borran los listados.
                 for (String sql : List.of(
+                    "DELETE mc FROM market_claim mc JOIN player p "
+                        + "ON p.player_id = mc.player_id WHERE p.mc_uuid = ?",
+                    "DELETE mt FROM market_trade mt JOIN player p "
+                        + "ON p.player_id = mt.buyer_id WHERE p.mc_uuid = ?",
+                    "DELETE mt FROM market_trade mt JOIN player p "
+                        + "ON p.player_id = mt.seller_id WHERE p.mc_uuid = ?",
+                    "DELETE mo FROM market_order mo JOIN player p "
+                        + "ON p.player_id = mo.player_id WHERE p.mc_uuid = ?",
                     "DELETE cm FROM clan_member cm JOIN player p "
                         + "ON p.player_id = cm.player_id WHERE p.mc_uuid = ?",
                     "DELETE ci FROM clan_invite ci JOIN player p "
@@ -1396,6 +1405,145 @@ public final class AutoTest {
         // El historial y el registro se van con el clan: son SUYOS.
         check("el historial se va con el clan", svc.historial(clan.id(), 10).isEmpty());
         check("el registro se va con el clan", svc.registro(clan.id(), 10).isEmpty());
+    }
+
+    /**
+     * EL MERCADO: el libro de ordenes.
+     *
+     * <p>⚠⚠ Lo que se comprueba aqui NO es que el cruce funcione --eso se ve a
+     * la primera-- sino que <b>el dinero cuadre en todos los caminos</b>. Un
+     * libro de ordenes tiene cuatro sitios por donde se puede crear o destruir
+     * Plata sin que nadie lo note:
+     *
+     * <ul>
+     *   <li>reservar y no devolver lo que sobra al ejecutar mas barato;</li>
+     *   <li>devolver lo PEDIDO en vez de lo NO EJECUTADO al cancelar;</li>
+     *   <li>cobrar al comprador dos veces --al reservar y al cruzar--;</li>
+     *   <li>o no cobrarle en ninguno de los dos.</li>
+     * </ul>
+     *
+     * <p>Ninguno da error. Los cuatro se ven aqui.
+     */
+    private void testMercado(long a, long b) throws Exception {
+        var svc = new net.pokereport.luna.market.MarketService(db);
+        var COMPRA = net.pokereport.luna.market.MarketService.Lado.COMPRA;
+        var VENTA = net.pokereport.luna.market.MarketService.Lado.VENTA;
+        String ITEM = "cobblemon:poke_ball";
+
+        // Dinero limpio para las dos partes.
+        economy.credit(a, Currency.POKEDOLLAR, 1_000_000, "autotest_mkt", clave());
+        economy.credit(b, Currency.POKEDOLLAR, 1_000_000, "autotest_mkt", clave());
+
+        // --- lo que ni siquiera llega a la base
+        check("una orden sin objeto se rechaza",
+                !svc.poner(a, COMPRA, "", 100, 1, clave()).ok());
+
+        // --- una venta sola se queda en el libro
+        var v1 = svc.poner(a, VENTA, ITEM, 500, 10, clave());
+        check("una venta sin contraparte se queda en el libro", v1.ok());
+        check("y no ejecuta nada", v1.ejecutado() == 0);
+        check("aparece en el libro de VENTA",
+                svc.libro(ITEM, VENTA).stream().anyMatch(n -> n.precio() == 500));
+        check("y NO aparece en el de COMPRA", svc.libro(ITEM, COMPRA).isEmpty());
+
+        // --- ⚠ NADIE SE CRUZA CONSIGO MISMO
+        // Cruzarte contigo permite fijar el precio que quieras, y ese precio es
+        // el que va a alimentar el indice de inflacion de todo el servidor.
+        var propio = svc.poner(a, COMPRA, ITEM, 900, 5, clave());
+        check("una compra propia NO se cruza con la venta propia",
+                propio.ejecutado() == 0);
+        check("las dos ordenes propias conviven en el libro",
+                !svc.libro(ITEM, COMPRA).isEmpty() && !svc.libro(ITEM, VENTA).isEmpty());
+        check("se puede cancelar la propia", svc.cancelar(a, ordenDe(svc, a, COMPRA)).ok());
+
+        // --- ⚠⚠ EL PRECIO DE EJECUCION ES EL DEL LIBRO
+        // b puja 900 contra una venta que estaba a 500: paga 500 y se le
+        // devuelve la diferencia. Si se cobrara lo ofrecido, poner una orden
+        // generosa seria un castigo y nadie pondria ordenes por encima del
+        // minimo -- que es lo que mata la liquidez.
+        long antesB = economy.balance(b, Currency.POKEDOLLAR);
+        long antesA = economy.balance(a, Currency.POKEDOLLAR);
+        var cruce = svc.poner(b, COMPRA, ITEM, 900, 4, clave());
+        check("la compra cruza contra la venta que habia", cruce.ok());
+        check("ejecuta las 4 unidades", cruce.ejecutado() == 4);
+        check("SE EJECUTA AL PRECIO DEL LIBRO (500) y no al ofrecido (900)",
+                cruce.gastado() == 4 * 500);
+        check("al comprador se le cobra SOLO lo ejecutado",
+                economy.balance(b, Currency.POKEDOLLAR) == antesB - 4 * 500);
+
+        // El vendedor cobra el neto: el impuesto progresivo se destruye.
+        long bruto = 4 * 500;
+        long impuesto = net.pokereport.luna.gts.GtsService.taxFor(bruto);
+        check("el vendedor cobra el neto (bruto menos impuesto)",
+                economy.balance(a, Currency.POKEDOLLAR) == antesA + bruto - impuesto);
+        check("el impuesto es mayor que cero", impuesto > 0);
+
+        // --- ⚠ SUMA CERO. Es el unico invariante que caza dinero creado.
+        check("nada se crea: lo que pierde el comprador == lo que gana el "
+                + "vendedor + impuesto",
+                (antesB - economy.balance(b, Currency.POKEDOLLAR))
+                        == (economy.balance(a, Currency.POKEDOLLAR) - antesA) + impuesto);
+
+        // --- el llenado parcial deja el resto vivo
+        check("la venta queda a medias, no cerrada",
+                svc.mias(a).stream().anyMatch(o -> o.itemId().equals(ITEM)
+                        && o.quedan() == 6));
+        check("los objetos comprados quedan APUNTADOS como deuda",
+                svc.deudas(b).stream().anyMatch(d -> d.itemId().equals(ITEM)
+                        && d.qty() == 4));
+        // ⚠ Los objetos NO se meten en el inventario al cruzar: el comprador
+        //   puede estar desconectado, y un inventario solo existe mientras su
+        //   dueño esta dentro. Es la leccion que el GTS aprendio en V006.
+        check("una deuda no se entrega dos veces",
+                svc.marcarEntregada(svc.deudas(b).get(0).id())
+                        && !svc.marcarEntregada(svc.deudas(b).stream()
+                                .findFirst().map(d -> d.id()).orElse(-1L)));
+
+        // --- ⚠ CANCELAR DEVUELVE LO NO EJECUTADO, no lo pedido
+        long antesCancel = economy.balance(b, Currency.POKEDOLLAR);
+        var pendiente = svc.poner(b, COMPRA, ITEM, 300, 10, clave());
+        check("una compra por debajo del libro no cruza", pendiente.ejecutado() == 0);
+        check("y retiene el dinero AL PONERLA",
+                economy.balance(b, Currency.POKEDOLLAR) == antesCancel - 3_000);
+        long orden = ordenDe(svc, b, COMPRA);
+        check("se cancela", svc.cancelar(b, orden).ok());
+        check("y devuelve EXACTAMENTE lo retenido",
+                economy.balance(b, Currency.POKEDOLLAR) == antesCancel);
+        check("cancelar dos veces la misma orden se rechaza",
+                !svc.cancelar(b, orden).ok());
+        check("no se puede cancelar la orden de otro",
+                !svc.cancelar(a, ordenDe(svc, a, VENTA)).ok());
+
+        // --- los topes, que son lo que impide reventar la base y el long
+        check("la cantidad se acota: 2.000 millones no entra tal cual",
+                svc.poner(b, COMPRA, ITEM, 1, Integer.MAX_VALUE, clave()).ok());
+        check("y queda acotada al maximo",
+                svc.mias(b).stream().anyMatch(o -> o.total()
+                        == net.pokereport.luna.market.MarketService.MAX_CANTIDAD));
+        // ⚠ Precio x cantidad tiene que seguir cabiendo en un long. Con los
+        //   topes de hoy el peor producto es 10^12, y un long llega a 9,2x10^18.
+        check("precio maximo x cantidad maxima no desborda el long",
+                net.pokereport.luna.market.MarketService.MAX_PRECIO
+                        < Long.MAX_VALUE
+                          / net.pokereport.luna.market.MarketService.MAX_CANTIDAD);
+
+        // --- limpieza de las ordenes que deja la prueba
+        for (var o : svc.mias(a)) {
+            svc.cancelar(a, o.id());
+        }
+        for (var o : svc.mias(b)) {
+            svc.cancelar(b, o.id());
+        }
+        check("tras cancelar todo, el libro queda vacio",
+                svc.libro(ITEM, COMPRA).isEmpty() && svc.libro(ITEM, VENTA).isEmpty());
+    }
+
+    /** El identificador de la primera orden viva de alguien por un lado. */
+    private long ordenDe(net.pokereport.luna.market.MarketService svc, long playerId,
+                         net.pokereport.luna.market.MarketService.Lado lado)
+            throws Exception {
+        return svc.mias(playerId).stream().filter(o -> o.lado() == lado)
+                .findFirst().map(o -> o.id()).orElse(-1L);
     }
 
     /** Cada operacion economica necesita la suya (R4). */

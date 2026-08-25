@@ -20,12 +20,14 @@ sin migrar datos de dinero.
 
 ## Current Status
 
-**Fases 1 y 2 en vivo** (2026-08-24). `V015` aplicada, **297/297** en el
-autotest. Sin verificar en el juego con dos cuentas.
+**Las dos mitades en vivo y con la misma forma** (2026-08-25). `V015` y `V016`
+aplicadas, **345/345** en el autotest. Sin verificar en el juego con dos
+cuentas.
 
 ## Last Decision
 
-**D-041 — Dos mercados, no uno.** Ver §2.
+**D-042 — Los objetos van por escaparate, no por libro de órdenes.** Revoca la
+mitad de objetos de D-041. Ver §2-bis.
 
 ## Next Actions
 
@@ -92,7 +94,108 @@ que se le añade es la pantalla y los filtros.
 
 ---
 
-## 3. El libro de órdenes
+## 2-bis. ⚠⚠ D-042: los objetos pasan a ESCAPARATE
+
+**Decisión del usuario, 2026-08-25**, después de usarlo:
+
+> *«hay textos que se sobreponen, opciones que no funcionan, opciones
+> duplicadas, botones duplicados… la idea es publicar una oferta así como en el
+> de los Pokémon: el comprador ve la oferta, se interesa y la compra, y se te
+> quita a ti el ítem»*
+
+**D-041 no estaba mal razonada; le faltaba un dato: cuánta gente hay.** Un libro
+de órdenes es el mecanismo correcto para objetos fungibles —eso sigue siendo
+cierto— pero un libro **necesita las dos caras pobladas para cruzar**. Con doce
+personas no cruza: pones una orden de compra y se queda ahí hasta que alguien
+pase por casualidad. Lo que en Albion es *liquidez* aquí es *una lista de
+deseos que nadie lee*.
+
+Y el coste no era solo que no cruzara. **La pantalla que un libro necesita tiene
+dos entradas para todo**: pestañas LIBRO / MIS ÓRDENES / HISTORIAL para mirar, y
+campos PRECIO / CANTIDAD con botones COMPRAR / VENDER para actuar. Eso es lo que
+el usuario describió como botones duplicados — y tenía razón, porque lo eran.
+
+> **D-042 — Los objetos se publican como oferta, igual que los Pokémon.**
+>
+> | | Antes (D-041) | Ahora (D-042) |
+> |---|---|---|
+> | **Objetos** | Libro de órdenes | **Escaparate**: publicas una pila con su precio |
+> | **Pokémon** | Listado por ejemplar | Igual |
+>
+> Las dos mitades usan **el mismo servicio** (`GtsService`), el mismo protocolo
+> y la misma disposición de pantalla. Dos mercados hermanos, no dos mercados
+> distintos.
+
+**Lo que se gana, y no es solo la pantalla:**
+
+| | |
+|---|---|
+| **Funciona con poca gente** | Una oferta publicada se puede comprar el primer día. Una orden de compra puede no cruzarse nunca |
+| **Una sola forma de hacer cada cosa** | Publicar, comprar, retirar. No hay dos caminos para lo mismo |
+| **Se aprende una vez** | Quien sepa vender un Pokémon sabe vender una pila de piedras |
+| **La custodia es más simple** | Solo retiene **mercancía**. La doble custodia de §4 existía porque una orden de compra retiene **dinero**, y sin órdenes de compra esa mitad desaparece |
+
+**Lo que se pierde, y hay que decirlo:**
+
+- **No hay precio de mercado agregado.** Un libro da un *bid/ask*; un escaparate
+  da «lo que la gente pide». Para el índice de precios (§6) eso significa medir
+  **operaciones cerradas** y no el libro — que de todas formas es lo que la
+  fase 4 iba a hacer.
+- **No hay órdenes de compra.** No puedes decir «compro cobre a 20». Hoy hay que
+  mirar y esperar.
+
+> ⚠ **`MarketService` NO SE BORRA.** Sigue escrito, probado y con sus
+> comprobaciones. Lo que cambia es **por dónde entra el jugador**. El día que el
+> servidor tenga gente de sobra para que un libro cruce, el motor está ahí y
+> volver a encenderlo es una pantalla, no un sistema.
+
+> ⚠ Y el diagnóstico de D-041 sigue siendo cierto en lo suyo: **un Pokémon no
+> puede ir a un libro de órdenes**. Lo que ha cambiado es que los objetos
+> tampoco lo necesitan *todavía*.
+
+### 2-bis.1 Lo que la maqueta cazó al hacerlo
+
+Cuatro fallos, **y ninguno daba error al compilar ni al ejecutar**:
+
+| | |
+|---|---|
+| `filasCaben()` era una **fórmula a mano** que ya no cuadraba con `listaY()` | La lista había bajado (conmutador y buscador nuevos) y la fórmula seguía contando desde donde estaba antes: salían **cinco filas donde caben cuatro**, y la quinta se dibujaba encima de la paginación |
+| La columna **EXPIRA salía marcada** nada más abrir | Su orden descendente era `NUEVO`, que es el orden **por defecto**. Decía que ordenaba por caducidad sin hacerlo — y en oro sobre naranja, que no se lee |
+| **Los nombres de Minecraft son largos** | «Escaleras de ladrillos de piedra» mide 364 px y su columna tiene 240: se metía **encima del vendedor**. Un Pokémon no tiene este problema («Charizard» cabe siempre), así que no se heredaba del GTS |
+| **«VENDEDOR / UNIDAD» no cabía con su flecha** de ordenación | 164 px en 150 |
+
+> ⚠⚠ **Los cuatro los encontró `tools/gen_maqueta_mercado.py`**, que dibuja la
+> pantalla sobre el chasis real con las anchuras reales de la fuente del juego y
+> **avisa** de desbordes y solapes. Ninguno se habría visto revisando el código:
+> los cuatro son *números que dejaron de cuadrar*.
+
+### 2-bis.2 Dos decisiones de la pantalla que no son estéticas
+
+**La barra tiene cuatro iconos y no seis.** Copiar los del GTS habría dejado
+*filtros* y *chollos* sin nada que hacer: un Pokémon tiene IVs, naturaleza y una
+tasación, y **una pila de veinte piedras no tiene nada que filtrar**. Un botón
+que no hace nada es justo de lo que se quejaba el usuario.
+
+**La confirmación se pide solo al comprar.** Comprar es lo único que no se
+deshace: el dinero se va. Publicar sí se deshace —se retira y los objetos
+vuelven, solo se pierde la tasa—, así que confirmar ahí sería un clic de más en
+la acción que más se repite.
+
+### 2-bis.3 ⚠⚠ El invariante nuevo: el payload
+
+`publicarObjeto` escribe `identificador + separador + cantidad` en un
+`byte[]`, y quien entrega lo vuelve a leer. **Son dos sitios distintos con su
+propia idea del formato.**
+
+Si dejaran de estar de acuerdo, **la compra no daría ningún error**: el dinero
+cambiaría de manos y los objetos no aparecerían. Es el único fallo posible en
+esta mitad que se come mercancía en silencio, así que el autotest lo comprueba
+de punta a punta: publica, compra, y verifica que salen **el mismo objeto y la
+misma cantidad**.
+
+---
+
+## 3. El libro de órdenes *(el motor, hoy sin puerta — ver §2-bis)*
 
 ### 3.1 Las dos caras
 
@@ -470,15 +573,28 @@ V015   market_order . market_trade
 autotest: el cruce, los precios, la custodia, el no-auto-cruce, suma cero
 ```
 
-### FASE 2 — La pantalla
+### FASE 2 — La pantalla del libro ~~hecha~~ **RETIRADA por D-042**
 
 ```
-chasis de cosmeticos . panel izquierdo: categorias y buscador
-pantalla: el LIBRO del objeto elegido, las dos caras
-poner orden de compra / de venta . mis ordenes
+existio, funciono, y el usuario la uso: por eso sabemos que no valia
+la pantalla que un LIBRO necesita tiene dos entradas para todo
+  --pestañas para mirar, campos y botones para actuar-- y eso es lo que
+  el usuario llamo "opciones duplicadas, botones duplicados"
 ```
 
-### FASE 3 — El mercado de Pokémon
+### FASE 2-bis — El escaparate de objetos ✅ (2026-08-25)
+
+```
+la misma pantalla que los Pokemon, con tres modos:
+  LISTA   lo que hay a la venta, con buscador y cabecera ordenable
+  VENDER  tu mochila -> elegir, cantidad (1/8/64/TODO), precio, duracion
+  MIAS    lo tuyo, para retirarlo
+conmutador POKEMON / OBJETOS a la derecha, en las dos mitades
+autotest +26: el PAYLOAD de punta a punta (§2-bis.3), el buscador,
+              duenoDe, retirar, y lo que NO se puede publicar
+```
+
+### FASE 3 — El mercado de Pokémon ✅ (2026-08-25)
 
 ```
 reutiliza gts_listing, que ya esta hecho
@@ -500,19 +616,30 @@ la pantalla, con la disposicion que pidio el usuario:
 ⚠ Y NO SE PRECARGA NADA: todo lo que se ve lo ha publicado un jugador
 ```
 
-### FASE 4 — El índice y el histórico
+### FASE 4 — El índice y el histórico ⬜
 
 ```
-V016   market_daily (VWAP por objeto y dia)
+market_daily (VWAP por objeto y dia)
 la cesta, los pesos congelados, el indice
 grafico en la pantalla . el indice en /luna economia
 ```
 
-### FASE 5 — Las conexiones
+> ⚠⚠ **CON EL ESCAPARATE, EL ÍNDICE SE MIDE IGUAL PERO LA FUENTE CAMBIA.** El
+> libro daba precios de cruce; el escaparate da **ventas cerradas**. Es menos
+> datos y **mejor dato**: un precio solo es información cuando alguien lo ha
+> pagado (§5-bis.3). Lo que sigue en pie es que **no sirve de nada hasta que
+> haya operaciones reales** — hoy mediría el ruido de dos personas probando.
+
+### FASE 5 — Las conexiones ⬜
 
 ```
 el tesoro del clan compra . las misiones . los avisos de "se vendio lo tuyo"
 ```
+
+> ⚠ El aviso de «se vendió lo tuyo» **ya está a medias y no se ve**: al comprar
+> se refresca la pantalla y el saldo del vendedor si está conectado
+> (`refrescarMercadoA`), que es la lección de los clanes. Lo que falta es el
+> **toast**, para el que no está mirando la pantalla.
 
 ---
 
@@ -523,4 +650,5 @@ el tesoro del clan compra . las misiones . los avisos de "se vendio lo tuyo"
 | **Mercados por ciudad** | Albion los tiene porque transportar mercancía **es** el juego. Aquí hay una ciudadela: separar precios por zona sería fricción sin contenido |
 | **Ventas al descubierto / derivados** | Es un servidor de Pokémon |
 | **Comprar con LunaCoins** | D-014. La moneda premium no toca el mercado, ni en una dirección ni en la otra |
+| **Órdenes de compra («compro cobre a 20»)** | Se fueron con D-042. El motor sigue escrito (§3): vuelven el día que el servidor tenga gente para que un libro cruce |
 | **Ajuste automático de impuestos** | §6.3 |

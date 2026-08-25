@@ -3,12 +3,57 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-08-23
+**Última actualización:** 2026-08-25
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela)
 **Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
 D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, ocho vías de progresión, y **ocho pantallas** en el PokePad.
-Autotest **269/269** en vivo. **El recorrido del jugador nuevo está completo.**
+Autotest **345/345** en vivo. **El recorrido del jugador nuevo está completo.**
+
+> **2026-08-25 — LOS OBJETOS PASAN A ESCAPARATE, Y ES UNA RECTIFICACIÓN.**
+> D-041 dijo que los objetos van por **libro de órdenes** porque son fungibles.
+> Sigue siendo cierto en teoría, y **le faltaba un dato: cuánta gente hay**. Un
+> libro necesita las dos caras pobladas para cruzar; con doce personas pones una
+> orden de compra y **se queda ahí para siempre**. El usuario lo dijo usándolo:
+> *«se pierde uno comprando allí»*, *«opciones duplicadas, botones duplicados»*.
+>
+> ⚠⚠ **Y los botones duplicados no eran descuido: los pedía el diseño.** La
+> pantalla que un libro necesita tiene **dos entradas para todo** — pestañas
+> LIBRO / MIS ÓRDENES / HISTORIAL para mirar, y campos PRECIO / CANTIDAD con
+> COMPRAR / VENDER para actuar. Un escaparate tiene una: publicas, o compras.
+>
+> **D-042: las dos mitades del mercado se comportan igual.** Mismo servicio
+> (`GtsService`), mismo protocolo, misma pantalla. Quien sepa vender un Pokémon
+> sabe vender una pila de piedras. `MarketService` **no se borra**: sigue
+> escrito y probado, y vuelve el día que haya gente para que un libro cruce.
+> Autotest 319 → **345**.
+>
+> ⚠⚠⚠ **Y LA MAQUETA SE GANÓ EL SUELDO: CUATRO FALLOS, NINGUNO DABA ERROR.**
+> `tools/gen_maqueta_mercado.py` dibuja la pantalla **sobre el chasis real** con
+> **las anchuras reales de la fuente del juego** y avisa de desbordes y solapes:
+>
+> 1. **`filasCaben()` era una fórmula a mano** que ya no cuadraba con
+>    `listaY()`. La lista había bajado y la fórmula seguía contando desde donde
+>    estaba antes: salían **cinco filas donde caben cuatro**, y la quinta se
+>    dibujaba **encima de la paginación**. Es la foto que mandó el usuario.
+> 2. La columna **EXPIRA salía marcada** nada más abrir — su orden descendente
+>    *era* el orden por defecto. Y en oro sobre naranja, que no se lee.
+> 3. **Los nombres de Minecraft son largos.** «Escaleras de ladrillos de piedra»
+>    mide 364 px y su columna tiene 240: se metía **encima del vendedor**. Un
+>    Pokémon no tiene este problema («Charizard» cabe siempre), así que no se
+>    heredaba del GTS.
+> 4. **«VENDEDOR / UNIDAD» no cabía con su flecha**: 164 px en 150.
+>
+> ⚠ **Ninguno se habría visto revisando el código**: los cuatro son *números que
+> dejaron de cuadrar*. Es la misma familia que la rejilla del PokePad — «cuadraba
+> por casualidad hasta que una medida cambió».
+>
+> ⚠⚠ **El invariante nuevo es EL PAYLOAD.** `publicarObjeto` escribe
+> «identificador + separador + cantidad» y la entrega lo vuelve a leer: dos
+> sitios con su propia idea del formato. Si dejaran de estar de acuerdo, **la
+> compra no daría ningún error** — el dinero cambiaría de manos y los objetos no
+> aparecerían. Es el único fallo de esta mitad que se come mercancía en
+> silencio, así que se comprueba de punta a punta.
 
 > **2026-08-23 (tarde) — CLANES Y TIENDA. Ya se puede comprar una Poké Ball.**
 > Dos sistemas más y el PokePad pasa de 5 pantallas a **7**. Los **clanes** son
@@ -93,7 +138,12 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 297/297 correctos (2026-08-24, en vivo)
+Autotest      /luna autotest -> 345/345 correctos (2026-08-25, en vivo)
+              +26 del escaparate de objetos, y el que importa es el
+              PAYLOAD: lo escribe `publicarObjeto` y lo lee la entrega,
+              y si dejaran de estar de acuerdo la compra NO DARIA
+              NINGUN ERROR -- el dinero cambia de manos y los objetos
+              no aparecen
               eran 156 antes de clanes: +51, y la mayoria son de LO QUE
               NO SE PUEDE HACER (ver el bloque Clanes)
               ⚠⚠ Y EN SU PRIMERA EJECUCION EN VIVO CAZO UNO. Fueron 7
@@ -415,9 +465,9 @@ Misiones      EL ARBOL, CON SUS RAMAS Y SUS CANDADOS (2026-08-23)
                 que cruza de cadena, y un CICLO. Ninguno da error al
                 cargar, y un ciclo cuelga EL DIBUJADO
               /luna reiniciarmision <id> (nivel 4, autocompleta)
-              ⚠ t5_gts NO SE PUEDE COMPLETAR todavia: pide el GTS, que no
-                tiene pantalla. t4_tienda, m1_comprar y m2_vender se
-                desbloquearon con la tienda (2026-08-23)
+              ⚠ t5_gts SE DESBLOQUEO el 2026-08-25 con la pantalla del GTS.
+                YA NO QUEDA NINGUNA MISION IMPOSIBLE: t4_tienda, m1_comprar y
+                m2_vender se habian desbloqueado con la tienda (23-ago)
 
 Oficios       MINAR, PESCAR Y COSECHAR DAN PLATA (2026-08-23, V012)
               5 Vias -> 8 . MINERO, PESCADOR, AGRICULTOR
@@ -481,53 +531,68 @@ Curar        LA ULTIMA PANTALLA BASICA (2026-08-23)
               que salieron al instalarlo. Los dos abajo, y los dos son de la
               misma familia: ALGO QUE CUADRABA POR CASUALIDAD
 
-Mercado       EL LIBRO DE ORDENES, ESTILO ALBION (2026-08-24, V015)
-              detalle y las 5 fases en docs/trading/mercado.md
-              fases 1 y 2 EN VIVO . 297/297 . icono GTS
-              ordenes de COMPRA y de VENTA . llenado parcial . historial
-              ⚠⚠ SON DOS MERCADOS Y NO UNO (D-041). Un libro de ordenes solo
-                 funciona con cosas INTERCAMBIABLES: "pago 500 por un
-                 Charizard" es una orden SIN SENTIDO --recibirias el peor del
-                 servidor, porque es el que cualquier vendedor racional te
-                 daria--. Objetos al LIBRO, Pokemon a gts_listing, que ya
-                 estaba hecho y es justo el mecanismo que les toca
-              ⚠⚠⚠ LA CUSTODIA ES DOBLE: la venta retiene los OBJETOS y la
-                  compra retiene el DINERO. La segunda es la que se olvida y
-                  la que crea dinero de la nada -- el vendedor YA ENTREGO, asi
-                  que cobra si o si, y ese dinero sale de ningun sitio
-              ⚠⚠ SE EJECUTA AL PRECIO DE LA ORDEN QUE YA ESTABA. Pujas 900,
-                 hay oferta a 500: pagas 500 y la diferencia vuelve EN EL ACTO.
-                 Al reves, poner una orden generosa seria un castigo y nadie
-                 pondria ordenes por encima del minimo -- que es lo que mata
-                 la liquidez
+Mercado       DOS ESCAPARATES HERMANOS (2026-08-25, D-042)
+              detalle y las fases en docs/trading/mercado.md
+              POKEMON y OBJETOS . 345/345 . icono GTS
+              publicas una oferta -> otro la ve -> la compra -> te llega
+              ⚠⚠ ERA UN LIBRO DE ORDENES Y SE RETIRO. D-041 tenia razon en
+                 teoria --los objetos SON fungibles-- y le faltaba un dato:
+                 CUANTA GENTE HAY. Un libro necesita las dos caras pobladas
+                 para cruzar, y con doce personas pones una orden de compra
+                 y se queda ahi para siempre
+                 ⚠ Y LOS BOTONES DUPLICADOS LOS PEDIA EL DISEÑO, no eran
+                   descuido: la pantalla de un libro tiene DOS ENTRADAS PARA
+                   TODO --pestañas para mirar, campos y botones para
+                   actuar--. Un escaparate tiene una
+                 MarketService NO SE BORRA: sigue escrito y probado, y vuelve
+                 el dia que haya gente para que un libro cruce
+              ⚠⚠ LAS DOS MITADES SE COMPORTAN IGUAL, y eso es la mitad del
+                 arreglo: mismo servicio (GtsService), mismo protocolo, misma
+                 disposicion. Quien sepa vender un Pokemon sabe vender una
+                 pila de piedras
               ⚠⚠ DE DONDE SALE LO QUE SE VENDE (orden del usuario, 24-ago):
                  objetos  DEL INVENTARIO y solo de ahi. La BARRA RAPIDA cuenta
                           (son los 9 primeros huecos de `main`)
                  Pokemon  DEL EQUIPO O DEL PC, da igual: un Pokemon no ocupa
-                          inventario, vive en un almacen del servidor. Obligar
-                          a sacarlo al equipo seria friccion por nada -- y con
-                          el equipo lleno directamente NO PODRIA VENDER
+                          inventario, vive en un almacen del servidor
                  ⚠ la MANO SECUNDARIA hoy NO cuenta. No rompe la custodia
                    --contar y sacar miran el mismo sitio-- pero confunde.
-                   Arreglarlo es sumarla en `cuantos` Y en `sacar`, LAS DOS:
-                   cambiar solo una rompe la custodia por donde no debe
+                   Arreglarlo es sumarla en `cuantos` Y en `sacar`, LAS DOS
+              ⚠⚠ LA CUSTODIA: publicar SACA los objetos del inventario ANTES
+                 de crear la oferta. Si la oferta existiera y los objetos
+                 siguieran encima, el escaparate venderia lo que su dueño
+                 todavia tiene -- el vector de duplicacion numero uno
+                 ⚠ Y SI LA PUBLICACION NO SALE, LOS OBJETOS VUELVEN. Es la
+                   unica parte que no puede vivir en una transaccion --un
+                   inventario no es una tabla-- asi que se deshace a mano.
+                   Sin eso, no poder pagar la tasa SE COME LOS OBJETOS
+              ⚠⚠⚠ EL INVARIANTE NUEVO ES EL PAYLOAD. `publicarObjeto` escribe
+                  «identificador + separador + cantidad» y la entrega lo
+                  vuelve a leer: DOS SITIOS con su propia idea del formato. Si
+                  dejaran de estar de acuerdo, LA COMPRA NO DARIA NINGUN
+                  ERROR -- el dinero cambia de manos y los objetos no
+                  aparecen. Es el unico fallo de esta mitad que se come
+                  mercancia en silencio, y por eso se prueba de punta a punta
               ⚠ solo objetos SIN datos propios: `item_id` + cantidad describe
                 la mercancia POR COMPLETO. Una picoleta encantada NO es
-                fungible y va por el GTS. Es la misma regla que protege tu
-                pico con nombre cuando vendes "un pico de hierro"
-              ⚠ los objetos comprados NO se meten en el inventario al cruzar:
-                van a market_claim y se entregan al entrar. Un mercado es
-                ASINCRONO y tu orden se llena cuando tu no estas
-              ⚠ si la orden NO sale, LOS OBJETOS VUELVEN. Es la unica parte de
-                la custodia que no puede vivir en una transaccion --un
-                inventario no es una tabla-- asi que se deshace a mano
-              ⚠ nadie se cruza consigo mismo: va en el WHERE del cruce Y en un
-                CHECK de la base. Cruzarte contigo fija el precio que va a
-                alimentar el indice de inflacion de TODO el servidor
-              LO QUE FALTA: fase 3 Pokemon . fase 4 el INDICE DE PRECIOS .
-              fase 5 las conexiones (tesoro del clan, misiones, avisos)
+                fungible y no sale en la mochila vendible
+              ⚠ nadie se compra a si mismo, y el precio NO VIAJA al comprar:
+                viaja el identificador de la oferta y el servidor cobra
+                mirando SU fila (P6)
+              ⚠ AL VENDEDOR SE LE REFRESCA aunque no haya pulsado nada: su
+                oferta desaparecio y su dinero subio. Es la leccion de los
+                clanes -- el estado no es de quien lo mira
+              EL TASADOR (solo Pokemon): formula + correccion por mercado
+                BST . rareza . IVs . EVs . nivel . shiny . habilidad oculta
+                y se corrige con la MEDIANA de precio/estimado de las ventas
+                CERRADAS, con peso n/(n+K), K=8
+                ⚠ solo cuentan las CERRADAS: un precio que nadie paga no dice
+                  nada, y mirar lo publicado se mueve gratis
+              LO QUE FALTA: fase 4 el INDICE DE PRECIOS . fase 5 el toast de
+              «se vendio lo tuyo»
               ⚠ EL INDICE NO SIRVE DE NADA HASTA QUE HAYA OPERACIONES REALES:
-                mediria el ruido de dos personas probando. La fase 3 va antes
+                mediria el ruido de dos personas probando
+              ⚠ SIN VERIFICAR EN EL JUEGO con dos cuentas
 
 Tienda        COMPRAR Y VENDER, POR CATEGORIAS (2026-08-23)
               2 categorias . 9 articulos . SIN migracion: la logica
@@ -1310,15 +1375,15 @@ Interfaz      NUEVE PANTALLAS. Siete verificadas en el juego:
                 Clan        2026-08-23   verificado con 2 cuentas
                 Tienda      2026-08-23   SIN VERIFICAR . 9 articulos
                 Curar       2026-08-23   la 16a celda, pagina 2
-                Mercado     2026-08-24   SIN VERIFICAR . libro de ordenes
+                GTS         2026-08-25   Pokemon: 3D, tasador, filtros
+                Mercado     2026-08-25   Objetos: escaparate (D-042)
               8 de los 16 iconos abren algo: pokedex (la de Cobblemon),
               cosmeticos, trabajos, misiones, clan, tienda, curar y mercado
               SIGUEN SIN PANTALLA, con la logica viva y probada:
                 kits . cazas . viaje
-              ⚠ el MERCADO ya usa el patron de `Resultado.afectados()` desde
-                el primer dia, que es la leccion de los clanes aplicada antes
-                de que doliera: cuando tu orden se llena contra la mia, MI
-                pantalla y MI dinero han cambiado sin que yo pulse nada
+              ⚠ el MERCADO refresca al VENDEDOR cuando le compran, sin que el
+                pulse nada: su oferta desaparecio y su dinero subio. Es la
+                leccion de los clanes aplicada antes de que doliera
               ⚠ CURAR YA ESTA (2026-08-23, tarde). Ver el bloque Curar
 Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
               solo captura las avanza; crianza cuenta al ECLOSIONAR
@@ -1654,8 +1719,8 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 5. Misiones que le guian            ✅ RESUELTO 2026-08-23 · 28 en 6 cadenas
 6. Cura gratis                      ✅ RESUELTO 2026-08-23
 7. Compra y vende                   ✅ RESUELTO 2026-08-23
-8. Comercia (mercado)               ✅ RESUELTO 2026-08-24 · objetos
-9. Comercia Pokemon (GTS)           ✅ servicios   · ⬜ FALTA PANTALLA
+8. Comercia objetos (escaparate)    ✅ RESUELTO 2026-08-25 · D-042
+9. Comercia Pokemon (GTS)           ✅ RESUELTO 2026-08-25 · con tasador
 ```
 
 > **El bloqueo circular se cerró el 2026-08-23.** Lo que faltaba no era lógica:
@@ -1664,20 +1729,33 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 > Balls**, sube oficios, funda un clan, y el árbol de misiones le dice qué hacer
 > a continuación.
 >
-> **El recorrido básico está COMPLETO desde el 2026-08-23 por la tarde**: entrar,
-> elegir inicial, capturar, comprar, curar, subir oficios, fundar un clan y
-> seguir el árbol de misiones. Lo único que no se puede completar es `t5_gts`,
-> porque el GTS sigue sin pantalla.
+> **El recorrido básico está COMPLETO, y desde el 2026-08-25 el GTS también**:
+> entrar, elegir inicial, capturar, comprar, curar, subir oficios, fundar un
+> clan, comerciar Pokémon y objetos, y seguir el árbol de misiones. **Ya no
+> queda ninguna misión que no se pueda completar** — `t5_gts` era la última.
 
-### ⏭ POR AQUÍ SE SIGUE (2026-08-24)
+### ⏭ POR AQUÍ SE SIGUE (2026-08-25)
 
 | | |
 |---|---|
-| **1. Verificar el mercado con dos cuentas** | Es lo único de hoy sin comprobar en vivo, y lo que hay que mirar es el **cruce**: que al llenarse tu orden contra la mía, **mi pantalla cambie sin que yo toque nada** |
-| **2. Fase 3 — el mercado de Pokémon** | Reutiliza `gts_listing`, que ya está hecho. ⚠ Se lista **desde el equipo o desde el PC** (mercado.md §4-bis) |
-| **3. La mano secundaria** | Hoy no cuenta para vender. No rompe la custodia, pero confunde. Se arregla en `cuantos` **y** en `sacar`, las dos a la vez |
-| **4. Fase 4 — el índice de precios** | ⚠ **Va después de la 3 a propósito**: hoy mediría el ruido de dos personas probando. Necesita días de gente comerciando |
+| **1. Verificar el mercado con dos cuentas** | Es lo único sin comprobar en vivo, y lo que hay que mirar es lo de siempre: que al comprarme algo, **mi pantalla y mi saldo cambien sin que yo toque nada** |
+| **2. La mano secundaria** | Hoy no cuenta para vender objetos. No rompe la custodia, pero confunde. Se arregla en `cuantos` **y** en `sacar`, las dos a la vez — cambiar solo una **sí** rompe la custodia |
+| **3. El toast de «se vendió lo tuyo»** | La pantalla del vendedor ya se refresca; falta el aviso para quien no la tenga abierta |
+| **4. Fase 4 — el índice de precios** | ⚠ **Va después de que la gente comercie de verdad, a propósito**: hoy mediría el ruido de dos personas probando |
 | **5. La ciudadela** | Sigue siendo el foco no-técnico, y nada la bloquea |
+
+> ⚠⚠ **La lección del 25-ago: UNA MAQUETA QUE MIDE ES UNA PRUEBA.**
+> `tools/gen_maqueta_mercado.py` dibuja las seis pantallas **sobre el chasis
+> real** con **las anchuras reales de la fuente del juego**, y avisa de
+> desbordes y solapes. En su primera pasada seria encontró **cuatro fallos que
+> no daban ningún error**: una fila dibujada encima de la paginación, una
+> columna que decía ordenar sin ordenar, nombres de objeto metiéndose en la
+> columna de al lado, y una cabecera que no cabía con su flecha.
+>
+> **Ninguno se habría visto revisando el código.** Los cuatro son *números que
+> dejaron de cuadrar* — la misma familia que la rejilla del PokePad. Al mover
+> cualquier medida de una pantalla, **reejecutarla es más barato que una captura
+> del usuario**.
 
 > ⚠ **Lo que más caro salió el 23-ago fue lo que “cuadraba por casualidad”.** La
 > rejilla funcionaba con quince aplicaciones porque 15 = 5×3 exactamente; el
@@ -1967,6 +2045,7 @@ documentación · migración · rollback.
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
 | D-037 | 2026-08-17 | **La base del pack pasa a ser COBBLEVERSE, quitandole la generacion de estructuras y la musica.** Revoca D-031 | **Orden del usuario, dada despues de que le enseñara las licencias** — `cobbleverse` es All Rights Reserved y `cobbleverse-badges` es CC-BY-NC-ND-4.0, que es la clausula por la que D-006 lo habia descartado. Queda escrito aqui para que quien lo lea dentro de seis meses vea **el dato y la decision**, no solo la decision. **Lo que si se hace bien:** el manifiesto guarda URL y hash y nunca el jar, asi que cada mod se descarga del CDN de Modrinth — no redistribuimos nada suyo, igual que con los shaders (D-030). Se les quita lo que el usuario no queria: **generacion de estructuras** (4 mods) y **421 MB de musica**, que multiplicaba por cinco la descarga de un jugador nuevo (P10). El pack pasa de 185 a **434 MB**. Tres cosas que solo se ven haciendolo: **el slug de Modrinth no es el nombre del jar** y una exclusion mal escrita no surte efecto *sin avisar*; **su configuracion son 155 ficheros** y sueltos eran 155 peticiones a `raw`, o sea el 429 de D-036 otra vez (van en un zip por carpeta con `keepExisting`); y **`continuity:default` cambia 42 bloques de construir** — lo reporto el usuario en vivo con la ciudadela ya empezada, y se apaga |
 | D-038 | 2026-08-17 | **El PokePad enseña datos de sesion —Plata, LunaCoins, Clan, Trabajo, Division y Medallas— en vez de la tarjeta de entrenador** | **Decision del usuario.** La tarjeta enseñaba el nivel de las cinco Vias en estrellas; lo que el queria bajo la cara es lo que se mira a diario. Dos cosas quedan escritas porque no son obvias: **las 16 medallas se referencian por identificador al mod de CobbleVerse y NO se copian sus texturas** — el mod va instalado en el cliente, asi que apuntarlas cuesta cero bytes, no redistribuye nada de un CC-BY-NC-ND y el dibujo lo sigue mandando su autor; y **clan, trabajo y division viajan en el paquete aunque no exista el sistema**, mandando cadena vacia para que el Pad pinte un guion. Un «Sin clan» diria «ya funciona y no tienes ninguno», que no es verdad; y tenerlos ya en el protocolo hace que encenderlos sea rellenar tres lineas en vez de tocar paquete, codec, cache y dibujado |
+| D-042 | 2026-08-25 | **Los objetos del mercado se venden por ESCAPARATE y no por libro de órdenes.** Revoca la mitad de objetos de D-041 | **Decisión del usuario, tomada usándolo**: *«opciones duplicadas, botones duplicados… la idea es publicar una oferta así como en el de los Pokémon: el comprador ve la oferta, se interesa y la compra»*. **D-041 no estaba mal razonada; le faltaba un dato: cuánta gente hay.** Un libro de órdenes es el mecanismo correcto para cosas fungibles —eso sigue siendo cierto— pero **un libro necesita las dos caras pobladas para cruzar**. Con doce personas pones una orden de compra y se queda ahí hasta que alguien pase por casualidad: lo que en Albion es *liquidez*, aquí es *una lista de deseos que nadie lee*. ⚠⚠ **Y los botones duplicados no eran descuido: los pedía el diseño.** La pantalla que un libro necesita tiene **dos entradas para todo** —pestañas LIBRO/MIS ÓRDENES/HISTORIAL para mirar, y campos PRECIO/CANTIDAD con COMPRAR/VENDER para actuar—; un escaparate tiene una: publicas, o compras. **Lo que se gana no es solo la pantalla**: funciona con poca gente, hay una sola forma de hacer cada cosa, se aprende una vez (quien sepa vender un Pokémon sabe vender una pila de piedras) y **la custodia se simplifica** — la doble custodia existía porque una orden de compra retiene *dinero*, y sin órdenes de compra esa mitad desaparece. **Lo que se pierde, y hay que decirlo**: no hay órdenes de compra («compro cobre a 20») ni precio agregado de libro; el índice de precios pasa a medir **ventas cerradas**, que es menos dato y **mejor dato** — un precio solo es información cuando alguien lo ha pagado. ⚠ `MarketService` **no se borra**: sigue escrito, probado y con sus comprobaciones, y vuelve el día que el servidor tenga gente para que un libro cruce. Lo que cambia es **por dónde entra el jugador**. Detalle en [mercado.md §2-bis](docs/trading/mercado.md) |
 | D-040 | 2026-08-23 | **Los clanes son un sistema propio, no un mod adoptado, y NO dan ninguna ventaja de juego** | **Petición del usuario** («si hay algún mod de clan sería excelente… tipo Albion»). Se buscó: lo que hay para Fabric 1.21.1 son **facciones con terreno** (reclamar chunks, guerra, PvP) o **equipos de chat**, y ninguna de las dos cosas es esto — la ciudadela es una isla que construimos nosotros, así que no hay territorio que repartir. P5 pone «mod maduro» antes que «sistema propio», pero **solo cuando el mod resuelve el problema**. **Lo que decide la cuestión es el tesoro:** un mod ajeno guardaría el dinero en su propio almacén, y entonces habría **dos economías** — la nuestra, con libro de asientos, idempotencia y auditoría (R3, R4), y la suya. Todo lo económico de este proyecto pasa por `applyInTransaction`, y un mod externo no puede pasar por ahí. **Y un clan no desbloquea nada:** da identidad (la etiqueta junto al nombre) y un sitio donde juntar dinero, y se queda ahí. Por diseño, porque una ventaja de clan convierte «tener amigos» en una estadística y castiga a quien juegue solo; y por economía, porque **un bono de clan es una fuente** (P3) y este proyecto tiene el problema contrario. Si algún día se le añade algo, la pregunta de P2 que hay que responder primero es la octava: *cómo se abusa* |
 | D-039 | 2026-08-22 | **Los cosmeticos NO se consiguen jugando: solo con LunaCoins o en eventos que organicemos** | **Decision del usuario.** No caen de un cofre, no se craftean, no los suelta un jefe. Dos consecuencias que no son obvias. **La primera es tecnica y es un invariante, no una preferencia:** si no hay ninguna via de mundo, el servidor es la UNICA fuente y el cliente jamas concede un cosmetico -- solo dibuja lo que le mandan (P6). Eso simplifica el anti-abuso a un solo punto: la compra, que va con clave de idempotencia como todo lo economico (R4). **La segunda es de producto, y el propio `monetization.md` la avisa:** «un cosmetico sin nadie que lo vea no vale nada». Si TODO fuera de pago, los unicos que llevarian cosmeticos serian los que pagan, y el escaparate se apaga solo. Los **eventos son los que sostienen eso**: son la via gratuita, y por eso no son un adorno de la decision sino la mitad que la hace funcionar. Conviene que salga algo en cada evento, aunque sea poco. Los cosmeticos siguen siendo **T1 · identidad**, que es venta libre en su propio marco |
 | D-035 | 2026-08-17 | **El launcher se rehace como fork de FreesmLauncher** (C++/Qt6, GPL-3.0), en repositorio propio y publico | **Decision del usuario, tomada tras leer el analisis en contra.** Mi recomendacion fue reestructurar el Electron actual: de los cinco riesgos que rompen al crecer —distribucion, identidad, firma, observabilidad, vuelta atras— el fork **no arregla ninguno**, y su funcionalidad estrella (jugar sin cuenta de Microsoft) ya la tenia el nuestro en 25 lineas. El usuario decidio el fork igualmente. **Dos consecuencias que no son opcionales y quedan escritas aqui para que nadie las descubra tarde:** (1) **GPL-3.0 obliga a publicar el codigo fuente completo** del fork, incluido cualquier anti-abuso o capa de identidad que se le añada encima — con tienda de pago (D-007), eso no es gratis; (2) hay que renombrar la marca (GPL §7.c/e, y Prism lo exige a sus forks). Ganancia real medida: instalador de **28,8 MB frente a 95**. Coste: rehacer perfiles, diagnostico, reparar e interfaz en español, y una cadena Qt6+CMake+MSVC+vcpkg en vez de `npm run dist`. Toolchain ya montado en `.toolchain/` (git-ignorado), fork clonado en `D:\luna-launcher` |

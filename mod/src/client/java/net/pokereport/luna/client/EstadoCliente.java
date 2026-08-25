@@ -26,6 +26,7 @@ public final class EstadoCliente {
     private static Red.Tienda tienda;
     private static Red.EstadoCura cura;
     private static Red.EstadoMercado mercado;
+    private static Red.EstadoGts gts;
 
     private EstadoCliente() {}
 
@@ -140,6 +141,15 @@ public final class EstadoCliente {
         return mercado;
     }
 
+    public static void guardar(Red.EstadoGts nuevo) {
+        gts = nuevo;
+    }
+
+    /** El GTS. {@code null} hasta que contesta el servidor. */
+    public static Red.EstadoGts gts() {
+        return gts;
+    }
+
     public static Red.Cosmeticos cosmeticos() {
         return cosmeticos;
     }
@@ -153,6 +163,7 @@ public final class EstadoCliente {
         tienda = null;
         cura = null;
         mercado = null;
+        gts = null;
         saldo = null;
         ficha = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo

@@ -79,7 +79,10 @@ public final class Apps {
     /** El mercado. Misma regla que las demas: NUESTRA pantalla, sin reflexion. */
     private static boolean abrirMercado() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
-        cliente.setScreen(new MercadoScreen(cliente.currentScreen));
+        // ⚠ ABRE EL DE POKEMON, no el libro de objetos. Son dos mercados
+        //   (D-041) y hay un solo icono: se entra por el que la gente busca
+        //   --«¿cuanto vale mi shiny?»-- y desde ahi hay un boton a objetos.
+        cliente.setScreen(new GtsScreen(cliente.currentScreen));
         return true;
     }
 

@@ -188,11 +188,62 @@ public final class GtsService {
     public record Filtro(String texto, String vendedor, Integer nivelMin,
                          Integer nivelMax, Long precioMin, Long precioMax,
                          int[] ivMin, int[] evMin, Boolean shiny, String genero,
-                         String tera, String rareza) {
+                         String tera, String rareza, String orden) {
 
         public static Filtro vacio() {
             return new Filtro(null, null, null, null, null, null,
-                    null, null, null, null, null, null);
+                    null, null, null, null, null, null, null);
+        }
+    }
+
+    /**
+     * Cómo se ordena la lista.
+     *
+     * <h2>⚠⚠ Sin esto no es una tienda, es una lista</h2>
+     *
+     * Es lo primero que hace cualquiera que entra en un mercado: <b>ordenar por
+     * precio</b>. Sin ordenación, encontrar lo barato es ir página por página
+     * comparando a ojo — y con cuarenta ofertas eso ya nadie lo hace. Todos los
+     * mercados que funcionan lo tienen, del Auction House de WoW al propio mod
+     * de GTS de Cobblemon.
+     *
+     * <h2>⚠ La lista de columnas ordenables vive AQUI, no en el SQL</h2>
+     *
+     * El cliente manda un <b>nombre</b> y este enum lo traduce. Concatenar
+     * directamente lo que mande el cliente en un {@code ORDER BY} es una
+     * inyección: {@code ORDER BY} no acepta parámetros, así que la única defensa
+     * es que el valor <b>no venga nunca de fuera</b>.
+     */
+    public enum Orden {
+        PRECIO_ASC("l.price ASC"),
+        PRECIO_DESC("l.price DESC"),
+        NIVEL_ASC("l.level ASC"),
+        NIVEL_DESC("l.level DESC"),
+        IVS_DESC("l.perfect_ivs DESC, l.iv_total DESC"),
+        EXPIRA_ASC("l.expires_at ASC"),
+        NUEVO("l.listed_at DESC"),
+        // ⚠ El chollo: lo que está más por debajo de su tasación. Es la
+        //   ordenación que solo puede existir porque hay tasador -- ningún
+        //   mercado normal la tiene, y aquí sale gratis.
+        CHOLLO("(l.price / GREATEST(l.estimated, 1)) ASC");
+
+        public final String sql;
+
+        Orden(String sql) {
+            this.sql = sql;
+        }
+
+        /** El de un nombre, o {@code NUEVO} si no se reconoce. */
+        public static Orden de(String nombre) {
+            if (nombre == null || nombre.isBlank()) {
+                return NUEVO;
+            }
+            for (Orden o : values()) {
+                if (o.name().equalsIgnoreCase(nombre.trim())) {
+                    return o;
+                }
+            }
+            return NUEVO;
         }
     }
 
@@ -361,7 +412,10 @@ public final class GtsService {
                 + "l.price, l.estimated, l.expires_at "
                 + "FROM gts_listing l JOIN player p ON p.player_id = l.seller_id "
                 + "WHERE " + String.join(" AND ", donde)
-                + " ORDER BY l.listed_at DESC LIMIT ?";
+                // ⚠ `Orden.de` es lo único que puede acabar aquí: un ORDER BY no
+                //   acepta parámetros, así que la defensa contra la inyección es
+                //   que el texto NUNCA venga del cliente sino de la enum.
+                + " ORDER BY " + Orden.de(f.orden()).sql + " LIMIT ?";
 
         var salida = new ArrayList<Ejemplar>();
         try (Connection c = db.connection();

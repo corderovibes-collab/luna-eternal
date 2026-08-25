@@ -101,6 +101,29 @@ public class GtsScreen extends Screen {
     private final TextFieldWidget[] campoEv = new TextFieldWidget[6];
     private boolean soloShiny;
 
+    /**
+     * Por qué columna se ordena.
+     *
+     * <h2>⚠⚠ Esto es lo que faltaba para que pareciera una tienda</h2>
+     *
+     * Lo primero que hace cualquiera al entrar en un mercado es <b>ordenar por
+     * precio</b>. Sin ordenación hay que ir página por página comparando a ojo,
+     * y con cuarenta ofertas eso ya nadie lo hace: la pantalla deja de ser una
+     * tienda y pasa a ser una lista.
+     */
+    private String orden = "NUEVO";
+
+    /**
+     * La compra que está esperando confirmación.
+     *
+     * <p>⚠⚠ <b>Comprar con un solo clic es un fallo, no una comodidad.</b> Un
+     * roce del ratón sobre una fila equivocada se lleva miles de Plata y no hay
+     * forma de deshacerlo — el vendedor ya cobró. Todos los mercados que mueven
+     * dinero de verdad confirman antes, y las pruebas de usabilidad de subastas
+     * dicen justo eso: la gente espera un paso explícito.
+     */
+    private Red.EjemplarGts confirmando;
+
     /** Las seis estadísticas, en el orden FIJO del protocolo. */
     private static final String[] SIGLAS = { "PS", "AT", "DE", "SA", "SD", "VE" };
 
@@ -211,7 +234,7 @@ public class GtsScreen extends Screen {
                 texto(campoBusqueda), "",
                 texto(campoNivelMin), texto(campoNivelMax),
                 texto(campoPrecioMin), texto(campoPrecioMax),
-                List.copyOf(ivs), List.copyOf(evs), soloShiny ? "1" : ""));
+                List.copyOf(ivs), List.copyOf(evs), soloShiny ? "1" : "", orden));
     }
 
     private String texto(TextFieldWidget c) {
@@ -298,6 +321,12 @@ public class GtsScreen extends Screen {
             dibujarLista(ctx, rx, ry, true);
         }
         dibujarRetrato(ctx, delta);
+
+        // La confirmación va la ÚLTIMA y encima de todo: es una decisión que
+        // interrumpe, no un panel más.
+        if (confirmando != null) {
+            dibujarConfirmacion(ctx, rx, ry);
+        }
     }
 
     private void dibujarNavegacion(DrawContext ctx, int rx, int ry) {
@@ -558,16 +587,7 @@ public class GtsScreen extends Screen {
     private void dibujarLista(DrawContext ctx, int rx, int ry, boolean tercera) {
         var l = lista();
         if (!tercera) {
-            // Cabecera
-            int hy = listaY();
-            texto(ctx, Text.translatable("pokepad.lunaeternal.gts.col_oferta"),
-                    PANT_X + MARGEN + 8, hy, 14, TEXTO_SUAVE, false, false);
-            texto(ctx, Text.translatable("pokepad.lunaeternal.gts.col_ivs"),
-                    PANT_X + MARGEN + 300, hy, 14, TEXTO_SUAVE, false, false);
-            texto(ctx, Text.translatable("pokepad.lunaeternal.gts.col_precio"),
-                    PANT_X + MARGEN + 500, hy, 14, TEXTO_SUAVE, false, false);
-            texto(ctx, Text.translatable("pokepad.lunaeternal.gts.col_expira"),
-                    PANT_X + MARGEN + 640, hy, 14, TEXTO_SUAVE, false, false);
+            dibujarCabecera(ctx, rx, ry);
             if (l.isEmpty()) {
                 texto(ctx, Text.translatable(modo == Modo.MIAS
                                 ? "pokepad.lunaeternal.gts.sin_mias"
@@ -628,9 +648,33 @@ public class GtsScreen extends Screen {
             }
 
             texto(ctx, Text.literal(String.format("%,d", e.precio())),
-                    ax + 500, y + 16, 18, 0xFF8A6A00, false, true);
-            texto(ctx, Text.literal(queda(e.expira())), ax + 640, y + 18, 14,
+                    ax + 500, y + 8, 18, 0xFF8A6A00, false, true);
+            // ⚠ Comparado con la tasación, EN LA PROPIA FILA. Sin esto hay que
+            //   seleccionar cada oferta para saber si es cara -- y entonces
+            //   comparar diez es abrir diez.
+            if (e.estimado() > 0) {
+                double razon = e.precio() / (double) e.estimado();
+                texto(ctx, Text.literal(razon < 0.7 ? "chollo"
+                                : razon > 1.3 ? "caro" : "justo"),
+                        ax + 500, y + 30, 13,
+                        razon < 0.7 ? 0xFF1F7A3C : razon > 1.3 ? ROJO : TEXTO_SUAVE,
+                        false, true);
+            }
+            texto(ctx, Text.literal(queda(e.expira())), ax + 620, y + 18, 14,
                     TEXTO_SUAVE, false, true);
+
+            // ⚠⚠ EL BOTON VA EN LA FILA. Antes había que seleccionar y bajar la
+            //   vista al panel de la izquierda: dos clics y un salto de atención
+            //   para lo único que se viene a hacer aquí. Todos los mercados que
+            //   funcionan compran desde la lista.
+            botonPeq(ctx, rx, ry, ax + aw - 124, y + 12, 116, 28,
+                    Text.translatable(modo == Modo.MIAS
+                            ? "pokepad.lunaeternal.gts.retirar"
+                            : "pokepad.lunaeternal.gts.comprar"),
+                    !esperando(), false);
+        }
+        if (!tercera) {
+            dibujarContador(ctx);
         }
 
         if (!tercera && paginas() > 1) {
@@ -642,6 +686,104 @@ public class GtsScreen extends Screen {
             botonPeq(ctx, rx, ry, PANT_X + MARGEN + 160, y, 60, 26, Text.literal(">"),
                     pagina < paginas() - 1, false);
         }
+    }
+
+    /** Las columnas por las que se puede ordenar, y dónde empieza cada una. */
+    private record Columna(String etiqueta, int x, int ancho,
+                           String asc, String desc) {}
+
+    private static final Columna[] COLUMNAS = {
+        new Columna("pokepad.lunaeternal.gts.col_oferta", 8, 280, "NIVEL_ASC", "NIVEL_DESC"),
+        new Columna("pokepad.lunaeternal.gts.col_ivs", 300, 190, "IVS_DESC", "IVS_DESC"),
+        new Columna("pokepad.lunaeternal.gts.col_precio", 500, 130, "PRECIO_ASC", "PRECIO_DESC"),
+        new Columna("pokepad.lunaeternal.gts.col_expira", 640, 120, "EXPIRA_ASC", "NUEVO"),
+    };
+
+    /**
+     * La cabecera de la tabla: <b>se pulsa para ordenar</b>.
+     *
+     * <p>⚠ Cada columna alterna entre dos ordenaciones, y la flecha dice cuál
+     * está puesta. Sin la flecha, el jugador pulsa y no sabe si pasó algo — que
+     * es la queja de siempre de las tablas ordenables mal hechas.
+     */
+    private void dibujarCabecera(DrawContext ctx, int rx, int ry) {
+        int hy = listaY();
+        for (var c : COLUMNAS) {
+            int ax = PANT_X + MARGEN + c.x();
+            boolean activa = orden.equals(c.asc()) || orden.equals(c.desc());
+            boolean encima = dentro(rx, ry, px(ax - 4), py(hy - 3), pl(c.ancho()), pl(20));
+            if (activa || encima) {
+                ctx.fill(px(ax - 4), py(hy - 3), px(ax - 4 + c.ancho()), py(hy + 17),
+                        activa ? 0x44F35C0C : 0x22FFFFFF);
+            }
+            String flecha = !activa ? " —" : orden.equals(c.asc()) ? " ▲" : " ▼";
+            texto(ctx, Text.translatable(c.etiqueta()).copy()
+                            .append(Text.literal(flecha)),
+                    ax, hy, 14, activa ? ORO : TEXTO_SUAVE, false, false);
+        }
+        // El chollo no es una columna: es una ordenación que solo existe porque
+        // hay tasador. Va aparte para que se vea que es otra cosa.
+        boolean chollo = "CHOLLO".equals(orden);
+        botonPeq(ctx, rx, ry, PANT_X + PANT_W - MARGEN - 130, hy - 6, 126, 24,
+                Text.translatable("pokepad.lunaeternal.gts.chollos"), true, chollo);
+    }
+
+    /** Cuántas ofertas hay y cuáles se están viendo. */
+    private void dibujarContador(DrawContext ctx) {
+        int n = modo == Modo.VENDER
+                ? (estado == null ? 0 : estado.disponibles().size())
+                : lista().size();
+        if (n == 0) {
+            return;
+        }
+        int desde = pagina * filasCaben() + 1;
+        int hasta = Math.min(n, (pagina + 1) * filasCaben());
+        texto(ctx, Text.translatable("pokepad.lunaeternal.gts.contador",
+                        desde, hasta, n),
+                PANT_X + PANT_W - MARGEN, PANT_Y + PANT_H - MARGEN - 22, 14,
+                TEXTO_SUAVE, false, true);
+    }
+
+    /**
+     * El aviso de confirmación antes de gastar.
+     *
+     * <p>⚠⚠ Es una capa por encima de todo y <b>se traga el clic</b>: mientras
+     * está puesta, nada de debajo responde. Si no, un clic destinado al
+     * «confirmar» que cae medio píxel fuera acabaría seleccionando otra fila —
+     * y el jugador creería que compró lo que no era.
+     */
+    private void dibujarConfirmacion(DrawContext ctx, int rx, int ry) {
+        ctx.fill(x0, y0, x0 + ancho, y0 + alto, 0xC0000000);
+        int aw = 480, ah = 200;
+        int ax = (NAT_ANCHO - aw) / 2, ay = (NAT_ALTO - ah) / 2;
+        ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), 0xFF121722);
+        marco(ctx, px(ax), py(ay), pl(aw), pl(ah), BORDE_ENCIMA, Math.max(1, pl(3)));
+
+        String nombre = confirmando.mote().isBlank()
+                ? confirmando.especie() : confirmando.mote();
+        texto(ctx, Text.translatable("pokepad.lunaeternal.gts.confirmar_titulo"),
+                ax + aw / 2, ay + 22, 22, 0xFFFFFFFF, true, false);
+        texto(ctx, Text.literal(nombre + "  Nv " + confirmando.nivel()
+                        + (confirmando.shiny() ? "  ✦" : "")),
+                ax + aw / 2, ay + 62, 20,
+                confirmando.shiny() ? SHINY : 0xFFE8EEF8, true, false);
+        texto(ctx, Text.literal(String.format("%,d", confirmando.precio())),
+                ax + aw / 2, ay + 92, 30, ORO, true, false);
+
+        // Lo que te queda después. Es la cifra que de verdad decide, y la que
+        // nadie calcula de cabeza con el saldo en la otra punta de la pantalla.
+        if (estado != null) {
+            long despues = estado.saldo() - confirmando.precio();
+            texto(ctx, Text.translatable("pokepad.lunaeternal.gts.te_quedan",
+                            String.format("%,d", Math.max(0, despues))),
+                    ax + aw / 2, ay + 128, 15,
+                    despues < 0 ? ROJO : TEXTO_SUAVE, true, false);
+        }
+        botonPeq(ctx, rx, ry, ax + 30, ay + ah - 52, 190, 36,
+                Text.translatable("pokepad.lunaeternal.gts.cancelar"), true, false);
+        boton(ctx, rx, ry, ax + aw - 220, ay + ah - 56, 190, 44,
+                Text.translatable("pokepad.lunaeternal.gts.confirmar"),
+                !esperando(), VERDE);
     }
 
     /** Tus Pokémon, para elegir cuál publicar. */
@@ -784,6 +926,15 @@ public class GtsScreen extends Screen {
             return super.mouseClicked(mx, my, boton);
         }
         int rx = (int) mx, ry = (int) my;
+
+        // ⚠⚠ LA CONFIRMACION SE TRAGA EL CLIC. Mientras está puesta, nada de
+        //   debajo responde: si no, un clic que cae medio píxel fuera del
+        //   «confirmar» seleccionaría otra fila, y el jugador creería que compró
+        //   lo que no era.
+        if (confirmando != null) {
+            return clicConfirmacion(rx, ry);
+        }
+
         for (var c : todos()) {
             if (c != null && c.mouseClicked(mx, my, boton)) {
                 setFocused(c);
@@ -835,6 +986,31 @@ public class GtsScreen extends Screen {
             }
         }
 
+        // Cabecera: ordenar
+        if (modo != Modo.VENDER) {
+            int hy = listaY();
+            for (var c : COLUMNAS) {
+                int ax = PANT_X + MARGEN + c.x();
+                if (dentro(rx, ry, px(ax - 4), py(hy - 3), pl(c.ancho()), pl(20))) {
+                    // Alterna entre las dos: pulsar otra vez la misma columna
+                    // invierte, que es lo que espera todo el mundo.
+                    orden = orden.equals(c.asc()) ? c.desc() : c.asc();
+                    pagina = 0;
+                    sonar();
+                    pedir();
+                    return true;
+                }
+            }
+            if (dentro(rx, ry, px(PANT_X + PANT_W - MARGEN - 130), py(hy - 6),
+                    pl(126), pl(24))) {
+                orden = "CHOLLO".equals(orden) ? "NUEVO" : "CHOLLO";
+                pagina = 0;
+                sonar();
+                pedir();
+                return true;
+            }
+        }
+
         // Filas
         int desde = pagina * filasCaben();
         int n = modo == Modo.VENDER
@@ -845,8 +1021,27 @@ public class GtsScreen extends Screen {
                 break;
             }
             int y = listaY() + 20 + f * FILA;
-            if (dentro(rx, ry, px(PANT_X + MARGEN), py(y), pl(PANT_W - 2 * MARGEN),
-                    pl(FILA - 4))) {
+            int aw = PANT_W - 2 * MARGEN;
+            // El botón de la fila va ANTES que la fila entera: si no, pulsar
+            // «comprar» solo seleccionaría.
+            if (modo != Modo.VENDER && dentro(rx, ry, px(PANT_X + MARGEN + aw - 124),
+                    py(y + 12), pl(116), pl(28))) {
+                elegido = i;
+                var e = lista().get(i);
+                sonar();
+                if (modo == Modo.MIAS) {
+                    pulsado = System.currentTimeMillis();
+                    ClientPlayNetworking.send(
+                            new Red.AccionGts("retirar", e.id(), "", 0, 0));
+                } else if (estado != null && estado.saldo() < e.precio()) {
+                    avisar("No te llega: hacen falta "
+                            + String.format("%,d", e.precio()) + ".");
+                } else {
+                    confirmando = e;
+                }
+                return true;
+            }
+            if (dentro(rx, ry, px(PANT_X + MARGEN), py(y), pl(aw), pl(FILA - 4))) {
                 if (modo == Modo.VENDER) {
                     elegidoUuid = estado.disponibles().get(i).uuid();
                 } else {
@@ -951,6 +1146,28 @@ public class GtsScreen extends Screen {
         return true;
     }
 
+    private boolean clicConfirmacion(int rx, int ry) {
+        int aw = 480, ah = 200;
+        int ax = (NAT_ANCHO - aw) / 2, ay = (NAT_ALTO - ah) / 2;
+        if (dentro(rx, ry, px(ax + 30), py(ay + ah - 52), pl(190), pl(36))) {
+            confirmando = null;
+            sonar();
+            return true;
+        }
+        if (dentro(rx, ry, px(ax + aw - 220), py(ay + ah - 56), pl(190), pl(44))) {
+            var e = confirmando;
+            confirmando = null;
+            pulsado = System.currentTimeMillis();
+            sonar();
+            // ⚠ NO se manda el precio: lo cobra el servidor mirando SU fila.
+            ClientPlayNetworking.send(new Red.AccionGts("comprar", e.id(), "", 0, 0));
+            return true;
+        }
+        // Cualquier otro clic no hace nada, pero SE CONSUME. Ver el comentario
+        // de `dibujarConfirmacion`.
+        return true;
+    }
+
     private boolean clicFiltros(int rx, int ry) {
         int sy = PANT_Y + 316;
         if (dentro(rx, ry, px(PANT_X + 30), py(sy), pl(24), pl(24))) {
@@ -991,6 +1208,16 @@ public class GtsScreen extends Screen {
 
     @Override
     public boolean keyPressed(int tecla, int escaneo, int mods) {
+        // ⚠ ESC cancela la compra en vez de cerrar la pantalla. Una confirmación
+        //   de la que solo se sale pulsando un botón es una trampa: lo primero
+        //   que hace todo el mundo para arrepentirse es dar a Escape.
+        if (confirmando != null) {
+            if (tecla == 256) {
+                confirmando = null;
+                return true;
+            }
+            return true;
+        }
         for (var c : todos()) {
             if (c != null && c.isFocused() && c.keyPressed(tecla, escaneo, mods)) {
                 return true;

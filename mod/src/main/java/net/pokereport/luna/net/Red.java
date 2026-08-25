@@ -445,7 +445,7 @@ public class Red implements ModInitializer {
     public record PedirGts(String texto, String vendedor, String nivelMin,
                            String nivelMax, String precioMin, String precioMax,
                            List<Integer> ivMin, List<Integer> evMin,
-                           String shiny) implements CustomPayload {
+                           String shiny, String orden) implements CustomPayload {
         public static final Id<PedirGts> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_gts"));
         public static final PacketCodec<RegistryByteBuf, PedirGts> CODEC =
@@ -459,15 +459,16 @@ public class Red implements ModInitializer {
                     seis(buf, p.ivMin);
                     seis(buf, p.evMin);
                     buf.writeString(p.shiny);
+                    buf.writeString(p.orden);
                 }, buf -> new PedirGts(buf.readString(), buf.readString(),
                         buf.readString(), buf.readString(), buf.readString(),
                         buf.readString(), leerSeis(buf), leerSeis(buf),
-                        buf.readString()));
+                        buf.readString(), buf.readString()));
 
         /** Sin filtros. */
         public static PedirGts vacio() {
             var ceros = List.of(0, 0, 0, 0, 0, 0);
-            return new PedirGts("", "", "", "", "", "", ceros, ceros, "");
+            return new PedirGts("", "", "", "", "", "", ceros, ceros, "", "");
         }
 
         @Override
@@ -2345,7 +2346,7 @@ public class Red implements ModInitializer {
                         largo(filtros.precioMin()), largo(filtros.precioMax()),
                         aArray(filtros.ivMin()), aArray(filtros.evMin()),
                         "1".equals(filtros.shiny()) ? Boolean.TRUE : null,
-                        null, null, null);
+                        null, null, null, filtros.orden());
 
                 List<EjemplarGts> ofertas = new ArrayList<>();
                 for (var e : LunaEternal.gts().buscar(f, 100)) {

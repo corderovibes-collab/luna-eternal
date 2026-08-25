@@ -360,6 +360,179 @@ def maqueta_panel(vender):
     return L
 
 
+def recortar(s, ancho, alto):
+    """Lo mismo que hace el Java: cortar con puntos suspensivos."""
+    if ancho_mc(s, alto) <= ancho:
+        return s
+    corte = len(s)
+    while corte > 1 and ancho_mc(s[:corte] + "\u2026", alto) > ancho:
+        corte -= 1
+    return s[:corte].rstrip() + "\u2026"
+
+
+def nav(L):
+    """La fila de navegacion del panel.
+
+    ⚠ Se dibuja AUNQUE no sea de esta pantalla: es lo que hace que la maqueta
+    cace que algo se le monta encima. Sin ella, el conmutador estaba puesto
+    justo sobre INICIO y la X, y la comprobacion decia «limpio».
+    """
+    L.caja("nav.atras", PANEL_X + 18, PANEL_Y + NAV_ALTO // 2 - 24, 60, 48,
+           None, (120, 130, 160, 120))
+    L.texto("nav.inicio", "INICIO", PANEL_X + 92, PANEL_Y + NAV_ALTO // 2 - 14,
+            28, BLANCO)
+    L.caja("nav.cerrar", PANEL_X + PANEL_W - 18 - 80,
+           PANEL_Y + NAV_ALTO // 2 - 32, 80, 64, None, (120, 130, 160, 120))
+
+
+# --- las mismas medidas que el Java. Si cambian alli, cambian aqui.
+MARGEN, BOT, BOT_SEP, FILA, PIE, CONM_W = 12, 34, 8, 70, 34, 100
+LISTA_Y = PANT_Y + MARGEN + BOT + 6 + 28 + 34
+FILAS = max(1, ((PANT_Y + PANT_H - MARGEN - PIE) - (LISTA_Y + 18)) // FILA)
+
+
+def cabecera_derecha(L, marcado):
+    """Conmutador, iconos y buscador: identico en las dos mitades."""
+    y1 = PANT_Y + MARGEN
+    for i, et in enumerate(("POKEMON", "OBJETOS")):
+        bx = PANT_X + MARGEN + i * (CONM_W + 4)
+        act = (i == 0) == (marcado == "pokemon")
+        L.caja(f"conm{i}", bx, y1, CONM_W, BOT,
+               NARANJA if act else (42, 49, 69, 255), (32, 40, 60, 255))
+        L.texto(f"conm{i}.t", et, bx + CONM_W // 2, y1 + 10, 14, BLANCO,
+                "centro", limite=CONM_W - 6)
+
+    n = 4 if marcado == "objetos" else 6
+    total = n * BOT + (n - 1) * BOT_SEP
+    x0 = PANT_X + PANT_W - MARGEN - total
+    for i in range(n):
+        L.caja(f"barra.b{i}", x0 + i * (BOT + BOT_SEP), y1, BOT, BOT,
+               (58, 69, 96, 255), (32, 40, 60, 255))
+
+    y2 = y1 + BOT + 6
+    L.caja("busca", PANT_X + MARGEN, y2, PANT_W - 2 * MARGEN, 28,
+           (30, 36, 50, 255))
+    L.texto("busca.pista", "Nombre del objeto...", PANT_X + MARGEN + 8, y2 + 8,
+            14, (136, 146, 172, 255))
+    return y2
+
+
+def pie(L, n_total):
+    """Contador y paginacion. ⚠ Es lo que se pisaba con la ultima fila."""
+    y = PANT_Y + PANT_H - MARGEN - 28
+    L.caja("pag.izq", PANT_X + MARGEN, y, 60, 26, (79, 111, 176, 255))
+    L.texto("pag.n", "1 / 3", PANT_X + MARGEN + 100, y + 5, 15, SUAVE)
+    L.caja("pag.der", PANT_X + MARGEN + 160, y, 60, 26, (79, 111, 176, 255))
+    L.texto("cont", f"1-{FILAS} de {n_total}", PANT_X + PANT_W - MARGEN - 4,
+            PANT_Y + PANT_H - MARGEN - 20, 13, SUAVE, "der")
+
+
+def maqueta_objetos():
+    """El escaparate de objetos: la lista, con su cabecera y su pie."""
+    L = Lienzo()
+    chasis(L, "OBJETOS")
+    nav(L)
+    cabecera_derecha(L, "objetos")
+
+    hy = LISTA_Y
+    for nombre, cx, ancho in (("OBJETO", 74, 220), ("UNIDAD", 320, 150),
+                              ("PRECIO", 480, 145)):
+        L.texto(f"cab.{nombre}", nombre + " \u2014", PANT_X + MARGEN + cx, hy,
+                14, SUAVE, limite=ancho)
+
+    aw = PANT_W - 2 * MARGEN
+    for n in range(FILAS):
+        y = hy + 18 + n * FILA
+        ax = PANT_X + MARGEN
+        L.caja(f"fila{n}", ax, y, aw, FILA - 6, FILA_BG, FILA_BORDE)
+        L.caja(f"fila{n}.icono", ax + 10, y + 12, 40, 40, (200, 210, 235, 255),
+               vigilar=False)
+        L.texto(f"fila{n}.nombre",
+                recortar("Escaleras de ladrillos de piedra", 240, 20),
+                ax + 70, y + 10, 20, OSCURO, limite=240)
+        L.texto(f"fila{n}.cant", "x64", ax + 70, y + 36, 15, SUAVE)
+        L.texto(f"fila{n}.vend", "TheJuanCE", ax + 320, y + 12, 14, SUAVE,
+                limite=150)
+        L.texto(f"fila{n}.unidad", "23 por unidad", ax + 320, y + 36, 14, SUAVE,
+                limite=150)
+        L.texto(f"fila{n}.precio", "1.500", ax + aw - 150, y + 10, 21,
+                (138, 106, 0, 255), "der")
+        L.texto(f"fila{n}.queda", "2d 3h", ax + aw - 150, y + 40, 12, SUAVE,
+                "der")
+        L.caja(f"fila{n}.comprar", ax + aw - 132, y + 16, 124, 32, VERDE)
+
+    pie(L, 12)
+    return L
+
+
+def maqueta_panel_obj(vender):
+    """El panel del escaparate: comprar (retrato grande) o publicar."""
+    L = Lienzo()
+    chasis(L, "OBJETO — " + ("PUBLICAR" if vender else "COMPRAR"))
+    nav(L)
+    ret_h = 190 if vender else 220
+    RET_X, RET_Y, RET_W = PANEL_X + 24, PANEL_Y + NAV_ALTO + 4, PANEL_W - 48
+    cx = PANEL_X + PANEL_W // 2
+    L.caja("retrato", RET_X, RET_Y, RET_W, ret_h, (18, 22, 31, 255),
+           (57, 65, 92, 255))
+
+    if vender:
+        y = RET_Y + ret_h + 8
+        L.texto("nombre", recortar("Escaleras de roca musgosa", RET_W, 22),
+                cx, y, 22, BLANCO, "centro", limite=RET_W)
+        y += 26
+        L.texto("tengo", "tienes 64", cx, y, 14, SUAVE, "centro")
+
+        L.texto("cant.et", "CANTIDAD", PANEL_X + 30, PANEL_Y + 404, 13, SUAVE)
+        bw = (PANEL_W - 60 - 3 * 6) // 4
+        for i, et in enumerate(("x1", "x8", "x64", "TODO")):
+            bx = PANEL_X + 30 + i * (bw + 6)
+            L.caja(f"cant{i}", bx, PANEL_Y + 420, bw, 32, (79, 111, 176, 255))
+            L.texto(f"cant{i}.t", et, bx + bw // 2, PANEL_Y + 428, 15, BLANCO,
+                    "centro", limite=bw - 10)
+        L.texto("cant.n", "x64", cx, PANEL_Y + 460, 22, BLANCO, "centro")
+
+        L.texto("precio.et", "PRECIO DEL LOTE", PANEL_X + 30, PANEL_Y + 486,
+                13, SUAVE)
+        L.caja("precio.campo", PANEL_X + 30, PANEL_Y + 502, PANEL_W - 60, 30,
+               (30, 36, 50, 255))
+        L.texto("precio.ud", "23 por unidad", PANEL_X + 30, PANEL_Y + 540, 13,
+                SUAVE)
+
+        L.texto("dur.et", "DURACION DE LA OFERTA", PANEL_X + 30, PANEL_Y + 562,
+                13, SUAVE)
+        dw = (PANEL_W - 60 - 2 * 6) // 3
+        for i, et in enumerate(("1 dia", "2 dias", "1 semana")):
+            bx = PANEL_X + 30 + i * (dw + 6)
+            L.caja(f"dur{i}", bx, PANEL_Y + 578, dw, 32, (58, 69, 96, 255))
+            # ⚠ 13 y no 15: `botonPeq` ENCOGE la letra hasta que cabe. La
+            #   maqueta tiene que encoger igual o dira que no cabe algo que si.
+            L.texto(f"dur{i}.t", et, bx + dw // 2, PANEL_Y + 586, 13, BLANCO,
+                    "centro", limite=dw - 10)
+        L.caja("publicar", PANEL_X + 30, PANEL_Y + PANEL_H - 72, PANEL_W - 60,
+               56, VERDE)
+    else:
+        y = RET_Y + ret_h + 12
+        L.texto("nombre", recortar("Panel de cristal tintado", RET_W, 24),
+                cx, y, 24, BLANCO, "centro", limite=RET_W)
+        y += 28
+        L.texto("cant", "x64", cx, y, 16, SUAVE, "centro")
+        y += 26
+        y += 14
+        L.texto("precio", "1.500", cx, y, 34, ORO, "centro")
+        y += 42
+        L.texto("unidad", "23 por unidad", cx, y, 14, SUAVE, "centro")
+        y += 26 + 12
+        for i, (et, va) in enumerate((("Vendedor", "TheJuanCE"),
+                                      ("EXPIRA", "2d 3h"))):
+            L.texto(f"det{i}.et", et, PANEL_X + 30, y + i * 22, 14, SUAVE)
+            L.texto(f"det{i}.va", va, PANEL_X + PANEL_W - 30, y + i * 22, 14,
+                    (232, 238, 248, 255), "der", limite=PANEL_W // 2 - 20)
+        L.caja("comprar", PANEL_X + 30, PANEL_Y + PANEL_H - 72, PANEL_W - 60,
+               56, VERDE)
+    return L
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -367,9 +540,12 @@ def main():
     SALIDA.mkdir(parents=True, exist_ok=True)
 
     total = 0
-    for nombre, L in (("mercado_lista", maqueta_gts()),
-                      ("mercado_comprar", maqueta_panel(False)),
-                      ("mercado_publicar", maqueta_panel(True))):
+    for nombre, L in (("gts_lista", maqueta_gts()),
+                      ("gts_comprar", maqueta_panel(False)),
+                      ("gts_publicar", maqueta_panel(True)),
+                      ("obj_lista", maqueta_objetos()),
+                      ("obj_comprar", maqueta_panel_obj(False)),
+                      ("obj_publicar", maqueta_panel_obj(True))):
         avisos = L.avisos + L.solapes()
         ruta = SALIDA / f"maqueta_{nombre}.png"
         L.im.save(ruta)

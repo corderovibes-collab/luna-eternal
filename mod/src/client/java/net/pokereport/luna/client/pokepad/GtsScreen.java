@@ -297,8 +297,25 @@ public class GtsScreen extends Screen {
         return modo == Modo.MIAS ? estado.mias() : estado.ofertas();
     }
 
+    /**
+     * Cuántas filas caben.
+     *
+     * <h2>⚠⚠ SE CALCULA DE {@code listaY()}, NO SE ESCRIBE A MANO</h2>
+     *
+     * Aquí había un {@code (PANT_H - 2*MARGEN - 56 - 30) / FILA} que <b>ya no
+     * cuadraba con nada</b>: la lista había bajado (conmutador y buscador
+     * nuevos) y la fórmula seguía contando desde donde estaba antes. Salían
+     * cinco filas donde solo caben cuatro, y <b>la quinta se dibujaba encima de
+     * la paginación</b> — que es exactamente lo que el usuario vio.
+     *
+     * <p>No daba ningún error. Es el mismo fallo de la rejilla del PokePad:
+     * <i>cuadraba por casualidad</i> hasta que una medida cambió.
+     */
+    private static final int PIE = 34;
+
     private int filasCaben() {
-        return (PANT_H - 2 * MARGEN - 56 - 30) / FILA;
+        int hueco = (PANT_Y + PANT_H - MARGEN - PIE) - (listaY() + 18);
+        return Math.max(1, hueco / FILA);
     }
 
     private int paginas() {
@@ -908,7 +925,11 @@ public class GtsScreen extends Screen {
         new Columna("pokepad.lunaeternal.gts.col_oferta", 74, 200, "NIVEL_ASC", "NIVEL_DESC"),
         new Columna("pokepad.lunaeternal.gts.col_ivs", 296, 90, "IVS_DESC", "IVS_DESC"),
         new Columna("pokepad.lunaeternal.gts.col_precio", 470, 140, "PRECIO_ASC", "PRECIO_DESC"),
-        new Columna("pokepad.lunaeternal.gts.col_expira", 620, 100, "EXPIRA_ASC", "NUEVO"),
+        // ⚠⚠ Su `desc` NO puede ser "NUEVO": ese es el orden POR DEFECTO, asi que
+        //    la columna salia marcada nada mas abrir --oro sobre naranja, que no
+        //    se lee-- diciendo que ordenaba por caducidad cuando no lo hacia.
+        new Columna("pokepad.lunaeternal.gts.col_expira", 620, 100,
+                "EXPIRA_ASC", "EXPIRA_DESC"),
     };
 
     /**
@@ -925,8 +946,10 @@ public class GtsScreen extends Screen {
             boolean activa = orden.equals(c.asc()) || orden.equals(c.desc());
             boolean encima = dentro(rx, ry, px(ax - 4), py(hy - 3), pl(c.ancho()), pl(20));
             if (activa || encima) {
+                // ⚠ La activa va OSCURA con el texto claro. Al reves --naranja
+                //   claro con texto oro-- no se lee: son el mismo tono.
                 ctx.fill(px(ax - 4), py(hy - 3), px(ax - 4 + c.ancho()), py(hy + 17),
-                        activa ? 0x44F35C0C : 0x22FFFFFF);
+                        activa ? 0xCC1E2438 : 0x22FFFFFF);
             }
             String flecha = !activa ? " —" : orden.equals(c.asc()) ? " ▲" : " ▼";
             texto(ctx, Text.translatable(c.etiqueta()).copy()

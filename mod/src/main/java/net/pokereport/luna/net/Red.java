@@ -555,13 +555,37 @@ public class Red implements ModInitializer {
         }
     }
 
-    /** «Dame el mercado». `item` vacio = solo la lista de objetos. */
-    public record PedirMercado(String item) implements CustomPayload {
+    /**
+     * «Dame el escaparate de objetos».
+     *
+     * <h2>⚠⚠ ESTO SUSTITUYE AL LIBRO DE ORDENES, Y ES UNA DECISION</h2>
+     *
+     * El libro (compras y ventas cruzandose por precio) es lo correcto para un
+     * mercado con mucha gente: da liquidez y un precio de verdad. Con doce
+     * personas <b>no cruza nada</b> — pones una orden de compra y se queda ahi
+     * hasta que alguien pase por casualidad. El usuario lo dijo con otras
+     * palabras: <i>«se pierde uno comprando alli»</i>.
+     *
+     * <p>Un escaparate es peor en teoria y muchisimo mejor de usar: cada uno
+     * pone lo suyo con su precio y quien quiera lo compra de una. Y es
+     * <b>exactamente el mismo mecanismo que los Pokemon</b>, asi que las dos
+     * mitades del mercado se comportan igual — que es la mitad de lo que hacia
+     * que costara entenderlo.
+     *
+     * <p>⚠ {@code MarketService} NO SE BORRA: sigue escrito, probado y con sus
+     * comprobaciones. Lo que cambia es por donde entra el jugador.
+     */
+    public record PedirMercado(String texto, String orden) implements CustomPayload {
         public static final Id<PedirMercado> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_mercado"));
         public static final PacketCodec<RegistryByteBuf, PedirMercado> CODEC =
-                PacketCodec.tuple(PacketCodecs.STRING, PedirMercado::item,
+                PacketCodec.tuple(PacketCodecs.STRING, PedirMercado::texto,
+                        PacketCodecs.STRING, PedirMercado::orden,
                         PedirMercado::new);
+
+        public static PedirMercado vacio() {
+            return new PedirMercado("", "");
+        }
 
         @Override
         public Id<? extends CustomPayload> getId() {
@@ -570,60 +594,57 @@ public class Red implements ModInitializer {
     }
 
     /**
-     * Una fila del libro: un precio y cuanto hay a ese precio.
+     * Una oferta del escaparate.
      *
-     * <p>⚠ Va AGREGADO por precio y NO orden a orden. Es lo que se dibuja, y
-     * ademas no dice de quien es cada orden -- que en un mercado es informacion
-     * que no se da: saber que la unica venta barata es de fulano invita a
-     * negociar por fuera y a acosarle.
+     * <p>⚠ Aqui SI va el vendedor, al reves que en el libro de ordenes. En un
+     * libro el precio es anonimo a proposito —saber que la unica venta barata es
+     * de fulano invita a negociar por fuera—, pero un escaparate <b>es</b> un
+     * puesto con dueño: ver de quien compras es la mitad de la confianza.
      */
-    public record NivelMercado(long precio, int unidades, int ordenes) {
-        public static final PacketCodec<RegistryByteBuf, NivelMercado> CODEC =
-                PacketCodec.tuple(
-                        PacketCodecs.VAR_LONG, NivelMercado::precio,
-                        PacketCodecs.VAR_INT, NivelMercado::unidades,
-                        PacketCodecs.VAR_INT, NivelMercado::ordenes,
-                        NivelMercado::new);
+    public record OfertaObj(long id, String vendedor, String item, String nombre,
+                            int cantidad, long precio, long expira) {
+        static void escribir(RegistryByteBuf buf, OfertaObj o) {
+            buf.writeVarLong(o.id);
+            buf.writeString(o.vendedor);
+            buf.writeString(o.item);
+            buf.writeString(o.nombre);
+            buf.writeVarInt(o.cantidad);
+            buf.writeVarLong(o.precio);
+            buf.writeVarLong(o.expira);
+        }
+
+        static OfertaObj leer(RegistryByteBuf buf) {
+            return new OfertaObj(buf.readVarLong(), buf.readString(),
+                    buf.readString(), buf.readString(), buf.readVarInt(),
+                    buf.readVarLong(), buf.readVarLong());
+        }
+
+        /** Lo unico comparable entre una pila de 64 y una de 1. */
+        public long porUnidad() {
+            return precio / Math.max(1, cantidad);
+        }
     }
 
-    /** Una orden mia. Aqui SI va el identificador: hace falta para cancelar. */
-    public record OrdenMercado(long id, String lado, String item, long precio,
-                               int total, int lleno) {
-        public static final PacketCodec<RegistryByteBuf, OrdenMercado> CODEC =
+    /** Un objeto del inventario que se puede poner a la venta. */
+    public record MioObj(String item, String nombre, int cantidad) {
+        public static final PacketCodec<RegistryByteBuf, MioObj> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.VAR_LONG, OrdenMercado::id,
-                        PacketCodecs.STRING, OrdenMercado::lado,
-                        PacketCodecs.STRING, OrdenMercado::item,
-                        PacketCodecs.VAR_LONG, OrdenMercado::precio,
-                        PacketCodecs.VAR_INT, OrdenMercado::total,
-                        PacketCodecs.VAR_INT, OrdenMercado::lleno,
-                        OrdenMercado::new);
-    }
-
-    /** Una operacion ejecutada, para el historico. */
-    public record TratoMercado(long precio, int qty, long cuando) {
-        public static final PacketCodec<RegistryByteBuf, TratoMercado> CODEC =
-                PacketCodec.tuple(
-                        PacketCodecs.VAR_LONG, TratoMercado::precio,
-                        PacketCodecs.VAR_INT, TratoMercado::qty,
-                        PacketCodecs.VAR_LONG, TratoMercado::cuando,
-                        TratoMercado::new);
+                        PacketCodecs.STRING, MioObj::item,
+                        PacketCodecs.STRING, MioObj::nombre,
+                        PacketCodecs.VAR_INT, MioObj::cantidad,
+                        MioObj::new);
     }
 
     /**
-     * Todo lo que dibuja la pantalla del mercado.
+     * Todo lo que dibuja el escaparate de objetos.
      *
-     * <p>⚠ `catalogo` son los objetos que se pueden mirar: los que tienen
-     * ordenes vivas MAS los que el jugador lleva encima. Sin lo segundo, un
-     * mercado vacio no tendria NADA en que pulsar -- y el primero que quisiera
-     * vender algo no encontraria como.
+     * <p>⚠ `disponibles` sale del INVENTARIO y solo de ahi (la barra rapida
+     * cuenta: son los nueve primeros huecos de `main`). Es lo que dijo el
+     * usuario, y ademas es lo que hace que la custodia se pueda cumplir: no se
+     * puede retener lo que no esta a mano.
      */
-    public record EstadoMercado(String item, List<String> catalogo,
-                                List<NivelMercado> compras,
-                                List<NivelMercado> ventas,
-                                List<OrdenMercado> mias,
-                                List<TratoMercado> historial,
-                                long ultimoPrecio, int tengo, long saldo)
+    public record EstadoMercado(List<OfertaObj> ofertas, List<OfertaObj> mias,
+                                List<MioObj> disponibles, long saldo)
             implements CustomPayload {
         public static final Id<EstadoMercado> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_mercado"));
@@ -631,65 +652,39 @@ public class Red implements ModInitializer {
                 PacketCodec.ofStatic(EstadoMercado::escribir, EstadoMercado::leer);
 
         private static void escribir(RegistryByteBuf buf, EstadoMercado e) {
-            buf.writeString(e.item);
-            buf.writeVarInt(e.catalogo.size());
-            for (String s : e.catalogo) {
-                buf.writeString(s);
+            buf.writeVarInt(e.ofertas.size());
+            for (OfertaObj o : e.ofertas) {
+                OfertaObj.escribir(buf, o);
             }
-            escribirNiveles(buf, e.compras);
-            escribirNiveles(buf, e.ventas);
             buf.writeVarInt(e.mias.size());
-            for (OrdenMercado o : e.mias) {
-                OrdenMercado.CODEC.encode(buf, o);
+            for (OfertaObj o : e.mias) {
+                OfertaObj.escribir(buf, o);
             }
-            buf.writeVarInt(e.historial.size());
-            for (TratoMercado x : e.historial) {
-                TratoMercado.CODEC.encode(buf, x);
+            buf.writeVarInt(e.disponibles.size());
+            for (MioObj m : e.disponibles) {
+                MioObj.CODEC.encode(buf, m);
             }
-            buf.writeVarLong(e.ultimoPrecio);
-            buf.writeVarInt(e.tengo);
             buf.writeVarLong(e.saldo);
         }
 
-        private static void escribirNiveles(RegistryByteBuf buf,
-                                            List<NivelMercado> ns) {
-            buf.writeVarInt(ns.size());
-            for (NivelMercado n : ns) {
-                NivelMercado.CODEC.encode(buf, n);
-            }
-        }
-
-        private static List<NivelMercado> leerNiveles(RegistryByteBuf buf) {
-            int n = buf.readVarInt();
-            List<NivelMercado> salida = new ArrayList<>(n);
-            for (int i = 0; i < n; i++) {
-                salida.add(NivelMercado.CODEC.decode(buf));
-            }
-            return List.copyOf(salida);
-        }
-
         private static EstadoMercado leer(RegistryByteBuf buf) {
-            String item = buf.readString();
-            int nc = buf.readVarInt();
-            List<String> catalogo = new ArrayList<>(nc);
-            for (int i = 0; i < nc; i++) {
-                catalogo.add(buf.readString());
+            int n = buf.readVarInt();
+            List<OfertaObj> ofertas = new ArrayList<>(n);
+            for (int i = 0; i < n; i++) {
+                ofertas.add(OfertaObj.leer(buf));
             }
-            var compras = leerNiveles(buf);
-            var ventas = leerNiveles(buf);
             int nm = buf.readVarInt();
-            List<OrdenMercado> mias = new ArrayList<>(nm);
+            List<OfertaObj> mias = new ArrayList<>(nm);
             for (int i = 0; i < nm; i++) {
-                mias.add(OrdenMercado.CODEC.decode(buf));
+                mias.add(OfertaObj.leer(buf));
             }
-            int nh = buf.readVarInt();
-            List<TratoMercado> hist = new ArrayList<>(nh);
-            for (int i = 0; i < nh; i++) {
-                hist.add(TratoMercado.CODEC.decode(buf));
+            int nd = buf.readVarInt();
+            List<MioObj> disp = new ArrayList<>(nd);
+            for (int i = 0; i < nd; i++) {
+                disp.add(MioObj.CODEC.decode(buf));
             }
-            return new EstadoMercado(item, List.copyOf(catalogo), compras, ventas,
-                    List.copyOf(mias), List.copyOf(hist),
-                    buf.readVarLong(), buf.readVarInt(), buf.readVarLong());
+            return new EstadoMercado(List.copyOf(ofertas), List.copyOf(mias),
+                    List.copyOf(disp), buf.readVarLong());
         }
 
         @Override
@@ -699,25 +694,26 @@ public class Red implements ModInitializer {
     }
 
     /**
-     * Poner o cancelar una orden.
+     * Publicar, comprar o retirar una oferta de objetos.
      *
-     * <p>⚠ EL PRECIO SI VIAJA AQUI, al contrario que en la tienda -- y es
-     * correcto: en la tienda el precio lo pone el servidor porque es SU
-     * catalogo; aqui lo pone el jugador, porque de eso va un mercado. Lo que el
-     * servidor no acepta es que ese precio se salte los topes ni que la orden
-     * se cree sin la contrapartida retenida.
+     * <p>⚠ EL PRECIO VIAJA —lo pone el vendedor, de eso va un mercado— pero al
+     * COMPRAR no: ahi solo viaja el identificador de la oferta y el precio sale
+     * de la fila. Si el precio de compra viniera del cliente, un cliente
+     * modificado compraria por 1 (P6).
      */
-    public record AccionMercado(String accion, String item, long precio,
-                                int cantidad, long orden) implements CustomPayload {
+    public record AccionMercado(String accion, long listado, String item,
+                                int cantidad, long precio, int horas)
+            implements CustomPayload {
         public static final Id<AccionMercado> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_mercado"));
         public static final PacketCodec<RegistryByteBuf, AccionMercado> CODEC =
                 PacketCodec.tuple(
                         PacketCodecs.STRING, AccionMercado::accion,
+                        PacketCodecs.VAR_LONG, AccionMercado::listado,
                         PacketCodecs.STRING, AccionMercado::item,
-                        PacketCodecs.VAR_LONG, AccionMercado::precio,
                         PacketCodecs.VAR_INT, AccionMercado::cantidad,
-                        PacketCodecs.VAR_LONG, AccionMercado::orden,
+                        PacketCodecs.VAR_LONG, AccionMercado::precio,
+                        PacketCodecs.VAR_INT, AccionMercado::horas,
                         AccionMercado::new);
 
         @Override
@@ -725,6 +721,7 @@ public class Red implements ModInitializer {
             return ID;
         }
     }
+
 
     /** «Dame el catalogo», al abrir la tienda. */
     public record PedirTienda() implements CustomPayload {
@@ -1559,111 +1556,17 @@ public class Red implements ModInitializer {
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirMercado.ID, (carga, ctx) ->
-                enviarMercado(ctx.player(), carga.item()));
+                enviarMercado(ctx.player(), carga));
 
         ServerPlayNetworking.registerGlobalReceiver(AccionMercado.ID, (carga, ctx) -> {
-            var jugador = ctx.player();
-            var servidor = jugador.getServer();
-            if (servidor == null) {
-                return;
+            switch (carga.accion()) {
+                case "vender" -> venderObjeto(ctx.player(), carga);
+                case "comprar" -> comprarObjeto(ctx.player(), carga);
+                case "retirar" -> retirarObjeto(ctx.player(), carga);
+                default -> { }
             }
-            var svc = LunaEternal.market();
-            if (svc == null) {
-                return;
-            }
-
-            // ⚠⚠ LA CUSTODIA DE LOS OBJETOS SE HACE AQUI Y EN EL HILO DEL
-            //    SERVIDOR, porque tocar un inventario desde el executor de E/S
-            //    es tocar el mundo desde fuera. Y va ANTES de crear la orden:
-            //    si la orden existiera y los objetos no estuvieran retenidos,
-            //    el mercado estaria vendiendo lo que no tiene -- que es el
-            //    vector de duplicacion numero uno de todos los GTS mal hechos.
-            String accion = carga.accion();
-            int sacados = 0;
-            net.minecraft.item.Item item = null;
-            if ("vender".equals(accion)) {
-                item = net.pokereport.luna.market.Inventarios.objeto(carga.item());
-                if (item == null) {
-                    jugador.sendMessage(net.minecraft.text.Text.literal(
-                            "\u00a7cEse objeto no existe."), true);
-                    return;
-                }
-                int piden = Math.max(1, Math.min(
-                        net.pokereport.luna.market.MarketService.MAX_CANTIDAD,
-                        carga.cantidad()));
-                if (net.pokereport.luna.market.Inventarios.cuantos(jugador, item) < piden) {
-                    jugador.sendMessage(net.minecraft.text.Text.literal(
-                            "\u00a7cNo tienes tantos."), true);
-                    return;
-                }
-                sacados = net.pokereport.luna.market.Inventarios.sacar(jugador, item, piden);
-                if (sacados <= 0) {
-                    jugador.sendMessage(net.minecraft.text.Text.literal(
-                            "\u00a7cNo se pudieron retirar los objetos."), true);
-                    return;
-                }
-            }
-
-            final int retenidos = sacados;
-            final net.minecraft.item.Item elItem = item;
-            LunaEternal.submit(() -> {
-                try {
-                    long id = LunaEternal.players()
-                            .resolve(jugador.getUuid(), jugador.getName().getString());
-                    net.pokereport.luna.market.MarketService.Resultado r;
-                    switch (accion) {
-                        case "comprar" -> r = svc.poner(id,
-                                net.pokereport.luna.market.MarketService.Lado.COMPRA,
-                                carga.item(), carga.precio(), carga.cantidad(),
-                                java.util.UUID.randomUUID().toString());
-                        case "vender" -> r = svc.poner(id,
-                                net.pokereport.luna.market.MarketService.Lado.VENTA,
-                                carga.item(), carga.precio(), retenidos,
-                                java.util.UUID.randomUUID().toString());
-                        case "cancelar" -> r = svc.cancelar(id, carga.orden());
-                        default -> r = null;
-                    }
-                    if (r == null) {
-                        return;
-                    }
-
-                    // ⚠⚠ SI LA ORDEN NO SALE, LOS OBJETOS VUELVEN. Es la unica
-                    //    parte de la custodia que no puede vivir en una
-                    //    transaccion de base de datos --el inventario no es una
-                    //    tabla-- asi que se deshace a mano. Sin esto, un rechazo
-                    //    por tope de ordenes se COME los objetos del jugador.
-                    if (!r.ok() && retenidos > 0 && elItem != null) {
-                        servidor.execute(() -> net.pokereport.luna.market.Inventarios
-                                .meter(jugador, elItem, retenidos));
-                    }
-
-                    final var res = r;
-                    servidor.execute(() -> jugador.sendMessage(
-                            net.minecraft.text.Text.literal(
-                                    (res.ok() ? "\u00a7a" : "\u00a7c") + res.mensaje()),
-                            true));
-
-                    // El saldo cambia en las tres acciones: comprar retiene,
-                    // vender cobra y cancelar devuelve.
-                    enviarSaldo(jugador);
-                    // ⚠⚠ Y SE AVISA A TODOS LOS AFECTADOS, no solo a quien actuo.
-                    //    Cuando tu orden se llena contra la mia, MI orden ha
-                    //    cambiado y mi dinero tambien. Es el bug de los clanes, y
-                    //    aqui es peor: alli se quedaba una etiqueta puesta; aqui
-                    //    veo ordenes que ya no existen e intento cancelarlas.
-                    refrescarMercadoA(servidor, res.afectados(), carga.item());
-
-                } catch (Exception e) {
-                    LunaEternal.LOG.warn("Fallo en la accion de mercado {}: {}",
-                            accion, e.toString());
-                    if (retenidos > 0 && elItem != null) {
-                        servidor.execute(() -> net.pokereport.luna.market.Inventarios
-                                .meter(jugador, elItem, retenidos));
-                    }
-                    enviarMercado(jugador, carga.item());
-                }
-            });
         });
+
 
         ServerPlayNetworking.registerGlobalReceiver(PedirTienda.ID, (carga, ctx) ->
                 ServerPlayNetworking.send(ctx.player(), componerTienda()));
@@ -2429,27 +2332,73 @@ public class Red implements ModInitializer {
     }
 
     /**
-     * Manda el estado del mercado a un jugador.
+     * Manda el escaparate de objetos a un jugador.
      *
-     * <p>⚠ Va por el executor de E/S: son cinco consultas. Y `tengo` se cuenta
-     * en el hilo del SERVIDOR antes de salir, porque leer un inventario desde
-     * otro hilo es leer el mundo desde fuera.
+     * <p>⚠⚠ LA MOCHILA SE LEE EN EL HILO DEL SERVIDOR y las consultas van por el
+     * executor de E/S. Leer un inventario desde otro hilo es leer el mundo desde
+     * fuera, y no falla ruidosamente: falla devolviendo la foto de un instante
+     * que no existió.
      */
     private static void enviarMercado(
-            net.minecraft.server.network.ServerPlayerEntity jugador, String item) {
-        var svc = LunaEternal.market();
+            net.minecraft.server.network.ServerPlayerEntity jugador,
+            PedirMercado filtro) {
+        var svc = LunaEternal.gts();
         var servidor = jugador.getServer();
         if (svc == null || servidor == null) {
             return;
         }
-        // Lo que lleva encima, contado AQUI y ya.
-        final String elItem = item == null ? "" : item;
-        var objeto = elItem.isEmpty()
-                ? null : net.pokereport.luna.market.Inventarios.objeto(elItem);
-        final int tengo = objeto == null
-                ? 0 : net.pokereport.luna.market.Inventarios.cuantos(jugador, objeto);
-        // Y lo que lleva de TODO, para poder ofrecerselo en la lista.
-        final List<String> mochila = new ArrayList<>();
+        final List<MioObj> mochila = mochilaVendible(jugador);
+        final String texto = filtro == null ? "" : filtro.texto();
+        final String orden = filtro == null ? "" : filtro.orden();
+
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                List<OfertaObj> ofertas = new ArrayList<>();
+                for (var o : svc.buscarObjetos(texto, orden, 120)) {
+                    ofertas.add(aOferta(o));
+                }
+                List<OfertaObj> mias = new ArrayList<>();
+                for (var o : svc.misObjetos(id)) {
+                    mias.add(aOferta(o));
+                }
+                long saldo = LunaEternal.economy().balance(id, Currency.POKEDOLLAR);
+                var carga = new EstadoMercado(List.copyOf(ofertas), List.copyOf(mias),
+                        mochila, saldo);
+                servidor.execute(() -> {
+                    if (!jugador.isRemoved()) {
+                        ServerPlayNetworking.send(jugador, carga);
+                    }
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo enviar el escaparate a {}: {}",
+                        jugador.getName().getString(), e.toString());
+            }
+        });
+    }
+
+    private static OfertaObj aOferta(net.pokereport.luna.gts.GtsService.Oferta o) {
+        return new OfertaObj(o.id(), o.vendedor() == null ? "?" : o.vendedor(),
+                o.itemId(), o.nombre(), o.cantidad(), o.precio(), o.expira());
+    }
+
+    /**
+     * Lo que el jugador puede poner a la venta, agrupado por objeto.
+     *
+     * <p>⚠ SOLO EL INVENTARIO —la barra rápida incluida, que son los nueve
+     * primeros huecos de {@code main}—, que es lo que pidió el usuario. Y solo
+     * lo CORRIENTE: un pico encantado no se describe con «identificador +
+     * cantidad», así que enseñarlo aquí prometería algo que la publicación no
+     * puede cumplir.
+     *
+     * <p>⚠ La mano secundaria hoy NO cuenta. No rompe la custodia —contar y
+     * sacar miran el mismo sitio— pero confunde.
+     */
+    private static List<MioObj> mochilaVendible(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var porItem = new java.util.LinkedHashMap<String, Integer>();
+        var nombres = new java.util.HashMap<String, String>();
         var inv = jugador.getInventory();
         for (int i = 0; i < inv.main.size(); i++) {
             var pila = inv.main.get(i);
@@ -2457,46 +2406,200 @@ public class Red implements ModInitializer {
                 continue;
             }
             var suyo = pila.getItem();
-            // ⚠ Solo lo CORRIENTE: un pico encantado no puede entrar en un libro
-            //   de ordenes, asi que tampoco tiene por que salir en la lista y
-            //   dar a entender que si.
             if (!net.pokereport.luna.market.Inventarios.corriente(pila, suyo)) {
                 continue;
             }
             String id = net.minecraft.registry.Registries.ITEM.getId(suyo).toString();
-            if (!mochila.contains(id)) {
-                mochila.add(id);
-            }
+            porItem.merge(id, pila.getCount(), Integer::sum);
+            nombres.putIfAbsent(id, pila.getName().getString());
         }
+        List<MioObj> salida = new ArrayList<>(porItem.size());
+        for (var e : porItem.entrySet()) {
+            salida.add(new MioObj(e.getKey(), nombres.get(e.getKey()), e.getValue()));
+        }
+        return List.copyOf(salida);
+    }
+
+    /**
+     * Publica objetos en el escaparate.
+     *
+     * <h2>⚠⚠ LOS OBJETOS SE RETIRAN ANTES DE PUBLICAR, y en el hilo del servidor</h2>
+     *
+     * Si la oferta existiera y los objetos siguieran en el inventario, el
+     * escaparate estaría vendiendo lo que su dueño todavía tiene — que es el
+     * vector de duplicación número uno de todos los GTS mal hechos.
+     *
+     * <h2>⚠⚠ Y SI LA PUBLICACIÓN NO SALE, LOS OBJETOS VUELVEN</h2>
+     *
+     * Es la única parte de la custodia que no puede vivir en una transacción
+     * —un inventario no es una tabla— así que se deshace a mano. Sin esto, un
+     * rechazo por no poder pagar la tasa <b>se come los objetos</b>.
+     */
+    private static void venderObjeto(
+            net.minecraft.server.network.ServerPlayerEntity jugador,
+            AccionMercado carga) {
+        var svc = LunaEternal.gts();
+        var servidor = jugador.getServer();
+        if (svc == null || servidor == null) {
+            return;
+        }
+        var item = net.pokereport.luna.market.Inventarios.objeto(carga.item());
+        if (item == null) {
+            aviso(jugador, "§cEse objeto no existe.");
+            return;
+        }
+        // ⚠ La cantidad SE ACOTA ANTES de tocar nada: llega del cliente, y un
+        //   número enorme desborda cualquier multiplicación que venga después.
+        int piden = Math.max(1, Math.min(2304, carga.cantidad()));
+        if (carga.precio() <= 0 || carga.precio() > 100_000_000L) {
+            aviso(jugador, "§cEse precio no vale.");
+            return;
+        }
+        if (net.pokereport.luna.market.Inventarios.cuantos(jugador, item) < piden) {
+            aviso(jugador, "§cNo tienes tantos.");
+            return;
+        }
+        final int sacados = net.pokereport.luna.market.Inventarios
+                .sacar(jugador, item, piden);
+        if (sacados <= 0) {
+            aviso(jugador, "§cNo se pudieron retirar los objetos.");
+            return;
+        }
+        final String nombre = new net.minecraft.item.ItemStack(item)
+                .getName().getString();
+        final net.minecraft.item.Item elItem = item;
 
         LunaEternal.submit(() -> {
+            boolean devolver = true;
             try {
                 long id = LunaEternal.players()
                         .resolve(jugador.getUuid(), jugador.getName().getString());
-                var carga = componerMercado(svc, id, elItem, tengo, mochila);
-                servidor.execute(() -> {
-                    if (!jugador.isRemoved()) {
-                        ServerPlayNetworking.send(jugador, carga);
-                    }
-                });
+                var r = svc.publicarObjeto(id, carga.item(), nombre, sacados,
+                        carga.precio(), carga.horas());
+                devolver = !r.ok();
+                servidor.execute(() -> jugador.sendMessage(
+                        net.minecraft.text.Text.literal(r.message()), true));
+                enviarSaldo(jugador);
             } catch (Exception e) {
-                LunaEternal.LOG.warn("No se pudo enviar el mercado a {}: {}",
+                LunaEternal.LOG.warn("No se pudo publicar el objeto de {}: {}",
                         jugador.getName().getString(), e.toString());
+            } finally {
+                if (devolver) {
+                    servidor.execute(() -> net.pokereport.luna.market.Inventarios
+                            .meter(jugador, elItem, sacados));
+                }
+                enviarMercado(jugador, PedirMercado.vacio());
             }
         });
     }
 
     /**
-     * Refresca a todos los afectados por un cruce.
+     * Compra una oferta entera.
      *
-     * <p>⚠⚠ Mismo patron que {@code refrescarA} de los clanes, y por el mismo
-     * motivo: <b>el estado no es de quien lo mira</b>. Un cruce cambia la orden
-     * y el dinero de OTRA persona, que no ha pulsado nada.
+     * <p>⚠ El precio NO viaja: viaja el identificador de la oferta y el precio
+     * sale de la fila, bloqueada. {@code GtsService.buy} ya hace el resto —
+     * dinero, impuesto y estado en una sola transacción.
      *
-     * <p>Se llama desde el hilo de E/S.
+     * <p>⚠⚠ LA ENTREGA VA DESPUÉS DEL COMMIT y en el hilo del servidor. Si la
+     * mochila está llena, {@code meter} lo suelta al suelo: se ve caer y se
+     * recoge. Perderlo en silencio sería cobrar por nada.
      */
+    private static void comprarObjeto(
+            net.minecraft.server.network.ServerPlayerEntity jugador,
+            AccionMercado carga) {
+        var svc = LunaEternal.gts();
+        var servidor = jugador.getServer();
+        if (svc == null || servidor == null) {
+            return;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                Long vendedor = svc.duenoDe(carga.listado());
+                var r = svc.buy(id, carga.listado());
+                servidor.execute(() -> {
+                    jugador.sendMessage(
+                            net.minecraft.text.Text.literal(r.message()), true);
+                    if (r.ok() && r.payload() != null) {
+                        entregarPila(jugador, r.payload());
+                    }
+                });
+                enviarSaldo(jugador);
+                enviarMercado(jugador, PedirMercado.vacio());
+                // ⚠⚠ Y AL VENDEDOR TAMBIÉN, que no ha pulsado nada: su oferta ha
+                //    desaparecido y su dinero ha subido. Es la lección de los
+                //    clanes — el estado no es de quien lo mira. Y el dueño se
+                //    pregunta ANTES de comprar: después la fila ya está vendida.
+                if (r.ok() && vendedor != null) {
+                    refrescarMercadoA(servidor, java.util.Set.of(vendedor));
+                }
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo comprar el objeto {}: {}",
+                        carga.listado(), e.toString());
+            }
+        });
+    }
+
+    /** Retira una oferta propia y devuelve los objetos. La tasa no vuelve. */
+    private static void retirarObjeto(
+            net.minecraft.server.network.ServerPlayerEntity jugador,
+            AccionMercado carga) {
+        var svc = LunaEternal.gts();
+        var servidor = jugador.getServer();
+        if (svc == null || servidor == null) {
+            return;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                var r = svc.cancel(id, carga.listado());
+                servidor.execute(() -> {
+                    jugador.sendMessage(
+                            net.minecraft.text.Text.literal(r.message()), true);
+                    if (r.ok() && r.payload() != null) {
+                        entregarPila(jugador, r.payload());
+                    }
+                });
+                enviarMercado(jugador, PedirMercado.vacio());
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo retirar la oferta {}: {}",
+                        carga.listado(), e.toString());
+            }
+        });
+    }
+
+    /**
+     * Devuelve al inventario lo que iba en el {@code payload} de un listado.
+     *
+     * <p>⚠ El formato lo escribe {@code publicarObjeto} y lo lee esto, y nadie
+     * más. Si lo escribiera uno y lo leyera otro con su propia idea del formato,
+     * la primera compra que no cuadrara se comería los objetos <b>sin dar
+     * ningún error</b>: el dinero ya habría cambiado de manos.
+     */
+    private static void entregarPila(
+            net.minecraft.server.network.ServerPlayerEntity jugador, byte[] datos) {
+        try {
+            String s = new String(datos, java.nio.charset.StandardCharsets.UTF_8);
+            int corte = s.indexOf((char) 0);
+            if (corte < 0) {
+                return;
+            }
+            var item = net.pokereport.luna.market.Inventarios
+                    .objeto(s.substring(0, corte));
+            int cantidad = Integer.parseInt(s.substring(corte + 1).trim());
+            if (item != null && cantidad > 0) {
+                net.pokereport.luna.market.Inventarios.meter(jugador, item, cantidad);
+            }
+        } catch (Exception e) {
+            LunaEternal.LOG.warn("Payload de listado ilegible: {}", e.toString());
+        }
+    }
+
+    /** Refresca el escaparate y el saldo de un puñado de jugadores. */
     private static void refrescarMercadoA(net.minecraft.server.MinecraftServer servidor,
-                                          java.util.Set<Long> afectados, String item) {
+                                          java.util.Set<Long> afectados) {
         if (afectados == null || afectados.isEmpty()) {
             return;
         }
@@ -2505,64 +2608,22 @@ public class Red implements ModInitializer {
                 long id = LunaEternal.players()
                         .resolve(otro.getUuid(), otro.getName().getString());
                 if (afectados.contains(id)) {
-                    // ⚠ A cada uno se le manda el objeto que EL estuviera
-                    //   mirando no se sabe, asi que se le manda este: es el que
-                    //   ha cambiado. Si estaba en otro, su pantalla lo pedira al
-                    //   cambiar de objeto -- y el saldo, que es lo que de verdad
-                    //   no puede quedarse viejo, va aparte.
-                    enviarMercado(otro, item);
+                    enviarMercado(otro, PedirMercado.vacio());
                     enviarSaldo(otro);
                 }
             } catch (Exception e) {
-                LunaEternal.LOG.debug("No se pudo refrescar el mercado de {}: {}",
+                LunaEternal.LOG.debug("No se pudo refrescar a {}: {}",
                         otro.getName().getString(), e.toString());
             }
         }
     }
 
-    /** Junta las consultas del mercado. Se llama desde el hilo de E/S. */
-    private static EstadoMercado componerMercado(
-            net.pokereport.luna.market.MarketService svc, long playerId,
-            String item, int tengo, List<String> mochila) throws Exception {
-
-        // El catalogo: lo que se negocia MAS lo que llevas encima.
-        var catalogo = new ArrayList<String>(svc.masNegociados(40));
-        for (String s : mochila) {
-            if (!catalogo.contains(s)) {
-                catalogo.add(s);
-            }
-        }
-
-        List<NivelMercado> compras = new ArrayList<>();
-        List<NivelMercado> ventas = new ArrayList<>();
-        List<TratoMercado> historial = new ArrayList<>();
-        long ultimo = 0;
-        if (!item.isEmpty()) {
-            for (var n : svc.libro(item,
-                    net.pokereport.luna.market.MarketService.Lado.COMPRA)) {
-                compras.add(new NivelMercado(n.precio(), n.unidades(), n.ordenes()));
-            }
-            for (var n : svc.libro(item,
-                    net.pokereport.luna.market.MarketService.Lado.VENTA)) {
-                ventas.add(new NivelMercado(n.precio(), n.unidades(), n.ordenes()));
-            }
-            for (var x : svc.historial(item, 20)) {
-                historial.add(new TratoMercado(x.precio(), x.qty(), x.cuando()));
-            }
-            ultimo = svc.ultimoPrecio(item);
-        }
-
-        List<OrdenMercado> mias = new ArrayList<>();
-        for (var o : svc.mias(playerId)) {
-            mias.add(new OrdenMercado(o.id(), o.lado().name(), o.itemId(),
-                    o.precio(), o.total(), o.lleno()));
-        }
-
-        long saldo = LunaEternal.economy().balance(playerId, Currency.POKEDOLLAR);
-        return new EstadoMercado(item, List.copyOf(catalogo), List.copyOf(compras),
-                List.copyOf(ventas), List.copyOf(mias), List.copyOf(historial),
-                ultimo, tengo, saldo);
+    private static void aviso(
+            net.minecraft.server.network.ServerPlayerEntity jugador, String texto) {
+        jugador.sendMessage(net.minecraft.text.Text.literal(texto), true);
     }
+
+
 
     /**
      * El catalogo de la tienda, tal y como lo tiene el servidor.

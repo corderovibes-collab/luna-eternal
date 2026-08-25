@@ -221,6 +221,7 @@ public final class GtsService {
         NIVEL_DESC("l.level DESC"),
         IVS_DESC("l.perfect_ivs DESC, l.iv_total DESC"),
         EXPIRA_ASC("l.expires_at ASC"),
+        EXPIRA_DESC("l.expires_at DESC"),
         NUEVO("l.listed_at DESC"),
         // ⚠ El chollo: lo que está más por debajo de su tasación. Es la
         //   ordenación que solo puede existir porque hay tasador -- ningún
@@ -665,6 +666,23 @@ public final class GtsService {
             }
         }
         return salida;
+    }
+
+    /**
+     * De quién es una oferta. {@code null} si no existe.
+     *
+     * <p>⚠ Se pregunta <b>antes</b> de comprar: después la fila ya está vendida
+     * y el vendedor ya no se puede avisar de que su oferta ha desaparecido.
+     */
+    public Long duenoDe(long listingId) throws SQLException {
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                 "SELECT seller_id FROM gts_listing WHERE listing_id = ?")) {
+            ps.setLong(1, listingId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : null;
+            }
+        }
     }
 
     private static Oferta leerOferta(ResultSet rs) throws SQLException {

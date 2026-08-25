@@ -1,5 +1,6 @@
 package net.pokereport.luna.client.pokepad;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -17,25 +18,44 @@ import net.pokereport.luna.client.EstadoCliente;
 import net.pokereport.luna.net.Red;
 
 /**
- * EL MERCADO: el libro de órdenes.
+ * EL ESCAPARATE DE OBJETOS.
  *
- * <h2>Lo que hay que entender de un vistazo</h2>
+ * <h2>⚠⚠ ESTO ERA UN LIBRO DE ÓRDENES Y YA NO LO ES</h2>
  *
- * Un libro tiene <b>dos lados empujando</b>. A la izquierda quien compra, a la
- * derecha quien vende, y arriba del todo de cada lado la <b>mejor oferta</b>. Si
- * las dos mejores se cruzan, ya se habrían ejecutado — así que lo que se ve
- * siempre es un hueco, y ese hueco <i>es</i> el precio.
+ * El libro —órdenes de compra y de venta cruzándose por precio— es lo correcto
+ * para un mercado con mucha gente. Con doce personas <b>no cruza nada</b>: pones
+ * una orden y se queda ahí hasta que alguien pase por casualidad. Y la pantalla
+ * que hacía falta para manejarlo tenía dos formas de hacer lo mismo —pestañas
+ * LIBRO/MIS ÓRDENES/HISTORIAL <i>y</i> botones COMPRAR/VENDER abajo—, que es lo
+ * que el usuario describió como <i>«opciones duplicadas, botones duplicados»</i>
+ * y <i>«se pierde uno comprando allí»</i>.
  *
- * <h2>⚠ El color dice el lado, no si es bueno</h2>
+ * <p>Un escaparate es peor en teoría y muchísimo mejor de usar: cada uno pone lo
+ * suyo con su precio y quien quiera lo compra de una. Y <b>es exactamente el
+ * mismo flujo que el GTS de Pokémon</b>, así que las dos mitades del mercado se
+ * comportan igual — que era la mitad de lo que costaba entenderlo.
  *
- * Verde compra, rojo vende, y punto. La tentación es pintar «barato» en verde,
- * y entonces el mismo precio sale de un color u otro según quién mire — que es
- * como se lee mal una fila y se pulsa la equivocada.
+ * <p>⚠ {@code MarketService} no se borra: sigue escrito y probado. Lo que cambia
+ * es por dónde entra el jugador.
+ *
+ * <h2>Tres modos, y solo uno a la vez</h2>
+ *
+ * <pre>
+ *   LISTA   lo que hay a la venta, con buscador
+ *   VENDER  tu mochila, para publicar una pila
+ *   MIAS    lo que has publicado tú, para retirarlo
+ * </pre>
+ *
+ * <h2>⚠ El cliente no decide nada</h2>
+ *
+ * Al comprar <b>no se manda el precio</b>: viaja el identificador de la oferta y
+ * el servidor cobra mirando su fila (P6).
  *
  * <h2>⚠⚠ ANTES DE TOCARLA, LEE {@code docs/ui/dibujado.md}</h2>
  *
- * Y la geometría ({@code recalcular}) es <b>copia literal</b> de
- * {@code CosmeticosScreen}, como en Clan, Tienda y Curar.
+ * La geometría es <b>copia literal</b> de {@code CosmeticosScreen}, y la
+ * disposición es la de {@code GtsScreen} a propósito: dos pantallas hermanas que
+ * se colocaran distinto serían dos pantallas que aprender.
  */
 public class MercadoScreen extends Screen {
 
@@ -50,14 +70,19 @@ public class MercadoScreen extends Screen {
     private static final int PANEL_X = 63, PANEL_Y = 70, PANEL_W = 315, PANEL_H = 692;
     private static final int PANT_X = 460, PANT_Y = 204, PANT_W = 801, PANT_H = 494;
     private static final int NAV_ALTO = 72;
-    private static final int MARGEN = 14, PESTANA_ALTO = 46;
+    private static final int MARGEN = 12;
 
-    /** Alto de una fila del catálogo de la izquierda. */
-    private static final int CAT_ALTO = 40;
+    private static final int FILA = 70;
+    private static final int BOT = 34, BOT_SEP = 8;
+    private static final int PIE = 34;
+    private static final int CONM_W = 100;
+
+    /** Dónde empieza la columna del vendedor. La usan la fila y la cabecera. */
+    private static final int COL_VENDEDOR = 320;
 
     private static final int FILA_FONDO = 0xFFBFCBE8;
     private static final int FILA_BORDE = 0xFF7C89B4;
-    private static final int FILA_ENCIMA = 0xFFFFF0DC;
+    private static final int FILA_SEL = 0xFFFFF0DC;
     private static final int BORDE_ENCIMA = 0xFFF35C0C;
     private static final int TEXTO_OSCURO = 0xFF16203A;
     private static final int TEXTO_SUAVE = 0xFF5A668C;
@@ -65,12 +90,12 @@ public class MercadoScreen extends Screen {
     private static final int SEPARADOR = 0xFF3C4250;
     private static final int ORO = 0xFFFFD65C;
     private static final int VERDE = 0xFF2E9E56;
-    private static final int VERDE_CLARO = 0xFF4FD07A;
     private static final int ROJO = 0xFFB03A2E;
-    private static final int ROJO_CLARO = 0xFFD8544A;
     private static final int APAGADO = 0xFF6E7899;
 
-    /** En qué mitad del mercado estamos. Ver `dibujarConmutador`. */
+    private enum Modo { LISTA, VENDER, MIAS }
+
+    /** Le dice al conmutador cuál de las dos mitades está puesta. */
     private static final boolean ES_POKEMON = false;
 
     private final Screen anterior;
@@ -78,16 +103,34 @@ public class MercadoScreen extends Screen {
     private float k;
     private int ancho, alto, x0, y0;
     private Red.EstadoMercado estado;
-    private String item = "";
-    private int pestana = 0;
-    private int paginaCat = 0;
-    private String aviso = "";
-
-    private TextFieldWidget campoPrecio;
-    private TextFieldWidget campoCantidad;
-
-    /** Para no dejar los botones encendidos mientras vuela el paquete. */
+    private Modo modo = Modo.LISTA;
+    private int elegido = -1;
+    private String elegidoItem = "";
+    private int pagina = 0;
     private long pulsado;
+    private String orden = "NUEVO";
+    private Red.OfertaObj confirmando;
+
+    private TextFieldWidget campoBusqueda;
+    private TextFieldWidget campoPrecio;
+
+    /**
+     * ⚠ Las tres del GTS, y a propósito las mismas. Un mercado donde los Pokémon
+     * duran una semana y los objetos tres días sería una regla más que recordar
+     * sin ninguna razón detrás.
+     */
+    private static final int[] DURACIONES = { 24, 48, 168 };
+    private int horas = 48;
+
+    /**
+     * Cuánto se publica.
+     *
+     * <p>⚠ Son CUATRO botones y no un campo de texto: teclear la cantidad es una
+     * forma más de equivocarse —y de mandar un número absurdo—, y lo que la
+     * gente publica de verdad es «una», «un puñado», «un mazo» o «todo».
+     */
+    private static final int[] CANTIDADES = { 1, 8, 64, -1 };
+    private int cantidad = 1;
 
     public MercadoScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.mercado"));
@@ -97,17 +140,17 @@ public class MercadoScreen extends Screen {
     @Override
     protected void init() {
         recalcular();
-        ClientPlayNetworking.send(new Red.PedirMercado(item));
-
-        campoPrecio = campo(PANT_X + 110, PANT_Y + PANT_H - 46, 130, 9);
-        campoCantidad = campo(PANT_X + 330, PANT_Y + PANT_H - 46, 90, 5);
+        campoBusqueda = campo(PANT_X + MARGEN, PANT_Y + MARGEN + BOT + 6,
+                PANT_W - 2 * MARGEN, 32);
+        campoPrecio = campo(PANEL_X + 30, PANEL_Y + 502, PANEL_W - 60, 9);
+        addSelectableChild(campoBusqueda);
         addSelectableChild(campoPrecio);
-        addSelectableChild(campoCantidad);
+        pedir();
     }
 
     private TextFieldWidget campo(int ax, int ay, int aw, int max) {
-        var c = new TextFieldWidget(textRenderer, px(ax), py(ay),
-                pl(aw), Math.max(12, pl(28)), Text.literal(""));
+        var c = new TextFieldWidget(textRenderer, px(ax), py(ay), pl(aw),
+                Math.max(12, pl(30)), Text.literal(""));
         c.setMaxLength(max);
         return c;
     }
@@ -156,35 +199,77 @@ public class MercadoScreen extends Screen {
 
     // ---- datos -------------------------------------------------------------
 
-    private List<String> catalogo() {
-        return estado == null ? List.of() : estado.catalogo();
+    private void pedir() {
+        ClientPlayNetworking.send(new Red.PedirMercado(texto(campoBusqueda), orden));
     }
 
-    private int catCaben() {
-        return (PANEL_H - NAV_ALTO - 150) / CAT_ALTO;
+    private String texto(TextFieldWidget c) {
+        return c == null ? "" : c.getText().trim();
     }
 
-    private int catPaginas() {
-        int n = catalogo().size();
-        return Math.max(1, (n + catCaben() - 1) / catCaben());
-    }
-
-    private ItemStack pila(String id) {
-        var i = Registries.ITEM.get(Identifier.tryParse(id));
-        var p = new ItemStack(i);
-        return p.isEmpty() ? new ItemStack(net.minecraft.item.Items.BARRIER) : p;
-    }
-
-    private String nombre(String id) {
-        return pila(id).getName().getString();
-    }
-
-    private long leerLong(TextFieldWidget campo) {
+    private long numeroLargo(TextFieldWidget c) {
         try {
-            return Math.max(0, Long.parseLong(campo.getText().trim()));
+            String s = texto(c);
+            return s.isEmpty() ? 0 : Math.max(0, Long.parseLong(s));
         } catch (NumberFormatException e) {
             return 0;
         }
+    }
+
+    private List<Red.OfertaObj> lista() {
+        if (estado == null) {
+            return List.of();
+        }
+        return modo == Modo.MIAS ? estado.mias() : estado.ofertas();
+    }
+
+    /**
+     * Cuántas filas caben.
+     *
+     * <p>⚠⚠ SE CALCULA DE {@code listaY()}. Escribirlo a mano es lo que hizo que
+     * en el GTS se dibujara una fila encima de la paginación: la lista bajó y la
+     * fórmula se quedó contando desde donde estaba antes, <b>sin dar ningún
+     * error</b>.
+     */
+    private int filasCaben() {
+        int hueco = (PANT_Y + PANT_H - MARGEN - PIE) - (listaY() + 18);
+        return Math.max(1, hueco / FILA);
+    }
+
+    private int cuantos() {
+        if (estado == null) {
+            return 0;
+        }
+        return modo == Modo.VENDER ? estado.disponibles().size() : lista().size();
+    }
+
+    private int paginas() {
+        return Math.max(1, (cuantos() + filasCaben() - 1) / filasCaben());
+    }
+
+    private Red.OfertaObj seleccionada() {
+        var l = lista();
+        return elegido >= 0 && elegido < l.size() ? l.get(elegido) : null;
+    }
+
+    private Red.MioObj mioSeleccionado() {
+        if (estado == null) {
+            return null;
+        }
+        for (var m : estado.disponibles()) {
+            if (m.item().equals(elegidoItem)) {
+                return m;
+            }
+        }
+        return null;
+    }
+
+    /** Cuántas unidades se van a publicar de verdad. */
+    private int cantidadReal(Red.MioObj m) {
+        if (m == null) {
+            return 0;
+        }
+        return cantidad < 0 ? m.cantidad() : Math.min(cantidad, m.cantidad());
     }
 
     // ---- dibujado ----------------------------------------------------------
@@ -193,36 +278,39 @@ public class MercadoScreen extends Screen {
     public void render(DrawContext ctx, int rx, int ry, float delta) {
         recalcular();
         renderBackground(ctx, rx, ry, delta);
-
         var nuevo = EstadoCliente.mercado();
         if (nuevo != null && nuevo != estado) {
             estado = nuevo;
             pulsado = 0;
-            if (item.isEmpty() && !estado.catalogo().isEmpty()) {
-                // Se elige el primero solo: una pantalla que abre sin nada
-                // seleccionado obliga a un clic para ver que esto hace algo.
-                item = estado.catalogo().get(0);
-                ClientPlayNetworking.send(new Red.PedirMercado(item));
+            if (elegido >= lista().size()) {
+                elegido = -1;
             }
         }
 
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
         dibujarNavegacion(ctx, rx, ry);
-        dibujarCatalogo(ctx, rx, ry, false);
-        dibujarPestanas(ctx, rx, ry);
-        switch (pestana) {
-            case 1 -> dibujarMias(ctx, rx, ry);
-            case 2 -> dibujarHistorial(ctx);
-            default -> dibujarLibro(ctx, rx, ry);
+        dibujarPanel(ctx, rx, ry);
+        dibujarBarra(ctx, rx, ry);
+        if (modo == Modo.VENDER) {
+            dibujarMochila(ctx, rx, ry, false);
+        } else {
+            dibujarLista(ctx, rx, ry, false);
         }
 
-        // ⚠ DOS PASADAS: todo el 2D, luego `ctx.draw()`, y solo entonces los
-        //   objetos 3D. Mezclarlos hace que el 2D se pinte ENCIMA de los
-        //   modelos, porque van por lotes distintos. Regla 3 de dibujado.md.
+        // ⚠ DOS PASADAS: todo el 2D, `ctx.draw()`, y solo entonces los objetos.
+        //   `drawItem` va por su propio lote y NO respeta el orden de la
+        //   interfaz: mezclado, el 2D se pinta encima de los iconos. Regla 3 de
+        //   dibujado.md, la misma que el 3D del GTS.
         ctx.draw();
-        dibujarCatalogo(ctx, rx, ry, true);
-        if (!item.isEmpty()) {
-            objeto(ctx, pila(item), PANT_X + MARGEN, PANT_Y + MARGEN + 4, 26);
+        if (confirmando == null) {
+            if (modo == Modo.VENDER) {
+                dibujarMochila(ctx, rx, ry, true);
+            } else {
+                dibujarLista(ctx, rx, ry, true);
+            }
+            dibujarRetrato(ctx);
+        } else {
+            dibujarConfirmacion(ctx, rx, ry);
         }
     }
 
@@ -244,323 +332,308 @@ public class MercadoScreen extends Screen {
         }
     }
 
-    private int catY(int i) {
-        return PANEL_Y + NAV_ALTO + 34 + i * CAT_ALTO;
-    }
+    // ---- el panel de la izquierda -----------------------------------------
+
+    private static final int RET_X = PANEL_X + 24, RET_Y = PANEL_Y + NAV_ALTO + 4;
+    private static final int RET_W = PANEL_W - 48;
 
     /**
-     * La lista de la izquierda.
-     *
-     * <p>⚠ Son los objetos <b>que se negocian ahora</b> más <b>los que llevas
-     * encima</b>. Sin lo segundo, un mercado vacío no tendría nada en que pulsar
-     * — y el primero que quisiera vender algo no encontraría cómo.
+     * ⚠ El retrato mide distinto al publicar. Publicar necesita cantidad, precio
+     * y duración debajo, y con el retrato grande <b>los botones de duración se
+     * quedaban enteros por debajo del de PUBLICAR</b>: invisibles y sin dar
+     * ningún error. Es el mismo fallo que ya salió en el GTS.
      */
-    private void dibujarCatalogo(DrawContext ctx, int rx, int ry, boolean objetos) {
-        var cat = catalogo();
-        if (!objetos) {
-            texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.objetos"),
-                    PANEL_X + PANEL_W / 2, PANEL_Y + NAV_ALTO + 8, 17,
+    private int retAlto() {
+        return modo == Modo.VENDER ? 190 : 220;
+    }
+
+    private ItemStack pila(String id) {
+        // ⚠ Un identificador que no exista devuelve AIRE, y `drawItem` con aire
+        //   no dibuja NADA: ni hueco, ni cubo morado. Se sustituye por algo
+        //   visible — un artículo invisible parecería que el mercado está roto.
+        var item = Registries.ITEM.get(Identifier.tryParse(id));
+        var p = new ItemStack(item);
+        return p.isEmpty() ? new ItemStack(net.minecraft.item.Items.BARRIER) : p;
+    }
+
+    private String itemElegido() {
+        if (modo == Modo.VENDER) {
+            var m = mioSeleccionado();
+            return m == null ? null : m.item();
+        }
+        var o = seleccionada();
+        return o == null ? null : o.item();
+    }
+
+    /** El objeto, grande, en su marco. Va en la segunda pasada. */
+    private void dibujarRetrato(DrawContext ctx) {
+        String id = itemElegido();
+        if (id == null) {
+            return;
+        }
+        int lado = Math.min(RET_W, retAlto()) - 60;
+        objeto(ctx, pila(id), RET_X + (RET_W - lado) / 2,
+                RET_Y + (retAlto() - lado) / 2, lado);
+    }
+
+    private void dibujarPanel(DrawContext ctx, int rx, int ry) {
+        // El marco del retrato siempre, tenga algo dentro o no: un hueco vacío
+        // dice «aquí va algo» y una nada dice «esta pantalla está a medias».
+        ctx.fill(px(RET_X), py(RET_Y), px(RET_X + RET_W), py(RET_Y + retAlto()),
+                0xFF12161F);
+        marco(ctx, px(RET_X), py(RET_Y), pl(RET_W), pl(retAlto()),
+                0xFF39415C, Math.max(1, pl(2)));
+
+        switch (modo) {
+            case VENDER -> panelVender(ctx, rx, ry);
+            case MIAS -> panelMia(ctx, rx, ry);
+            default -> panelComprar(ctx, rx, ry);
+        }
+    }
+
+    private void aviso(DrawContext ctx, String clave) {
+        int y = RET_Y + retAlto() + 40;
+        for (String linea : partir(Text.translatable(clave).getString(), RET_W, 15)) {
+            texto(ctx, Text.literal(linea), PANEL_X + PANEL_W / 2, y, 15,
                     TEXTO_SUAVE, true, false);
+            y += 20;
         }
-        int desde = paginaCat * catCaben();
-        for (int n = 0; n < catCaben(); n++) {
-            int i = desde + n;
-            if (i >= cat.size()) {
-                break;
-            }
-            String id = cat.get(i);
-            int y = catY(n);
-            int ax = PANEL_X + 16, aw = PANEL_W - 32;
+    }
 
-            if (objetos) {
-                objeto(ctx, pila(id), ax + 6, y + 6, 22);
-                continue;
-            }
-            boolean sel = id.equals(item);
-            boolean encima = dentro(rx, ry, px(ax), py(y), pl(aw), pl(CAT_ALTO - 4));
-            ctx.fill(px(ax), py(y), px(ax + aw), py(y + CAT_ALTO - 4),
-                    sel ? FILA_ENCIMA : (encima ? 0xFFD3DCF2 : FILA_FONDO));
-            marco(ctx, px(ax), py(y), pl(aw), pl(CAT_ALTO - 4),
-                    sel ? BORDE_ENCIMA : FILA_BORDE, Math.max(1, pl(sel ? 3 : 2)));
-            int alto = 17;
-            String n2 = nombre(id);
-            while (alto > 10 && anchoArte(n2, alto) > aw - 46) {
-                alto--;
-            }
-            texto(ctx, Text.literal(n2), ax + 36, y + (CAT_ALTO - 4 - alto) / 2 - 1,
-                    alto, TEXTO_OSCURO, false, true);
-        }
-        if (objetos) {
+    private void panelComprar(DrawContext ctx, int rx, int ry) {
+        var o = seleccionada();
+        if (o == null) {
+            aviso(ctx, "pokepad.lunaeternal.gts.elige");
             return;
         }
+        int y = RET_Y + retAlto() + 12;
+        y = tituloOferta(ctx, o, y);
 
-        // Paginación del catálogo
-        if (catPaginas() > 1) {
-            int y = catY(catCaben()) + 2;
-            botonPeq(ctx, rx, ry, PANEL_X + 16, y, 60, 26, Text.literal("<"),
-                    paginaCat > 0);
-            texto(ctx, Text.literal((paginaCat + 1) + " / " + catPaginas()),
-                    PANEL_X + PANEL_W / 2, y + 5, 16, TEXTO_SUAVE, true, false);
-            botonPeq(ctx, rx, ry, PANEL_X + PANEL_W - 16 - 60, y, 60, 26,
-                    Text.literal(">"), paginaCat < catPaginas() - 1);
-        }
-
-        // El saldo, abajo. Es lo que decide si puedes poner una compra.
-        int sy = PANEL_Y + PANEL_H - 92;
-        separador(ctx, sy);
-        texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.tu_plata"),
-                PANEL_X + PANEL_W / 2, sy + 14, 15, TEXTO_SUAVE, true, false);
-        texto(ctx, Text.literal(estado == null ? "—"
-                        : String.format("%,d", estado.saldo())),
-                PANEL_X + PANEL_W / 2, sy + 34, 28, 0xFFFFFFFF, true, false);
-    }
-
-    private void dibujarPestanas(DrawContext ctx, int rx, int ry) {
-        dibujarConmutador(ctx, rx, ry);
-        String[] ids = { "libro", "mias", "historial" };
-        int aw = (PANT_W - 2 * MARGEN) / 3;
-        for (int i = 0; i < ids.length; i++) {
-            int ax = PANT_X + MARGEN + i * aw;
-            boolean activa = i == pestana;
-            boolean encima = dentro(rx, ry, px(ax), py(PANT_Y + MARGEN + 34),
-                    pl(aw - 6), pl(PESTANA_ALTO));
-            ctx.fill(px(ax), py(PANT_Y + MARGEN + 34), px(ax + aw - 6),
-                    py(PANT_Y + MARGEN + 34 + PESTANA_ALTO),
-                    activa ? FILA_ENCIMA : (encima ? 0xFFD3DCF2 : FILA_FONDO));
-            marco(ctx, px(ax), py(PANT_Y + MARGEN + 34), pl(aw - 6), pl(PESTANA_ALTO),
-                    activa ? BORDE_ENCIMA : FILA_BORDE, Math.max(1, pl(activa ? 3 : 2)));
-            texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.tab." + ids[i]),
-                    ax + (aw - 6) / 2, PANT_Y + MARGEN + 34 + 14, 20,
-                    TEXTO_OSCURO, true, false);
-        }
-
-        // La cabecera del objeto: nombre y último precio.
-        if (!item.isEmpty()) {
-            texto(ctx, Text.literal(nombre(item)), PANT_X + MARGEN + 34,
-                    PANT_Y + MARGEN + 2, 22, TEXTO_OSCURO, false, true);
-            long ultimo = estado == null ? 0 : estado.ultimoPrecio();
-            textoDer(ctx, ultimo > 0
-                            ? Text.translatable("pokepad.lunaeternal.mercado.ultimo",
-                                    String.format("%,d", ultimo))
-                            : Text.translatable("pokepad.lunaeternal.mercado.sin_precio"),
-                    PANT_X + PANT_W - MARGEN - 4, PANT_Y + MARGEN + 6, 17,
-                    ultimo > 0 ? ORO : TEXTO_SUAVE, true);
-        }
-    }
-
-    private int libroY() {
-        return PANT_Y + MARGEN + 34 + PESTANA_ALTO + 10;
-    }
-
-    private int filasLibro() {
-        return (PANT_Y + PANT_H - 66 - libroY()) / 24;
-    }
-
-    /** Las dos caras del libro, lado a lado. */
-    private void dibujarLibro(DrawContext ctx, int rx, int ry) {
-        if (estado == null) {
-            texto(ctx, Text.translatable("pokepad.lunaeternal.cargando"),
-                    PANT_X + PANT_W / 2, PANT_Y + PANT_H / 2, 22, TEXTO_SUAVE, true, false);
-            return;
-        }
-        int mitad = (PANT_W - 2 * MARGEN - 14) / 2;
-        int y = libroY();
-
-        texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.compran"),
-                PANT_X + MARGEN + mitad / 2, y, 18, VERDE, true, false);
-        texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.venden"),
-                PANT_X + MARGEN + 14 + mitad + mitad / 2, y, 18, ROJO, true, false);
+        separador(ctx, y);
+        y += 14;
+        texto(ctx, Text.literal(String.format("%,d", o.precio())),
+                PANEL_X + PANEL_W / 2, y, 34, ORO, true, true);
+        y += 42;
+        texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.por_unidad",
+                        String.format("%,d", o.porUnidad())),
+                PANEL_X + PANEL_W / 2, y, 14, TEXTO_SUAVE, true, false);
+        y += 26;
+        separador(ctx, y);
+        y += 12;
+        fila(ctx, Text.translatable("pokepad.lunaeternal.gts.f_vendedor"),
+                Text.literal(o.vendedor()), y);
         y += 22;
+        fila(ctx, Text.translatable("pokepad.lunaeternal.gts.col_expira"),
+                Text.literal(queda(o.expira())), y);
 
-        dibujarLado(ctx, estado.compras(), PANT_X + MARGEN, mitad, y, VERDE);
-        dibujarLado(ctx, estado.ventas(), PANT_X + MARGEN + 14 + mitad, mitad, y, ROJO);
-
-        dibujarFormulario(ctx, rx, ry);
+        long saldo = estado == null ? 0 : estado.saldo();
+        boolean puede = saldo >= o.precio() && !esperando();
+        boton(ctx, rx, ry, PANEL_X + 30, PANEL_Y + PANEL_H - 72, PANEL_W - 60, 56,
+                Text.translatable("pokepad.lunaeternal.gts.comprar"), puede, VERDE);
     }
 
-    private void dibujarLado(DrawContext ctx, List<Red.NivelMercado> niveles,
-                             int ax, int aw, int y0f, int color) {
-        if (niveles.isEmpty()) {
-            texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.vacio"),
-                    ax + aw / 2, y0f + 20, 16, TEXTO_SUAVE, true, false);
+    private void panelMia(DrawContext ctx, int rx, int ry) {
+        var o = seleccionada();
+        if (o == null) {
+            aviso(ctx, "pokepad.lunaeternal.gts.elige_mia");
             return;
         }
-        int y = y0f;
-        for (int i = 0; i < niveles.size() && i < filasLibro(); i++) {
-            var n = niveles.get(i);
-            // La primera fila es la MEJOR oferta de ese lado: se resalta, porque
-            // es contra la que se va a ejecutar quien llegue.
-            if (i == 0) {
-                ctx.fill(px(ax), py(y - 2), px(ax + aw), py(y + 20), 0x33FFFFFF);
-            }
-            texto(ctx, Text.literal(String.format("%,d", n.precio())),
-                    ax + 8, y, 18, color, false, true);
-            texto(ctx, Text.literal("x" + n.unidades()), ax + aw - 110, y, 17,
-                    TEXTO_OSCURO, false, true);
-            texto(ctx, Text.literal("(" + n.ordenes() + ")"), ax + aw - 34, y, 15,
-                    TEXTO_SUAVE, false, true);
-            y += 24;
+        int y = RET_Y + retAlto() + 12;
+        y = tituloOferta(ctx, o, y);
+
+        separador(ctx, y);
+        y += 14;
+        texto(ctx, Text.literal(String.format("%,d", o.precio())),
+                PANEL_X + PANEL_W / 2, y, 34, ORO, true, true);
+        y += 42;
+        texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.por_unidad",
+                        String.format("%,d", o.porUnidad())),
+                PANEL_X + PANEL_W / 2, y, 14, TEXTO_SUAVE, true, false);
+        y += 26;
+        separador(ctx, y);
+        y += 12;
+        fila(ctx, Text.translatable("pokepad.lunaeternal.gts.col_expira"),
+                Text.literal(queda(o.expira())), y);
+        y += 22;
+        // ⚠ Se dice ANTES de pulsar: la tasa no vuelve. Un jugador que retire
+        //   creyendo que recupera todo y no lo haga, no vuelve a publicar.
+        for (String linea : partir(
+                Text.translatable("pokepad.lunaeternal.mercado.tasa_perdida").getString(),
+                RET_W, 13)) {
+            texto(ctx, Text.literal(linea), PANEL_X + PANEL_W / 2, y, 13,
+                    TEXTO_SUAVE, true, false);
+            y += 17;
         }
+
+        boton(ctx, rx, ry, PANEL_X + 30, PANEL_Y + PANEL_H - 72, PANEL_W - 60, 56,
+                Text.translatable("pokepad.lunaeternal.gts.retirar"),
+                !esperando(), ROJO);
     }
 
-    /** Precio, cantidad y los dos botones. */
-    private void dibujarFormulario(DrawContext ctx, int rx, int ry) {
-        int y = PANT_Y + PANT_H - 52;
-        separadorPantalla(ctx, y - 10);
+    /** Nombre y cantidad, que es lo mismo en los tres modos. */
+    private int tituloOferta(DrawContext ctx, Red.OfertaObj o, int y) {
+        for (Text linea : partirLim(o.nombre(), RET_W, 24, 2)) {
+            texto(ctx, linea, PANEL_X + PANEL_W / 2, y, 24,
+                    0xFFFFFFFF, true, false);
+            y += 28;
+        }
+        texto(ctx, Text.literal("x" + o.cantidad()), PANEL_X + PANEL_W / 2, y, 16,
+                TEXTO_SUAVE, true, false);
+        return y + 26;
+    }
 
-        texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.precio"),
-                PANT_X + MARGEN, y + 8, 16, TEXTO_SUAVE, false, true);
-        campoPrecio.render(ctx, rx, ry, 0);
+    private void panelVender(DrawContext ctx, int rx, int ry) {
+        var m = mioSeleccionado();
+        if (m == null) {
+            aviso(ctx, "pokepad.lunaeternal.mercado.elige_tuyo");
+            return;
+        }
+        int y = RET_Y + retAlto() + 8;
+        // ⚠ DOS líneas como mucho: debajo van cantidad, precio y duración en
+        //   posiciones fijas, así que un nombre de cuatro líneas se metería
+        //   dentro de ellas.
+        for (Text linea : partirLim(m.nombre(), RET_W, 22, 2)) {
+            texto(ctx, linea, PANEL_X + PANEL_W / 2, y, 22,
+                    0xFFFFFFFF, true, false);
+            y += 26;
+        }
+        texto(ctx, Text.translatable("pokepad.lunaeternal.tienda.tienes", m.cantidad()),
+                PANEL_X + PANEL_W / 2, y, 14, TEXTO_SUAVE, true, false);
+
+        // --- cuántas
         texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.cantidad"),
-                PANT_X + 254, y + 8, 16, TEXTO_SUAVE, false, true);
-        campoCantidad.render(ctx, rx, ry, 0);
-
-        long precio = leerLong(campoPrecio);
-        long cant = leerLong(campoCantidad);
-        long total = precio * cant;
-        boolean vale = precio > 0 && cant > 0 && !item.isEmpty() && !esperando();
-
-        // ⚠ El total se enseña ANTES de pulsar. Es la única cifra que importa y
-        //   la única que el jugador no calcula de cabeza: 37 x 1.240 no se hace
-        //   mentalmente, y equivocarse cuesta dinero de verdad.
-        boolean llega = estado == null || total <= estado.saldo();
-        texto(ctx, total > 0
-                        ? Text.translatable("pokepad.lunaeternal.mercado.total",
-                                String.format("%,d", total))
-                        : Text.literal(""),
-                PANT_X + 440, y + 8, 16, llega ? TEXTO_SUAVE : ROJO, false, true);
-
-        botonPeq(ctx, rx, ry, PANT_X + PANT_W - MARGEN - 300, y, 140, 34,
-                Text.translatable("pokepad.lunaeternal.mercado.comprar"),
-                vale && llega);
-        int tengo = estado == null ? 0 : estado.tengo();
-        botonPeq(ctx, rx, ry, PANT_X + PANT_W - MARGEN - 148, y, 140, 34,
-                Text.translatable("pokepad.lunaeternal.mercado.vender"),
-                vale && tengo >= cant);
-        if (tengo > 0) {
-            textoDer(ctx, Text.translatable("pokepad.lunaeternal.mercado.tienes", tengo),
-                    PANT_X + PANT_W - MARGEN - 8, y - 14, 14, TEXTO_SUAVE, false);
+                PANEL_X + 30, PANEL_Y + 404, 13, TEXTO_SUAVE, false, false);
+        int anchoBot = (PANEL_W - 60 - 3 * 6) / 4;
+        for (int i = 0; i < CANTIDADES.length; i++) {
+            int bx = PANEL_X + 30 + i * (anchoBot + 6);
+            boolean vale = CANTIDADES[i] < 0 || CANTIDADES[i] <= m.cantidad();
+            botonPeq(ctx, rx, ry, bx, PANEL_Y + 420, anchoBot, 32,
+                    CANTIDADES[i] < 0
+                            ? Text.translatable("pokepad.lunaeternal.mercado.todo")
+                            : Text.literal("x" + CANTIDADES[i]),
+                    vale, cantidad == CANTIDADES[i]);
         }
-        if (!aviso.isEmpty()) {
-            texto(ctx, Text.literal(aviso), PANT_X + MARGEN, y - 26, 15, ROJO,
-                    false, true);
+        texto(ctx, Text.literal("x" + cantidadReal(m)), PANEL_X + PANEL_W / 2,
+                PANEL_Y + 460, 22, 0xFFFFFFFF, true, true);
+
+        // --- precio
+        texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.precio_total"),
+                PANEL_X + 30, PANEL_Y + 486, 13, TEXTO_SUAVE, false, false);
+        campoPrecio.render(ctx, rx, ry, 0);
+
+        long precio = numeroLargo(campoPrecio);
+        int cuantas = Math.max(1, cantidadReal(m));
+        if (precio > 0) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.por_unidad",
+                            String.format("%,d", precio / cuantas)),
+                    PANEL_X + 30, PANEL_Y + 540, 13, TEXTO_SUAVE, false, false);
         }
+
+        // --- duración
+        texto(ctx, Text.translatable("pokepad.lunaeternal.gts.duracion"),
+                PANEL_X + 30, PANEL_Y + 562, 13, TEXTO_SUAVE, false, false);
+        int anchoDur = (PANEL_W - 60 - 2 * 6) / 3;
+        for (int i = 0; i < DURACIONES.length; i++) {
+            int bx = PANEL_X + 30 + i * (anchoDur + 6);
+            botonPeq(ctx, rx, ry, bx, PANEL_Y + 578, anchoDur, 32,
+                    Text.translatable("pokepad.lunaeternal.gts.dur_" + DURACIONES[i]),
+                    true, horas == DURACIONES[i]);
+        }
+
+        boolean puede = precio > 0 && cantidadReal(m) > 0 && !esperando();
+        boton(ctx, rx, ry, PANEL_X + 30, PANEL_Y + PANEL_H - 72, PANEL_W - 60, 56,
+                Text.translatable("pokepad.lunaeternal.gts.publicar"), puede, VERDE);
     }
 
-    /** Mis órdenes vivas, con su botón de cancelar. */
-    private void dibujarMias(DrawContext ctx, int rx, int ry) {
-        if (estado == null || estado.mias().isEmpty()) {
-            texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.sin_ordenes"),
-                    PANT_X + PANT_W / 2, PANT_Y + PANT_H / 2, 20, TEXTO_SUAVE, true, false);
-            return;
-        }
-        int y = libroY();
-        int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
-        for (int i = 0; i < estado.mias().size() && i < filasLibro(); i++) {
-            var o = estado.mias().get(i);
-            boolean compra = "COMPRA".equals(o.lado());
-            ctx.fill(px(ax), py(y), px(ax + aw), py(y + 32), FILA_FONDO);
-            marco(ctx, px(ax), py(y), pl(aw), pl(32), FILA_BORDE, Math.max(1, pl(2)));
-
-            texto(ctx, Text.translatable(compra
-                            ? "pokepad.lunaeternal.mercado.compra"
-                            : "pokepad.lunaeternal.mercado.venta"),
-                    ax + 8, y + 8, 16, compra ? VERDE : ROJO, false, true);
-            texto(ctx, Text.literal(nombre(o.item())), ax + 100, y + 8, 17,
-                    TEXTO_OSCURO, false, true);
-            texto(ctx, Text.literal(String.format("%,d", o.precio())),
-                    ax + 370, y + 8, 17, TEXTO_OSCURO, false, true);
-            // ⚠ Se enseña «servidas / pedidas» y no «quedan». Cuánto llevas
-            //   vendido de lo que pusiste es lo que dice si tu precio es
-            //   realista, y es justo lo que se pierde si solo se enseña el resto.
-            texto(ctx, Text.literal(o.lleno() + " / " + o.total()),
-                    ax + 500, y + 8, 17, TEXTO_SUAVE, false, true);
-            botonPeq(ctx, rx, ry, ax + aw - 130, y + 3, 122, 26,
-                    Text.translatable("pokepad.lunaeternal.mercado.cancelar"), true);
-            y += 36;
-        }
+    private void fila(DrawContext ctx, Text etiqueta, Text valor, int y) {
+        texto(ctx, etiqueta, PANEL_X + 30, y, 14, TEXTO_SUAVE, false, false);
+        textoDer(ctx, valor, PANEL_X + PANEL_W - 30, y, 14, 0xFFE8EDF8, false);
     }
 
-    private void dibujarHistorial(DrawContext ctx) {
-        if (estado == null || estado.historial().isEmpty()) {
-            texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.sin_historial"),
-                    PANT_X + PANT_W / 2, PANT_Y + PANT_H / 2, 20, TEXTO_SUAVE, true, false);
-            return;
-        }
-        var h = estado.historial();
-        int y = libroY();
-        int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
+    // ---- la barra de arriba ------------------------------------------------
 
-        // Una barra por operación, escalada al precio máximo del tramo. Es un
-        // gráfico pobre y dice lo único que hace falta: si sube o si baja.
-        long max = 1;
-        for (var x : h) {
-            max = Math.max(max, x.precio());
+    private record Boton(String id, String etiqueta) {}
+
+    /**
+     * ⚠ CUATRO Y NO SEIS. El GTS tiene filtros y chollos porque un Pokémon tiene
+     * IVs, naturaleza y una tasación; una pila de veinte piedras <b>no tiene
+     * nada que filtrar</b>. Copiar los seis dejaría dos botones que no hacen
+     * nada, que es justo de lo que se quejó el usuario.
+     */
+    private static final Boton[] BARRA = {
+        new Boton("buscar", "pokepad.lunaeternal.gts.b_buscar"),
+        new Boton("refrescar", "pokepad.lunaeternal.gts.b_refrescar"),
+        new Boton("vender", "pokepad.lunaeternal.mercado.b_vender"),
+        new Boton("mias", "pokepad.lunaeternal.gts.b_mias"),
+    };
+
+    private int botonX(int i) {
+        int total = BARRA.length * BOT + (BARRA.length - 1) * BOT_SEP;
+        return PANT_X + PANT_W - MARGEN - total + i * (BOT + BOT_SEP);
+    }
+
+    private void dibujarBarra(DrawContext ctx, int rx, int ry) {
+        dibujarConmutador(ctx, rx, ry);
+        campoBusqueda.render(ctx, rx, ry, 0);
+        if (texto(campoBusqueda).isEmpty()) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.buscar_pista"),
+                    PANT_X + MARGEN + 8, PANT_Y + MARGEN + BOT + 14, 14,
+                    0xFF8892AC, false, false);
         }
-        for (int i = 0; i < h.size() && i < filasLibro(); i++) {
-            var x = h.get(i);
-            if (i % 2 == 0) {
-                ctx.fill(px(ax), py(y - 2), px(ax + aw), py(y + 20), 0x22FFFFFF);
+
+        String encimaDe = null;
+        for (int i = 0; i < BARRA.length; i++) {
+            var b = BARRA[i];
+            int ax = botonX(i), ay = PANT_Y + MARGEN;
+            boolean marcado = switch (b.id()) {
+                case "vender" -> modo == Modo.VENDER;
+                case "mias" -> modo == Modo.MIAS;
+                default -> false;
+            };
+            boolean encima = dentro(rx, ry, px(ax), py(ay), pl(BOT), pl(BOT));
+            if (encima) {
+                encimaDe = b.etiqueta();
             }
-            int barra = (int) Math.max(2, (aw - 300) * x.precio() / max);
-            ctx.fill(px(ax + 200), py(y + 4), px(ax + 200 + barra), py(y + 14), 0x66F35C0C);
-            texto(ctx, Text.literal(String.format("%,d", x.precio())),
-                    ax + 8, y, 17, TEXTO_OSCURO, false, true);
-            texto(ctx, Text.literal("x" + x.qty()), ax + 120, y, 16, TEXTO_SUAVE,
-                    false, true);
-            textoDer(ctx, Text.literal(hace(x.cuando())), ax + aw - 8, y, 15,
-                    TEXTO_SUAVE, true);
-            y += 24;
+            ctx.fill(px(ax), py(ay), px(ax + BOT), py(ay + BOT),
+                    marcado ? BORDE_ENCIMA : (encima ? 0xFF5E86D8 : 0xFF3A4560));
+            marco(ctx, px(ax), py(ay), pl(BOT), pl(BOT),
+                    marcado ? 0xFFFFC46B : 0xFF20283C, Math.max(1, pl(2)));
+
+            int cx = px(ax + BOT / 2), cy = py(ay + BOT / 2);
+            int lado = pl(BOT - 14);
+            int color = marcado ? 0xFF2A1C00 : 0xFFFFFFFF;
+            switch (b.id()) {
+                case "buscar" -> Iconos.lupa(ctx, cx, cy, lado, color);
+                case "refrescar" -> Iconos.refrescar(ctx, cx, cy, lado, color);
+                case "vender" -> Iconos.mas(ctx, cx, cy, lado, color);
+                case "mias" -> Iconos.lista(ctx, cx, cy, lado, color);
+                default -> { }
+            }
+        }
+        if (encimaDe != null) {
+            // Sobre el buscador, que es la única franja libre de esa fila.
+            textoDer(ctx, Text.translatable(encimaDe),
+                    PANT_X + PANT_W - MARGEN - 8, PANT_Y + MARGEN + BOT + 14, 13,
+                    ORO, true);
         }
     }
 
-    private static String hace(long cuando) {
-        long s = Math.max(0, (System.currentTimeMillis() - cuando) / 1000);
-        if (s < 60) {
-            return "ahora";
-        }
-        if (s < 3600) {
-            return "hace " + (s / 60) + " min";
-        }
-        if (s < 86400) {
-            return "hace " + (s / 3600) + " h";
-        }
-        return "hace " + (s / 86400) + " d";
-    }
-
     /**
-     * El conmutador POKÉMON / OBJETOS.
+     * El conmutador POKÉMON / OBJETOS. <b>A la derecha</b>, donde lo pidió el
+     * usuario, y en la misma posición que en el GTS.
      *
-     * <h2>⚠⚠ Dos pestañas, no un icono</h2>
-     *
-     * Antes se cambiaba con un icono más de la barra, y eso <b>no dice que haya
-     * otra mitad</b>: un icono es un botón que hace algo, no un sitio donde
-     * estás. Con dos pestañas y una marcada se ve de un vistazo que el mercado
-     * tiene dos caras y en cuál estás — que es literalmente lo que pidió el
-     * usuario.
-     *
-     * <p>⚠ Va arriba del panel izquierdo y no en la barra de la derecha: es el
-     * cambio más grande que se puede hacer aquí —cambia la pantalla entera— y
-     * lo grande va donde empieza la lectura, no al final.
+     * <p>⚠ Dos pestañas y no un icono: un icono es un botón que hace algo, una
+     * pestaña es <b>un sitio donde estás</b>.
      */
-    /**
-     * El conmutador POKÉMON / OBJETOS. <b>A la derecha</b>, igual que en el GTS.
-     *
-     * <p>⚠ En el panel izquierdo se montaba encima de INICIO y de la X: esa
-     * fila ocupa 72 px y el conmutador estaba justo ahí.
-     */
-    private static final int CONM_W = 100, CONM_H = 34;
-
     private void dibujarConmutador(DrawContext ctx, int rx, int ry) {
         for (int i = 0; i < 2; i++) {
             boolean act = (i == 0) == ES_POKEMON;
             int bx = PANT_X + MARGEN + i * (CONM_W + 4);
-            boolean enc = dentro(rx, ry, px(bx), py(PANT_Y + MARGEN),
-                    pl(CONM_W), pl(CONM_H));
+            boolean enc = dentro(rx, ry, px(bx), py(PANT_Y + MARGEN), pl(CONM_W), pl(BOT));
             ctx.fill(px(bx), py(PANT_Y + MARGEN), px(bx + CONM_W),
-                    py(PANT_Y + MARGEN + CONM_H),
+                    py(PANT_Y + MARGEN + BOT),
                     act ? BORDE_ENCIMA : (enc ? 0xFF4F6FB0 : 0xFF2A3145));
-            marco(ctx, px(bx), py(PANT_Y + MARGEN), pl(CONM_W), pl(CONM_H),
+            marco(ctx, px(bx), py(PANT_Y + MARGEN), pl(CONM_W), pl(BOT),
                     act ? 0xFFFFC46B : 0xFF20283C, Math.max(1, pl(2)));
             texto(ctx, Text.translatable(i == 0
                             ? "pokepad.lunaeternal.gts.c_pokemon"
@@ -573,7 +646,7 @@ public class MercadoScreen extends Screen {
     private boolean clicConmutador(int rx, int ry) {
         for (int i = 0; i < 2; i++) {
             int bx = PANT_X + MARGEN + i * (CONM_W + 4);
-            if (dentro(rx, ry, px(bx), py(PANT_Y + MARGEN), pl(CONM_W), pl(CONM_H))) {
+            if (dentro(rx, ry, px(bx), py(PANT_Y + MARGEN), pl(CONM_W), pl(BOT))) {
                 if ((i == 0) != ES_POKEMON && client != null) {
                     sonar();
                     client.setScreen(new GtsScreen(anterior));
@@ -584,176 +657,544 @@ public class MercadoScreen extends Screen {
         return false;
     }
 
+    // ---- la lista ----------------------------------------------------------
+
+    /** ⚠ Misma cuenta que el GTS: fila 1 (34) + 6 + buscador (28) + cabecera. */
+    private int listaY() {
+        return PANT_Y + MARGEN + BOT + 6 + 28 + 34;
+    }
+
+    private record Columna(String etiqueta, int x, int ancho, String asc, String desc) {}
+
+    // ⚠ Las x coinciden con las de la fila. Si se separaran, la cabecera diría
+    //   que ordena por una columna y la flecha señalaría a otra.
+    private static final Columna[] COLUMNAS = {
+        new Columna("pokepad.lunaeternal.mercado.col_objeto", 74, 220, "NUEVO", "NUEVO"),
+        new Columna("pokepad.lunaeternal.mercado.col_unidad", COL_VENDEDOR, 150,
+                "UNIDAD_ASC", "UNIDAD_ASC"),
+        new Columna("pokepad.lunaeternal.gts.col_precio", 480, 140,
+                "PRECIO_ASC", "PRECIO_DESC"),
+    };
+
+    private void dibujarCabecera(DrawContext ctx, int rx, int ry) {
+        int hy = listaY();
+        for (var c : COLUMNAS) {
+            int ax = PANT_X + MARGEN + c.x();
+            boolean activa = orden.equals(c.asc()) || orden.equals(c.desc());
+            boolean encima = dentro(rx, ry, px(ax - 4), py(hy - 3), pl(c.ancho()), pl(20));
+            if (activa || encima) {
+                // ⚠ La activa va OSCURA con el texto claro. Al revés —naranja
+                //   claro con texto oro— no se lee: son el mismo tono.
+                ctx.fill(px(ax - 4), py(hy - 3), px(ax - 4 + c.ancho()), py(hy + 17),
+                        activa ? 0xCC1E2438 : 0x22FFFFFF);
+            }
+            String flecha = !activa ? " —" : orden.equals(c.asc()) ? " ▲" : " ▼";
+            texto(ctx, Text.translatable(c.etiqueta()).copy()
+                            .append(Text.literal(flecha)),
+                    ax, hy, 14, activa ? ORO : TEXTO_SUAVE, false, false);
+        }
+    }
+
+    /**
+     * Las ofertas.
+     *
+     * <p>⚠ Dos pasadas: {@code objetos=false} pinta cajas y texto, y
+     * {@code objetos=true} solo los iconos de los objetos, después de
+     * {@code ctx.draw()}.
+     */
+    private void dibujarLista(DrawContext ctx, int rx, int ry, boolean objetos) {
+        if (!objetos) {
+            dibujarCabecera(ctx, rx, ry);
+        }
+        var l = lista();
+        if (l.isEmpty()) {
+            if (!objetos) {
+                texto(ctx, Text.translatable(modo == Modo.MIAS
+                                ? "pokepad.lunaeternal.gts.sin_mias"
+                                : "pokepad.lunaeternal.mercado.sin_ofertas"),
+                        PANT_X + PANT_W / 2, listaY() + 60, 16, TEXTO_SUAVE, true, false);
+            }
+            return;
+        }
+
+        int desde = pagina * filasCaben();
+        int aw = PANT_W - 2 * MARGEN;
+        for (int n = 0; n < filasCaben() && desde + n < l.size(); n++) {
+            var o = l.get(desde + n);
+            int y = listaY() + 18 + n * FILA;
+            int ax = PANT_X + MARGEN;
+
+            if (objetos) {
+                objeto(ctx, pila(o.item()), ax + 10, y + 12, 40);
+                continue;
+            }
+
+            boolean sel = desde + n == elegido;
+            boolean encima = dentro(rx, ry, px(ax), py(y), pl(aw), pl(FILA - 6));
+            ctx.fill(px(ax), py(y), px(ax + aw), py(y + FILA - 6),
+                    sel ? FILA_SEL : (encima ? 0xFFD3DDF3 : FILA_FONDO));
+            marco(ctx, px(ax), py(y), pl(aw), pl(FILA - 6),
+                    sel ? BORDE_ENCIMA : FILA_BORDE, Math.max(1, pl(2)));
+
+            // ⚠ 240 es lo que hay hasta la columna del vendedor (320 - 70 - 10).
+            //   No se escribe suelto: si el vendedor se moviera, esto tendría
+            //   que moverse con él.
+            texto(ctx, recortar(o.nombre(), COL_VENDEDOR - 70 - 10, 20),
+                    ax + 70, y + 10, 20, TEXTO_OSCURO, false, false);
+            texto(ctx, Text.literal("x" + o.cantidad()), ax + 70, y + 36, 15,
+                    TEXTO_SUAVE, false, false);
+            texto(ctx, recortar(o.vendedor(), 140, 14), ax + COL_VENDEDOR, y + 12, 14,
+                    TEXTO_SUAVE, false, false);
+            texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.por_unidad",
+                            String.format("%,d", o.porUnidad())),
+                    ax + COL_VENDEDOR, y + 36, 14, TEXTO_SUAVE, false, false);
+
+            int precioDer = ax + aw - 150;
+            textoDer(ctx, Text.literal(String.format("%,d", o.precio())),
+                    precioDer, y + 10, 21, 0xFF8A6A00, true);
+            textoDer(ctx, Text.literal(queda(o.expira())), precioDer, y + 40, 12,
+                    TEXTO_SUAVE, true);
+
+            botonPeq(ctx, rx, ry, ax + aw - 132, y + 16, 124, 32,
+                    Text.translatable(modo == Modo.MIAS
+                            ? "pokepad.lunaeternal.gts.retirar"
+                            : "pokepad.lunaeternal.gts.comprar"),
+                    !esperando(), false);
+        }
+        if (!objetos) {
+            dibujarContador(ctx);
+            dibujarPaginacion(ctx, rx, ry);
+        }
+    }
+
+    /** Tu mochila, para elegir qué publicar. */
+    private void dibujarMochila(DrawContext ctx, int rx, int ry, boolean objetos) {
+        var disp = estado == null ? List.<Red.MioObj>of() : estado.disponibles();
+        if (disp.isEmpty()) {
+            if (!objetos) {
+                texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.mochila_vacia"),
+                        PANT_X + PANT_W / 2, listaY() + 60, 16, TEXTO_SUAVE, true, false);
+            }
+            return;
+        }
+        int desde = pagina * filasCaben();
+        int aw = PANT_W - 2 * MARGEN;
+        for (int n = 0; n < filasCaben() && desde + n < disp.size(); n++) {
+            var m = disp.get(desde + n);
+            int y = listaY() + 18 + n * FILA;
+            int ax = PANT_X + MARGEN;
+
+            if (objetos) {
+                objeto(ctx, pila(m.item()), ax + 10, y + 12, 40);
+                continue;
+            }
+
+            boolean sel = m.item().equals(elegidoItem);
+            boolean encima = dentro(rx, ry, px(ax), py(y), pl(aw), pl(FILA - 6));
+            ctx.fill(px(ax), py(y), px(ax + aw), py(y + FILA - 6),
+                    sel ? FILA_SEL : (encima ? 0xFFD3DDF3 : FILA_FONDO));
+            marco(ctx, px(ax), py(y), pl(aw), pl(FILA - 6),
+                    sel ? BORDE_ENCIMA : FILA_BORDE, Math.max(1, pl(2)));
+
+            texto(ctx, recortar(m.nombre(), aw - 70 - 90, 20),
+                    ax + 70, y + 12, 20, TEXTO_OSCURO, false, false);
+            texto(ctx, Text.translatable("pokepad.lunaeternal.tienda.tienes",
+                            m.cantidad()),
+                    ax + 70, y + 38, 14, TEXTO_SUAVE, false, false);
+            textoDer(ctx, Text.literal("x" + m.cantidad()), ax + aw - 16, y + 22, 20,
+                    TEXTO_OSCURO, true);
+        }
+        dibujarContador(ctx);
+        dibujarPaginacion(ctx, rx, ry);
+    }
+
+    private void dibujarContador(DrawContext ctx) {
+        int n = cuantos();
+        if (n == 0) {
+            return;
+        }
+        int desde = pagina * filasCaben() + 1;
+        int hasta = Math.min(n, (pagina + 1) * filasCaben());
+        textoDer(ctx, Text.translatable("pokepad.lunaeternal.gts.contador",
+                        desde, hasta, n),
+                PANT_X + PANT_W - MARGEN - 4, PANT_Y + PANT_H - MARGEN - 20, 13,
+                TEXTO_SUAVE, true);
+    }
+
+    private int paginacionY() {
+        return PANT_Y + PANT_H - MARGEN - 28;
+    }
+
+    private void dibujarPaginacion(DrawContext ctx, int rx, int ry) {
+        if (paginas() <= 1) {
+            return;
+        }
+        int y = paginacionY();
+        botonPeq(ctx, rx, ry, PANT_X + MARGEN, y, 60, 26, Text.literal("<"),
+                pagina > 0, false);
+        texto(ctx, Text.literal((pagina + 1) + " / " + paginas()),
+                PANT_X + MARGEN + 100, y + 5, 15, TEXTO_SUAVE, false, true);
+        botonPeq(ctx, rx, ry, PANT_X + MARGEN + 160, y, 60, 26, Text.literal(">"),
+                pagina < paginas() - 1, false);
+    }
+
+    /**
+     * El aviso antes de gastar.
+     *
+     * <h2>⚠ Solo al COMPRAR, y es una línea deliberada</h2>
+     *
+     * Comprar es lo único que <b>no se puede deshacer</b>: el dinero se va y el
+     * objeto es tuyo. Publicar sí se deshace —se retira y los objetos vuelven,
+     * solo se pierde la tasa—, así que pedir confirmación ahí sería un clic de
+     * más en la acción que más se repite.
+     *
+     * <p>⚠⚠ Y <b>se traga el clic</b>: mientras está puesta, nada de debajo
+     * responde. Si no, un clic destinado al «confirmar» que cae medio píxel
+     * fuera acabaría comprando otra cosa.
+     */
+    private void dibujarConfirmacion(DrawContext ctx, int rx, int ry) {
+        ctx.fill(x0, y0, x0 + ancho, y0 + alto, 0xC0000000);
+        int aw = 620, ah = 260;
+        int ax = (NAT_ANCHO - aw) / 2, ay = (NAT_ALTO - ah) / 2;
+        ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), 0xFF161B29);
+        marco(ctx, px(ax), py(ay), pl(aw), pl(ah), ORO, Math.max(2, pl(3)));
+
+        texto(ctx, Text.translatable("pokepad.lunaeternal.gts.confirmar_titulo"),
+                ax + aw / 2, ay + 26, 22, ORO, true, false);
+        texto(ctx, recortar(confirmando.nombre() + "  x" + confirmando.cantidad(),
+                        aw - 60, 24),
+                ax + aw / 2, ay + 70, 24, 0xFFFFFFFF, true, false);
+        texto(ctx, Text.literal(String.format("%,d", confirmando.precio())),
+                ax + aw / 2, ay + 110, 30, ORO, true, false);
+
+        long saldo = estado == null ? 0 : estado.saldo();
+        texto(ctx, Text.translatable("pokepad.lunaeternal.gts.te_quedan",
+                        String.format("%,d", saldo - confirmando.precio())),
+                ax + aw / 2, ay + 152, 14, TEXTO_SUAVE, true, false);
+
+        boton(ctx, rx, ry, ax + 30, ay + ah - 76, aw / 2 - 45, 52,
+                Text.translatable("pokepad.lunaeternal.gts.cancelar"), true, 0xFF4A5268);
+        boton(ctx, rx, ry, ax + aw / 2 + 15, ay + ah - 76, aw / 2 - 45, 52,
+                Text.translatable("pokepad.lunaeternal.gts.confirmar"),
+                saldo >= confirmando.precio(), VERDE);
+    }
+
+    private static String queda(long cuando) {
+        long ms = cuando - System.currentTimeMillis();
+        if (ms <= 0) {
+            return "—";
+        }
+        long horas = ms / 3_600_000L;
+        if (horas >= 24) {
+            return (horas / 24) + "d " + (horas % 24) + "h";
+        }
+        if (horas >= 1) {
+            return horas + "h";
+        }
+        return Math.max(1, ms / 60_000L) + "m";
+    }
+
     // ---- interacción -------------------------------------------------------
 
     @Override
     public boolean mouseClicked(double mx, double my, int boton) {
-        if (boton != 0) {
-            return super.mouseClicked(mx, my, boton);
-        }
         int rx = (int) mx, ry = (int) my;
-        for (var c : new TextFieldWidget[] { campoPrecio, campoCantidad }) {
-            if (c != null && c.mouseClicked(mx, my, boton)) {
-                setFocused(c);
-                return true;
-            }
-        }
 
-        if (clicConmutador(rx, ry)) {
+        if (confirmando != null) {
+            clicConfirmacion(rx, ry);
             return true;
         }
 
-        int cy = py(PANEL_Y + NAV_ALTO / 2);
-        if (dentro(rx, ry, px(PANEL_X + 18), cy - pl(24), pl(60), pl(48))) {
+        int cy = PANEL_Y + NAV_ALTO / 2;
+        if (dentro(rx, ry, px(PANEL_X + 18), py(cy) - pl(24), pl(60), pl(48))) {
             sonar();
             if (client != null) {
                 client.setScreen(anterior);
             }
             return true;
         }
-        if (dentro(rx, ry, px(PANEL_X + PANEL_W - 18) - pl(80), cy - pl(32), pl(80), pl(64))) {
+        int cx = PANEL_X + PANEL_W - 18 - 80;
+        if (dentro(rx, ry, px(cx), py(cy) - pl(32), pl(80), pl(64))) {
             sonar();
             close();
             return true;
         }
 
-        // Catálogo
-        var cat = catalogo();
-        int desde = paginaCat * catCaben();
-        for (int n = 0; n < catCaben(); n++) {
-            int i = desde + n;
-            if (i >= cat.size()) {
-                break;
-            }
-            if (dentro(rx, ry, px(PANEL_X + 16), py(catY(n)), pl(PANEL_W - 32),
-                    pl(CAT_ALTO - 4))) {
-                item = cat.get(i);
-                aviso = "";
-                sonar();
-                ClientPlayNetworking.send(new Red.PedirMercado(item));
-                return true;
-            }
+        if (clicConmutador(rx, ry)) {
+            return true;
         }
-        if (catPaginas() > 1) {
-            int y = catY(catCaben()) + 2;
-            if (paginaCat > 0 && dentro(rx, ry, px(PANEL_X + 16), py(y), pl(60), pl(26))) {
-                paginaCat--;
-                sonar();
-                return true;
-            }
-            if (paginaCat < catPaginas() - 1 && dentro(rx, ry,
-                    px(PANEL_X + PANEL_W - 16 - 60), py(y), pl(60), pl(26))) {
-                paginaCat++;
-                sonar();
+
+        for (int i = 0; i < BARRA.length; i++) {
+            if (dentro(rx, ry, px(botonX(i)), py(PANT_Y + MARGEN), pl(BOT), pl(BOT))) {
+                pulsarBarra(BARRA[i].id());
                 return true;
             }
         }
 
-        // Pestañas
-        int aw = (PANT_W - 2 * MARGEN) / 3;
-        for (int i = 0; i < 3; i++) {
-            if (dentro(rx, ry, px(PANT_X + MARGEN + i * aw), py(PANT_Y + MARGEN + 34),
-                    pl(aw - 6), pl(PESTANA_ALTO))) {
-                pestana = i;
-                aviso = "";
-                sonar();
-                return true;
-            }
+        if (campoBusqueda.mouseClicked(mx, my, boton)) {
+            setFocused(campoBusqueda);
+            return true;
+        }
+        if (modo == Modo.VENDER && campoPrecio.mouseClicked(mx, my, boton)) {
+            setFocused(campoPrecio);
+            return true;
         }
 
-        if (pestana == 0) {
-            return clicFormulario(rx, ry) || super.mouseClicked(mx, my, boton);
+        if (clicCabecera(rx, ry)) {
+            return true;
         }
-        if (pestana == 1) {
-            return clicMias(rx, ry) || super.mouseClicked(mx, my, boton);
+        if (modo == Modo.VENDER ? clicPanelVender(rx, ry) : clicPanelOferta(rx, ry)) {
+            return true;
+        }
+        if (clicFilas(rx, ry)) {
+            return true;
+        }
+        if (clicPaginacion(rx, ry)) {
+            return true;
         }
         return super.mouseClicked(mx, my, boton);
     }
 
-    private boolean clicFormulario(int rx, int ry) {
-        int y = PANT_Y + PANT_H - 52;
-        long precio = leerLong(campoPrecio);
-        long cant = leerLong(campoCantidad);
-
-        boolean compra = dentro(rx, ry, px(PANT_X + PANT_W - MARGEN - 300), py(y),
-                pl(140), pl(34));
-        boolean venta = dentro(rx, ry, px(PANT_X + PANT_W - MARGEN - 148), py(y),
-                pl(140), pl(34));
-        if (!compra && !venta) {
+    private boolean clicCabecera(int rx, int ry) {
+        if (modo == Modo.VENDER) {
             return false;
         }
-        if (item.isEmpty()) {
-            return poner("Elige un objeto de la lista.");
-        }
-        if (precio <= 0 || cant <= 0) {
-            return poner("Escribe precio y cantidad.");
-        }
-        if (compra && estado != null && precio * cant > estado.saldo()) {
-            // Se dice aquí en vez de mandarlo: el servidor contestaría lo mismo,
-            // y un viaje para un «no te llega» que el cliente ya sabe es medio
-            // segundo por gusto.
-            return poner("No te llega: hacen falta "
-                    + String.format("%,d", precio * cant) + ".");
-        }
-        if (venta && estado != null && estado.tengo() < cant) {
-            return poner("Solo tienes " + estado.tengo() + ".");
-        }
-        aviso = "";
-        pulsado = System.currentTimeMillis();
-        sonar();
-        ClientPlayNetworking.send(new Red.AccionMercado(
-                compra ? "comprar" : "vender", item, precio, (int) cant, 0));
-        return true;
-    }
-
-    private boolean poner(String texto) {
-        aviso = texto;
-        if (client != null && client.player != null) {
-            client.player.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.6f, 0.8f);
-        }
-        return true;
-    }
-
-    private boolean clicMias(int rx, int ry) {
-        if (estado == null) {
-            return false;
-        }
-        int y = libroY();
-        int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
-        for (int i = 0; i < estado.mias().size() && i < filasLibro(); i++) {
-            if (dentro(rx, ry, px(ax + aw - 130), py(y + 3), pl(122), pl(26))) {
-                pulsado = System.currentTimeMillis();
+        int hy = listaY();
+        for (var c : COLUMNAS) {
+            int ax = PANT_X + MARGEN + c.x();
+            if (dentro(rx, ry, px(ax - 4), py(hy - 3), pl(c.ancho()), pl(20))) {
+                // ⚠ Alterna entre las dos ordenaciones de esa columna. Sin
+                //   alternar, ordenar por precio solo serviría para una
+                //   dirección y la flecha mentiría.
+                orden = orden.equals(c.asc()) ? c.desc() : c.asc();
+                pagina = 0;
                 sonar();
-                ClientPlayNetworking.send(new Red.AccionMercado("cancelar",
-                        estado.mias().get(i).item(), 0, 0, estado.mias().get(i).id()));
+                pedir();
                 return true;
             }
-            y += 36;
         }
         return false;
     }
 
-    @Override
-    public boolean keyPressed(int tecla, int escaneo, int mods) {
-        for (var c : new TextFieldWidget[] { campoPrecio, campoCantidad }) {
-            if (c != null && c.isFocused() && c.keyPressed(tecla, escaneo, mods)) {
+    private boolean clicFilas(int rx, int ry) {
+        int aw = PANT_W - 2 * MARGEN;
+        int desde = pagina * filasCaben();
+
+        if (modo == Modo.VENDER) {
+            var disp = estado == null ? List.<Red.MioObj>of() : estado.disponibles();
+            for (int n = 0; n < filasCaben() && desde + n < disp.size(); n++) {
+                int y = listaY() + 18 + n * FILA;
+                if (dentro(rx, ry, px(PANT_X + MARGEN), py(y), pl(aw), pl(FILA - 6))) {
+                    var m = disp.get(desde + n);
+                    elegidoItem = m.item();
+                    // ⚠ Al cambiar de objeto se reajusta la cantidad: dejar «x64»
+                    //   puesto sobre una pila de 3 dibujaría un botón marcado que
+                    //   no se puede pulsar.
+                    if (cantidad > 0 && cantidad > m.cantidad()) {
+                        cantidad = 1;
+                    }
+                    sonar();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        var l = lista();
+        for (int n = 0; n < filasCaben() && desde + n < l.size(); n++) {
+            int y = listaY() + 18 + n * FILA;
+            if (!dentro(rx, ry, px(PANT_X + MARGEN), py(y), pl(aw), pl(FILA - 6))) {
+                continue;
+            }
+            elegido = desde + n;
+            sonar();
+            // El botón de la fila hace lo mismo que el del panel: es un atajo,
+            // no una segunda función.
+            if (dentro(rx, ry, px(PANT_X + MARGEN + aw - 132), py(y + 16),
+                    pl(124), pl(32)) && !esperando()) {
+                if (modo == Modo.MIAS) {
+                    retirar(l.get(elegido));
+                } else {
+                    confirmando = l.get(elegido);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean clicPaginacion(int rx, int ry) {
+        if (paginas() <= 1) {
+            return false;
+        }
+        int y = paginacionY();
+        if (pagina > 0 && dentro(rx, ry, px(PANT_X + MARGEN), py(y), pl(60), pl(26))) {
+            pagina--;
+            sonar();
+            return true;
+        }
+        if (pagina < paginas() - 1 && dentro(rx, ry, px(PANT_X + MARGEN + 160),
+                py(y), pl(60), pl(26))) {
+            pagina++;
+            sonar();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean clicPanelOferta(int rx, int ry) {
+        var o = seleccionada();
+        if (o == null || esperando()) {
+            return false;
+        }
+        if (!dentro(rx, ry, px(PANEL_X + 30), py(PANEL_Y + PANEL_H - 72),
+                pl(PANEL_W - 60), pl(56))) {
+            return false;
+        }
+        sonar();
+        if (modo == Modo.MIAS) {
+            retirar(o);
+        } else if (estado != null && estado.saldo() >= o.precio()) {
+            confirmando = o;
+        }
+        return true;
+    }
+
+    private boolean clicPanelVender(int rx, int ry) {
+        var m = mioSeleccionado();
+        if (m == null) {
+            return false;
+        }
+        int anchoBot = (PANEL_W - 60 - 3 * 6) / 4;
+        for (int i = 0; i < CANTIDADES.length; i++) {
+            int bx = PANEL_X + 30 + i * (anchoBot + 6);
+            if (dentro(rx, ry, px(bx), py(PANEL_Y + 420), pl(anchoBot), pl(32))) {
+                if (CANTIDADES[i] < 0 || CANTIDADES[i] <= m.cantidad()) {
+                    cantidad = CANTIDADES[i];
+                    sonar();
+                }
                 return true;
             }
+        }
+        int anchoDur = (PANEL_W - 60 - 2 * 6) / 3;
+        for (int i = 0; i < DURACIONES.length; i++) {
+            int bx = PANEL_X + 30 + i * (anchoDur + 6);
+            if (dentro(rx, ry, px(bx), py(PANEL_Y + 578), pl(anchoDur), pl(32))) {
+                horas = DURACIONES[i];
+                sonar();
+                return true;
+            }
+        }
+        if (dentro(rx, ry, px(PANEL_X + 30), py(PANEL_Y + PANEL_H - 72),
+                pl(PANEL_W - 60), pl(56))) {
+            long precio = numeroLargo(campoPrecio);
+            if (precio > 0 && cantidadReal(m) > 0 && !esperando()) {
+                sonar();
+                pulsado = System.currentTimeMillis();
+                ClientPlayNetworking.send(new Red.AccionMercado(
+                        "vender", 0, m.item(), cantidadReal(m), precio, horas));
+                campoPrecio.setText("");
+                elegidoItem = "";
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void retirar(Red.OfertaObj o) {
+        pulsado = System.currentTimeMillis();
+        ClientPlayNetworking.send(new Red.AccionMercado(
+                "retirar", o.id(), o.item(), 0, 0, 0));
+    }
+
+    private void clicConfirmacion(int rx, int ry) {
+        int aw = 620, ah = 260;
+        int ax = (NAT_ANCHO - aw) / 2, ay = (NAT_ALTO - ah) / 2;
+        if (dentro(rx, ry, px(ax + 30), py(ay + ah - 76), pl(aw / 2 - 45), pl(52))) {
+            sonar();
+            confirmando = null;
+            return;
+        }
+        if (dentro(rx, ry, px(ax + aw / 2 + 15), py(ay + ah - 76),
+                pl(aw / 2 - 45), pl(52))) {
+            sonar();
+            // ⚠ Solo viaja el identificador. El precio lo pone el servidor
+            //   mirando su fila (P6).
+            ClientPlayNetworking.send(new Red.AccionMercado(
+                    "comprar", confirmando.id(), confirmando.item(), 0, 0, 0));
+            pulsado = System.currentTimeMillis();
+            confirmando = null;
+        }
+    }
+
+    private void pulsarBarra(String id) {
+        sonar();
+        switch (id) {
+            case "buscar" -> {
+                setFocused(campoBusqueda);
+                campoBusqueda.setFocused(true);
+                pagina = 0;
+                pedir();
+            }
+            case "refrescar" -> pedir();
+            case "vender" -> {
+                modo = modo == Modo.VENDER ? Modo.LISTA : Modo.VENDER;
+                elegido = -1;
+                pagina = 0;
+                pedir();
+            }
+            case "mias" -> {
+                modo = modo == Modo.MIAS ? Modo.LISTA : Modo.MIAS;
+                elegido = -1;
+                pagina = 0;
+                pedir();
+            }
+            default -> { }
+        }
+    }
+
+    @Override
+    public boolean keyPressed(int tecla, int escaneo, int mods) {
+        if (confirmando != null) {
+            if (tecla == 256) {
+                confirmando = null;
+                return true;
+            }
+            return true;
+        }
+        if (tecla == 256) {
+            if (client != null) {
+                client.setScreen(anterior);
+            }
+            return true;
+        }
+        if (tecla == 257 && getFocused() == campoBusqueda) {
+            pagina = 0;
+            pedir();
+            return true;
+        }
+        if (getFocused() == campoBusqueda && campoBusqueda.keyPressed(tecla, escaneo, mods)) {
+            return true;
+        }
+        if (getFocused() == campoPrecio && campoPrecio.keyPressed(tecla, escaneo, mods)) {
+            return true;
         }
         return super.keyPressed(tecla, escaneo, mods);
     }
 
     @Override
     public boolean charTyped(char c, int mods) {
-        // ⚠ Solo dígitos. Un campo de precio que acepta letras obliga a
-        //   comprobar al pulsar, y entonces el error llega tarde.
-        if (!Character.isDigit(c)) {
-            return false;
+        if (confirmando != null) {
+            return true;
         }
-        for (var campo : new TextFieldWidget[] { campoPrecio, campoCantidad }) {
-            if (campo != null && campo.isFocused() && campo.charTyped(c, mods)) {
-                return true;
-            }
+        if (getFocused() == campoBusqueda) {
+            return campoBusqueda.charTyped(c, mods);
+        }
+        // ⚠ Solo dígitos en el precio. Un `setMaxLength` no lo impide: deja
+        //   escribir letras y luego `parseLong` devuelve 0, que se ve como un
+        //   botón apagado sin decir por qué.
+        if (getFocused() == campoPrecio) {
+            return Character.isDigit(c) && campoPrecio.charTyped(c, mods);
         }
         return super.charTyped(c, mods);
     }
@@ -766,23 +1207,12 @@ public class MercadoScreen extends Screen {
 
     // ---- utilidades --------------------------------------------------------
 
-    private void botonPeq(DrawContext ctx, int rx, int ry, int ax, int ay, int aw,
-                          int ah, Text etiqueta, boolean activo) {
-        boolean encima = activo && dentro(rx, ry, px(ax), py(ay), pl(aw), pl(ah));
-        int base = etiqueta.getString().startsWith("COMPR") ? VERDE
-                : etiqueta.getString().startsWith("VEND") ? ROJO : 0xFF4F6FB0;
-        int claro = base == VERDE ? VERDE_CLARO : base == ROJO ? ROJO_CLARO : 0xFF5E86D8;
-        ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah),
-                !activo ? APAGADO : (encima ? claro : base));
-        marco(ctx, px(ax), py(ay), pl(aw), pl(ah), 0xFF20283C, Math.max(1, pl(2)));
-        int alto = 17;
-        while (alto > 10 && anchoArte(etiqueta.getString(), alto) > aw - 12) {
-            alto--;
-        }
-        texto(ctx, etiqueta, ax + aw / 2, ay + (ah - alto) / 2 - 1, alto,
-                activo ? 0xFFFFFFFF : 0xFFD8DEEA, true, false);
-    }
-
+    /**
+     * Un objeto del juego, a tamaño de arte.
+     *
+     * <p>⚠ {@code drawItem} dibuja a 16×16 fijos: para agrandarlo hay que escalar
+     * la matriz, no pasarle un tamaño. Y va DESPUÉS de {@code ctx.draw()}.
+     */
     private void objeto(DrawContext ctx, ItemStack p, int ax, int ay, int altoArte) {
         float escala = altoArte * k / 16f;
         MatrixStack m = ctx.getMatrices();
@@ -793,8 +1223,101 @@ public class MercadoScreen extends Screen {
         m.pop();
     }
 
+    private void boton(DrawContext ctx, int rx, int ry, int ax, int ay, int aw,
+                       int ah, Text etiqueta, boolean activo, int color) {
+        boolean encima = activo && dentro(rx, ry, px(ax), py(ay), pl(aw), pl(ah));
+        ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah),
+                !activo ? APAGADO : (encima ? aclarar(color) : color));
+        marco(ctx, px(ax), py(ay), pl(aw), pl(ah), 0xFF10331E, Math.max(1, pl(2)));
+        texto(ctx, etiqueta, ax + aw / 2, ay + ah / 2 - 12, 24,
+                activo ? 0xFFFFFFFF : 0xFFD8DEEA, true, false);
+    }
+
+    private void botonPeq(DrawContext ctx, int rx, int ry, int ax, int ay, int aw,
+                          int ah, Text etiqueta, boolean activo, boolean marcado) {
+        boolean encima = activo && dentro(rx, ry, px(ax), py(ay), pl(aw), pl(ah));
+        ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah),
+                !activo ? APAGADO : marcado ? BORDE_ENCIMA
+                        : (encima ? 0xFF5E86D8 : 0xFF4F6FB0));
+        marco(ctx, px(ax), py(ay), pl(aw), pl(ah), 0xFF20283C, Math.max(1, pl(2)));
+        int alto = 15;
+        while (alto > 9 && anchoArte(etiqueta.getString(), alto) > aw - 10) {
+            alto--;
+        }
+        texto(ctx, etiqueta, ax + aw / 2, ay + (ah - alto) / 2 - 1, alto,
+                activo ? 0xFFFFFFFF : 0xFFD8DEEA, true, false);
+    }
+
+    private static int aclarar(int color) {
+        int r = Math.min(255, ((color >> 16) & 0xFF) + 48);
+        int g = Math.min(255, ((color >> 8) & 0xFF) + 48);
+        int b = Math.min(255, (color & 0xFF) + 48);
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
+    /**
+     * Corta un texto para que quepa, con puntos suspensivos.
+     *
+     * <h2>⚠⚠ HACE FALTA PORQUE LOS NOMBRES DE MINECRAFT SON LARGOS</h2>
+     *
+     * «Escaleras de ladrillos de piedra» mide 364 px de arte y la columna del
+     * nombre tiene 240: sin cortarlo se metía <b>encima del vendedor</b>. Y no
+     * daba ningún error — se veía como dos textos superpuestos, que es
+     * exactamente de lo que se quejó el usuario.
+     *
+     * <p>⚠ Un Pokémon no tiene este problema («Charizard» cabe siempre), así
+     * que esto es propio del escaparate de objetos y no se copió del GTS.
+     */
+    private Text recortar(String s, int anchoMax, int alto) {
+        if (anchoArte(s, alto) <= anchoMax) {
+            return Text.literal(s);
+        }
+        int corte = s.length();
+        while (corte > 1 && anchoArte(s.substring(0, corte) + "…", alto) > anchoMax) {
+            corte--;
+        }
+        return Text.literal(s.substring(0, corte).trim() + "…");
+    }
+
+    /**
+     * Parte en líneas, con un tope.
+     *
+     * <p>⚠ El tope es lo que impide que un nombre larguísimo empuje hacia abajo
+     * todo lo que va debajo del título hasta meterlo en el botón. La última
+     * línea se corta con puntos suspensivos en vez de desaparecer sin más.
+     */
+    private List<Text> partirLim(String s, int anchoMax, int alto, int maxLineas) {
+        var crudas = partir(s, anchoMax, alto);
+        var salida = new ArrayList<Text>();
+        for (int i = 0; i < crudas.size() && i < maxLineas; i++) {
+            boolean ultima = i == maxLineas - 1 && crudas.size() > maxLineas;
+            salida.add(ultima ? recortar(crudas.get(i) + "…", anchoMax, alto)
+                    : Text.literal(crudas.get(i)));
+        }
+        return salida;
+    }
+
+    private List<String> partir(String s, int anchoMax, int altoArte) {
+        var salida = new ArrayList<String>();
+        var actual = new StringBuilder();
+        for (String palabra : s.split(" ")) {
+            String prueba = actual.isEmpty() ? palabra : actual + " " + palabra;
+            if (anchoArte(prueba, altoArte) > anchoMax && !actual.isEmpty()) {
+                salida.add(actual.toString());
+                actual = new StringBuilder(palabra);
+            } else {
+                actual = new StringBuilder(prueba);
+            }
+        }
+        if (!actual.isEmpty()) {
+            salida.add(actual.toString());
+        }
+        return salida;
+    }
+
     private int anchoArte(String linea, int alto) {
-        return Math.round(textRenderer.getWidth(linea) * alto / (float) textRenderer.fontHeight);
+        return Math.round(textRenderer.getWidth(linea) * alto
+                / (float) textRenderer.fontHeight);
     }
 
     private void separador(DrawContext ctx, int artY) {
@@ -802,23 +1325,16 @@ public class MercadoScreen extends Screen {
                 py(artY) + Math.max(1, pl(2)), SEPARADOR);
     }
 
-    private void separadorPantalla(DrawContext ctx, int artY) {
-        ctx.fill(px(PANT_X + MARGEN), py(artY), px(PANT_X + PANT_W - MARGEN),
-                py(artY) + Math.max(1, pl(2)), 0x44000000);
-    }
-
     /**
-     * ⚠⚠ Alinear a la derecha DE VERDAD.
-     *
-     * <p>Pasar la x del borde con {@code centrado=false} dibuja el texto
-     * <b>empezando</b> ahí, o sea hacia fuera del marco. Es lo que hacía que
-     * «sin operaciones» y «llevas 1» se salieran de la pantalla.
+     * ⚠⚠ ALINEAR A LA DERECHA DE VERDAD: pasar la x del borde con
+     * {@code centrado=false} dibuja el texto <b>hacia fuera</b>. Ahí estaba la
+     * causa de casi toda la fealdad de la versión anterior.
      */
     private void textoDer(DrawContext ctx, Text linea, int derecha, int arriba,
                           int alto, int color, boolean contorno) {
-        int ancho = Math.round(textRenderer.getWidth(linea) * alto
+        int a = Math.round(textRenderer.getWidth(linea) * alto
                 / (float) textRenderer.fontHeight);
-        texto(ctx, linea, derecha - ancho, arriba, alto, color, false, contorno);
+        texto(ctx, linea, derecha - a, arriba, alto, color, false, contorno);
     }
 
     private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,

@@ -67,6 +67,7 @@ public final class AutoTest {
             testShopCatalog();
             testGtsTax();
             testGtsFlow(a, b);
+            testEscaparate(a, b);
             testPokedex(a);
             testKits(a);
             testQuests(a);
@@ -879,6 +880,114 @@ public final class AutoTest {
                   gts.pendingClaims(seller).stream().anyMatch(c -> c.listingId() == id2));
             gts.markDelivered(id2);
         }
+    }
+
+    /**
+     * EL ESCAPARATE DE OBJETOS, de punta a punta.
+     *
+     * <h2>⚠⚠ Lo que de verdad se comprueba aquí es EL PAYLOAD</h2>
+     *
+     * {@code publicarObjeto} escribe {@code identificador + separador +
+     * cantidad} en un {@code byte[]}, y quien entrega lo vuelve a leer. Son dos
+     * sitios distintos con su propia idea del formato, y si dejaran de estar de
+     * acuerdo <b>la compra no daría ningún error</b>: el dinero cambiaría de
+     * manos y los objetos no aparecerían. Es el único fallo posible aquí que se
+     * come mercancía en silencio.
+     *
+     * <p>El resto —tasa, impuesto, no comprarte a ti mismo, no comprar dos
+     * veces— ya lo cubre {@code testGtsFlow}, porque es el mismo código.
+     */
+    private void testEscaparate(long vendedor, long comprador) throws Exception {
+        var gts = LunaEternal.gts();
+        var economy = LunaEternal.economy();
+
+        economy.credit(vendedor, Currency.POKEDOLLAR, 100_000, "autotest", key());
+        economy.credit(comprador, Currency.POKEDOLLAR, 100_000, "autotest", key());
+        long antes = economy.balance(vendedor, Currency.POKEDOLLAR);
+
+        final String item = "minecraft:cobblestone";
+        final int cantidad = 37;
+        final long precio = 8_000;
+
+        var pub = gts.publicarObjeto(vendedor, item, "Roca", cantidad, precio, 48);
+        check("se puede publicar un objeto", pub.ok());
+
+        long tasa = net.pokereport.luna.gts.GtsService.listingFee(precio);
+        check("publicar un objeto cobra la tasa",
+              economy.balance(vendedor, Currency.POKEDOLLAR) == antes - tasa);
+
+        var mias = gts.misObjetos(vendedor);
+        check("la oferta sale entre las mías", !mias.isEmpty());
+        if (mias.isEmpty()) {
+            return;
+        }
+        var oferta = mias.get(0);
+        check("la cantidad publicada es la que se pidió", oferta.cantidad() == cantidad);
+        check("el precio publicado es el que se pidió", oferta.precio() == precio);
+        check("el objeto publicado es el que se pidió", item.equals(oferta.itemId()));
+
+        check("duenoDe dice quién publicó",
+              Long.valueOf(vendedor).equals(gts.duenoDe(oferta.id())));
+        check("duenoDe de una oferta que no existe es nulo",
+              gts.duenoDe(-1) == null);
+
+        // ---- el buscador ---------------------------------------------------
+        check("el buscador la encuentra por nombre",
+              gts.buscarObjetos("Roca", "NUEVO", 50).stream()
+                 .anyMatch(o -> o.id() == oferta.id()));
+        check("el buscador la encuentra por identificador",
+              gts.buscarObjetos("cobblestone", "NUEVO", 50).stream()
+                 .anyMatch(o -> o.id() == oferta.id()));
+        check("el buscador NO devuelve lo que no casa",
+              gts.buscarObjetos("zzzzzznoexiste", "NUEVO", 50).isEmpty());
+
+        // ⚠ El ORDER BY sale de una enum nuestra: un orden inventado no puede
+        //   colarse en el SQL. Si esto reventara, sería inyección.
+        check("un orden inventado no rompe la consulta",
+              gts.buscarObjetos("", "'; DROP TABLE player; --", 5) != null);
+
+        // ---- lo que más importa: el payload vuelve entero ------------------
+        var comprada = gts.buy(comprador, oferta.id());
+        check("otro jugador puede comprar la oferta", comprada.ok());
+        check("la compra devuelve el payload", comprada.payload() != null);
+        if (comprada.payload() != null) {
+            String s = new String(comprada.payload(),
+                    java.nio.charset.StandardCharsets.UTF_8);
+            int corte = s.indexOf((char) 0);
+            check("el payload lleva el separador que espera la entrega", corte > 0);
+            if (corte > 0) {
+                check("el payload devuelve EL MISMO objeto",
+                      item.equals(s.substring(0, corte)));
+                check("el payload devuelve LA MISMA cantidad",
+                      Integer.parseInt(s.substring(corte + 1).trim()) == cantidad);
+            }
+        }
+        check("una oferta comprada ya no sale en el escaparate",
+              gts.buscarObjetos("Roca", "NUEVO", 50).stream()
+                 .noneMatch(o -> o.id() == oferta.id()));
+
+        // ---- retirar devuelve la mercancía ---------------------------------
+        var otra = gts.publicarObjeto(vendedor, item, "Roca2", 5, 1_000, 24);
+        check("se puede publicar una segunda vez", otra.ok());
+        var mias2 = gts.misObjetos(vendedor);
+        if (!mias2.isEmpty()) {
+            long id2 = mias2.get(0).id();
+            var cancelada = gts.cancel(vendedor, id2);
+            check("retirar una oferta propia funciona", cancelada.ok());
+            check("retirar devuelve la mercancía", cancelada.payload() != null);
+            check("nadie puede retirar la oferta de otro",
+                  !gts.cancel(comprador, id2).ok());
+            check("una oferta retirada ya no sale entre las mías",
+                  gts.misObjetos(vendedor).stream().noneMatch(o -> o.id() == id2));
+        }
+
+        // ---- lo que NO se puede hacer --------------------------------------
+        check("no se puede publicar a precio cero",
+              !gts.publicarObjeto(vendedor, item, "Roca", 1, 0, 24).ok());
+        check("no se puede publicar a precio negativo",
+              !gts.publicarObjeto(vendedor, item, "Roca", 1, -500, 24).ok());
+        check("no se puede publicar cantidad cero",
+              !gts.publicarObjeto(vendedor, item, "Roca", 0, 100, 24).ok());
     }
 
     /**

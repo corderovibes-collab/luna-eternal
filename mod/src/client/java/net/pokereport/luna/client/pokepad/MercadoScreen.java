@@ -208,7 +208,6 @@ public class MercadoScreen extends Screen {
 
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
         dibujarNavegacion(ctx, rx, ry);
-        dibujarConmutador(ctx, rx, ry);
         dibujarCatalogo(ctx, rx, ry, false);
         dibujarPestanas(ctx, rx, ry);
         switch (pestana) {
@@ -317,6 +316,7 @@ public class MercadoScreen extends Screen {
     }
 
     private void dibujarPestanas(DrawContext ctx, int rx, int ry) {
+        dibujarConmutador(ctx, rx, ry);
         String[] ids = { "libro", "mias", "historial" };
         int aw = (PANT_W - 2 * MARGEN) / 3;
         for (int i = 0; i < ids.length; i++) {
@@ -543,35 +543,38 @@ public class MercadoScreen extends Screen {
      * cambio más grande que se puede hacer aquí —cambia la pantalla entera— y
      * lo grande va donde empieza la lectura, no al final.
      */
+    /**
+     * El conmutador POKÉMON / OBJETOS. <b>A la derecha</b>, igual que en el GTS.
+     *
+     * <p>⚠ En el panel izquierdo se montaba encima de INICIO y de la X: esa
+     * fila ocupa 72 px y el conmutador estaba justo ahí.
+     */
+    private static final int CONM_W = 100, CONM_H = 34;
+
     private void dibujarConmutador(DrawContext ctx, int rx, int ry) {
-        int ax = PANEL_X + 16, aw = PANEL_W - 32;
-        int ay = PANEL_Y + NAV_ALTO - 34;
-        int mitad = aw / 2;
         for (int i = 0; i < 2; i++) {
             boolean act = (i == 0) == ES_POKEMON;
-            int bx = ax + i * mitad;
-            boolean enc = dentro(rx, ry, px(bx), py(ay), pl(mitad), pl(30));
-            ctx.fill(px(bx), py(ay), px(bx + mitad), py(ay + 30),
-                    act ? 0xFFF35C0C : (enc ? 0xFF4F6FB0 : 0xFF2A3145));
-            marco(ctx, px(bx), py(ay), pl(mitad), pl(30),
+            int bx = PANT_X + MARGEN + i * (CONM_W + 4);
+            boolean enc = dentro(rx, ry, px(bx), py(PANT_Y + MARGEN),
+                    pl(CONM_W), pl(CONM_H));
+            ctx.fill(px(bx), py(PANT_Y + MARGEN), px(bx + CONM_W),
+                    py(PANT_Y + MARGEN + CONM_H),
+                    act ? BORDE_ENCIMA : (enc ? 0xFF4F6FB0 : 0xFF2A3145));
+            marco(ctx, px(bx), py(PANT_Y + MARGEN), pl(CONM_W), pl(CONM_H),
                     act ? 0xFFFFC46B : 0xFF20283C, Math.max(1, pl(2)));
             texto(ctx, Text.translatable(i == 0
                             ? "pokepad.lunaeternal.gts.c_pokemon"
                             : "pokepad.lunaeternal.gts.c_objetos"),
-                    bx + mitad / 2, ay + 8, 15,
+                    bx + CONM_W / 2, PANT_Y + MARGEN + 10, 14,
                     act ? 0xFF2A1C00 : 0xFFC9D2E6, true, false);
         }
     }
 
-    /** @return true si el clic era del conmutador */
     private boolean clicConmutador(int rx, int ry) {
-        int ax = PANEL_X + 16, aw = PANEL_W - 32;
-        int ay = PANEL_Y + NAV_ALTO - 34;
-        int mitad = aw / 2;
         for (int i = 0; i < 2; i++) {
-            if (dentro(rx, ry, px(ax + i * mitad), py(ay), pl(mitad), pl(30))) {
-                boolean quierePokemon = i == 0;
-                if (quierePokemon != ES_POKEMON && client != null) {
+            int bx = PANT_X + MARGEN + i * (CONM_W + 4);
+            if (dentro(rx, ry, px(bx), py(PANT_Y + MARGEN), pl(CONM_W), pl(CONM_H))) {
+                if ((i == 0) != ES_POKEMON && client != null) {
                     sonar();
                     client.setScreen(new GtsScreen(anterior));
                 }

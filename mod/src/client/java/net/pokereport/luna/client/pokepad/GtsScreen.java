@@ -73,7 +73,7 @@ public class GtsScreen extends Screen {
      * de la que no se puede leer nada no sirve de más porque quepan dos filas
      * más.
      */
-    private static final int FILA = 76;
+    private static final int FILA = 70;
 
     private static final int FILA_FONDO = 0xFFBFCBE8;
     private static final int FILA_BORDE = 0xFF7C89B4;
@@ -172,8 +172,11 @@ public class GtsScreen extends Screen {
         // El buscador ocupa lo que dejan los seis iconos, que van pegados a la
         // derecha. Se calcula en vez de escribirse: con un icono mas, un ancho
         // a mano se solaparia sin dar ningun error.
-        campoBusqueda = campo(PANT_X + MARGEN, PANT_Y + MARGEN,
-                botonX(0) - (PANT_X + MARGEN) - 12, 32);
+        // ⚠ Segunda fila y a todo lo ancho: en la primera están el conmutador
+        //   y los seis iconos, y un buscador espachurrado entre los dos no lo
+        //   usa nadie.
+        campoBusqueda = campo(PANT_X + MARGEN, PANT_Y + MARGEN + BOT + 6,
+                PANT_W - 2 * MARGEN, 32);
         campoPrecio = campo(PANEL_X + 30, PANEL_Y + 524, PANEL_W - 60, 11);
         campoNivelMin = campo(PANT_X + 30, PANT_Y + 118, 130, 3);
         campoNivelMax = campo(PANT_X + 180, PANT_Y + 118, 130, 3);
@@ -339,7 +342,6 @@ public class GtsScreen extends Screen {
 
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
         dibujarNavegacion(ctx, rx, ry);
-        dibujarConmutador(ctx, rx, ry);
         dibujarPanel(ctx, rx, ry);
         dibujarBarra(ctx, rx, ry);
 
@@ -700,7 +702,7 @@ public class GtsScreen extends Screen {
     };
 
     /** Lado de un botón de la barra, en unidades de arte. */
-    private static final int BOT = 40;
+    private static final int BOT = 34;
     private static final int BOT_SEP = 8;
 
     private int botonX(int i) {
@@ -711,11 +713,12 @@ public class GtsScreen extends Screen {
     }
 
     private void dibujarBarra(DrawContext ctx, int rx, int ry) {
+        dibujarConmutador(ctx, rx, ry);
         campoBusqueda.render(ctx, rx, ry, 0);
         if (texto(campoBusqueda).isEmpty()) {
             texto(ctx, Text.translatable("pokepad.lunaeternal.gts.buscar_pista"),
-                    PANT_X + MARGEN + 8, PANT_Y + MARGEN + 9, 15, 0xFF8892AC,
-                    false, false);
+                    PANT_X + MARGEN + 8, PANT_Y + MARGEN + BOT + 14, 14,
+                    0xFF8892AC, false, false);
         }
 
         String encimaDe = null;
@@ -757,8 +760,10 @@ public class GtsScreen extends Screen {
         // no flotando junto al cursor porque flotando taparía la primera fila,
         // que es justo la que se está mirando.
         if (encimaDe != null) {
+            // Sobre el buscador, que es la unica franja libre de esa fila.
             textoDer(ctx, Text.translatable(encimaDe),
-                    PANT_X + PANT_W - MARGEN, PANT_Y + MARGEN + BOT + 4, 14, ORO, true);
+                    PANT_X + PANT_W - MARGEN - 8, PANT_Y + MARGEN + BOT + 14, 13,
+                    ORO, true);
         }
         if (!aviso.isEmpty()) {
             texto(ctx, Text.literal(aviso), PANT_X + MARGEN,
@@ -768,8 +773,9 @@ public class GtsScreen extends Screen {
 
     // ---- la lista ----------------------------------------------------------
 
+    /** ⚠ Misma cuenta que la maqueta: fila 1 (34) + 6 + buscador (28) + 34. */
     private int listaY() {
-        return PANT_Y + MARGEN + 44;
+        return PANT_Y + MARGEN + BOT + 6 + 28 + 34;
     }
 
     private void dibujarLista(DrawContext ctx, int rx, int ry, boolean tercera) {
@@ -791,7 +797,7 @@ public class GtsScreen extends Screen {
                 break;
             }
             var e = l.get(i);
-            int y = listaY() + 20 + n * FILA;
+            int y = listaY() + 18 + n * FILA;
             int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
 
             if (tercera) {
@@ -800,7 +806,7 @@ public class GtsScreen extends Screen {
                 if (id != null) {
                     Mascota3D.dibujarEspecie(ctx, id,
                             "gtsfila:" + e.id(), e.shiny() ? "shiny" : "",
-                            px(ax + 6), py(y + 4), pl(64), pl(62), 0.10f, 0f, false);
+                            px(ax + 6), py(y + 3), pl(58), pl(58), 0.10f, 0f, false);
                 }
                 continue;
             }
@@ -820,13 +826,13 @@ public class GtsScreen extends Screen {
                 altoN--;
             }
             texto(ctx, Text.literal(nombre + (e.shiny() ? " ✦" : "")),
-                    ax + 74, y + 10, altoN, e.shiny() ? 0xFF8A6A00 : TEXTO_OSCURO,
+                    ax + 70, y + 8, altoN, e.shiny() ? 0xFF8A6A00 : TEXTO_OSCURO,
                     false, true);
-            int tx = ax + 74;
+            int tx = ax + 70;
             for (var tp : tipos(e.especie())) {
-                tx += insignia(ctx, tp, tx, y + 36, 18);
+                tx += insignia(ctx, tp, tx, y + 34, 17);
             }
-            texto(ctx, Text.literal("Nv " + e.nivel()), ax + 300, y + 16, 17,
+            texto(ctx, Text.literal("Nv " + e.nivel()), ax + 300, y + 14, 16,
                     TEXTO_OSCURO, false, true);
 
             // ---- MEDIO: la calidad, resumida. ⚠ Antes iban los seis IVs en
@@ -842,36 +848,36 @@ public class GtsScreen extends Screen {
             if (perfectos > 0) {
                 int c = perfectos >= 5 ? 0xFF1F7A3C : perfectos >= 3
                         ? 0xFF8A6A00 : TEXTO_SUAVE;
-                ctx.fill(px(ax + 296), py(y + 40), px(ax + 296 + 74), py(y + 58),
+                ctx.fill(px(ax + 296), py(y + 36), px(ax + 296 + 74), py(y + 53),
                         perfectos >= 5 ? 0x331F7A3C : 0x22000000);
-                texto(ctx, Text.literal(perfectos + " × 31"), ax + 333, y + 43,
+                texto(ctx, Text.literal(perfectos + " × 31"), ax + 333, y + 38,
                         14, c, true, false);
             } else {
-                texto(ctx, Text.literal("—"), ax + 333, y + 43, 14, TEXTO_SUAVE,
+                texto(ctx, Text.literal("—"), ax + 333, y + 38, 14, TEXTO_SUAVE,
                         true, false);
             }
 
             // ---- DERECHA: el precio, grande, y qué tal está.
             int precioDer = ax + aw - 150;
             textoDer(ctx, Text.literal(String.format("%,d", e.precio())),
-                    precioDer, y + 12, 22, 0xFF8A6A00, true);
+                    precioDer, y + 10, 21, 0xFF8A6A00, true);
             if (e.estimado() > 0) {
                 double razon = e.precio() / (double) e.estimado();
                 textoDer(ctx, Text.translatable(razon < 0.7
                                 ? "pokepad.lunaeternal.gts.et_chollo"
                                 : razon > 1.3 ? "pokepad.lunaeternal.gts.et_caro"
                                 : "pokepad.lunaeternal.gts.et_justo"),
-                        precioDer, y + 38, 13,
+                        precioDer, y + 34, 12,
                         razon < 0.7 ? 0xFF1F7A3C : razon > 1.3 ? ROJO : TEXTO_SUAVE,
                         true);
             }
-            textoDer(ctx, Text.literal(queda(e.expira())), precioDer, y + 54, 12,
+            textoDer(ctx, Text.literal(queda(e.expira())), precioDer, y + 48, 11,
                     TEXTO_SUAVE, true);
 
             // ⚠⚠ EL BOTON VA EN LA FILA. Antes había que seleccionar y bajar la
             //   vista al panel: dos clics y un salto de atención para lo único
             //   que se viene a hacer aquí.
-            botonPeq(ctx, rx, ry, ax + aw - 132, y + 18, 124, 34,
+            botonPeq(ctx, rx, ry, ax + aw - 132, y + 16, 124, 32,
                     Text.translatable(modo == Modo.MIAS
                             ? "pokepad.lunaeternal.gts.retirar"
                             : "pokepad.lunaeternal.gts.comprar"),
@@ -941,7 +947,7 @@ public class GtsScreen extends Screen {
         int hasta = Math.min(n, (pagina + 1) * filasCaben());
         textoDer(ctx, Text.translatable("pokepad.lunaeternal.gts.contador",
                         desde, hasta, n),
-                PANT_X + PANT_W - MARGEN - 4, PANT_Y + PANT_H - MARGEN - 24, 14,
+                PANT_X + PANT_W - MARGEN - 4, PANT_Y + PANT_H - MARGEN - 20, 13,
                 TEXTO_SUAVE, true);
     }
 
@@ -1006,7 +1012,7 @@ public class GtsScreen extends Screen {
                 break;
             }
             var m = l.get(i);
-            int y = listaY() + 20 + n * FILA;
+            int y = listaY() + 18 + n * FILA;
             int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
 
             if (tercera) {
@@ -1014,8 +1020,8 @@ public class GtsScreen extends Screen {
                         + m.especie().toLowerCase(java.util.Locale.ROOT));
                 if (id != null) {
                     Mascota3D.dibujarEspecie(ctx, id, "gtsmio:" + m.uuid(),
-                            m.shiny() ? "shiny" : "", px(ax + 6), py(y + 4),
-                            pl(64), pl(62), 0.10f, 0f, false);
+                            m.shiny() ? "shiny" : "", px(ax + 6), py(y + 3),
+                            pl(58), pl(58), 0.10f, 0f, false);
                 }
                 continue;
             }
@@ -1030,13 +1036,13 @@ public class GtsScreen extends Screen {
             String nombre = m.mote().isBlank()
                     ? especieEs(m.especie()).getString() : m.mote();
             texto(ctx, Text.literal(nombre + (m.shiny() ? " ✦" : "")),
-                    ax + 74, y + 10, 21, m.shiny() ? 0xFF8A6A00 : TEXTO_OSCURO,
+                    ax + 70, y + 8, 20, m.shiny() ? 0xFF8A6A00 : TEXTO_OSCURO,
                     false, true);
-            int tx2 = ax + 74;
+            int tx2 = ax + 70;
             for (var tp : tipos(m.especie())) {
-                tx2 += insignia(ctx, tp, tx2, y + 36, 18);
+                tx2 += insignia(ctx, tp, tx2, y + 34, 17);
             }
-            texto(ctx, Text.literal("Nv " + m.nivel()), ax + 300, y + 16, 17,
+            texto(ctx, Text.literal("Nv " + m.nivel()), ax + 300, y + 14, 16,
                     TEXTO_OSCURO, false, true);
             // ⚠ SE DICE DE DONDE SALE. Un Pokémon del PC se puede vender igual
             //   que uno del equipo, pero saber cuál estás vendiendo evita el
@@ -1044,10 +1050,10 @@ public class GtsScreen extends Screen {
             texto(ctx, Text.translatable("EQUIPO".equals(m.donde())
                             ? "pokepad.lunaeternal.gts.del_equipo"
                             : "pokepad.lunaeternal.gts.del_pc"),
-                    ax + 300, y + 40, 13, TEXTO_SUAVE, false, true);
+                    ax + 300, y + 36, 12, TEXTO_SUAVE, false, true);
             textoDer(ctx, Text.translatable("pokepad.lunaeternal.gts.vale",
                             String.format("%,d", m.estimado())),
-                    ax + aw - 16, y + 24, 17, 0xFF8A6A00, true);
+                    ax + aw - 16, y + 22, 16, 0xFF8A6A00, true);
         }
         if (!tercera && paginas() > 1) {
             int y = PANT_Y + PANT_H - MARGEN - 28;
@@ -1127,45 +1133,47 @@ public class GtsScreen extends Screen {
     /**
      * El conmutador POKÉMON / OBJETOS.
      *
-     * <h2>⚠⚠ Dos pestañas, no un icono</h2>
+     * <h2>⚠⚠ A LA DERECHA, y por dos motivos</h2>
      *
-     * Antes se cambiaba con un icono más de la barra, y eso <b>no dice que haya
-     * otra mitad</b>: un icono es un botón que hace algo, no un sitio donde
-     * estás. Con dos pestañas y una marcada se ve de un vistazo que el mercado
-     * tiene dos caras y en cuál estás — que es literalmente lo que pidió el
-     * usuario.
+     * El usuario lo pidió ahí — <i>«que a la derecha se pueda alternar entre
+     * objetos y pokémons»</i>. Y estando en el panel izquierdo <b>se montaba
+     * encima de INICIO y de la X</b>: la fila de navegación ocupa esos 72 px, y
+     * yo había puesto el conmutador justo ahí.
      *
-     * <p>⚠ Va arriba del panel izquierdo y no en la barra de la derecha: es el
-     * cambio más grande que se puede hacer aquí —cambia la pantalla entera— y
-     * lo grande va donde empieza la lectura, no al final.
+     * <p>La maqueta no lo cazaba porque no dibujaba la navegación. Ahora sí la
+     * dibuja, aunque no sea suya, precisamente para eso.
+     *
+     * <h2>⚠ Dos pestañas y no un icono</h2>
+     *
+     * Un icono es un botón que hace algo; una pestaña es <b>un sitio donde
+     * estás</b>. Con dos y una marcada se ve de un vistazo que el mercado tiene
+     * dos caras y en cuál estás.
      */
+    private static final int CONM_W = 100;
+
     private void dibujarConmutador(DrawContext ctx, int rx, int ry) {
-        int ax = PANEL_X + 16, aw = PANEL_W - 32;
-        int ay = PANEL_Y + NAV_ALTO - 34;
-        int mitad = aw / 2;
         for (int i = 0; i < 2; i++) {
             boolean act = (i == 0) == ES_POKEMON;
-            int bx = ax + i * mitad;
-            boolean enc = dentro(rx, ry, px(bx), py(ay), pl(mitad), pl(30));
-            ctx.fill(px(bx), py(ay), px(bx + mitad), py(ay + 30),
-                    act ? 0xFFF35C0C : (enc ? 0xFF4F6FB0 : 0xFF2A3145));
-            marco(ctx, px(bx), py(ay), pl(mitad), pl(30),
+            int bx = PANT_X + MARGEN + i * (CONM_W + 4);
+            boolean enc = dentro(rx, ry, px(bx), py(PANT_Y + MARGEN),
+                    pl(CONM_W), pl(BOT));
+            ctx.fill(px(bx), py(PANT_Y + MARGEN), px(bx + CONM_W),
+                    py(PANT_Y + MARGEN + BOT),
+                    act ? BORDE_ENCIMA : (enc ? 0xFF4F6FB0 : 0xFF2A3145));
+            marco(ctx, px(bx), py(PANT_Y + MARGEN), pl(CONM_W), pl(BOT),
                     act ? 0xFFFFC46B : 0xFF20283C, Math.max(1, pl(2)));
             texto(ctx, Text.translatable(i == 0
                             ? "pokepad.lunaeternal.gts.c_pokemon"
                             : "pokepad.lunaeternal.gts.c_objetos"),
-                    bx + mitad / 2, ay + 8, 15,
+                    bx + CONM_W / 2, PANT_Y + MARGEN + 10, 14,
                     act ? 0xFF2A1C00 : 0xFFC9D2E6, true, false);
         }
     }
 
-    /** @return true si el clic era del conmutador */
     private boolean clicConmutador(int rx, int ry) {
-        int ax = PANEL_X + 16, aw = PANEL_W - 32;
-        int ay = PANEL_Y + NAV_ALTO - 34;
-        int mitad = aw / 2;
         for (int i = 0; i < 2; i++) {
-            if (dentro(rx, ry, px(ax + i * mitad), py(ay), pl(mitad), pl(30))) {
+            int bx = PANT_X + MARGEN + i * (CONM_W + 4);
+            if (dentro(rx, ry, px(bx), py(PANT_Y + MARGEN), pl(CONM_W), pl(BOT))) {
                 boolean quierePokemon = i == 0;
                 if (quierePokemon != ES_POKEMON && client != null) {
                     sonar();
@@ -1289,12 +1297,12 @@ public class GtsScreen extends Screen {
             if (i >= n) {
                 break;
             }
-            int y = listaY() + 20 + f * FILA;
+            int y = listaY() + 18 + f * FILA;
             int aw = PANT_W - 2 * MARGEN;
             // El botón de la fila va ANTES que la fila entera: si no, pulsar
             // «comprar» solo seleccionaría.
             if (modo != Modo.VENDER && dentro(rx, ry, px(PANT_X + MARGEN + aw - 132),
-                    py(y + 18), pl(124), pl(34))) {
+                    py(y + 16), pl(124), pl(32))) {
                 elegido = i;
                 var e = lista().get(i);
                 sonar();

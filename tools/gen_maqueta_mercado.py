@@ -70,10 +70,39 @@ VERDE = (46, 158, 86, 255)
 ALERTA = (255, 60, 60, 255)
 
 
+# ---------------------------------------------------------- LA FUENTE
+#
+# ⚠⚠⚠ ESTO ES LO QUE HACE QUE LA MAQUETA PREDIGA EN VEZ DE APROXIMAR.
+#
+#     Minecraft usa una fuente de ANCHO VARIABLE, y muy variable: una `i` mide
+#     2 y una `m` mide 6. Medir con Courier --que es de ancho fijo-- da un
+#     ancho equivocado en CADA cadena, y entonces la maqueta dice que algo cabe
+#     cuando en el juego se sale, o al reves.
+#
+#     Estas son las anchuras reales de `default.png`, en unidades de fuente
+#     sobre una altura de 9. El codigo Java calcula igual:
+#         ancho_en_arte = getWidth(texto) * alto_pedido / fontHeight
+ANCHOS = {
+    " ": 4, "!": 2, '"': 5, "'": 3, "(": 5, ")": 5, "*": 5, ",": 2,
+    ".": 2, ":": 2, ";": 2, "<": 5, ">": 5, "[": 4, "]": 4, "`": 3,
+    "f": 5, "i": 2, "k": 5, "l": 3, "t": 4, "{": 5, "}": 5, "|": 2,
+    "I": 4, "@": 7, "~": 7, "\u2014": 6, "\u00d7": 6, "\u2726": 6,
+}
+FONT_HEIGHT = 9
+ANCHO_POR_DEFECTO = 6
+
+
+def ancho_mc(texto, alto):
+    """El ancho que tendria ese texto EN EL JUEGO, en unidades de arte."""
+    total = sum(ANCHOS.get(c, ANCHO_POR_DEFECTO) for c in texto)
+    return total * alto / FONT_HEIGHT
+
+
 def fuente(px):
+    """Solo para DIBUJAR. Las medidas salen de `ancho_mc`, no de aqui."""
     for nombre in ("consola.ttf", "cour.ttf", "arial.ttf"):
         try:
-            return ImageFont.truetype(nombre, px)
+            return ImageFont.truetype(nombre, max(8, int(px * 0.9)))
         except OSError:
             continue
     return ImageFont.load_default()
@@ -83,7 +112,19 @@ class Lienzo:
     """Dibuja y VIGILA: apunta cada caja y avisa de solapes y desbordes."""
 
     def __init__(self):
-        self.im = Image.new("RGBA", (NAT_ANCHO, NAT_ALTO), FONDO)
+        # ⚠ EL CHASIS DE VERDAD, no uno dibujado. Es lo que el usuario pidio:
+        #   sobre ESE fondo tiene que quedar todo bien, asi que sobre ESE fondo
+        #   hay que comprobarlo. Un chasis inventado deja huecos donde el de
+        #   verdad tiene molduras.
+        base = FUENTE / "fondo_cosmeticos.png"
+        if base.exists():
+            self.im = Image.open(base).convert("RGBA")
+            if self.im.size != (NAT_ANCHO, NAT_ALTO):
+                self.im = self.im.resize((NAT_ANCHO, NAT_ALTO), Image.LANCZOS)
+            self.conFondo = True
+        else:
+            self.im = Image.new("RGBA", (NAT_ANCHO, NAT_ALTO), FONDO)
+            self.conFondo = False
         self.d = ImageDraw.Draw(self.im)
         self.cajas = []      # (nombre, x0, y0, x1, y1)
         self.avisos = []
@@ -100,7 +141,10 @@ class Lienzo:
     def texto(self, nombre, s, x, y, px=16, color=BLANCO, ali="izq",
               limite=None, vigilar=True):
         f = fuente(px)
-        ancho = self.d.textlength(s, font=f)
+        # ⚠ EL ANCHO SALE DE LAS MEDIDAS DE MINECRAFT, no de la tipografia con
+        #   la que se dibuja el PNG. Dibujar es para mirarlo; MEDIR es la
+        #   prueba, y tiene que dar lo mismo que dara el juego.
+        ancho = ancho_mc(s, px)
         if ali == "der":
             x = x - ancho
         elif ali == "centro":
@@ -161,72 +205,85 @@ class Lienzo:
 
 
 def chasis(L, titulo):
-    L.caja("chasis", 0, 0, NAT_ANCHO - 1, NAT_ALTO - 1, FONDO, vigilar=False)
-    L.caja("chasis.panel", PANEL_X, PANEL_Y, PANEL_W, PANEL_H, PANEL_BG,
-           (255, 196, 60, 255), 3, vigilar=False)
-    L.caja("chasis.pantalla", PANT_X, PANT_Y, PANT_W, PANT_H, PANT_BG,
-           NARANJA, 6, vigilar=False)
-    L.texto("chasis.titulo", titulo, NAT_ANCHO // 2, 16, 26, ORO, "centro",
-            vigilar=False)
+    """Sobre el chasis real no se dibuja nada: ya esta ahi."""
+    if not L.conFondo:
+        L.caja("chasis.panel", PANEL_X, PANEL_Y, PANEL_W, PANEL_H, PANEL_BG,
+               (255, 196, 60, 255), 3, vigilar=False)
+        L.caja("chasis.pantalla", PANT_X, PANT_Y, PANT_W, PANT_H, PANT_BG,
+               NARANJA, 6, vigilar=False)
 
 
 def maqueta_gts():
-    """La pantalla de Pokemon: barra, cabecera y cinco filas."""
+    """La pantalla de la derecha: conmutador, barra, buscador y filas."""
     L = Lienzo()
-    chasis(L, "GTS — POKEMON")
-    MARGEN, BOT, BOT_SEP, FILA = 12, 40, 8, 76
+    chasis(L, "GTS")
+    MARGEN, BOT, BOT_SEP, FILA = 12, 34, 8, 70
 
-    # --- conmutador
-    L.caja("conm", PANEL_X + 16, PANEL_Y + NAV_ALTO - 34, PANEL_W - 32, 30,
-           (42, 49, 69, 255), (32, 40, 60, 255))
-    L.texto("conm.pk", "POKEMON", PANEL_X + 16 + (PANEL_W - 32) // 4,
-            PANEL_Y + NAV_ALTO - 26, 15, BLANCO, "centro")
-    L.texto("conm.ob", "OBJETOS", PANEL_X + 16 + (PANEL_W - 32) * 3 // 4,
-            PANEL_Y + NAV_ALTO - 26, 15, BLANCO, "centro")
+    # ⚠ La fila de navegacion del panel se dibuja AUNQUE no sea nuestra: es lo
+    #   que hace que la maqueta cace que algo se le monta encima. Sin ella, el
+    #   conmutador estaba puesto justo sobre INICIO y la X, y la comprobacion
+    #   decia «limpio».
+    L.caja("nav.atras", PANEL_X + 18, PANEL_Y + NAV_ALTO // 2 - 24, 60, 48,
+           None, (120, 130, 160, 120))
+    L.texto("nav.inicio", "INICIO", PANEL_X + 92, PANEL_Y + NAV_ALTO // 2 - 14,
+            28, BLANCO)
+    L.caja("nav.cerrar", PANEL_X + PANEL_W - 18 - 80,
+           PANEL_Y + NAV_ALTO // 2 - 32, 80, 64, None, (120, 130, 160, 120))
 
-    # --- barra de iconos
+    # --- FILA 1: conmutador a la izquierda de la pantalla, iconos a la derecha
+    y1 = PANT_Y + MARGEN
+    for i, et in enumerate(("POKEMON", "OBJETOS")):
+        bx = PANT_X + MARGEN + i * 104
+        L.caja(f"conm{i}", bx, y1, 100, BOT,
+               NARANJA if i == 0 else (42, 49, 69, 255), (32, 40, 60, 255))
+        L.texto(f"conm{i}.t", et, bx + 50, y1 + 10, 14, BLANCO, "centro",
+                limite=94)
+
     n_botones = 5
     total = n_botones * BOT + (n_botones - 1) * BOT_SEP
     x0_bot = PANT_X + PANT_W - MARGEN - total
     for i in range(n_botones):
-        L.caja(f"barra.b{i}", x0_bot + i * (BOT + BOT_SEP), PANT_Y + MARGEN,
-               BOT, BOT, (58, 69, 96, 255), (32, 40, 60, 255))
-    L.caja("busca", PANT_X + MARGEN, PANT_Y + MARGEN,
-           x0_bot - (PANT_X + MARGEN) - 12, 32, (30, 36, 50, 255))
-    L.texto("busca.pista", "Nombre del Pokemon...", PANT_X + MARGEN + 8,
-            PANT_Y + MARGEN + 9, 15, (136, 146, 172, 255))
+        L.caja(f"barra.b{i}", x0_bot + i * (BOT + BOT_SEP), y1, BOT, BOT,
+               (58, 69, 96, 255), (32, 40, 60, 255))
+
+    # --- FILA 2: el buscador, a todo lo ancho
+    y2 = y1 + BOT + 6
+    L.caja("busca", PANT_X + MARGEN, y2, PANT_W - 2 * MARGEN, 28,
+           (30, 36, 50, 255))
+    L.texto("busca.pista", "Nombre del Pokemon...", PANT_X + MARGEN + 8, y2 + 8,
+            14, (136, 146, 172, 255))
 
     # --- cabecera ordenable
-    hy = PANT_Y + MARGEN + 44
+    hy = y2 + 34
     for nombre, cx, ancho in (("OFERTA", 74, 200), ("IVs", 296, 90),
                               ("PRECIO", 470, 140), ("EXPIRA", 620, 100)):
-        L.texto(f"cab.{nombre}", nombre + " —", PANT_X + MARGEN + cx, hy, 14,
-                SUAVE, limite=ancho)
+        L.texto(f"cab.{nombre}", nombre + " \u2014", PANT_X + MARGEN + cx, hy,
+                13, SUAVE, limite=ancho)
 
     # --- filas
     aw = PANT_W - 2 * MARGEN
     for n in range(5):
-        y = hy + 20 + n * FILA
+        y = hy + 18 + n * FILA
         ax = PANT_X + MARGEN
         L.caja(f"fila{n}", ax, y, aw, FILA - 6, FILA_BG, FILA_BORDE)
-        L.caja(f"fila{n}.sprite", ax + 6, y + 4, 64, 62, (200, 210, 235, 255),
+        L.caja(f"fila{n}.sprite", ax + 6, y + 3, 58, 58, (200, 210, 235, 255),
                vigilar=False)
-        L.texto(f"fila{n}.nombre", "Nidoking", ax + 74, y + 10, 21, OSCURO,
+        L.texto(f"fila{n}.nombre", "Nidoking", ax + 70, y + 8, 20, OSCURO,
                 limite=210)
-        L.caja(f"fila{n}.tipo1", ax + 74, y + 36, 62, 18, (160, 64, 160, 255))
-        L.caja(f"fila{n}.tipo2", ax + 140, y + 36, 62, 18, (176, 128, 64, 255))
-        L.texto(f"fila{n}.nivel", "Nv 84", ax + 300, y + 16, 17, OSCURO)
-        L.caja(f"fila{n}.ivs", ax + 296, y + 40, 74, 18, (200, 210, 235, 255))
-        L.texto(f"fila{n}.precio", "1.500", ax + aw - 150, y + 12, 22,
+        L.caja(f"fila{n}.tipo1", ax + 70, y + 34, 62, 17, (160, 64, 160, 255))
+        L.caja(f"fila{n}.tipo2", ax + 136, y + 34, 62, 17, (176, 128, 64, 255))
+        L.texto(f"fila{n}.nivel", "Nv 84", ax + 300, y + 14, 16, OSCURO)
+        L.caja(f"fila{n}.ivs", ax + 296, y + 36, 74, 17, (200, 210, 235, 255))
+        L.texto(f"fila{n}.precio", "1.500", ax + aw - 150, y + 10, 21,
                 (138, 106, 0, 255), "der")
-        L.texto(f"fila{n}.trato", "precio justo", ax + aw - 150, y + 38, 13,
+        L.texto(f"fila{n}.trato", "precio justo", ax + aw - 150, y + 34, 12,
                 SUAVE, "der")
-        L.texto(f"fila{n}.expira", "2d 3h", ax + aw - 150, y + 54, 12, SUAVE,
+        L.texto(f"fila{n}.expira", "2d 3h", ax + aw - 150, y + 48, 11, SUAVE,
                 "der")
-        L.caja(f"fila{n}.comprar", ax + aw - 132, y + 18, 124, 34, VERDE)
+        L.caja(f"fila{n}.comprar", ax + aw - 132, y + 16, 124, 32, VERDE)
 
     L.texto("contador", "1-5 de 12", PANT_X + PANT_W - MARGEN - 4,
-            PANT_Y + PANT_H - MARGEN - 24, 14, SUAVE, "der")
+            PANT_Y + PANT_H - MARGEN - 20, 13, SUAVE, "der")
     return L
 
 
@@ -235,6 +292,9 @@ def maqueta_panel(vender):
     L = Lienzo()
     chasis(L, "PANEL — " + ("PUBLICAR" if vender else "COMPRAR"))
     ret_h = 190 if vender else 220
+    # ⚠ El conmutador SE FUE A LA DERECHA, que es donde lo pidio el usuario --
+    #   y de paso deja de montarse encima de INICIO y de la X, que es lo que
+    #   pasaba estando aqui.
     RET_X, RET_Y, RET_W = PANEL_X + 24, PANEL_Y + NAV_ALTO + 4, PANEL_W - 48
     cx = PANEL_X + PANEL_W // 2
 

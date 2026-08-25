@@ -136,7 +136,11 @@ public class GtsScreen extends Screen {
     protected void init() {
         recalcular();
 
-        campoBusqueda = campo(PANT_X + MARGEN, PANT_Y + MARGEN, 300, 32);
+        // El buscador ocupa lo que dejan los seis iconos, que van pegados a la
+        // derecha. Se calcula en vez de escribirse: con un icono mas, un ancho
+        // a mano se solaparia sin dar ningun error.
+        campoBusqueda = campo(PANT_X + MARGEN, PANT_Y + MARGEN,
+                botonX(0) - (PANT_X + MARGEN) - 12, 32);
         campoPrecio = campo(PANEL_X + 30, PANEL_Y + 430, PANEL_W - 60, 11);
         campoNivelMin = campo(PANT_X + 30, PANT_Y + 118, 130, 3);
         campoNivelMax = campo(PANT_X + 180, PANT_Y + 118, 130, 3);
@@ -542,17 +546,38 @@ public class GtsScreen extends Screen {
 
     // ---- la barra de arriba ------------------------------------------------
 
-    private record Boton(String id, String etiqueta, int x, int w) {}
+    /**
+     * Un botón de la barra. <b>Icono, no texto.</b>
+     *
+     * <p>⚠ Los botones de texto llenaban la barra entera y la hacían parecer un
+     * formulario. Una barra de herramientas se lee <b>por forma</b>, no por
+     * palabra: la lupa se reconoce antes de leerse, y así caben seis en el
+     * espacio en el que antes cabían tres.
+     *
+     * <p>Y como un icono solo no siempre se entiende, <b>cada uno dice su nombre
+     * al pasar el ratón</b>. Es lo que hace que un icono sea aprendible en vez
+     * de un acertijo.
+     */
+    private record Boton(String id, String etiqueta) {}
 
-    private List<Boton> botones() {
-        var xs = new ArrayList<Boton>();
-        int x = PANT_X + MARGEN + 312;
-        xs.add(new Boton("buscar", "BUSCAR", x, 96));
-        xs.add(new Boton("filtros", "FILTROS", x + 102, 96));
-        xs.add(new Boton("objetos", "OBJETOS", x + 204, 104));
-        xs.add(new Boton("vender", "+ VENDER", x + 314, 110));
-        xs.add(new Boton("mias", "MIS OFERTAS", x + 430, 130));
-        return xs;
+    private static final Boton[] BARRA = {
+        new Boton("buscar", "pokepad.lunaeternal.gts.b_buscar"),
+        new Boton("refrescar", "pokepad.lunaeternal.gts.b_refrescar"),
+        new Boton("filtros", "pokepad.lunaeternal.gts.b_filtros"),
+        new Boton("vender", "pokepad.lunaeternal.gts.b_vender"),
+        new Boton("mias", "pokepad.lunaeternal.gts.b_mias"),
+        new Boton("objetos", "pokepad.lunaeternal.gts.b_objetos"),
+    };
+
+    /** Lado de un botón de la barra, en unidades de arte. */
+    private static final int BOT = 40;
+    private static final int BOT_SEP = 8;
+
+    private int botonX(int i) {
+        // Pegados a la derecha: el buscador crece hacia ellos y así el hueco
+        // sobrante queda en medio, donde no molesta.
+        int total = BARRA.length * BOT + (BARRA.length - 1) * BOT_SEP;
+        return PANT_X + PANT_W - MARGEN - total + i * (BOT + BOT_SEP);
     }
 
     private void dibujarBarra(DrawContext ctx, int rx, int ry) {
@@ -562,19 +587,51 @@ public class GtsScreen extends Screen {
                     PANT_X + MARGEN + 8, PANT_Y + MARGEN + 9, 15, 0xFF8892AC,
                     false, false);
         }
-        for (var b : botones()) {
-            boolean activo = switch (b.id()) {
+
+        String encimaDe = null;
+        for (int i = 0; i < BARRA.length; i++) {
+            var b = BARRA[i];
+            int ax = botonX(i), ay = PANT_Y + MARGEN;
+            boolean marcado = switch (b.id()) {
                 case "vender" -> modo == Modo.VENDER;
                 case "mias" -> modo == Modo.MIAS;
                 case "filtros" -> modo == Modo.FILTROS;
                 default -> false;
             };
-            botonPeq(ctx, rx, ry, b.x(), PANT_Y + MARGEN, b.w(), 32,
-                    Text.literal(b.etiqueta()), true, activo);
+            boolean encima = dentro(rx, ry, px(ax), py(ay), pl(BOT), pl(BOT));
+            if (encima) {
+                encimaDe = b.etiqueta();
+            }
+            ctx.fill(px(ax), py(ay), px(ax + BOT), py(ay + BOT),
+                    marcado ? BORDE_ENCIMA : (encima ? 0xFF5E86D8 : 0xFF3A4560));
+            marco(ctx, px(ax), py(ay), pl(BOT), pl(BOT),
+                    marcado ? 0xFFFFC46B : 0xFF20283C, Math.max(1, pl(2)));
+
+            int cx = px(ax + BOT / 2), cy = py(ay + BOT / 2);
+            int lado = pl(BOT - 14);
+            int color = marcado ? 0xFF2A1C00 : 0xFFFFFFFF;
+            switch (b.id()) {
+                case "buscar" -> Iconos.lupa(ctx, cx, cy, lado, color);
+                case "refrescar" -> Iconos.refrescar(ctx, cx, cy, lado, color);
+                case "filtros" -> Iconos.embudo(ctx, cx, cy, lado, color);
+                case "vender" -> Iconos.mas(ctx, cx, cy, lado, color);
+                case "mias" -> Iconos.lista(ctx, cx, cy, lado, color);
+                case "objetos" -> Iconos.caja(ctx, cx, cy, lado, color);
+                default -> { }
+            }
+        }
+
+        // La etiqueta del que está bajo el ratón, debajo de la barra. Va aquí y
+        // no flotando junto al cursor porque flotando taparía la primera fila,
+        // que es justo la que se está mirando.
+        if (encimaDe != null) {
+            texto(ctx, Text.translatable(encimaDe),
+                    PANT_X + PANT_W - MARGEN, PANT_Y + MARGEN + BOT + 4, 14,
+                    ORO, false, true);
         }
         if (!aviso.isEmpty()) {
-            texto(ctx, Text.literal(aviso), PANT_X + PANT_W - MARGEN,
-                    PANT_Y + PANT_H - 20, 15, ROJO, false, true);
+            texto(ctx, Text.literal(aviso), PANT_X + MARGEN,
+                    PANT_Y + PANT_H - 20, 15, ROJO, false, false);
         }
     }
 
@@ -957,9 +1014,9 @@ public class GtsScreen extends Screen {
             return true;
         }
 
-        for (var b : botones()) {
-            if (dentro(rx, ry, px(b.x()), py(PANT_Y + MARGEN), pl(b.w()), pl(32))) {
-                pulsarBarra(b.id());
+        for (int i = 0; i < BARRA.length; i++) {
+            if (dentro(rx, ry, px(botonX(i)), py(PANT_Y + MARGEN), pl(BOT), pl(BOT))) {
+                pulsarBarra(BARRA[i].id());
                 return true;
             }
         }
@@ -1080,7 +1137,7 @@ public class GtsScreen extends Screen {
         sonar();
         aviso = "";
         switch (id) {
-            case "buscar" -> {
+            case "buscar", "refrescar" -> {
                 pagina = 0;
                 elegido = -1;
                 pedir();

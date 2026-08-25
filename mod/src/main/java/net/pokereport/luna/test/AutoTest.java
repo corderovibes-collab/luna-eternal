@@ -78,6 +78,7 @@ public final class AutoTest {
             testArbolMisiones();
             testClanes(a, b);
             testMercado(a, b);
+            testTasador();
             testCura();
 
         } catch (Exception e) {
@@ -1540,6 +1541,131 @@ public final class AutoTest {
         }
         check("tras cancelar todo, el libro queda vacio",
                 svc.libro(ITEM, COMPRA).isEmpty() && svc.libro(ITEM, VENTA).isEmpty());
+    }
+
+    /**
+     * EL TASADOR: que el orden de los precios tenga sentido.
+     *
+     * <p>⚠⚠ Aqui NO se comprueban cifras concretas, y es a proposito: los
+     * numeros del tasador son provisionales como toda la economia, asi que una
+     * prueba que dijera «un Pikachu vale 1.240» se rompe el dia que se calibre y
+     * no habria enseñado nada.
+     *
+     * <p>Lo que se fija son las <b>relaciones de orden</b>, que son las que
+     * tienen que seguir siendo ciertas pase lo que pase: un shiny vale mas que
+     * el mismo sin brillo, un 6x31 mas que uno mediocre, un legendario mas que
+     * un comun. Si alguna de esas se invierte, el tasador esta roto por mucho
+     * que las cifras parezcan razonables.
+     */
+    private void testTasador() {
+        var COMUN = net.pokereport.luna.market.Tasador.Rareza.COMUN;
+        var LEGENDARIO = net.pokereport.luna.market.Tasador.Rareza.LEGENDARIO;
+        var MITICO = net.pokereport.luna.market.Tasador.Rareza.MITICO;
+
+        // Un ejemplar corriente de referencia: 500 BST, nivel 50, IVs mediocres.
+        var normal = ficha("pikachu", 50, false, 500, COMUN, 90, 0, 0, false);
+        long base = net.pokereport.luna.market.Tasador.formula(normal);
+        check("un Pokemon corriente vale algo", base > 0);
+        check("nadie vale menos que el minimo",
+                net.pokereport.luna.market.Tasador.formula(
+                        ficha("magikarp", 1, false, 200, COMUN, 0, 0, 0, false))
+                        >= net.pokereport.luna.market.Tasador.MINIMO);
+
+        // --- SHINY. Va aparte de todo lo demas: un shiny malo sigue siendo un
+        //     shiny, asi que su valor no depende de sus numeros.
+        var shiny = ficha("pikachu", 50, true, 500, COMUN, 90, 0, 0, false);
+        check("un shiny vale mas que el mismo sin brillo",
+                net.pokereport.luna.market.Tasador.formula(shiny) > base);
+        check("y MUCHO mas, no un poco",
+                net.pokereport.luna.market.Tasador.formula(shiny) > base * 5);
+
+        // --- IVs. Se miden dos veces y las dos cuentan.
+        var buenos = ficha("pikachu", 50, false, 500, COMUN, 186, 6, 0, false);
+        var mediocres = ficha("pikachu", 50, false, 500, COMUN, 90, 0, 0, false);
+        check("un 6x31 vale mas que uno mediocre",
+                net.pokereport.luna.market.Tasador.formula(buenos)
+                        > net.pokereport.luna.market.Tasador.formula(mediocres));
+        // ⚠ ESTA ES LA QUE IMPORTA: el mercado competitivo no paga por «180 de
+        //   186», paga por CUANTOS 31. Con solo el total, estos dos serian
+        //   indistinguibles.
+        var seisPerfectos = ficha("pikachu", 50, false, 500, COMUN, 156, 5, 0, false);
+        var sinPerfectos = ficha("pikachu", 50, false, 500, COMUN, 156, 0, 0, false);
+        check("a igual TOTAL de IVs, gana quien tiene mas PERFECTOS",
+                net.pokereport.luna.market.Tasador.formula(seisPerfectos)
+                        > net.pokereport.luna.market.Tasador.formula(sinPerfectos));
+
+        // --- EVs y nivel: valen porque son TRABAJO.
+        check("los EVs entrenados suben el precio",
+                net.pokereport.luna.market.Tasador.formula(
+                        ficha("pikachu", 50, false, 500, COMUN, 90, 0, 508, false)) > base);
+        check("el nivel sube el precio",
+                net.pokereport.luna.market.Tasador.formula(
+                        ficha("pikachu", 100, false, 500, COMUN, 90, 0, 0, false)) > base);
+        check("la habilidad oculta sube el precio",
+                net.pokereport.luna.market.Tasador.formula(
+                        ficha("pikachu", 50, false, 500, COMUN, 90, 0, 0, true)) > base);
+
+        // --- RAREZA. El orden tiene que ser el que dice la enum.
+        var leg = ficha("mewtwo", 50, false, 500, LEGENDARIO, 90, 0, 0, false);
+        var mit = ficha("mew", 50, false, 500, MITICO, 90, 0, 0, false);
+        check("un legendario vale mas que un comun",
+                net.pokereport.luna.market.Tasador.formula(leg) > base);
+        check("un mitico vale mas que un legendario",
+                net.pokereport.luna.market.Tasador.formula(mit)
+                        > net.pokereport.luna.market.Tasador.formula(leg));
+
+        // --- BST. Mas estadisticas, mas precio.
+        check("mas estadisticas base, mas precio",
+                net.pokereport.luna.market.Tasador.formula(
+                        ficha("dragonite", 50, false, 600, COMUN, 90, 0, 0, false)) > base);
+
+        // --- LAS ETIQUETAS DE COBBLEMON
+        // ⚠ De mas rara a menos: una especie puede llevar VARIAS, y tiene que
+        //   ganar la mas alta. Al reves, un mitico se tasaria como legendario.
+        check("mythical gana a legendary cuando van juntas",
+                net.pokereport.luna.market.Tasador.Rareza.de(
+                        java.util.List.of("legendary", "mythical")) == MITICO);
+        check("legendary se reconoce", net.pokereport.luna.market.Tasador.Rareza.de(
+                java.util.List.of("gen1", "legendary")) == LEGENDARIO);
+        check("sin etiquetas de rareza es COMUN",
+                net.pokereport.luna.market.Tasador.Rareza.de(
+                        java.util.List.of("gen1", "kantonian_form")) == COMUN);
+        check("una lista nula no revienta",
+                net.pokereport.luna.market.Tasador.Rareza.de(null) == COMUN);
+
+        // --- LA MEDIANA, que es lo que protege de la manipulacion
+        // ⚠ Con MEDIA, dos cuentas haciendose una venta absurda mueven la
+        //   referencia. Con MEDIANA hacen falta mas operaciones falsas que
+        //   reales, que es un liston mucho mas alto por el mismo esfuerzo.
+        check("la mediana ignora un valor absurdo",
+                net.pokereport.luna.market.Tasador.mediana(
+                        java.util.List.of(1.0, 1.1, 0.9, 1.0, 900.0)) < 2.0);
+        check("la mediana de una lista vacia es neutra",
+                net.pokereport.luna.market.Tasador.mediana(java.util.List.of()) == 1.0);
+        check("la mediana de un par promedia los dos de en medio",
+                net.pokereport.luna.market.Tasador.mediana(
+                        java.util.List.of(1.0, 2.0, 3.0, 4.0)) == 2.5);
+
+        // --- SIN VENTAS, EL TASADOR ES PURA FORMULA
+        try {
+            var t = new net.pokereport.luna.market.Tasador(db)
+                    .tasar(ficha("__especie_que_no_existe__", 50, false, 500,
+                            COMUN, 90, 0, 0, false));
+            check("sin ventas, el estimado ES la formula", t.estimado() == t.formula());
+            check("sin ventas, la correccion es neutra", t.correccion() == 1.0);
+            check("sin ventas, se dice que es una estimacion",
+                    t.ventasVistas() == 0 && !t.explicacion().isBlank());
+        } catch (Exception e) {
+            fail("tasar sin ventas", e.toString());
+        }
+    }
+
+    private static net.pokereport.luna.market.Tasador.Ficha ficha(
+            String especie, int nivel, boolean shiny, int bst,
+            net.pokereport.luna.market.Tasador.Rareza rareza,
+            int ivTotal, int perfectos, int evTotal, boolean oculta) {
+        return new net.pokereport.luna.market.Tasador.Ficha(especie, nivel, shiny,
+                bst, rareza, ivTotal, perfectos, evTotal, oculta);
     }
 
     /** El identificador de la primera orden viva de alguien por un lado. */

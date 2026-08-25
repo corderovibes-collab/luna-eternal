@@ -293,6 +293,111 @@ Lo retenido se devuelve por entrega diferida.
 
 ---
 
+## 5-bis. ⚠⚠ EL TASADOR: de qué depende que un Pokémon valga
+
+**Petición del usuario (2026-08-24):** *«una economía súper avanzada sobre las
+habilidades, IVs, EVs que tenga, el estado del Pokémon, tipo, si es legendario o
+no, si es shiny o no, y basándote en eso se da un precio estimado; también
+basándote en lo que han colocado los jugadores… eso con el tiempo se va
+sincronizando»*.
+
+Son **dos mitades**, y la segunda es la que lo hace interesante.
+
+### 5-bis.1 La fórmula: qué hace caro a un Pokémon
+
+```
+estimado = BASE(especie) × IVs × EVs × shiny × nivel × habilidad
+```
+
+**`BASE(especie)` sale de los datos de Cobblemon, no de una lista nuestra.**
+Cada especie trae su **total de estadísticas base** y sus **etiquetas**
+(`legendary`, `mythical`, `ultra_beast`, `paradox`, `starter`…). Con eso hay de
+sobra:
+
+| | Por qué |
+|---|---|
+| Total de estadísticas base | Es el mejor indicador de «cuánto sirve» que existe, y viene ya calculado |
+| Etiquetas de rareza | Un legendario no vale más *por sus números*: vale más porque **hay uno** |
+
+> ⚠⚠ **Mantener a mano una tabla de 1.025 especies sería garantizar que se queda
+> vieja.** Es la misma lección que el catálogo de la tienda y los 62 cosméticos
+> que no existían: **si se puede derivar del jar, se deriva**.
+
+**Los IVs se miden dos veces, y no es redundante:**
+
+```
+total     0..186   cuánto tiene en general
+perfectos 0..6     cuántos están a 31
+```
+
+> ⚠ El mercado competitivo no paga por «180 de 186»: paga por **cuántos 31**
+> tiene. Un 6×31 vale mucho más que la suma de sus partes, y con solo el total
+> los dos serían indistinguibles.
+
+**Los EVs valen porque son trabajo**, no potencial: 508 puntos son horas de
+alguien. Y **el nivel, igual**.
+
+**Shiny es el multiplicador grande**, y va aparte de todo lo demás: un shiny malo
+sigue siendo un shiny.
+
+### 5-bis.2 ⚠⚠⚠ La sincronización: el mercado corrige la fórmula, no la sustituye
+
+Aquí está la parte que hay que hacer bien.
+
+Lo obvio sería: *«mira lo que se ha pagado por esa especie y usa la mediana»*.
+**Y estaría mal**, porque mezcla un shiny 6×31 con un ejemplar de nivel 5 recién
+capturado: la mediana de esa mezcla no describe a ninguno de los dos.
+
+Lo que se hace es corregir **la calibración**:
+
+```
+por cada venta cerrada:   ratio = precio_real / estimado_al_publicar
+                          (por eso `estimated` se guarda EN LA FILA)
+
+correccion(especie) = mediana de los ratios de esa especie
+estimado_final      = formula × correccion
+```
+
+Y la corrección **entra poco a poco**, con peso según cuántas ventas haya:
+
+```
+peso = n / (n + K)          n = ventas observadas,  K = 8
+final = formula × (1 + peso × (correccion − 1))
+```
+
+> **Con cero ventas el tasador es pura fórmula. Con muchas, es casi puro
+> mercado.** Y por el camino se mezclan solos, sin que nadie tenga que decidir
+> cuándo cambiar de método. Eso es literalmente el *«con el tiempo se va
+> sincronizando»* que pidió el usuario.
+
+> ⚠ **`K = 8` es la cifra que decide cuánto tarda.** Con 8 ventas, la fórmula y
+> el mercado pesan la mitad cada uno. Es provisional, como todo lo económico, y
+> se toca en un solo sitio.
+
+### 5-bis.3 Cómo se abusa, y qué lo impide
+
+| Ataque | Defensa |
+|---|---|
+| Vendértelo a ti mismo caro para inflar la corrección | Ya prohibido: nadie cruza consigo mismo, en el código **y** en la base |
+| Dos cuentas haciéndose ventas entre ellas | La corrección usa la **mediana**, no la media: hacen falta más operaciones falsas que reales |
+| Publicar a precio absurdo para mover el índice | **Solo cuentan las ventas CERRADAS**, no las publicadas. Un precio que nadie paga no dice nada |
+
+> ⚠⚠ Esa última es la que más importa y la más fácil de hacer mal. Un tasador
+> que mirase lo **publicado** se puede mover gratis: publicas un Magikarp a diez
+> millones y ya has movido la referencia. **Un precio solo es información cuando
+> alguien lo ha pagado.**
+
+### 5-bis.4 Qué NO hace el tasador
+
+> ⚠ **No pone el precio: lo sugiere.** El jugador escribe el que quiera. Si el
+> servidor fijara precios dejaría de haber mercado — y la mitad de la gracia es
+> encontrar a alguien que no sabe lo que tiene.
+
+Se enseña como una referencia («estimado: 12.400») y, cuando el precio escrito
+se aleja mucho, un aviso suave. Nada más.
+
+---
+
 ## 6. La inflación, medida y no supuesta
 
 ### 6.1 Qué es de verdad
@@ -377,9 +482,22 @@ poner orden de compra / de venta . mis ordenes
 
 ```
 reutiliza gts_listing, que ya esta hecho
-filtros: especie, nivel, shiny, IVs
-pestaña propia en la misma pantalla
+V016   las columnas para FILTRAR: los 6 IVs, los 6 EVs, naturaleza,
+       habilidad, genero, tera, rareza y el ESTIMADO al publicar
+Tasador  la formula + la correccion por mercado (§5-bis)
+
+la pantalla, con la disposicion que pidio el usuario:
+  alternar POKEMON / OBJETOS
+  buscador por nombre o por @nick
+  filtros avanzados: nivel, precio, los 6 IVs, los 6 EVs,
+                     shiny, genero, tera
+  panel izquierdo: el ejemplar EN 3D + pestañas EST / IVS / EVS
+  crear oferta: eliges de tu equipo o tu PC, lo ves en 3D, precio,
+                duracion y PUBLICAR -- con el ESTIMADO al lado
+  mis ofertas: ver, cancelar
+
 ⚠ SE PUEDE LISTAR DESDE EL EQUIPO O DESDE EL PC (§4-bis)
+⚠ Y NO SE PRECARGA NADA: todo lo que se ve lo ha publicado un jugador
 ```
 
 ### FASE 4 — El índice y el histórico

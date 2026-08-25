@@ -49,7 +49,8 @@ public final class Database implements AutoCloseable {
         "V012__oficios.sql",
         "V013__clanes.sql",
         "V014__clan_auditoria.sql",
-        "V015__mercado.sql"
+        "V015__mercado.sql",
+        "V016__gts_pokemon.sql"
     };
 
     private final HikariDataSource ds;

@@ -494,6 +494,185 @@ public final class GtsService {
         return salida;
     }
 
+    // ---------------------------------------------------------- OBJETOS
+
+    /**
+     * Una oferta de objetos.
+     *
+     * <h2>⚠⚠ Por que los objetos vuelven al ESCAPARATE (2026-08-25)</h2>
+     *
+     * Habia un libro de ordenes --con ordenes de compra, llenado parcial y
+     * prioridad precio-tiempo-- y era CORRECTO. El usuario lo probo y dijo lo
+     * unico que importa: <b>«se pierde uno comprando alli»</b>.
+     *
+     * <p>Y tenia razon. Un libro de ordenes pide entender cuatro conceptos
+     * antes de comprar nada: que hay dos lados, que tu orden puede quedarse
+     * esperando, que se llena a trozos y que el precio de ejecucion no es el que
+     * escribiste. Todo eso es cierto y util en un mercado con cientos de
+     * personas; con diez, <b>solo es friccion</b>.
+     *
+     * <p>Un escaparate se explica solo: <i>alguien vende esto por tanto, lo
+     * compras</i>. Es mas pobre en teoria y muchisimo mas facil de usar -- y
+     * ademas es EL MISMO mecanismo que los Pokemon, asi que las dos mitades del
+     * mercado se comportan igual.
+     *
+     * <p>⚠ El libro de ordenes NO SE BORRA: {@code MarketService} sigue escrito,
+     * probado y con sus 24 comprobaciones. Si algun dia el servidor tiene gente
+     * de sobra, esta ahi. Lo que cambia es <b>por donde entra el jugador</b>.
+     */
+    public record Oferta(long id, long sellerId, String vendedor, String itemId,
+                         String nombre, int cantidad, long precio, long expira) {}
+
+    /**
+     * Publica objetos. <b>Quien llama ya los ha sacado del inventario.</b>
+     *
+     * <p>⚠ Es la misma custodia de siempre: lo listado no puede estar en poder
+     * del vendedor. Ver la cabecera de {@code V005}.
+     */
+    public Result publicarObjeto(long sellerId, String itemId, String nombre,
+                                 int cantidad, long precio, int horas)
+            throws SQLException {
+        if (precio <= 0) {
+            return Result.fail("§cEl precio debe ser positivo.");
+        }
+        if (cantidad <= 0) {
+            return Result.fail("§cNo hay nada que publicar.");
+        }
+        long fee = listingFee(precio);
+        final int duracion = Math.max(1, Math.min(168, horas));
+
+        try (Connection c = db.connection()) {
+            c.setAutoCommit(false);
+            try {
+                LunaEternal.economy().applyInTransaction(
+                    c, sellerId, Currency.POKEDOLLAR, -fee,
+                    "gts_listing", "gts", null, UUID.randomUUID().toString());
+
+                long id;
+                // ⚠ `payload` va con el identificador y la cantidad, que para un
+                //   objeto corriente lo describe POR COMPLETO. Al libro de
+                //   ordenes solo entran objetos sin datos propios, y aqui vale
+                //   la misma regla -- por eso no hace falta serializar la pila.
+                byte[] datos = (itemId + "\u0000" + cantidad)
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                try (PreparedStatement ps = c.prepareStatement("""
+                        INSERT INTO gts_listing
+                          (seller_id, kind, payload, payload_hash, price,
+                           display_name, item_id, quantity, expires_at)
+                        VALUES (?, 'ITEM', ?, ?, ?, ?, ?, ?,
+                                DATE_ADD(CURRENT_TIMESTAMP(3), INTERVAL ? HOUR))
+                        """, Statement.RETURN_GENERATED_KEYS)) {
+                    ps.setLong(1, sellerId);
+                    ps.setBytes(2, datos);
+                    ps.setString(3, sha256(datos));
+                    ps.setLong(4, precio);
+                    ps.setString(5, nombre);
+                    ps.setString(6, itemId);
+                    ps.setInt(7, cantidad);
+                    ps.setInt(8, duracion);
+                    ps.executeUpdate();
+                    try (ResultSet keys = ps.getGeneratedKeys()) {
+                        id = keys.next() ? keys.getLong(1) : -1;
+                    }
+                }
+                c.commit();
+                return Result.ok("§aPublicado por §f" + fmt(precio)
+                    + " §7(tasa: §f" + fmt(fee) + "§7) §8#" + id);
+
+            } catch (EconomyException e) {
+                c.rollback();
+                return Result.fail(e.kind == EconomyException.Kind.INSUFFICIENT_FUNDS
+                    ? "§cNo tienes para pagar la tasa de " + fmt(fee) + "."
+                    : "§c" + e.getMessage());
+            } catch (Exception e) {
+                c.rollback();
+                throw e;
+            } finally {
+                c.setAutoCommit(true);
+            }
+        }
+    }
+
+    /** Lo que hay a la venta, con buscador y orden. */
+    public List<Oferta> buscarObjetos(String texto, String orden, int limite)
+            throws SQLException {
+        var donde = new ArrayList<String>();
+        var valores = new ArrayList<Object>();
+        donde.add("l.state = 'ACTIVE'");
+        donde.add("l.kind = 'ITEM'");
+        donde.add("l.expires_at > CURRENT_TIMESTAMP(3)");
+        if (texto != null && !texto.isBlank()) {
+            donde.add("(l.display_name LIKE ? OR l.item_id LIKE ?)");
+            valores.add("%" + texto.trim() + "%");
+            valores.add("%" + texto.trim() + "%");
+        }
+        // ⚠ Igual que en los Pokemon: el ORDER BY sale de una enum nuestra y
+        //   NUNCA del cliente. Un ORDER BY no acepta parametros.
+        String sql = "SELECT l.listing_id, l.seller_id, p.username, l.item_id, "
+                + "l.display_name, l.quantity, l.price, l.expires_at "
+                + "FROM gts_listing l JOIN player p ON p.player_id = l.seller_id "
+                + "WHERE " + String.join(" AND ", donde)
+                + " ORDER BY " + ordenObjetos(orden) + " LIMIT ?";
+
+        var salida = new ArrayList<Oferta>();
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            int i = 1;
+            for (Object v : valores) {
+                ps.setObject(i++, v);
+            }
+            ps.setInt(i, Math.max(1, Math.min(limite, 200)));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    salida.add(leerOferta(rs));
+                }
+            }
+        }
+        return salida;
+    }
+
+    private static String ordenObjetos(String orden) {
+        if (orden == null) {
+            return "l.listed_at DESC";
+        }
+        return switch (orden) {
+            case "PRECIO_ASC" -> "l.price ASC";
+            case "PRECIO_DESC" -> "l.price DESC";
+            // ⚠ El precio POR UNIDAD, que es lo unico comparable entre una pila
+            //   de 64 y una de 1. Sin esto, ordenar por precio pone primero al
+            //   que vende una sola unidad barata y no al que vende barato.
+            case "UNIDAD_ASC" -> "(l.price / GREATEST(l.quantity, 1)) ASC";
+            case "CANTIDAD_DESC" -> "l.quantity DESC";
+            default -> "l.listed_at DESC";
+        };
+    }
+
+    /** Lo que ha publicado alguien y sigue vivo. */
+    public List<Oferta> misObjetos(long sellerId) throws SQLException {
+        String sql = "SELECT l.listing_id, l.seller_id, p.username, l.item_id, "
+                + "l.display_name, l.quantity, l.price, l.expires_at "
+                + "FROM gts_listing l JOIN player p ON p.player_id = l.seller_id "
+                + "WHERE l.seller_id = ? AND l.state = 'ACTIVE' AND l.kind = 'ITEM' "
+                + "ORDER BY l.listed_at DESC LIMIT 100";
+        var salida = new ArrayList<Oferta>();
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, sellerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    salida.add(leerOferta(rs));
+                }
+            }
+        }
+        return salida;
+    }
+
+    private static Oferta leerOferta(ResultSet rs) throws SQLException {
+        return new Oferta(rs.getLong(1), rs.getLong(2), rs.getString(3),
+                texto(rs.getString(4)), texto(rs.getString(5)), rs.getInt(6),
+                rs.getLong(7), rs.getTimestamp(8).getTime());
+    }
+
     // ------------------------------------------------------------ comprar
 
     /**

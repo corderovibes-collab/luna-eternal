@@ -174,7 +174,7 @@ public class GtsScreen extends Screen {
         // a mano se solaparia sin dar ningun error.
         campoBusqueda = campo(PANT_X + MARGEN, PANT_Y + MARGEN,
                 botonX(0) - (PANT_X + MARGEN) - 12, 32);
-        campoPrecio = campo(PANEL_X + 30, PANEL_Y + 574, PANEL_W - 60, 11);
+        campoPrecio = campo(PANEL_X + 30, PANEL_Y + 524, PANEL_W - 60, 11);
         campoNivelMin = campo(PANT_X + 30, PANT_Y + 118, 130, 3);
         campoNivelMax = campo(PANT_X + 180, PANT_Y + 118, 130, 3);
         campoPrecioMin = campo(PANT_X + 400, PANT_Y + 118, 150, 9);
@@ -401,7 +401,7 @@ public class GtsScreen extends Screen {
      * solapaba con el botón</b> — que es justo lo que se veía.
      */
     private int retAlto() {
-        return modo == Modo.VENDER ? 190 : 260;
+        return modo == Modo.VENDER ? 190 : 220;
     }
 
     /**
@@ -542,24 +542,24 @@ public class GtsScreen extends Screen {
                     cx, y + 24, 24, ORO, true, false);
 
             texto(ctx, Text.translatable("pokepad.lunaeternal.gts.tu_precio"),
-                    PANEL_X + 30, PANEL_Y + 556, 13, TEXTO_SUAVE, false, false);
+                    PANEL_X + 30, PANEL_Y + 508, 13, TEXTO_SUAVE, false, false);
             campoPrecio.render(ctx, rx, ry, 0);
 
             // ---- LA DURACIÓN. Tres botones, no un número escrito.
             texto(ctx, Text.translatable("pokepad.lunaeternal.gts.duracion"),
-                    PANEL_X + 30, PANEL_Y + 614, 13, TEXTO_SUAVE, false, false);
+                    PANEL_X + 30, PANEL_Y + 562, 13, TEXTO_SUAVE, false, false);
             int bw = (PANEL_W - 60) / 3 - 4;
             for (int i = 0; i < DURACIONES.length; i++) {
                 int bx = PANEL_X + 30 + i * (bw + 6);
                 boolean act = horas == DURACIONES[i];
-                boolean enc = dentro(rx, ry, px(bx), py(PANEL_Y + 632), pl(bw), pl(30));
-                ctx.fill(px(bx), py(PANEL_Y + 632), px(bx + bw), py(PANEL_Y + 662),
+                boolean enc = dentro(rx, ry, px(bx), py(PANEL_Y + 578), pl(bw), pl(30));
+                ctx.fill(px(bx), py(PANEL_Y + 578), px(bx + bw), py(PANEL_Y + 608),
                         act ? BORDE_ENCIMA : (enc ? 0xFF5E86D8 : 0xFF3A4560));
-                marco(ctx, px(bx), py(PANEL_Y + 632), pl(bw), pl(30),
+                marco(ctx, px(bx), py(PANEL_Y + 578), pl(bw), pl(30),
                         act ? 0xFFFFC46B : 0xFF20283C, Math.max(1, pl(2)));
                 texto(ctx, Text.translatable("pokepad.lunaeternal.gts.dur_"
                                 + DURACIONES[i]),
-                        bx + bw / 2, PANEL_Y + 640, 14,
+                        bx + bw / 2, PANEL_Y + 586, 14,
                         act ? 0xFF2A1C00 : 0xFFFFFFFF, true, false);
             }
 
@@ -618,15 +618,15 @@ public class GtsScreen extends Screen {
                 fila(ctx, Text.translatable("pokepad.lunaeternal.gts.f_naturaleza"),
                         naturalezaEs(e.naturaleza()), y);
                 fila(ctx, Text.translatable("pokepad.lunaeternal.gts.f_habilidad"),
-                        habilidadEs(e.habilidad()), y + 22);
+                        habilidadEs(e.habilidad()), y + 19);
                 fila(ctx, Text.translatable("pokepad.lunaeternal.gts.f_genero"),
-                        generoEs(e.genero()), y + 44);
+                        generoEs(e.genero()), y + 38);
                 fila(ctx, Text.translatable("pokepad.lunaeternal.gts.f_tera"),
-                        Text.literal(bonito(e.tera())), y + 66);
+                        Text.literal(bonito(e.tera())), y + 57);
                 fila(ctx, Text.translatable("pokepad.lunaeternal.gts.f_rareza"),
-                        rarezaEs(e.rareza()), y + 88);
+                        rarezaEs(e.rareza()), y + 76);
                 fila(ctx, Text.translatable("pokepad.lunaeternal.gts.f_vendedor"),
-                        Text.literal(e.vendedor()), y + 110);
+                        Text.literal(e.vendedor()), y + 95);
             }
         }
     }
@@ -1236,7 +1236,7 @@ public class GtsScreen extends Screen {
             int bw = (PANEL_W - 60) / 3 - 4;
             for (int i = 0; i < DURACIONES.length; i++) {
                 int bx = PANEL_X + 30 + i * (bw + 6);
-                if (dentro(rx, ry, px(bx), py(PANEL_Y + 632), pl(bw), pl(30))) {
+                if (dentro(rx, ry, px(bx), py(PANEL_Y + 578), pl(bw), pl(30))) {
                     horas = DURACIONES[i];
                     sonar();
                     return true;

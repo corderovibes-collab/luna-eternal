@@ -197,6 +197,28 @@ public final class Iconos {
         disco(ctx, cx, cy, Math.max(1, lado / 10), 0xFFF0F0F0);
     }
 
+    /**
+     * ETIQUETA DE PRECIO: los chollos.
+     *
+     * <p>⚠ Una etiqueta y no una flecha hacia abajo: una flecha ya significa
+     * «ordenar descendente» en la cabecera de al lado, y dos cosas distintas
+     * con el mismo dibujo es peor que un dibujo regular.
+     */
+    public static void etiqueta(DrawContext ctx, int cx, int cy, int lado, int color) {
+        int b = lado * 2 / 5;
+        int g = Math.max(2, lado / 9);
+        // Cuerpo de la etiqueta: un cuadrado girado a medias.
+        ctx.fill(cx - b, cy - b / 3, cx + b / 2, cy - b / 3 + g, color);
+        ctx.fill(cx + b / 2 - g, cy - b / 3, cx + b / 2, cy + b, color);
+        ctx.fill(cx - b, cy + b - g, cx + b / 2, cy + b, color);
+        ctx.fill(cx - b, cy - b / 3, cx - b + g, cy + b, color);
+        // La punta, arriba a la derecha.
+        linea(ctx, cx + b / 2 - g, cy - b / 3, cx + b, cy - b, g, color);
+        // El agujero por donde va el cordel.
+        aro(ctx, cx + b / 4, cy + b / 6, Math.max(2, lado / 8),
+                Math.max(1, lado / 16), color);
+    }
+
     /** CAJA: alternar al mercado de objetos. */
     public static void caja(DrawContext ctx, int cx, int cy, int lado, int color) {
         int b = lado * 2 / 5;

@@ -319,16 +319,19 @@ public class GtsScreen extends Screen {
         //   Mezclarlos hace que el 2D se pinte ENCIMA de los modelos, porque van
         //   por lotes distintos. Regla 3 de dibujado.md.
         ctx.draw();
-        if (modo == Modo.VENDER) {
-            dibujarMios(ctx, rx, ry, true);
-        } else if (modo != Modo.FILTROS) {
-            dibujarLista(ctx, rx, ry, true);
-        }
-        dibujarRetrato(ctx, delta);
-
-        // La confirmación va la ÚLTIMA y encima de todo: es una decisión que
-        // interrumpe, no un panel más.
-        if (confirmando != null) {
+        // ⚠⚠ NADA DE 3D MIENTRAS HAY CONFIRMACION. El 3D va en su propio lote y
+        //   NO respeta el orden de dibujado de la interfaz, así que se pintaba
+        //   ENCIMA del diálogo -- el Pokémon salía flotando sobre el aviso. No
+        //   es un problema de capas que se arregle moviendo código: la única
+        //   forma es no dibujarlo.
+        if (confirmando == null) {
+            if (modo == Modo.VENDER) {
+                dibujarMios(ctx, rx, ry, true);
+            } else if (modo != Modo.FILTROS) {
+                dibujarLista(ctx, rx, ry, true);
+            }
+            dibujarRetrato(ctx, delta);
+        } else {
             dibujarConfirmacion(ctx, rx, ry);
         }
     }
@@ -400,12 +403,28 @@ public class GtsScreen extends Screen {
         var m = mioSeleccionado();
 
         if ((vender && m == null) || (!vender && e == null)) {
-            int y = PANEL_Y + 250;
-            for (String linea : partir(Text.translatable(
-                    "pokepad.lunaeternal.gts.elige").getString(), PANEL_W - 70, 17)) {
+            // ⚠ El texto DEPENDE DEL MODO. Decía «elige una oferta» también
+            //   mientras elegías cuál de TUS Pokémon vender, que es justo lo
+            //   contrario de lo que estabas haciendo.
+            String clave = vender ? "pokepad.lunaeternal.gts.elige_tuyo"
+                    : modo == Modo.MIAS ? "pokepad.lunaeternal.gts.elige_mia"
+                    : "pokepad.lunaeternal.gts.elige";
+            int y = PANEL_Y + 200;
+            for (String linea : partir(Text.translatable(clave).getString(),
+                    PANEL_W - 70, 17)) {
                 texto(ctx, Text.literal(linea), cx, y, 17, TEXTO_SUAVE, true, false);
                 y += 22;
             }
+            // Y el saldo, que es lo único útil que se puede enseñar aquí sin
+            // haber elegido nada. Un panel vacío del alto de la pantalla se ve
+            // como que falta algo.
+            y += 24;
+            separador(ctx, y);
+            texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.tu_plata"),
+                    cx, y + 16, 15, TEXTO_SUAVE, true, false);
+            texto(ctx, Text.literal(estado == null ? "—"
+                            : String.format("%,d", estado.saldo())),
+                    cx, y + 36, 26, 0xFFFFFFFF, true, false);
             return;
         }
 
@@ -496,11 +515,11 @@ public class GtsScreen extends Screen {
             case 1 -> barras(ctx, e.ivs(), 31, y);
             case 2 -> barras(ctx, e.evs(), 252, y);
             default -> {
-                fila(ctx, "Naturaleza", e.naturaleza(), y);
-                fila(ctx, "Habilidad", e.habilidad(), y + 22);
-                fila(ctx, "Género", e.genero(), y + 44);
-                fila(ctx, "Tera", e.tera(), y + 66);
-                fila(ctx, "Rareza", e.rareza(), y + 88);
+                fila(ctx, "Naturaleza", bonito(e.naturaleza()), y);
+                fila(ctx, "Habilidad", bonito(e.habilidad()), y + 22);
+                fila(ctx, "Género", genero(e.genero()), y + 44);
+                fila(ctx, "Tera", bonito(e.tera()), y + 66);
+                fila(ctx, "Rareza", bonito(e.rareza()), y + 88);
                 fila(ctx, "Vendedor", e.vendedor(), y + 110);
             }
         }
@@ -513,8 +532,8 @@ public class GtsScreen extends Screen {
         while (alto > 9 && anchoArte(v, alto) > 150) {
             alto--;
         }
-        texto(ctx, Text.literal(v), PANEL_X + PANEL_W - 30, y, alto, 0xFFE8EEF8,
-                false, false);
+        textoDer(ctx, Text.literal(v), PANEL_X + PANEL_W - 30, y, alto,
+                0xFFE8EEF8, false);
     }
 
     /**
@@ -539,8 +558,8 @@ public class GtsScreen extends Screen {
             if (lleno > 0) {
                 ctx.fill(px(bx), py(fy), px(bx + lleno), py(fy + 14), color);
             }
-            texto(ctx, Text.literal(String.valueOf(v)), PANEL_X + PANEL_W - 30, fy + 2,
-                    14, v >= max ? SHINY : 0xFFE8EEF8, false, false);
+            textoDer(ctx, Text.literal(String.valueOf(v)), PANEL_X + PANEL_W - 30,
+                    fy + 2, 14, v >= max ? SHINY : 0xFFE8EEF8, false);
         }
     }
 
@@ -566,6 +585,7 @@ public class GtsScreen extends Screen {
         new Boton("filtros", "pokepad.lunaeternal.gts.b_filtros"),
         new Boton("vender", "pokepad.lunaeternal.gts.b_vender"),
         new Boton("mias", "pokepad.lunaeternal.gts.b_mias"),
+        new Boton("chollos", "pokepad.lunaeternal.gts.b_chollos"),
         new Boton("objetos", "pokepad.lunaeternal.gts.b_objetos"),
     };
 
@@ -596,6 +616,7 @@ public class GtsScreen extends Screen {
                 case "vender" -> modo == Modo.VENDER;
                 case "mias" -> modo == Modo.MIAS;
                 case "filtros" -> modo == Modo.FILTROS;
+                case "chollos" -> "CHOLLO".equals(orden);
                 default -> false;
             };
             boolean encima = dentro(rx, ry, px(ax), py(ay), pl(BOT), pl(BOT));
@@ -616,6 +637,7 @@ public class GtsScreen extends Screen {
                 case "filtros" -> Iconos.embudo(ctx, cx, cy, lado, color);
                 case "vender" -> Iconos.mas(ctx, cx, cy, lado, color);
                 case "mias" -> Iconos.lista(ctx, cx, cy, lado, color);
+                case "chollos" -> Iconos.etiqueta(ctx, cx, cy, lado, color);
                 case "objetos" -> Iconos.caja(ctx, cx, cy, lado, color);
                 default -> { }
             }
@@ -625,9 +647,8 @@ public class GtsScreen extends Screen {
         // no flotando junto al cursor porque flotando taparía la primera fila,
         // que es justo la que se está mirando.
         if (encimaDe != null) {
-            texto(ctx, Text.translatable(encimaDe),
-                    PANT_X + PANT_W - MARGEN, PANT_Y + MARGEN + BOT + 4, 14,
-                    ORO, false, true);
+            textoDer(ctx, Text.translatable(encimaDe),
+                    PANT_X + PANT_W - MARGEN, PANT_Y + MARGEN + BOT + 4, 14, ORO, true);
         }
         if (!aviso.isEmpty()) {
             texto(ctx, Text.literal(aviso), PANT_X + MARGEN,
@@ -717,8 +738,10 @@ public class GtsScreen extends Screen {
                         razon < 0.7 ? 0xFF1F7A3C : razon > 1.3 ? ROJO : TEXTO_SUAVE,
                         false, true);
             }
-            texto(ctx, Text.literal(queda(e.expira())), ax + 620, y + 18, 14,
-                    TEXTO_SUAVE, false, true);
+            // ⚠ Pegado al borde del botón y alineado a la DERECHA: antes
+            //   empezaba en una x fija y el botón se comía el final («2d 3»).
+            textoDer(ctx, Text.literal(queda(e.expira())), ax + aw - 136, y + 18,
+                    14, TEXTO_SUAVE, true);
 
             // ⚠⚠ EL BOTON VA EN LA FILA. Antes había que seleccionar y bajar la
             //   vista al panel de la izquierda: dos clics y un salto de atención
@@ -778,11 +801,6 @@ public class GtsScreen extends Screen {
                             .append(Text.literal(flecha)),
                     ax, hy, 14, activa ? ORO : TEXTO_SUAVE, false, false);
         }
-        // El chollo no es una columna: es una ordenación que solo existe porque
-        // hay tasador. Va aparte para que se vea que es otra cosa.
-        boolean chollo = "CHOLLO".equals(orden);
-        botonPeq(ctx, rx, ry, PANT_X + PANT_W - MARGEN - 130, hy - 6, 126, 24,
-                Text.translatable("pokepad.lunaeternal.gts.chollos"), true, chollo);
     }
 
     /** Cuántas ofertas hay y cuáles se están viendo. */
@@ -795,10 +813,10 @@ public class GtsScreen extends Screen {
         }
         int desde = pagina * filasCaben() + 1;
         int hasta = Math.min(n, (pagina + 1) * filasCaben());
-        texto(ctx, Text.translatable("pokepad.lunaeternal.gts.contador",
+        textoDer(ctx, Text.translatable("pokepad.lunaeternal.gts.contador",
                         desde, hasta, n),
-                PANT_X + PANT_W - MARGEN, PANT_Y + PANT_H - MARGEN - 22, 14,
-                TEXTO_SUAVE, false, true);
+                PANT_X + PANT_W - MARGEN - 4, PANT_Y + PANT_H - MARGEN - 24, 14,
+                TEXTO_SUAVE, true);
     }
 
     /**
@@ -1058,14 +1076,6 @@ public class GtsScreen extends Screen {
                     return true;
                 }
             }
-            if (dentro(rx, ry, px(PANT_X + PANT_W - MARGEN - 130), py(hy - 6),
-                    pl(126), pl(24))) {
-                orden = "CHOLLO".equals(orden) ? "NUEVO" : "CHOLLO";
-                pagina = 0;
-                sonar();
-                pedir();
-                return true;
-            }
         }
 
         // Filas
@@ -1160,6 +1170,12 @@ public class GtsScreen extends Screen {
                 modo = modo == Modo.MIAS ? Modo.LISTA : Modo.MIAS;
                 pagina = 0;
                 elegido = -1;
+            }
+            case "chollos" -> {
+                orden = "CHOLLO".equals(orden) ? "NUEVO" : "CHOLLO";
+                pagina = 0;
+                elegido = -1;
+                pedir();
             }
             default -> { }
         }
@@ -1378,6 +1394,64 @@ public class GtsScreen extends Screen {
     private void separador(DrawContext ctx, int artY) {
         ctx.fill(px(PANEL_X + 28), py(artY), px(PANEL_X + PANEL_W - 28),
                 py(artY) + Math.max(1, pl(2)), SEPARADOR);
+    }
+
+    /**
+     * ⚠⚠ ALINEAR A LA DERECHA DE VERDAD.
+     *
+     * <p>Aquí estaba la causa de casi toda la fealdad: para poner algo pegado al
+     * borde derecho yo pasaba <b>la x del borde</b> con {@code centrado=false} —
+     * y eso dibuja el texto <i>empezando</i> ahí, o sea <b>hacia fuera</b>. Por
+     * eso «sin operaciones», «llevas 1», el contador «1-1 de 1» y el tiempo que
+     * queda se salían del marco o los cortaba el botón de al lado.
+     *
+     * <p>No era un problema de medidas ni de espacio: era que <b>no existía la
+     * alineación a la derecha</b> y yo creía estar usándola.
+     */
+    private void textoDer(DrawContext ctx, Text linea, int derecha, int arriba,
+                          int alto, int color, boolean contorno) {
+        int ancho = Math.round(textRenderer.getWidth(linea) * alto
+                / (float) textRenderer.fontHeight);
+        texto(ctx, linea, derecha - ancho, arriba, alto, color, false, contorno);
+    }
+
+    /**
+     * Un identificador convertido en algo que se pueda leer.
+     *
+     * <p>⚠ Cobblemon devuelve {@code cobblemon:surge_surfer} y
+     * {@code cobblemon:hardy}. Enseñar eso tal cual es lo que hacía que el panel
+     * dijera «cobblemonre» y «surgesurfer»: no era un corte de texto, es que
+     * <b>nunca se limpió el identificador</b>.
+     */
+    /** ⚠ `MALE`/`FEMALE` es lo que devuelve Cobblemon; ahí se traduce. */
+    private static String genero(String g) {
+        if (g == null) {
+            return "—";
+        }
+        return switch (g.toUpperCase(java.util.Locale.ROOT)) {
+            case "MALE" -> "♂ Macho";
+            case "FEMALE" -> "♀ Hembra";
+            case "GENDERLESS" -> "Sin género";
+            default -> "—";
+        };
+    }
+
+    private static String bonito(String id) {
+        if (id == null || id.isBlank()) {
+            return "—";
+        }
+        String s = id;
+        int dp = s.lastIndexOf(':');
+        if (dp >= 0) {
+            s = s.substring(dp + 1);
+        }
+        s = s.replace('_', ' ').trim();
+        if (s.isEmpty()) {
+            return "—";
+        }
+        // Primera en mayúscula, el resto tal cual: «Surge surfer», no
+        // «Surge Surfer», que a este tamaño se lee peor.
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,

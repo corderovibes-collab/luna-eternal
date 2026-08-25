@@ -335,12 +335,12 @@ public class MercadoScreen extends Screen {
             texto(ctx, Text.literal(nombre(item)), PANT_X + MARGEN + 34,
                     PANT_Y + MARGEN + 2, 22, TEXTO_OSCURO, false, true);
             long ultimo = estado == null ? 0 : estado.ultimoPrecio();
-            texto(ctx, ultimo > 0
+            textoDer(ctx, ultimo > 0
                             ? Text.translatable("pokepad.lunaeternal.mercado.ultimo",
                                     String.format("%,d", ultimo))
                             : Text.translatable("pokepad.lunaeternal.mercado.sin_precio"),
-                    PANT_X + PANT_W - MARGEN, PANT_Y + MARGEN + 6, 17,
-                    ultimo > 0 ? ORO : TEXTO_SUAVE, false, true);
+                    PANT_X + PANT_W - MARGEN - 4, PANT_Y + MARGEN + 6, 17,
+                    ultimo > 0 ? ORO : TEXTO_SUAVE, true);
         }
     }
 
@@ -434,8 +434,8 @@ public class MercadoScreen extends Screen {
                 Text.translatable("pokepad.lunaeternal.mercado.vender"),
                 vale && tengo >= cant);
         if (tengo > 0) {
-            texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.tienes", tengo),
-                    PANT_X + PANT_W - MARGEN - 78, y - 14, 14, TEXTO_SUAVE, true, false);
+            textoDer(ctx, Text.translatable("pokepad.lunaeternal.mercado.tienes", tengo),
+                    PANT_X + PANT_W - MARGEN - 8, y - 14, 14, TEXTO_SUAVE, false);
         }
         if (!aviso.isEmpty()) {
             texto(ctx, Text.literal(aviso), PANT_X + MARGEN, y - 26, 15, ROJO,
@@ -504,8 +504,8 @@ public class MercadoScreen extends Screen {
                     ax + 8, y, 17, TEXTO_OSCURO, false, true);
             texto(ctx, Text.literal("x" + x.qty()), ax + 120, y, 16, TEXTO_SUAVE,
                     false, true);
-            texto(ctx, Text.literal(hace(x.cuando())), ax + aw - 120, y, 15,
-                    TEXTO_SUAVE, false, true);
+            textoDer(ctx, Text.literal(hace(x.cuando())), ax + aw - 8, y, 15,
+                    TEXTO_SUAVE, true);
             y += 24;
         }
     }
@@ -741,6 +741,20 @@ public class MercadoScreen extends Screen {
     private void separadorPantalla(DrawContext ctx, int artY) {
         ctx.fill(px(PANT_X + MARGEN), py(artY), px(PANT_X + PANT_W - MARGEN),
                 py(artY) + Math.max(1, pl(2)), 0x44000000);
+    }
+
+    /**
+     * ⚠⚠ Alinear a la derecha DE VERDAD.
+     *
+     * <p>Pasar la x del borde con {@code centrado=false} dibuja el texto
+     * <b>empezando</b> ahí, o sea hacia fuera del marco. Es lo que hacía que
+     * «sin operaciones» y «llevas 1» se salieran de la pantalla.
+     */
+    private void textoDer(DrawContext ctx, Text linea, int derecha, int arriba,
+                          int alto, int color, boolean contorno) {
+        int ancho = Math.round(textRenderer.getWidth(linea) * alto
+                / (float) textRenderer.fontHeight);
+        texto(ctx, linea, derecha - ancho, arriba, alto, color, false, contorno);
     }
 
     private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,

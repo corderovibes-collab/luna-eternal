@@ -161,6 +161,285 @@ public final class GtsService {
         }
     }
 
+    // ---------------------------------------------------------- POKEMON
+
+    /**
+     * Un listado de Pokemon, con todo lo que se filtra y se enseña.
+     *
+     * <p>⚠ Los IVs y los EVs van como arrays de seis en el ORDEN FIJO de
+     * {@code PokemonMercado.ORDEN}. Ese orden es parte del formato: cambiarlo
+     * convertiria el Ataque de todo el mundo en Defensa, en la base y en las
+     * pantallas, <b>sin un solo error</b>.
+     */
+    public record Ejemplar(long id, long sellerId, String vendedor, String especie,
+                           String mote, int nivel, boolean shiny, String genero,
+                           String naturaleza, String habilidad, String tera,
+                           String ball, String rareza, int[] ivs, int[] evs,
+                           long precio, long estimado, long expira) {}
+
+    /**
+     * Lo que se puede filtrar. <b>Todo opcional.</b>
+     *
+     * <p>⚠ Cada campo es {@code null} cuando no se filtra por el, y NO un cero:
+     * «nivel minimo 0» y «no me importa el nivel» son cosas distintas, y con un
+     * cero por defecto serian la misma. Es el mismo problema que «no lo se» y
+     * «tienes cero» del saldo del Pad.
+     */
+    public record Filtro(String texto, String vendedor, Integer nivelMin,
+                         Integer nivelMax, Long precioMin, Long precioMax,
+                         int[] ivMin, int[] evMin, Boolean shiny, String genero,
+                         String tera, String rareza) {
+
+        public static Filtro vacio() {
+            return new Filtro(null, null, null, null, null, null,
+                    null, null, null, null, null, null);
+        }
+    }
+
+    /**
+     * Publica un Pokemon. <b>Cobra la tasa y guarda el ESTIMADO.</b>
+     *
+     * <p>⚠⚠ `estimated` no es decoracion: es lo que hace posible que el tasador
+     * aprenda. La correccion de mercado es la mediana de
+     * {@code precio_real / estimado_al_publicar}, y sin el estimado del momento
+     * ese ratio no se puede calcular NUNCA -- recalcular la formula hoy daria
+     * otro numero, porque la formula habra cambiado. Ver mercado.md §5-bis.
+     *
+     * <p>⚠ Quien llama tiene que haber RETIRADO ya el Pokemon del equipo o del
+     * PC. Este metodo da por hecho que esta en custodia.
+     */
+    public Result publicarPokemon(long sellerId, byte[] payload,
+                                  net.pokereport.luna.market.PokemonMercado.Resumen r,
+                                  long price, long estimado, int horas)
+            throws SQLException {
+
+        if (price <= 0) {
+            return Result.fail("§cEl precio debe ser positivo.");
+        }
+        if (payload == null || payload.length == 0) {
+            return Result.fail("§cNo hay nada que publicar.");
+        }
+        long fee = listingFee(price);
+        // ⚠ La duracion se acota AQUI. Llega del cliente, y una orden de
+        //   2.000 millones de horas es una fila que no caduca jamas -- y con
+        //   ella, un Pokemon en custodia para siempre.
+        final int duracion = Math.max(1, Math.min(168, horas));
+
+        try (Connection c = db.connection()) {
+            c.setAutoCommit(false);
+            try {
+                LunaEternal.economy().applyInTransaction(
+                    c, sellerId, Currency.POKEDOLLAR, -fee,
+                    "gts_listing", "gts", null, UUID.randomUUID().toString());
+
+                long id;
+                try (PreparedStatement ps = c.prepareStatement("""
+                        INSERT INTO gts_listing
+                          (seller_id, kind, payload, payload_hash, price,
+                           display_name, species, level, is_shiny, iv_total,
+                           iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe,
+                           ev_hp, ev_atk, ev_def, ev_spa, ev_spd, ev_spe,
+                           nature, ability, gender, tera_type, ball,
+                           ev_total, perfect_ivs, rarity, estimated, expires_at)
+                        VALUES (?, 'POKEMON', ?, ?, ?, ?, ?, ?, ?, ?,
+                                ?,?,?,?,?,?, ?,?,?,?,?,?,
+                                ?,?,?,?,?, ?,?,?,?,
+                                DATE_ADD(CURRENT_TIMESTAMP(3), INTERVAL ? HOUR))
+                        """, Statement.RETURN_GENERATED_KEYS)) {
+                    int i = 1;
+                    ps.setLong(i++, sellerId);
+                    ps.setBytes(i++, payload);
+                    ps.setString(i++, sha256(payload));
+                    ps.setLong(i++, price);
+                    ps.setString(i++, r.mote() == null || r.mote().isBlank()
+                            ? r.especie() : r.mote());
+                    ps.setString(i++, r.especie());
+                    ps.setInt(i++, r.nivel());
+                    ps.setBoolean(i++, r.shiny());
+                    ps.setInt(i++, r.ivTotal());
+                    for (int v : r.ivs()) {
+                        ps.setInt(i++, v);
+                    }
+                    for (int v : r.evs()) {
+                        ps.setInt(i++, v);
+                    }
+                    ps.setString(i++, r.naturaleza());
+                    ps.setString(i++, r.habilidad());
+                    ps.setString(i++, r.genero());
+                    ps.setString(i++, r.tera());
+                    ps.setString(i++, r.ball());
+                    ps.setInt(i++, r.evTotal());
+                    ps.setInt(i++, r.ivsPerfectos());
+                    ps.setString(i++, r.rareza().name());
+                    ps.setLong(i++, estimado);
+                    ps.setInt(i++, duracion);
+                    ps.executeUpdate();
+                    try (ResultSet keys = ps.getGeneratedKeys()) {
+                        id = keys.next() ? keys.getLong(1) : -1;
+                    }
+                }
+                c.commit();
+                return Result.ok("§aPublicado por §f" + fmt(price)
+                    + " §7(tasa: §f" + fmt(fee) + "§7, no reembolsable) §8#" + id);
+
+            } catch (EconomyException e) {
+                c.rollback();
+                return Result.fail(e.kind == EconomyException.Kind.INSUFFICIENT_FUNDS
+                    ? "§cNo tienes para pagar la tasa de " + fmt(fee) + "."
+                    : "§c" + e.getMessage());
+            } catch (Exception e) {
+                c.rollback();
+                throw e;
+            } finally {
+                c.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * Busca ejemplares con filtros.
+     *
+     * <h2>⚠⚠ La consulta se construye con parametros, NUNCA concatenando</h2>
+     *
+     * El texto de busqueda viene del jugador. Concatenarlo en el SQL seria una
+     * inyeccion de manual, y en una tabla que guarda dinero y custodia. Lo unico
+     * que se compone dinamicamente son los TROZOS de condicion --que son
+     * literales nuestros-- y cada valor va por su {@code ?}.
+     */
+    public List<Ejemplar> buscar(Filtro f, int limite) throws SQLException {
+        var donde = new ArrayList<String>();
+        var valores = new ArrayList<Object>();
+        donde.add("l.state = 'ACTIVE'");
+        donde.add("l.kind = 'POKEMON'");
+        donde.add("l.expires_at > CURRENT_TIMESTAMP(3)");
+
+        if (f.texto() != null && !f.texto().isBlank()) {
+            donde.add("(l.species LIKE ? OR l.display_name LIKE ?)");
+            valores.add("%" + f.texto().trim() + "%");
+            valores.add("%" + f.texto().trim() + "%");
+        }
+        if (f.vendedor() != null && !f.vendedor().isBlank()) {
+            donde.add("p.username LIKE ?");
+            valores.add("%" + f.vendedor().trim() + "%");
+        }
+        anadir(donde, valores, "l.level >= ?", f.nivelMin());
+        anadir(donde, valores, "l.level <= ?", f.nivelMax());
+        anadir(donde, valores, "l.price >= ?", f.precioMin());
+        anadir(donde, valores, "l.price <= ?", f.precioMax());
+        if (f.shiny() != null) {
+            donde.add("l.is_shiny = ?");
+            valores.add(f.shiny() ? 1 : 0);
+        }
+        anadirTexto(donde, valores, "l.gender = ?", f.genero());
+        anadirTexto(donde, valores, "l.tera_type = ?", f.tera());
+        anadirTexto(donde, valores, "l.rarity = ?", f.rareza());
+
+        String[] cols = {"iv_hp", "iv_atk", "iv_def", "iv_spa", "iv_spd", "iv_spe"};
+        String[] evc = {"ev_hp", "ev_atk", "ev_def", "ev_spa", "ev_spd", "ev_spe"};
+        if (f.ivMin() != null) {
+            for (int i = 0; i < 6 && i < f.ivMin().length; i++) {
+                if (f.ivMin()[i] > 0) {
+                    donde.add("l." + cols[i] + " >= ?");
+                    valores.add(f.ivMin()[i]);
+                }
+            }
+        }
+        if (f.evMin() != null) {
+            for (int i = 0; i < 6 && i < f.evMin().length; i++) {
+                if (f.evMin()[i] > 0) {
+                    donde.add("l." + evc[i] + " >= ?");
+                    valores.add(f.evMin()[i]);
+                }
+            }
+        }
+
+        String sql = "SELECT l.listing_id, l.seller_id, p.username, l.species, "
+                + "l.display_name, l.level, l.is_shiny, l.gender, l.nature, "
+                + "l.ability, l.tera_type, l.ball, l.rarity, "
+                + "l.iv_hp, l.iv_atk, l.iv_def, l.iv_spa, l.iv_spd, l.iv_spe, "
+                + "l.ev_hp, l.ev_atk, l.ev_def, l.ev_spa, l.ev_spd, l.ev_spe, "
+                + "l.price, l.estimated, l.expires_at "
+                + "FROM gts_listing l JOIN player p ON p.player_id = l.seller_id "
+                + "WHERE " + String.join(" AND ", donde)
+                + " ORDER BY l.listed_at DESC LIMIT ?";
+
+        var salida = new ArrayList<Ejemplar>();
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            int i = 1;
+            for (Object v : valores) {
+                ps.setObject(i++, v);
+            }
+            ps.setInt(i, Math.max(1, Math.min(limite, 200)));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    salida.add(leerEjemplar(rs));
+                }
+            }
+        }
+        return salida;
+    }
+
+    private static void anadir(List<String> donde, List<Object> valores,
+                               String cond, Number v) {
+        if (v != null) {
+            donde.add(cond);
+            valores.add(v);
+        }
+    }
+
+    private static void anadirTexto(List<String> donde, List<Object> valores,
+                                    String cond, String v) {
+        if (v != null && !v.isBlank()) {
+            donde.add(cond);
+            valores.add(v);
+        }
+    }
+
+    private static Ejemplar leerEjemplar(ResultSet rs) throws SQLException {
+        int[] ivs = new int[6];
+        int[] evs = new int[6];
+        for (int i = 0; i < 6; i++) {
+            ivs[i] = rs.getInt(14 + i);
+            evs[i] = rs.getInt(20 + i);
+        }
+        return new Ejemplar(rs.getLong(1), rs.getLong(2), rs.getString(3),
+                rs.getString(4), rs.getString(5), rs.getInt(6),
+                rs.getBoolean(7), texto(rs.getString(8)), texto(rs.getString(9)),
+                texto(rs.getString(10)), texto(rs.getString(11)),
+                texto(rs.getString(12)), texto(rs.getString(13)),
+                ivs, evs, rs.getLong(26), rs.getLong(27),
+                rs.getTimestamp(28).getTime());
+    }
+
+    private static String texto(String s) {
+        return s == null ? "" : s;
+    }
+
+    /** Los ejemplares que ha publicado alguien y siguen vivos. */
+    public List<Ejemplar> misEjemplares(long sellerId) throws SQLException {
+        String sql = "SELECT l.listing_id, l.seller_id, p.username, l.species, "
+                + "l.display_name, l.level, l.is_shiny, l.gender, l.nature, "
+                + "l.ability, l.tera_type, l.ball, l.rarity, "
+                + "l.iv_hp, l.iv_atk, l.iv_def, l.iv_spa, l.iv_spd, l.iv_spe, "
+                + "l.ev_hp, l.ev_atk, l.ev_def, l.ev_spa, l.ev_spd, l.ev_spe, "
+                + "l.price, l.estimated, l.expires_at "
+                + "FROM gts_listing l JOIN player p ON p.player_id = l.seller_id "
+                + "WHERE l.seller_id = ? AND l.state = 'ACTIVE' "
+                + "ORDER BY l.listed_at DESC LIMIT 100";
+        var salida = new ArrayList<Ejemplar>();
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, sellerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    salida.add(leerEjemplar(rs));
+                }
+            }
+        }
+        return salida;
+    }
+
     // ------------------------------------------------------------ comprar
 
     /**

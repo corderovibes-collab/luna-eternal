@@ -70,6 +70,9 @@ public class MercadoScreen extends Screen {
     private static final int ROJO_CLARO = 0xFFD8544A;
     private static final int APAGADO = 0xFF6E7899;
 
+    /** En qué mitad del mercado estamos. Ver `dibujarConmutador`. */
+    private static final boolean ES_POKEMON = false;
+
     private final Screen anterior;
 
     private float k;
@@ -205,6 +208,7 @@ public class MercadoScreen extends Screen {
 
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
         dibujarNavegacion(ctx, rx, ry);
+        dibujarConmutador(ctx, rx, ry);
         dibujarCatalogo(ctx, rx, ry, false);
         dibujarPestanas(ctx, rx, ry);
         switch (pestana) {
@@ -524,6 +528,59 @@ public class MercadoScreen extends Screen {
         return "hace " + (s / 86400) + " d";
     }
 
+    /**
+     * El conmutador POKÉMON / OBJETOS.
+     *
+     * <h2>⚠⚠ Dos pestañas, no un icono</h2>
+     *
+     * Antes se cambiaba con un icono más de la barra, y eso <b>no dice que haya
+     * otra mitad</b>: un icono es un botón que hace algo, no un sitio donde
+     * estás. Con dos pestañas y una marcada se ve de un vistazo que el mercado
+     * tiene dos caras y en cuál estás — que es literalmente lo que pidió el
+     * usuario.
+     *
+     * <p>⚠ Va arriba del panel izquierdo y no en la barra de la derecha: es el
+     * cambio más grande que se puede hacer aquí —cambia la pantalla entera— y
+     * lo grande va donde empieza la lectura, no al final.
+     */
+    private void dibujarConmutador(DrawContext ctx, int rx, int ry) {
+        int ax = PANEL_X + 16, aw = PANEL_W - 32;
+        int ay = PANEL_Y + NAV_ALTO - 34;
+        int mitad = aw / 2;
+        for (int i = 0; i < 2; i++) {
+            boolean act = (i == 0) == ES_POKEMON;
+            int bx = ax + i * mitad;
+            boolean enc = dentro(rx, ry, px(bx), py(ay), pl(mitad), pl(30));
+            ctx.fill(px(bx), py(ay), px(bx + mitad), py(ay + 30),
+                    act ? 0xFFF35C0C : (enc ? 0xFF4F6FB0 : 0xFF2A3145));
+            marco(ctx, px(bx), py(ay), pl(mitad), pl(30),
+                    act ? 0xFFFFC46B : 0xFF20283C, Math.max(1, pl(2)));
+            texto(ctx, Text.translatable(i == 0
+                            ? "pokepad.lunaeternal.gts.c_pokemon"
+                            : "pokepad.lunaeternal.gts.c_objetos"),
+                    bx + mitad / 2, ay + 8, 15,
+                    act ? 0xFF2A1C00 : 0xFFC9D2E6, true, false);
+        }
+    }
+
+    /** @return true si el clic era del conmutador */
+    private boolean clicConmutador(int rx, int ry) {
+        int ax = PANEL_X + 16, aw = PANEL_W - 32;
+        int ay = PANEL_Y + NAV_ALTO - 34;
+        int mitad = aw / 2;
+        for (int i = 0; i < 2; i++) {
+            if (dentro(rx, ry, px(ax + i * mitad), py(ay), pl(mitad), pl(30))) {
+                boolean quierePokemon = i == 0;
+                if (quierePokemon != ES_POKEMON && client != null) {
+                    sonar();
+                    client.setScreen(new GtsScreen(anterior));
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ---- interacción -------------------------------------------------------
 
     @Override
@@ -537,6 +594,10 @@ public class MercadoScreen extends Screen {
                 setFocused(c);
                 return true;
             }
+        }
+
+        if (clicConmutador(rx, ry)) {
+            return true;
         }
 
         int cy = py(PANEL_Y + NAV_ALTO / 2);

@@ -176,18 +176,31 @@ public final class HuntService {
             }
         }
 
-        var elegidas = Especies.sortear(CAZAS + CRIANZAS);
+        // ⚠⚠ UNA DE CADA RAREZA, y por tipo. Antes se sorteaban seis al azar y
+        //    la estrella era LA POSICION: un Caterpie podia salir de ★★★ y
+        //    pagar 2.500. Hoy la estrella la decide el Pokemon.
+        var elegidas = new ArrayList<Especies.Especie>(CAZAS + CRIANZAS);
+        elegidas.addAll(Especies.unaDeCada());
+        elegidas.addAll(Especies.unaDeCada());
         try (PreparedStatement ps = c.prepareStatement(
                 "INSERT INTO hunt_target (cycle_id, kind, species, needed, "
               + "reward_dollar, reward_mark, reward_item, reward_qty, "
-              + "reward_item2, reward_qty2) VALUES (?,?,?,?,?,?,?,?,?,?)")) {
+              + "reward_item2, reward_qty2, rarity) "
+              + "VALUES (?,?,?,?,?,?,?,?,?,?,?)")) {
             for (int i = 0; i < elegidas.size(); i++) {
                 boolean caza = i < CAZAS;
-                int rareza = (caza ? i : i - CAZAS) + 1;   // 1, 2, 3
                 var esp = elegidas.get(i);
-                // Criar cuesta mucho más que capturar, así que pide menos
-                // unidades y paga más. Si pidiera tres, nadie lo intentaría.
-                int necesarios = caza ? rareza : 1;
+                // ⚠ La rareza sale de la ESPECIE, no de la posición. Y como
+                //   `unaDeCada` devuelve una de cada tramo en orden, la
+                //   posición coincide -- pero el que manda es el Pokémon.
+                int rareza = esp.rareza();
+                // ⚠⚠ CUANTO MAS RARO, MENOS HACEN FALTA, y es al reves de lo
+                //    que parece. La dificultad de una caza es
+                //    «lo raro que es» x «cuantos pides»: pedir TRES de un
+                //    Dragonite en 24 h no es dificil, es imposible, y pedir UNO
+                //    de un Caterpie no es una caza. Con esto, las tres cuestan
+                //    parecido y la estrella dice CUANTO PAGA.
+                int necesarios = caza ? (4 - rareza) : 1;
                 // ⚠⚠ EL PREMIO SE GUARDA AQUÍ, no se calcula al cobrar. La
                 //    pantalla lo enseña, y entre enseñarlo y cobrarlo pasan
                 //    hasta 24 h: si saliera de la tabla de arriba, tocarla
@@ -203,6 +216,7 @@ public final class HuntService {
                 ps.setInt(8, premio.cantidad());
                 ps.setString(9, premio.objeto2());
                 ps.setInt(10, premio.cantidad2());
+                ps.setInt(11, rareza);
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -226,7 +240,7 @@ public final class HuntService {
         try (PreparedStatement ps = c.prepareStatement("""
                 SELECT t.id, t.kind, t.species, t.needed, t.reward_dollar,
                        t.reward_mark, t.reward_item, t.reward_qty,
-                       t.reward_item2, t.reward_qty2,
+                       t.reward_item2, t.reward_qty2, t.rarity,
                        COALESCE(p.done, 0), p.claimed_at IS NOT NULL
                 FROM hunt_target t
                 LEFT JOIN hunt_progress p
@@ -240,16 +254,22 @@ public final class HuntService {
                 int nCaptura = 0, nCrianza = 0;
                 while (rs.next()) {
                     var tipo = Tipo.valueOf(rs.getString(2));
-                    // La rareza es la posicion dentro de su tipo. Se deriva
-                    // al leer para no necesitar una columna nueva.
-                    int rareza = tipo == Tipo.CAPTURA ? ++nCaptura : ++nCrianza;
+                    // ⚠⚠ LA RAREZA SALE DE LA FILA, no se recalcula. El premio
+                    //    también está guardado ahí, y las dos tienen que venir
+                    //    del mismo sitio: si una se recalculara y la otra no,
+                    //    un objetivo podría enseñar ★★ pagando lo de ★.
+                    // ⚠ Un 0 es un ciclo anterior a V019: para esos se deriva
+                    //   de la posición, que es lo que se les prometió.
+                    int guardada = rs.getInt(11);
+                    int porPosicion = tipo == Tipo.CAPTURA ? ++nCaptura : ++nCrianza;
+                    int rareza = guardada > 0 ? guardada : porPosicion;
                     String objeto = rs.getString(7);
                     String objeto2 = rs.getString(9);
                     out.add(new Objetivo(rs.getLong(1), tipo, rs.getString(3),
                         rs.getInt(4), rs.getLong(5), rs.getLong(6),
                         objeto == null ? "" : objeto, rs.getInt(8),
                         objeto2 == null ? "" : objeto2, rs.getInt(10),
-                        rs.getInt(11), rs.getBoolean(12), rareza));
+                        rs.getInt(12), rs.getBoolean(13), rareza));
                 }
             }
         }

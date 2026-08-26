@@ -1194,6 +1194,34 @@ public final class AutoTest {
             }
         }
 
+        // ⚠⚠ LA ESTRELLA TIENE QUE COINCIDIR CON EL POKEMON. Es lo que el
+        //    usuario pidio --«que tenga sentido»-- y es lo unico que impide
+        //    volver al estado anterior, donde la estrella era la POSICION y un
+        //    Caterpie podia salir de ★★★ pagando 2.500.
+        //    ⚠ Solo se comprueba en los ciclos NUEVOS (rareza guardada): los
+        //      anteriores a V019 derivan de la posicion a proposito.
+        boolean coherentes = true;
+        for (var o : ciclo.objetivos()) {
+            int suya = net.pokereport.luna.hunt.Especies.rareza(o.especie());
+            if (suya > 0 && suya != o.rareza()) {
+                coherentes = false;
+                LunaEternal.LOG.error(
+                    "Caza incoherente: {} es rareza {} y sale con {} estrellas",
+                    o.especie(), suya, o.rareza());
+            }
+        }
+        check("las estrellas coinciden con la rareza del Pokemon", coherentes);
+
+        // ⚠ CUANTO MAS RARO, MENOS HACEN FALTA. Al reves, pedir tres de un
+        //   Dragonite en 24 h no seria dificil: seria imposible.
+        boolean escala = true;
+        for (int i = 1; i < capturas.size(); i++) {
+            if (capturas.get(i).necesarios() > capturas.get(i - 1).necesarios()) {
+                escala = false;
+            }
+        }
+        check("una caza mas rara no pide MAS unidades", escala);
+
         // ⚠ Solo Kanto y Johto: una especie de fuera sería una caza imposible.
         //   Se pregunta al registro, que es de donde salen.
         boolean enRango = true;

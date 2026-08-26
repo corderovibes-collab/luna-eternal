@@ -32,6 +32,7 @@ tres cosas que las capturas del usuario han ido enseñando una a una:
 """
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -106,6 +107,28 @@ def fuente(px):
         except OSError:
             continue
     return ImageFont.load_default()
+
+
+# --------------------------------------------------------------- LOS TEXTOS
+#
+# ⚠⚠ SE LEEN DEL FICHERO DE IDIOMA DE VERDAD, no se escriben aqui.
+#
+#    Si la maqueta llevara los textos a mano, mediria unos y el juego pintaria
+#    otros: en cuanto alguien cambia una traduccion, la maqueta dice «cabe» sobre
+#    una cadena que ya no existe. Paso al cambiar «CHOLLOS» por «OFERTAS» y al
+#    ponerle las tildes a todo -- son cadenas MAS LARGAS.
+LANG = {}
+_ruta = RAIZ / "mod/src/client/resources/assets/lunaeternal/lang/es_es.json"
+if _ruta.exists():
+    LANG = json.loads(_ruta.read_text(encoding="utf-8"))
+
+
+def T(clave, *args):
+    """El texto real de esa clave. Si no existe, se ve -- no se inventa."""
+    s = LANG.get("pokepad.lunaeternal." + clave)
+    if s is None:
+        return "??" + clave + "??"
+    return s % args if args else s
 
 
 class Lienzo:
@@ -225,14 +248,14 @@ def maqueta_gts():
     #   decia «limpio».
     L.caja("nav.atras", PANEL_X + 18, PANEL_Y + NAV_ALTO // 2 - 24, 60, 48,
            None, (120, 130, 160, 120))
-    L.texto("nav.inicio", "INICIO", PANEL_X + 92, PANEL_Y + NAV_ALTO // 2 - 14,
+    L.texto("nav.inicio", T("inicio"), PANEL_X + 92, PANEL_Y + NAV_ALTO // 2 - 14,
             28, BLANCO)
     L.caja("nav.cerrar", PANEL_X + PANEL_W - 18 - 80,
            PANEL_Y + NAV_ALTO // 2 - 32, 80, 64, None, (120, 130, 160, 120))
 
     # --- FILA 1: conmutador a la izquierda de la pantalla, iconos a la derecha
     y1 = PANT_Y + MARGEN
-    for i, et in enumerate(("POKEMON", "OBJETOS")):
+    for i, et in enumerate((T("gts.c_pokemon"), T("gts.c_objetos"))):
         bx = PANT_X + MARGEN + i * 104
         L.caja(f"conm{i}", bx, y1, 100, BOT,
                NARANJA if i == 0 else (42, 49, 69, 255), (32, 40, 60, 255))
@@ -255,8 +278,10 @@ def maqueta_gts():
 
     # --- cabecera ordenable
     hy = y2 + 34
-    for nombre, cx, ancho in (("OFERTA", 74, 200), ("IVs", 296, 90),
-                              ("PRECIO", 470, 140), ("EXPIRA", 620, 100)):
+    for nombre, cx, ancho in ((T("gts.col_oferta"), 74, 200),
+                              (T("gts.col_ivs"), 296, 90),
+                              (T("gts.col_precio"), 470, 140),
+                              (T("gts.col_expira"), 620, 100)):
         L.texto(f"cab.{nombre}", nombre + " \u2014", PANT_X + MARGEN + cx, hy,
                 13, SUAVE, limite=ancho)
 
@@ -324,10 +349,10 @@ def maqueta_panel(vender):
         L.texto("precio.et", "TU PRECIO", PANEL_X + 30, PANEL_Y + 508, 13, SUAVE)
         L.caja("precio.campo", PANEL_X + 30, PANEL_Y + 524, PANEL_W - 60, 30,
                (30, 36, 50, 255))
-        L.texto("dur.et", "DURACION DE LA OFERTA", PANEL_X + 30,
-                PANEL_Y + 562, 13, SUAVE)
+        L.texto("dur.et", T("gts.duracion"), PANEL_X + 30, PANEL_Y + 562, 13, SUAVE)
         bw = (PANEL_W - 60) // 3 - 4
-        for i, et in enumerate(("1 dia", "2 dias", "1 semana")):
+        for i, et in enumerate((T("gts.dur_24"), T("gts.dur_48"),
+                                T("gts.dur_168"))):
             bx = PANEL_X + 30 + i * (bw + 6)
             L.caja(f"dur{i}", bx, PANEL_Y + 578, bw, 30, (58, 69, 96, 255))
             L.texto(f"dur{i}.t", et, bx + bw // 2, PANEL_Y + 586, 14, BLANCO,
@@ -379,7 +404,7 @@ def nav(L):
     """
     L.caja("nav.atras", PANEL_X + 18, PANEL_Y + NAV_ALTO // 2 - 24, 60, 48,
            None, (120, 130, 160, 120))
-    L.texto("nav.inicio", "INICIO", PANEL_X + 92, PANEL_Y + NAV_ALTO // 2 - 14,
+    L.texto("nav.inicio", T("inicio"), PANEL_X + 92, PANEL_Y + NAV_ALTO // 2 - 14,
             28, BLANCO)
     L.caja("nav.cerrar", PANEL_X + PANEL_W - 18 - 80,
            PANEL_Y + NAV_ALTO // 2 - 32, 80, 64, None, (120, 130, 160, 120))
@@ -394,7 +419,7 @@ FILAS = max(1, ((PANT_Y + PANT_H - MARGEN - PIE) - (LISTA_Y + 18)) // FILA)
 def cabecera_derecha(L, marcado):
     """Conmutador, iconos y buscador: identico en las dos mitades."""
     y1 = PANT_Y + MARGEN
-    for i, et in enumerate(("POKEMON", "OBJETOS")):
+    for i, et in enumerate((T("gts.c_pokemon"), T("gts.c_objetos"))):
         bx = PANT_X + MARGEN + i * (CONM_W + 4)
         act = (i == 0) == (marcado == "pokemon")
         L.caja(f"conm{i}", bx, y1, CONM_W, BOT,
@@ -412,7 +437,7 @@ def cabecera_derecha(L, marcado):
     y2 = y1 + BOT + 6
     L.caja("busca", PANT_X + MARGEN, y2, PANT_W - 2 * MARGEN, 28,
            (30, 36, 50, 255))
-    L.texto("busca.pista", "Nombre del objeto...", PANT_X + MARGEN + 8, y2 + 8,
+    L.texto("busca.pista", T("mercado.buscar_pista"), PANT_X + MARGEN + 8, y2 + 8,
             14, (136, 146, 172, 255))
     return y2
 
@@ -435,8 +460,9 @@ def maqueta_objetos():
     cabecera_derecha(L, "objetos")
 
     hy = LISTA_Y
-    for nombre, cx, ancho in (("OBJETO", 74, 220), ("UNIDAD", 320, 150),
-                              ("PRECIO", 480, 145)):
+    for nombre, cx, ancho in ((T("mercado.col_objeto"), 74, 220),
+                              (T("mercado.col_unidad"), 320, 150),
+                              (T("gts.col_precio"), 480, 145)):
         L.texto(f"cab.{nombre}", nombre + " \u2014", PANT_X + MARGEN + cx, hy,
                 14, SUAVE, limite=ancho)
 
@@ -453,8 +479,8 @@ def maqueta_objetos():
         L.texto(f"fila{n}.cant", "x64", ax + 70, y + 36, 15, SUAVE)
         L.texto(f"fila{n}.vend", "TheJuanCE", ax + 320, y + 12, 14, SUAVE,
                 limite=150)
-        L.texto(f"fila{n}.unidad", "23 por unidad", ax + 320, y + 36, 14, SUAVE,
-                limite=150)
+        L.texto(f"fila{n}.unidad", T("mercado.por_unidad", "23"), ax + 320, y + 36,
+                14, SUAVE, limite=150)
         L.texto(f"fila{n}.precio", "1.500", ax + aw - 150, y + 10, 21,
                 (138, 106, 0, 255), "der")
         L.texto(f"fila{n}.queda", "2d 3h", ax + aw - 150, y + 40, 12, SUAVE,
@@ -483,26 +509,27 @@ def maqueta_panel_obj(vender):
         y += 26
         L.texto("tengo", "tienes 64", cx, y, 14, SUAVE, "centro")
 
-        L.texto("cant.et", "CANTIDAD", PANEL_X + 30, PANEL_Y + 404, 13, SUAVE)
+        L.texto("cant.et", T("mercado.cantidad"), PANEL_X + 30, PANEL_Y + 404, 13,
+                SUAVE)
         bw = (PANEL_W - 60 - 3 * 6) // 4
-        for i, et in enumerate(("x1", "x8", "x64", "TODO")):
+        for i, et in enumerate(("x1", "x8", "x64", T("mercado.todo"))):
             bx = PANEL_X + 30 + i * (bw + 6)
             L.caja(f"cant{i}", bx, PANEL_Y + 420, bw, 32, (79, 111, 176, 255))
             L.texto(f"cant{i}.t", et, bx + bw // 2, PANEL_Y + 428, 15, BLANCO,
                     "centro", limite=bw - 10)
         L.texto("cant.n", "x64", cx, PANEL_Y + 460, 22, BLANCO, "centro")
 
-        L.texto("precio.et", "PRECIO DEL LOTE", PANEL_X + 30, PANEL_Y + 486,
-                13, SUAVE)
+        L.texto("precio.et", T("mercado.precio_total"), PANEL_X + 30,
+                PANEL_Y + 486, 13, SUAVE)
         L.caja("precio.campo", PANEL_X + 30, PANEL_Y + 502, PANEL_W - 60, 30,
                (30, 36, 50, 255))
-        L.texto("precio.ud", "23 por unidad", PANEL_X + 30, PANEL_Y + 540, 13,
-                SUAVE)
+        L.texto("precio.ud", T("mercado.por_unidad", "23"), PANEL_X + 30,
+                PANEL_Y + 540, 13, SUAVE)
 
-        L.texto("dur.et", "DURACION DE LA OFERTA", PANEL_X + 30, PANEL_Y + 562,
-                13, SUAVE)
+        L.texto("dur.et", T("gts.duracion"), PANEL_X + 30, PANEL_Y + 562, 13, SUAVE)
         dw = (PANEL_W - 60 - 2 * 6) // 3
-        for i, et in enumerate(("1 dia", "2 dias", "1 semana")):
+        for i, et in enumerate((T("gts.dur_24"), T("gts.dur_48"),
+                                T("gts.dur_168"))):
             bx = PANEL_X + 30 + i * (dw + 6)
             L.caja(f"dur{i}", bx, PANEL_Y + 578, dw, 32, (58, 69, 96, 255))
             # ⚠ 13 y no 15: `botonPeq` ENCOGE la letra hasta que cabe. La
@@ -521,7 +548,7 @@ def maqueta_panel_obj(vender):
         y += 14
         L.texto("precio", "1.500", cx, y, 34, ORO, "centro")
         y += 42
-        L.texto("unidad", "23 por unidad", cx, y, 14, SUAVE, "centro")
+        L.texto("unidad", T("mercado.por_unidad", "23"), cx, y, 14, SUAVE, "centro")
         y += 26 + 12
         for i, (et, va) in enumerate((("Vendedor", "TheJuanCE"),
                                       ("EXPIRA", "2d 3h"))):

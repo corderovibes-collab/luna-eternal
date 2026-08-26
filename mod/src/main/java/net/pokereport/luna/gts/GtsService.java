@@ -458,8 +458,12 @@ public final class GtsService {
             ivs[i] = rs.getInt(14 + i);
             evs[i] = rs.getInt(20 + i);
         }
-        return new Ejemplar(rs.getLong(1), rs.getLong(2), rs.getString(3),
-                rs.getString(4), rs.getString(5), rs.getInt(6),
+        // ⚠⚠ LAS TRES PRIMERAS TAMBIEN. Estaban SIN sanear mientras las seis
+        //   siguientes si lo estaban, y `display_name` es NULO en cuanto se
+        //   publica un Pokemon sin mote: eso ECHABA DEL SERVIDOR a quien
+        //   abriera el GTS. Ver la cabecera de `Red.cad`.
+        return new Ejemplar(rs.getLong(1), rs.getLong(2), texto(rs.getString(3)),
+                texto(rs.getString(4)), texto(rs.getString(5)), rs.getInt(6),
                 rs.getBoolean(7), texto(rs.getString(8)), texto(rs.getString(9)),
                 texto(rs.getString(10)), texto(rs.getString(11)),
                 texto(rs.getString(12)), texto(rs.getString(13)),
@@ -686,7 +690,7 @@ public final class GtsService {
     }
 
     private static Oferta leerOferta(ResultSet rs) throws SQLException {
-        return new Oferta(rs.getLong(1), rs.getLong(2), rs.getString(3),
+        return new Oferta(rs.getLong(1), rs.getLong(2), texto(rs.getString(3)),
                 texto(rs.getString(4)), texto(rs.getString(5)), rs.getInt(6),
                 rs.getLong(7), rs.getTimestamp(8).getTime());
     }

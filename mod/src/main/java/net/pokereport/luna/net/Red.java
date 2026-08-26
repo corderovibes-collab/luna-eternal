@@ -337,6 +337,35 @@ public class Red implements ModInitializer {
     }
 
     /**
+     * Escribe una cadena que <b>puede ser nula</b>.
+     *
+     * <h2>⚠⚠⚠ UN {@code writeString(null)} ECHA AL JUGADOR DEL SERVIDOR</h2>
+     *
+     * Y lo hace en el peor sitio posible: <b>al codificar el paquete</b>, ya
+     * fuera del hilo del servidor. El jugador ve
+     * <i>«Failed to encode packet 'clientbound/custom_payload'»</i> y se le
+     * corta la conexión. No es un aviso, no es un hueco en una pantalla: es una
+     * desconexión, y el mensaje <b>no dice qué campo</b>.
+     *
+     * <p>Pasó de verdad el 2026-08-25: un Pokémon publicado <b>sin mote</b>
+     * dejaba {@code display_name} a nulo, y abrir el GTS echaba del servidor a
+     * quien lo abriera. Lo que hace grave el fallo no es la columna: es que
+     * <b>cualquiera</b> de los 34 campos de texto del protocolo podía hacerlo, y
+     * el remedio se había escrito a mano <b>solo en dos</b>.
+     *
+     * <p>Por eso esto no es una comprobación más: es que <b>el codificador ya no
+     * puede escribir un nulo</b>. Un campo nuevo que se olvide de sanear enseña
+     * una cadena vacía, que es un fallo visible y arreglable — no una patada.
+     *
+     * <p>⚠ Lo de arriba <b>no sustituye</b> a sanear en origen: un nulo que
+     * llega hasta aquí sigue siendo un dato mal leído. Esto es la red debajo del
+     * alambre, no el alambre.
+     */
+    private static void cad(RegistryByteBuf buf, String s) {
+        buf.writeString(s == null ? "" : s);
+    }
+
+    /**
      * Un ejemplar publicado en el GTS.
      *
      * <p>⚠ Los IVs y los EVs viajan como SEIS numeros en un orden FIJO (PS, At,
@@ -352,16 +381,16 @@ public class Red implements ModInitializer {
 
         static void escribir(RegistryByteBuf buf, EjemplarGts e) {
             buf.writeVarLong(e.id);
-            buf.writeString(e.vendedor);
-            buf.writeString(e.especie);
-            buf.writeString(e.mote);
+            cad(buf, e.vendedor);
+            cad(buf, e.especie);
+            cad(buf, e.mote);
             buf.writeVarInt(e.nivel);
             buf.writeBoolean(e.shiny);
-            buf.writeString(e.genero);
-            buf.writeString(e.naturaleza);
-            buf.writeString(e.habilidad);
-            buf.writeString(e.tera);
-            buf.writeString(e.rareza);
+            cad(buf, e.genero);
+            cad(buf, e.naturaleza);
+            cad(buf, e.habilidad);
+            cad(buf, e.tera);
+            cad(buf, e.rareza);
             seis(buf, e.ivs);
             seis(buf, e.evs);
             buf.writeVarLong(e.precio);
@@ -386,16 +415,16 @@ public class Red implements ModInitializer {
                          long estimado) {
 
         static void escribir(RegistryByteBuf buf, MioGts m) {
-            buf.writeString(m.uuid);
-            buf.writeString(m.especie);
-            buf.writeString(m.mote);
+            cad(buf, m.uuid);
+            cad(buf, m.especie);
+            cad(buf, m.mote);
             buf.writeVarInt(m.nivel);
             buf.writeBoolean(m.shiny);
-            buf.writeString(m.donde);
+            cad(buf, m.donde);
             seis(buf, m.ivs);
             seis(buf, m.evs);
-            buf.writeString(m.naturaleza);
-            buf.writeString(m.habilidad);
+            cad(buf, m.naturaleza);
+            cad(buf, m.habilidad);
             buf.writeVarLong(m.estimado);
         }
 
@@ -450,16 +479,16 @@ public class Red implements ModInitializer {
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_gts"));
         public static final PacketCodec<RegistryByteBuf, PedirGts> CODEC =
                 PacketCodec.ofStatic((buf, p) -> {
-                    buf.writeString(p.texto);
-                    buf.writeString(p.vendedor);
-                    buf.writeString(p.nivelMin);
-                    buf.writeString(p.nivelMax);
-                    buf.writeString(p.precioMin);
-                    buf.writeString(p.precioMax);
+                    cad(buf, p.texto);
+                    cad(buf, p.vendedor);
+                    cad(buf, p.nivelMin);
+                    cad(buf, p.nivelMax);
+                    cad(buf, p.precioMin);
+                    cad(buf, p.precioMax);
                     seis(buf, p.ivMin);
                     seis(buf, p.evMin);
-                    buf.writeString(p.shiny);
-                    buf.writeString(p.orden);
+                    cad(buf, p.shiny);
+                    cad(buf, p.orden);
                 }, buf -> new PedirGts(buf.readString(), buf.readString(),
                         buf.readString(), buf.readString(), buf.readString(),
                         buf.readString(), leerSeis(buf), leerSeis(buf),
@@ -605,9 +634,9 @@ public class Red implements ModInitializer {
                             int cantidad, long precio, long expira) {
         static void escribir(RegistryByteBuf buf, OfertaObj o) {
             buf.writeVarLong(o.id);
-            buf.writeString(o.vendedor);
-            buf.writeString(o.item);
-            buf.writeString(o.nombre);
+            cad(buf, o.vendedor);
+            cad(buf, o.item);
+            cad(buf, o.nombre);
             buf.writeVarInt(o.cantidad);
             buf.writeVarLong(o.precio);
             buf.writeVarLong(o.expira);
@@ -890,13 +919,13 @@ public class Red implements ModInitializer {
 
         private static void escribir(RegistryByteBuf buf, ClanResumen c) {
             buf.writeVarLong(c.id);
-            buf.writeString(c.nombre);
-            buf.writeString(c.etiqueta);
-            buf.writeString(c.color);
-            buf.writeString(c.descripcion);
+            cad(buf, c.nombre);
+            cad(buf, c.etiqueta);
+            cad(buf, c.color);
+            cad(buf, c.descripcion);
             buf.writeVarLong(c.tesoro);
             buf.writeVarInt(c.miembros);
-            buf.writeString(c.lider);
+            cad(buf, c.lider);
         }
 
         private static ClanResumen leer(RegistryByteBuf buf) {
@@ -982,7 +1011,7 @@ public class Red implements ModInitializer {
             for (MiembroClan m : e.miembros) {
                 MiembroClan.CODEC.encode(buf, m);
             }
-            buf.writeString(e.miRol == null ? "" : e.miRol);
+            cad(buf, e.miRol);
             buf.writeVarInt(e.invitaciones.size());
             for (InvitacionClan i : e.invitaciones) {
                 InvitacionClan.CODEC.encode(buf, i);
@@ -1289,13 +1318,13 @@ public class Red implements ModInitializer {
         //   deja de compilar con un error que no dice por qué. Escribirlo así
         //   quita ese techo de golpe.
         private static void escribir(RegistryByteBuf buf, MisionEstado m) {
-            buf.writeString(m.id);
-            buf.writeString(m.cadena);
+            cad(buf, m.id);
+            cad(buf, m.cadena);
             buf.writeVarInt(m.orden);
-            buf.writeString(m.requiere == null ? "" : m.requiere);
-            buf.writeString(m.nombre);
-            buf.writeString(m.descripcion);
-            buf.writeString(m.objetivo);
+            cad(buf, m.requiere);
+            cad(buf, m.nombre);
+            cad(buf, m.descripcion);
+            cad(buf, m.objetivo);
             buf.writeVarLong(m.meta);
             buf.writeVarLong(m.progreso);
             buf.writeBoolean(m.completada);
@@ -1303,7 +1332,7 @@ public class Red implements ModInitializer {
             buf.writeBoolean(m.desbloqueada);
             buf.writeVarLong(m.plata);
             buf.writeVarLong(m.marcas);
-            buf.writeString(m.via == null ? "" : m.via);
+            cad(buf, m.via);
             buf.writeVarLong(m.xp);
         }
 

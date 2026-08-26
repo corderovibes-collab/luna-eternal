@@ -15,6 +15,39 @@ public final class GtsDelivery {
 
     private GtsDelivery() {}
 
+    /**
+     * Las reclamaciones que ya se ha dicho que no se pueden leer.
+     *
+     * <h2>⚠⚠ UN ERROR QUE SALE EN CADA LOGIN, PARA SIEMPRE, ENSEÑA A IGNORARLOS</h2>
+     *
+     * Una reclamación ilegible <b>no se marca entregada</b>, y eso está bien: si
+     * el payload dejó de leerse porque falta un mod, marcarla destruiría el
+     * objeto para siempre. Pero como no se marca, <b>se reintenta en cada
+     * conexión</b> — y escribía un {@code ERROR} cada vez.
+     *
+     * <p>Es exactamente la lección del diagnóstico de la gráfica del launcher:
+     * <b>un aviso que salta siempre es peor que no tenerlo</b>, porque el día
+     * que haya uno de verdad tampoco lo va a leer nadie.
+     *
+     * <p>Ahora se dice <b>una vez por arranque del servidor</b>. Y sobre todo:
+     * <b>se le dice al jugador</b>, que es quien tiene algo pendiente que no va
+     * a recibir y hasta hoy no se enteraba.
+     */
+    private static final java.util.Set<Long> YA_AVISADAS =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private static void avisarIlegible(ServerPlayerEntity player, long listingId,
+                                       String nombre) {
+        if (YA_AVISADAS.add(listingId)) {
+            LunaEternal.LOG.error(
+                "Reclamación #{} ({}) ilegible; NO se marca entregada. "
+                + "No se repetirá hasta el próximo arranque.", listingId, nombre);
+        }
+        player.sendMessage(Text.literal(
+            "§8[§6GTS§8] §cNo se pudo entregar §f" + nombre
+            + " §8(#" + listingId + ")§c. Avisa a un administrador."), false);
+    }
+
     /** Entrega lo pendiente. Silencioso si no hay nada. */
     public static void claimAll(ServerPlayerEntity player, long playerId) {
         var server = player.getServer();
@@ -31,9 +64,8 @@ public final class GtsDelivery {
                         var stack = ItemCodec.decode(claim.payload(),
                                                      player.getRegistryManager());
                         if (stack.isEmpty()) {
-                            LunaEternal.LOG.error(
-                                "Reclamación #{} ilegible; NO se marca entregada",
-                                claim.listingId());
+                            avisarIlegible(player, claim.listingId(),
+                                           claim.displayName());
                             continue;   // se reintentará al volver a conectar
                         }
                         // Primero el objeto, después la marca. Al revés, un

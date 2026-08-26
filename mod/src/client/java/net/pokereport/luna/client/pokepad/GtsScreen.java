@@ -768,7 +768,6 @@ public class GtsScreen extends Screen {
                 case "vender" -> Iconos.mas(ctx, cx, cy, lado, color);
                 case "mias" -> Iconos.lista(ctx, cx, cy, lado, color);
                 case "chollos" -> Iconos.etiqueta(ctx, cx, cy, lado, color);
-                case "objetos" -> Iconos.caja(ctx, cx, cy, lado, color);
                 default -> { }
             }
         }

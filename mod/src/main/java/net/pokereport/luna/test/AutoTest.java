@@ -965,6 +965,13 @@ public final class AutoTest {
         check("una oferta comprada ya no sale en el escaparate",
               gts.buscarObjetos("Roca", "NUEVO", 50).stream()
                  .noneMatch(o -> o.id() == oferta.id()));
+        // ⚠⚠ HAY QUE MARCARLA ENTREGADA, Y OLVIDARLO NO ES INOCENTE. Comprar
+        //   deja una reclamación pendiente, y una reclamación de prueba lleva
+        //   un payload que NO es un objeto: al conectarse cualquiera,
+        //   `GtsDelivery` intenta leerla, no puede, y lo escribe en el log.
+        //   Como no se marca entregada, VUELVE A INTENTARLO EN CADA LOGIN —
+        //   para siempre. Dos filas de basura por ejecución del autotest.
+        gts.markDelivered(oferta.id());
 
         // ---- retirar devuelve la mercancía ---------------------------------
         var otra = gts.publicarObjeto(vendedor, item, "Roca2", 5, 1_000, 24);
@@ -979,6 +986,7 @@ public final class AutoTest {
                   !gts.cancel(comprador, id2).ok());
             check("una oferta retirada ya no sale entre las mías",
                   gts.misObjetos(vendedor).stream().noneMatch(o -> o.id() == id2));
+            gts.markDelivered(id2);
         }
 
         // ---- lo que NO se puede hacer --------------------------------------

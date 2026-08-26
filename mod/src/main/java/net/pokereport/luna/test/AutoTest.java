@@ -1146,16 +1146,32 @@ public final class AutoTest {
 
         boolean todosExisten = true, todosPagan = true;
         for (var o : ciclo.objetivos()) {
-            if (!o.premioObjeto().isBlank()) {
-                var id = net.minecraft.util.Identifier.tryParse(o.premioObjeto());
+            // ⚠ LOS DOS. Comprobar solo el primero dejaria el segundo sin
+            //   red -- y el segundo es el que se añadio despues, o sea el que
+            //   mas probabilidades tiene de estar mal escrito.
+            for (var par : java.util.List.of(
+                    java.util.Map.entry(o.premioObjeto(), o.premioCantidad()),
+                    java.util.Map.entry(o.premioObjeto2(), o.premioCantidad2()))) {
+                if (par.getKey().isBlank()) {
+                    continue;
+                }
+                var id = net.minecraft.util.Identifier.tryParse(par.getKey());
                 var item = id == null ? null
                         : net.minecraft.registry.Registries.ITEM.get(id);
                 if (item == null || item == net.minecraft.item.Items.AIR
-                        || o.premioCantidad() <= 0) {
+                        || par.getValue() <= 0) {
                     todosExisten = false;
                     LunaEternal.LOG.error("Premio de caza inexistente: {} x{}",
-                            o.premioObjeto(), o.premioCantidad());
+                            par.getKey(), par.getValue());
                 }
+            }
+            // ⚠ Un premio con SOLO el segundo objeto es un hueco en la tabla:
+            //   el primero es el que se dibuja arriba, asi que se veria un
+            //   premio empezando por el segundo renglon.
+            if (o.premioObjeto().isBlank() && !o.premioObjeto2().isBlank()) {
+                todosExisten = false;
+                LunaEternal.LOG.error("Premio con el primer objeto vacio: {}",
+                        o.especie());
             }
             if (o.premioDolar() <= 0 && o.premioMarca() <= 0) {
                 todosPagan = false;
@@ -1193,8 +1209,13 @@ public final class AutoTest {
 
         // ⚠ La entrega se recoge UNA vez. Si se pudiera leer dos, un cobro
         //   entregaría el objeto dos veces.
+        // ⚠⚠ `== null` COMPILABA Y COMPROBABA LO CONTRARIO. Al pasar la entrega
+        //    de un valor suelto a una lista, esto siguió compilando --una lista
+        //    comparada con null es Java valido-- pero paso de «no hay nada» a
+        //    «siempre falso». Un cambio de tipo que ROMPE una prueba sin que el
+        //    compilador diga nada.
         check("no hay entrega pendiente si no se ha cobrado nada",
-              svc.entregaPendiente() == null);
+              svc.entregaPendiente().isEmpty());
 
         check("no se cobra un objetivo que no existe",
               svc.cobrar(jugador, -1, java.util.UUID.randomUUID())

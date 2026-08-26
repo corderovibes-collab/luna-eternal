@@ -566,7 +566,7 @@ FILA_CAZA = 140
 LISTA_CAZA_Y = PANT_Y + MARGEN + PEST_H + 12
 RET_CAZA_H = 226
 COL_MODELO, COL_TEXTO = 8, 136
-COL_PREMIO, ANCHO_PREMIO = 490, 150
+COL_PREMIO, ANCHO_PREMIO = 470, 170
 ANCHO_BOTON = 119
 
 
@@ -606,14 +606,17 @@ def maqueta_cazas():
         L.texto(f"fila{n}.prog", "2 / 3", ax + COL_TEXTO + 160, y + 93, 13,
                 BLANCO, "centro", vigilar=False)
         pxx = ax + COL_PREMIO
-        L.texto(f"fila{n}.rec", T("caza.recompensa"), pxx, y + 16, 12, SUAVE,
+        L.texto(f"fila{n}.rec", T("caza.recompensa"), pxx, y + 10, 12, SUAVE,
                 limite=ANCHO_PREMIO)
-        L.texto(f"fila{n}.plata", T("caza.plata", "2.500"), pxx, y + 34, 16,
-                (138, 106, 0, 255), limite=ANCHO_PREMIO)
-        L.texto(f"fila{n}.marcas", T("caza.marcas", "24"), pxx, y + 58, 14,
-                (60, 110, 150, 255), limite=ANCHO_PREMIO)
-        L.texto(f"fila{n}.objeto", "Ultra Ball x3", pxx + 24, y + 82, 14,
-                SUAVE, limite=ANCHO_PREMIO - 24)
+        L.texto(f"fila{n}.plata", T("caza.plata", "2.500"), pxx, y + 26, 17,
+                (122, 93, 0, 255), limite=ANCHO_PREMIO)
+        L.texto(f"fila{n}.marcas", T("caza.marcas", "24"), pxx, y + 48, 15,
+                (31, 91, 133, 255), limite=ANCHO_PREMIO)
+        # ⚠ DOS objetos, y el mas largo de los que se dan: si cabe «Maximo
+        #   Revivir x1», caben todos.
+        for i, et in enumerate(("Ultra Ball x4", "Maximo Revivir x1")):
+            L.texto(f"fila{n}.obj{i}", et, pxx + 24, y + 70 + i * 22, 14,
+                    OSCURO, limite=ANCHO_PREMIO - 24)
         L.caja(f"fila{n}.cobrar", ax + aw - 8 - ANCHO_BOTON, y + 44,
                ANCHO_BOTON, 44, VERDE)
         L.texto(f"fila{n}.cobrar.t", T("caza.cobrar"),
@@ -634,30 +637,33 @@ def maqueta_panel_caza():
            (57, 65, 92, 255))
 
     cy = RET_Y + RET_CAZA_H + 6
-    L.caja("reloj", RET_X, cy, RET_W, 46, (27, 32, 48, 255), (57, 65, 92, 255))
-    L.texto("reloj.et", T("caza.rotan"), cx, cy + 5, 12, SUAVE, "centro",
+    L.caja("reloj", RET_X, cy, RET_W, 58, (16, 20, 31, 255), (74, 85, 120, 255))
+    L.texto("reloj.et", T("caza.rotan"), cx, cy + 6, 13, SUAVE, "centro",
             limite=RET_W - 10)
-    L.texto("reloj.n", "18h 42m", cx, cy + 20, 22, ORO, "centro")
+    # ⚠ 30 px: era el numero peor legible de la pantalla y es el mas importante.
+    L.texto("reloj.n", "18h 42m", cx, cy + 24, 30, ORO, "centro",
+            limite=RET_W - 10)
 
-    y = cy + 62
-    L.texto("nombre", "Charizard", cx, y, 24, BLANCO, "centro", limite=RET_W)
-    y += 28
+    y = cy + 74
+    L.texto("nombre", "Charizard", cx, y, 26, BLANCO, "centro", limite=RET_W)
+    y += 30
     for e in range(3):
-        L.caja(f"est{e}", cx - 28 + e * 20, y + 2, 16, 16,
+        L.caja(f"est{e}", cx - 37 + e * 26, y + 2, 22, 22,
                ORO if e < 2 else (0, 0, 0, 60), vigilar=False)
-    y += 28
+    y += 34
     L.caja("progreso", PANEL_X + 30, y, PANEL_W - 60, 20, (32, 40, 60, 255))
     y += 32
-    L.texto("rec.et", T("caza.recompensa"), cx, y + 10, 13, SUAVE, "centro")
-    y += 30
-    L.texto("rec.plata", T("caza.plata", "2.500"), PANEL_X + 30, y, 16, ORO,
+    L.texto("rec.et", T("caza.recompensa"), cx, y + 12, 14, SUAVE, "centro")
+    y += 36
+    L.texto("rec.plata", T("caza.plata", "2.500"), PANEL_X + 30, y, 18, ORO,
             limite=PANEL_W - 60)
-    y += 22
-    L.texto("rec.marcas", T("caza.marcas", "24"), PANEL_X + 30, y, 16,
-            (159, 214, 255, 255), limite=PANEL_W - 60)
-    y += 22
-    L.texto("rec.obj", "Ultra Ball x3", PANEL_X + 54, y, 16,
-            (232, 238, 248, 255), limite=PANEL_W - 84)
+    y += 25
+    L.texto("rec.marcas", T("caza.marcas", "24"), PANEL_X + 30, y, 18,
+            (127, 212, 255, 255), limite=PANEL_W - 60)
+    y += 25
+    for i, et in enumerate(("Ultra Ball x4", "Maximo Revivir x1")):
+        L.texto(f"rec.obj{i}", et, PANEL_X + 56, y + i * 25, 18, BLANCO,
+                limite=PANEL_W - 86)
     L.caja("cobrar", PANEL_X + 30, PANEL_Y + PANEL_H - 72, PANEL_W - 60, 56, VERDE)
     return L
 

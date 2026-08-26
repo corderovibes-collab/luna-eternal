@@ -76,7 +76,7 @@ public class CazasScreen extends Screen {
      * siguiente, así que moverlas de una en una es como se solapan.
      */
     private static final int COL_MODELO = 8, COL_TEXTO = 136;
-    private static final int COL_PREMIO = 490, ANCHO_PREMIO = 150;
+    private static final int COL_PREMIO = 470, ANCHO_PREMIO = 170;
     private static final int ANCHO_BOTON = 119;
 
     private static final int FILA_FONDO = 0xFFBFCBE8;
@@ -85,7 +85,23 @@ public class CazasScreen extends Screen {
     private static final int BORDE_ENCIMA = 0xFFF35C0C;
     private static final int TEXTO_OSCURO = 0xFF16203A;
     private static final int TEXTO_SUAVE = 0xFF5A668C;
-    private static final int TEXTO_CONTORNO = 0xFFF2F6FF;
+    /**
+     * ⚠⚠⚠ DOS CONTORNOS, UNO POR FONDO.
+     *
+     * <p>Un contorno sirve para <b>despegar el texto de su fondo</b>, así que
+     * tiene que ir en contra de ese fondo. Con una sola constante clara:
+     *
+     * <pre>
+     *   fila CLARA + texto oscuro + halo CLARO   ->  se despega. Bien.
+     *   panel OSCURO + texto dorado + halo CLARO ->  BORRÓN. Mal.
+     * </pre>
+     *
+     * <p>Es la lección del chasis v4, otra vez: la decisión correcta —«que se
+     * lean»— aplicada sobre un fondo invertido da el resultado contrario.
+     */
+    private static final int CONTORNO_CLARO = 0xFFF2F6FF;
+    private static final int CONTORNO_OSCURO = 0xFF080B12;
+    private static final int TEXTO_CONTORNO = CONTORNO_CLARO;
     private static final int SEPARADOR = 0xFF3C4250;
     private static final int ORO = 0xFFFFD65C;
     private static final int VERDE = 0xFF2E9E56;
@@ -261,12 +277,16 @@ public class CazasScreen extends Screen {
         //   servidor mandara «faltan N horas», el número se quedaría viejo en
         //   cuanto pasara un minuto y el reloj mentiría hasta reabrir.
         int cy = RET_Y + RET_H + 6;
-        ctx.fill(px(RET_X), py(cy), px(RET_X + RET_W), py(cy + 46), 0xFF1B2030);
-        marco(ctx, px(RET_X), py(cy), pl(RET_W), pl(46), 0xFF39415C, Math.max(1, pl(2)));
+        ctx.fill(px(RET_X), py(cy), px(RET_X + RET_W), py(cy + 58), 0xFF10141F);
+        marco(ctx, px(RET_X), py(cy), pl(RET_W), pl(58), 0xFF4A5578, Math.max(1, pl(2)));
+        // ⚠ El rótulo va CLARO, no en `TEXTO_SUAVE`: ese gris azulado está
+        //   pensado para las filas claras y sobre casi negro desaparece.
         texto(ctx, Text.translatable("pokepad.lunaeternal.caza.rotan"),
-                PANEL_X + PANEL_W / 2, cy + 5, 12, TEXTO_SUAVE, true, false);
+                PANEL_X + PANEL_W / 2, cy + 6, 13, 0xFFA8B4D0, true, 0);
+        // ⚠ 30 px y SIN halo. Es el número más importante de la pantalla y era
+        //   el que peor se leía: 22 px con halo claro sobre negro es un borrón.
         texto(ctx, Text.literal(queda(estado == null ? 0 : estado.terminaEn())),
-                PANEL_X + PANEL_W / 2, cy + 20, 22, ORO, true, true);
+                PANEL_X + PANEL_W / 2, cy + 24, 30, ORO, true, CONTORNO_OSCURO);
 
         var o = seleccionado();
         if (o == null) {
@@ -279,23 +299,27 @@ public class CazasScreen extends Screen {
             return;
         }
 
-        int y = cy + 62;
-        for (Text linea : partirLim(especieEs(o.especie()).getString(), RET_W, 24, 2)) {
-            texto(ctx, linea, PANEL_X + PANEL_W / 2, y, 24, 0xFFFFFFFF, true, false);
-            y += 28;
+        int y = cy + 74;
+        for (Text linea : partirLim(especieEs(o.especie()).getString(), RET_W, 26, 2)) {
+            texto(ctx, linea, PANEL_X + PANEL_W / 2, y, 26, 0xFFFFFFFF, true,
+                    CONTORNO_OSCURO);
+            y += 30;
         }
-        estrellas(ctx, PANEL_X + PANEL_W / 2, y + 2, o.rareza(), 16, true);
-        y += 28;
+        // ⚠ 22 y no 16: en el panel las estrellas son lo que dice de qué nivel
+        //   es el objetivo, y a 16 sobre negro no se distinguía cuáles estaban
+        //   encendidas.
+        estrellas(ctx, PANEL_X + PANEL_W / 2, y + 2, o.rareza(), 22, true);
+        y += 34;
 
         // --- progreso
         progreso(ctx, PANEL_X + 30, y, PANEL_W - 60, 20, o);
         y += 32;
 
         separador(ctx, y);
-        y += 10;
+        y += 12;
         texto(ctx, Text.translatable("pokepad.lunaeternal.caza.recompensa"),
-                PANEL_X + PANEL_W / 2, y, 13, TEXTO_SUAVE, true, false);
-        y += 20;
+                PANEL_X + PANEL_W / 2, y, 14, 0xFFA8B4D0, true, 0);
+        y += 24;
         y = premio(ctx, o, PANEL_X + 30, y, PANEL_W - 60, false);
 
         boolean puede = o.completo() && !o.cobrado() && !esperando();
@@ -313,36 +337,66 @@ public class CazasScreen extends Screen {
      * a partir del identificador: el servidor solo tiene {@code en_us}. Es la
      * regla de idioma de CLAUDE.md.
      */
+    /**
+     * El premio, en varias líneas.
+     *
+     * <p>⚠ Va SIEMPRE sobre fondo oscuro (el panel o el cartelito), así que el
+     * contorno es oscuro. Y los colores son los vivos, no los del texto de las
+     * filas: un gris azulado pensado para fondo claro sobre negro desaparece.
+     */
     private int premio(DrawContext ctx, Red.ObjetivoCaza o, int ax, int y, int aw,
                        boolean compacto) {
-        int alto = compacto ? 14 : 16;
+        int alto = compacto ? 15 : 18;
         if (o.dolar() > 0) {
             texto(ctx, Text.translatable("pokepad.lunaeternal.caza.plata",
                             String.format("%,d", o.dolar())),
-                    ax, y, alto, ORO, false, !compacto);
-            y += alto + 6;
+                    ax, y, alto, ORO, false, CONTORNO_OSCURO);
+            y += alto + 7;
         }
         if (o.marca() > 0) {
             texto(ctx, Text.translatable("pokepad.lunaeternal.caza.marcas",
                             String.format("%,d", o.marca())),
-                    ax, y, alto, 0xFF9FD6FF, false, !compacto);
-            y += alto + 6;
+                    ax, y, alto, 0xFF7FD4FF, false, CONTORNO_OSCURO);
+            y += alto + 7;
         }
-        if (!o.objeto().isEmpty() && o.cantidad() > 0) {
-            texto(ctx, nombreDe(o.objeto()).copy()
-                            .append(Text.literal(" x" + o.cantidad())),
-                    ax + 24, y, alto, 0xFFE8EDF8, false, !compacto);
-            y += alto + 6;
+        for (var e : objetos(o)) {
+            texto(ctx, recortar(nombreDe(e.id()).getString() + " x" + e.cantidad(),
+                            aw - 26, alto),
+                    ax + 26, y, alto, 0xFFFFFFFF, false, CONTORNO_OSCURO);
+            y += alto + 7;
         }
         return y;
     }
 
-    /** Los iconos del premio. Van en la pasada de después de `ctx.draw()`. */
-    private void premioIconos(DrawContext ctx, Red.ObjetivoCaza o, int ax, int y) {
-        if (o.objeto().isEmpty() || o.cantidad() <= 0) {
-            return;
+    /** Un objeto del premio y cuántos. */
+    private record Suelto(String id, int cantidad) {}
+
+    /**
+     * Los objetos de un premio, ya filtrados.
+     *
+     * <p>⚠ Existe para que dibujar y contar miren <b>la misma lista</b>. Con la
+     * comprobación repetida en cada sitio, basta que uno olvide el segundo
+     * objeto para que se enseñe uno y se entreguen dos — o al revés.
+     */
+    private List<Suelto> objetos(Red.ObjetivoCaza o) {
+        var salida = new ArrayList<Suelto>(2);
+        if (!o.objeto().isEmpty() && o.cantidad() > 0) {
+            salida.add(new Suelto(o.objeto(), o.cantidad()));
         }
-        objeto(ctx, pila(o.objeto()), ax, y - 2, 18);
+        if (!o.objeto2().isEmpty() && o.cantidad2() > 0) {
+            salida.add(new Suelto(o.objeto2(), o.cantidad2()));
+        }
+        return salida;
+    }
+
+    /** Los iconos del premio. Van en la pasada de después de `ctx.draw()`. */
+    private void premioIconos(DrawContext ctx, Red.ObjetivoCaza o, int ax, int y,
+                              int paso) {
+        int n = 0;
+        for (var e : objetos(o)) {
+            objeto(ctx, pila(e.id()), ax, y + n * paso, 18);
+            n++;
+        }
     }
 
     private void progreso(DrawContext ctx, int ax, int y, int aw, int ah,
@@ -422,7 +476,7 @@ public class CazasScreen extends Screen {
                             px(ax + COL_MODELO), py(y + 8), pl(116), pl(116),
                             0.10f, 0f, false);
                 }
-                premioIconos(ctx, o, ax + COL_PREMIO, y + 80);
+                premioIconos(ctx, o, ax + COL_PREMIO, y + 68, 22);
                 continue;
             }
 
@@ -445,35 +499,41 @@ public class CazasScreen extends Screen {
             progreso(ctx, ax + COL_TEXTO, y + 88, COL_PREMIO - COL_TEXTO - 30, 24, o);
 
             // --- el premio, en su columna
+            //
+            // ⚠ Aquí el fondo es CLARO, así que los colores son los oscuros y
+            //   el contorno el claro. Es la misma información que en el panel
+            //   pintada al revés, y tiene que ser al revés.
             int pxx = ax + COL_PREMIO;
             texto(ctx, Text.translatable("pokepad.lunaeternal.caza.recompensa"),
-                    pxx, y + 16, 12, TEXTO_SUAVE, false, false);
+                    pxx, y + 10, 12, TEXTO_SUAVE, false, false);
             texto(ctx, recortar(Text.translatable("pokepad.lunaeternal.caza.plata",
                             String.format("%,d", o.dolar())).getString(),
-                            ANCHO_PREMIO, 16),
-                    pxx, y + 34, 16, 0xFF8A6A00, false, true);
+                            ANCHO_PREMIO, 17),
+                    pxx, y + 26, 17, 0xFF7A5D00, false, CONTORNO_CLARO);
             texto(ctx, recortar(Text.translatable("pokepad.lunaeternal.caza.marcas",
                             String.format("%,d", o.marca())).getString(),
-                            ANCHO_PREMIO, 14),
-                    pxx, y + 58, 14, 0xFF3C6E96, false, false);
-            if (!o.objeto().isEmpty() && o.cantidad() > 0) {
-                texto(ctx, recortar(nombreDe(o.objeto()).getString()
-                                + " x" + o.cantidad(), ANCHO_PREMIO - 24, 14),
-                        pxx + 24, y + 82, 14, TEXTO_SUAVE, false, false);
+                            ANCHO_PREMIO, 15),
+                    pxx, y + 48, 15, 0xFF1F5B85, false, 0);
+            int ny = y + 70;
+            for (var e : objetos(o)) {
+                texto(ctx, recortar(nombreDe(e.id()).getString()
+                                + " x" + e.cantidad(), ANCHO_PREMIO - 24, 14),
+                        pxx + 24, ny, 14, TEXTO_OSCURO, false, 0);
+                ny += 22;
             }
 
             // --- estado, pegado a la derecha
             int bx = ax + aw - 8 - ANCHO_BOTON;
             if (o.cobrado()) {
                 textoDer(ctx, Text.translatable("pokepad.lunaeternal.caza.cobrado"),
-                        ax + aw - 12, y + 52, 18, APAGADO, true);
+                        ax + aw - 12, y + 52, 18, APAGADO, CONTORNO_CLARO);
             } else if (o.completo()) {
                 botonPeq(ctx, rx, ry, bx, y + 44, ANCHO_BOTON, 44,
                         Text.translatable("pokepad.lunaeternal.caza.cobrar"),
                         !esperando(), true);
             } else {
                 textoDer(ctx, Text.translatable("pokepad.lunaeternal.caza.en_curso"),
-                        ax + aw - 12, y + 56, 15, TEXTO_SUAVE, true);
+                        ax + aw - 12, y + 56, 15, TEXTO_SUAVE, 0);
             }
         }
     }
@@ -515,7 +575,7 @@ public class CazasScreen extends Screen {
         }
         var o = l.get(encima);
 
-        int aw = 250, ah = 116;
+        int aw = 260, ah = 146;
         // Coordenadas de arte a partir del ratón.
         int mx = Math.round((rx - x0) / k), my = Math.round((ry - y0) / k);
         int ax = Math.min(mx + 16, PANT_X + PANT_W - aw - 4);
@@ -526,13 +586,16 @@ public class CazasScreen extends Screen {
         marco(ctx, px(ax), py(ay), pl(aw), pl(ah), ORO, Math.max(2, pl(2)));
 
         texto(ctx, Text.translatable("pokepad.lunaeternal.caza.recompensa"),
-                ax + 12, ay + 10, 13, ORO, false, false);
-        int y = ay + 30;
+                ax + 12, ay + 10, 14, ORO, false, 0);
+        int y = ay + 32;
         y = premio(ctx, o, ax + 12, y, aw - 24, true);
+        // ⚠ Los iconos van AQUI aunque el cartel se dibuje despues del 3D: el
+        //   cartel es lo ultimo de todo, asi que ya no hay nada que le pise.
+        premioIconos(ctx, o, ax + 12, ay + 32 + 2 * 22, 22);
         if (!o.completo()) {
             texto(ctx, Text.translatable("pokepad.lunaeternal.caza.faltan",
                             o.necesarios() - Math.min(o.hechos(), o.necesarios())),
-                    ax + 12, ay + ah - 22, 12, TEXTO_SUAVE, false, false);
+                    ax + 12, ay + ah - 20, 13, 0xFFA8B4D0, false, 0);
         }
     }
 
@@ -768,7 +831,7 @@ public class CazasScreen extends Screen {
     }
 
     private void textoDer(DrawContext ctx, Text linea, int derecha, int arriba,
-                          int alto, int color, boolean contorno) {
+                          int alto, int color, int contorno) {
         int a = Math.round(textRenderer.getWidth(linea) * alto
                 / (float) textRenderer.fontHeight);
         texto(ctx, linea, derecha - a, arriba, alto, color, false, contorno);
@@ -776,6 +839,13 @@ public class CazasScreen extends Screen {
 
     private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,
                        int color, boolean centrado, boolean contorno) {
+        texto(ctx, linea, cx, arriba, alto, color, centrado,
+                contorno ? CONTORNO_CLARO : 0);
+    }
+
+    /** {@code contorno == 0} significa «sin contorno». */
+    private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,
+                       int color, boolean centrado, int contorno) {
         float escala = alto * k / textRenderer.fontHeight;
         if (escala <= 0) {
             return;
@@ -787,11 +857,11 @@ public class CazasScreen extends Screen {
         int anchoTexto = textRenderer.getWidth(linea);
         int tx = Math.round(cx * k / escala) - (centrado ? anchoTexto / 2 : 0);
         int ty = Math.round(arriba * k / escala);
-        if (contorno) {
-            ctx.drawText(textRenderer, linea, tx - 1, ty, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx + 1, ty, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx, ty - 1, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx, ty + 1, TEXTO_CONTORNO, false);
+        if (contorno != 0) {
+            ctx.drawText(textRenderer, linea, tx - 1, ty, contorno, false);
+            ctx.drawText(textRenderer, linea, tx + 1, ty, contorno, false);
+            ctx.drawText(textRenderer, linea, tx, ty - 1, contorno, false);
+            ctx.drawText(textRenderer, linea, tx, ty + 1, contorno, false);
         }
         ctx.drawText(textRenderer, linea, tx, ty, color, false);
         m.pop();

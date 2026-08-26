@@ -810,7 +810,8 @@ public class Red implements ModInitializer {
     public record ObjetivoCaza(long id, String tipo, String especie,
                                int necesarios, int hechos, boolean cobrado,
                                int rareza, long dolar, long marca,
-                               String objeto, int cantidad) {
+                               String objeto, int cantidad,
+                               String objeto2, int cantidad2) {
 
         static void escribir(RegistryByteBuf buf, ObjetivoCaza o) {
             buf.writeVarLong(o.id);
@@ -824,13 +825,16 @@ public class Red implements ModInitializer {
             buf.writeVarLong(o.marca);
             cad(buf, o.objeto);
             buf.writeVarInt(o.cantidad);
+            cad(buf, o.objeto2);
+            buf.writeVarInt(o.cantidad2);
         }
 
         static ObjetivoCaza leer(RegistryByteBuf buf) {
             return new ObjetivoCaza(buf.readVarLong(), buf.readString(),
                     buf.readString(), buf.readVarInt(), buf.readVarInt(),
                     buf.readBoolean(), buf.readVarInt(), buf.readVarLong(),
-                    buf.readVarLong(), buf.readString(), buf.readVarInt());
+                    buf.readVarLong(), buf.readString(), buf.readVarInt(),
+                    buf.readString(), buf.readVarInt());
         }
 
         public boolean completo() {
@@ -2870,7 +2874,8 @@ public class Red implements ModInitializer {
                     xs.add(new ObjetivoCaza(o.id(), o.tipo().name(), o.especie(),
                             o.necesarios(), o.hechos(), o.cobrado(), o.rareza(),
                             o.premioDolar(), o.premioMarca(),
-                            o.premioObjeto(), o.premioCantidad()));
+                            o.premioObjeto(), o.premioCantidad(),
+                            o.premioObjeto2(), o.premioCantidad2()));
                 }
                 long saldo = LunaEternal.economy().balance(id, Currency.POKEDOLLAR);
                 // ⚠ `terminaEn` viene en SEGUNDOS de la base y el cliente
@@ -2911,8 +2916,9 @@ public class Red implements ModInitializer {
                 long id = LunaEternal.players()
                         .resolve(jugador.getUuid(), jugador.getName().getString());
                 var r = svc.cobrar(id, objetivo, java.util.UUID.randomUUID());
-                var entrega = r == net.pokereport.luna.hunt.HuntService.Resultado.PAGADO
-                        ? svc.entregaPendiente() : null;
+                var entregas = r == net.pokereport.luna.hunt.HuntService.Resultado.PAGADO
+                        ? svc.entregaPendiente() : java.util.List
+                            .<net.pokereport.luna.hunt.HuntService.Entrega>of();
                 servidor.execute(() -> {
                     jugador.sendMessage(net.minecraft.text.Text.literal(
                             switch (r) {
@@ -2921,7 +2927,7 @@ public class Red implements ModInitializer {
                                 case YA_COBRADO -> "\u00a7eYa habías cobrado esto.";
                                 case CADUCADO -> "\u00a7cEsa caza ya no está activa.";
                             }), true);
-                    if (entrega != null) {
+                    for (var entrega : entregas) {
                         var item = net.pokereport.luna.market.Inventarios
                                 .objeto(entrega.objeto());
                         if (item != null) {

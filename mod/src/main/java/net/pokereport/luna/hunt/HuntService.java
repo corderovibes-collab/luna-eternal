@@ -55,6 +55,7 @@ public final class HuntService {
     public record Objetivo(long id, Tipo tipo, String especie, int necesarios,
                            long premioDolar, long premioMarca,
                            String premioObjeto, int premioCantidad,
+                           String premioObjeto2, int premioCantidad2,
                            int hechos, boolean cobrado, int rareza) {
         public boolean completo() { return hechos >= necesarios; }
     }
@@ -81,22 +82,38 @@ public final class HuntService {
      * escrito no da error: da un premio que no se entrega, y el jugador se
      * queda sin él <b>después de haber hecho el trabajo</b>.
      */
-    private record Premio(long dolar, long marca, String objeto, int cantidad) {}
+    private record Premio(long dolar, long marca, String objeto, int cantidad,
+                          String objeto2, int cantidad2) {}
 
+    /**
+     * ⚠⚠ NADA QUE DÉ VENTAJA DE COMBATE, dicho por el usuario: <i>«que no estén
+     * rotas o les dé ventaja»</i>.
+     *
+     * <p>Por eso son <b>balls, pociones y caramelos de experiencia</b>, y no
+     * vitaminas, ni objetos equipables, ni Caramelos Raros. La diferencia no es
+     * de cantidad sino de clase: <b>esto acelera lo que ya estabas haciendo; no
+     * cambia lo que puedes hacer.</b> Una vitamina sube una estadística para
+     * siempre; veinte Poké Balls solo te ahorran ir a comprarlas.
+     *
+     * <p>Y cada objetivo da <b>una ball y algo más</b> — así el premio de cazar
+     * es lo que necesitas para seguir cazando, en vez de un número.
+     */
     private static final Premio[] CAPTURA_PREMIOS = {
-        //          Plata  Marcas  objeto                        x
-        new Premio(   500,      8, "cobblemon:poke_ball",        5),
-        new Premio( 1_200,     16, "cobblemon:great_ball",       5),
-        new Premio( 2_500,     24, "cobblemon:ultra_ball",       3),
+        //          Plata  Marcas  objeto                     x   + objeto     x
+        new Premio(   500,      8, "cobblemon:poke_ball",     8, "cobblemon:potion",       3),
+        new Premio( 1_200,     16, "cobblemon:great_ball",    6, "cobblemon:super_potion", 3),
+        new Premio( 2_500,     24, "cobblemon:ultra_ball",    4, "cobblemon:max_revive",   1),
     };
 
+    /**
+     * Criar cuesta más que capturar —hace falta la especie, un Ditto y tiempo—
+     * así que paga más y en experiencia, que es lo que le falta a un recién
+     * eclosionado.
+     */
     private static final Premio[] CRIANZA_PREMIOS = {
-        new Premio( 1_000,     20, "cobblemon:exp_candy_s",      3),
-        new Premio( 2_000,     40, "cobblemon:exp_candy_m",      2),
-        // ⚠ Un Caramelo Raro se GANA jugando, y eso está bien: lo que la línea
-        //   roja prohíbe (T4, D-007) es venderlo por moneda premium, no que
-        //   sea el premio de criar un Pokémon concreto.
-        new Premio( 3_500,     60, "cobblemon:rare_candy",       1),
+        new Premio( 1_000,     20, "cobblemon:exp_candy_s",   4, "cobblemon:poke_ball",    8),
+        new Premio( 2_000,     40, "cobblemon:exp_candy_m",   3, "cobblemon:great_ball",   6),
+        new Premio( 3_500,     60, "cobblemon:exp_candy_l",   2, "cobblemon:ultra_ball",   4),
     };
 
     public record Ciclo(long id, long terminaEn, List<Objetivo> objetivos) {}
@@ -162,8 +179,8 @@ public final class HuntService {
         var elegidas = Especies.sortear(CAZAS + CRIANZAS);
         try (PreparedStatement ps = c.prepareStatement(
                 "INSERT INTO hunt_target (cycle_id, kind, species, needed, "
-              + "reward_dollar, reward_mark, reward_item, reward_qty) "
-              + "VALUES (?,?,?,?,?,?,?,?)")) {
+              + "reward_dollar, reward_mark, reward_item, reward_qty, "
+              + "reward_item2, reward_qty2) VALUES (?,?,?,?,?,?,?,?,?,?)")) {
             for (int i = 0; i < elegidas.size(); i++) {
                 boolean caza = i < CAZAS;
                 int rareza = (caza ? i : i - CAZAS) + 1;   // 1, 2, 3
@@ -184,6 +201,8 @@ public final class HuntService {
                 ps.setLong(6, premio.marca());
                 ps.setString(7, premio.objeto());
                 ps.setInt(8, premio.cantidad());
+                ps.setString(9, premio.objeto2());
+                ps.setInt(10, premio.cantidad2());
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -207,6 +226,7 @@ public final class HuntService {
         try (PreparedStatement ps = c.prepareStatement("""
                 SELECT t.id, t.kind, t.species, t.needed, t.reward_dollar,
                        t.reward_mark, t.reward_item, t.reward_qty,
+                       t.reward_item2, t.reward_qty2,
                        COALESCE(p.done, 0), p.claimed_at IS NOT NULL
                 FROM hunt_target t
                 LEFT JOIN hunt_progress p
@@ -224,10 +244,12 @@ public final class HuntService {
                     // al leer para no necesitar una columna nueva.
                     int rareza = tipo == Tipo.CAPTURA ? ++nCaptura : ++nCrianza;
                     String objeto = rs.getString(7);
+                    String objeto2 = rs.getString(9);
                     out.add(new Objetivo(rs.getLong(1), tipo, rs.getString(3),
                         rs.getInt(4), rs.getLong(5), rs.getLong(6),
                         objeto == null ? "" : objeto, rs.getInt(8),
-                        rs.getInt(9), rs.getBoolean(10), rareza));
+                        objeto2 == null ? "" : objeto2, rs.getInt(10),
+                        rs.getInt(11), rs.getBoolean(12), rareza));
                 }
             }
         }
@@ -300,13 +322,19 @@ public final class HuntService {
      */
     public record Entrega(String objeto, int cantidad) {}
 
-    private final ThreadLocal<Entrega> ultimaEntrega = new ThreadLocal<>();
+    private final ThreadLocal<List<Entrega>> ultimaEntrega = new ThreadLocal<>();
 
-    /** Lo que hubiera que entregar tras un {@link #cobrar} que devolvió PAGADO. */
-    public Entrega entregaPendiente() {
+    /**
+     * Lo que hubiera que entregar tras un {@link #cobrar} que devolvió PAGADO.
+     *
+     * <p>⚠ Devuelve una LISTA y se vacía al leerla. Con un solo objeto esto
+     * era un valor suelto; en cuanto entraron dos, un valor suelto habría
+     * entregado <b>uno y perdido el otro sin decir nada</b>.
+     */
+    public List<Entrega> entregaPendiente() {
         var e = ultimaEntrega.get();
         ultimaEntrega.remove();
-        return e;
+        return e == null ? List.of() : e;
     }
 
     public Resultado cobrar(long playerId, long objetivoId, UUID clave) {
@@ -315,13 +343,14 @@ public final class HuntService {
             c.setAutoCommit(false);
             try {
                 long dolar, marca;
-                String objeto;
-                int cantidad;
+                String objeto, objeto2;
+                int cantidad, cantidad2;
                 try (PreparedStatement ps = c.prepareStatement("""
                         SELECT t.reward_dollar, t.reward_mark, t.needed,
                                COALESCE(p.done,0), p.claimed_at,
                                y.ends_at > CURRENT_TIMESTAMP(3),
-                               t.reward_item, t.reward_qty
+                               t.reward_item, t.reward_qty,
+                               t.reward_item2, t.reward_qty2
                           FROM hunt_target t
                           JOIN hunt_cycle y ON y.id = t.cycle_id
                           LEFT JOIN hunt_progress p
@@ -340,6 +369,8 @@ public final class HuntService {
                         boolean vivo = rs.getBoolean(6);
                         objeto = rs.getString(7);
                         cantidad = rs.getInt(8);
+                        objeto2 = rs.getString(9);
+                        cantidad2 = rs.getInt(10);
                         if (!vivo) return Resultado.CADUCADO;
                         if (cobrado) return Resultado.YA_COBRADO;
                         if (hechos < necesarios) return Resultado.NO_COMPLETO;
@@ -368,8 +399,15 @@ public final class HuntService {
                 c.commit();
                 // ⚠ DESPUÉS del commit. Si se anunciara antes y la transacción
                 //   se cayera, se entregaría un objeto que nadie ha cobrado.
+                var entregas = new ArrayList<Entrega>(2);
                 if (objeto != null && !objeto.isBlank() && cantidad > 0) {
-                    ultimaEntrega.set(new Entrega(objeto, cantidad));
+                    entregas.add(new Entrega(objeto, cantidad));
+                }
+                if (objeto2 != null && !objeto2.isBlank() && cantidad2 > 0) {
+                    entregas.add(new Entrega(objeto2, cantidad2));
+                }
+                if (!entregas.isEmpty()) {
+                    ultimaEntrega.set(List.copyOf(entregas));
                 }
                 return Resultado.PAGADO;
             } catch (Exception e) {

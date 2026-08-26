@@ -782,6 +782,121 @@ public class Red implements ModInitializer {
     }
 
 
+    /** «Dame las cazas», al abrir la pantalla. */
+    public record PedirCazas() implements CustomPayload {
+        public static final Id<PedirCazas> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cazas"));
+        public static final PacketCodec<RegistryByteBuf, PedirCazas> CODEC =
+                PacketCodec.unit(new PedirCazas());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Un objetivo de caza o de crianza.
+     *
+     * <p>⚠ Viaja el <b>identificador</b> del objeto del premio, no su nombre:
+     * el nombre lo pone el cliente, que sí sabe en qué idioma juega su dueño.
+     * Ver {@link #cad} y la regla de idioma de CLAUDE.md.
+     *
+     * <p>⚠ Y viaja el premio <b>tal y como está guardado en la fila</b>. La
+     * pantalla lo enseña al pasar el ratón y el servidor paga eso mismo: si
+     * cada uno mirara su propia tabla, lo enseñado y lo cobrado podrían
+     * separarse sin que nada fallara.
+     */
+    public record ObjetivoCaza(long id, String tipo, String especie,
+                               int necesarios, int hechos, boolean cobrado,
+                               int rareza, long dolar, long marca,
+                               String objeto, int cantidad) {
+
+        static void escribir(RegistryByteBuf buf, ObjetivoCaza o) {
+            buf.writeVarLong(o.id);
+            cad(buf, o.tipo);
+            cad(buf, o.especie);
+            buf.writeVarInt(o.necesarios);
+            buf.writeVarInt(o.hechos);
+            buf.writeBoolean(o.cobrado);
+            buf.writeVarInt(o.rareza);
+            buf.writeVarLong(o.dolar);
+            buf.writeVarLong(o.marca);
+            cad(buf, o.objeto);
+            buf.writeVarInt(o.cantidad);
+        }
+
+        static ObjetivoCaza leer(RegistryByteBuf buf) {
+            return new ObjetivoCaza(buf.readVarLong(), buf.readString(),
+                    buf.readString(), buf.readVarInt(), buf.readVarInt(),
+                    buf.readBoolean(), buf.readVarInt(), buf.readVarLong(),
+                    buf.readVarLong(), buf.readString(), buf.readVarInt());
+        }
+
+        public boolean completo() {
+            return hechos >= necesarios;
+        }
+    }
+
+    /**
+     * Las cazas del ciclo en curso.
+     *
+     * <p>⚠ {@code terminaEn} es un instante absoluto (epoch en milisegundos) y
+     * <b>no «faltan N horas»</b>. Un número de horas se queda viejo en cuanto
+     * pasa un minuto, y la pantalla estaría contando desde un valor que ya no
+     * es cierto. Con el instante, el reloj lo lleva el cliente y siempre acierta.
+     */
+    public record EstadoCazas(List<ObjetivoCaza> objetivos, long terminaEn,
+                              long saldo) implements CustomPayload {
+        public static final Id<EstadoCazas> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_cazas"));
+        public static final PacketCodec<RegistryByteBuf, EstadoCazas> CODEC =
+                PacketCodec.ofStatic(EstadoCazas::escribir, EstadoCazas::leer);
+
+        private static void escribir(RegistryByteBuf buf, EstadoCazas e) {
+            buf.writeVarInt(e.objetivos.size());
+            for (ObjetivoCaza o : e.objetivos) {
+                ObjetivoCaza.escribir(buf, o);
+            }
+            buf.writeVarLong(e.terminaEn);
+            buf.writeVarLong(e.saldo);
+        }
+
+        private static EstadoCazas leer(RegistryByteBuf buf) {
+            int n = buf.readVarInt();
+            List<ObjetivoCaza> xs = new ArrayList<>(n);
+            for (int i = 0; i < n; i++) {
+                xs.add(ObjetivoCaza.leer(buf));
+            }
+            return new EstadoCazas(List.copyOf(xs), buf.readVarLong(),
+                    buf.readVarLong());
+        }
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Cóbrame este objetivo».
+     *
+     * <p>⚠ Solo viaja el identificador. El premio lo saca el servidor de su
+     * fila, y comprueba ahí mismo que esté completo y sin cobrar (P6).
+     */
+    public record AccionCaza(long objetivo) implements CustomPayload {
+        public static final Id<AccionCaza> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_caza"));
+        public static final PacketCodec<RegistryByteBuf, AccionCaza> CODEC =
+                PacketCodec.tuple(PacketCodecs.VAR_LONG, AccionCaza::objetivo,
+                        AccionCaza::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame el catalogo», al abrir la tienda. */
     public record PedirTienda() implements CustomPayload {
         public static final Id<PedirTienda> ID =
@@ -1571,6 +1686,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirMercado.ID, PedirMercado.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionMercado.ID, AccionMercado.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoMercado.ID, EstadoMercado.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirCazas.ID, PedirCazas.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionCaza.ID, AccionCaza.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoCazas.ID, EstadoCazas.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirTienda.ID, PedirTienda.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionTienda.ID, AccionTienda.CODEC);
         PayloadTypeRegistry.playS2C().register(Tienda.ID, Tienda.CODEC);
@@ -1626,6 +1744,12 @@ public class Red implements ModInitializer {
             }
         });
 
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirCazas.ID, (carga, ctx) ->
+                enviarCazas(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionCaza.ID, (carga, ctx) ->
+                cobrarCaza(ctx.player(), carga.objetivo()));
 
         ServerPlayNetworking.registerGlobalReceiver(PedirTienda.ID, (carga, ctx) ->
                 ServerPlayNetworking.send(ctx.player(), componerTienda()));
@@ -2724,6 +2848,103 @@ public class Red implements ModInitializer {
     }
 
 
+
+    /** Manda las cazas del ciclo en curso. Va por el executor de E/S. */
+    private static void enviarCazas(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var svc = LunaEternal.hunts();
+        var servidor = jugador.getServer();
+        if (svc == null || servidor == null) {
+            return;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                // ⚠ `cicloActual` CREA el ciclo si el anterior caducó. Por eso
+                //   no hace falta ningún reloj: la primera persona que mira
+                //   después de las 24 h provoca la rotación.
+                var ciclo = svc.cicloActual(id);
+                List<ObjetivoCaza> xs = new ArrayList<>();
+                for (var o : ciclo.objetivos()) {
+                    xs.add(new ObjetivoCaza(o.id(), o.tipo().name(), o.especie(),
+                            o.necesarios(), o.hechos(), o.cobrado(), o.rareza(),
+                            o.premioDolar(), o.premioMarca(),
+                            o.premioObjeto(), o.premioCantidad()));
+                }
+                long saldo = LunaEternal.economy().balance(id, Currency.POKEDOLLAR);
+                // ⚠ `terminaEn` viene en SEGUNDOS de la base y el cliente
+                //   trabaja en milisegundos. Sin el x1000, el reloj diría que
+                //   caducó en 1970 -- y «—» en vez de una cuenta atrás.
+                var carga = new EstadoCazas(List.copyOf(xs),
+                        ciclo.terminaEn() * 1000L, saldo);
+                servidor.execute(() -> {
+                    if (!jugador.isRemoved()) {
+                        ServerPlayNetworking.send(jugador, carga);
+                    }
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudieron enviar las cazas a {}: {}",
+                        jugador.getName().getString(), e.toString());
+            }
+        });
+    }
+
+    /**
+     * Cobra un objetivo.
+     *
+     * <p>⚠⚠ EL OBJETO SE ENTREGA DESPUÉS DEL COMMIT y en el hilo del servidor.
+     * {@code cobrar} ya marca y paga en una sola transacción; lo que no puede
+     * hacer dentro es tocar un inventario, porque un inventario no es una
+     * tabla. Si la entrega falla, el dinero ya está cobrado — por eso
+     * {@code meter} suelta al suelo cuando no cabe, en vez de perderlo.
+     */
+    private static void cobrarCaza(
+            net.minecraft.server.network.ServerPlayerEntity jugador, long objetivo) {
+        var svc = LunaEternal.hunts();
+        var servidor = jugador.getServer();
+        if (svc == null || servidor == null) {
+            return;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players()
+                        .resolve(jugador.getUuid(), jugador.getName().getString());
+                var r = svc.cobrar(id, objetivo, java.util.UUID.randomUUID());
+                var entrega = r == net.pokereport.luna.hunt.HuntService.Resultado.PAGADO
+                        ? svc.entregaPendiente() : null;
+                servidor.execute(() -> {
+                    jugador.sendMessage(net.minecraft.text.Text.literal(
+                            switch (r) {
+                                case PAGADO -> "\u00a7a¡Recompensa cobrada!";
+                                case NO_COMPLETO -> "\u00a7cTodavía no lo has completado.";
+                                case YA_COBRADO -> "\u00a7eYa habías cobrado esto.";
+                                case CADUCADO -> "\u00a7cEsa caza ya no está activa.";
+                            }), true);
+                    if (entrega != null) {
+                        var item = net.pokereport.luna.market.Inventarios
+                                .objeto(entrega.objeto());
+                        if (item != null) {
+                            net.pokereport.luna.market.Inventarios
+                                    .meter(jugador, item, entrega.cantidad());
+                        } else {
+                            // ⚠ Un identificador que no exista NO puede quedarse
+                            //   callado: el jugador hizo el trabajo y no recibe
+                            //   lo prometido, y nadie se enteraría.
+                            LunaEternal.LOG.error(
+                                "Premio de caza inexistente: {} x{} (objetivo {})",
+                                entrega.objeto(), entrega.cantidad(), objetivo);
+                        }
+                    }
+                });
+                enviarSaldo(jugador);
+                enviarCazas(jugador);
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo cobrar la caza {}: {}",
+                        objetivo, e.toString());
+            }
+        });
+    }
 
     /**
      * El catalogo de la tienda, tal y como lo tiene el servidor.

@@ -64,6 +64,7 @@ public final class Apps {
             case "tienda" -> abrirTienda();
             case "curar" -> abrirCurar();
             case "gts" -> abrirMercado();
+            case "cazas" -> abrirCazas();
             default -> false;
         };
     }
@@ -83,6 +84,13 @@ public final class Apps {
         //   (D-041) y hay un solo icono: se entra por el que la gente busca
         //   --«¿cuanto vale mi shiny?»-- y desde ahi hay un boton a objetos.
         cliente.setScreen(new GtsScreen(cliente.currentScreen));
+        return true;
+    }
+
+    /** Cazas y crianza. Misma regla: NUESTRA pantalla, sin reflexion. */
+    private static boolean abrirCazas() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new CazasScreen(cliente.currentScreen));
         return true;
     }
 

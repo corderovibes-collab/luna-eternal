@@ -560,6 +560,108 @@ def maqueta_panel_obj(vender):
     return L
 
 
+# --- CAZAS. Mismas medidas que CazasScreen.java.
+PEST_W, PEST_H = 130, 36
+FILA_CAZA = 140
+LISTA_CAZA_Y = PANT_Y + MARGEN + PEST_H + 12
+RET_CAZA_H = 226
+COL_MODELO, COL_TEXTO = 8, 136
+COL_PREMIO, ANCHO_PREMIO = 490, 150
+ANCHO_BOTON = 119
+
+
+def maqueta_cazas():
+    """La lista de cazas: 2 pestañas y 3 objetivos grandes."""
+    L = Lienzo()
+    chasis(L, "CAZAS")
+    nav(L)
+
+    for i, clave in enumerate(("caza.p_caza", "caza.p_crianza")):
+        bx = PANT_X + MARGEN + i * (PEST_W + 6)
+        L.caja(f"pest{i}", bx, PANT_Y + MARGEN, PEST_W, PEST_H,
+               NARANJA if i == 0 else (42, 49, 69, 255), (32, 40, 60, 255))
+        L.texto(f"pest{i}.t", T(clave), bx + PEST_W // 2, PANT_Y + MARGEN + 11,
+                15, BLANCO, "centro", limite=PEST_W - 8)
+    # ⚠ La ayuda va PEGADA A LA DERECHA. Si se alineara a la izquierda tras las
+    #   pestañas, «Cuenta al ECLOSIONAR el huevo» se montaria encima de ellas.
+    L.texto("ayuda", T("caza.ayuda_crianza"), PANT_X + PANT_W - MARGEN,
+            PANT_Y + MARGEN + 12, 13, SUAVE, "der")
+
+    aw = PANT_W - 2 * MARGEN
+    for n in range(3):
+        y = LISTA_CAZA_Y + n * FILA_CAZA
+        ax = PANT_X + MARGEN
+        L.caja(f"fila{n}", ax, y, aw, FILA_CAZA - 8, FILA_BG, FILA_BORDE)
+        L.caja(f"fila{n}.modelo", ax + COL_MODELO, y + 8, 116, 116,
+               (200, 210, 235, 255), vigilar=False)
+        # ⚠ El nombre mas largo de Kanto+Johto, no uno comodo: si cabe este,
+        #   caben todos. «Charizard» habria pasado la prueba y mentido.
+        L.texto(f"fila{n}.nombre", "Nidoran\u2642", ax + COL_TEXTO, y + 14, 28,
+                OSCURO, limite=COL_PREMIO - COL_TEXTO - 20)
+        for e in range(3):
+            L.caja(f"fila{n}.est{e}", ax + COL_TEXTO + e * 24, y + 54, 20, 20,
+                   ORO if e == 0 else (0, 0, 0, 60), vigilar=False)
+        L.caja(f"fila{n}.progreso", ax + COL_TEXTO, y + 88,
+               COL_PREMIO - COL_TEXTO - 30, 24, (32, 40, 60, 255))
+        L.texto(f"fila{n}.prog", "2 / 3", ax + COL_TEXTO + 160, y + 93, 13,
+                BLANCO, "centro", vigilar=False)
+        pxx = ax + COL_PREMIO
+        L.texto(f"fila{n}.rec", T("caza.recompensa"), pxx, y + 16, 12, SUAVE,
+                limite=ANCHO_PREMIO)
+        L.texto(f"fila{n}.plata", T("caza.plata", "2.500"), pxx, y + 34, 16,
+                (138, 106, 0, 255), limite=ANCHO_PREMIO)
+        L.texto(f"fila{n}.marcas", T("caza.marcas", "24"), pxx, y + 58, 14,
+                (60, 110, 150, 255), limite=ANCHO_PREMIO)
+        L.texto(f"fila{n}.objeto", "Ultra Ball x3", pxx + 24, y + 82, 14,
+                SUAVE, limite=ANCHO_PREMIO - 24)
+        L.caja(f"fila{n}.cobrar", ax + aw - 8 - ANCHO_BOTON, y + 44,
+               ANCHO_BOTON, 44, VERDE)
+        L.texto(f"fila{n}.cobrar.t", T("caza.cobrar"),
+                ax + aw - 8 - ANCHO_BOTON // 2, y + 56, 18, BLANCO, "centro",
+                limite=ANCHO_BOTON - 10)
+    return L
+
+
+def maqueta_panel_caza():
+    """El panel: modelo, cuenta atras, progreso y recompensa."""
+    L = Lienzo()
+    chasis(L, "CAZA \u2014 PANEL")
+    nav(L)
+    RET_X, RET_Y, RET_W = PANEL_X + 24, PANEL_Y + NAV_ALTO + 4, PANEL_W - 48
+    cx = PANEL_X + PANEL_W // 2
+
+    L.caja("retrato", RET_X, RET_Y, RET_W, RET_CAZA_H, (18, 22, 31, 255),
+           (57, 65, 92, 255))
+
+    cy = RET_Y + RET_CAZA_H + 6
+    L.caja("reloj", RET_X, cy, RET_W, 46, (27, 32, 48, 255), (57, 65, 92, 255))
+    L.texto("reloj.et", T("caza.rotan"), cx, cy + 5, 12, SUAVE, "centro",
+            limite=RET_W - 10)
+    L.texto("reloj.n", "18h 42m", cx, cy + 20, 22, ORO, "centro")
+
+    y = cy + 62
+    L.texto("nombre", "Charizard", cx, y, 24, BLANCO, "centro", limite=RET_W)
+    y += 28
+    for e in range(3):
+        L.caja(f"est{e}", cx - 28 + e * 20, y + 2, 16, 16,
+               ORO if e < 2 else (0, 0, 0, 60), vigilar=False)
+    y += 28
+    L.caja("progreso", PANEL_X + 30, y, PANEL_W - 60, 20, (32, 40, 60, 255))
+    y += 32
+    L.texto("rec.et", T("caza.recompensa"), cx, y + 10, 13, SUAVE, "centro")
+    y += 30
+    L.texto("rec.plata", T("caza.plata", "2.500"), PANEL_X + 30, y, 16, ORO,
+            limite=PANEL_W - 60)
+    y += 22
+    L.texto("rec.marcas", T("caza.marcas", "24"), PANEL_X + 30, y, 16,
+            (159, 214, 255, 255), limite=PANEL_W - 60)
+    y += 22
+    L.texto("rec.obj", "Ultra Ball x3", PANEL_X + 54, y, 16,
+            (232, 238, 248, 255), limite=PANEL_W - 84)
+    L.caja("cobrar", PANEL_X + 30, PANEL_Y + PANEL_H - 72, PANEL_W - 60, 56, VERDE)
+    return L
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -572,7 +674,9 @@ def main():
                       ("gts_publicar", maqueta_panel(True)),
                       ("obj_lista", maqueta_objetos()),
                       ("obj_comprar", maqueta_panel_obj(False)),
-                      ("obj_publicar", maqueta_panel_obj(True))):
+                      ("obj_publicar", maqueta_panel_obj(True)),
+                      ("cazas_lista", maqueta_cazas()),
+                      ("cazas_panel", maqueta_panel_caza())):
         avisos = L.avisos + L.solapes()
         ruta = SALIDA / f"maqueta_{nombre}.png"
         L.im.save(ruta)

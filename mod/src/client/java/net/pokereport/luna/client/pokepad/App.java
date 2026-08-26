@@ -35,7 +35,9 @@ public record App(String id, boolean abierta) {
         new App("tienda",     true),
         new App("tesoros",    false),
         new App("wiki",       false),
-        new App("cazas",      false),
+        // ⚠ Se enciende con su pantalla (2026-08-25). La logica
+        //   --HuntService-- llevaba escrita desde PHASE 5.
+        new App("cazas",      true),
         new App("kits",       false),
         new App("mochila",    false),
         new App("gyms",       false),

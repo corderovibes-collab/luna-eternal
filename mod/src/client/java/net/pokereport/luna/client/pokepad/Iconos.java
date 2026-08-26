@@ -232,4 +232,48 @@ public final class Iconos {
         ctx.fill(cx - b, cy - g / 2, cx + b, cy + g / 2 + g % 2, color);
         ctx.fill(cx - g / 2, cy - b, cx + g / 2 + g % 2, cy + b, color);
     }
+
+    /**
+     * UNA ESTRELLA DE CINCO PUNTAS, dibujada con código.
+     *
+     * <p>⚠ Se dibuja por FILAS, no con polígonos: `DrawContext.fill` solo sabe
+     * hacer rectángulos. Para cada altura se calcula qué tramo horizontal
+     * pertenece a la estrella y se pinta de una.
+     *
+     * <p>La forma sale de los cinco vértices de un pentagrama; el relleno usa
+     * la regla par-impar, que es lo que le da el hueco central característico
+     * — sin ella sale un pentágono con picos, que no se lee como estrella.
+     */
+    public static void estrella(DrawContext ctx, int cx, int cy, int lado, int color) {
+        int r = Math.max(2, lado / 2);
+        double[] xs = new double[10];
+        double[] ys = new double[10];
+        for (int i = 0; i < 10; i++) {
+            // Empieza arriba (-90º) y alterna radio grande y pequeño.
+            double ang = Math.toRadians(-90 + i * 36);
+            double radio = (i % 2 == 0) ? r : r * 0.42;
+            xs[i] = cx + Math.cos(ang) * radio;
+            ys[i] = cy + Math.sin(ang) * radio;
+        }
+        for (int y = cy - r; y <= cy + r; y++) {
+            double py = y + 0.5;
+            var cortes = new java.util.ArrayList<Double>();
+            for (int i = 0; i < 10; i++) {
+                int j = (i + 1) % 10;
+                double y1 = ys[i], y2 = ys[j];
+                if ((y1 <= py && y2 > py) || (y2 <= py && y1 > py)) {
+                    double t = (py - y1) / (y2 - y1);
+                    cortes.add(xs[i] + t * (xs[j] - xs[i]));
+                }
+            }
+            java.util.Collections.sort(cortes);
+            for (int i = 0; i + 1 < cortes.size(); i += 2) {
+                int a = (int) Math.round(cortes.get(i));
+                int b = (int) Math.round(cortes.get(i + 1));
+                if (b > a) {
+                    ctx.fill(a, y, b, y + 1, color);
+                }
+            }
+        }
+    }
 }

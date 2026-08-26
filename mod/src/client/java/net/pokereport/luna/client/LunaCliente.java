@@ -105,6 +105,8 @@ public class LunaCliente implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoMercado.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoCazas.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
 
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoCura.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));

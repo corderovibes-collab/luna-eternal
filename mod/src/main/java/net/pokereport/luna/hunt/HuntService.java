@@ -27,8 +27,14 @@ import java.util.UUID;
  */
 public final class HuntService {
 
-    /** Cada cuánto rota. 12 h: cabe una sesión de tarde y una de noche. */
-    private static final long HORAS = 12;
+    /**
+     * Cada cuánto rota. <b>24 h</b>, por decisión del usuario.
+     *
+     * <p>⚠ Con 12 h la caza cambiaba <b>dos veces al día</b>, y quien juega por
+     * la tarde nunca veía la del ciclo de noche. Con 24 h todo el mundo ve la
+     * misma, que es justo lo que hace que se hable de ella.
+     */
+    private static final long HORAS = 24;
 
     /**
      * Tres de cada tipo. Tres caben grandes en el Pad; con cinco cada tarjeta
@@ -48,9 +54,50 @@ public final class HuntService {
      */
     public record Objetivo(long id, Tipo tipo, String especie, int necesarios,
                            long premioDolar, long premioMarca,
+                           String premioObjeto, int premioCantidad,
                            int hechos, boolean cobrado, int rareza) {
         public boolean completo() { return hechos >= necesarios; }
     }
+
+    /**
+     * LOS PREMIOS, en un solo sitio.
+     *
+     * <h2>⚠⚠ PROVISIONALES A PROPÓSITO, como los de la tienda</h2>
+     *
+     * El usuario dejó dicho que los precios se fijan después de un análisis
+     * general de la economía. Están aquí, en una tabla de seis filas, para que
+     * ese análisis sea <b>cambiar seis números</b> y no buscarlos por el código.
+     *
+     * <h2>⚠ Y son una FUENTE de dinero, que es lo que más cuidado pide (P3)</h2>
+     *
+     * Alguien que complete las seis se lleva unos 10.000 de Plata al día. Es
+     * mucho, y se sostiene sólo porque completar las seis <b>es difícil</b>:
+     * hay que capturar tres de una especie concreta y criar otras tres. Si
+     * algún día se hacen más fáciles, esto hay que bajarlo <b>a la vez</b>.
+     *
+     * <h2>⚠⚠ Los identificadores se comprobaron contra el jar de Cobblemon</h2>
+     *
+     * {@code python tools/gen_tienda.py --buscar candy}. Un identificador mal
+     * escrito no da error: da un premio que no se entrega, y el jugador se
+     * queda sin él <b>después de haber hecho el trabajo</b>.
+     */
+    private record Premio(long dolar, long marca, String objeto, int cantidad) {}
+
+    private static final Premio[] CAPTURA_PREMIOS = {
+        //          Plata  Marcas  objeto                        x
+        new Premio(   500,      8, "cobblemon:poke_ball",        5),
+        new Premio( 1_200,     16, "cobblemon:great_ball",       5),
+        new Premio( 2_500,     24, "cobblemon:ultra_ball",       3),
+    };
+
+    private static final Premio[] CRIANZA_PREMIOS = {
+        new Premio( 1_000,     20, "cobblemon:exp_candy_s",      3),
+        new Premio( 2_000,     40, "cobblemon:exp_candy_m",      2),
+        // ⚠ Un Caramelo Raro se GANA jugando, y eso está bien: lo que la línea
+        //   roja prohíbe (T4, D-007) es venderlo por moneda premium, no que
+        //   sea el premio de criar un Pokémon concreto.
+        new Premio( 3_500,     60, "cobblemon:rare_candy",       1),
+    };
 
     public record Ciclo(long id, long terminaEn, List<Objetivo> objetivos) {}
 
@@ -115,7 +162,8 @@ public final class HuntService {
         var elegidas = Especies.sortear(CAZAS + CRIANZAS);
         try (PreparedStatement ps = c.prepareStatement(
                 "INSERT INTO hunt_target (cycle_id, kind, species, needed, "
-              + "reward_dollar, reward_mark) VALUES (?,?,?,?,?,?)")) {
+              + "reward_dollar, reward_mark, reward_item, reward_qty) "
+              + "VALUES (?,?,?,?,?,?,?,?)")) {
             for (int i = 0; i < elegidas.size(); i++) {
                 boolean caza = i < CAZAS;
                 int rareza = (caza ? i : i - CAZAS) + 1;   // 1, 2, 3
@@ -123,12 +171,19 @@ public final class HuntService {
                 // Criar cuesta mucho más que capturar, así que pide menos
                 // unidades y paga más. Si pidiera tres, nadie lo intentaría.
                 int necesarios = caza ? rareza : 1;
+                // ⚠⚠ EL PREMIO SE GUARDA AQUÍ, no se calcula al cobrar. La
+                //    pantalla lo enseña, y entre enseñarlo y cobrarlo pasan
+                //    hasta 24 h: si saliera de la tabla de arriba, tocarla
+                //    pagaría algo distinto de lo prometido.
+                var premio = (caza ? CAPTURA_PREMIOS : CRIANZA_PREMIOS)[rareza - 1];
                 ps.setLong(1, id);
                 ps.setString(2, caza ? "CAPTURA" : "CRIANZA");
                 ps.setString(3, esp.nombre());
                 ps.setInt(4, necesarios);
-                ps.setLong(5, (caza ? 600L : 1500L) * rareza);
-                ps.setLong(6, (caza ? 8L : 20L) * rareza);
+                ps.setLong(5, premio.dolar());
+                ps.setLong(6, premio.marca());
+                ps.setString(7, premio.objeto());
+                ps.setInt(8, premio.cantidad());
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -151,7 +206,7 @@ public final class HuntService {
         List<Objetivo> out = new ArrayList<>();
         try (PreparedStatement ps = c.prepareStatement("""
                 SELECT t.id, t.kind, t.species, t.needed, t.reward_dollar,
-                       t.reward_mark,
+                       t.reward_mark, t.reward_item, t.reward_qty,
                        COALESCE(p.done, 0), p.claimed_at IS NOT NULL
                 FROM hunt_target t
                 LEFT JOIN hunt_progress p
@@ -168,9 +223,11 @@ public final class HuntService {
                     // La rareza es la posicion dentro de su tipo. Se deriva
                     // al leer para no necesitar una columna nueva.
                     int rareza = tipo == Tipo.CAPTURA ? ++nCaptura : ++nCrianza;
+                    String objeto = rs.getString(7);
                     out.add(new Objetivo(rs.getLong(1), tipo, rs.getString(3),
                         rs.getInt(4), rs.getLong(5), rs.getLong(6),
-                        rs.getInt(7), rs.getBoolean(8), rareza));
+                        objeto == null ? "" : objeto, rs.getInt(8),
+                        rs.getInt(9), rs.getBoolean(10), rareza));
                 }
             }
         }
@@ -234,15 +291,37 @@ public final class HuntService {
      * IS NULL} del UPDATE es lo que hace imposible cobrar dos veces aunque
      * lleguen dos clics a la vez: el segundo actualiza cero filas.
      */
+    /**
+     * Lo que hay que entregar además del dinero. {@code null} si no hay nada.
+     *
+     * <p>⚠ Se rellena <b>solo cuando se paga de verdad</b>: quien llama lo
+     * usa para meter el objeto en el inventario, y meterlo sin haber cobrado
+     * sería regalarlo.
+     */
+    public record Entrega(String objeto, int cantidad) {}
+
+    private final ThreadLocal<Entrega> ultimaEntrega = new ThreadLocal<>();
+
+    /** Lo que hubiera que entregar tras un {@link #cobrar} que devolvió PAGADO. */
+    public Entrega entregaPendiente() {
+        var e = ultimaEntrega.get();
+        ultimaEntrega.remove();
+        return e;
+    }
+
     public Resultado cobrar(long playerId, long objetivoId, UUID clave) {
+        ultimaEntrega.remove();
         try (Connection c = db.connection()) {
             c.setAutoCommit(false);
             try {
                 long dolar, marca;
+                String objeto;
+                int cantidad;
                 try (PreparedStatement ps = c.prepareStatement("""
                         SELECT t.reward_dollar, t.reward_mark, t.needed,
                                COALESCE(p.done,0), p.claimed_at,
-                               y.ends_at > CURRENT_TIMESTAMP(3)
+                               y.ends_at > CURRENT_TIMESTAMP(3),
+                               t.reward_item, t.reward_qty
                           FROM hunt_target t
                           JOIN hunt_cycle y ON y.id = t.cycle_id
                           LEFT JOIN hunt_progress p
@@ -259,6 +338,8 @@ public final class HuntService {
                         int necesarios = rs.getInt(3), hechos = rs.getInt(4);
                         boolean cobrado = rs.getTimestamp(5) != null;
                         boolean vivo = rs.getBoolean(6);
+                        objeto = rs.getString(7);
+                        cantidad = rs.getInt(8);
                         if (!vivo) return Resultado.CADUCADO;
                         if (cobrado) return Resultado.YA_COBRADO;
                         if (hechos < necesarios) return Resultado.NO_COMPLETO;
@@ -285,6 +366,11 @@ public final class HuntService {
                     "hunt_reward", "hunt", objetivoId, clave + ":m");
 
                 c.commit();
+                // ⚠ DESPUÉS del commit. Si se anunciara antes y la transacción
+                //   se cayera, se entregaría un objeto que nadie ha cobrado.
+                if (objeto != null && !objeto.isBlank() && cantidad > 0) {
+                    ultimaEntrega.set(new Entrega(objeto, cantidad));
+                }
                 return Resultado.PAGADO;
             } catch (Exception e) {
                 c.rollback();

@@ -82,6 +82,7 @@ public final class AutoTest {
             testQuests(a);
             testTelemetria(a, b);
             testCazas(a);
+            testCazasPremios(a);
             testVozPokedex();
             testCosmeticos();
             testOficios();
@@ -1088,6 +1089,116 @@ public final class AutoTest {
             fail("un EstadoMercado con TODO a nulo se codifica sin lanzar",
                  e.getClass().getSimpleName() + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * CAZAS: las estrellas y los premios.
+     *
+     * <p>⚠ NO repite lo que ya comprueba {@link #testCazas}: allí están el
+     * ciclo, el progreso y el no-cobrar-dos-veces. Aquí está lo que entró con
+     * la pantalla — las estrellas y los premios en objetos.
+     *
+     * <h2>⚠⚠⚠ LO QUE MÁS IMPORTA: QUE LOS PREMIOS EXISTAN</h2>
+     *
+     * Un identificador de objeto mal escrito <b>no da ningún error</b>. Se
+     * guarda en la fila, la pantalla lo enseña, el jugador se pasa un día
+     * capturando, pulsa COBRAR... y no recibe nada. Es el fallo de los 62
+     * cosméticos que no existían, con la diferencia de que aquí el jugador
+     * <b>ya ha hecho el trabajo</b>.
+     *
+     * <p>Se comprueban contra el <b>registro del juego</b>. Contra una lista
+     * nuestra prometerían lo mismo que el código y no comprobarían nada.
+     */
+    private void testCazasPremios(long jugador) throws Exception {
+        var svc = LunaEternal.hunts();
+        if (svc == null) {
+            return;
+        }
+        var ciclo = svc.cicloActual(jugador);
+        if (ciclo == null) {
+            return;
+        }
+
+        // ⚠ 24 h, no 12. Si alguien lo baja sin querer, la caza cambia dos
+        //   veces al día y media gente no ve la mitad de los ciclos.
+        long faltan = ciclo.terminaEn() * 1000L - System.currentTimeMillis();
+        check("el ciclo dura como mucho 24 h", faltan <= 24 * 3600_000L + 60_000L);
+
+        var capturas = new ArrayList<net.pokereport.luna.hunt.HuntService.Objetivo>();
+        var crianzas = new ArrayList<net.pokereport.luna.hunt.HuntService.Objetivo>();
+        for (var o : ciclo.objetivos()) {
+            (o.tipo() == net.pokereport.luna.hunt.HuntService.Tipo.CAPTURA
+                    ? capturas : crianzas).add(o);
+        }
+        check("hay 3 objetivos de captura", capturas.size() == 3);
+        check("hay 3 objetivos de crianza", crianzas.size() == 3);
+
+        // ⚠ UNA DE CADA ESTRELLA, y no al azar. Un ciclo de tres difíciles no
+        //   lo completaría nadie, y uno de tres fáciles no valdría nada.
+        for (var grupo : java.util.List.of(capturas, crianzas)) {
+            var vistas = new java.util.HashSet<Integer>();
+            for (var o : grupo) {
+                vistas.add(o.rareza());
+            }
+            check("las estrellas son 1, 2 y 3 (una de cada)",
+                  vistas.equals(java.util.Set.of(1, 2, 3)));
+        }
+
+        boolean todosExisten = true, todosPagan = true;
+        for (var o : ciclo.objetivos()) {
+            if (!o.premioObjeto().isBlank()) {
+                var id = net.minecraft.util.Identifier.tryParse(o.premioObjeto());
+                var item = id == null ? null
+                        : net.minecraft.registry.Registries.ITEM.get(id);
+                if (item == null || item == net.minecraft.item.Items.AIR
+                        || o.premioCantidad() <= 0) {
+                    todosExisten = false;
+                    LunaEternal.LOG.error("Premio de caza inexistente: {} x{}",
+                            o.premioObjeto(), o.premioCantidad());
+                }
+            }
+            if (o.premioDolar() <= 0 && o.premioMarca() <= 0) {
+                todosPagan = false;
+            }
+        }
+        check("todos los premios en objeto EXISTEN en el juego", todosExisten);
+        check("todo objetivo paga algo", todosPagan);
+
+        // ⚠ Un objetivo MÁS RARO no puede pagar MENOS. Es la clase de cosa que
+        //   se rompe editando la tabla y que nadie mira hasta que un jugador se
+        //   queja de que la ★ paga más que la ★★★.
+        for (var grupo : java.util.List.of(capturas, crianzas)) {
+            grupo.sort(java.util.Comparator.comparingInt(
+                    net.pokereport.luna.hunt.HuntService.Objetivo::rareza));
+            for (int i = 1; i < grupo.size(); i++) {
+                check("una estrella más paga más Plata",
+                      grupo.get(i).premioDolar() > grupo.get(i - 1).premioDolar());
+                check("una estrella más paga más Marcas",
+                      grupo.get(i).premioMarca() > grupo.get(i - 1).premioMarca());
+            }
+        }
+
+        // ⚠ Solo Kanto y Johto: una especie de fuera sería una caza imposible.
+        //   Se pregunta al registro, que es de donde salen.
+        boolean enRango = true;
+        for (var o : ciclo.objetivos()) {
+            var esp = com.cobblemon.mod.common.api.pokemon.PokemonSpecies.INSTANCE
+                    .getByName(o.especie());
+            if (esp == null || esp.getNationalPokedexNumber() > 251) {
+                enRango = false;
+                LunaEternal.LOG.error("Caza fuera de Kanto/Johto: {}", o.especie());
+            }
+        }
+        check("todas las especies son de Kanto o Johto", enRango);
+
+        // ⚠ La entrega se recoge UNA vez. Si se pudiera leer dos, un cobro
+        //   entregaría el objeto dos veces.
+        check("no hay entrega pendiente si no se ha cobrado nada",
+              svc.entregaPendiente() == null);
+
+        check("no se cobra un objetivo que no existe",
+              svc.cobrar(jugador, -1, java.util.UUID.randomUUID())
+                 == net.pokereport.luna.hunt.HuntService.Resultado.CADUCADO);
     }
 
     /**

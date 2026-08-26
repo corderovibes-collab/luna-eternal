@@ -586,6 +586,7 @@ public final class LunaCommand {
                 LunaEternal.database(),
                 LunaEternal.players(),
                 LunaEternal.economy(),
+                server.getRegistryManager(),
                 line -> server.execute(() ->
                     src.sendFeedback(() -> Text.literal(line), false)));
             test.run();

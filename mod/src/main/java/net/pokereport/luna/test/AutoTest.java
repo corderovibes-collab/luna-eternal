@@ -39,11 +39,19 @@ public final class AutoTest {
     private final EconomyService economy;
     private final Consumer<String> out;
 
+    /**
+     * Los registros del servidor. Hacen falta para <b>codificar un paquete de
+     * verdad</b>, que es lo único que prueba el protocolo sin un cliente.
+     */
+    private final net.minecraft.registry.DynamicRegistryManager registros;
+
     private int passed = 0;
     private int failed = 0;
 
     public AutoTest(Database db, PlayerService players, EconomyService economy,
+                    net.minecraft.registry.DynamicRegistryManager registros,
                     Consumer<String> out) {
+        this.registros = registros;
         this.db = db;
         this.players = players;
         this.economy = economy;
@@ -68,6 +76,7 @@ public final class AutoTest {
             testGtsTax();
             testGtsFlow(a, b);
             testEscaparate(a, b);
+            testProtocoloNulos();
             testPokedex(a);
             testKits(a);
             testQuests(a);
@@ -996,6 +1005,89 @@ public final class AutoTest {
               !gts.publicarObjeto(vendedor, item, "Roca", 1, -500, 24).ok());
         check("no se puede publicar cantidad cero",
               !gts.publicarObjeto(vendedor, item, "Roca", 0, 100, 24).ok());
+    }
+
+    /**
+     * EL PROTOCOLO CONTRA LOS NULOS.
+     *
+     * <h2>⚠⚠⚠ ESTA ES LA COMPROBACIÓN QUE HABRÍA EVITADO UNA DESCONEXIÓN</h2>
+     *
+     * El 2026-08-25 un Pokémon publicado <b>sin mote</b> dejaba {@code mote} a
+     * nulo, y {@code writeString(null)} lanzaba <b>al codificar el paquete</b>:
+     * <i>«Failed to encode packet 'clientbound/custom_payload'»</i> y al jugador
+     * se le cortaba la conexión al abrir el GTS.
+     *
+     * <p>Lo que hace que este fallo merezca su propia prueba es <b>dónde</b>
+     * revienta. No es un hueco en una pantalla que se vea y se arregle: pasa
+     * fuera del hilo del servidor, echa a quien lo provoque, y el mensaje
+     * <b>no dice qué campo</b>. Y podía provocarlo cualquiera de los campos de
+     * texto del protocolo.
+     *
+     * <p>Así que aquí <b>se codifica de verdad</b>, con todos los campos a nulo.
+     * Si alguien añade un campo y se salta {@code Red.cad()}, esto revienta
+     * <b>en consola y no en la cara de un jugador</b>.
+     *
+     * <p>⚠ Y se comprueba que al decodificar salen <b>cadenas vacías</b>: no
+     * basta con no lanzar, porque escribir basura también «no lanza».
+     */
+    private void testProtocoloNulos() {
+        if (registros == null) {
+            check("los registros están disponibles para probar el protocolo", false);
+            return;
+        }
+        var ceros = java.util.List.of(0, 0, 0, 0, 0, 0);
+
+        // Un ejemplar con TODAS las cadenas a nulo. Es el peor caso posible y
+        // es exactamente lo que llegó a producción con `mote`.
+        var ejemplar = new net.pokereport.luna.net.Red.EjemplarGts(
+                1L, null, null, null, 5, false, null, null, null, null, null,
+                ceros, ceros, 100L, 100L, System.currentTimeMillis());
+        var mio = new net.pokereport.luna.net.Red.MioGts(
+                null, null, null, 5, false, null, ceros, ceros, null, null, 0L);
+        var oferta = new net.pokereport.luna.net.Red.OfertaObj(
+                1L, null, null, null, 1, 100L, System.currentTimeMillis());
+        var mioObj = new net.pokereport.luna.net.Red.MioObj(null, null, 1);
+
+        var gts = new net.pokereport.luna.net.Red.EstadoGts(
+                java.util.List.of(ejemplar), java.util.List.of(ejemplar),
+                java.util.List.of(mio), 0L);
+        var mercado = new net.pokereport.luna.net.Red.EstadoMercado(
+                java.util.List.of(oferta), java.util.List.of(oferta),
+                java.util.List.of(mioObj), 0L);
+
+        net.pokereport.luna.net.Red.EstadoGts vueltaGts = null;
+        try {
+            var buf = new net.minecraft.network.RegistryByteBuf(
+                    io.netty.buffer.Unpooled.buffer(), registros);
+            net.pokereport.luna.net.Red.EstadoGts.CODEC.encode(buf, gts);
+            check("un EstadoGts con TODO a nulo se codifica sin lanzar", true);
+            vueltaGts = net.pokereport.luna.net.Red.EstadoGts.CODEC.decode(buf);
+        } catch (Exception e) {
+            fail("un EstadoGts con TODO a nulo se codifica sin lanzar",
+                 e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
+        if (vueltaGts != null && !vueltaGts.ofertas().isEmpty()) {
+            var e = vueltaGts.ofertas().get(0);
+            check("un nulo llega al cliente como cadena vacía, no como basura",
+                  "".equals(e.mote()) && "".equals(e.vendedor())
+                  && "".equals(e.especie()) && "".equals(e.rareza()));
+            check("los campos que NO son texto sobreviven al viaje",
+                  e.id() == 1L && e.nivel() == 5 && e.precio() == 100L);
+        }
+
+        try {
+            var buf = new net.minecraft.network.RegistryByteBuf(
+                    io.netty.buffer.Unpooled.buffer(), registros);
+            net.pokereport.luna.net.Red.EstadoMercado.CODEC.encode(buf, mercado);
+            var vuelta = net.pokereport.luna.net.Red.EstadoMercado.CODEC.decode(buf);
+            check("un EstadoMercado con TODO a nulo se codifica sin lanzar", true);
+            check("la oferta vuelve con cadenas vacías",
+                  !vuelta.ofertas().isEmpty()
+                  && "".equals(vuelta.ofertas().get(0).nombre()));
+        } catch (Exception e) {
+            fail("un EstadoMercado con TODO a nulo se codifica sin lanzar",
+                 e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
     }
 
     /**

@@ -95,9 +95,9 @@ public class Red implements ModInitializer {
                 PacketCodec.tuple(
                         PacketCodecs.VAR_INT.collect(PacketCodecs.toList()),
                         Ficha::vias,
-                        PacketCodecs.STRING, Ficha::clan,
-                        PacketCodecs.STRING, Ficha::trabajo,
-                        PacketCodecs.STRING, Ficha::division,
+                        CADENA, Ficha::clan,
+                        CADENA, Ficha::trabajo,
+                        CADENA, Ficha::division,
                         PacketCodecs.VAR_INT, Ficha::medallas,
                         Ficha::new);
 
@@ -123,7 +123,7 @@ public class Red implements ModInitializer {
         public static final Id<VozPokedex> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "voz_pokedex"));
         public static final PacketCodec<RegistryByteBuf, VozPokedex> CODEC =
-                PacketCodec.tuple(PacketCodecs.STRING, VozPokedex::especie,
+                PacketCodec.tuple(CADENA, VozPokedex::especie,
                         VozPokedex::new);
 
         @Override
@@ -161,10 +161,10 @@ public class Red implements ModInitializer {
                                  String aspecto, int precio, int banderas) {
         public static final PacketCodec<RegistryByteBuf, PiezaCosmetica> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, PiezaCosmetica::id,
-                        PacketCodecs.STRING, PiezaCosmetica::categoria,
-                        PacketCodecs.STRING, PiezaCosmetica::especie,
-                        PacketCodecs.STRING, PiezaCosmetica::aspecto,
+                        CADENA, PiezaCosmetica::id,
+                        CADENA, PiezaCosmetica::categoria,
+                        CADENA, PiezaCosmetica::especie,
+                        CADENA, PiezaCosmetica::aspecto,
                         PacketCodecs.VAR_INT, PiezaCosmetica::precio,
                         PacketCodecs.VAR_INT, PiezaCosmetica::banderas,
                         PiezaCosmetica::new);
@@ -230,7 +230,7 @@ public class Red implements ModInitializer {
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_cosmetico"));
         public static final PacketCodec<RegistryByteBuf, AccionCosmetico> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, AccionCosmetico::id,
+                        CADENA, AccionCosmetico::id,
                         PacketCodecs.INTEGER, AccionCosmetico::ranura,
                         AccionCosmetico::new);
 
@@ -297,8 +297,8 @@ public class Red implements ModInitializer {
                         //   existe en 1.21.1 y el error de compilación no dice
                         //   cuál es el bueno.
                         net.minecraft.util.Uuids.PACKET_CODEC, LlevaPuesto::jugador,
-                        PacketCodecs.STRING, LlevaPuesto::categoria,
-                        PacketCodecs.STRING, LlevaPuesto::cosmetico,
+                        CADENA, LlevaPuesto::categoria,
+                        CADENA, LlevaPuesto::cosmetico,
                         LlevaPuesto::new);
 
         @Override
@@ -325,9 +325,9 @@ public class Red implements ModInitializer {
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "aviso_logro"));
         public static final PacketCodec<RegistryByteBuf, AvisoLogro> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, AvisoLogro::titulo,
-                        PacketCodecs.STRING, AvisoLogro::detalle,
-                        PacketCodecs.STRING, AvisoLogro::objeto,
+                        CADENA, AvisoLogro::titulo,
+                        CADENA, AvisoLogro::detalle,
+                        CADENA, AvisoLogro::objeto,
                         AvisoLogro::new);
 
         @Override
@@ -335,6 +335,36 @@ public class Red implements ModInitializer {
             return ID;
         }
     }
+
+    /**
+     * {@code CADENA}, pero que <b>tolera nulos</b>.
+     *
+     * <h2>⚠⚠⚠ HAY DOS FAMILIAS DE CODIFICADORES Y ESTA ES LA SEGUNDA</h2>
+     *
+     * {@link #cad} arregló los {@code escribir} escritos a mano. Pero la mayoría
+     * de los paquetes se declaran con {@code PacketCodec.tuple(...)}, y esos no
+     * pasan por ningún método nuestro: van directos a {@code CADENA},
+     * que <b>lanza con un nulo exactamente igual</b>.
+     *
+     * <p>Yo arreglé la primera familia y di el fallo por cerrado. <b>Lo destapó
+     * la comprobación nueva</b>, que codifica un paquete de verdad con todo a
+     * nulo: falló en {@code EstadoMercado}, que es de los de {@code tuple}.
+     *
+     * <p>Es la razón de ser de esa prueba. Un repaso a ojo encuentra lo que
+     * buscas —«los writeString»— y no lo que no sabías que existía.
+     */
+    private static final PacketCodec<io.netty.buffer.ByteBuf, String> CADENA =
+            new PacketCodec<>() {
+                @Override
+                public String decode(io.netty.buffer.ByteBuf buf) {
+                    return PacketCodecs.STRING.decode(buf);
+                }
+
+                @Override
+                public void encode(io.netty.buffer.ByteBuf buf, String valor) {
+                    PacketCodecs.STRING.encode(buf, valor == null ? "" : valor);
+                }
+            };
 
     /**
      * Escribe una cadena que <b>puede ser nula</b>.
@@ -571,9 +601,9 @@ public class Red implements ModInitializer {
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_gts"));
         public static final PacketCodec<RegistryByteBuf, AccionGts> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, AccionGts::accion,
+                        CADENA, AccionGts::accion,
                         PacketCodecs.VAR_LONG, AccionGts::listado,
-                        PacketCodecs.STRING, AccionGts::uuid,
+                        CADENA, AccionGts::uuid,
                         PacketCodecs.VAR_LONG, AccionGts::precio,
                         PacketCodecs.VAR_INT, AccionGts::horas,
                         AccionGts::new);
@@ -608,8 +638,8 @@ public class Red implements ModInitializer {
         public static final Id<PedirMercado> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_mercado"));
         public static final PacketCodec<RegistryByteBuf, PedirMercado> CODEC =
-                PacketCodec.tuple(PacketCodecs.STRING, PedirMercado::texto,
-                        PacketCodecs.STRING, PedirMercado::orden,
+                PacketCodec.tuple(CADENA, PedirMercado::texto,
+                        CADENA, PedirMercado::orden,
                         PedirMercado::new);
 
         public static PedirMercado vacio() {
@@ -658,8 +688,8 @@ public class Red implements ModInitializer {
     public record MioObj(String item, String nombre, int cantidad) {
         public static final PacketCodec<RegistryByteBuf, MioObj> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, MioObj::item,
-                        PacketCodecs.STRING, MioObj::nombre,
+                        CADENA, MioObj::item,
+                        CADENA, MioObj::nombre,
                         PacketCodecs.VAR_INT, MioObj::cantidad,
                         MioObj::new);
     }
@@ -737,9 +767,9 @@ public class Red implements ModInitializer {
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_mercado"));
         public static final PacketCodec<RegistryByteBuf, AccionMercado> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, AccionMercado::accion,
+                        CADENA, AccionMercado::accion,
                         PacketCodecs.VAR_LONG, AccionMercado::listado,
-                        PacketCodecs.STRING, AccionMercado::item,
+                        CADENA, AccionMercado::item,
                         PacketCodecs.VAR_INT, AccionMercado::cantidad,
                         PacketCodecs.VAR_LONG, AccionMercado::precio,
                         PacketCodecs.VAR_INT, AccionMercado::horas,
@@ -780,11 +810,11 @@ public class Red implements ModInitializer {
                                 long venta, String moneda) {
         public static final PacketCodec<RegistryByteBuf, EntradaTienda> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, EntradaTienda::item,
-                        PacketCodecs.STRING, EntradaTienda::etiqueta,
+                        CADENA, EntradaTienda::item,
+                        CADENA, EntradaTienda::etiqueta,
                         PacketCodecs.VAR_LONG, EntradaTienda::compra,
                         PacketCodecs.VAR_LONG, EntradaTienda::venta,
-                        PacketCodecs.STRING, EntradaTienda::moneda,
+                        CADENA, EntradaTienda::moneda,
                         EntradaTienda::new);
     }
 
@@ -792,10 +822,10 @@ public class Red implements ModInitializer {
                                   String descripcion, List<EntradaTienda> entradas) {
         public static final PacketCodec<RegistryByteBuf, CategoriaTienda> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, CategoriaTienda::id,
-                        PacketCodecs.STRING, CategoriaTienda::nombre,
-                        PacketCodecs.STRING, CategoriaTienda::icono,
-                        PacketCodecs.STRING, CategoriaTienda::descripcion,
+                        CADENA, CategoriaTienda::id,
+                        CADENA, CategoriaTienda::nombre,
+                        CADENA, CategoriaTienda::icono,
+                        CADENA, CategoriaTienda::descripcion,
                         EntradaTienda.CODEC.collect(PacketCodecs.toList()),
                         CategoriaTienda::entradas,
                         CategoriaTienda::new);
@@ -839,8 +869,8 @@ public class Red implements ModInitializer {
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_tienda"));
         public static final PacketCodec<RegistryByteBuf, AccionTienda> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, AccionTienda::categoria,
-                        PacketCodecs.STRING, AccionTienda::item,
+                        CADENA, AccionTienda::categoria,
+                        CADENA, AccionTienda::item,
                         PacketCodecs.VAR_INT, AccionTienda::cantidad,
                         PacketCodecs.BOOL, AccionTienda::comprar,
                         AccionTienda::new);
@@ -885,9 +915,9 @@ public class Red implements ModInitializer {
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_clan"));
         public static final PacketCodec<RegistryByteBuf, AccionClan> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, AccionClan::accion,
-                        PacketCodecs.STRING, AccionClan::texto,
-                        PacketCodecs.STRING, AccionClan::texto2,
+                        CADENA, AccionClan::accion,
+                        CADENA, AccionClan::texto,
+                        CADENA, AccionClan::texto2,
                         PacketCodecs.VAR_LONG, AccionClan::objetivo,
                         PacketCodecs.VAR_LONG, AccionClan::cantidad,
                         AccionClan::new);
@@ -902,8 +932,8 @@ public class Red implements ModInitializer {
         public static final PacketCodec<RegistryByteBuf, MiembroClan> CODEC =
                 PacketCodec.tuple(
                         PacketCodecs.VAR_LONG, MiembroClan::playerId,
-                        PacketCodecs.STRING, MiembroClan::nombre,
-                        PacketCodecs.STRING, MiembroClan::rol,
+                        CADENA, MiembroClan::nombre,
+                        CADENA, MiembroClan::rol,
                         PacketCodecs.BOOL, MiembroClan::conectado,
                         MiembroClan::new);
     }
@@ -940,10 +970,10 @@ public class Red implements ModInitializer {
         public static final PacketCodec<RegistryByteBuf, InvitacionClan> CODEC =
                 PacketCodec.tuple(
                         PacketCodecs.VAR_LONG, InvitacionClan::clanId,
-                        PacketCodecs.STRING, InvitacionClan::nombre,
-                        PacketCodecs.STRING, InvitacionClan::etiqueta,
-                        PacketCodecs.STRING, InvitacionClan::color,
-                        PacketCodecs.STRING, InvitacionClan::invitadoPor,
+                        CADENA, InvitacionClan::nombre,
+                        CADENA, InvitacionClan::etiqueta,
+                        CADENA, InvitacionClan::color,
+                        CADENA, InvitacionClan::invitadoPor,
                         InvitacionClan::new);
     }
 
@@ -952,10 +982,10 @@ public class Red implements ModInitializer {
                                  String motivo, long cuando) {
         public static final PacketCodec<RegistryByteBuf, MovimientoClan> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, MovimientoClan::quien,
+                        CADENA, MovimientoClan::quien,
                         PacketCodecs.VAR_LONG, MovimientoClan::delta,
                         PacketCodecs.VAR_LONG, MovimientoClan::saldoDespues,
-                        PacketCodecs.STRING, MovimientoClan::motivo,
+                        CADENA, MovimientoClan::motivo,
                         PacketCodecs.VAR_LONG, MovimientoClan::cuando,
                         MovimientoClan::new);
     }
@@ -965,10 +995,10 @@ public class Red implements ModInitializer {
                                 String detalle, long cuando) {
         public static final PacketCodec<RegistryByteBuf, AnotacionClan> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, AnotacionClan::quien,
-                        PacketCodecs.STRING, AnotacionClan::aQuien,
-                        PacketCodecs.STRING, AnotacionClan::accion,
-                        PacketCodecs.STRING, AnotacionClan::detalle,
+                        CADENA, AnotacionClan::quien,
+                        CADENA, AnotacionClan::aQuien,
+                        CADENA, AnotacionClan::accion,
+                        CADENA, AnotacionClan::detalle,
                         PacketCodecs.VAR_LONG, AnotacionClan::cuando,
                         AnotacionClan::new);
     }
@@ -1093,7 +1123,7 @@ public class Red implements ModInitializer {
         public static final Id<ElegirInicial> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "elegir_inicial"));
         public static final PacketCodec<RegistryByteBuf, ElegirInicial> CODEC =
-                PacketCodec.tuple(PacketCodecs.STRING, ElegirInicial::especie,
+                PacketCodec.tuple(CADENA, ElegirInicial::especie,
                         ElegirInicial::new);
 
         @Override
@@ -1106,11 +1136,11 @@ public class Red implements ModInitializer {
                                 String tipo, String consejo) {
         public static final PacketCodec<RegistryByteBuf, OpcionInicial> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, OpcionInicial::especie,
-                        PacketCodecs.STRING, OpcionInicial::nombre,
-                        PacketCodecs.STRING, OpcionInicial::region,
-                        PacketCodecs.STRING, OpcionInicial::tipo,
-                        PacketCodecs.STRING, OpcionInicial::consejo,
+                        CADENA, OpcionInicial::especie,
+                        CADENA, OpcionInicial::nombre,
+                        CADENA, OpcionInicial::region,
+                        CADENA, OpcionInicial::tipo,
+                        CADENA, OpcionInicial::consejo,
                         OpcionInicial::new);
     }
 
@@ -1203,12 +1233,12 @@ public class Red implements ModInitializer {
                               int vida, int vidaMax, String estado) {
         public static final PacketCodec<RegistryByteBuf, PokemonCura> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, PokemonCura::especie,
-                        PacketCodecs.STRING, PokemonCura::apodo,
+                        CADENA, PokemonCura::especie,
+                        CADENA, PokemonCura::apodo,
                         PacketCodecs.VAR_INT, PokemonCura::nivel,
                         PacketCodecs.VAR_INT, PokemonCura::vida,
                         PacketCodecs.VAR_INT, PokemonCura::vidaMax,
-                        PacketCodecs.STRING, PokemonCura::estado,
+                        CADENA, PokemonCura::estado,
                         PokemonCura::new);
     }
 
@@ -1283,7 +1313,7 @@ public class Red implements ModInitializer {
         public static final Id<ReclamarMision> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "reclamar_mision"));
         public static final PacketCodec<RegistryByteBuf, ReclamarMision> CODEC =
-                PacketCodec.tuple(PacketCodecs.STRING, ReclamarMision::id,
+                PacketCodec.tuple(CADENA, ReclamarMision::id,
                         ReclamarMision::new);
 
         @Override
@@ -1400,7 +1430,7 @@ public class Red implements ModInitializer {
     public record ViaEstado(String id, int nivel, long xp, long xpSiguiente) {
         public static final PacketCodec<RegistryByteBuf, ViaEstado> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.STRING, ViaEstado::id,
+                        CADENA, ViaEstado::id,
                         PacketCodecs.VAR_INT, ViaEstado::nivel,
                         PacketCodecs.VAR_LONG, ViaEstado::xp,
                         PacketCodecs.VAR_LONG, ViaEstado::xpSiguiente,

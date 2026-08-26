@@ -8,7 +8,7 @@
 **Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
 D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, ocho vías de progresión, y **ocho pantallas** en el PokePad.
-Autotest **345/345** en vivo. **El recorrido del jugador nuevo está completo.**
+Autotest **350/350** en vivo. **El recorrido del jugador nuevo está completo.**
 
 > **2026-08-25 — LOS OBJETOS PASAN A ESCAPARATE, Y ES UNA RECTIFICACIÓN.**
 > D-041 dijo que los objetos van por **libro de órdenes** porque son fungibles.
@@ -138,7 +138,7 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 345/345 correctos (2026-08-25, en vivo)
+Autotest      /luna autotest -> 350/350 correctos (2026-08-25, en vivo)
               +26 del escaparate de objetos, y el que importa es el
               PAYLOAD: lo escribe `publicarObjeto` y lo lee la entrega,
               y si dejaran de estar de acuerdo la compra NO DARIA
@@ -738,6 +738,50 @@ Clanes        EL PRIMER SISTEMA SOCIAL (2026-08-23, V013)
               Fue exacto
               ⚠ SIN VERIFICAR EN EL JUEGO todavia: hacen falta DOS cuentas
               desplegado y V013 aplicada (2026-08-23) . Done (9,2 s)
+
+Idioma        ⚠⚠⚠ UN SERVIDOR NO TIENE IDIOMA, Y ESO ES UNA REGLA DEL
+              PROTOCOLO (2026-08-25)
+                EL SERVIDOR MANDA EL IDENTIFICADOR
+                EL CLIENTE PONE EL NOMBRE
+              `getName()` devuelve un Text TRADUCIBLE y viaja sin resolver;
+              `.getString()` lo CONGELA en el idioma de quien lo llama -- y en
+              el servidor solo existe `en_us`
+              ⚠ el sintoma: «Black Stained Glass Pane» y «White Neon» con el
+                cliente en español, Y CON LOS 607 NOMBRES DE lunaneon YA
+                TRADUCIDOS. Nunca llegaron a consultarse
+              ⚠ vale para CHAT tambien: `Text.literal(nombreYaResuelto)` sale
+                en ingles; `Text.literal("Comprado ").append(pila.getName())`
+                lo pinta el cliente en su idioma
+              ⚠⚠ Y ARRASTRA AL BUSCADOR: el servidor solo puede buscar por lo
+                 que tiene guardado, que esta en ingles. Quien escriba
+                 «cristal» NO encontraria «Black Stained Glass Pane» jamas.
+                 Por eso el buscador de objetos filtra EN EL CLIENTE, sobre los
+                 nombres ya traducidos (y tambien por identificador)
+                 ⚠ el precio: filtra sobre lo que el servidor manda, no sobre
+                   todo. Con un escaparate pequeño da igual; con miles habra
+                   que mandar el idioma del jugador en el paquete
+              LA TIENDA NO LO SUFRIA, y por que importa: sus etiquetas se
+              escriben A MANO en español en shop_catalog.json, asi que nunca
+              dependio de que el servidor resolviera nada
+
+Protocolo     ⚠⚠⚠ UN `writeString(null)` ECHA AL JUGADOR DEL SERVIDOR
+              (2026-08-25) . revienta AL CODIFICAR, fuera del hilo del
+              servidor, y el mensaje NO DICE QUE CAMPO:
+                Failed to encode packet 'clientbound/custom_payload'
+              paso de verdad: un Pokemon publicado SIN MOTE dejaba
+              `display_name` nulo y abrir el GTS desconectaba
+              ⚠⚠ HAY DOS FAMILIAS DE CODIFICADORES Y SE OLVIDA LA SEGUNDA:
+                 los `escribir` a mano   ->  Red.cad()
+                 los PacketCodec.tuple   ->  Red.CADENA
+                 arregle la primera (39 sitios), di el fallo por cerrado, y
+                 habia 96. Lo destapo el autotest, no una revision
+              ⚠⚠ LA LECCION: UN REPASO A OJO ENCUENTRA LO QUE BUSCAS Y NO LO
+                 QUE NO SABIAS QUE EXISTIA. Yo busque «writeString» --que es lo
+                 que decia la traza-- y encontre todos los writeString. La otra
+                 familia no salia porque no se llama asi.
+                 Lo caza una prueba que EJERCITA EL CAMINO: `testProtocoloNulos`
+                 codifica un paquete de verdad con TODO a nulo, y no sabe
+                 cuantas familias hay ni le importa
 
 Avisos        ui/Aviso.java centraliza como se anuncia un logro
               TOAST (esquina, con el marco de los logros de vanilla) +

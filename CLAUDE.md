@@ -8,7 +8,7 @@
 **Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
 D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, ocho vías de progresión, y **ocho pantallas** en el PokePad.
-Autotest **350/350** en vivo. **El recorrido del jugador nuevo está completo.**
+Autotest **368/368** en vivo. **El recorrido del jugador nuevo está completo.**
 
 > **2026-08-25 — LOS OBJETOS PASAN A ESCAPARATE, Y ES UNA RECTIFICACIÓN.**
 > D-041 dijo que los objetos van por **libro de órdenes** porque son fungibles.
@@ -138,7 +138,7 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 350/350 correctos (2026-08-25, en vivo)
+Autotest      /luna autotest -> 368/368 correctos (2026-08-25, en vivo)
               +26 del escaparate de objetos, y el que importa es el
               PAYLOAD: lo escribe `publicarObjeto` y lo lee la entrega,
               y si dejaran de estar de acuerdo la compra NO DARIA
@@ -738,6 +738,22 @@ Clanes        EL PRIMER SISTEMA SOCIAL (2026-08-23, V013)
               Fue exacto
               ⚠ SIN VERIFICAR EN EL JUEGO todavia: hacen falta DOS cuentas
               desplegado y V013 aplicada (2026-08-23) . Done (9,2 s)
+
+Textos        ⚠⚠⚠ UNA CLAVE DE TRADUCCION QUE NO EXISTE SE VE CRUDA
+              `Text.translatable("clave.que.no.existe")` NO DA NINGUN ERROR:
+              ni al compilar, ni al arrancar, ni al dibujar. Minecraft pinta
+              LA CLAVE, y el jugador ve `pokepad.lunaeternal.mercado.tu_plata`
+              paso el 2026-08-25: al pasar los objetos a escaparate borre las
+              claves del libro de ordenes, y una --el rotulo «TU PLATA»-- la
+              seguia usando la pantalla del GTS. El unico aviso fue una captura
+                python tools/comprobar_textos.py
+              comprueba LOS DOS SENTIDOS (usadas que faltan, y las que sobran)
+              y ademas ENTRE IDIOMAS: una clave que este en es_es y no en en_us
+              deja al cliente en ingles viendo la clave cruda
+              ⚠ los PREFIJOS dinamicos se distinguen POR LA FORMA --acaban en
+                `.` o en `_`, porque el codigo los concatena-- y NO con una
+                lista de excepciones: una lista hay que mantenerla, y acaba
+                siendo el sitio donde se esconden los fallos de verdad
 
 Idioma        ⚠⚠⚠ UN SERVIDOR NO TIENE IDIOMA, Y ESO ES UNA REGLA DEL
               PROTOCOLO (2026-08-25)
@@ -1410,7 +1426,7 @@ Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
                 jugador conectado; desde consola solo consta que el
                 datapack carga sin errores. Es el mismo PKM-004 de
                 siempre
-Interfaz      NUEVE PANTALLAS. Siete verificadas en el juego:
+Interfaz      DIEZ PANTALLAS. Siete verificadas en el juego:
                 PokePad     2026-08-16   la principal, 15 iconos
                 Cosmeticos  2026-08-22   4 pestanias
                 Trabajos    2026-08-23   8 Vias y oficios, paginado
@@ -1421,16 +1437,76 @@ Interfaz      NUEVE PANTALLAS. Siete verificadas en el juego:
                 Curar       2026-08-23   la 16a celda, pagina 2
                 GTS         2026-08-25   Pokemon: 3D, tasador, filtros
                 Mercado     2026-08-25   Objetos: escaparate (D-042)
-              8 de los 16 iconos abren algo: pokedex (la de Cobblemon),
-              cosmeticos, trabajos, misiones, clan, tienda, curar y mercado
+                Cazas       2026-08-25   SIN VERIFICAR . 2 pestañas, 3+3
+              9 de los 16 iconos abren algo: pokedex (la de Cobblemon),
+              cosmeticos, trabajos, misiones, clan, tienda, curar, mercado y
+              cazas
               SIGUEN SIN PANTALLA, con la logica viva y probada:
-                kits . cazas . viaje
+                kits . viaje
               ⚠ el MERCADO refresca al VENDEDOR cuando le compran, sin que el
                 pulse nada: su oferta desaparecio y su dinero subio. Es la
                 leccion de los clanes aplicada antes de que doliera
               ⚠ CURAR YA ESTA (2026-08-23, tarde). Ver el bloque Curar
-Cazas         HUNT-001 · mismas para todo el servidor · rotan 12 h
+Cazas         YA TIENE PANTALLA (2026-08-25, V017)
+              2 pestañas (CAZA . CRIANZA) . 3 objetivos en cada una con
+              1, 2 y 3 ESTRELLAS . mismas para todo el servidor
               solo captura las avanza; crianza cuenta al ECLOSIONAR
+              ⚠⚠ CASI TODO ESTABA HECHO DESDE PHASE 5 y no lo sabia ni yo:
+                 HuntService ya sorteaba 3+3, ya derivaba la rareza DE LA
+                 POSICION --para que cada ciclo tenga uno facil, uno medio y
+                 uno dificil-- y ya filtraba legendarios por etiqueta. Faltaba
+                 la pantalla. Mismo patron que la tienda y que el inicial:
+                 logica esperando una puerta
+              ROTAN CADA 24 H, no 12 (orden del usuario). Con 12 cambiaban DOS
+              VECES AL DIA y quien juega por la tarde no veia nunca la del
+              ciclo de noche -- lo contrario de lo que hace que se hable de ella
+              ⚠ NO HAY RELOJ: `cicloActual` crea el ciclo si el anterior caduco,
+                asi que la rotacion la provoca la primera persona que mira
+              PREMIOS EN OBJETOS (V017):
+                captura  ★ 500 Plata + 5 Poke Ball
+                         ★★ 1.200 + 5 Great Ball
+                         ★★★ 2.500 + 3 Ultra Ball
+                crianza  ★ 1.000 + 3 Exp. Candy S
+                         ★★ 2.000 + 2 Exp. Candy M
+                         ★★★ 3.500 + 1 Rare Candy
+              ⚠⚠ EL PREMIO SE GUARDA EN LA FILA, NO SE CALCULA AL COBRAR. La
+                 pantalla lo enseña y entre enseñarlo y cobrarlo pasan hasta
+                 24 h: si saliera de la tabla en Java, tocarla pagaria algo
+                 DISTINTO de lo prometido -- sin error, y al jugador le
+                 pareceria que le hemos engañado. Misma regla que el precio de
+                 la tienda
+              ⚠ los identificadores se comprobaron contra el JAR antes de
+                escribirlos (`gen_tienda.py --buscar candy`) y el autotest los
+                comprueba contra el REGISTRO en cada ejecucion. Uno mal escrito
+                no da error: da un premio que no se entrega, y el jugador YA HA
+                HECHO EL TRABAJO
+              ⚠ IMPORTES PROVISIONALES, como los de la tienda, y en UNA tabla
+                de seis filas para que el analisis de economia sea cambiar seis
+                numeros
+                ⚠ SON UNA FUENTE (P3): ~10.000 de Plata al dia si alguien
+                  completa las seis. Se sostiene solo porque completarlas es
+                  DIFICIL. Si algun dia se hacen mas faciles, esto baja A LA VEZ
+              ⚠ un Rare Candy SE GANA jugando y eso esta bien: lo que prohibe
+                la linea roja (T4, D-007) es VENDERLO por moneda premium
+              LA PANTALLA:
+              ⚠ las estrellas se dibujan SIEMPRE LAS TRES, apagando las que no
+                tocan. Con solo las encendidas, ★★ y ★★★ se distinguen
+                CONTANDO -- y contar es lo que un icono te tiene que ahorrar
+              ⚠ la CUENTA ATRAS la lleva el CLIENTE, restando de un instante
+                absoluto. Si el servidor mandara "faltan N horas" el numero se
+                quedaria viejo en cuanto pasara un minuto
+              ⚠ un ciclo caducado dice "cambiando...", no "hace 3 h". Dura
+                segundos --lo crea la primera persona que mire-- pero un
+                numero negativo asustaria
+              ⚠ el cartel de la recompensa se dibuja EL ULTIMO, 3D incluido, y
+                se mete hacia dentro cerca del borde
+              ⚠ la lista ordena por rareza EN EL CLIENTE aunque el servidor ya
+                lo mande ordenado: la estrella es lo que promete la posicion
+              +18 comprobaciones, y NINGUNA repite las que ya habia. Las nuevas
+              son las estrellas (una de cada), que MAS ESTRELLAS PAGUEN MAS --se
+              rompe editando la tabla y nadie lo mira hasta que alguien se queja
+              de que la ★ paga mas que la ★★★-- y que los premios EXISTAN
+              ⚠ SIN VERIFICAR EN EL JUEGO todavia
 Repos         luna-eternal (privado) · luna-eternal-pack (publico)
               ⚠ OJO: la rama de luna-eternal-pack es master, NO main
 Manifiesto    publicado y responde 200 · 198 ficheros · pack 0.2.0
@@ -1778,14 +1854,14 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 > clan, comerciar Pokémon y objetos, y seguir el árbol de misiones. **Ya no
 > queda ninguna misión que no se pueda completar** — `t5_gts` era la última.
 
-### ⏭ POR AQUÍ SE SIGUE (2026-08-25)
+### ⏭ POR AQUÍ SE SIGUE (2026-08-25, noche)
 
 | | |
 |---|---|
-| **1. Verificar el mercado con dos cuentas** | Es lo único sin comprobar en vivo, y lo que hay que mirar es lo de siempre: que al comprarme algo, **mi pantalla y mi saldo cambien sin que yo toque nada** |
-| **2. La mano secundaria** | Hoy no cuenta para vender objetos. No rompe la custodia, pero confunde. Se arregla en `cuantos` **y** en `sacar`, las dos a la vez — cambiar solo una **sí** rompe la custodia |
-| **3. El toast de «se vendió lo tuyo»** | La pantalla del vendedor ya se refresca; falta el aviso para quien no la tenga abierta |
-| **4. Fase 4 — el índice de precios** | ⚠ **Va después de que la gente comercie de verdad, a propósito**: hoy mediría el ruido de dos personas probando |
+| **1. Verificar en el juego lo de hoy** | **Cazas** y el **escaparate de objetos** están sin mirar. En cazas, lo que hay que comprobar es el **3D en la lista** —tres modelos a la vez es lo más pesado que dibuja ninguna pantalla— y que la cuenta atrás avance |
+| **2. `ECO-005` — las Marcas no se gastan en nada** | Ocho sitios las dan, **cero las cobren**. No rompe nada hoy y **se pone más caro cada día**: los precios se fijan contra lo que la gente tiene, y todos están acumulando |
+| **3. El mercado con dos cuentas** | Que al comprarte algo, tu pantalla y tu saldo cambien **sin que toques nada** |
+| **4. La mano secundaria** | No cuenta al vender objetos. Se arregla en `cuantos` **y** en `sacar`, las dos a la vez |
 | **5. La ciudadela** | Sigue siendo el foco no-técnico, y nada la bloquea |
 
 > ⚠⚠ **La lección del 25-ago: UNA MAQUETA QUE MIDE ES UNA PRUEBA.**
@@ -1940,6 +2016,7 @@ Catálogo completo en [interfaces-catalog.md](docs/ui/interfaces-catalog.md).
 | ~~`GPL-001`~~ | ✅ **CUMPLIDO, comprobado por la API el 2026-08-21.** `corderovibes-collab/luna-eternal-launcher` es **publico y GPL-3.0**, y el binario se distribuye desde ese mismo repositorio: el fuente completo del fork viaja con el, que es lo que exige la licencia (D-035). **Sigue siendo una obligacion viva, no una casilla marcada:** cualquier cosa que se le añada encima --anti-abuso, capa de identidad, lo que sea-- hay que publicarla tambien. Y con tienda de pago (D-007) eso no es gratis |
 | **`LNC-002`** | Crear el token `PACK_TOKEN` para que el launcher publique sus releases — ver [launcher.md §2](docs/technical/launcher.md) |
 | **`ART-002`** | Enviar el arte de la interfaz nueva: fondos, botones, iconos (D-026) |
+| **`ECO-005`** | **Las Marcas se ganan y no se gastan en NADA.** Medido con `grep` el 2026-08-25: **ocho sitios las dan, cero las cobren**. El diseño es bueno y es la pieza que sostiene todo el modelo de pago —*no se compra progresión* se cumple **porque las Marcas solo se ganan jugando** (D-014)—, pero la mitad que las hace valer algo no existe: hoy son un número que sube. ⚠⚠ **Y se pone más caro cada día**: los precios de una moneda se fijan contra lo que la gente tiene, y todo el mundo está acumulando sin gastar. Cuando llegue la tienda habrá que elegir entre precios altos (y que los nuevos no lleguen nunca) o normales (y que los veteranos lo compren todo el primer día). ⚠ Salida barata si se alarga: **no hace falta la tienda entera**, basta con que exista *algo* que las cobre para tener una referencia. Detalle en [backlog ECO-005](docs/roadmap/backlog.md) |
 | `SEC-001` | **Rotar la API key de Pterodactyl.** Ha vuelto a circular en texto plano el 2026-08-12. Está en `.env` (git-ignorado) y funciona; conviene regenerarla en el panel cuando se cierre la fase de construcción |
 | `SEC-006` | ¿El servidor nuevo nace con `online-mode=true`? Condiciona el anti-abuso |
 | `SEC-004` | Leer el texto oficial de Mojang sobre monetización (no accesible desde aquí) |

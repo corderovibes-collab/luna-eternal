@@ -130,6 +130,56 @@ El último sistema grande. Sostiene la economía: su impuesto progresivo es el
 > Empieza por **objetos**. Los Pokémon usan el mismo esquema y el mismo flujo;
 > solo cambia qué se serializa, y hoy Cobblemon no está instalado.
 
+### ECO-005 — Las Marcas no se gastan en NADA
+
+**Estado: pendiente. No rompe nada hoy, y se pone más caro cada día.**
+
+Hay **ocho sitios que dan Marcas y cero que las cobren.** Medido con `grep` el
+2026-08-25, no supuesto:
+
+| Se ganan en | Se gastan en |
+|---|---|
+| Primera captura de cada especie (Pokédex) | — |
+| Cazas y crianza | — |
+| Misiones | — |
+
+**El diseño está claro y es bueno.** Las Marcas son lo que hace que el modelo
+de pago no rompa el juego:
+
+```
+No se compra poder       LunaCoins no llega ni a Plata ni a Marcas
+No se compra progresión  las Marcas SOLO se ganan jugando
+Pagar no infla nada      LunaCoins nunca entra al mercado
+```
+
+`economy-overview.md` §🔷 lo dice: la idea es **una tienda que el dinero no
+puede comprar** — desbloqueos de progresión, títulos de prestigio, funciones
+avanzadas. Así el rico no se salta la progresión pagándola y el veterano tiene
+algo que solo él tiene.
+
+**Hoy esa mitad no existe.** Son un número que sube.
+
+> ⚠⚠ **POR QUÉ SE PONE MÁS CARO CADA DÍA, y es la razón de apuntarlo ahora.**
+> Los precios de una moneda se fijan contra lo que la gente tiene. Cada día que
+> pasa, todo el mundo acumula Marcas sin gastar ninguna — así que cuando llegue
+> la tienda habrá que elegir entre poner precios altos (y que los nuevos no
+> lleguen nunca) o precios normales (y que los veteranos lo compren todo el
+> primer día). **Ninguna de las dos es buena, y las dos se evitan hoy.**
+>
+> Es el mismo problema que ya está anotado para el índice de precios del
+> mercado, al revés: aquel necesita esperar a que haya datos, y este necesita
+> **no** esperar a que haya saldos.
+
+> ⚠ Y hay una salida barata si esto se alarga: **no hace falta la tienda entera
+> para frenar la acumulación.** Basta con que exista *algo* que las cobre —un
+> título, un desbloqueo— para tener una referencia de cuánto vale una Marca.
+
+**Lo natural cuando toque:** una pestaña de Marcas en la tienda, que ya tiene
+las categorías en el panel izquierdo y ya sabe manejar más de una moneda
+(`ArticuloTienda` lleva el campo `moneda` desde el primer día).
+
+---
+
 ### MOD-006 — Ampliar el autotest con cada sistema
 `READY` · permanente
 

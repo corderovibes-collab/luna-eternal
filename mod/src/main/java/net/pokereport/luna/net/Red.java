@@ -2470,7 +2470,10 @@ public class Red implements ModInitializer {
             }
             String id = net.minecraft.registry.Registries.ITEM.getId(suyo).toString();
             porItem.merge(id, pila.getCount(), Integer::sum);
-            nombres.putIfAbsent(id, pila.getName().getString());
+            // ⚠ NO se resuelve el nombre aquí: el servidor solo tiene `en_us`.
+            //   Viaja el identificador y el nombre lo pone el cliente, que sí
+            //   sabe en qué idioma juega su dueño.
+            nombres.putIfAbsent(id, "");
         }
         List<MioObj> salida = new ArrayList<>(porItem.size());
         for (var e : porItem.entrySet()) {
@@ -2524,6 +2527,10 @@ public class Red implements ModInitializer {
             aviso(jugador, "§cNo se pudieron retirar los objetos.");
             return;
         }
+        // ⚠ Este nombre se guarda en la fila y NO se enseña a nadie: sale en
+        //   `en_us` porque el servidor no tiene otro idioma. Vive ahí para los
+        //   registros y para que un administrador sepa qué era mirando la base.
+        //   Lo que el jugador ve lo compone su cliente, del identificador.
         final String nombre = new net.minecraft.item.ItemStack(item)
                 .getName().getString();
         final net.minecraft.item.Item elItem = item;
@@ -2577,11 +2584,25 @@ public class Red implements ModInitializer {
                         .resolve(jugador.getUuid(), jugador.getName().getString());
                 Long vendedor = svc.duenoDe(carga.listado());
                 var r = svc.buy(id, carga.listado());
+                final long precio = r.ok() ? precioDe(r.message()) : 0;
                 servidor.execute(() -> {
-                    jugador.sendMessage(
-                            net.minecraft.text.Text.literal(r.message()), true);
                     if (r.ok() && r.payload() != null) {
-                        entregarPila(jugador, r.payload());
+                        var entregado = entregarPila(jugador, r.payload());
+                        // ⚠⚠ EL MENSAJE SE COMPONE AQUÍ Y NO SE USA EL DEL
+                        //    SERVICIO, porque el del servicio lleva el nombre
+                        //    YA RESUELTO -- y el servidor solo tiene `en_us`.
+                        //    `getName()` devuelve un Text TRADUCIBLE: viaja sin
+                        //    resolver y lo pinta el cliente EN SU IDIOMA.
+                        jugador.sendMessage(net.minecraft.text.Text
+                                .literal("\u00a7aComprado \u00a7f")
+                                .append(entregado == null
+                                        ? net.minecraft.text.Text.literal("?")
+                                        : entregado)
+                                .append(net.minecraft.text.Text.literal(
+                                        "\u00a77 por \u00a7f" + precio)), true);
+                    } else {
+                        jugador.sendMessage(
+                                net.minecraft.text.Text.literal(r.message()), true);
                     }
                 });
                 enviarSaldo(jugador);
@@ -2637,22 +2658,42 @@ public class Red implements ModInitializer {
      * la primera compra que no cuadrara se comería los objetos <b>sin dar
      * ningún error</b>: el dinero ya habría cambiado de manos.
      */
-    private static void entregarPila(
+    private static net.minecraft.text.Text entregarPila(
             net.minecraft.server.network.ServerPlayerEntity jugador, byte[] datos) {
         try {
             String s = new String(datos, java.nio.charset.StandardCharsets.UTF_8);
             int corte = s.indexOf((char) 0);
             if (corte < 0) {
-                return;
+                return null;
             }
             var item = net.pokereport.luna.market.Inventarios
                     .objeto(s.substring(0, corte));
             int cantidad = Integer.parseInt(s.substring(corte + 1).trim());
-            if (item != null && cantidad > 0) {
-                net.pokereport.luna.market.Inventarios.meter(jugador, item, cantidad);
+            if (item == null || cantidad <= 0) {
+                return null;
             }
+            net.pokereport.luna.market.Inventarios.meter(jugador, item, cantidad);
+            // ⚠ Se devuelve un Text SIN RESOLVER. Llamar a `.getString()` aquí
+            //   lo resolvería en `en_us` y perderíamos justo lo que buscamos.
+            return new net.minecraft.item.ItemStack(item).getName().copy()
+                    .append(net.minecraft.text.Text.literal(" x" + cantidad));
         } catch (Exception e) {
             LunaEternal.LOG.warn("Payload de listado ilegible: {}", e.toString());
+            return null;
+        }
+    }
+
+    /** El precio que el servicio metió en su mensaje. Solo para reescribirlo. */
+    private static long precioDe(String mensaje) {
+        var m = java.util.regex.Pattern.compile("([0-9][0-9.,]*)\\s*$")
+                .matcher(mensaje == null ? "" : mensaje);
+        if (!m.find()) {
+            return 0;
+        }
+        try {
+            return Long.parseLong(m.group(1).replaceAll("[.,]", ""));
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 

@@ -199,8 +199,23 @@ public class MercadoScreen extends Screen {
 
     // ---- datos -------------------------------------------------------------
 
+    /**
+     * ⚠⚠ EL TEXTO DE BÚSQUEDA <b>NO VIAJA</b>, y no es un olvido.
+     *
+     * <p>El servidor solo puede buscar por lo que tiene guardado, que está en
+     * inglés (ver {@link #nombreDe}). Un jugador que escriba «cristal» no
+     * encontraría «Black Stained Glass Pane» jamás.
+     *
+     * <p>Así que se filtra <b>aquí</b>, sobre los nombres ya traducidos. Al
+     * servidor solo le va la <b>ordenación</b>, que sí sabe hacer.
+     *
+     * <p>⚠ El precio de esto es que se filtra sobre las 200 ofertas que manda
+     * el servidor, no sobre todas. Con un escaparate pequeño da igual; el día
+     * que haya miles habrá que mandar el idioma del jugador en el paquete y
+     * buscar en el servidor.
+     */
     private void pedir() {
-        ClientPlayNetworking.send(new Red.PedirMercado(texto(campoBusqueda), orden));
+        ClientPlayNetworking.send(new Red.PedirMercado("", orden));
     }
 
     private String texto(TextFieldWidget c) {
@@ -220,7 +235,36 @@ public class MercadoScreen extends Screen {
         if (estado == null) {
             return List.of();
         }
-        return modo == Modo.MIAS ? estado.mias() : estado.ofertas();
+        var todas = modo == Modo.MIAS ? estado.mias() : estado.ofertas();
+        return filtrar(todas, o -> nombreDe(o.item()).getString(), o -> o.item());
+    }
+
+    /** Filtra por el texto del buscador, sobre el nombre YA traducido. */
+    private <X> List<X> filtrar(List<X> xs,
+                                java.util.function.Function<X, String> nombre,
+                                java.util.function.Function<X, String> id) {
+        String q = texto(campoBusqueda).toLowerCase(java.util.Locale.ROOT);
+        if (q.isEmpty()) {
+            return xs;
+        }
+        var salida = new ArrayList<X>();
+        for (X x : xs) {
+            // Por el nombre traducido O por el identificador: quien sepa que
+            // busca `quartz` no tiene por que escribirlo en español.
+            if (nombre.apply(x).toLowerCase(java.util.Locale.ROOT).contains(q)
+                    || id.apply(x).toLowerCase(java.util.Locale.ROOT).contains(q)) {
+                salida.add(x);
+            }
+        }
+        return salida;
+    }
+
+    private List<Red.MioObj> mochila() {
+        if (estado == null) {
+            return List.of();
+        }
+        return filtrar(estado.disponibles(), m -> nombreDe(m.item()).getString(),
+                m -> m.item());
     }
 
     /**
@@ -240,7 +284,7 @@ public class MercadoScreen extends Screen {
         if (estado == null) {
             return 0;
         }
-        return modo == Modo.VENDER ? estado.disponibles().size() : lista().size();
+        return modo == Modo.VENDER ? mochila().size() : lista().size();
     }
 
     private int paginas() {
@@ -256,7 +300,7 @@ public class MercadoScreen extends Screen {
         if (estado == null) {
             return null;
         }
-        for (var m : estado.disponibles()) {
+        for (var m : mochila()) {
             if (m.item().equals(elegidoItem)) {
                 return m;
             }
@@ -354,6 +398,27 @@ public class MercadoScreen extends Screen {
         var item = Registries.ITEM.get(Identifier.tryParse(id));
         var p = new ItemStack(item);
         return p.isEmpty() ? new ItemStack(net.minecraft.item.Items.BARRIER) : p;
+    }
+
+    /**
+     * El nombre de un objeto <b>en el idioma del jugador</b>.
+     *
+     * <h2>⚠⚠⚠ NO SE USA EL NOMBRE QUE MANDA EL SERVIDOR</h2>
+     *
+     * El servidor lo resuelve con {@code getName().getString()} y <b>ahí solo
+     * existe {@code en_us}</b>: no sabe en qué idioma juega cada uno, ni puede
+     * saberlo. Por eso salía «Black Stained Glass Pane» con el cliente en
+     * español — y con los 607 nombres de {@code lunaneon} ya traducidos.
+     *
+     * <p>{@code getName()} devuelve un {@code Text} <b>traducible</b>, y aquí
+     * sí hay idioma. La regla: <b>el servidor manda el identificador, el
+     * cliente pone el nombre.</b>
+     *
+     * <p>⚠ Y arregla también lo ya publicado: el nombre inglés sigue guardado
+     * en la fila, pero <b>ya no se enseña</b>.
+     */
+    private Text nombreDe(String itemId) {
+        return pila(itemId).getName();
     }
 
     private String itemElegido() {
@@ -472,7 +537,7 @@ public class MercadoScreen extends Screen {
 
     /** Nombre y cantidad, que es lo mismo en los tres modos. */
     private int tituloOferta(DrawContext ctx, Red.OfertaObj o, int y) {
-        for (Text linea : partirLim(o.nombre(), RET_W, 24, 2)) {
+        for (Text linea : partirLim(nombreDe(o.item()).getString(), RET_W, 24, 2)) {
             texto(ctx, linea, PANEL_X + PANEL_W / 2, y, 24,
                     0xFFFFFFFF, true, false);
             y += 28;
@@ -492,7 +557,7 @@ public class MercadoScreen extends Screen {
         // ⚠ DOS líneas como mucho: debajo van cantidad, precio y duración en
         //   posiciones fijas, así que un nombre de cuatro líneas se metería
         //   dentro de ellas.
-        for (Text linea : partirLim(m.nombre(), RET_W, 22, 2)) {
+        for (Text linea : partirLim(nombreDe(m.item()).getString(), RET_W, 22, 2)) {
             texto(ctx, linea, PANEL_X + PANEL_W / 2, y, 22,
                     0xFFFFFFFF, true, false);
             y += 26;
@@ -739,7 +804,8 @@ public class MercadoScreen extends Screen {
             // ⚠ 240 es lo que hay hasta la columna del vendedor (320 - 70 - 10).
             //   No se escribe suelto: si el vendedor se moviera, esto tendría
             //   que moverse con él.
-            texto(ctx, recortar(o.nombre(), COL_VENDEDOR - 70 - 10, 20),
+            texto(ctx, recortar(nombreDe(o.item()).getString(),
+                            COL_VENDEDOR - 70 - 10, 20),
                     ax + 70, y + 10, 20, TEXTO_OSCURO, false, false);
             texto(ctx, Text.literal("x" + o.cantidad()), ax + 70, y + 36, 15,
                     TEXTO_SUAVE, false, false);
@@ -769,7 +835,7 @@ public class MercadoScreen extends Screen {
 
     /** Tu mochila, para elegir qué publicar. */
     private void dibujarMochila(DrawContext ctx, int rx, int ry, boolean objetos) {
-        var disp = estado == null ? List.<Red.MioObj>of() : estado.disponibles();
+        var disp = mochila();
         if (disp.isEmpty()) {
             if (!objetos) {
                 texto(ctx, Text.translatable("pokepad.lunaeternal.mercado.mochila_vacia"),
@@ -796,7 +862,7 @@ public class MercadoScreen extends Screen {
             marco(ctx, px(ax), py(y), pl(aw), pl(FILA - 6),
                     sel ? BORDE_ENCIMA : FILA_BORDE, Math.max(1, pl(2)));
 
-            texto(ctx, recortar(m.nombre(), aw - 70 - 90, 20),
+            texto(ctx, recortar(nombreDe(m.item()).getString(), aw - 70 - 90, 20),
                     ax + 70, y + 12, 20, TEXTO_OSCURO, false, false);
             texto(ctx, Text.translatable("pokepad.lunaeternal.tienda.tienes",
                             m.cantidad()),
@@ -861,7 +927,8 @@ public class MercadoScreen extends Screen {
 
         texto(ctx, Text.translatable("pokepad.lunaeternal.gts.confirmar_titulo"),
                 ax + aw / 2, ay + 26, 22, ORO, true, false);
-        texto(ctx, recortar(confirmando.nombre() + "  x" + confirmando.cantidad(),
+        texto(ctx, recortar(nombreDe(confirmando.item()).getString()
+                        + "  x" + confirmando.cantidad(),
                         aw - 60, 24),
                 ax + aw / 2, ay + 70, 24, 0xFFFFFFFF, true, false);
         texto(ctx, Text.literal(String.format("%,d", confirmando.precio())),
@@ -981,7 +1048,7 @@ public class MercadoScreen extends Screen {
         int desde = pagina * filasCaben();
 
         if (modo == Modo.VENDER) {
-            var disp = estado == null ? List.<Red.MioObj>of() : estado.disponibles();
+            var disp = mochila();
             for (int n = 0; n < filasCaben() && desde + n < disp.size(); n++) {
                 int y = listaY() + 18 + n * FILA;
                 if (dentro(rx, ry, px(PANT_X + MARGEN), py(y), pl(aw), pl(FILA - 6))) {
@@ -1174,6 +1241,7 @@ public class MercadoScreen extends Screen {
             return true;
         }
         if (getFocused() == campoBusqueda && campoBusqueda.keyPressed(tecla, escaneo, mods)) {
+            pagina = 0;
             return true;
         }
         if (getFocused() == campoPrecio && campoPrecio.keyPressed(tecla, escaneo, mods)) {
@@ -1188,7 +1256,11 @@ public class MercadoScreen extends Screen {
             return true;
         }
         if (getFocused() == campoBusqueda) {
-            return campoBusqueda.charTyped(c, mods);
+            // ⚠ Vuelta a la página 1: si estabas en la 5 y el filtro deja tres
+            //   resultados, te quedarías mirando una página vacía.
+            boolean r = campoBusqueda.charTyped(c, mods);
+            pagina = 0;
+            return r;
         }
         // ⚠ Solo dígitos en el precio. Un `setMaxLength` no lo impide: deja
         //   escribir letras y luego `parseLong` devuelve 0, que se ve como un

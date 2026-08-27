@@ -1214,15 +1214,17 @@ public final class AutoTest {
         }
         check("las estrellas coinciden con la rareza del Pokemon", coherentes);
 
-        // ⚠ CUANTO MAS RARO, MENOS HACEN FALTA. Al reves, pedir tres de un
-        //   Dragonite en 24 h no seria dificil: seria imposible.
-        boolean escala = true;
-        for (int i = 1; i < capturas.size(); i++) {
-            if (capturas.get(i).necesarios() > capturas.get(i - 1).necesarios()) {
-                escala = false;
+        // ⚠⚠ UNO DE CADA, SIEMPRE (decision del usuario). Es lo que hace que LA
+        //    ESTRELLA SEA LO UNICO QUE VARIA: la dificultad la pone entero el
+        //    Pokemon. Con cantidades distintas, un ★ de tres capturas podia
+        //    costar mas que un ★★★ de una y la estrella dejaba de predecir nada.
+        boolean unoDeCada = true;
+        for (var o : ciclo.objetivos()) {
+            if (o.necesarios() != 1) {
+                unoDeCada = false;
             }
         }
-        check("una caza mas rara no pide MAS unidades", escala);
+        check("cada objetivo se completa con UNO", unoDeCada);
 
         // ⚠ Solo Kanto y Johto: una especie de fuera sería una caza imposible.
         //   Se pregunta al registro, que es de donde salen.

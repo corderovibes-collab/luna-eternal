@@ -194,13 +194,23 @@ public final class HuntService {
                 //   `unaDeCada` devuelve una de cada tramo en orden, la
                 //   posición coincide -- pero el que manda es el Pokémon.
                 int rareza = esp.rareza();
-                // ⚠⚠ CUANTO MAS RARO, MENOS HACEN FALTA, y es al reves de lo
-                //    que parece. La dificultad de una caza es
-                //    «lo raro que es» x «cuantos pides»: pedir TRES de un
-                //    Dragonite en 24 h no es dificil, es imposible, y pedir UNO
-                //    de un Caterpie no es una caza. Con esto, las tres cuestan
-                //    parecido y la estrella dice CUANTO PAGA.
-                int necesarios = caza ? (4 - rareza) : 1;
+                // ⚠⚠ UNO DE CADA, SIEMPRE. Decision del usuario: «la idea es que
+                //    sea solo 1 pokemon de cada estrella que se capture y ya
+                //    cuente como completado».
+                //
+                //    Antes eran 3/2/1 por rareza, buscando que las tres
+                //    costaran parecido. La decision del usuario es mejor y por
+                //    un motivo que no se me habia ocurrido: con «uno de cada»,
+                //    LA ESTRELLA ES LO UNICO QUE VARIA. La dificultad la pone
+                //    entero el Pokemon --lo raro que sea de encontrar-- y la
+                //    estrella dice a la vez lo dificil que es y lo que paga.
+                //    Con cantidades distintas, un ★ de tres capturas podia
+                //    acabar costando mas que un ★★★ de una, y entonces la
+                //    estrella dejaba de predecir nada.
+                //
+                //    ⚠ Y hace la pantalla mas legible: una barra de 0/1 se lee
+                //      de un vistazo como «hecho o no hecho».
+                int necesarios = 1;
                 // ⚠⚠ EL PREMIO SE GUARDA AQUÍ, no se calcula al cobrar. La
                 //    pantalla lo enseña, y entre enseñarlo y cobrarlo pasan
                 //    hasta 24 h: si saliera de la tabla de arriba, tocarla

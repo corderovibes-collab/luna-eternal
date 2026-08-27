@@ -127,24 +127,19 @@ public class ClanScreen extends Screen {
     }
 
     /** Copia literal de CosmeticosScreen. Ver el comentario de la clase. */
+    /**
+     * ⚠ Delegado en {@link Escalado} (2026-08-26). Esto era una copia
+     *   literal en ONCE pantallas, y para entonces ya había seis
+     *   variantes distintas: cada una había envejecido por su lado sin
+     *   dar ningún error.
+     */
     private void recalcular() {
-        double gui = client != null ? client.getWindow().getScaleFactor() : 1;
-        int ventanaW = client == null ? NAT_ANCHO : client.getWindow().getFramebufferWidth();
-        int ventanaH = client == null ? NAT_ALTO : client.getWindow().getFramebufferHeight();
-        double cabe = Math.min(ventanaW / (double) NAT_ANCHO, ventanaH / (double) NAT_ALTO);
-        k = (float) (Math.min(1.0, cabe) / gui);
-        ancho = Math.round(NAT_ANCHO * k);
-        alto = Math.round(NAT_ALTO * k);
-        x0 = (width - ancho) / 2;
-        y0 = (height - alto) / 2;
-
-        boolean exacto = Math.round(ancho * gui) == NAT_ANCHO
-                && Math.round(alto * gui) == NAT_ALTO;
-        if (client != null) {
-            for (Identifier t : new Identifier[] { CHASIS, ATRAS, CERRAR }) {
-                client.getTextureManager().getTexture(t).setFilter(!exacto, false);
-            }
-        }
+        var m = Escalado.aplicar(client, width, height, CHASIS, ATRAS, CERRAR);
+        k = m.k();
+        ancho = m.ancho();
+        alto = m.alto();
+        x0 = m.x0();
+        y0 = m.y0();
     }
 
     @Override

@@ -443,53 +443,25 @@ public class PokePadScreen extends Screen {
         ClientPlayNetworking.send(new Red.PedirSaldo());
         orden = OrdenPad.leer();
 
-        // `k` convierte un pixel del arte en unidades de interfaz, que es en lo
-        // que dibuja DrawContext. Dividir por el GUI Scale es lo que cancela la
-        // ampliacion del juego y deja el Pad a tamano real.
-        double gui = client != null ? client.getWindow().getScaleFactor() : 1;
-
-        // Y no siempre cabe: 1380x828 pixeles REALES no entran en un portatil
-        // de 1366x768. Antes de recortarlo se prefiere verlo entero y algo
-        // reducido, que en arte suavizado se nota mucho menos que en pixel art.
+        // ⚠⚠ DELEGADO EN `Escalado` (2026-08-26). Aqui vivia la version buena
+        //    --con la leccion del borde transparente-- y en las otras DIEZ
+        //    pantallas habia copias que ya habian derivado en seis variantes.
+        //    Hoy hay una sola, y esta es la que se llevo alli.
         //
-        // ⚠ SIN MARGEN, A PROPOSITO. Aqui habia un 0,98 "para que no pegue con
-        // el borde" y salia caro: con una ventana de 1382x825 --tres pixeles
-        // corta-- el Pad se encogia igualmente, y encoger es lo que rompe el
-        // dibujo. El margen convertia en borrosas todas las ventanas de entre
-        // 1380 y 1409 de ancho a cambio de un hueco que nadie mira. Se prefiere
-        // que toque el borde y se vea exacto.
-        int ventanaW = client == null ? NAT_ANCHO : client.getWindow().getFramebufferWidth();
-        int ventanaH = client == null ? NAT_ALTO : client.getWindow().getFramebufferHeight();
-
-        // Lo que falta para que quepa a tamaño real, y si ese sobrante entra en
-        // el margen transparente del chasis. Ver MARGEN_X/MARGEN_Y: es lo que
-        // evita encoger un 0,5 % y emborronarlo todo por siete píxeles.
-        boolean desborda = (NAT_ANCHO - ventanaW) <= MARGEN_X * 2
-                && (NAT_ALTO - ventanaH) <= MARGEN_Y * 2;
-        double cabe = Math.min(ventanaW / (double) NAT_ANCHO,
-                ventanaH / (double) NAT_ALTO);
-        k = (float) ((desborda ? 1.0 : Math.min(1.0, cabe)) / gui);
-
-        ancho = Math.round(NAT_ANCHO * k);
-        alto = Math.round(NAT_ALTO * k);
-        x0 = (width - ancho) / 2;
-        y0 = (height - alto) / 2;
-
-        // ¿Ha salido un texel por pixel, o ha habido que encoger?
-        //
-        // ⚠ ESTO NO ES COSMETICO. Minecraft dibuja las texturas con el vecino
-        // mas proximo, y encoger con vecino mas proximo NO suaviza: TIRA filas
-        // y columnas enteras. A 0,98 se pierde una de cada cincuenta, y eso se
-        // ve como rayas finas cruzando el chasis y como un cerco alrededor de
-        // cada icono --justo lo que se vio en el juego la primera vez--.
-        //
-        // Asi que cuando no cabe a tamano real se pasa a filtrado lineal, que
-        // reparte el error en vez de tirar lineas. Encoger arte suavizado con
-        // lineal se ve bien; a tamano exacto se deja el vecino mas proximo,
-        // que es lo que da el borde limpio.
-        boolean exacto = Math.round(ancho * gui) == NAT_ANCHO
-                && Math.round(alto * gui) == NAT_ALTO;
-        filtrar(!exacto);
+        //    Lo que cambia respecto a lo que habia: ya NO se limita a 1x. Antes
+        //    el chasis se dibujaba siempre a 1.380 pixeles fisicos, asi que
+        //    cuanto mas grande el monitor MAS PEQUEÑO se veia -- 36 % del ancho
+        //    en un 4K frente al 72 % de 1080p. Ahora crece a medios pasos.
+        var m = Escalado.aplicar(client, width, height);
+        k = m.k();
+        ancho = m.ancho();
+        alto = m.alto();
+        x0 = m.x0();
+        y0 = m.y0();
+        // ⚠ El PokePad filtra SUS texturas, que no son una lista fija: los
+        //   iconos y los botones se descubren al vuelo. Por eso `Escalado`
+        //   devuelve la decision en vez de aplicarla aqui.
+        filtrar(!m.exacto());
     }
 
     /**

@@ -94,6 +94,18 @@ public final class LunaCommand {
                         return 1;
                     })))
 
+            .then(literal("rango")
+                // ⚠ Nivel 4 y no 3. Un rango desbloquea comodidad para siempre;
+                //   los comandos de nivel 3 son de diagnostico y los tienen los
+                //   moderadores. Dar rangos es de la administracion.
+                .requires(s -> s.hasPermissionLevel(4))
+                .executes(ctx -> listarRangos(ctx.getSource()))
+                .then(argument("jugador", StringArgumentType.word())
+                    .then(argument("rango", StringArgumentType.word())
+                        .executes(ctx -> ponerRango(ctx.getSource(),
+                            StringArgumentType.getString(ctx, "jugador"),
+                            StringArgumentType.getString(ctx, "rango"))))))
+
             .then(literal("rotarcazas")
                 .requires(s -> s.hasPermissionLevel(3))
                 .executes(ctx -> rotarCazas(ctx.getSource())))
@@ -595,6 +607,96 @@ public final class LunaCommand {
     }
 
     /** Fuerza la rotación de cazas. Herramienta de administración. */
+    /** Los rangos que existen y cuanta gente hay en cada uno. */
+    private static int listarRangos(ServerCommandSource src) {
+        var svc = LunaEternal.ranks();
+        if (svc == null) {
+            src.sendFeedback(() -> Text.literal("§cEl sistema de rangos no está listo."), false);
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                var reparto = svc.reparto();
+                var lineas = new java.util.ArrayList<String>();
+                lineas.add("§7— rangos de jugador, de mayor a menor —");
+                for (var r : net.pokereport.luna.ui.Tablist.Rank.deJugador()) {
+                    lineas.add("  " + r.tag + " §8" + r.name()
+                        + " §7· nivel §f" + r.escalon
+                        + " §7· §f" + reparto.getOrDefault(r, 0) + " §7jugadores");
+                }
+                lineas.add("§8/luna rango <jugador> <RANGO>");
+                src.getServer().execute(() -> {
+                    for (String l : lineas) {
+                        src.sendFeedback(() -> Text.literal(l), false);
+                    }
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo listar los rangos", e);
+            }
+        });
+        return 1;
+    }
+
+    /**
+     * Cambia el rango de alguien.
+     *
+     * <p>⚠⚠ FUNCIONA AUNQUE NO ESTE CONECTADO, y es a proposito: los rangos se
+     * conceden desde fuera del juego —una compra, un evento— y esperar a que la
+     * persona entre para poder dárselo convierte una tarea de un minuto en una
+     * que hay que recordar.
+     *
+     * <p>⚠ Si está conectado se le refresca la etiqueta <b>y se le avisa</b>. Es
+     * la lección de los clanes: el estado no es de quien lo mira, y un rango que
+     * cambia sin que se note es un rango que nadie agradece.
+     */
+    private static int ponerRango(ServerCommandSource src, String jugador,
+                                  String rango) {
+        var svc = LunaEternal.ranks();
+        if (svc == null) {
+            src.sendFeedback(() -> Text.literal("§cEl sistema de rangos no está listo."), false);
+            return 0;
+        }
+        var r = net.pokereport.luna.ui.Tablist.Rank.de(rango);
+        if (r.equipo || !r.name().equalsIgnoreCase(rango.trim())) {
+            // ⚠ `Rank.de` devuelve NOVATO ante un nombre desconocido, asi que
+            //   sin esta comprobacion un error de tecleo DEGRADARIA al jugador
+            //   en silencio en vez de dar error.
+            src.sendFeedback(() -> Text.literal(
+                "§cRango desconocido. Usa §f/luna rango §7para ver los que hay."), false);
+            return 0;
+        }
+        var server = src.getServer();
+        LunaEternal.submit(() -> {
+            try {
+                var conectado = server.getPlayerManager().getPlayer(jugador);
+                java.util.UUID uuid = conectado != null ? conectado.getUuid() : null;
+                Long id = LunaEternal.players().resolveByName(jugador);
+                if (id == null) {
+                    server.execute(() -> src.sendFeedback(() -> Text.literal(
+                        "§cNo conozco a §f" + jugador + "§c."), false));
+                    return;
+                }
+                var puesto = svc.cambiar(id, uuid, r);
+                server.execute(() -> {
+                    if (puesto == null) {
+                        src.sendFeedback(() -> Text.literal("§cNo se pudo cambiar."), false);
+                        return;
+                    }
+                    src.sendFeedback(() -> Text.literal(
+                        "§a" + jugador + " §7ahora es " + puesto.tag), false);
+                    if (conectado != null && !conectado.isRemoved()) {
+                        net.pokereport.luna.ui.Tablist.refrescarClan(server, conectado);
+                        conectado.sendMessage(Text.literal(
+                            "§7Tu rango ahora es " + puesto.tag), false);
+                    }
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo cambiar el rango de {}", jugador, e);
+            }
+        });
+        return 1;
+    }
+
     private static int rotarCazas(ServerCommandSource src) {
         var server = src.getServer();
         LunaEternal.submit(() -> {

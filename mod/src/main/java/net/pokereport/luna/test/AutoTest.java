@@ -83,6 +83,7 @@ public final class AutoTest {
             testTelemetria(a, b);
             testCazas(a);
             testCazasPremios(a);
+            testRangos(a);
             testVozPokedex();
             testCosmeticos();
             testOficios();
@@ -1248,6 +1249,80 @@ public final class AutoTest {
         check("no se cobra un objetivo que no existe",
               svc.cobrar(jugador, -1, java.util.UUID.randomUUID())
                  == net.pokereport.luna.hunt.HuntService.Resultado.CADUCADO);
+    }
+
+    /**
+     * LOS RANGOS.
+     *
+     * <p>⚠⚠ Lo que de verdad se comprueba es que <b>un nombre desconocido no
+     * degrade a nadie en silencio</b>. {@code Rank.de} devuelve el más bajo
+     * ante lo que no reconoce —que es lo correcto para leer una fila vieja—,
+     * pero por eso mismo un error de tecleo en el comando bajaría a un LEYENDA
+     * a NOVATO sin decir nada. El comando lo comprueba aparte, y esto vigila
+     * que la pieza de abajo siga comportándose como se espera.
+     */
+    private void testRangos(long jugador) throws Exception {
+        var svc = LunaEternal.ranks();
+        if (svc == null) {
+            check("el servicio de rangos está vivo", false);
+            return;
+        }
+        var R = net.pokereport.luna.ui.Tablist.Rank.class;
+
+        check("hay 5 rangos de jugador",
+              net.pokereport.luna.ui.Tablist.Rank.deJugador().size() == 5);
+        check("el rango por defecto es el más bajo",
+              net.pokereport.luna.ui.Tablist.Rank.porDefecto()
+                  == net.pokereport.luna.ui.Tablist.Rank.NOVATO);
+
+        // ⚠ Los escalones son 1..5 SIN HUECOS Y SIN REPETIRSE. Un hueco o un
+        //   empate haría que dos rangos desbloquearan lo mismo, y entonces
+        //   subir de rango no daría nada -- que es peor que no subir.
+        var vistos = new java.util.HashSet<Integer>();
+        boolean bien = true;
+        for (var r : net.pokereport.luna.ui.Tablist.Rank.deJugador()) {
+            if (r.escalon < 1 || r.escalon > 5 || !vistos.add(r.escalon)) {
+                bien = false;
+            }
+        }
+        check("los escalones de jugador son 1..5, sin huecos ni repetidos",
+              bien && vistos.size() == 5);
+
+        // ⚠ Los de equipo van a -1: NO son «más altos» que LEYENDA, son de otra
+        //   clase. Con un escalón positivo, dar OP a alguien para mirar una cosa
+        //   le regalaría todo lo que desbloquea el rango más alto.
+        boolean equipoAparte = true;
+        for (var r : R.getEnumConstants()) {
+            if (r.equipo && r.escalon != -1) {
+                equipoAparte = false;
+            }
+        }
+        check("los rangos de equipo no tienen escalón de progresión", equipoAparte);
+
+        check("un rango desconocido cae al más bajo",
+              net.pokereport.luna.ui.Tablist.Rank.de("NO_EXISTE")
+                  == net.pokereport.luna.ui.Tablist.Rank.porDefecto());
+        check("el nombre se reconoce sin importar mayúsculas",
+              net.pokereport.luna.ui.Tablist.Rank.de("leyenda")
+                  == net.pokereport.luna.ui.Tablist.Rank.LEYENDA);
+
+        // ⚠⚠ NO SE PUEDE CONCEDER UN RANGO DE EQUIPO. Si se pudiera, cualquiera
+        //    con el comando se fabricaría un administrador.
+        check("no se puede conceder ADMIN",
+              svc.cambiar(jugador, null, net.pokereport.luna.ui.Tablist.Rank.ADMIN) == null);
+        check("no se puede conceder MODERADOR",
+              svc.cambiar(jugador, null,
+                  net.pokereport.luna.ui.Tablist.Rank.MODERADOR) == null);
+
+        // ---- cambiar y volver ----------------------------------------------
+        var puesto = svc.cambiar(jugador, null,
+                net.pokereport.luna.ui.Tablist.Rank.CAMPEON);
+        check("se puede conceder un rango de jugador",
+              puesto == net.pokereport.luna.ui.Tablist.Rank.CAMPEON);
+        var reparto = svc.reparto();
+        check("el reparto cuenta a alguien en CAMPEON",
+              reparto.getOrDefault(net.pokereport.luna.ui.Tablist.Rank.CAMPEON, 0) >= 1);
+        svc.cambiar(jugador, null, net.pokereport.luna.ui.Tablist.Rank.NOVATO);
     }
 
     /**

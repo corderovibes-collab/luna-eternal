@@ -30,25 +30,82 @@ public final class Tablist {
      * nunca se muestra.
      */
     public enum Rank {
-        ADMIN     ("00_admin",     "§4§lADMIN",      "§4"),
-        DEV       ("10_dev",       "§d§lDEV",        "§d"),
-        MODERADOR ("20_mod",       "§2§lMOD",        "§2"),
-        MAESTRO   ("30_maestro",   "§5§lMAESTRO",    "§5"),
-        LIDER     ("40_lider",     "§6§lLÍDER",      "§6"),
-        AS        ("50_as",        "§b§lAS",         "§b"),
-        ENTRENADOR("60_entrenador","§c§lENTRENADOR", "§c"),
-        JUGADOR   ("90_jugador",   "§7JUGADOR",      "§f");
+        // --- de equipo. NO se ganan jugando y no desbloquean nada del juego:
+        //     un moderador no tiene mas mochila por ser moderador.
+        ADMIN     ("00_admin",  "§4§lADMIN", "§4", -1, true),
+        DEV       ("10_dev",    "§d§lDEV",   "§d", -1, true),
+        MODERADOR ("20_mod",    "§2§lMOD",   "§2", -1, true),
+
+        // --- de jugador, de mayor a menor (decision del usuario, 2026-08-26).
+        //
+        // ⚠ El `escalon` es lo que ORDENA, y es un numero explicito en vez del
+        //   `ordinal()`: con `ordinal()`, meter un rango en medio le cambia el
+        //   nivel a todos los de abajo -- que es exactamente lo que la leccion
+        //   del ENUM de MariaDB dice que no hagamos.
+        LEYENDA   ("30_leyenda", "§6§lLEYENDA", "§6", 5, false),
+        MAESTRO   ("40_maestro", "§5§lMAESTRO", "§5", 4, false),
+        CAMPEON   ("50_campeon", "§b§lCAMPEÓN", "§b", 3, false),
+        ELITE     ("60_elite",   "§a§lÉLITE",   "§a", 2, false),
+        NOVATO    ("90_novato",  "§7NOVATO",    "§f", 1, false);
 
         public final String teamName;
         /** Etiqueta visible antes del nombre. */
         public final String tag;
         /** Color del propio nombre. */
         public final String nameColor;
+        /**
+         * Nivel de progresion, 1 el mas bajo. <b>-1 en los de equipo</b>: un
+         * rango de staff no es «mas alto» que LEYENDA, es de otra clase.
+         */
+        public final int escalon;
+        public final boolean equipo;
 
-        Rank(String teamName, String tag, String nameColor) {
+        Rank(String teamName, String tag, String nameColor, int escalon,
+             boolean equipo) {
             this.teamName = teamName;
             this.tag = tag;
             this.nameColor = nameColor;
+            this.escalon = escalon;
+            this.equipo = equipo;
+        }
+
+        /** El rango por defecto. Todo el mundo empieza aqui. */
+        public static Rank porDefecto() {
+            return NOVATO;
+        }
+
+        /**
+         * El rango con ese nombre, o {@link #NOVATO}.
+         *
+         * <p>⚠ Un nombre que no exista devuelve NOVATO y <b>lo dice en el
+         * log</b>. Devolverlo en silencio convertiria un error de tecleo en
+         * «este jugador perdio su rango», que es la clase de fallo que nadie
+         * relaciona con su causa.
+         */
+        public static Rank de(String nombre) {
+            if (nombre != null) {
+                for (Rank r : values()) {
+                    if (r.name().equalsIgnoreCase(nombre.trim())) {
+                        return r;
+                    }
+                }
+            }
+            if (nombre != null && !nombre.isBlank()) {
+                net.pokereport.luna.LunaEternal.LOG.warn(
+                    "Rango desconocido «{}»: se usa {}", nombre, porDefecto());
+            }
+            return porDefecto();
+        }
+
+        /** Los que un jugador puede tener, de mayor a menor. */
+        public static java.util.List<Rank> deJugador() {
+            var salida = new java.util.ArrayList<Rank>();
+            for (Rank r : values()) {
+                if (!r.equipo) {
+                    salida.add(r);
+                }
+            }
+            return salida;
         }
     }
 
@@ -158,12 +215,38 @@ public final class Tablist {
     }
 
     /**
-     * Rango del jugador. Provisional: hasta que exista el sistema de rangos
-     * (PHASE 10) todo el mundo es JUGADOR salvo los operadores.
+     * Rango del jugador.
+     *
+     * <h2>⚠⚠ SALE DE LA CACHE, NO DE LA BASE</h2>
+     *
+     * Esto lo llama el dibujado del tablist y el prefijo del chat, o sea
+     * <b>muchas veces y en el hilo del servidor</b>. Consultar la base aqui
+     * seria tocar la base desde el hilo del servidor, que es justo lo que la
+     * primera regla del proyecto prohibe.
+     *
+     * <p>La cache la rellena {@code RankService} al entrar, y se actualiza
+     * cuando alguien cambia de rango.
+     *
+     * <p>⚠ Un operador se ve como ADMIN <b>ademas</b> de su rango guardado: es
+     * informacion operativa y tiene que verse. Pero para lo que DESBLOQUEA
+     * cuenta el guardado ({@link #escalonDe}) -- si no, darle OP a alguien para
+     * mirar una cosa le regalaria la mochila entera.
      */
     public static Rank rankOf(MinecraftServer server, ServerPlayerEntity player) {
-        if (server.getPlayerManager().isOperator(player.getGameProfile())) return Rank.ADMIN;
-        return Rank.JUGADOR;
+        if (server.getPlayerManager().isOperator(player.getGameProfile())) {
+            return Rank.ADMIN;
+        }
+        return net.pokereport.luna.rank.RankService.enCache(player.getUuid());
+    }
+
+    /**
+     * El escalon que de verdad tiene, para decidir que desbloquea.
+     *
+     * <p>⚠ NO usa {@link #rankOf}, y esa es la diferencia importante: alli un
+     * operador sale como ADMIN, que tiene escalon -1. Aqui manda lo guardado.
+     */
+    public static int escalonDe(ServerPlayerEntity player) {
+        return net.pokereport.luna.rank.RankService.enCache(player.getUuid()).escalon;
     }
 
     /** Cabecera y pie. Se reenvía cuando cambia el número de conectados. */

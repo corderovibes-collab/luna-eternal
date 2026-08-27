@@ -67,6 +67,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.quest.QuestService quests;
     private static net.pokereport.luna.economy.EconomyStats stats;
     private static net.pokereport.luna.hunt.HuntService hunts;
+    private static net.pokereport.luna.rank.RankService ranks;
     private static net.pokereport.luna.cosmetics.CosmeticsService cosmetics;
     private static ExecutorService io;
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
@@ -107,6 +108,21 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             var player = handler.getPlayer();
             Tablist.onJoin(server, player);
+            // ⚠⚠ EL RANGO SE CARGA Y LUEGO SE REPINTA LA ETIQUETA. `onJoin` ya
+            //    la puso, pero con el rango que hubiera en cache -- y al entrar
+            //    no hay ninguno. Sin este repintado, quien entra se ve NOVATO
+            //    hasta la siguiente vez que algo toque su prefijo, que puede
+            //    ser nunca. Es la leccion del 23-ago: si el servidor cambia un
+            //    estado que el cliente dibuja, el servidor lo reenvia.
+            if (ranks != null) {
+                var perfil = player.getGameProfile();
+                ranks.cargar(perfil.getId(), perfil.getName(),
+                        () -> server.execute(() -> {
+                            if (!player.isRemoved()) {
+                                Tablist.refrescarClan(server, player);
+                            }
+                        }));
+            }
             // La etiqueta del clan, que va en el mismo equipo que el rango.
             Tablist.refrescarClan(server, player);
             PlayerCache.refresh(player);
@@ -140,6 +156,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             PlayerCache.forget(player);
             net.pokereport.luna.heal.HealService.olvidar(player);
             net.pokereport.luna.pokedex.ScanListener.olvidar(player);
+            net.pokereport.luna.rank.RankService.olvidar(player.getUuid());
             Tablist.onLeave(server, player);
         });
 
@@ -216,6 +233,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             quests = new net.pokereport.luna.quest.QuestService(database);
             stats = new net.pokereport.luna.economy.EconomyStats(database);
             hunts = new net.pokereport.luna.hunt.HuntService(database);
+            ranks = new net.pokereport.luna.rank.RankService(database);
             cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
@@ -270,6 +288,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.market.MarketService market() { return market; }
     public static net.pokereport.luna.market.Tasador tasador() { return tasador; }
     public static net.pokereport.luna.hunt.HuntService hunts() { return hunts; }
+
+    public static net.pokereport.luna.rank.RankService ranks() { return ranks; }
     public static net.pokereport.luna.cosmetics.CosmeticsService cosmetics() { return cosmetics; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }

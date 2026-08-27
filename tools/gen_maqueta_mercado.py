@@ -240,7 +240,7 @@ def maqueta_gts():
     """La pantalla de la derecha: conmutador, barra, buscador y filas."""
     L = Lienzo()
     chasis(L, "GTS")
-    MARGEN, BOT, BOT_SEP, FILA = 12, 34, 8, 70
+    MARGEN, BOT, BOT_SEP, FILA = 12, 44, 8, 70
 
     # ⚠ La fila de navegacion del panel se dibuja AUNQUE no sea nuestra: es lo
     #   que hace que la maqueta cace que algo se le monta encima. Sin ella, el
@@ -411,7 +411,7 @@ def nav(L):
 
 
 # --- las mismas medidas que el Java. Si cambian alli, cambian aqui.
-MARGEN, BOT, BOT_SEP, FILA, PIE, CONM_W = 12, 34, 8, 70, 34, 100
+MARGEN, BOT, BOT_SEP, FILA, PIE, CONM_W = 12, 44, 8, 70, 34, 100
 LISTA_Y = PANT_Y + MARGEN + BOT + 6 + 28 + 34
 FILAS = max(1, ((PANT_Y + PANT_H - MARGEN - PIE) - (LISTA_Y + 18)) // FILA)
 
@@ -427,7 +427,7 @@ def cabecera_derecha(L, marcado):
         L.texto(f"conm{i}.t", et, bx + CONM_W // 2, y1 + 10, 14, BLANCO,
                 "centro", limite=CONM_W - 6)
 
-    n = 4 if marcado == "objetos" else 6
+    n = 3 if marcado == "objetos" else 5
     total = n * BOT + (n - 1) * BOT_SEP
     x0 = PANT_X + PANT_W - MARGEN - total
     for i in range(n):

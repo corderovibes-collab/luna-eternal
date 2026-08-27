@@ -73,7 +73,11 @@ public class MercadoScreen extends Screen {
     private static final int MARGEN = 12;
 
     private static final int FILA = 70;
-    private static final int BOT = 34, BOT_SEP = 8;
+    /**
+     * ⚠ 44 y no 34. A 34 el icono cabía a 20 px, y a 20 px un trazo fino con
+     * filtrado lineal es una mancha gris.
+     */
+    private static final int BOT = 44, BOT_SEP = 8;
     private static final int PIE = 34;
     private static final int CONM_W = 100;
 
@@ -86,7 +90,24 @@ public class MercadoScreen extends Screen {
     private static final int BORDE_ENCIMA = 0xFFF35C0C;
     private static final int TEXTO_OSCURO = 0xFF16203A;
     private static final int TEXTO_SUAVE = 0xFF5A668C;
-    private static final int TEXTO_CONTORNO = 0xFFF2F6FF;
+    /**
+     * ⚠⚠⚠ DOS CONTORNOS, UNO POR FONDO.
+     *
+     * <p>Un contorno sirve para <b>despegar el texto de su fondo</b>, así que
+     * tiene que ir en contra de ese fondo:
+     *
+     * <pre>
+     *   fila CLARA + texto oscuro + halo CLARO   ->  se despega. Bien.
+     *   franja OSCURA + texto oro + halo CLARO   ->  BORRÓN. Mal.
+     * </pre>
+     *
+     * <p>Con una sola constante clara, el rótulo del botón que hay bajo el
+     * ratón salía en oro con halo casi blanco <b>sobre la franja oscura</b> —
+     * ilegible, y es lo que reportó el usuario.
+     */
+    private static final int CONTORNO_CLARO = 0xFFF2F6FF;
+    private static final int CONTORNO_OSCURO = 0xFF080B12;
+    private static final int TEXTO_CONTORNO = CONTORNO_CLARO;
     private static final int SEPARADOR = 0xFF3C4250;
     private static final int ORO = 0xFFFFD65C;
     private static final int VERDE = 0xFF2E9E56;
@@ -621,7 +642,6 @@ public class MercadoScreen extends Screen {
      * nada, que es justo de lo que se quejó el usuario.
      */
     private static final Boton[] BARRA = {
-        new Boton("buscar", "pokepad.lunaeternal.gts.b_buscar"),
         new Boton("refrescar", "pokepad.lunaeternal.gts.b_refrescar"),
         new Boton("vender", "pokepad.lunaeternal.mercado.b_vender"),
         new Boton("mias", "pokepad.lunaeternal.gts.b_mias"),
@@ -660,10 +680,9 @@ public class MercadoScreen extends Screen {
                     marcado ? 0xFFFFC46B : 0xFF20283C, Math.max(1, pl(2)));
 
             int cx = px(ax + BOT / 2), cy = py(ay + BOT / 2);
-            int lado = pl(BOT - 14);
+            int lado = pl(BOT - 16);
             int color = marcado ? 0xFF2A1C00 : 0xFFFFFFFF;
             switch (b.id()) {
-                case "buscar" -> Iconos.lupa(ctx, cx, cy, lado, color);
                 case "refrescar" -> Iconos.refrescar(ctx, cx, cy, lado, color);
                 case "vender" -> Iconos.mas(ctx, cx, cy, lado, color);
                 case "mias" -> Iconos.lista(ctx, cx, cy, lado, color);
@@ -812,7 +831,7 @@ public class MercadoScreen extends Screen {
 
             int precioDer = ax + aw - 150;
             textoDer(ctx, Text.literal(String.format("%,d", o.precio())),
-                    precioDer, y + 10, 21, 0xFF8A6A00, true);
+                    precioDer, y + 8, 24, 0xFF6B5200, CONTORNO_CLARO);
             textoDer(ctx, Text.literal(queda(o.expira())), precioDer, y + 40, 12,
                     TEXTO_SUAVE, true);
 
@@ -1192,12 +1211,6 @@ public class MercadoScreen extends Screen {
     private void pulsarBarra(String id) {
         sonar();
         switch (id) {
-            case "buscar" -> {
-                setFocused(campoBusqueda);
-                campoBusqueda.setFocused(true);
-                pagina = 0;
-                pedir();
-            }
             case "refrescar" -> pedir();
             case "vender" -> {
                 modo = modo == Modo.VENDER ? Modo.LISTA : Modo.VENDER;
@@ -1397,6 +1410,14 @@ public class MercadoScreen extends Screen {
      * {@code centrado=false} dibuja el texto <b>hacia fuera</b>. Ahí estaba la
      * causa de casi toda la fealdad de la versión anterior.
      */
+    /** ⚠ Con color de contorno: el fondo decide, ver `CONTORNO_CLARO`. */
+    private void textoDer(DrawContext ctx, Text linea, int derecha, int arriba,
+                          int alto, int color, int contorno) {
+        int a = Math.round(textRenderer.getWidth(linea) * alto
+                / (float) textRenderer.fontHeight);
+        texto(ctx, linea, derecha - a, arriba, alto, color, false, contorno);
+    }
+
     private void textoDer(DrawContext ctx, Text linea, int derecha, int arriba,
                           int alto, int color, boolean contorno) {
         int a = Math.round(textRenderer.getWidth(linea) * alto
@@ -1406,6 +1427,13 @@ public class MercadoScreen extends Screen {
 
     private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,
                        int color, boolean centrado, boolean contorno) {
+        texto(ctx, linea, cx, arriba, alto, color, centrado,
+                contorno ? CONTORNO_CLARO : 0);
+    }
+
+    /** {@code contorno == 0} significa «sin contorno». */
+    private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,
+                       int color, boolean centrado, int contorno) {
         float escala = alto * k / textRenderer.fontHeight;
         if (escala <= 0) {
             return;
@@ -1417,11 +1445,11 @@ public class MercadoScreen extends Screen {
         int anchoTexto = textRenderer.getWidth(linea);
         int tx = Math.round(cx * k / escala) - (centrado ? anchoTexto / 2 : 0);
         int ty = Math.round(arriba * k / escala);
-        if (contorno) {
-            ctx.drawText(textRenderer, linea, tx - 1, ty, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx + 1, ty, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx, ty - 1, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx, ty + 1, TEXTO_CONTORNO, false);
+        if (contorno != 0) {
+            ctx.drawText(textRenderer, linea, tx - 1, ty, contorno, false);
+            ctx.drawText(textRenderer, linea, tx + 1, ty, contorno, false);
+            ctx.drawText(textRenderer, linea, tx, ty - 1, contorno, false);
+            ctx.drawText(textRenderer, linea, tx, ty + 1, contorno, false);
         }
         ctx.drawText(textRenderer, linea, tx, ty, color, false);
         m.pop();

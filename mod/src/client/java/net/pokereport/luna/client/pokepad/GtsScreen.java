@@ -81,7 +81,24 @@ public class GtsScreen extends Screen {
     private static final int BORDE_ENCIMA = 0xFFF35C0C;
     private static final int TEXTO_OSCURO = 0xFF16203A;
     private static final int TEXTO_SUAVE = 0xFF5A668C;
-    private static final int TEXTO_CONTORNO = 0xFFF2F6FF;
+    /**
+     * ⚠⚠⚠ DOS CONTORNOS, UNO POR FONDO.
+     *
+     * <p>Un contorno sirve para <b>despegar el texto de su fondo</b>, así que
+     * tiene que ir en contra de ese fondo:
+     *
+     * <pre>
+     *   fila CLARA + texto oscuro + halo CLARO   ->  se despega. Bien.
+     *   franja OSCURA + texto oro + halo CLARO   ->  BORRÓN. Mal.
+     * </pre>
+     *
+     * <p>Con una sola constante clara, el rótulo del botón que hay bajo el
+     * ratón salía en oro con halo casi blanco <b>sobre la franja oscura</b> —
+     * ilegible, y es lo que reportó el usuario.
+     */
+    private static final int CONTORNO_CLARO = 0xFFF2F6FF;
+    private static final int CONTORNO_OSCURO = 0xFF080B12;
+    private static final int TEXTO_CONTORNO = CONTORNO_CLARO;
     private static final int SEPARADOR = 0xFF3C4250;
     private static final int ORO = 0xFFFFD65C;
     private static final int VERDE = 0xFF2E9E56;
@@ -705,7 +722,6 @@ public class GtsScreen extends Screen {
     private record Boton(String id, String etiqueta) {}
 
     private static final Boton[] BARRA = {
-        new Boton("buscar", "pokepad.lunaeternal.gts.b_buscar"),
         new Boton("refrescar", "pokepad.lunaeternal.gts.b_refrescar"),
         new Boton("filtros", "pokepad.lunaeternal.gts.b_filtros"),
         new Boton("vender", "pokepad.lunaeternal.gts.b_vender"),
@@ -714,7 +730,12 @@ public class GtsScreen extends Screen {
     };
 
     /** Lado de un botón de la barra, en unidades de arte. */
-    private static final int BOT = 34;
+    /**
+     * ⚠ 44 y no 34. A 34 el icono cabía a 20 px, y a 20 px un trazo fino con
+     * filtrado lineal es una mancha gris. Un icono se lee por su silueta, y una
+     * silueta necesita masa.
+     */
+    private static final int BOT = 44;
     private static final int BOT_SEP = 8;
 
     private int botonX(int i) {
@@ -754,10 +775,9 @@ public class GtsScreen extends Screen {
                     marcado ? 0xFFFFC46B : 0xFF20283C, Math.max(1, pl(2)));
 
             int cx = px(ax + BOT / 2), cy = py(ay + BOT / 2);
-            int lado = pl(BOT - 14);
+            int lado = pl(BOT - 16);
             int color = marcado ? 0xFF2A1C00 : 0xFFFFFFFF;
             switch (b.id()) {
-                case "buscar" -> Iconos.lupa(ctx, cx, cy, lado, color);
                 case "refrescar" -> Iconos.refrescar(ctx, cx, cy, lado, color);
                 case "filtros" -> Iconos.embudo(ctx, cx, cy, lado, color);
                 case "vender" -> Iconos.mas(ctx, cx, cy, lado, color);
@@ -771,10 +791,17 @@ public class GtsScreen extends Screen {
         // no flotando junto al cursor porque flotando taparía la primera fila,
         // que es justo la que se está mirando.
         if (encimaDe != null) {
-            // Sobre el buscador, que es la unica franja libre de esa fila.
-            textoDer(ctx, Text.translatable(encimaDe),
-                    PANT_X + PANT_W - MARGEN - 8, PANT_Y + MARGEN + BOT + 14, 13,
-                    ORO, true);
+            // ⚠⚠ UN CARTEL CON FONDO, no un texto suelto. Antes iba en oro con
+            //    halo casi blanco SOBRE LA FRANJA OSCURA del buscador: dos
+            //    claros pegados no se despegan de nada. Con su propia caja
+            //    oscura detrás se lee siempre, mire lo que mire por debajo.
+            var et = Text.translatable(encimaDe);
+            int a = anchoArte(et.getString(), 15) + 20;
+            int bx = PANT_X + PANT_W - MARGEN - a;
+            int by = PANT_Y + MARGEN + BOT + 4;
+            ctx.fill(px(bx), py(by), px(bx + a), py(by + 26), 0xF0121722);
+            marco(ctx, px(bx), py(by), pl(a), pl(26), ORO, Math.max(1, pl(2)));
+            texto(ctx, et, bx + 10, by + 6, 15, 0xFFFFE08A, false, 0);
         }
         if (!aviso.isEmpty()) {
             texto(ctx, Text.literal(aviso), PANT_X + MARGEN,
@@ -837,7 +864,7 @@ public class GtsScreen extends Screen {
                 altoN--;
             }
             texto(ctx, Text.literal(nombre + (e.shiny() ? " ✦" : "")),
-                    ax + 70, y + 8, altoN, e.shiny() ? 0xFF8A6A00 : TEXTO_OSCURO,
+                    ax + 70, y + 8, altoN, e.shiny() ? 0xFF6B5200 : TEXTO_OSCURO,
                     false, true);
             int tx = ax + 70;
             for (var tp : tipos(e.especie())) {
@@ -858,7 +885,7 @@ public class GtsScreen extends Screen {
             }
             if (perfectos > 0) {
                 int c = perfectos >= 5 ? 0xFF1F7A3C : perfectos >= 3
-                        ? 0xFF8A6A00 : TEXTO_SUAVE;
+                        ? 0xFF6B5200 : TEXTO_SUAVE;
                 ctx.fill(px(ax + 296), py(y + 36), px(ax + 296 + 74), py(y + 53),
                         perfectos >= 5 ? 0x331F7A3C : 0x22000000);
                 texto(ctx, Text.literal(perfectos + " × 31"), ax + 333, y + 38,
@@ -871,7 +898,7 @@ public class GtsScreen extends Screen {
             // ---- DERECHA: el precio, grande, y qué tal está.
             int precioDer = ax + aw - 150;
             textoDer(ctx, Text.literal(String.format("%,d", e.precio())),
-                    precioDer, y + 10, 21, 0xFF8A6A00, true);
+                    precioDer, y + 8, 24, 0xFF6B5200, CONTORNO_CLARO);
             if (e.estimado() > 0) {
                 double razon = e.precio() / (double) e.estimado();
                 textoDer(ctx, Text.translatable(razon < 0.7
@@ -1053,7 +1080,7 @@ public class GtsScreen extends Screen {
             String nombre = m.mote().isBlank()
                     ? especieEs(m.especie()).getString() : m.mote();
             texto(ctx, Text.literal(nombre + (m.shiny() ? " ✦" : "")),
-                    ax + 70, y + 8, 20, m.shiny() ? 0xFF8A6A00 : TEXTO_OSCURO,
+                    ax + 70, y + 8, 22, m.shiny() ? 0xFF6B5200 : TEXTO_OSCURO,
                     false, true);
             int tx2 = ax + 70;
             for (var tp : tipos(m.especie())) {
@@ -1070,7 +1097,7 @@ public class GtsScreen extends Screen {
                     ax + 300, y + 36, 12, TEXTO_SUAVE, false, true);
             textoDer(ctx, Text.translatable("pokepad.lunaeternal.gts.vale",
                             String.format("%,d", m.estimado())),
-                    ax + aw - 16, y + 22, 16, 0xFF8A6A00, true);
+                    ax + aw - 16, y + 20, 19, 0xFF6B5200, CONTORNO_CLARO);
         }
         if (!tercera && paginas() > 1) {
             int y = PANT_Y + PANT_H - MARGEN - 28;
@@ -1393,7 +1420,7 @@ public class GtsScreen extends Screen {
         sonar();
         aviso = "";
         switch (id) {
-            case "buscar", "refrescar" -> {
+            case "refrescar" -> {
                 pagina = 0;
                 elegido = -1;
                 pedir();
@@ -1544,7 +1571,11 @@ public class GtsScreen extends Screen {
         }
         // Enter busca: es lo que hace todo el mundo tras escribir en un buscador.
         if (tecla == 257 && campoBusqueda != null && campoBusqueda.isFocused()) {
-            pulsarBarra("buscar");
+            // ⚠ «buscar» ya no es un botón --el campo está VISIBLE justo
+            //   debajo, así que un botón para enfocarlo no hacía nada que
+            //   no hiciera un clic--. Enter refresca, que es lo que se
+            //   espera al terminar de escribir.
+            pulsarBarra("refrescar");
             return true;
         }
         return super.keyPressed(tecla, escaneo, mods);
@@ -1654,6 +1685,14 @@ public class GtsScreen extends Screen {
      * <p>No era un problema de medidas ni de espacio: era que <b>no existía la
      * alineación a la derecha</b> y yo creía estar usándola.
      */
+    /** ⚠ Con color de contorno: el fondo decide, ver `CONTORNO_CLARO`. */
+    private void textoDer(DrawContext ctx, Text linea, int derecha, int arriba,
+                          int alto, int color, int contorno) {
+        int a = Math.round(textRenderer.getWidth(linea) * alto
+                / (float) textRenderer.fontHeight);
+        texto(ctx, linea, derecha - a, arriba, alto, color, false, contorno);
+    }
+
     private void textoDer(DrawContext ctx, Text linea, int derecha, int arriba,
                           int alto, int color, boolean contorno) {
         int ancho = Math.round(textRenderer.getWidth(linea) * alto
@@ -1864,6 +1903,13 @@ public class GtsScreen extends Screen {
 
     private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,
                        int color, boolean centrado, boolean contorno) {
+        texto(ctx, linea, cx, arriba, alto, color, centrado,
+                contorno ? CONTORNO_CLARO : 0);
+    }
+
+    /** {@code contorno == 0} significa «sin contorno». */
+    private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,
+                       int color, boolean centrado, int contorno) {
         float escala = alto * k / textRenderer.fontHeight;
         if (escala <= 0) {
             return;
@@ -1875,11 +1921,11 @@ public class GtsScreen extends Screen {
         int anchoTexto = textRenderer.getWidth(linea);
         int tx = Math.round(cx * k / escala) - (centrado ? anchoTexto / 2 : 0);
         int ty = Math.round(arriba * k / escala);
-        if (contorno) {
-            ctx.drawText(textRenderer, linea, tx - 1, ty, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx + 1, ty, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx, ty - 1, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx, ty + 1, TEXTO_CONTORNO, false);
+        if (contorno != 0) {
+            ctx.drawText(textRenderer, linea, tx - 1, ty, contorno, false);
+            ctx.drawText(textRenderer, linea, tx + 1, ty, contorno, false);
+            ctx.drawText(textRenderer, linea, tx, ty - 1, contorno, false);
+            ctx.drawText(textRenderer, linea, tx, ty + 1, contorno, false);
         }
         ctx.drawText(textRenderer, linea, tx, ty, color, false);
         m.pop();

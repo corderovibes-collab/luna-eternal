@@ -96,141 +96,149 @@ public final class Iconos {
     }
 
     // ---- los iconos --------------------------------------------------------
+    //
+    // ⚠⚠ TODOS SE DIBUJAN CON TRAZO GRUESO, `lado/6` COMO MINIMO.
+    //
+    //    Antes iban a `lado/10`: dos pixeles de arte. A esa escala, y con el
+    //    filtrado lineal que hace falta para el escalado por medios pasos, una
+    //    linea de dos pixeles se convierte en una mancha gris. Un icono se lee
+    //    por su SILUETA, y una silueta necesita masa.
+    //
+    // ⚠ Y por eso las formas son MAS SIMPLES que antes, no mas detalladas: a 28
+    //   pixeles el detalle no se ve, solo ensucia.
 
-    /** LUPA: un aro y el mango en diagonal. */
+    private static int trazo(int lado) {
+        return Math.max(2, lado / 6);
+    }
+
+    /** LUPA: un aro grueso y el mango en diagonal. */
     public static void lupa(DrawContext ctx, int cx, int cy, int lado, int color) {
-        int r = lado * 7 / 20;
-        int g = Math.max(1, lado / 10);
-        aro(ctx, cx - lado / 10, cy - lado / 10, r, g, color);
-        linea(ctx, cx + r / 2, cy + r / 2, cx + lado / 3, cy + lado / 3,
-                Math.max(2, g + 1), color);
+        int g = trazo(lado);
+        int r = lado * 2 / 5;
+        int ox = cx - lado / 8, oy = cy - lado / 8;
+        aro(ctx, ox, oy, r, g, color);
+        // El mango sale del borde del aro, no del centro: si sale del centro
+        // cruza el cristal y parece una señal de prohibido.
+        int d = (int) (r * 0.71);
+        linea(ctx, ox + d, oy + d, cx + lado / 2, cy + lado / 2, g + 1, color);
     }
 
-    /**
-     * EMBUDO: el filtro.
-     *
-     * <p>⚠ Un embudo y no unas rayas con flechas: la forma de embudo se entiende
-     * sin saber leer, que es de lo que va un icono.
-     */
+    /** EMBUDO: los filtros. Se entiende sin saber leer. */
     public static void embudo(DrawContext ctx, int cx, int cy, int lado, int color) {
-        int ancho = lado * 3 / 4;
-        int alto = lado / 2;
-        trianguloAbajo(ctx, cx, cy - lado / 3, ancho, alto, color);
-        int g = Math.max(2, lado / 8);
-        ctx.fill(cx - g / 2, cy - lado / 3 + alto, cx + g / 2, cy + lado / 3, color);
+        int g = trazo(lado);
+        int mitad = lado / 2;
+        int alto = lado * 2 / 5;
+        // El cono, por franjas: ancho arriba y estrecho abajo.
+        for (int i = 0; i < alto; i++) {
+            int w = mitad - i * mitad / Math.max(1, alto) * 3 / 4;
+            ctx.fill(cx - w, cy - mitad + i, cx + w, cy - mitad + i + 1, color);
+        }
+        // El tallo.
+        ctx.fill(cx - g / 2, cy - mitad + alto, cx + (g + 1) / 2, cy + mitad, color);
     }
 
-    /** MÁS: dos barras. Publicar algo nuevo. */
+    /** MÁS: publicar algo nuevo. */
     public static void mas(DrawContext ctx, int cx, int cy, int lado, int color) {
         int b = lado / 2;
-        int g = Math.max(2, lado / 6);
-        ctx.fill(cx - b, cy - g / 2, cx + b, cy + g / 2 + g % 2, color);
-        ctx.fill(cx - g / 2, cy - b, cx + g / 2 + g % 2, cy + b, color);
+        int g = trazo(lado) + 1;
+        ctx.fill(cx - b, cy - g / 2, cx + b, cy + (g + 1) / 2, color);
+        ctx.fill(cx - g / 2, cy - b, cx + (g + 1) / 2, cy + b, color);
     }
 
-    /** LISTA: tres renglones. Lo tuyo publicado. */
+    /**
+     * LISTA: lo tuyo publicado.
+     *
+     * <p>⚠ Punto + renglón, no tres rayas sueltas. Tres rayas iguales son un
+     * icono de menú; con el punto delante se lee como una lista.
+     */
     public static void lista(DrawContext ctx, int cx, int cy, int lado, int color) {
         int b = lado / 2;
-        int g = Math.max(2, lado / 8);
+        int g = trazo(lado);
+        int paso = lado / 3;
         for (int i = -1; i <= 1; i++) {
-            int y = cy + i * (lado / 3) - g / 2;
+            int y = cy + i * paso - g / 2;
             ctx.fill(cx - b, y, cx - b + g, y + g, color);
-            ctx.fill(cx - b + g * 2, y, cx + b, y + g, color);
+            ctx.fill(cx - b + g + Math.max(2, g / 2), y, cx + b, y + g, color);
         }
     }
 
-    /** FLECHA CIRCULAR: refrescar. */
+    /**
+     * FLECHA CIRCULAR: refrescar.
+     *
+     * <p>⚠ El hueco va ARRIBA A LA DERECHA y la punta justo al lado. Con el
+     * hueco en otro sitio, el ojo ve un círculo roto en vez de una flecha.
+     */
     public static void refrescar(DrawContext ctx, int cx, int cy, int lado, int color) {
+        int g = trazo(lado);
         int r = lado * 2 / 5;
-        int g = Math.max(2, lado / 8);
-        // El aro abierto por arriba a la derecha: se salta las franjas de ese
-        // cuadrante para que se vea que es una flecha y no un círculo.
         for (int dy = -r; dy <= r; dy++) {
             int fuera = (int) Math.sqrt(Math.max(0, r * r - dy * dy));
-            int interior = Math.max(0, r - g);
-            int dentro = Math.abs(dy) <= interior
-                    ? (int) Math.sqrt(Math.max(0, interior * interior - dy * dy))
-                    : 0;
-            if (fuera <= 0) {
-                continue;
-            }
-            boolean arriba = dy < -r / 3;
-            if (dentro <= 0) {
-                ctx.fill(cx - fuera, cy + dy, cx + fuera, cy + dy + 1, color);
-            } else {
-                ctx.fill(cx - fuera, cy + dy, cx - dentro, cy + dy + 1, color);
-                if (!arriba) {
-                    ctx.fill(cx + dentro, cy + dy, cx + fuera, cy + dy + 1, color);
+            int dentro = (int) Math.sqrt(Math.max(0, (r - g) * (r - g) - dy * dy));
+            for (int dx = -fuera; dx <= fuera; dx++) {
+                if (Math.abs(dx) < dentro) {
+                    continue;
                 }
+                if (dx > 0 && dy < 0 && dy > -r + g) {
+                    continue;   // el hueco
+                }
+                ctx.fill(cx + dx, cy + dy, cx + dx + 1, cy + dy + 1, color);
             }
         }
-        // La punta de la flecha, arriba a la derecha.
-        int px = cx + r - g / 2, py = cy - r + g;
-        for (int i = 0; i < g * 2; i++) {
-            ctx.fill(px - i, py - i, px + i, py - i + 1, color);
+        // La punta, un triángulo macizo en el hueco.
+        int p = g + lado / 8;
+        for (int i = 0; i < p; i++) {
+            ctx.fill(cx + r - p + i, cy - r + g / 2 - (p - i),
+                     cx + r - p + i + 1, cy - r + g / 2 + (p - i), color);
         }
     }
 
     /**
-     * POKÉ BALL: alternar al mercado de Pokémon.
+     * ETIQUETA DE PRECIO: las ofertas.
      *
-     * <p>⚠ Los colores van fijos —roja arriba, blanca abajo— y no siguen al
-     * botón. Una Poké Ball gris no se reconoce, y el trabajo de un icono es
-     * reconocerse antes de leerse.
-     */
-    public static void pokeball(DrawContext ctx, int cx, int cy, int lado) {
-        int r = lado * 2 / 5;
-        int negro = 0xFF1A1A1A;
-        disco(ctx, cx, cy, r, 0xFFF0F0F0);
-        // La mitad de arriba, roja. Se recorta por franjas para que el borde
-        // siga la curva en vez de cortarse en recto.
-        for (int dy = -r; dy < 0; dy++) {
-            int dx = (int) Math.sqrt(Math.max(0, r * r - dy * dy));
-            if (dx > 0) {
-                ctx.fill(cx - dx, cy + dy, cx + dx, cy + dy + 1, 0xFFE03A2F);
-            }
-        }
-        int g = Math.max(2, lado / 9);
-        ctx.fill(cx - r, cy - g / 2, cx + r, cy + g / 2 + g % 2, negro);
-        aro(ctx, cx, cy, r, Math.max(1, lado / 14), negro);
-        disco(ctx, cx, cy, Math.max(2, lado / 6), negro);
-        disco(ctx, cx, cy, Math.max(1, lado / 10), 0xFFF0F0F0);
-    }
-
-    /**
-     * ETIQUETA DE PRECIO: los chollos.
-     *
-     * <p>⚠ Una etiqueta y no una flecha hacia abajo: una flecha ya significa
-     * «ordenar descendente» en la cabecera de al lado, y dos cosas distintas
-     * con el mismo dibujo es peor que un dibujo regular.
+     * <p>⚠ Rombo con agujero, no un rectángulo con una esquina cortada: el
+     * agujero es lo que lo convierte en etiqueta y no en una nota.
      */
     public static void etiqueta(DrawContext ctx, int cx, int cy, int lado, int color) {
         int b = lado * 2 / 5;
-        int g = Math.max(2, lado / 9);
-        // Cuerpo de la etiqueta: un cuadrado girado a medias.
-        ctx.fill(cx - b, cy - b / 3, cx + b / 2, cy - b / 3 + g, color);
-        ctx.fill(cx + b / 2 - g, cy - b / 3, cx + b / 2, cy + b, color);
-        ctx.fill(cx - b, cy + b - g, cx + b / 2, cy + b, color);
-        ctx.fill(cx - b, cy - b / 3, cx - b + g, cy + b, color);
-        // La punta, arriba a la derecha.
-        linea(ctx, cx + b / 2 - g, cy - b / 3, cx + b, cy - b, g, color);
-        // El agujero por donde va el cordel.
-        aro(ctx, cx + b / 4, cy + b / 6, Math.max(2, lado / 8),
-                Math.max(1, lado / 16), color);
+        // Cuerpo: un cuadrado girado 45º, dibujado por franjas.
+        for (int dy = -b; dy <= b; dy++) {
+            int w = b - Math.abs(dy);
+            ctx.fill(cx - w, cy + dy, cx + w + 1, cy + dy + 1, color);
+        }
+        // El agujero, arriba a la izquierda del eje.
+        int r = Math.max(2, lado / 8);
+        disco(ctx, cx - b / 3, cy - b / 3, r, 0x00000000);
+        for (int dy = -r; dy <= r; dy++) {
+            int w = (int) Math.sqrt(Math.max(0, r * r - dy * dy));
+            ctx.fill(cx - b / 3 - w, cy - b / 3 + dy,
+                     cx - b / 3 + w + 1, cy - b / 3 + dy + 1, 0x00000000);
+        }
     }
 
-    /** CAJA: alternar al mercado de objetos. */
+    /** POKÉ BALL. */
+    public static void pokeball(DrawContext ctx, int cx, int cy, int lado) {
+        int r = lado / 2;
+        int g = Math.max(2, lado / 8);
+        disco(ctx, cx, cy, r, 0xFFF2F2F2);
+        for (int dy = -r; dy < 0; dy++) {
+            int w = (int) Math.sqrt(Math.max(0, r * r - dy * dy));
+            ctx.fill(cx - w, cy + dy, cx + w, cy + dy + 1, 0xFFD3403A);
+        }
+        ctx.fill(cx - r, cy - g / 2, cx + r, cy + (g + 1) / 2, 0xFF16181D);
+        disco(ctx, cx, cy, g + 2, 0xFF16181D);
+        disco(ctx, cx, cy, g, 0xFFF2F2F2);
+    }
+
+    /** CAJA: los objetos. */
     public static void caja(DrawContext ctx, int cx, int cy, int lado, int color) {
-        int b = lado * 2 / 5;
-        int g = Math.max(2, lado / 10);
-        // El contorno.
+        int b = lado / 2;
+        int g = trazo(lado);
         ctx.fill(cx - b, cy - b, cx + b, cy - b + g, color);
         ctx.fill(cx - b, cy + b - g, cx + b, cy + b, color);
         ctx.fill(cx - b, cy - b, cx - b + g, cy + b, color);
         ctx.fill(cx + b - g, cy - b, cx + b, cy + b, color);
-        // La cinta, que es lo que la hace una caja y no un cuadrado.
-        ctx.fill(cx - b, cy - g / 2, cx + b, cy + g / 2 + g % 2, color);
-        ctx.fill(cx - g / 2, cy - b, cx + g / 2 + g % 2, cy + b, color);
+        // La cinta, que es lo que la distingue de un cuadrado.
+        ctx.fill(cx - g / 2, cy - b, cx + (g + 1) / 2, cy + b, color);
     }
 
     /**
@@ -249,7 +257,6 @@ public final class Iconos {
         double[] xs = new double[10];
         double[] ys = new double[10];
         for (int i = 0; i < 10; i++) {
-            // Empieza arriba (-90º) y alterna radio grande y pequeño.
             double ang = Math.toRadians(-90 + i * 36);
             double radio = (i % 2 == 0) ? r : r * 0.42;
             xs[i] = cx + Math.cos(ang) * radio;

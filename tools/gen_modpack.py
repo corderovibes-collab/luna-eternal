@@ -99,6 +99,33 @@ EXCLUIDOS = {
         "Solo existe para colocar las estructuras gigantes de Legendary "
         "Monuments. Sin ellas no pinta nada",
 
+    # --- mochilas: las nuestras van por RANGO, y estas se conseguian solas --
+    #
+    # ⚠⚠ TRES PUERTAS, NO UNA. El usuario pidio que no hubiera «otra manera de
+    #    tener mochilas», y al mirar el jar salieron tres:
+    #      1. OCHO RECETAS  (backpack, copper, iron, gold, diamond, netherite...)
+    #      2. INYECCION EN COFRES  (mazmorra, mina, piramide, mansion, bastion,
+    #         puente del Nether, ciudad del End, pecio)
+    #      3. MOBS QUE APARECEN LLEVANDOLA PUESTA -- 17 tipos, un 1 % de las
+    #         veces, y con un 50 % de soltarla al morir. Esta no la esperaba
+    #         nadie y es la que mas mochilas habria repartido
+    #
+    # ⚠⚠⚠ CON TRES PUERTAS, TAPARLAS UNA A UNA ES VIGILAR. Y este proyecto ya
+    #     tomo esta decision una vez, con los cosmeticos: «NO SE VIGILA LA
+    #     PUERTA, SE QUITA». Una receta desactivada por datapack vuelve el dia
+    #     que alguien regenere los datos; un mod que no esta no vuelve.
+    #
+    # ⚠ Se quita SOLO `backpacks`. `sophisticatedcore` y `sophisticatedstorage`
+    #   se quedan: storage da bloques de almacenamiento que pueden estar YA
+    #   COLOCADOS en la ciudadela, y quitarlo los borraria. Comprobado en su
+    #   fabric.mod.json: storage depende de core, no de backpacks.
+    "sophisticated-backpacks-(unoffical-fabric-port)":
+        "La mochila del servidor es NUESTRA y se desbloquea por rango (V021). "
+        "Este mod repartia mochilas por receta, por cofre y por mob, o sea "
+        "almacenamiento por fuera del sistema de rangos. OJO CON EL SLUG: el "
+        "jar se llama sophisticatedbackpacks y el proyecto de Modrinth es "
+        "sophisticated-backpacks-(unoffical-fabric-port)",
+
     # --- musica: 421 MB, mas del doble de todo el pack de hoy --------------
     # No es un juicio sobre la musica: es que multiplicaba por cinco la
     # descarga de un jugador nuevo (P10). Se pueden volver a meter el dia que

@@ -167,7 +167,14 @@ CONTENIDO = {
     "sophisticatedstorage": "almacenamiento",
     "pokeblocks":        "bloques decorativos",
     "waystones":         "piedras de viaje",
-    "sophisticatedbackpacks": "mochilas",
+    # ⚠ FUERA (2026-08-26). La mochila del servidor es NUESTRA y se
+    #   desbloquea por rango (V021). Este mod repartia mochilas por TRES
+    #   vias --receta, cofre y mob que la lleva puesta-- o sea
+    #   almacenamiento por fuera del sistema de rangos.
+    #   `sophisticatedcore` y `sophisticatedstorage` SE QUEDAN: storage da
+    #   bloques que pueden estar ya colocados en la ciudadela, y depende de
+    #   core, no de backpacks.
+    # "sophisticatedbackpacks": "mochilas",
     "comforts":          "sacos de dormir y hamacas",
     "beautify":          "decoracion",
     "moar-concrete":     "160 bloques de hormigon",

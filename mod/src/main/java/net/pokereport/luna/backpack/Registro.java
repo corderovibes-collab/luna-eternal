@@ -4,7 +4,6 @@ import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
-import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -79,19 +78,41 @@ public final class Registro {
                     if (jugador.isRemoved()) {
                         return;
                     }
-                    jugador.openHandledScreen(new NamedScreenHandlerFactory() {
-                        @Override
-                        public Text getDisplayName() {
-                            return Text.translatable("pokepad.lunaeternal.mochila.titulo");
-                        }
+                    // ⚠⚠⚠ TIENE QUE SER UNA `ExtendedScreenHandlerFactory`, y con
+                    //     una `NamedScreenHandlerFactory` a secas Fabric LANZA:
+                    //       «Extended screen handler ... must be opened with an
+                    //        ExtendedScreenHandlerFactory!»
+                    //
+                    //     Y tiene sentido: el tipo es `Extended` porque manda
+                    //     datos al abrir --cuantas filas-- y una factoria normal
+                    //     no tiene de donde sacarlos. `getScreenOpeningData` es
+                    //     el metodo que los produce.
+                    //
+                    //     ⚠ El fallo NO SE VE AL COMPILAR: `openHandledScreen`
+                    //       acepta cualquier `NamedScreenHandlerFactory`, y la
+                    //       comprobacion la hace Fabric al abrir.
+                    jugador.openHandledScreen(
+                        new net.fabricmc.fabric.api.screenhandler.v1
+                                .ExtendedScreenHandlerFactory<MochilaHandler.Apertura>() {
+                            @Override
+                            public Text getDisplayName() {
+                                return Text.translatable(
+                                    "pokepad.lunaeternal.mochila.titulo");
+                            }
 
-                        @Override
-                        public ScreenHandler createMenu(int sincId,
-                                net.minecraft.entity.player.PlayerInventory pi,
-                                net.minecraft.entity.player.PlayerEntity p) {
-                            return new MochilaHandler(sincId, pi, inv, filas);
-                        }
-                    });
+                            @Override
+                            public MochilaHandler.Apertura getScreenOpeningData(
+                                    ServerPlayerEntity p) {
+                                return new MochilaHandler.Apertura(filas);
+                            }
+
+                            @Override
+                            public ScreenHandler createMenu(int sincId,
+                                    net.minecraft.entity.player.PlayerInventory pi,
+                                    net.minecraft.entity.player.PlayerEntity p) {
+                                return new MochilaHandler(sincId, pi, inv, filas);
+                            }
+                        });
                     Abiertas.recordar(jugador, inv);
                 });
             } catch (Exception e) {

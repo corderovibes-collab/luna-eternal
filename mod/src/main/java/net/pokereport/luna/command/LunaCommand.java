@@ -94,6 +94,30 @@ public final class LunaCommand {
                         return 1;
                     })))
 
+            .then(literal("decorar")
+                // ⚠ Nivel 4: coloca entidades permanentes en el mundo. Es
+                //   decoracion, pero decoracion que no se despawnea sola.
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(literal("quitar")
+                    .executes(ctx -> quitarDecorativos(ctx.getSource(), 8))
+                    .then(argument("radio", com.mojang.brigadier.arguments
+                            .IntegerArgumentType.integer(1, 64))
+                        .executes(ctx -> quitarDecorativos(ctx.getSource(),
+                            com.mojang.brigadier.arguments.IntegerArgumentType
+                                .getInteger(ctx, "radio")))))
+                .then(argument("especie", StringArgumentType.word())
+                    .then(argument("postura", StringArgumentType.word())
+                        .executes(ctx -> decorar(ctx.getSource(),
+                            StringArgumentType.getString(ctx, "especie"),
+                            StringArgumentType.getString(ctx, "postura"), null))
+                        .then(argument("donde", net.minecraft.command.argument
+                                .Vec3ArgumentType.vec3())
+                            .executes(ctx -> decorar(ctx.getSource(),
+                                StringArgumentType.getString(ctx, "especie"),
+                                StringArgumentType.getString(ctx, "postura"),
+                                net.minecraft.command.argument.Vec3ArgumentType
+                                    .getVec3(ctx, "donde")))))))
+
             .then(literal("rango")
                 // ⚠ Nivel 4 y no 3. Un rango desbloquea comodidad para siempre;
                 //   los comandos de nivel 3 son de diagnostico y los tienen los
@@ -608,6 +632,52 @@ public final class LunaCommand {
 
     /** Fuerza la rotación de cazas. Herramienta de administración. */
     /** Los rangos que existen y cuanta gente hay en cada uno. */
+    /**
+     * Coloca un Pokemon de decoracion.
+     *
+     * <p>⚠ Acepta coordenadas <b>opcionales</b> y por eso admite `~ ~ ~`: la
+     * decoracion se coloca con decimales --«dentro del recipiente»-- y ponerse
+     * exactamente en un punto con tres decimales es imposible a pie.
+     */
+    private static int decorar(ServerCommandSource src, String especie,
+                               String postura, net.minecraft.util.math.Vec3d donde) {
+        var mundo = src.getWorld();
+        net.pokereport.luna.world.Decorativos.Postura p;
+        try {
+            p = net.pokereport.luna.world.Decorativos.Postura
+                    .valueOf(postura.toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            src.sendFeedback(() -> Text.literal(
+                "§cPosturas: §fquieto §c· §fdormido "
+                + "§c· §fflotando"), false);
+            return 0;
+        }
+        var pos = donde != null ? donde : src.getPosition();
+        // ⚠ El giro sale de quien lo pone: asi se coloca uno mirando a donde
+        //   mira el que lo coloca, que es lo que se espera al decorar.
+        float giro = src.getRotation().y;
+        var e = net.pokereport.luna.world.Decorativos
+                .colocar(mundo, especie, p, pos, giro);
+        if (e == null) {
+            src.sendFeedback(() -> Text.literal(
+                "§cNo existe §f" + especie + "§c."), false);
+            return 0;
+        }
+        src.sendFeedback(() -> Text.literal(
+            "§a" + especie + " §7colocado en §f"
+            + String.format("%.2f %.2f %.2f", pos.x, pos.y, pos.z)), false);
+        return 1;
+    }
+
+    private static int quitarDecorativos(ServerCommandSource src, int radio) {
+        int n = net.pokereport.luna.world.Decorativos
+                .quitar(src.getWorld(), src.getPosition(), radio);
+        src.sendFeedback(() -> Text.literal(
+            "§e" + n + " §7decorativos quitados en " + radio + " bloques."),
+            false);
+        return n;
+    }
+
     private static int listarRangos(ServerCommandSource src) {
         var svc = LunaEternal.ranks();
         if (svc == null) {

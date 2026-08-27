@@ -1,5 +1,6 @@
 {
   "key.categories.lunaeternal": "PokeReport Network",
+  "key.lunaeternal.mochila": "Abrir la mochila",
   "key.lunaeternal.pokepad": "Abrir el PokePad",
   "pokepad.lunaeternal.app.cazas": "Cazas",
   "pokepad.lunaeternal.app.cazas.desc": "Los objetivos de la rotación y su recompensa",
@@ -217,6 +218,10 @@
   "pokepad.lunaeternal.mercado.tasa_perdida": "La comisión por publicar no se devuelve.",
   "pokepad.lunaeternal.mercado.todo": "TODO",
   "pokepad.lunaeternal.mercado.tu_plata": "TU PLATA",
+  "pokepad.lunaeternal.mochila.bloqueada": "Fila bloqueada",
+  "pokepad.lunaeternal.mochila.bloqueada_desc": "Esta fila aún está bloqueada.",
+  "pokepad.lunaeternal.mochila.necesitas": "Necesitas el rango:",
+  "pokepad.lunaeternal.mochila.titulo": "Tu Mochila",
   "pokepad.lunaeternal.necesitas_pokemon": "Necesitas un %s en tu equipo para ponerle este disfraz.",
   "pokepad.lunaeternal.nivel_total": "NIVEL TOTAL",
   "pokepad.lunaeternal.ordenar.coge": "Elige un icono para moverlo",

@@ -68,6 +68,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.economy.EconomyStats stats;
     private static net.pokereport.luna.hunt.HuntService hunts;
     private static net.pokereport.luna.rank.RankService ranks;
+    private static net.pokereport.luna.backpack.BackpackService backpacks;
     private static net.pokereport.luna.cosmetics.CosmeticsService cosmetics;
     private static ExecutorService io;
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
@@ -156,6 +157,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             PlayerCache.forget(player);
             net.pokereport.luna.heal.HealService.olvidar(player);
             net.pokereport.luna.pokedex.ScanListener.olvidar(player);
+            // ⚠⚠ ANTES de `players.forget`: guardar necesita resolver el id,
+            //    y si ya se ha olvidado hay que volver a la base a buscarlo.
+            net.pokereport.luna.backpack.Abiertas.guardarYOlvidar(player);
             net.pokereport.luna.rank.RankService.olvidar(player.getUuid());
             Tablist.onLeave(server, player);
         });
@@ -234,6 +238,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             stats = new net.pokereport.luna.economy.EconomyStats(database);
             hunts = new net.pokereport.luna.hunt.HuntService(database);
             ranks = new net.pokereport.luna.rank.RankService(database);
+            backpacks = new net.pokereport.luna.backpack.BackpackService(database);
             cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
@@ -290,6 +295,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.hunt.HuntService hunts() { return hunts; }
 
     public static net.pokereport.luna.rank.RankService ranks() { return ranks; }
+
+    public static net.pokereport.luna.backpack.BackpackService backpacks() {
+        return backpacks;
+    }
     public static net.pokereport.luna.cosmetics.CosmeticsService cosmetics() { return cosmetics; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }

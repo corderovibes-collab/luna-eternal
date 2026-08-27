@@ -26,6 +26,7 @@ import org.lwjgl.glfw.GLFW;
 public class LunaCliente implements ClientModInitializer {
 
     private static KeyBinding abrirPad;
+    private static KeyBinding abrirMochila;
 
     /**
      * Abre la eleccion de inicial cuando el jugador puede verla.
@@ -53,6 +54,15 @@ public class LunaCliente implements ClientModInitializer {
                 // B de "bolsillo". No la usa vanilla, y queda cerca de las
                 // teclas de movimiento sin pisar el inventario ni el chat.
                 GLFW.GLFW_KEY_B,
+                "key.categories.lunaeternal"));
+
+        abrirMochila = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.lunaeternal.mochila",
+                InputUtil.Type.KEYSYM,
+                // ⚠ N de "mochila", y SIN asignar por defecto seria peor: una
+                //   tecla que hay que ir a buscar a los ajustes no la usa nadie.
+                //   N no la usa vanilla y esta al lado de B, que ya es nuestra.
+                GLFW.GLFW_KEY_N,
                 "key.categories.lunaeternal"));
 
         // La respuesta del servidor con el saldo. Solo se guarda para dibujarla.
@@ -100,6 +110,14 @@ public class LunaCliente implements ClientModInitializer {
 
         // Las cinco Vias. Llegan al abrir Trabajos, no antes: nadie las mira
         // el resto del tiempo.
+        // ⚠ La pantalla se asocia AQUI, en el cliente. El TIPO se registra en
+        //   el entrypoint `main` porque su registro se sincroniza; asociarle una
+        //   pantalla es cosa solo del cliente, y hacerlo en `main` reventaria en
+        //   el servidor dedicado, que no tiene clases de pantalla.
+        net.minecraft.client.gui.screen.ingame.HandledScreens.register(
+                net.pokereport.luna.backpack.Registro.TIPO,
+                net.pokereport.luna.client.pokepad.MochilaScreen::new);
+
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoGts.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
@@ -204,6 +222,16 @@ public class LunaCliente implements ClientModInitializer {
             while (abrirPad.wasPressed()) {
                 if (cliente.currentScreen == null) {
                     cliente.setScreen(new PokePadScreen());
+                }
+            }
+
+            // ⚠⚠ AQUI NO SE ABRE NADA: SE PIDE. Un contenedor lo crea el
+            //    SERVIDOR y le asigna un identificador de sincronizacion; una
+            //    pantalla abierta por el cliente no estaria conectada a nada y
+            //    lo que moviera dentro no existiria.
+            while (abrirMochila.wasPressed()) {
+                if (cliente.currentScreen == null) {
+                    ClientPlayNetworking.send(new Red.AbrirMochila());
                 }
             }
         });

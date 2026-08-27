@@ -65,6 +65,7 @@ public final class Apps {
             case "curar" -> abrirCurar();
             case "gts" -> abrirMercado();
             case "cazas" -> abrirCazas();
+            case "mochila" -> abrirMochila();
             default -> false;
         };
     }
@@ -84,6 +85,21 @@ public final class Apps {
         //   (D-041) y hay un solo icono: se entra por el que la gente busca
         //   --«¿cuanto vale mi shiny?»-- y desde ahi hay un boton a objetos.
         cliente.setScreen(new GtsScreen(cliente.currentScreen));
+        return true;
+    }
+
+    /**
+     * La mochila.
+     *
+     * <p>⚠⚠ AQUI NO SE ABRE NADA: SE PIDE. Las demas pantallas las abre el
+     * cliente y luego piden datos; esta la tiene que abrir EL SERVIDOR, porque
+     * un contenedor lo crea el servidor y le asigna un identificador de
+     * sincronizacion. Si el cliente abriera una por su cuenta, no estaria
+     * conectada a nada y los objetos que moviera no existirian.
+     */
+    private static boolean abrirMochila() {
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
+                .send(new net.pokereport.luna.net.Red.AbrirMochila());
         return true;
     }
 

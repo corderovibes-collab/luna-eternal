@@ -84,6 +84,7 @@ public final class AutoTest {
             testCazas(a);
             testCazasPremios(a);
             testRangos(a);
+            testMochila(a);
             testVozPokedex();
             testCosmeticos();
             testOficios();
@@ -1323,6 +1324,117 @@ public final class AutoTest {
         check("el reparto cuenta a alguien en CAMPEON",
               reparto.getOrDefault(net.pokereport.luna.ui.Tablist.Rank.CAMPEON, 0) >= 1);
         svc.cambiar(jugador, null, net.pokereport.luna.ui.Tablist.Rank.NOVATO);
+    }
+
+    /**
+     * LA MOCHILA.
+     *
+     * <h2>⚠⚠⚠ AQUI LO QUE SE PIERDE SON OBJETOS DEL JUGADOR</h2>
+     *
+     * En la economia un fallo se ve en un numero y se puede reponer. Aqui un
+     * fallo <b>borra la mochila de alguien</b>, y no hay libro de asientos que
+     * la reconstruya. Por eso lo que se prueba es el viaje completo: guardar,
+     * leer, y que salga lo mismo.
+     */
+    private void testMochila(long jugador) throws Exception {
+        var svc = LunaEternal.backpacks();
+        if (svc == null) {
+            check("el servicio de mochila está vivo", false);
+            return;
+        }
+        var M = net.pokereport.luna.backpack.Mochila.class;
+
+        // ---- las filas por rango --------------------------------------------
+        check("NOVATO abre 1 fila",
+              net.pokereport.luna.backpack.Mochila.filasDe(
+                  net.pokereport.luna.ui.Tablist.Rank.NOVATO) == 1);
+        check("LEYENDA abre todas",
+              net.pokereport.luna.backpack.Mochila.filasDe(
+                  net.pokereport.luna.ui.Tablist.Rank.LEYENDA)
+                  == net.pokereport.luna.backpack.Mochila.FILAS_MAX);
+
+        // ⚠ CADA RANGO ABRE MAS QUE EL ANTERIOR. Si dos abrieran lo mismo,
+        //   subir de rango no daria nada -- que es peor que no subir.
+        var rangos = net.pokereport.luna.ui.Tablist.Rank.deJugador().reversed();
+        int previo = 0;
+        boolean crece = true;
+        for (var r : rangos) {
+            int f = net.pokereport.luna.backpack.Mochila.filasDe(r);
+            if (f <= previo) {
+                crece = false;
+            }
+            previo = f;
+        }
+        check("cada rango abre MAS filas que el anterior", crece);
+
+        // ⚠⚠ EL CARTEL NO PUEDE MENTIR: el rango que dice que hace falta para
+        //    una fila tiene que abrirla de verdad. Se rompe en cuanto alguien
+        //    toque la tabla de filas y no la del cartel -- por eso el cartel se
+        //    calcula de la misma tabla, y esto lo vigila.
+        boolean carteles = true;
+        for (int fila = 0; fila < net.pokereport.luna.backpack.Mochila.FILAS_MAX; fila++) {
+            var pide = net.pokereport.luna.backpack.Mochila.rangoParaFila(fila);
+            if (net.pokereport.luna.backpack.Mochila.filasDe(pide) <= fila) {
+                carteles = false;
+                LunaEternal.LOG.error("La fila {} dice pedir {} y ese rango no la abre",
+                        fila, pide);
+            }
+        }
+        check("el rango que pide cada fila la abre de verdad", carteles);
+
+        // ⚠ Un hueco fuera de las filas abiertas esta CERRADO, mire quien mire.
+        check("con 1 fila, el hueco 0 esta abierto",
+              net.pokereport.luna.backpack.Mochila.abierto(0, 1));
+        check("con 1 fila, el hueco 9 esta cerrado",
+              !net.pokereport.luna.backpack.Mochila.abierto(9, 1));
+        check("un hueco negativo esta cerrado",
+              !net.pokereport.luna.backpack.Mochila.abierto(-1, 5));
+        check("un hueco fuera del maximo esta cerrado",
+              !net.pokereport.luna.backpack.Mochila.abierto(
+                  net.pokereport.luna.backpack.Mochila.HUECOS, 9));
+
+        // ---- guardar y leer, de punta a punta -------------------------------
+        var registros = net.minecraft.registry.RegistryWrapper.WrapperLookup.of(
+                java.util.stream.Stream.of());
+        try {
+            var inv = new net.minecraft.inventory.SimpleInventory(
+                    net.pokereport.luna.backpack.Mochila.HUECOS);
+            var pila = new net.minecraft.item.ItemStack(
+                    net.minecraft.item.Items.DIAMOND, 17);
+            inv.setStack(0, pila);
+            inv.setStack(40, new net.minecraft.item.ItemStack(
+                    net.minecraft.item.Items.STONE, 3));
+
+            svc.guardar(jugador, inv, registros);
+            var vuelta = svc.cargar(jugador, registros);
+
+            check("lo guardado vuelve en su MISMO hueco",
+                  vuelta.getStack(0).getItem() == net.minecraft.item.Items.DIAMOND
+                  && vuelta.getStack(40).getItem() == net.minecraft.item.Items.STONE);
+            check("y con la misma cantidad",
+                  vuelta.getStack(0).getCount() == 17
+                  && vuelta.getStack(40).getCount() == 3);
+            check("los huecos vacíos siguen vacíos", vuelta.getStack(1).isEmpty());
+
+            // ⚠⚠ CONTAR LO QUE QUEDARIA ATRAPADO al bajar de rango. Es lo que
+            //    permite avisar en vez de confiscar en silencio.
+            check("cuenta lo que quedaria por encima de 1 fila",
+                  svc.atrapadosPorEncima(jugador, 1) == 1);
+            check("con todas las filas no queda nada atrapado",
+                  svc.atrapadosPorEncima(jugador,
+                      net.pokereport.luna.backpack.Mochila.FILAS_MAX) == 0);
+
+            // ⚠⚠⚠ GUARDAR UNA MOCHILA VACIA LA VACIA DE VERDAD. Si el borrado y
+            //     la escritura no fueran una transaccion, esto es lo que se
+            //     quedaria a medias -- y a medias significa PERDER objetos.
+            svc.guardar(jugador, new net.minecraft.inventory.SimpleInventory(
+                    net.pokereport.luna.backpack.Mochila.HUECOS), registros);
+            check("guardar vacía deja la mochila vacía",
+                  svc.atrapadosPorEncima(jugador, 0) == 0);
+        } catch (Exception e) {
+            fail("la mochila guarda y lee sin lanzar",
+                 e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
     }
 
     /**

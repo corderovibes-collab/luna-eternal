@@ -39,7 +39,9 @@ public record App(String id, boolean abierta) {
         //   --HuntService-- llevaba escrita desde PHASE 5.
         new App("cazas",      true),
         new App("kits",       false),
-        new App("mochila",    false),
+        // ⚠ Se enciende con su pantalla (2026-08-26). Es la unica del Pad
+        //   con CONTENEDOR: arrastrar objetos lo hace Minecraft, no nosotros.
+        new App("mochila",    true),
         new App("gyms",       false),
         new App("explorar",   false),
         // ⚠ LA DECIMOSEXTA, y por eso cae en la PAGINA 2. No hubo que

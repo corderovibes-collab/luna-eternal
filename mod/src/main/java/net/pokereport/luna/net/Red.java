@@ -901,6 +901,25 @@ public class Red implements ModInitializer {
         }
     }
 
+    /**
+     * «Abreme la mochila».
+     *
+     * <p>⚠ NO lleva cuantas filas quiere: eso lo decide el servidor mirando el
+     * rango guardado. Si viniera del cliente, un cliente modificado pediria
+     * siete (P6).
+     */
+    public record AbrirMochila() implements CustomPayload {
+        public static final Id<AbrirMochila> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_mochila"));
+        public static final PacketCodec<RegistryByteBuf, AbrirMochila> CODEC =
+                PacketCodec.unit(new AbrirMochila());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame el catalogo», al abrir la tienda. */
     public record PedirTienda() implements CustomPayload {
         public static final Id<PedirTienda> ID =
@@ -1673,6 +1692,15 @@ public class Red implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        // ⚠⚠⚠ EL TIPO DE CONTENEDOR DE LA MOCHILA VA AQUI, en el entrypoint
+        //     `main`, que es el UNICO que corre en los dos lados. Vive en un
+        //     registro QUE SE SINCRONIZA: el servidor abre el contenedor
+        //     mandando un numero y el cliente lo busca en SU tabla. Registrarlo
+        //     solo en un lado descuadra las dos tablas y ECHA AL JUGADOR con un
+        //     error que no nombra la mochila -- la misma familia que los 5.687
+        //     bloques de desfase que ya estan documentados.
+        net.pokereport.luna.backpack.Registro.registrar();
+
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Ficha.ID, Ficha.CODEC);
@@ -1691,6 +1719,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(AccionMercado.ID, AccionMercado.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoMercado.ID, EstadoMercado.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirCazas.ID, PedirCazas.CODEC);
+        PayloadTypeRegistry.playC2S().register(AbrirMochila.ID, AbrirMochila.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionCaza.ID, AccionCaza.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoCazas.ID, EstadoCazas.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirTienda.ID, PedirTienda.CODEC);
@@ -1751,6 +1780,9 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(PedirCazas.ID, (carga, ctx) ->
                 enviarCazas(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AbrirMochila.ID, (carga, ctx) ->
+                net.pokereport.luna.backpack.Registro.abrir(ctx.player()));
 
         ServerPlayNetworking.registerGlobalReceiver(AccionCaza.ID, (carga, ctx) ->
                 cobrarCaza(ctx.player(), carga.objetivo()));

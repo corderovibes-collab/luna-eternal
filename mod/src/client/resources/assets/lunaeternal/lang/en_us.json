@@ -1,5 +1,6 @@
 {
   "key.categories.lunaeternal": "PokeReport Network",
+  "key.lunaeternal.mochila": "Open the backpack",
   "key.lunaeternal.pokepad": "Open the PokePad",
   "pokepad.lunaeternal.app.cazas": "Hunts",
   "pokepad.lunaeternal.app.cazas.desc": "The current targets and their reward",
@@ -217,6 +218,10 @@
   "pokepad.lunaeternal.mercado.tasa_perdida": "The listing fee is not refunded.",
   "pokepad.lunaeternal.mercado.todo": "ALL",
   "pokepad.lunaeternal.mercado.tu_plata": "YOUR SILVER",
+  "pokepad.lunaeternal.mochila.bloqueada": "Row locked",
+  "pokepad.lunaeternal.mochila.bloqueada_desc": "This row is still locked.",
+  "pokepad.lunaeternal.mochila.necesitas": "You need the rank:",
+  "pokepad.lunaeternal.mochila.titulo": "Your Backpack",
   "pokepad.lunaeternal.necesitas_pokemon": "You need a %s in your party to use this outfit.",
   "pokepad.lunaeternal.nivel_total": "TOTAL LEVEL",
   "pokepad.lunaeternal.ordenar.coge": "Pick an icon to move it",

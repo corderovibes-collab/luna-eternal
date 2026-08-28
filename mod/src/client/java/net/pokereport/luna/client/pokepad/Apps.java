@@ -67,6 +67,7 @@ public final class Apps {
             case "cazas" -> abrirCazas();
             case "mochila" -> abrirMochila();
             case "explorar" -> abrirExplorar();
+            case "warps" -> abrirViajes();
             default -> false;
         };
     }
@@ -101,6 +102,13 @@ public final class Apps {
     private static boolean abrirMochila() {
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
                 .send(new net.pokereport.luna.net.Red.AbrirMochila());
+        return true;
+    }
+
+    /** Viajes: el moto taxi de la ciudadela. */
+    private static boolean abrirViajes() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new ViajesScreen(cliente.currentScreen));
         return true;
     }
 

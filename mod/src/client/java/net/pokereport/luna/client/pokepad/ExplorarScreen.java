@@ -335,59 +335,8 @@ public class ExplorarScreen extends Screen {
         return PANT_Y + MARGEN + TARJETA_H + 12;
     }
 
-    /**
-     * LAS PARADAS DE LA CIUDADELA: el «moto taxi».
-     *
-     * <p>⚠ Se apagan fuera de la ciudadela en vez de esconderse. Que existan y
-     * no se puedan usar <b>es información</b> —dice que hay un sitio a donde
-     * volver—; que desaparezcan hace pensar que se han roto.
-     */
-    private void dibujarParadas(DrawContext ctx, int rx, int ry) {
-        boolean dentro = estado != null && estado.enCiudadela();
-        int y = companerosY();
-        texto(ctx, Text.translatable("pokepad.lunaeternal.explorar.paradas"),
-                PANT_X + MARGEN, y, 15, dentro ? 0xFF9FB6D8 : 0xFF5A668C, false, 0);
-        if (!dentro) {
-            textoDer(ctx, Text.translatable("pokepad.lunaeternal.explorar.fuera"),
-                    PANT_X + PANT_W - MARGEN, y + 1, 13, 0xFF5A668C);
-        }
-        y += 22;
-        int aw = PANT_W - 2 * MARGEN;
-        int cols = 4;
-        int bw = (aw - (cols - 1) * 8) / cols;
-        for (int i = 0; i < PARADAS.length; i++) {
-            int bx = PANT_X + MARGEN + (i % cols) * (bw + 8);
-            int by = y + (i / cols) * 38;
-            boolean enc = dentro && dentro(rx, ry, px(bx), py(by), pl(bw), pl(32));
-            ctx.fill(px(bx), py(by), px(bx + bw), py(by + 32),
-                    !dentro ? 0xFF262B38 : (enc ? 0xFF3C5A8C : 0xFF2B3550));
-            marco(ctx, px(bx), py(by), pl(bw), pl(32),
-                    !dentro ? 0xFF333B4E : (enc ? BORDE_ENCIMA : 0xFF39415C),
-                    Math.max(1, pl(2)));
-            var et = Text.translatable("pokepad.lunaeternal.parada." + PARADAS[i]);
-            int alto = 15;
-            while (alto > 9 && anchoArte(et.getString(), alto) > bw - 10) {
-                alto--;
-            }
-            texto(ctx, et, bx + bw / 2 - anchoArte(et.getString(), alto) / 2,
-                    by + (32 - alto) / 2 - 1, alto,
-                    dentro ? 0xFFE0E8F6 : 0xFF6E7899, false, 0);
-        }
-    }
-
-    /** ⚠ Mismo orden que `Paradas.TODAS` en el servidor: la pantalla no ordena. */
-    private static final String[] PARADAS = {
-        "torre_batalla", "laboratorio", "palacio", "monumentos",
-        "torre_comercial", "centro_curacion", "montana",
-    };
-
-    private int paradasAlto() {
-        return 22 + ((PARADAS.length + 3) / 4) * 38 + 10;
-    }
-
     private void dibujarCompaneros(DrawContext ctx, int rx, int ry) {
-        dibujarParadas(ctx, rx, ry);
-        int y = companerosY() + paradasAlto();
+        int y = companerosY();
         var cs = companeros();
         texto(ctx, Text.translatable("pokepad.lunaeternal.explorar.con_clan"),
                 PANT_X + MARGEN, y, 15, 0xFF9FB6D8, false, 0);
@@ -452,25 +401,8 @@ public class ExplorarScreen extends Screen {
             }
         }
 
-        // --- las paradas
-        if (estado != null && estado.enCiudadela()) {
-            int py0 = companerosY() + 22;
-            int aw0 = PANT_W - 2 * MARGEN;
-            int bw = (aw0 - 3 * 8) / 4;
-            for (int i = 0; i < PARADAS.length; i++) {
-                int bx = PANT_X + MARGEN + (i % 4) * (bw + 8);
-                int by = py0 + (i / 4) * 38;
-                if (dentro(rx, ry, px(bx), py(by), pl(bw), pl(32))) {
-                    sonar();
-                    pulsado = System.currentTimeMillis();
-                    ClientPlayNetworking.send(new Red.AccionExplorar(PARADAS[i]));
-                    return true;
-                }
-            }
-        }
-
         var cs = companeros();
-        int y = companerosY() + paradasAlto() + 24;
+        int y = companerosY() + 24;
         int aw = PANT_W - 2 * MARGEN;
         for (int i = 0; i < cs.size(); i++) {
             int fy = y + i * 34;

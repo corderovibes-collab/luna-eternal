@@ -8,7 +8,7 @@
 **Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
 D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, ocho vías de progresión, y **ocho pantallas** en el PokePad.
-Autotest **368/368** en vivo. **El recorrido del jugador nuevo está completo.**
+Autotest **376/376**. **El recorrido del jugador nuevo está completo.**
 
 > **2026-08-27 — RANGOS, MOCHILA, MUNDOS Y ESCALADO. Y tres lecciones que se
 > repiten.**
@@ -166,7 +166,7 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 368/368 correctos (2026-08-25, en vivo)
+Autotest      /luna autotest -> 376/376 correctos (+8 de Viajes)
               +26 del escaparate de objetos, y el que importa es el
               PAYLOAD: lo escribe `publicarObjeto` y lo lee la entrega,
               y si dejaran de estar de acuerdo la compra NO DARIA
@@ -903,8 +903,48 @@ Paradas       EL MOTO TAXI: SIETE PUNTOS EN LA CIUDADELA (2026-08-27)
                 se construye a mano y cambia con ella
               ⚠ `/luna paradas` se puede repetir: BORRA antes de poner. Sin eso
                 quedarian dos superpuestos -- y no se pueden atacar ni capturar
-              ⚠⚠ ESTAN EN LA PANTALLA EQUIVOCADA. Se metieron en EXPLORAR y el
-                 usuario las quiere en VIAJES (icono `warps`). PENDIENTE
+              ⚠⚠ ESTUVIERON EN LA PANTALLA EQUIVOCADA, y el usuario lo cazó: se
+                 metieron en EXPLORAR. Hoy tienen la suya (ver Viajes)
+                 ⚠ y el MIRAIDON PASO DE CARTEL A BOTON: clic derecho abre
+                   Viajes. El usuario lo pidio SIN interaccion y despues cambio
+                   de idea, asi que las dos versiones estan escritas
+                   ⚠⚠ RESPONDE POR MARCA, NO POR ESPECIE NI POR SER DECORATIVO:
+                      `MARCA_PARADA` es una SEGUNDA etiqueta. Con la de siempre,
+                      el Kabutops del laboratorio y los tres iniciales abririan
+                      Viajes al tocarlos
+                   ⚠ y sigue abriendose desde el PokePad: un punto de viaje al
+                     que solo se llega tocando su Miraidon obligaria a IR
+                     ANDANDO HASTA UN PUNTO DE VIAJE para poder viajar
+
+Viajes        LAS PARADAS, POR FIN EN SU SITIO (2026-08-27)
+              icono `warps` . rejilla 4x2 de fichas de color . panel a la
+              izquierda con el destino elegido y para que sirve
+              SE ABRE TAMBIEN CON CLIC DERECHO en cualquier Miraidon de parada
+              ⚠⚠ POR QUE NO ERA UN TROZO DE EXPLORAR, que es como empezo:
+                 EXPLORAR responde a «que mundo» -- dos opciones, una decision
+                 con consecuencias, un viaje que cambia las reglas
+                 VIAJES  responde a «que esquina de la ciudadela» -- siete
+                 destinos equivalentes, sin consecuencias, veinte veces al dia
+                 mezclarlas obligaba a que la segunda cupiera en el hueco de la
+                 primera, y por eso acabaron siendo botoncitos apretados
+              ⚠ CADA PARADA TIENE SU COLOR, y no es adorno: con siete fichas del
+                mismo tono hay que leerlas todas cada vez. Con color, a la
+                tercera visita vas al cuadro naranja sin leer
+              ⚠ UN CLIC ELIGE, EL BOTON VIAJA. Con el viaje en la propia ficha,
+                un clic despistado te manda al otro lado de la ciudadela
+              ⚠ FUERA DE LA CIUDADELA SE APAGAN Y SE DICE POR QUE. Un boton gris
+                sin explicacion parece roto; con la razon al lado es una regla
+              ⚠⚠ EL RECEPTOR DE `EstadoViajes` ABRE LA PANTALLA, no solo guarda:
+                 es lo que convierte el clic derecho en la pantalla. Y SOLO si no
+                 hay otra delante -- si no, tocar un Miraidon sin querer con el
+                 inventario abierto lo cerraria de golpe
+              +8 comprobaciones, y la que importa es LA REJILLA: 4x2 son OCHO
+              huecos, asi que una NOVENA parada seria inalcanzable SIN DAR
+              NINGUN ERROR. Es la decimosexta aplicacion del PokePad otra vez
+              ⚠ el icono del Miraidon se dibuja con ARO y no con dos discos:
+                rellenar el interior con alfa 0 no borra nada --`fill` mezcla, y
+                mezclar con transparente es no hacer nada-- y saldria macizo
+              ⚠ SIN VERIFICAR EN EL JUEGO todavia
 
 Textos        ⚠⚠⚠ UNA CLAVE DE TRADUCCION QUE NO EXISTE SE VE CRUDA
               `Text.translatable("clave.que.no.existe")` NO DA NINGUN ERROR:
@@ -1607,11 +1647,12 @@ Interfaz      TRECE PANTALLAS. Nueve verificadas en el juego:
                 Cazas       2026-08-25   2 pestañas, 3+3
                 Mochila     2026-08-27   7 filas por rango . CONTENEDOR
                 Explorar    2026-08-27   2 mundos, arte 768x512
-              9 de los 16 iconos abren algo: pokedex (la de Cobblemon),
-              cosmeticos, trabajos, misiones, clan, tienda, curar, mercado y
-              cazas
-              SIGUEN SIN PANTALLA, con la logica viva y probada:
-                kits . viaje
+                Viajes      2026-08-27   7 paradas . rejilla 4x2
+              11 de los 16 iconos abren algo: pokedex (la de Cobblemon),
+              cosmeticos, trabajos, misiones, clan, tienda, curar, mercado,
+              cazas, explorar y viajes
+              SIGUE SIN PANTALLA, con la logica viva y probada:
+                kits
               ⚠ el MERCADO refresca al VENDEDOR cuando le compran, sin que el
                 pulse nada: su oferta desaparecio y su dinero subio. Es la
                 leccion de los clanes aplicada antes de que doliera
@@ -2027,12 +2068,11 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 
 | | |
 |---|---|
-| **1. LAS PARADAS ESTÁN EN LA PANTALLA EQUIVOCADA** | Se metieron en **Explorar** y el usuario las quiere en **Viajes** (`warps`, hoy apagado). Hay que sacarlas de `ExplorarScreen`, hacer `ViajesScreen` y encender su icono. **Y hacerlo bien**: lo pidió «estructurado, bonito y profesional» |
-| **2. Clic derecho en el Miraidon abre Viajes** | Hoy los decorativos no responden a nada — fue una decisión explícita suya, y ahora la cambia. ⚠ Hará falta un evento de interacción **que solo responda a los que tienen la marca**, igual que el daño y la Pokédex |
-| **3. Pre-generar** | Chunky **ya está instalado y sin usar**. Tres mundos × 3.000 = 2-4 h, **con el servidor vacío**: compite con los jugadores por los mismos 3 núcleos |
-| **4. Verificar lo de hoy** | Mochila con rangos de verdad, el regreso al Hogar, y que un Miraidon **no** se pueda pegar en creativo ni registrar |
-| **5. `ECO-005`** | Las Marcas siguen sin gastarse en nada |
-| **6. La ciudadela** | Sigue siendo el foco no-técnico |
+| **1. Verificar Viajes en el juego** | La pantalla existe y el clic derecho en un Miraidon la abre. **Falta mirarla**: que las siete fichas se lean, que viajar funcione, y que fuera de la ciudadela se apaguen |
+| **2. Pre-generar** | Chunky **ya está instalado y sin usar**. Tres mundos × 3.000 = 2-4 h, **con el servidor vacío**: compite con los jugadores por los mismos 3 núcleos |
+| **3. Verificar lo demás de hoy** | Mochila con rangos de verdad, el regreso al Hogar, y que un Miraidon **no** se pueda pegar en creativo ni registrar |
+| **4. `ECO-005`** | Las Marcas siguen sin gastarse en nada |
+| **5. La ciudadela** | Sigue siendo el foco no-técnico |
 
 > ⚠⚠⚠ **LA REGLA DEL DÍA, y costó seis minutos de servidor inaccesible: UN
 > REGISTRO QUE SE SINCRONIZA NO DEGRADA, ECHA.** Todo lo anterior —paquetes,

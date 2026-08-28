@@ -1030,6 +1030,64 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «Dame las paradas», al abrir Viajes. */
+    public record PedirViajes() implements CustomPayload {
+        public static final Id<PedirViajes> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_viajes"));
+        public static final PacketCodec<RegistryByteBuf, PedirViajes> CODEC =
+                PacketCodec.unit(new PedirViajes());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * El estado de Viajes.
+     *
+     * <p>⚠ Lo único que cambia es <b>si estás en la ciudadela</b>: la lista de
+     * paradas es fija y la sabe el cliente. Mandarla entera en cada apertura
+     * sería repetir siete cadenas que nunca cambian.
+     *
+     * <p>⚠ {@code abrir} distingue «me lo has pedido tú» de «te lo abro yo
+     * porque has tocado un Miraidon». Sin ese aviso, el clic derecho tendría que
+     * mandar dos paquetes y confiar en que lleguen en orden.
+     */
+    public record EstadoViajes(boolean enCiudadela, boolean abrir)
+            implements CustomPayload {
+        public static final Id<EstadoViajes> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_viajes"));
+        public static final PacketCodec<RegistryByteBuf, EstadoViajes> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.BOOL, EstadoViajes::enCiudadela,
+                        PacketCodecs.BOOL, EstadoViajes::abrir,
+                        EstadoViajes::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Llévame a esta parada».
+     *
+     * <p>⚠ Viaja el IDENTIFICADOR y no las coordenadas: si el cliente mandara un
+     * punto, cualquiera se teletransportaría a donde quisiera (P6).
+     */
+    public record AccionViaje(String parada) implements CustomPayload {
+        public static final Id<AccionViaje> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_viaje"));
+        public static final PacketCodec<RegistryByteBuf, AccionViaje> CODEC =
+                PacketCodec.tuple(CADENA, AccionViaje::parada, AccionViaje::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame el catalogo», al abrir la tienda. */
     public record PedirTienda() implements CustomPayload {
         public static final Id<PedirTienda> ID =
@@ -1833,6 +1891,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirExplorar.ID, PedirExplorar.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionExplorar.ID, AccionExplorar.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoExplorar.ID, EstadoExplorar.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirViajes.ID, PedirViajes.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionViaje.ID, AccionViaje.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoViajes.ID, EstadoViajes.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionCaza.ID, AccionCaza.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoCazas.ID, EstadoCazas.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirTienda.ID, PedirTienda.CODEC);
@@ -1899,6 +1960,14 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(PedirExplorar.ID, (carga, ctx) ->
                 enviarExplorar(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirViajes.ID, (carga, ctx) ->
+                enviarViajes(ctx.player(), false));
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionViaje.ID, (carga, ctx) -> {
+            net.pokereport.luna.world.Paradas.llevar(ctx.player(), carga.parada());
+            enviarViajes(ctx.player(), false);
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(AccionExplorar.ID, (carga, ctx) ->
                 viajar(ctx.player(), carga.destino()));
@@ -3190,14 +3259,6 @@ public class Red implements ModInitializer {
             enviarExplorar(jugador);
             return;
         }
-        // ⚠ Una parada de la ciudadela. Va ANTES que lo del compañero porque
-        //   los identificadores de parada son fijos y conocidos: si se probara
-        //   después, alguien podría llamarse `montana` y colarse.
-        if (net.pokereport.luna.world.Paradas.de(destino) != null) {
-            net.pokereport.luna.world.Paradas.llevar(jugador, destino);
-            enviarExplorar(jugador);
-            return;
-        }
         // ⚠ Un compañero. Se COMPRUEBA que sea de su clan aquí también: la
         //   pantalla solo enseña los del clan, pero un cliente modificado
         //   mandaría cualquier nombre.
@@ -3220,6 +3281,18 @@ public class Red implements ModInitializer {
                     "§cNo se pudo llegar hasta él."), true);
         }
         enviarExplorar(jugador);
+    }
+
+    /**
+     * Manda el estado de Viajes.
+     *
+     * @param abrir si además hay que abrirle la pantalla (clic en un Miraidon)
+     */
+    public static void enviarViajes(
+            net.minecraft.server.network.ServerPlayerEntity jugador, boolean abrir) {
+        boolean dentro = net.pokereport.luna.world.LunaDimensions.CIUDADELA
+                .equals(jugador.getServerWorld().getRegistryKey());
+        ServerPlayNetworking.send(jugador, new EstadoViajes(dentro, abrir));
     }
 
     /**

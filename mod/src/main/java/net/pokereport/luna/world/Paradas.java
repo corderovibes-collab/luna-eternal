@@ -9,15 +9,18 @@ import net.pokereport.luna.LunaEternal;
 /**
  * LAS PARADAS DE LA CIUDADELA: el «moto taxi».
  *
- * <p>Petición del usuario: puntos de viaje rápido por la ciudadela, con un
- * <b>Miraidon estático</b> marcando cada uno.
+ * <p>Puntos de viaje rápido por la ciudadela, con un <b>Miraidon estático</b>
+ * marcando cada uno.
  *
- * <h2>⚠⚠ EL MIRAIDON NO ES EL BOTÓN, ES EL CARTEL</h2>
+ * <h2>⚠⚠ EL MIRAIDON ES LAS DOS COSAS: EL CARTEL Y EL BOTÓN</h2>
  *
- * Se viaja desde el PokePad, no haciendo clic en él — el usuario lo pidió
- * explícitamente sin interacción. El Miraidon está ahí para que <b>desde lejos
- * se vea dónde hay una parada</b>, que es lo que convierte una lista de nombres
- * en un sitio reconocible.
+ * Empezó siendo solo el cartel —el usuario lo pidió <i>sin</i> interacción— y
+ * después cambió de idea: <b>clic derecho abre Viajes</b>. Queda escrito porque
+ * las dos versiones son defendibles y conviene saber cuál está puesta.
+ *
+ * <p>⚠ Y sigue abriéndose también desde el PokePad. Un punto de viaje al que
+ * solo se llega tocando su Miraidon obligaría a <b>ir andando hasta un punto de
+ * viaje</b> para poder viajar, que es exactamente el problema que resuelve.
  *
  * <h2>⚠ Las coordenadas van AQUÍ y no en la base de datos</h2>
  *
@@ -146,6 +149,9 @@ public final class Paradas {
             var e = Decorativos.colocar(mundo, "miraidon",
                     Decorativos.Postura.QUIETO, p.pos(), 0f);
             if (e != null) {
+                // ⚠ La segunda etiqueta es lo que hace que el clic derecho abra
+                //   Viajes. Sin ella sería decoración a secas, como el Kabutops.
+                e.addCommandTag(Decorativos.MARCA_PARADA);
                 n++;
             }
         }

@@ -93,6 +93,7 @@ public final class AutoTest {
             testMercado(a, b);
             testTasador();
             testCura();
+            testViajes();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -1622,6 +1623,82 @@ public final class AutoTest {
      * que el cooldown sea un número de segundos coherente, que el enum de estado
      * que viaja al cliente exista de verdad, y que la pantalla quepa.
      */
+    /**
+     * VIAJES: el moto taxi de la ciudadela.
+     *
+     * <p>Lo que se comprueba aquí no es que teletransporte —eso necesita un
+     * jugador— sino <b>los números que dejan de cuadrar en silencio</b>, que es
+     * la familia de fallos que ya nos costó la rejilla del PokePad y la quinta
+     * fila del mercado.
+     */
+    private void testViajes() {
+        var todas = net.pokereport.luna.world.Paradas.TODAS;
+
+        check("hay paradas declaradas", !todas.isEmpty());
+
+        // ⚠⚠ LA REJILLA DEL CLIENTE SON 4x2 = OCHO HUECOS. Una novena parada no
+        //    daría ningún error: se dibujarían ocho y la novena sería
+        //    INALCANZABLE. Es exactamente lo que pasó con la decimosexta
+        //    aplicación del PokePad y con los 54 cosméticos de la página 2.
+        check("las paradas caben en la rejilla de Viajes (4x2)",
+              todas.size() <= 8);
+
+        // ⚠ Un id repetido no falla: `de()` devuelve siempre el primero, así que
+        //   dos fichas llevarían al mismo sitio y una parada sería inalcanzable.
+        var ids = new java.util.HashSet<String>();
+        boolean unicos = true;
+        for (var p : todas) {
+            if (!ids.add(p.id())) {
+                unicos = false;
+                LunaEternal.LOG.error("Parada repetida: {}", p.id());
+            }
+        }
+        check("los identificadores de parada no se repiten", unicos);
+
+        // ⚠ Dos paradas encima la una de la otra dejarían dos Miraidon
+        //   superpuestos, y no se pueden separar: no se les puede pegar ni
+        //   capturar. Habría que borrarlos por comando.
+        boolean separadas = true;
+        for (int i = 0; i < todas.size(); i++) {
+            for (int j = i + 1; j < todas.size(); j++) {
+                if (todas.get(i).pos().distanceTo(todas.get(j).pos()) < 4) {
+                    separadas = false;
+                    LunaEternal.LOG.error("Paradas pegadas: {} y {}",
+                            todas.get(i).id(), todas.get(j).id());
+                }
+            }
+        }
+        check("ninguna parada se solapa con otra", separadas);
+
+        // ⚠ Un id que no existe se RECHAZA, no cae en la primera. El cliente
+        //   manda el identificador y P6 dice que no nos fiamos de él.
+        check("un identificador desconocido no resuelve",
+              net.pokereport.luna.world.Paradas.de("no_existe") == null);
+        check("una cadena vacía no resuelve",
+              net.pokereport.luna.world.Paradas.de("") == null);
+        boolean todasResuelven = true;
+        for (var p : todas) {
+            if (net.pokereport.luna.world.Paradas.de(p.id()) == null) {
+                todasResuelven = false;
+            }
+        }
+        check("todas las paradas se resuelven por su identificador", todasResuelven);
+
+        // ⚠⚠ EL NOMBRE QUE VE EL JUGADOR SALE DE UNA CLAVE DE TRADUCCIÓN, y una
+        //    clave que no existe NO DA NINGÚN ERROR: Minecraft pinta la clave
+        //    cruda. Aquí solo se puede comprobar la forma del identificador —lo
+        //    otro lo caza `tools/comprobar_textos.py`— pero un id con mayúsculas
+        //    o espacios ya rompería la clave.
+        boolean formaOk = true;
+        for (var p : todas) {
+            if (!p.id().matches("[a-z0-9_]+")) {
+                formaOk = false;
+                LunaEternal.LOG.error("Identificador de parada mal formado: {}", p.id());
+            }
+        }
+        check("los identificadores valen para una clave de traducción", formaOk);
+    }
+
     private void testCura() {
         // ⚠ EL COOLDOWN NO PUEDE SER 0 NI NEGATIVO. A 0 la curación deja de ser
         //   un recurso: se cura entre turno y turno y el combate deja de tener

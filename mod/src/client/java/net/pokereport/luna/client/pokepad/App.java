@@ -26,7 +26,11 @@ public record App(String id, boolean abierta) {
         new App("cosmeticos", true),
         new App("trabajos",   true),
         new App("misiones",   true),
-        new App("warps",      false),
+        // ⚠ Se enciende con su pantalla (2026-08-27). Las paradas
+        //   estaban en EXPLORAR y ahi estaban mal: Explorar responde a
+        //   «¿a que mundo voy?» y esto a «¿a que esquina de la ciudadela
+        //   voy?». Son dos preguntas distintas.
+        new App("warps",      true),
         new App("clan",       true),
         // ⚠ EL MERCADO VA EN EL ICONO `gts`, que ya existe y ya esta
         //   dibujado: dos Poke Balls intercambiandose con una gema en

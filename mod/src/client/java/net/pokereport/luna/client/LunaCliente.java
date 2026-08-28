@@ -125,6 +125,23 @@ public class LunaCliente implements ClientModInitializer {
                 (carga, ctx) -> EstadoCliente.guardar(carga));
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoCazas.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
+        // ⚠⚠ ESTE NO SOLO GUARDA: PUEDE ABRIR LA PANTALLA. Es lo que hace que
+        //    el clic derecho en un Miraidon lleve a Viajes -- el servidor manda
+        //    el estado con la bandera puesta y el cliente abre.
+        //    ⚠ Y se abre SOLO si no hay otra pantalla delante: si no, tocar sin
+        //      querer un Miraidon con el inventario abierto lo cerraria de golpe.
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoViajes.ID,
+                (carga, ctx) -> {
+                    EstadoCliente.guardar(carga);
+                    if (carga.abrir()) {
+                        var cliente = ctx.client();
+                        if (cliente.currentScreen == null) {
+                            cliente.setScreen(new net.pokereport.luna.client.pokepad
+                                    .ViajesScreen(null));
+                        }
+                    }
+                });
+
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoExplorar.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 

@@ -52,6 +52,20 @@ public final class Decorativos {
     public static final String MARCA = "luna_decorativo";
 
     /**
+     * La SEGUNDA etiqueta: este decorativo es una parada del moto taxi.
+     *
+     * <h2>⚠⚠ DOS ETIQUETAS Y NO UNA, Y ES LA DIFERENCIA ENTRE DOS COSAS</h2>
+     *
+     * {@link #MARCA} dice «esto es decoración» y de ella cuelgan las diez
+     * protecciones. Ésta dice «además, es un punto de viaje», y de ella cuelga
+     * <b>abrir la pantalla al hacer clic derecho</b>.
+     *
+     * <p>Con una sola, el Kabutops del laboratorio y los tres iniciales
+     * abrirían Viajes al tocarlos — y eso no lo ha pedido nadie.
+     */
+    public static final String MARCA_PARADA = "luna_parada";
+
+    /**
      * Las posturas que se pueden pedir.
      *
      * <p>⚠ Tres y no las quince de Cobblemon: las demás son estados de combate
@@ -104,6 +118,44 @@ public final class Decorativos {
         } catch (Throwable ignorado) {
             return false;
         }
+    }
+
+    /**
+     * CLIC DERECHO EN UNA PARADA: abre Viajes.
+     *
+     * <h2>⚠⚠ SOLO LOS QUE LLEVAN LA SEGUNDA ETIQUETA</h2>
+     *
+     * {@link #MARCA} es «esto es decoración» y la llevan también el Kabutops y
+     * los tres iniciales del laboratorio. Si esto respondiera a esa, tocar un
+     * Squirtle abriría el moto taxi — que no lo ha pedido nadie. Responde a
+     * {@link #MARCA_PARADA}, que solo ponen las paradas.
+     *
+     * <h2>⚠⚠ Y DEVUELVE `SUCCESS` PARA CORTAR LO DE DEBAJO</h2>
+     *
+     * Sin cortar, el clic sigue su camino hasta Cobblemon y llega a su menú de
+     * interacción de Pokémon. Y como el evento se dispara en <b>los dos
+     * lados</b>, hay que cortar en los dos: si solo se cortara en el servidor,
+     * el cliente enseñaría un instante el menú de Cobblemon antes de que llegue
+     * el nuestro.
+     */
+    public static void abrirViajesAlTocar() {
+        net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register(
+                (jugador, mundo, mano, entidad, golpe) -> {
+                    if (!entidad.getCommandTags().contains(MARCA_PARADA)) {
+                        return net.minecraft.util.ActionResult.PASS;
+                    }
+                    // ⚠ Una sola mano: sin esto el evento llega dos veces (mano
+                    //   principal y secundaria) y la pantalla se abriría dos
+                    //   veces por cada clic.
+                    if (mano != net.minecraft.util.Hand.MAIN_HAND) {
+                        return net.minecraft.util.ActionResult.SUCCESS;
+                    }
+                    if (jugador instanceof net.minecraft.server.network.ServerPlayerEntity sp) {
+                        net.pokereport.luna.net.Red.enviarViajes(sp, true);
+                    }
+                    return net.minecraft.util.ActionResult.SUCCESS;
+                });
+        LunaEternal.LOG.info("Paradas: el clic derecho abre Viajes");
     }
 
     /**

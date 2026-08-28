@@ -66,6 +66,7 @@ public final class Apps {
             case "gts" -> abrirMercado();
             case "cazas" -> abrirCazas();
             case "mochila" -> abrirMochila();
+            case "explorar" -> abrirExplorar();
             default -> false;
         };
     }
@@ -100,6 +101,13 @@ public final class Apps {
     private static boolean abrirMochila() {
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
                 .send(new net.pokereport.luna.net.Red.AbrirMochila());
+        return true;
+    }
+
+    /** Explorar: Mundo Hogar y Mundo Salvaje. */
+    private static boolean abrirExplorar() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new ExplorarScreen(cliente.currentScreen));
         return true;
     }
 

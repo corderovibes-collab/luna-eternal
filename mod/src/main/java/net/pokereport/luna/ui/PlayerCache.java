@@ -39,6 +39,18 @@ public final class PlayerCache {
         return CACHE.get(player.getUuid());
     }
 
+    /**
+     * El clan de un jugador, ya en memoria.
+     *
+     * <p>⚠ SALE DE LA CACHE, no de la base. Lo pregunta el reparto de mundos
+     * salvajes, que corre en el hilo del servidor — y consultar ahí está
+     * prohibido. La caché ya lo tenía; lo único que faltaba era poder leerlo.
+     */
+    public static String clanDe(ServerPlayerEntity player) {
+        var snap = cached(player);
+        return snap == null || snap.clan == null ? "" : snap.clan;
+    }
+
     public static void forget(ServerPlayerEntity player) {
         CACHE.remove(player.getUuid());
     }

@@ -43,7 +43,8 @@ public record App(String id, boolean abierta) {
         //   con CONTENEDOR: arrastrar objetos lo hace Minecraft, no nosotros.
         new App("mochila",    true),
         new App("gyms",       false),
-        new App("explorar",   false),
+        // ⚠ Se enciende con su pantalla (2026-08-27): los dos mundos.
+        new App("explorar",   true),
         // ⚠ LA DECIMOSEXTA, y por eso cae en la PAGINA 2. No hubo que
         //   quitar ninguna: la rejilla ya pagina y reordena (OrdenPad).
         new App("curar",      true),

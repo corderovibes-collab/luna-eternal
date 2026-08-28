@@ -82,6 +82,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> shutdown());
 
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            // ⚠ El borde del salvaje SE APLICA EN CADA ARRANQUE. Se guarda en el
+            //   nivel, asi que bastaria con ponerlo una vez -- hasta que alguien
+            //   lo cambie con un comando o restauremos un respaldo viejo.
+            net.pokereport.luna.world.Salvaje.ponerBorde(server);
             Tablist.setup(server);
             // Se suscribe cuando Cobblemon ya esta cargado del todo.
             net.pokereport.luna.pokedex.CaptureListener.register();

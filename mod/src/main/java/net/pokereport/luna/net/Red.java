@@ -920,6 +920,107 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «Dame los mundos», al abrir Explorar. */
+    public record PedirExplorar() implements CustomPayload {
+        public static final Id<PedirExplorar> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_explorar"));
+        public static final PacketCodec<RegistryByteBuf, PedirExplorar> CODEC =
+                PacketCodec.unit(new PedirExplorar());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Un mundo salvaje y cuánta gente hay dentro. */
+    public record MundoSalvaje(int numero, int jugadores, boolean lleno) {
+        public static final PacketCodec<RegistryByteBuf, MundoSalvaje> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_INT, MundoSalvaje::numero,
+                        PacketCodecs.VAR_INT, MundoSalvaje::jugadores,
+                        PacketCodecs.BOOL, MundoSalvaje::lleno,
+                        MundoSalvaje::new);
+    }
+
+    /** Alguien de tu clan que está en un mundo salvaje. */
+    public record Companero(String nombre, int mundo) {
+        public static final PacketCodec<RegistryByteBuf, Companero> CODEC =
+                PacketCodec.tuple(
+                        CADENA, Companero::nombre,
+                        PacketCodecs.VAR_INT, Companero::mundo,
+                        Companero::new);
+    }
+
+    /**
+     * Lo que dibuja la pantalla de Explorar.
+     *
+     * <p>⚠ Los compañeros son <b>de tu clan</b> y solo los que están en un
+     * mundo salvaje. Enseñar a todo el servidor convertiría esto en un
+     * teletransporte a cualquiera, gratis — que es otra cosa muy distinta.
+     */
+    public record EstadoExplorar(List<MundoSalvaje> mundos,
+                                 List<Companero> companeros, int miMundo)
+            implements CustomPayload {
+        public static final Id<EstadoExplorar> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_explorar"));
+        public static final PacketCodec<RegistryByteBuf, EstadoExplorar> CODEC =
+                PacketCodec.ofStatic(EstadoExplorar::escribir, EstadoExplorar::leer);
+
+        private static void escribir(RegistryByteBuf buf, EstadoExplorar e) {
+            buf.writeVarInt(e.mundos.size());
+            for (var m : e.mundos) {
+                MundoSalvaje.CODEC.encode(buf, m);
+            }
+            buf.writeVarInt(e.companeros.size());
+            for (var c : e.companeros) {
+                Companero.CODEC.encode(buf, c);
+            }
+            buf.writeVarInt(e.miMundo);
+        }
+
+        private static EstadoExplorar leer(RegistryByteBuf buf) {
+            int n = buf.readVarInt();
+            List<MundoSalvaje> ms = new ArrayList<>(n);
+            for (int i = 0; i < n; i++) {
+                ms.add(MundoSalvaje.CODEC.decode(buf));
+            }
+            int nc = buf.readVarInt();
+            List<Companero> cs = new ArrayList<>(nc);
+            for (int i = 0; i < nc; i++) {
+                cs.add(Companero.CODEC.decode(buf));
+            }
+            return new EstadoExplorar(List.copyOf(ms), List.copyOf(cs),
+                    buf.readVarInt());
+        }
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Llévame».
+     *
+     * <p>⚠ El destino NO es una dimensión: es «hogar», «salvaje» o el nombre de
+     * un compañero. El servidor decide a qué mundo salvaje va — si viniera del
+     * cliente, cualquiera elegiría el mundo lleno de legendarios sin pasar por
+     * el reparto (P6).
+     */
+    public record AccionExplorar(String destino) implements CustomPayload {
+        public static final Id<AccionExplorar> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_explorar"));
+        public static final PacketCodec<RegistryByteBuf, AccionExplorar> CODEC =
+                PacketCodec.tuple(CADENA, AccionExplorar::destino,
+                        AccionExplorar::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame el catalogo», al abrir la tienda. */
     public record PedirTienda() implements CustomPayload {
         public static final Id<PedirTienda> ID =
@@ -1720,6 +1821,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(EstadoMercado.ID, EstadoMercado.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirCazas.ID, PedirCazas.CODEC);
         PayloadTypeRegistry.playC2S().register(AbrirMochila.ID, AbrirMochila.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirExplorar.ID, PedirExplorar.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionExplorar.ID, AccionExplorar.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoExplorar.ID, EstadoExplorar.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionCaza.ID, AccionCaza.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoCazas.ID, EstadoCazas.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirTienda.ID, PedirTienda.CODEC);
@@ -1783,6 +1887,12 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(AbrirMochila.ID, (carga, ctx) ->
                 net.pokereport.luna.backpack.Registro.abrir(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirExplorar.ID, (carga, ctx) ->
+                enviarExplorar(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionExplorar.ID, (carga, ctx) ->
+                viajar(ctx.player(), carga.destino()));
 
         ServerPlayNetworking.registerGlobalReceiver(AccionCaza.ID, (carga, ctx) ->
                 cobrarCaza(ctx.player(), carga.objetivo()));
@@ -2982,6 +3092,108 @@ public class Red implements ModInitializer {
                         objetivo, e.toString());
             }
         });
+    }
+
+    /**
+     * Manda los mundos y los compañeros.
+     *
+     * <p>⚠ Todo se lee del servidor en el hilo del servidor: son listas de
+     * jugadores conectados, no consultas. Lo único que iría a la base es el
+     * clan, y ese ya está en la caché de {@code PlayerCache}.
+     */
+    private static void enviarExplorar(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var servidor = jugador.getServer();
+        if (servidor == null) {
+            return;
+        }
+        int[] pobl = net.pokereport.luna.world.Salvaje.poblacion(servidor);
+        List<MundoSalvaje> mundos = new ArrayList<>(pobl.length);
+        for (int i = 0; i < pobl.length; i++) {
+            mundos.add(new MundoSalvaje(i + 1, pobl[i],
+                    pobl[i] >= net.pokereport.luna.world.Salvaje.LLENO));
+        }
+
+        // ⚠ SOLO LOS DEL CLAN, y solo los que estan en un salvaje. Enseñar a
+        //   todo el servidor convertiria esto en un teletransporte gratuito a
+        //   cualquiera, que es otra cosa que nadie ha pedido.
+        String miClan = net.pokereport.luna.ui.PlayerCache.clanDe(jugador);
+        List<Companero> companeros = new ArrayList<>();
+        if (miClan != null && !miClan.isBlank()) {
+            for (var otro : servidor.getPlayerManager().getPlayerList()) {
+                if (otro == jugador) {
+                    continue;
+                }
+                var clave = otro.getServerWorld().getRegistryKey();
+                if (!net.pokereport.luna.world.Salvaje.esSalvaje(clave)) {
+                    continue;
+                }
+                if (miClan.equals(net.pokereport.luna.ui.PlayerCache.clanDe(otro))) {
+                    companeros.add(new Companero(otro.getName().getString(),
+                            net.pokereport.luna.world.Salvaje
+                                .numeroDe(otro.getServerWorld())));
+                }
+            }
+        }
+
+        var mia = jugador.getServerWorld().getRegistryKey();
+        int miMundo = net.pokereport.luna.world.Salvaje.esSalvaje(mia)
+                ? net.pokereport.luna.world.Salvaje.numeroDe(jugador.getServerWorld())
+                : 0;
+        ServerPlayNetworking.send(jugador,
+                new EstadoExplorar(List.copyOf(mundos), List.copyOf(companeros),
+                        miMundo));
+    }
+
+    /**
+     * Viaja.
+     *
+     * <p>⚠⚠ EL CLIENTE NO ELIGE MUNDO SALVAJE. Manda «salvaje» y el servidor
+     * decide cuál según el reparto. Si el número viniera del cliente,
+     * cualquiera se metería siempre en el mismo y el reparto no serviría de
+     * nada (P6).
+     */
+    private static void viajar(
+            net.minecraft.server.network.ServerPlayerEntity jugador, String destino) {
+        var servidor = jugador.getServer();
+        if (servidor == null || destino == null) {
+            return;
+        }
+        if (destino.equals("hogar")) {
+            net.pokereport.luna.world.TravelService.travel(jugador,
+                    net.pokereport.luna.world.LunaDimensions.HOGAR, "Mundo Hogar");
+            enviarExplorar(jugador);
+            return;
+        }
+        if (destino.equals("salvaje")) {
+            if (!net.pokereport.luna.world.Salvaje.llevar(jugador)) {
+                jugador.sendMessage(net.minecraft.text.Text.literal(
+                        "§cNo se encontró sitio. Inténtalo otra vez."), true);
+            }
+            enviarExplorar(jugador);
+            return;
+        }
+        // ⚠ Un compañero. Se COMPRUEBA que sea de su clan aquí también: la
+        //   pantalla solo enseña los del clan, pero un cliente modificado
+        //   mandaría cualquier nombre.
+        var otro = servidor.getPlayerManager().getPlayer(destino);
+        if (otro == null) {
+            jugador.sendMessage(net.minecraft.text.Text.literal(
+                    "§cEse jugador ya no está conectado."), true);
+            return;
+        }
+        String miClan = net.pokereport.luna.ui.PlayerCache.clanDe(jugador);
+        if (miClan == null || miClan.isBlank()
+                || !miClan.equals(net.pokereport.luna.ui.PlayerCache.clanDe(otro))) {
+            jugador.sendMessage(net.minecraft.text.Text.literal(
+                    "§cSolo puedes ir con alguien de tu clan."), true);
+            return;
+        }
+        if (!net.pokereport.luna.world.Salvaje.conJugador(jugador, otro)) {
+            jugador.sendMessage(net.minecraft.text.Text.literal(
+                    "§cNo se pudo llegar hasta él."), true);
+        }
+        enviarExplorar(jugador);
     }
 
     /**

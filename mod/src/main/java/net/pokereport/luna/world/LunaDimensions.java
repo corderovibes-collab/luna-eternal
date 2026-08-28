@@ -1,5 +1,7 @@
 package net.pokereport.luna.world;
 
+import java.util.List;
+
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.Identifier;
@@ -26,7 +28,30 @@ public final class LunaDimensions {
 
     public static final RegistryKey<World> LOBBY     = key("lobby");
     public static final RegistryKey<World> CIUDADELA = key("ciudadela");
-    public static final RegistryKey<World> SALVAJE   = key("salvaje");
+    /**
+     * LOS SEIS MUNDOS SALVAJES.
+     *
+     * <h2>⚠⚠ SE DECLARAN LOS SEIS AUNQUE SOLO TRES SE USEN</h2>
+     *
+     * Fabric <b>no puede crear dimensiones en caliente</b>: o están declaradas
+     * al arrancar o no existen. Con los seis declarados, la rotación semanal es
+     * <b>cambiar cuáles son los activos</b> —tres números— en vez de crear
+     * mundos, que no se puede hacer.
+     *
+     * <p>⚠ Y un mundo declarado y vacío no cuesta casi nada: Minecraft solo
+     * mantiene cargados los chunks de aparición del <b>overworld</b>. Una
+     * dimensión propia sin nadie dentro no tickea chunks.
+     *
+     * <p>⚠ El primero se sigue llamando {@code salvaje} y no {@code salvaje1}:
+     * ese mundo <b>ya tiene datos en el disco del servidor</b>, y renombrarlo
+     * los dejaría huérfanos.
+     */
+    public static final List<RegistryKey<World>> SALVAJES = List.of(
+        key("salvaje"), key("salvaje2"), key("salvaje3"),
+        key("salvaje4"), key("salvaje5"), key("salvaje6"));
+
+    /** El primero. Lo usan los comandos que hablan de «el salvaje» a secas. */
+    public static final RegistryKey<World> SALVAJE = SALVAJES.get(0);
 
     /** El Mundo Hogar es el overworld de toda la vida. */
     public static final RegistryKey<World> HOGAR = World.OVERWORLD;

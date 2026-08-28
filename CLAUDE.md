@@ -8,7 +8,7 @@
 **Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
 D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, ocho vías de progresión, y **ocho pantallas** en el PokePad.
-Autotest **402/402** en vivo. **El recorrido del jugador nuevo está completo.**
+Autotest **411/411** en vivo. **El recorrido del jugador nuevo está completo.**
 
 > **2026-08-27 — RANGOS, MOCHILA, MUNDOS Y ESCALADO. Y tres lecciones que se
 > repiten.**
@@ -166,7 +166,7 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 402/402 correctos (2026-08-27, en vivo)
+Autotest      /luna autotest -> 411/411 correctos (2026-08-28, en vivo)
               +8 de Viajes, y la que importa es LA REJILLA: 4x2 son
               OCHO huecos, asi que una NOVENA parada seria
               INALCANZABLE sin dar ningun error
@@ -949,6 +949,76 @@ Viajes        LAS PARADAS, POR FIN EN SU SITIO (2026-08-27)
                 mezclar con transparente es no hacer nada-- y saldria macizo
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
 
+Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
+              5 trajes . NOVATO hecho . los otros 4 «en preparacion»
+              3 pestañas: KITS DE RANGO . KITS EXCLUSIVOS . MIS KITS
+              saldo de LunaCoins con su «+» . previsualizador 3D
+              ⚠⚠⚠ NO HAY OBJETO EN NINGUNA PARTE, y hay CUATRO motivos. Los tres
+                 primeros son los de los sombreros --ocupa ranura, se cae al
+                 morir, SE PUEDE REGALAR (y entonces el traje ya no vendria del
+                 rango, que es lo unico que lo sostiene)--, y el cuarto es de
+                 infraestructura: VEINTE OBJETOS SON VEINTE ENTRADAS MAS EN UN
+                 REGISTRO QUE SE SINCRONIZA, o sea veinte razones para echar a
+                 quien no se actualice. Aqui no se registra nada
+              ⚠⚠ CERO PROTECCION, y es un dato MEDIDO: el material de Diosesmon
+                 da 3/8/6/3 en su `ModArmorMaterials`, que es EXACTAMENTE
+                 diamante. Su traje de pago protege. D-007 y D-014 dicen que se
+                 vende identidad, no poder
+              ⚠⚠ NO SE USA GECKOLIB aunque este instalado: hace falta para
+                 modelos ANIMADOS y estos no lo estan. El .geo.json se convierte
+                 a ModelPart de vainilla, que es lo que hace el dibujado de
+                 armadura del propio Minecraft
+                 ⚠⚠⚠ Y LA CONVERSION DE COORDENADAS ES DONDE SE ROMPE TODO:
+                    Bedrock mide Y hacia ARRIBA desde los pies y Java hacia
+                    ABAJO desde el pivote del hueso. De ahi y = 24 - oy - sy y
+                    z = -oz - sz. Copiada mal NO DA NINGUN ERROR: el traje sale
+                    del reves, dentro del cuerpo, o flotando bajo los pies
+              ⚠⚠ NO HAY TABLA DE «QUE TRAJES TIENES»: se DERIVA del rango. Una
+                 segunda tabla seria una copia que puede quedarse vieja. De
+                 propina, BAJAR DE RANGO RETIRA EL TRAJE SOLO
+              ⚠⚠ EL ESTADO NO ES DE QUIEN LO MIRA, y aqui es literal: un traje
+                 lo ve TODO EL MUNDO MENOS TU. Se reparte a todos al cambiarlo
+                 Y se pone al dia a quien entra -- esa segunda mitad es la que
+                 siempre se olvida
+              ⚠ el traje se carga DENTRO del callback del rango, no al lado:
+                `revisar` necesita el escalon y `ranks.cargar` es ASINCRONO.
+                Es la trampa de `conceder()` en la pantalla del inicial
+              ⚠ se puede llevar CUALQUIERA hasta el tuyo, no solo el tuyo:
+                obligar al mas alto convierte una recompensa en un uniforme
+              ⚠ el probado se quita en un `finally`: el dibujado pasa por codigo
+                de vanilla y lo que se prueba viaja en una estatica. Sin el, una
+                excepcion te deja saliendo al mundo con un traje que no tienes
+              +10 comprobaciones, y la que importa: UN TRAJE SIN ARTE NO SE PUEDE
+              PONER NI SIENDO LEYENDA. Sin eso se equipa, se sincroniza, no da
+              ningun error y el jugador NO VE NADA -- el fallo de los 62
+              cosmeticos que no existian, otra vez
+              ⚠ SIN VERIFICAR EN EL JUEGO todavia
+
+EL ARTE       tools/gen_trajes.py . tools/trajes/ . docs/ui/prompts-trajes.md
+              ⚠⚠⚠ EL VISOR ES LA PIEZA QUE IMPORTA, NO UN EXTRA. Sin el, un traje
+                 se escribe A CIEGAS: generas un fichero que dice «cubo aqui,
+                 cubo alla» y no ves el resultado hasta compilar, desplegar,
+                 reiniciar y ponertelo. Media hora por intento = UN intento
+                 `--ver novato` dibuja las 4 vistas y NO TOCA NADA
+              ⚠⚠ Y DIBUJA EL MANIQUI DEBAJO, que es lo que caza el fallo de
+                 verdad. En su segunda pasada encontro DOS SITIOS CON PIEL
+                 ASOMANDO --el cinturon no llegaba al final del torso y la
+                 hombrera acababa antes que el brazo-- y flotando en negro el
+                 traje parecia perfecto
+              ⚠⚠ EL BOCETO LO GENERA EL USUARIO CON IA Y AQUI SE TRADUCE. Una IA
+                 de imagen NO puede hacer el traje --no genera .geo.json ni
+                 textura envuelta-- pero SI el boceto, y con el dejo de inventar.
+                 Vale el boceto PLANO Y ORTOGRAFICO, no un render bonito
+                 ⚠ LA VISTA DE ESPALDA SE GANO EL SUELDO EN EL PRIMERO: la Poke
+                   Ball del NOVATO no se ve de frente, asi que sin esa vista no
+                   se habria puesto nunca
+              ⚠ el reparto de la textura SE CALCULA: escrito a mano cuadra hasta
+                que alguien cambia un cubo, y entonces dos cubos comparten
+                pixeles -- la cara de la bota dibujada en el hombro
+              ⚠ NOVATO no usa el color de su rango (§f, casi blanco): un traje
+                blanco sobre un cuerpo gris no se ve. Lleva el ROJO DEL
+                ENTRENADOR. Los otros cuatro si llevan el suyo
+
 Textos        ⚠⚠⚠ UNA CLAVE DE TRADUCCION QUE NO EXISTE SE VE CRUDA
               `Text.translatable("clave.que.no.existe")` NO DA NINGUN ERROR:
               ni al compilar, ni al arrancar, ni al dibujar. Minecraft pinta
@@ -1651,11 +1721,12 @@ Interfaz      TRECE PANTALLAS. Nueve verificadas en el juego:
                 Mochila     2026-08-27   7 filas por rango . CONTENEDOR
                 Explorar    2026-08-27   2 mundos, arte 768x512
                 Viajes      2026-08-27   7 paradas . rejilla 4x2
+                Kits        2026-08-28   trajes de rango . 3D
               11 de los 16 iconos abren algo: pokedex (la de Cobblemon),
               cosmeticos, trabajos, misiones, clan, tienda, curar, mercado,
               cazas, explorar y viajes
-              SIGUE SIN PANTALLA, con la logica viva y probada:
-                kits
+              YA NO QUEDA NINGUNA con logica viva y sin pantalla:
+                `kits` era la ultima y hoy es la de TRAJES
               ⚠ el MERCADO refresca al VENDEDOR cuando le compran, sin que el
                 pulse nada: su oferta desaparecio y su dinero subio. Es la
                 leccion de los clanes aplicada antes de que doliera

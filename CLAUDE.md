@@ -3,12 +3,40 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-08-25
+**Última actualización:** 2026-08-27
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela)
 **Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
 D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, ocho vías de progresión, y **ocho pantallas** en el PokePad.
 Autotest **368/368** en vivo. **El recorrido del jugador nuevo está completo.**
+
+> **2026-08-27 — RANGOS, MOCHILA, MUNDOS Y ESCALADO. Y tres lecciones que se
+> repiten.**
+>
+> ⚠⚠⚠ **LA INTERFAZ NO CRECÍA CON LA PANTALLA, Y EL CÓDIGO ESTABA COPIADO ONCE
+> VECES.** `Math.min(1.0, cabe)`: el chasis **nunca ampliaba**, así que cuanto
+> más grande el monitor, más pequeño se veía — **36 % del ancho en un 4K frente
+> al 72 % de 1080p**. Hoy crece a **medios pasos** (1 · 1,5 · 2 · 2,5), con lo
+> que 1080p **no cambia nada** y 4K pasa al 90 %.
+> **Y el arreglo de verdad es que ahora hay un solo sitio**: `recalcular()`
+> estaba copiado en once pantallas —«copia literal de CosmeticosScreen», decían
+> todas— y medido ese día ya había **seis variantes distintas**.
+> ⚠⚠ **Y al extraerlo casi deshago una lección ya pagada**: puse un margen del
+> 2 %, y `PokePadScreen` decía con todas las letras que eso ya se probó y se
+> retiró porque **encoger es lo que emborrona**. La versión buena estaba en
+> **una** de las once; ahora la tienen todas.
+>
+> ⚠⚠ **UN REGISTRO SINCRONIZADO NO DEGRADA: ECHA.** La mochila añadió un tipo de
+> contenedor, y al reiniciar **nadie pudo entrar** hasta reabrir el launcher —
+> cero «joined the game» durante seis minutos. Todo lo anterior eran paquetes y
+> datos: un cliente viejo pierde funciones pero **entra**. **Hay que avisar
+> ANTES de reiniciar, no después.**
+>
+> ⚠⚠ **Y `setInvulnerable` NO PROTEGE DEL CREATIVO.** El propio Minecraft lo
+> dice: la invulnerabilidad no aplica `if (fuente.isSourceCreativePlayer())`. Y
+> en este servidor **todos los que colocan decoración son operadores en
+> creativo**, o sea el único caso que la bandera no cubre: el fallo parecía «no
+> funciona» cuando era «funciona para todos menos para ti».
 
 > **2026-08-25 — LOS OBJETOS PASAN A ESCAPARATE, Y ES UNA RECTIFICACIÓN.**
 > D-041 dijo que los objetos van por **libro de órdenes** porque son fungibles.
@@ -739,6 +767,145 @@ Clanes        EL PRIMER SISTEMA SOCIAL (2026-08-23, V013)
               ⚠ SIN VERIFICAR EN EL JUEGO todavia: hacen falta DOS cuentas
               desplegado y V013 aplicada (2026-08-23) . Done (9,2 s)
 
+Rangos        NOVATO . ELITE . CAMPEON . MAESTRO . LEYENDA (2026-08-27, V020)
+              y encima ADMIN . DEV . MODERADOR, que son de equipo
+              /luna rango                   los que hay y cuanta gente
+              /luna rango <jugador> <RANGO> nivel 4, SIN que este conectado
+              ⚠⚠ SALIO GRATIS PORQUE EL SISTEMA NO EXISTIA. `Tablist.rankOf`
+                 decia la verdad en su comentario: «Provisional... todo el mundo
+                 es JUGADOR salvo los operadores». NO habia ni un rango guardado,
+                 asi que renombrarlos no le cambio el rango a nadie
+              ⚠⚠⚠ VARCHAR Y NO UN ENUM DE MARIADB, y esto ya nos mordio con los
+                  oficios (V012): un ENUM guarda EL INDICE, asi que reordenar
+                  convierte a unos jugadores en otros, y meter un valor que no
+                  esta en la lista NO DA ERROR -- guarda la cadena vacia
+              ⚠⚠ EL `escalon` ES UN NUMERO EXPLICITO, no `ordinal()`: con ordinal,
+                 meter un rango en medio le cambia el nivel a todos los de abajo
+              ⚠⚠ LA CACHE NO ES UNA OPTIMIZACION, ES UN REQUISITO: el rango lo
+                 pregunta el tablist, el chat y la mochila, todo EN EL HILO DEL
+                 SERVIDOR. Se lee una vez al entrar
+                 ⚠ y cambiarlo escribe EN LOS DOS SITIOS. La base PRIMERO
+              ⚠⚠ UN OPERADOR SE VE COMO ADMIN PERO NO DESBLOQUEA COMO ADMIN:
+                 `rankOf` da ADMIN (informacion operativa) y `escalonDe` da el
+                 guardado. Sin esa separacion, dar OP a alguien para mirar una
+                 cosa le regalaria la mochila entera
+              ⚠ un nombre mal escrito DA ERROR en vez de degradar: `Rank.de` cae
+                al mas bajo --correcto al leer una fila vieja-- asi que sin
+                comprobarlo aparte, un error de tecleo bajaria a un LEYENDA
+
+Mochila       SIETE FILAS QUE SE ABREN POR RANGO (2026-08-27, V021)
+              tecla N o el icono del PokePad
+                NOVATO 1 . ELITE 3 . CAMPEON 4 . MAESTRO 6 . LEYENDA 7
+              ⚠⚠ SIETE Y NO SEIS, y sale de la aritmetica del usuario: «1, otras
+                 2 mas, otra mas, otras 2 mas, y LEYENDA todas» -> 1,3,4,6... y
+                 «todas» TENIA que ser mas de 6 o LEYENDA no daria nada nuevo
+              ⚠⚠ NO SE USA SOPHISTICATED BACKPACKS aunque estuviera instalado:
+                 su almacen vive DENTRO DE UN ITEM (y el usuario no quiere item)
+                 y no sabe nada de NUESTROS rangos. Misma razon que D-040 dio
+                 para no adoptar un mod de clanes
+              ⚠⚠ ESTO NO ES UN MENU DE COFRE DE LOS QUE PROHIBE P9-BIS. D-026
+                 retiro aquellos porque eran PANTALLAS DE INFORMACION disfrazadas
+                 de inventario. Esto ES un inventario, y arrastrar objetos EXIGE
+                 un ScreenHandler. Lo que si se cumple: el dibujo es NUESTRO
+              ⚠⚠⚠ EL CANDADO VIVE EN EL SERVIDOR, dentro del Slot. La barra roja
+                  es decoracion: un cliente modificado no dibuja nada y hace clic
+                  donde quiere (P6)
+                  ⚠ Y SI SE PUEDE SACAR de un hueco bloqueado, a proposito: si
+                    alguien baja de rango sus objetos quedarian ENCERRADOS PARA
+                    SIEMPRE. Sacar si, meter no
+              ⚠⚠ SE GUARDA AL CERRAR Y AL DESCONECTAR, y las dos hacen falta: al
+                 desconectar Minecraft cierra el contenedor sin avisar, y como el
+                 guardado BORRA Y REESCRIBE, sin la segunda se perderia entera
+                 ⚠ borrar y escribir van EN UNA TRANSACCION
+              ⚠ `payload` lleva el objeto ENTERO (encantamientos incluidos), al
+                contrario que el escaparate: aqui entra cualquier cosa
+
+Mundos        HOGAR + TRES SALVAJES DE TRES (2026-08-27, V022)
+              icono EXPLORAR . dos tarjetas con arte de 768x512
+              ⚠⚠⚠ REPARTIR GENTE ENTRE DIMENSIONES NO BAJA EL LAG. TODAS se
+                  tickean EN EL MISMO HILO. 40 jugadores repartidos por tres
+                  mundos cargan LOS MISMOS chunks que 40 por uno -- y si la gente
+                  se agrupa, UN SOLO MUNDO ES MEJOR porque los comparten.
+                  Lo que si arregla es que 40 personas se peleen por el mismo
+                  legendario: es un problema DE JUEGO. Por eso la pantalla habla
+                  de GENTE y nunca de rendimiento
+                  ⚠ el camino de verdad para mucha gente es MAS SERVIDORES con
+                    proxy. Y D-009 ya lo permite: economia, clanes, GTS y
+                    misiones estan EN MARIADB, asi que un segundo servidor lo
+                    compartiria sin escribir una linea
+              MEDIDO EN EL PANEL: RAM 10 GB usando 5,79 con el mundo vacio,
+              disco 120 GB usando 0,92, CPU 300% = 3 nucleos
+              SEIS DIMENSIONES DECLARADAS, TRES EN USO. Fabric NO crea
+              dimensiones en caliente: la rotacion semanal sera CAMBIAR TRES
+              NUMEROS. Un mundo declarado y vacio no cuesta casi nada
+              ⚠ el primero se llama `salvaje` y no `salvaje1`: ya tiene datos
+              RADIO 3000 (36 km²), bajado de 5000 por el usuario al ver el coste:
+                3000  140.000 chunks  25-45 min/mundo   2-4 h los tres
+                5000  390.000 chunks   1-2 h /mundo    9-18 h con reservas
+              y esas horas COMPITEN con los jugadores por los mismos 3 nucleos
+              ⚠⚠ LA SALIDA AL REPARTO es lo mejor del diseño y la pidio el
+                 usuario: un reparto que SEPARA A UN CLAN no es equilibrio, es
+                 una averia. La lista de compañeros la salta
+                 ⚠ y se comprueba EN EL SERVIDOR que sea de tu clan
+              ⚠ el cliente NO elige mundo: manda «salvaje» y decide el servidor
+              HOGAR: la primera vez ALEATORIA en 2.000 de radio, y despues DONDE
+              LO DEJASTE (V022)
+              ⚠⚠ Minecraft recuerda UNA posicion por jugador, la de al
+                 desconectar. NO recuerda «donde estaba en el Hogar» mientras
+                 esta en el Salvaje, que es justo lo que hace falta
+              ⚠⚠ LA PRIMERA AL AZAR ES LO QUE REPARTE LAS CASAS: si todos
+                 aparecieran en el mismo punto, todos construirian ahi -- y con
+                 protecciones, quien llegue tarde no encuentra sitio
+              ⚠ se apunta ANTES de mover, en los tres caminos. Despues ya esta en
+                el otro mundo y se guardaria LA POSICION DE DESTINO
+              LO QUE FALTA: PRE-GENERAR (Chunky ya instalado, sin usar) y la
+              rotacion semanal con las tres reservas
+              ⚠ sin pre-generar, el primero que caiga en zona virgen paga la
+                generacion con su lag. Es la medida que MAS se nota
+
+Decorativos   POKEMON QUIETOS, Y SON DIEZ COSAS QUE APAGAR (2026-08-26/27)
+              /luna decorar <especie> <quieto|dormido|flotando> [x y z] [grados]
+              /luna decorar quitar [radio]
+              /luna paradas · /luna paradas quitar
+              ⚠⚠ ES UN POKEMON DE VERDAD, no una estatua: los modelos viven
+                 DENTRO de Cobblemon y no se pueden dibujar sin su entidad
+              LA LISTA, y cada una llego porque alguien probo la anterior:
+                etiqueta . nivel . IA . captura . daño . DAÑO EN CREATIVO .
+                combate . sonido . persistencia . postura . POKEDEX
+              ⚠⚠⚠ `setInvulnerable` NO CUBRE EL CREATIVO. Lo dice el propio
+                  Minecraft: `&& !fuente.isSourceCreativePlayer()`. Y aqui TODOS
+                  los que colocan son operadores en creativo. Hoy tambien se
+                  corta con ServerLivingEntityEvents.ALLOW_DAMAGE
+              ⚠⚠ `uncatchable` NO IMPIDE EL COMBATE: sin `UNBATTLEABLE`, el
+                 Miraidon de una parada seria el jefe final del servidor
+              ⚠⚠ LA POKEDEX SON DOS EVENTOS, no uno: POKEMON_SEEN («lo he visto»)
+                 y POKEDEX_DATA_CHANGED_PRE («se va a escribir»). Cancelar solo
+                 el primero deja abierto el escaneo, que es lo que el usuario
+                 probo. Los dos son cancelables en Cobblemon
+                 ⚠ y hay que marcar EL POKEMON, no la entidad: los eventos de
+                   Pokedex reciben el Pokemon. `getPersistentData()` es el hueco
+                   que Cobblemon deja para eso
+              ⚠⚠ SE FILTRA POR MARCA Y NO POR ESPECIE, a proposito: asi protege a
+                 cualquier decorativo y NO protege a un Miraidon de verdad
+              ⚠ `enablePoseTypeRecalculation=false` es la que no es obvia:
+                Cobblemon recalcula la postura CADA TICK, asi que «dormido»
+                duraria un tick
+
+Paradas       EL MOTO TAXI: SIETE PUNTOS EN LA CIUDADELA (2026-08-27)
+              Torre de Batalla . Laboratorio de Oak . Palacio de Entrenadores .
+              Monumentos . Torre Comercial . Centro de Curacion . La Montaña
+              ⚠⚠ SOLO FUNCIONAN DENTRO DE LA CIUDADELA: si se pudieran usar desde
+                 el salvaje serian un «volver a casa» instantaneo, y salir a
+                 explorar dejaria de tener riesgo
+                 ⚠ fuera SE APAGAN, no se esconden: que existan y no se puedan
+                   usar ES INFORMACION
+              ⚠ las coordenadas van EN EL CODIGO: son parte de la ciudadela, que
+                se construye a mano y cambia con ella
+              ⚠ `/luna paradas` se puede repetir: BORRA antes de poner. Sin eso
+                quedarian dos superpuestos -- y no se pueden atacar ni capturar
+              ⚠⚠ ESTAN EN LA PANTALLA EQUIVOCADA. Se metieron en EXPLORAR y el
+                 usuario las quiere en VIAJES (icono `warps`). PENDIENTE
+
 Textos        ⚠⚠⚠ UNA CLAVE DE TRADUCCION QUE NO EXISTE SE VE CRUDA
               `Text.translatable("clave.que.no.existe")` NO DA NINGUN ERROR:
               ni al compilar, ni al arrancar, ni al dibujar. Minecraft pinta
@@ -1426,7 +1593,7 @@ Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
                 jugador conectado; desde consola solo consta que el
                 datapack carga sin errores. Es el mismo PKM-004 de
                 siempre
-Interfaz      DIEZ PANTALLAS. Siete verificadas en el juego:
+Interfaz      TRECE PANTALLAS. Nueve verificadas en el juego:
                 PokePad     2026-08-16   la principal, 15 iconos
                 Cosmeticos  2026-08-22   4 pestanias
                 Trabajos    2026-08-23   8 Vias y oficios, paginado
@@ -1437,7 +1604,9 @@ Interfaz      DIEZ PANTALLAS. Siete verificadas en el juego:
                 Curar       2026-08-23   la 16a celda, pagina 2
                 GTS         2026-08-25   Pokemon: 3D, tasador, filtros
                 Mercado     2026-08-25   Objetos: escaparate (D-042)
-                Cazas       2026-08-25   SIN VERIFICAR . 2 pestañas, 3+3
+                Cazas       2026-08-25   2 pestañas, 3+3
+                Mochila     2026-08-27   7 filas por rango . CONTENEDOR
+                Explorar    2026-08-27   2 mundos, arte 768x512
               9 de los 16 iconos abren algo: pokedex (la de Cobblemon),
               cosmeticos, trabajos, misiones, clan, tienda, curar, mercado y
               cazas
@@ -1854,15 +2023,23 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 > clan, comerciar Pokémon y objetos, y seguir el árbol de misiones. **Ya no
 > queda ninguna misión que no se pueda completar** — `t5_gts` era la última.
 
-### ⏭ POR AQUÍ SE SIGUE (2026-08-25, noche)
+### ⏭ POR AQUÍ SE SIGUE (2026-08-27, noche)
 
 | | |
 |---|---|
-| **1. Verificar en el juego lo de hoy** | **Cazas** y el **escaparate de objetos** están sin mirar. En cazas, lo que hay que comprobar es el **3D en la lista** —tres modelos a la vez es lo más pesado que dibuja ninguna pantalla— y que la cuenta atrás avance |
-| **2. `ECO-005` — las Marcas no se gastan en nada** | Ocho sitios las dan, **cero las cobren**. No rompe nada hoy y **se pone más caro cada día**: los precios se fijan contra lo que la gente tiene, y todos están acumulando |
-| **3. El mercado con dos cuentas** | Que al comprarte algo, tu pantalla y tu saldo cambien **sin que toques nada** |
-| **4. La mano secundaria** | No cuenta al vender objetos. Se arregla en `cuantos` **y** en `sacar`, las dos a la vez |
-| **5. La ciudadela** | Sigue siendo el foco no-técnico, y nada la bloquea |
+| **1. LAS PARADAS ESTÁN EN LA PANTALLA EQUIVOCADA** | Se metieron en **Explorar** y el usuario las quiere en **Viajes** (`warps`, hoy apagado). Hay que sacarlas de `ExplorarScreen`, hacer `ViajesScreen` y encender su icono. **Y hacerlo bien**: lo pidió «estructurado, bonito y profesional» |
+| **2. Clic derecho en el Miraidon abre Viajes** | Hoy los decorativos no responden a nada — fue una decisión explícita suya, y ahora la cambia. ⚠ Hará falta un evento de interacción **que solo responda a los que tienen la marca**, igual que el daño y la Pokédex |
+| **3. Pre-generar** | Chunky **ya está instalado y sin usar**. Tres mundos × 3.000 = 2-4 h, **con el servidor vacío**: compite con los jugadores por los mismos 3 núcleos |
+| **4. Verificar lo de hoy** | Mochila con rangos de verdad, el regreso al Hogar, y que un Miraidon **no** se pueda pegar en creativo ni registrar |
+| **5. `ECO-005`** | Las Marcas siguen sin gastarse en nada |
+| **6. La ciudadela** | Sigue siendo el foco no-técnico |
+
+> ⚠⚠⚠ **LA REGLA DEL DÍA, y costó seis minutos de servidor inaccesible: UN
+> REGISTRO QUE SE SINCRONIZA NO DEGRADA, ECHA.** Todo lo anterior —paquetes,
+> datos, texturas— deja entrar a un cliente viejo aunque pierda funciones. Un
+> bloque, un objeto o **un tipo de contenedor**, no: las dos tablas tienen que
+> coincidir o la conexión se cae en la puerta.
+> **Hay que avisar ANTES de reiniciar, no después.**
 
 > ⚠⚠ **La lección del 25-ago: UNA MAQUETA QUE MIDE ES UNA PRUEBA.**
 > `tools/gen_maqueta_mercado.py` dibuja las seis pantallas **sobre el chasis

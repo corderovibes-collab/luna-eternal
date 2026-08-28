@@ -53,7 +53,49 @@ public class ExplorarScreen extends Screen {
     private static final int NAV_ALTO = 72;
     private static final int MARGEN = 12;
 
-    private static final int TARJETA_W = 384, TARJETA_H = 210;
+    /**
+     * Las tarjetas.
+     *
+     * <p>⚠ 384×256 es <b>3:2 exacto</b>, y por eso el arte se pide a 768×512:
+     * el doble justo. Así en un monitor donde el chasis se dibuja a 2× cada
+     * píxel de la imagen cae en un píxel de pantalla, sin interpolar.
+     */
+    private static final int TARJETA_W = 384, TARJETA_H = 256;
+
+    /**
+     * El arte de cada mundo.
+     *
+     * <p>⚠⚠ SI NO ESTÁ, SE DIBUJA EL COLOR PLANO. Sin comprobarlo, una imagen
+     * que falte se dibuja como la textura rosa y negra de «falta esto» — encima
+     * de la tarjeta entera, que es peor que no tener imagen.
+     */
+    private static final Identifier ARTE_HOGAR =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/mundo_hogar.png");
+    private static final Identifier ARTE_SALVAJE =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/mundo_salvaje.png");
+
+    private Boolean hayArteHogar;
+    private Boolean hayArteSalvaje;
+
+    /**
+     * ⚠ Se pregunta UNA VEZ y se recuerda. `getResource` va al gestor de
+     * recursos, y hacerlo en cada fotograma sería preguntarlo sesenta veces por
+     * segundo por algo que no cambia mientras la pantalla está abierta.
+     */
+    private boolean hayArte(boolean salvaje) {
+        Boolean cache = salvaje ? hayArteSalvaje : hayArteHogar;
+        if (cache != null) {
+            return cache;
+        }
+        boolean hay = client != null && client.getResourceManager()
+                .getResource(salvaje ? ARTE_SALVAJE : ARTE_HOGAR).isPresent();
+        if (salvaje) {
+            hayArteSalvaje = hay;
+        } else {
+            hayArteHogar = hay;
+        }
+        return hay;
+    }
 
     private static final int BORDE_ENCIMA = 0xFFF35C0C;
     private static final int TEXTO_SUAVE = 0xFF5A668C;
@@ -177,8 +219,21 @@ public class ExplorarScreen extends Screen {
             boolean sel = salvaje == salvajeElegido;
             boolean enc = dentro(rx, ry, px(tx), py(ty), pl(TARJETA_W), pl(TARJETA_H));
 
-            ctx.fill(px(tx), py(ty), px(tx + TARJETA_W), py(ty + TARJETA_H),
-                    salvaje ? VERDE_SALVAJE : AZUL_HOGAR);
+            if (hayArte(salvaje)) {
+                dibujarTextura(ctx, salvaje ? ARTE_SALVAJE : ARTE_HOGAR,
+                        px(tx), py(ty), pl(TARJETA_W), pl(TARJETA_H), 768, 512);
+                // ⚠⚠ UNA BANDA OSCURA ARRIBA Y ABAJO, Y NO ES DECORACIÓN: el
+                //    título y los datos van ENCIMA de la imagen, y sobre una
+                //    ilustración con cielo claro un texto blanco desaparece.
+                //    Con la banda se lee siempre, salga la imagen que salga —
+                //    que además es lo que permite pedirle a la IA una
+                //    ilustración a sangre en vez de una con hueco para texto.
+                velo(ctx, tx, ty, TARJETA_W, 74, true);
+                velo(ctx, tx, ty + TARJETA_H - 78, TARJETA_W, 78, false);
+            } else {
+                ctx.fill(px(tx), py(ty), px(tx + TARJETA_W), py(ty + TARJETA_H),
+                        salvaje ? VERDE_SALVAJE : AZUL_HOGAR);
+            }
             // ⚠ El resalte va en el MARCO y no en el relleno: cambiar el relleno
             //   perdería el color que dice de qué mundo es cada tarjeta.
             marco(ctx, px(tx), py(ty), pl(TARJETA_W), pl(TARJETA_H),
@@ -190,22 +245,17 @@ public class ExplorarScreen extends Screen {
                             : "pokepad.lunaeternal.explorar.hogar"),
                     tx + TARJETA_W / 2, ty + 20, 30, 0xFFFFFFFF, true, CONTORNO_OSCURO);
 
-            int y = ty + 66;
-            for (String l : partir(Text.translatable(salvaje
-                            ? "pokepad.lunaeternal.explorar.salvaje_desc"
-                            : "pokepad.lunaeternal.explorar.hogar_desc").getString(),
-                    TARJETA_W - 40, 15)) {
-                texto(ctx, Text.literal(l), tx + TARJETA_W / 2, y, 15,
-                        0xFFC9D6EE, true, 0);
-                y += 20;
-            }
-
             if (salvaje) {
-                dibujarMundos(ctx, tx, ty + TARJETA_H - 62);
+                dibujarMundos(ctx, tx, ty + TARJETA_H - 60);
             } else {
-                texto(ctx, Text.translatable("pokepad.lunaeternal.explorar.hogar_pista"),
-                        tx + TARJETA_W / 2, ty + TARJETA_H - 34, 14, 0xFF9FB6D8,
-                        true, 0);
+                int y = ty + TARJETA_H - 62;
+                for (String l : partir(Text.translatable(
+                        "pokepad.lunaeternal.explorar.hogar_desc").getString(),
+                        TARJETA_W - 40, 15)) {
+                    texto(ctx, Text.literal(l), tx + TARJETA_W / 2, y, 15,
+                            0xFFDCE6F8, true, CONTORNO_OSCURO);
+                    y += 20;
+                }
             }
         }
     }
@@ -282,7 +332,7 @@ public class ExplorarScreen extends Screen {
     // ---- los compañeros ----------------------------------------------------
 
     private int companerosY() {
-        return PANT_Y + MARGEN + TARJETA_H + 14;
+        return PANT_Y + MARGEN + TARJETA_H + 12;
     }
 
     private void dibujarCompaneros(DrawContext ctx, int rx, int ry) {
@@ -406,6 +456,25 @@ public class ExplorarScreen extends Screen {
         marco(ctx, px(ax), py(ay), pl(aw), pl(ah), 0xFF10331E, Math.max(1, pl(2)));
         texto(ctx, etiqueta, ax + aw / 2, ay + ah / 2 - 12, 24,
                 activo ? 0xFFFFFFFF : 0xFFD8DEEA, true, 0);
+    }
+
+    /**
+     * Una banda oscura degradada, para que el texto se lea sobre la imagen.
+     *
+     * <p>⚠ Degradada y no plana: una banda plana corta la ilustración con una
+     * línea recta y se ve como un parche pegado encima.
+     */
+    private void velo(DrawContext ctx, int ax, int ay, int aw, int ah, boolean arriba) {
+        int pasos = Math.max(4, pl(ah) / 2);
+        int altoPx = pl(ah);
+        for (int i = 0; i < pasos; i++) {
+            float f = i / (float) pasos;
+            // Opaco en el borde y transparente hacia dentro.
+            int alfa = (int) ((arriba ? (1 - f) : f) * 210);
+            int y1 = py(ay) + i * altoPx / pasos;
+            int y2 = py(ay) + (i + 1) * altoPx / pasos;
+            ctx.fill(px(ax), y1, px(ax + aw), y2, (alfa << 24));
+        }
     }
 
     private static int aclarar(int color) {

@@ -194,6 +194,14 @@ QUEREMOS.update({k: f"Registra bloques ({v}). Si esta solo en el cliente, las "
 # Sin esta lista, `--aplicar` borraria el mod del servidor entero.
 INTOCABLES = ("lunaeternal", "lunaneon", "fabric-api", "Cobblemon",
               "EasyAuth", "worldedit", "Axiom",
+              # ⚠ CHUNKY ES SOLO DE SERVIDOR Y ESTA COMPROBADO, no supuesto:
+              #   0 blockstates, 0 modelos de objeto, 0 traducciones y un solo
+              #   entrypoint `main`. NO REGISTRA NADA QUE SE SINCRONICE, asi que
+              #   tenerlo aqui y no en el cliente no descuadra ninguna tabla --
+              #   misma categoria que EasyAuth y WorldEdit.
+              #   Pre-genera chunks: `/chunky world <mundo>`, `/chunky radius 3000`,
+              #   `/chunky start`. TODAVIA NO SE HA PRE-GENERADO NADA.
+              "Chunky",
               # ⚠ LIBRERIAS YA INSTALADAS: NO SE BORRAN AUNQUE PAREZCAN SOBRAR.
               #
               # Desde que `aporta()` mira dentro de los jars anidados, estas dos

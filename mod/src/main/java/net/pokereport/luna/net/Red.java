@@ -959,8 +959,16 @@ public class Red implements ModInitializer {
      * mundo salvaje. Enseñar a todo el servidor convertiría esto en un
      * teletransporte a cualquiera, gratis — que es otra cosa muy distinta.
      */
+    /**
+     * Lo que dibuja Explorar.
+     *
+     * <p>⚠ Las PARADAS van en el mismo paquete y no en uno propio: son la misma
+     * pantalla y se piden a la vez. Dos paquetes para una pantalla significan
+     * dos momentos en que puede estar a medio dibujar.
+     */
     public record EstadoExplorar(List<MundoSalvaje> mundos,
-                                 List<Companero> companeros, int miMundo)
+                                 List<Companero> companeros, int miMundo,
+                                 boolean enCiudadela)
             implements CustomPayload {
         public static final Id<EstadoExplorar> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_explorar"));
@@ -977,6 +985,7 @@ public class Red implements ModInitializer {
                 Companero.CODEC.encode(buf, c);
             }
             buf.writeVarInt(e.miMundo);
+            buf.writeBoolean(e.enCiudadela);
         }
 
         private static EstadoExplorar leer(RegistryByteBuf buf) {
@@ -991,7 +1000,7 @@ public class Red implements ModInitializer {
                 cs.add(Companero.CODEC.decode(buf));
             }
             return new EstadoExplorar(List.copyOf(ms), List.copyOf(cs),
-                    buf.readVarInt());
+                    buf.readVarInt(), buf.readBoolean());
         }
 
         @Override
@@ -3140,9 +3149,14 @@ public class Red implements ModInitializer {
         int miMundo = net.pokereport.luna.world.Salvaje.esSalvaje(mia)
                 ? net.pokereport.luna.world.Salvaje.numeroDe(jugador.getServerWorld())
                 : 0;
+        // ⚠ Las paradas solo se pueden usar DENTRO de la ciudadela, asi que la
+        //   pantalla necesita saber donde esta para apagarlas en vez de
+        //   ofrecerlas y luego rechazarlas.
+        boolean enCiudadela = net.pokereport.luna.world.LunaDimensions.CIUDADELA
+                .equals(jugador.getServerWorld().getRegistryKey());
         ServerPlayNetworking.send(jugador,
                 new EstadoExplorar(List.copyOf(mundos), List.copyOf(companeros),
-                        miMundo));
+                        miMundo, enCiudadela));
     }
 
     /**
@@ -3173,6 +3187,14 @@ public class Red implements ModInitializer {
                 jugador.sendMessage(net.minecraft.text.Text.literal(
                         "§cNo se encontró sitio. Inténtalo otra vez."), true);
             }
+            enviarExplorar(jugador);
+            return;
+        }
+        // ⚠ Una parada de la ciudadela. Va ANTES que lo del compañero porque
+        //   los identificadores de parada son fijos y conocidos: si se probara
+        //   después, alguien podría llamarse `montana` y colarse.
+        if (net.pokereport.luna.world.Paradas.de(destino) != null) {
+            net.pokereport.luna.world.Paradas.llevar(jugador, destino);
             enviarExplorar(jugador);
             return;
         }

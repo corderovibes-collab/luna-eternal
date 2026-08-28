@@ -118,6 +118,12 @@ public final class Decorativos {
             return null;
         }
         e.getDataTracker().set(PokemonEntity.getPOSE_TYPE(), postura.pose);
+        // ⚠⚠ NO SE PUEDE RETAR. `uncatchable` impide la Poké Ball, pero NO el
+        //    combate: sin esto, el Miraidon del punto de viaje se convierte en
+        //    el jefe final del servidor y alguien se pasa la tarde peleándose
+        //    con la decoración. Es un campo propio de Cobblemon
+        //    (`UNBATTLEABLE`), comprobado en el jar.
+        e.getDataTracker().set(PokemonEntity.getUNBATTLEABLE(), true);
         return e;
     }
 

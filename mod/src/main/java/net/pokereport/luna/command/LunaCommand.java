@@ -94,6 +94,18 @@ public final class LunaCommand {
                         return 1;
                     })))
 
+            .then(literal("paradas")
+                // ⚠ Nivel 4: coloca entidades permanentes en la ciudadela.
+                .requires(x -> x.hasPermissionLevel(4))
+                .executes(ctx -> {
+                    int n = net.pokereport.luna.world.Paradas
+                            .colocarTodas(ctx.getSource().getServer());
+                    ctx.getSource().sendFeedback(() -> Text.literal(
+                        "\u00a7a" + n + " \u00a77Miraidon colocados en las paradas."),
+                        false);
+                    return n;
+                }))
+
             .then(literal("decorar")
                 // ⚠ Nivel 4: coloca entidades permanentes en el mundo. Es
                 //   decoracion, pero decoracion que no se despawnea sola.

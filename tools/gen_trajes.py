@@ -38,7 +38,11 @@ sys.path.insert(0, str(RAIZ / "tools"))
 from trajes.modelo import Cubo, Traje, escribir            # noqa: E402
 from trajes import visor                                    # noqa: E402
 
-DESTINO = RAIZ / "mod" / "src" / "client" / "resources" / "assets" / "lunaeternal"
+# ⚠⚠ YA NO ESCRIBE EN EL MOD (2026-08-28, decision del usuario). El arte de los
+#    trajes se hace A MANO en Blockbench -- ver docs/ui/trajes-a-mano.md -- y
+#    esto queda como BANCO DE PRUEBAS: genera a `build/` para poder mirar el
+#    visor sin tocar lo que se reparte a los jugadores.
+DESTINO = RAIZ / "build" / "trajes" / "generado"
 LAMINAS = RAIZ / "build" / "trajes"
 
 

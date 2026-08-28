@@ -36,7 +36,14 @@ import net.pokereport.luna.ui.Tablist;
  */
 public enum Traje {
 
-    NOVATO("novato", Tablist.Rank.NOVATO, true),
+    // ⚠⚠⚠ LOS CINCO ESTAN A `false`, Y ES LO CORRECTO AHORA MISMO.
+    //    El arte generado por script se retiro el 2026-08-28 (decision del
+    //    usuario): se hara A MANO en Blockbench. Hasta que un traje tenga sus
+    //    ficheros, se ve en la pantalla --que dice hacia donde va la
+    //    progresion-- y NO SE PUEDE PONER.
+    //    Se enciende cambiando su `false` por `true`, y nada mas.
+
+    NOVATO("novato", Tablist.Rank.NOVATO, false),
     ELITE("elite", Tablist.Rank.ELITE, false),
     CAMPEON("campeon", Tablist.Rank.CAMPEON, false),
     MAESTRO("maestro", Tablist.Rank.MAESTRO, false),

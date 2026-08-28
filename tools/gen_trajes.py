@@ -62,89 +62,91 @@ def claro(c, k=0.35):
     return tuple(int(v + (255 - v) * k) for v in c)
 
 
-# Un gris calido para lo que en todos los trajes es «tela de debajo». Que sea
-# el mismo en los cinco es lo que los hace familia.
-BASE = (44, 50, 68)
+# ⚠⚠ EL TRAJE NO USA EL COLOR DEL CHAT DE NOVATO, Y ES A PROPOSITO. El rango es
+#    §f -- casi blanco -- y un traje blanco sobre un cuerpo gris no se ve. La
+#    regla sigue siendo «el color dice el rango», pero al mas bajo se le da el
+#    ROJO DEL ENTRENADOR CLASICO, que es lo que hace que se lea «Pokemon» desde
+#    lejos. Los otros cuatro si llevan el suyo, que ya son colores vivos.
+ROJO = (216, 62, 54)
+BLANCO = (238, 240, 246)
+AZUL = (48, 104, 196)
+DENIM = (68, 94, 150)
+NEGRO = (46, 48, 58)
 CUERO = (74, 58, 46)
+BASE = (44, 50, 68)
 
 
 # ---------------------------------------------------------------- NOVATO
 
 def novato():
     """
-    NOVATO: el que acaba de llegar.
+    NOVATO: el entrenador que acaba de salir de casa.
 
-    Gorra con visera, chaleco con tirantes, guantes y botas. NADA DE METAL: el
-    metal es lo que va apareciendo al subir de rango, asi que empezar sin el es
-    lo que hace que el siguiente se note.
+    Gorra roja con la banda blanca, chaleco azul, mangas blancas, vaqueros y
+    zapatillas. Es LA silueta del entrenador de Pokemon, y esta elegida por eso:
+    a un novato hay que reconocerlo sin leer nada.
 
-    ⚠ El color del rango va de ACENTO y no de tela: NOVATO es §f, o sea casi
-      blanco, y un traje blanco entero sobre un cuerpo gris no se distingue de
-      nada. La prenda es azul oscuro y el blanco son los tirantes, la visera y
-      la puntera -- que es donde el ojo lo busca.
+    ⚠ BASICO A PROPOSITO. Ni metal, ni capa, ni hombreras: eso es lo que va
+      apareciendo al subir de rango. Si el primero ya llevara placas, ELITE no
+      tendria por donde crecer.
     """
-    color = RANGOS["novato"][1]
     t = Traje("novato", "Traje NOVATO")
 
     # ---- la gorra ------------------------------------------------------
     # ⚠⚠ LA CABEZA DE VANILLA VA DE y=24 A y=32. Una gorra que empiece en 30 es
-    #    UNA BANDEJA: hay que bajarla hasta las orejas (29) y hacerla mas ancha
-    #    que la cabeza, o no se lee como tela puesta encima.
+    #    UNA BANDEJA: hay que bajarla hasta las orejas y hacerla mas ancha que
+    #    la cabeza, o no se lee como tela puesta encima.
     t.poner("armorHead",
-            Cubo((-4.5, 29.2, -4.5), (9.0, 3.4, 9.0), BASE, "tela"),
-            # la cinta, un poco mas ancha: es el borde de la gorra
-            Cubo((-4.7, 28.9, -4.7), (9.4, 1.0, 9.4), color, "tela"),
-            # la visera, hacia -Z que es la cara
-            Cubo((-3.4, 29.1, -8.0), (6.8, 0.9, 3.6), color, "cuero"),
-            # el emblema del frente
-            Cubo((-1.0, 30.6, -4.9), (2.0, 1.6, 0.5), color, "tela"))
+            Cubo((-4.5, 29.2, -4.5), (9.0, 3.4, 9.0), ROJO, "tela"),
+            # la media banda blanca del frente, que es lo que la hace «esa» gorra
+            Cubo((-4.6, 29.3, -4.9), (9.2, 2.4, 0.9), BLANCO, "tela"),
+            # visera
+            Cubo((-3.4, 29.1, -8.0), (6.8, 0.9, 3.6), ROJO, "cuero"),
+            # ⚠ la Poke Ball son DOS cubos, uno encima del otro: a este tamaño
+            #   una bola redonda no existe, y dos mitades si se leen
+            Cubo((-0.9, 30.7, -5.1), (1.8, 0.9, 0.4), ROJO, "tela"),
+            Cubo((-0.9, 29.8, -5.1), (1.8, 0.9, 0.4), BLANCO, "tela"))
 
     # ---- el chaleco ----------------------------------------------------
-    # El torso va de y=12 a y=24 y mide 8x4. El chaleco lo envuelve.
     t.poner("armorBody",
-            Cubo((-4.4, 13.0, -2.6), (8.8, 10.3, 5.2), BASE, "tela"),
-            # ⚠ DOS TIRANTES Y NO UN PETO. Un rectangulo grande de color en el
-            #   pecho se lee como un babero; dos tiras verticales se leen como
-            #   ropa, y ademas dejan ver la prenda de debajo.
-            Cubo((-3.1, 13.2, -3.0), (1.5, 9.8, 0.5), color, "tela"),
-            Cubo((1.6, 13.2, -3.0), (1.5, 9.8, 0.5), color, "tela"),
+            Cubo((-4.4, 13.0, -2.6), (8.8, 10.4, 5.2), AZUL, "tela"),
+            # el cierre y los bolsillos, en blanco: sin ellos el chaleco es una
+            # caja azul
+            Cubo((-0.5, 13.2, -3.0), (1.0, 10.0, 0.5), BLANCO, "tela"),
+            Cubo((-3.6, 14.6, -3.0), (2.4, 2.0, 0.5), BLANCO, "tela"),
+            Cubo((1.2, 14.6, -3.0), (2.4, 2.0, 0.5), BLANCO, "tela"),
             # cuello
-            Cubo((-4.6, 22.6, -2.8), (9.2, 1.5, 5.6), color, "tela"),
-            # cinturon
-            Cubo((-4.6, 11.8, -2.8), (9.2, 2.3, 5.6), CUERO, "cuero"),
-            Cubo((-1.1, 12.2, -3.1), (2.2, 1.8, 0.5), color, "metal"))
+            Cubo((-4.6, 22.8, -2.8), (9.2, 1.5, 5.6), BLANCO, "tela"),
+            # ⚠ el cinturon BAJA HASTA 11,8: el torso acaba en 12 y sin eso
+            #   asomaba media unidad de piel en toda la cintura
+            Cubo((-4.6, 11.8, -2.8), (9.2, 2.3, 5.6), NEGRO, "cuero"),
+            Cubo((-1.1, 12.2, -3.1), (2.2, 1.8, 0.5), (206, 176, 92), "metal"))
 
     # ⚠ Los dos brazos son ESPEJO, no copia: el derecho vive en x negativa.
+    # ⚠⚠ Y la manga llega a 24,2 porque el brazo de vanilla llega a 24: si
+    #    acabara antes queda un anillo de piel en cada hombro, y el cuello NO lo
+    #    tapa -- solo mide 9,2 de ancho y los brazos viven mas afuera.
     for lado in ("Right", "Left"):
         x = -8.0 if lado == "Right" else 4.0
         t.poner("armor%sArm" % lado,
-                # hombrera
-                Cubo((-0.4 + x, 20.6, -2.4), (4.8, 3.6, 4.8), color, "tela"),
-                # manga
-                Cubo((-0.2 + x, 13.4, -2.2), (4.4, 7.5, 4.4), BASE, "tela"),
-                # puno
-                Cubo((-0.35 + x, 13.2, -2.35), (4.7, 1.0, 4.7), color, "tela"),
-                # guante
-                Cubo((-0.4 + x, 11.4, -2.4), (4.8, 2.0, 4.8), CUERO, "cuero"))
+                Cubo((-0.25 + x, 12.8, -2.25), (4.5, 11.4, 4.5), BLANCO, "tela"),
+                Cubo((-0.3 + x, 12.9, -2.3), (4.6, 1.0, 4.6), AZUL, "tela"),
+                Cubo((-0.4 + x, 11.3, -2.4), (4.8, 2.0, 4.8), NEGRO, "cuero"))
 
-    # ---- pantalon ------------------------------------------------------
+    # ---- vaqueros ------------------------------------------------------
     for lado, x in (("Right", -3.9), ("Left", -0.1)):
-        fuera = -0.32 if lado == "Right" else 4.22   # la cara exterior
         t.poner("armor%sLeg" % lado,
-                Cubo((x - 0.25, 2.8, -2.25), (4.5, 9.6, 4.5), BASE, "tela"),
-                # ⚠ La franja va en la cara EXTERIOR de cada pierna, no en el
-                #   centro: en el centro las dos se tocan y parecen una sola.
-                Cubo((x + fuera, 3.2, -1.0), (0.5, 8.6, 2.0), color, "tela"),
-                Cubo((x - 0.3, 11.6, -2.3), (4.6, 1.0, 4.6), color, "tela"))
+                Cubo((x - 0.25, 2.8, -2.25), (4.5, 9.6, 4.5), DENIM, "tela"),
+                Cubo((x - 0.3, 11.4, -2.3), (4.6, 1.0, 4.6), (54, 74, 120), "tela"))
 
-    # ---- botas ---------------------------------------------------------
+    # ---- zapatillas ----------------------------------------------------
     for lado, x in (("Right", -3.9), ("Left", -0.1)):
         t.poner("armor%sBoot" % lado,
-                Cubo((x - 0.4, 0.2, -2.4), (4.8, 3.2, 4.8), CUERO, "cuero"),
-                # puntera
-                Cubo((x + 0.5, 0.5, -2.9), (3.0, 1.0, 0.7), color, "cuero"),
-                # suela
-                Cubo((x - 0.5, -0.1, -2.5), (5.0, 0.9, 5.4), (40, 38, 44), "cuero"))
+                Cubo((x - 0.4, 0.5, -2.4), (4.8, 2.9, 4.8), BLANCO, "tela"),
+                # ⚠ la puntera va ESTRECHA: dos punteras anchas juntas se leen
+                #   como UNA plataforma en vez de como dos zapatos
+                Cubo((x + 0.4, 0.7, -2.9), (3.2, 1.2, 0.7), ROJO, "tela"),
+                Cubo((x - 0.5, -0.1, -2.5), (5.0, 0.9, 5.4), NEGRO, "cuero"))
     return t
 
 

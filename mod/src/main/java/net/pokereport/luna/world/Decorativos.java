@@ -76,6 +76,39 @@ public final class Decorativos {
     }
 
     /**
+     * NADIE LES PEGA. Se registra una vez, al arrancar.
+     *
+     * <h2>⚠⚠⚠ `setInvulnerable` NO BASTA, Y ESTE ES EL MOTIVO EXACTO</h2>
+     *
+     * {@code Entity.isInvulnerableTo} dice, literalmente, que la invulnerabilidad
+     * <b>no se aplica si quien pega es un jugador en creativo</b>:
+     *
+     * <pre>
+     *   invulnerable &amp;&amp; !fuente.isIn(BYPASSES_INVULNERABILITY)
+     *                &amp;&amp; !fuente.isSourceCreativePlayer()
+     * </pre>
+     *
+     * <p>Y en este servidor <b>todos los que colocan decoración son operadores
+     * en creativo</b>, o sea justo el único caso que la bandera no cubre. Por eso
+     * el usuario vio que sí se les podía pegar: la protección estaba puesta y no
+     * aplicaba a quien lo probó.
+     *
+     * <p>Este evento se dispara <b>antes</b> de decidir nada, así que corta
+     * también el creativo. Lo que sigue funcionando es {@code /kill}, y está
+     * bien: tiene que haber una forma de quitarlos si algo va mal.
+     */
+    public static void protegerlos() {
+        net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents
+                .ALLOW_DAMAGE.register((entidad, fuente, cantidad) -> {
+                    // ⚠ Se mira LA ETIQUETA y no si es un PokemonEntity: así
+                    //   protege a cualquier decorativo, sea de la especie que
+                    //   sea, y no protege a los Pokémon de verdad.
+                    return !entidad.getCommandTags().contains(MARCA);
+                });
+        LunaEternal.LOG.info("Decorativos: protegidos del daño, creativo incluido");
+    }
+
+    /**
      * Coloca uno. Devuelve {@code null} si la especie no existe.
      *
      * <p>⚠ La postura se fija <b>después</b> de soltarlo en el mundo: antes de

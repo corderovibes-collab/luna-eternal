@@ -79,6 +79,12 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public void onInitializeServer() {
         LOG.info("Luna Eternal — iniciando");
 
+        // ⚠ AQUI Y NO EN SERVER_STARTED: `SERVER_STARTED` corre en cada
+        //   arranque del servidor, y registrar un evento dos veces lo llama dos
+        //   veces. En un servidor dedicado solo pasa una, pero no hay motivo
+        //   para depender de eso -- y un dia se prueba en un mundo local.
+        net.pokereport.luna.world.Decorativos.protegerlos();
+
         ServerLifecycleEvents.SERVER_STARTING.register(server -> boot());
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> shutdown());
 

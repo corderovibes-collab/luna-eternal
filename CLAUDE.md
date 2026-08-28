@@ -8,7 +8,7 @@
 **Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
 D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, ocho vías de progresión, y **ocho pantallas** en el PokePad.
-Autotest **376/376**. **El recorrido del jugador nuevo está completo.**
+Autotest **402/402** en vivo. **El recorrido del jugador nuevo está completo.**
 
 > **2026-08-27 — RANGOS, MOCHILA, MUNDOS Y ESCALADO. Y tres lecciones que se
 > repiten.**
@@ -166,7 +166,10 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 376/376 correctos (+8 de Viajes)
+Autotest      /luna autotest -> 402/402 correctos (2026-08-27, en vivo)
+              +8 de Viajes, y la que importa es LA REJILLA: 4x2 son
+              OCHO huecos, asi que una NOVENA parada seria
+              INALCANZABLE sin dar ningun error
               +26 del escaparate de objetos, y el que importa es el
               PAYLOAD: lo escribe `publicarObjeto` y lo lee la entrega,
               y si dejaran de estar de acuerdo la compra NO DARIA

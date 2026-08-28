@@ -28,11 +28,12 @@ import net.pokereport.luna.net.Red;
  * <p>Mezclarlas obligaba a que la segunda cupiera en el hueco que dejaba la
  * primera, que es como acabaron siendo una fila de botoncitos apretados.
  *
- * <h2>⚠ Solo funcionan dentro de la ciudadela</h2>
+ * <h2>⚠⚠ SE VIAJA DESDE CUALQUIER MUNDO (orden del usuario)</h2>
  *
- * Fuera <b>se apagan, no desaparecen</b>: que existan y no se puedan usar es
- * información —dice que hay un sitio a donde volver—; que desaparezcan hace
- * pensar que se han roto.
+ * Empezó siendo solo desde la ciudadela. Fuera de ella la pantalla <b>no se
+ * apaga</b>: lo único que cambia es que se avisa de que el viaje te <b>saca del
+ * mundo en el que estás</b> — que es lo que un jugador necesita saber antes de
+ * pulsar, no después de aparecer en otro sitio.
  *
  * <h2>⚠⚠ ANTES DE TOCARLA, LEE {@code docs/ui/dibujado.md}</h2>
  *
@@ -137,8 +138,20 @@ public class ViajesScreen extends Screen {
         return pulsado > 0 && System.currentTimeMillis() - pulsado < 1500;
     }
 
+    /**
+     * ¿Está en la ciudadela?
+     *
+     * <p>⚠ Ya <b>no decide si se puede viajar</b> — se viaja desde cualquier
+     * mundo. Solo decide <b>qué aviso se enseña</b>: desde fuera, el viaje te
+     * saca del mundo en el que estás, y eso hay que decirlo antes.
+     */
     private boolean dentroCiudadela() {
-        return estado != null && estado.enCiudadela();
+        return estado == null || estado.enCiudadela();
+    }
+
+    /** El estado ya llegó: hasta entonces no se deja pulsar. */
+    private boolean listo() {
+        return estado != null;
     }
 
     // ---- dibujado ----------------------------------------------------------
@@ -203,16 +216,16 @@ public class ViajesScreen extends Screen {
     }
 
     private void dibujarRejilla(DrawContext ctx, int rx, int ry) {
-        boolean dentro = dentroCiudadela();
+        boolean dentro = listo();
 
         texto(ctx, Text.translatable("pokepad.lunaeternal.viajes.titulo"),
                 PANT_X + MARGEN, PANT_Y + MARGEN + 6, 22,
                 dentro ? 0xFF16203A : 0xFF6E7899, false, 0);
-        if (!dentro) {
-            // ⚠ Se dice POR QUÉ están apagadas. Un botón gris sin explicación
-            //   parece roto; con la razón al lado, es una regla del juego.
+        if (dentro && !dentroCiudadela()) {
+            // ⚠ Un aviso, no un candado: el viaje SE PUEDE hacer y lo que hay
+            //   que decir es que te saca de donde estás.
             textoDer(ctx, Text.translatable("pokepad.lunaeternal.viajes.fuera"),
-                    PANT_X + PANT_W - MARGEN, PANT_Y + MARGEN + 10, 14, 0xFFB03A2E);
+                    PANT_X + PANT_W - MARGEN, PANT_Y + MARGEN + 10, 14, 0xFFD98A2B);
         }
 
         int w = celdaW(), h = celdaH();
@@ -328,11 +341,11 @@ public class ViajesScreen extends Screen {
         // panel a la ficha que acabas de pulsar.
         int rw = PANEL_W - 60, rh = 120;
         ctx.fill(px(PANEL_X + 30), py(y), px(PANEL_X + 30 + rw), py(y + rh),
-                dentroCiudadela() ? p.color() : 0xFF3A4050);
+                listo() ? p.color() : 0xFF3A4050);
         marco(ctx, px(PANEL_X + 30), py(y), pl(rw), pl(rh), 0xFF20283C,
                 Math.max(2, pl(2)));
         icono(ctx, p.icono(), px(PANEL_X + PANEL_W / 2), py(y + rh / 2), pl(56),
-                dentroCiudadela() ? 0xFFFFFFFF : 0xFF6E7899);
+                listo() ? 0xFFFFFFFF : 0xFF6E7899);
         y += rh + 18;
 
         for (String l : partir(Text.translatable(
@@ -351,7 +364,7 @@ public class ViajesScreen extends Screen {
             y += 21;
         }
 
-        if (!dentroCiudadela()) {
+        if (listo() && !dentroCiudadela()) {
             y += 12;
             for (String l : partir(Text.translatable(
                     "pokepad.lunaeternal.viajes.fuera_largo").getString(),
@@ -363,7 +376,7 @@ public class ViajesScreen extends Screen {
 
         boton(ctx, rx, ry, PANEL_X + 30, PANEL_Y + PANEL_H - 72, PANEL_W - 60, 56,
                 Text.translatable("pokepad.lunaeternal.viajes.ir"),
-                dentroCiudadela() && !esperando(), VERDE);
+                listo() && !esperando(), VERDE);
     }
 
     // ---- interacción -------------------------------------------------------
@@ -387,7 +400,7 @@ public class ViajesScreen extends Screen {
             return true;
         }
 
-        if (dentroCiudadela()) {
+        if (listo()) {
             int w = celdaW(), h = celdaH();
             for (int i = 0; i < PARADAS.length; i++) {
                 if (dentro(rx, ry, px(celdaX(i)), py(celdaY(i)), pl(w), pl(h))) {

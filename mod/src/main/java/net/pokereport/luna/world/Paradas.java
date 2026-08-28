@@ -74,19 +74,19 @@ public final class Paradas {
     /**
      * Lleva a alguien a una parada.
      *
-     * <p>⚠⚠ SOLO DESDE LA CIUDADELA. Si se pudiera desde cualquier sitio, esto
-     * sería un «volver a casa» instantáneo desde el mundo salvaje — y entonces
-     * salir a explorar dejaría de tener ningún riesgo, que es de lo que va el
-     * salvaje.
+     * <p>⚠⚠ SE VIAJA DESDE CUALQUIER MUNDO (orden del usuario, 2026-08-27).
+     * Empezó siendo solo desde la ciudadela, y el motivo escrito era que desde
+     * el salvaje sería un «volver a casa» instantáneo y salir a explorar dejaría
+     * de tener riesgo. <b>El usuario lo decidió al revés</b> y queda escrito
+     * para que se sepa cuál está puesta y qué se aceptó a cambio.
+     *
+     * <p>⚠ El riesgo del salvaje pasa a estar <b>en la ida, no en la vuelta</b>:
+     * lo que se pierde al morir se sigue perdiendo, y el aterrizaje sigue siendo
+     * aleatorio. Lo que ya no cuesta es el camino de regreso.
      */
     public static boolean llevar(ServerPlayerEntity jugador, String id) {
         var servidor = jugador.getServer();
         if (servidor == null) {
-            return false;
-        }
-        if (!LunaDimensions.CIUDADELA.equals(jugador.getServerWorld().getRegistryKey())) {
-            jugador.sendMessage(net.minecraft.text.Text.literal(
-                    "§cLas paradas solo funcionan dentro de la ciudadela."), true);
             return false;
         }
         Parada p = de(id);

@@ -147,8 +147,13 @@ public final class Trajes {
         var piezas = new ArrayList<Pieza>();
         var recursos = MinecraftClient.getInstance().getResourceManager();
         for (String pieza : PIEZAS) {
+            // ⚠⚠⚠ `trajes/` Y NO `geo/`. GeckoLib valida TODO lo que hay en
+            //    `assets/*/geo/` aunque no lo use nadie, y un modelo que no le
+            //    guste NO da un aviso: tumba la recarga de recursos entera y el
+            //    cliente se queda colgado en la pantalla de carga. Pasó de
+            //    verdad el 2026-08-28.
             var ruta = Identifier.of(LunaEternal.MOD_ID,
-                    "geo/" + id + "/" + id + "_" + pieza + ".geo.json");
+                    "trajes/" + id + "/" + id + "_" + pieza + ".geo.json");
             var recurso = recursos.getResource(ruta);
             if (recurso.isEmpty()) {
                 continue;   // esa pieza no existe en este traje: es legítimo
@@ -172,7 +177,7 @@ public final class Trajes {
         //    se dice a nivel de ERROR y no de info.
         if (piezas.isEmpty()) {
             LunaEternal.LOG.error("El traje {} NO TIENE ARTE: se declaro listo en el "
-                    + "servidor pero no hay geo/{}/ en el cliente", id, id);
+                    + "servidor pero no hay trajes/{}/ en el cliente", id, id);
         } else {
             LunaEternal.LOG.info("Traje {}: {} huesos horneados", id, piezas.size());
         }

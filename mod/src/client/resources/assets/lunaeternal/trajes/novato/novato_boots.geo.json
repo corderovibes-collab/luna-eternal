@@ -16,8 +16,24 @@
       },
       "bones": [
         {
+          "name": "bipedRightLeg",
+          "pivot": [
+            -1.9,
+            12,
+            0
+          ]
+        },
+        {
+          "name": "bipedLeftLeg",
+          "pivot": [
+            1.9,
+            12,
+            0
+          ]
+        },
+        {
           "name": "armorRightBoot",
-          "parent": "armorRightLeg",
+          "parent": "bipedRightLeg",
           "pivot": [
             -1.9,
             12,
@@ -60,7 +76,7 @@
         },
         {
           "name": "armorLeftBoot",
-          "parent": "armorLeftLeg",
+          "parent": "bipedLeftLeg",
           "pivot": [
             1.9,
             12,

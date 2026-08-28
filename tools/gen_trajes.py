@@ -192,6 +192,21 @@ def verificar(t):
             fallos.append("hueso desconocido: %s (GeckoLib no lo pega a nada "
                           "y el traje sale flotando)" % hueso)
 
+    # ⚠⚠⚠ CADA PIEZA TIENE QUE SOSTENERSE SOLA. Un hueso cuyo padre viva en
+    #    OTRA pieza da un .geo.json roto, y eso NO es un aviso: GeckoLib valida
+    #    todo lo que encuentra, lanza, y la recarga de recursos falla entera --
+    #    el cliente se queda colgado en la pantalla de carga. Paso el 2026-08-28
+    #    con `armorRightBoot -> armorRightLeg`.
+    for pieza in modelo.PIEZAS:
+        dentro = set(t.de_pieza(pieza))
+        for hueso in dentro:
+            padre = modelo.PADRES[hueso]
+            if not padre.startswith("biped") and padre not in dentro:
+                fallos.append(
+                    "en la pieza %s, %s cuelga de %s, que vive en otro fichero: "
+                    "GeckoLib lo rechaza y TUMBA LA RECARGA DE RECURSOS"
+                    % (pieza, hueso, padre))
+
     # ⚠ Cada pieza se pinta en SU textura. Un cubo que no caiga en ninguna
     #   pieza no se dibuja nunca, sin avisar.
     de_piezas = set()

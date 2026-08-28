@@ -30,6 +30,17 @@ from pathlib import Path
 
 from PIL import Image
 
+# ⚠⚠⚠ NO SE LLAMA `geo/`, Y ESA ES LA MITAD DEL ARREGLO DEL 2026-08-28.
+#
+#    GECKOLIB VALIDA TODO FICHERO QUE ENCUENTRE EN `assets/*/geo/`, esté quien
+#    esté usándolo. Nosotros no dibujamos con GeckoLib --estos modelos son cubos
+#    rígidos y los pinta Minecraft-- pero al dejarlos en su carpeta, GeckoLib los
+#    leía igual. Uno mal formado no da un aviso: TUMBA LA RECARGA DE RECURSOS
+#    ENTERA y el juego se queda colgado en la pantalla de carga.
+#
+#    En `trajes/` no los mira nadie más que nosotros.
+CARPETA = "trajes"
+
 # ---------------------------------------------------------------- el esqueleto
 
 # ⚠ Sale del modelo de jugador de vanilla, no de la nada: si el pivote no
@@ -43,8 +54,24 @@ PIVOTES = {
     "bipedLeftLeg": (1.9, 12, 0),
 }
 
-# Cada hueso de armadura cuelga de su ancla. Las botas cuelgan de la pierna:
-# asi una sola pieza puede llevar espinillera y bota y se mueven juntas.
+# Cada hueso de armadura cuelga de SU ANCLA `biped*`, y ninguno de otro hueso
+# de armadura.
+#
+# ⚠⚠⚠ LAS BOTAS COLGABAN DE `armorRightLeg` Y ESO TUMBO EL CLIENTE (2026-08-28).
+#    Parecia lo natural --una bota va en una pierna-- y tiene un fallo mortal:
+#    las botas y las perneras son PIEZAS DISTINTAS, o sea FICHEROS DISTINTOS.
+#    `novato_boots.geo.json` declaraba `armorRightBoot -> armorRightLeg` y ese
+#    padre vive en `novato_legs.geo.json`. Dentro de su fichero, el padre NO
+#    EXISTE.
+#
+#    Y no se quedo en un aviso: GeckoLib valida TODO .geo.json que encuentre,
+#    lanzo, la recarga de recursos fallo entera, y Minecraft respondio
+#    «Caught error loading resourcepacks, removing all selected resourcepacks»
+#    -- el juego se quedo colgado en la pantalla de carga para siempre.
+#
+#    Colgando cada hueso de su ancla, cada fichero se sostiene solo. Y no se
+#    pierde nada: `armorRightLeg` no tiene rotacion propia, asi que heredar de
+#    el o de la pierna del jugador es exactamente lo mismo.
 PADRES = {
     "armorHead": "bipedHead",
     "armorBody": "bipedBody",
@@ -52,8 +79,8 @@ PADRES = {
     "armorLeftArm": "bipedLeftArm",
     "armorRightLeg": "bipedRightLeg",
     "armorLeftLeg": "bipedLeftLeg",
-    "armorRightBoot": "armorRightLeg",
-    "armorLeftBoot": "armorLeftLeg",
+    "armorRightBoot": "bipedRightLeg",
+    "armorLeftBoot": "bipedLeftLeg",
 }
 
 # Que huesos puede tocar cada pieza. Es lo que impide que el peto dibuje una
@@ -270,7 +297,7 @@ def geo(traje, pieza, lado=128):
 def escribir(traje, destino, lado=128):
     """Genera las cuatro piezas: .geo.json + textura (+ glowmask si toca)."""
     hechos = []
-    geo_dir = Path(destino) / "geo" / traje.id
+    geo_dir = Path(destino) / CARPETA / traje.id
     tex_dir = Path(destino) / "textures" / "armor" / traje.id
     geo_dir.mkdir(parents=True, exist_ok=True)
     tex_dir.mkdir(parents=True, exist_ok=True)

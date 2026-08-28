@@ -97,6 +97,57 @@ public final class Decorativos {
      * también el creativo. Lo que sigue funcionando es {@code /kill}, y está
      * bien: tiene que haber una forma de quitarlos si algo va mal.
      */
+    /** ¿Este Pokémon es de decoración? */
+    public static boolean esDecorativo(com.cobblemon.mod.common.pokemon.Pokemon p) {
+        try {
+            return p != null && p.getPersistentData().getBoolean(MARCA);
+        } catch (Throwable ignorado) {
+            return false;
+        }
+    }
+
+    /**
+     * NO ENTRAN EN LA POKÉDEX.
+     *
+     * <h2>⚠⚠ UN DECORATIVO REGISTRADO ES UNA POKÉDEX MENTIROSA</h2>
+     *
+     * La Pokédex de este servidor está limitada a Kanto y Johto a propósito
+     * (D-017), y el Miraidon de una parada es de novena generación. Dejar que se
+     * registre significa que <b>ver una estatua cuenta como haber encontrado un
+     * Pokémon</b> — y encima uno que no existe en el juego.
+     *
+     * <p>⚠ Se cortan LOS DOS eventos y no solo uno. {@code POKEMON_SEEN} es el
+     * de «lo he visto» y {@code POKEDEX_DATA_CHANGED_PRE} el de «se va a
+     * escribir en la Pokédex»: cancelar solo el primero deja abierto el escaneo
+     * con la Pokédex, que es justo lo que el usuario probó.
+     */
+    public static void fueraDeLaPokedex() {
+        try {
+            com.cobblemon.mod.common.api.events.CobblemonEvents.POKEMON_SEEN
+                    .subscribe(evento -> {
+                        if (esDecorativo(evento.getPokemon())) {
+                            evento.cancel();
+                        }
+
+                    });
+            com.cobblemon.mod.common.api.events.CobblemonEvents
+                    .POKEDEX_DATA_CHANGED_PRE.subscribe(evento -> {
+                        var datos = evento.getDataSource();
+                        if (datos != null && esDecorativo(datos.getPokemon())) {
+                            evento.cancel();
+                        }
+
+                    });
+            LunaEternal.LOG.info("Decorativos: fuera de la Pokédex");
+        } catch (Throwable t) {
+            // ⚠ Si Cobblemon cambia estos eventos, el resto del mod sigue vivo.
+            //   Lo que se pierde es que un decorativo se pueda registrar, que es
+            //   feo pero no rompe nada.
+            LunaEternal.LOG.warn("No se pudo excluir los decorativos de la "
+                    + "Pokédex: {}", t.toString());
+        }
+    }
+
     public static void protegerlos() {
         net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents
                 .ALLOW_DAMAGE.register((entidad, fuente, cantidad) -> {
@@ -142,6 +193,17 @@ public final class Decorativos {
         e.setPersistent();
         e.setNoGravity(postura.sinGravedad);
         e.addCommandTag(MARCA);
+        // ⚠⚠ Y EL POKEMON TAMBIEN, no solo la entidad. Los eventos de Pokédex
+        //    reciben el <b>Pokémon</b>, no la entidad que lo lleva: sin marcar
+        //    el objeto no hay forma de saber, desde ahí, que esto era
+        //    decoración. `getPersistentData` es un hueco de Cobblemon pensado
+        //    justo para que otros mods guarden lo suyo.
+        try {
+            e.getPokemon().getPersistentData().putBoolean(MARCA, true);
+        } catch (Throwable ignorado) {
+            // Si algún día cambia, el decorativo sigue siendo decorativo: lo
+            // único que se pierde es el bloqueo de la Pokédex.
+        }
         // ⚠⚠ ESTA ES LA QUE NO ES OBVIA. Cobblemon recalcula la postura en cada
         //    tick a partir de si anda, vuela o nada. Sin apagarlo, «dormido»
         //    dura un tick y vuelve a ponerse de pie.

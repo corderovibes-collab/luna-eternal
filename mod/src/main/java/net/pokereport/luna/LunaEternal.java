@@ -84,6 +84,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         //   veces. En un servidor dedicado solo pasa una, pero no hay motivo
         //   para depender de eso -- y un dia se prueba en un mundo local.
         net.pokereport.luna.world.Decorativos.protegerlos();
+        net.pokereport.luna.world.Decorativos.fueraDeLaPokedex();
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> boot());
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> shutdown());

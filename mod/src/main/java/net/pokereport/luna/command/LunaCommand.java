@@ -121,14 +121,27 @@ public final class LunaCommand {
                     .then(argument("postura", StringArgumentType.word())
                         .executes(ctx -> decorar(ctx.getSource(),
                             StringArgumentType.getString(ctx, "especie"),
-                            StringArgumentType.getString(ctx, "postura"), null))
+                            StringArgumentType.getString(ctx, "postura"), null, null))
                         .then(argument("donde", net.minecraft.command.argument
                                 .Vec3ArgumentType.vec3())
                             .executes(ctx -> decorar(ctx.getSource(),
                                 StringArgumentType.getString(ctx, "especie"),
                                 StringArgumentType.getString(ctx, "postura"),
                                 net.minecraft.command.argument.Vec3ArgumentType
-                                    .getVec3(ctx, "donde")))))))
+                                    .getVec3(ctx, "donde"), null))
+                            // ⚠ Los grados son OPCIONALES y no obligatorios: sin
+                            //   ellos coge hacia donde mira quien lo pone, que es
+                            //   lo comodo cuando estas delante. Con ellos se pone
+                            //   un angulo exacto sin tener que apuntar.
+                            .then(argument("grados", com.mojang.brigadier.arguments
+                                    .FloatArgumentType.floatArg(-180f, 360f))
+                                .executes(ctx -> decorar(ctx.getSource(),
+                                    StringArgumentType.getString(ctx, "especie"),
+                                    StringArgumentType.getString(ctx, "postura"),
+                                    net.minecraft.command.argument.Vec3ArgumentType
+                                        .getVec3(ctx, "donde"),
+                                    com.mojang.brigadier.arguments.FloatArgumentType
+                                        .getFloat(ctx, "grados"))))))))
 
             .then(literal("rango")
                 // ⚠ Nivel 4 y no 3. Un rango desbloquea comodidad para siempre;
@@ -652,7 +665,8 @@ public final class LunaCommand {
      * exactamente en un punto con tres decimales es imposible a pie.
      */
     private static int decorar(ServerCommandSource src, String especie,
-                               String postura, net.minecraft.util.math.Vec3d donde) {
+                               String postura, net.minecraft.util.math.Vec3d donde,
+                               Float grados) {
         var mundo = src.getWorld();
         net.pokereport.luna.world.Decorativos.Postura p;
         try {
@@ -665,9 +679,13 @@ public final class LunaCommand {
             return 0;
         }
         var pos = donde != null ? donde : src.getPosition();
-        // ⚠ El giro sale de quien lo pone: asi se coloca uno mirando a donde
-        //   mira el que lo coloca, que es lo que se espera al decorar.
-        float giro = src.getRotation().y;
+        // ⚠ Sin grados, el giro sale de HACIA DONDE MIRA quien lo pone: es lo
+        //   comodo estando delante. Con grados se fija exacto y no hay que
+        //   apuntar -- que es lo que hace falta para alinear varios iguales.
+        //
+        //   Los grados son los de Minecraft (los que enseña F3):
+        //       0 = sur   ·   90 = oeste   ·   180 = norte   ·   -90 = este
+        float giro = grados != null ? grados : src.getRotation().y;
         var e = net.pokereport.luna.world.Decorativos
                 .colocar(mundo, especie, p, pos, giro);
         if (e == null) {
@@ -677,7 +695,8 @@ public final class LunaCommand {
         }
         src.sendFeedback(() -> Text.literal(
             "§a" + especie + " §7colocado en §f"
-            + String.format("%.2f %.2f %.2f", pos.x, pos.y, pos.z)), false);
+            + String.format("%.2f %.2f %.2f", pos.x, pos.y, pos.z)
+            + " §8· mirando a §7" + Math.round(giro) + "°"), false);
         return 1;
     }
 

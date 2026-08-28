@@ -1030,6 +1030,97 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «Dame los trajes», al abrir la pantalla. */
+    public record PedirTrajes() implements CustomPayload {
+        public static final Id<PedirTrajes> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_trajes"));
+        public static final PacketCodec<RegistryByteBuf, PedirTrajes> CODEC =
+                PacketCodec.unit(new PedirTrajes());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Un traje en la pantalla: si se puede llevar, y si no, por que no. */
+    public record FichaTraje(String id, int pideEscalon, boolean listo,
+                             boolean puede) {
+        public static final PacketCodec<RegistryByteBuf, FichaTraje> CODEC =
+                PacketCodec.tuple(
+                        CADENA, FichaTraje::id,
+                        PacketCodecs.VAR_INT, FichaTraje::pideEscalon,
+                        PacketCodecs.BOOL, FichaTraje::listo,
+                        PacketCodecs.BOOL, FichaTraje::puede,
+                        FichaTraje::new);
+    }
+
+    /**
+     * El estado de la pantalla de trajes.
+     *
+     * <p>⚠ `puesto` viaja como cadena VACIA y nunca como nulo: un
+     * `writeString(null)` revienta AL CODIFICAR y echa al jugador del servidor,
+     * con un error que ni siquiera dice que campo era.
+     */
+    public record EstadoTrajes(String puesto, int escalon, List<FichaTraje> fichas)
+            implements CustomPayload {
+        public static final Id<EstadoTrajes> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_trajes"));
+        public static final PacketCodec<RegistryByteBuf, EstadoTrajes> CODEC =
+                PacketCodec.tuple(
+                        CADENA, EstadoTrajes::puesto,
+                        PacketCodecs.VAR_INT, EstadoTrajes::escalon,
+                        FichaTraje.CODEC.collect(PacketCodecs.toList()),
+                        EstadoTrajes::fichas,
+                        EstadoTrajes::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Ponme este traje» -- vacio para quitarselo. */
+    public record AccionTraje(String traje) implements CustomPayload {
+        public static final Id<AccionTraje> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_traje"));
+        public static final PacketCodec<RegistryByteBuf, AccionTraje> CODEC =
+                PacketCodec.tuple(CADENA, AccionTraje::traje, AccionTraje::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * QUIEN LLEVA QUE, para dibujarlo encima de cada jugador.
+     *
+     * <p>⚠⚠ ES UN PAQUETE DISTINTO DEL ESTADO DE LA PANTALLA, y tiene que serlo:
+     * el estado es <b>tuyo</b> y este es <b>de todos</b>. Mezclarlos obligaria a
+     * mandar el catalogo entero cada vez que alguien se cambia de ropa.
+     *
+     * <p>⚠ `traje` vacio significa «se lo ha quitado», y es un mensaje que hay
+     * que mandar igual: sin el, los demas seguirian dibujandole el anterior.
+     */
+    public record TrajeDe(java.util.UUID jugador, String traje)
+            implements CustomPayload {
+        public static final Id<TrajeDe> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "traje_de"));
+        public static final PacketCodec<RegistryByteBuf, TrajeDe> CODEC =
+                PacketCodec.tuple(
+                        // ⚠ Uuids.PACKET_CODEC y NO PacketCodecs.UUID -- la
+                        //   misma trampa que ya cazamos en LlevaPuesto
+                        net.minecraft.util.Uuids.PACKET_CODEC, TrajeDe::jugador,
+                        CADENA, TrajeDe::traje,
+                        TrajeDe::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame las paradas», al abrir Viajes. */
     public record PedirViajes() implements CustomPayload {
         public static final Id<PedirViajes> ID =
@@ -1891,6 +1982,10 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirExplorar.ID, PedirExplorar.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionExplorar.ID, AccionExplorar.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoExplorar.ID, EstadoExplorar.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirTrajes.ID, PedirTrajes.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionTraje.ID, AccionTraje.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoTrajes.ID, EstadoTrajes.CODEC);
+        PayloadTypeRegistry.playS2C().register(TrajeDe.ID, TrajeDe.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirViajes.ID, PedirViajes.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionViaje.ID, AccionViaje.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoViajes.ID, EstadoViajes.CODEC);
@@ -1960,6 +2055,34 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(PedirExplorar.ID, (carga, ctx) ->
                 enviarExplorar(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirTrajes.ID, (carga, ctx) ->
+                enviarTrajes(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionTraje.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                final boolean cambio;
+                try {
+                    long id = LunaEternal.players().resolve(
+                            jugador.getUuid(), jugador.getGameProfile().getName());
+                    cambio = LunaEternal.trajes().ponerse(jugador, id, carga.traje());
+                } catch (java.sql.SQLException e) {
+                    LunaEternal.LOG.error("No se pudo cambiar el traje de {}",
+                            jugador.getGameProfile().getName(), e);
+                    return;
+                }
+                jugador.getServer().execute(() -> {
+                    enviarTrajes(jugador);
+                    if (cambio) {
+                        // ⚠⚠ A TODO EL MUNDO, no solo a el: un traje lo ve todo
+                        //    el mundo MENOS tu. Es la leccion de los clanes en
+                        //    su forma mas literal.
+                        repartirTraje(jugador);
+                    }
+                });
+            });
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirViajes.ID, (carga, ctx) ->
                 enviarViajes(ctx.player(), false));
@@ -3671,6 +3794,54 @@ public class Red implements ModInitializer {
         } catch (Exception e) {
             LunaEternal.LOG.warn("No se pudo enviar el catalogo de cosmeticos a {}: {}",
                     jugador.getName().getString(), e.toString());
+        }
+    }
+
+    /** Manda a un jugador su pantalla de trajes. */
+    public static void enviarTrajes(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
+        var fichas = new java.util.ArrayList<FichaTraje>();
+        for (var t : net.pokereport.luna.traje.Traje.todos()) {
+            fichas.add(new FichaTraje(t.id(), t.pide().escalon, t.listo(),
+                    t.puede(escalon)));
+        }
+        String puesto = net.pokereport.luna.traje.TrajeService.enCache(jugador.getUuid());
+        ServerPlayNetworking.send(jugador,
+                new EstadoTrajes(puesto == null ? "" : puesto, escalon, fichas));
+    }
+
+    /**
+     * Le dice a TODOS que traje lleva este jugador.
+     *
+     * <p>⚠ Tambien a el mismo: en tercera persona se ve.
+     */
+    public static void repartirTraje(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        String puesto = net.pokereport.luna.traje.TrajeService.enCache(jugador.getUuid());
+        var carga = new TrajeDe(jugador.getUuid(), puesto == null ? "" : puesto);
+        for (var otro : jugador.getServer().getPlayerManager().getPlayerList()) {
+            ServerPlayNetworking.send(otro, carga);
+        }
+    }
+
+    /**
+     * Le manda a quien acaba de entrar lo que llevan TODOS los demas.
+     *
+     * <p>⚠⚠ SIN ESTO, QUIEN ENTRA VE A TODO EL MUNDO SIN TRAJE. Los cambios se
+     * reparten cuando ocurren, asi que quien no estaba conectado se perdio todos
+     * los anteriores. Es la mitad que siempre se olvida de «el estado no es de
+     * quien lo mira»: no basta con avisar del cambio, hay que poner al dia a
+     * quien llega.
+     */
+    public static void ponerAlDia(
+            net.minecraft.server.network.ServerPlayerEntity quienEntra) {
+        for (var otro : quienEntra.getServer().getPlayerManager().getPlayerList()) {
+            String puesto = net.pokereport.luna.traje.TrajeService
+                    .enCache(otro.getUuid());
+            if (puesto != null) {
+                ServerPlayNetworking.send(quienEntra, new TrajeDe(otro.getUuid(), puesto));
+            }
         }
     }
 }

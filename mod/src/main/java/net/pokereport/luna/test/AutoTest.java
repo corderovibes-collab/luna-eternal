@@ -94,6 +94,7 @@ public final class AutoTest {
             testTasador();
             testCura();
             testViajes();
+            testTrajes();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -1631,6 +1632,93 @@ public final class AutoTest {
      * la familia de fallos que ya nos costó la rejilla del PokePad y la quinta
      * fila del mercado.
      */
+    /**
+     * LOS TRAJES DE RANGO.
+     *
+     * <p>⚠ Lo que se vigila aqui es <b>la escalera</b>: que subir de rango
+     * siempre abra mas y nunca menos, y que un traje sin arte no se pueda poner
+     * pase lo que pase. Los dos se rompen editando una linea del enum, y ninguno
+     * da error.
+     */
+    private void testTrajes() {
+        var todos = net.pokereport.luna.traje.Traje.todos();
+        check("hay trajes declarados", !todos.isEmpty());
+
+        // ⚠⚠ UN TRAJE SIN ARTE NO SE PUEDE PONER, NI SIENDO LEYENDA. Es lo que
+        //    impide vender humo: sin esto, se equipa, se sincroniza, no da
+        //    ningun error y el jugador NO VE NADA. Es el fallo de los 62
+        //    cosmeticos que no existian, otra vez.
+        boolean humo = false;
+        for (var t : todos) {
+            if (!t.listo() && t.puede(99)) {
+                humo = true;
+                LunaEternal.LOG.error("El traje {} no tiene arte y se puede poner",
+                        t.id());
+            }
+        }
+        check("un traje sin arte no se puede poner ni con el escalon mas alto", !humo);
+
+        // ⚠⚠ LA ESCALERA SUBE Y NO BAJA. Si un rango alto abriera MENOS trajes
+        //    que uno bajo, subir de rango QUITARIA aspecto -- que es lo contrario
+        //    de una recompensa. Se rompe reordenando el enum.
+        int previo = -1;
+        boolean crece = true;
+        for (var t : todos) {
+            int pide = t.pide().escalon;
+            if (pide <= previo) {
+                crece = false;
+                LunaEternal.LOG.error("El traje {} pide escalon {} y el anterior {}",
+                        t.id(), pide, previo);
+            }
+            previo = pide;
+        }
+        check("cada traje pide un escalon MAS ALTO que el anterior", crece);
+
+        // ⚠ Y lo que abre un escalon lo abre tambien el siguiente: se puede
+        //   llevar cualquiera hasta el tuyo, no solo el tuyo.
+        boolean acumula = true;
+        for (int e = 0; e <= 6; e++) {
+            for (var t : todos) {
+                if (t.puede(e) && !t.puede(e + 1)) {
+                    acumula = false;
+                    LunaEternal.LOG.error("El escalon {} abre {} y el {} no",
+                            e, t.id(), e + 1);
+                }
+            }
+        }
+        check("un escalon abre todo lo del anterior", acumula);
+
+        // ⚠ El identificador llega DEL CLIENTE: uno desconocido no puede caer al
+        //   primero, o un cliente modificado siempre acertaria con algo (P6).
+        check("un traje desconocido no resuelve",
+              net.pokereport.luna.traje.Traje.de("no_existe") == null);
+        check("una cadena vacia no resuelve",
+              net.pokereport.luna.traje.Traje.de("") == null);
+        check("un nulo no resuelve",
+              net.pokereport.luna.traje.Traje.de(null) == null);
+
+        // ⚠ El nombre que ve el jugador sale de una clave de traduccion, y una
+        //   clave que no existe se pinta CRUDA sin dar ningun error.
+        boolean forma = true;
+        var vistos = new java.util.HashSet<String>();
+        for (var t : todos) {
+            if (!t.id().matches("[a-z0-9_]+") || !vistos.add(t.id())) {
+                forma = false;
+                LunaEternal.LOG.error("Identificador de traje invalido o repetido: {}",
+                        t.id());
+            }
+        }
+        check("los identificadores valen para una clave y no se repiten", forma);
+
+        // ⚠⚠ Y EL PRIMER TRAJE TIENE QUE SER ALCANZABLE POR TODO EL MUNDO. Si
+        //    pidiera mas que el rango de partida, un jugador nuevo abriria la
+        //    pantalla y no podria ponerse NADA -- que se lee como «esto no
+        //    funciona», no como «te falta rango».
+        var base = net.pokereport.luna.ui.Tablist.Rank.NOVATO;
+        check("el traje mas bajo lo abre el rango de partida",
+              todos.get(0).pide().escalon <= base.escalon);
+    }
+
     private void testViajes() {
         var todas = net.pokereport.luna.world.Paradas.TODAS;
 

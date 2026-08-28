@@ -30,6 +30,7 @@ public final class EstadoCliente {
     private static Red.EstadoCazas cazas;
     private static Red.EstadoExplorar explorar;
     private static Red.EstadoViajes viajes;
+    private static Red.EstadoTrajes trajes;
 
     private EstadoCliente() {}
 
@@ -142,6 +143,14 @@ public final class EstadoCliente {
     /** El libro de ordenes. {@code null} hasta que contesta el servidor. */
     public static Red.EstadoMercado mercado() {
         return mercado;
+    }
+
+    public static void guardar(Red.EstadoTrajes nuevo) {
+        trajes = nuevo;
+    }
+
+    public static Red.EstadoTrajes trajes() {
+        return trajes;
     }
 
     public static void guardar(Red.EstadoViajes nuevo) {

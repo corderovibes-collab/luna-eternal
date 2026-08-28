@@ -165,6 +165,14 @@ public class LunaCliente implements ClientModInitializer {
         //   al llegar los sombreros habrian sido dos paquetes, dos receptores y
         //   dos difusiones que mantener sincronizadas. La categoria viaja dentro,
         //   asi que añadir capas es una linea en este switch.
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoTrajes.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
+        // ⚠ Quien lleva que. Es un paquete DISTINTO del estado de la pantalla:
+        //   aquel es tuyo y este es de todos.
+        ClientPlayNetworking.registerGlobalReceiver(Red.TrajeDe.ID,
+                (carga, ctx) -> Trajes.guardar(carga.jugador(), carga.traje()));
+
         ClientPlayNetworking.registerGlobalReceiver(Red.LlevaPuesto.ID, (carga, ctx) -> {
             switch (carga.categoria()) {
                 case net.pokereport.luna.cosmetics.Catalogo.AURAS ->
@@ -190,6 +198,7 @@ public class LunaCliente implements ClientModInitializer {
         //   hornea, y sale el cubo morado y negro en vez de un error.
         Sombreros.registrarModelos();
         Sombreros.registrarDibujado();
+        Trajes.registrarDibujado();
 
         // Al salir del mundo se olvida: el saldo es de esa partida. Y se calla
         // la voz, que si no sigue sonando en la pantalla de servidores.

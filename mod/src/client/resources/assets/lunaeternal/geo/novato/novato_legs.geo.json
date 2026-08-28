@@ -1,0 +1,123 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.unknown",
+        "texture_width": 128,
+        "texture_height": 128,
+        "visible_bounds_width": 3,
+        "visible_bounds_height": 3.5,
+        "visible_bounds_offset": [
+          0,
+          1.25,
+          0
+        ]
+      },
+      "bones": [
+        {
+          "name": "bipedRightLeg",
+          "pivot": [
+            -1.9,
+            12,
+            0
+          ]
+        },
+        {
+          "name": "bipedLeftLeg",
+          "pivot": [
+            1.9,
+            12,
+            0
+          ]
+        },
+        {
+          "name": "armorRightLeg",
+          "parent": "bipedRightLeg",
+          "pivot": [
+            -1.9,
+            12,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -4.15,
+                2.8,
+                -2.25
+              ],
+              "size": [
+                4.5,
+                9.6,
+                4.5
+              ],
+              "uv": [
+                0,
+                0
+              ]
+            },
+            {
+              "origin": [
+                -4.2,
+                11.4,
+                -2.3
+              ],
+              "size": [
+                4.6,
+                1.0,
+                4.6
+              ],
+              "uv": [
+                40,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "name": "armorLeftLeg",
+          "parent": "bipedLeftLeg",
+          "pivot": [
+            1.9,
+            12,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -0.35,
+                2.8,
+                -2.25
+              ],
+              "size": [
+                4.5,
+                9.6,
+                4.5
+              ],
+              "uv": [
+                20,
+                0
+              ]
+            },
+            {
+              "origin": [
+                -0.4,
+                11.4,
+                -2.3
+              ],
+              "size": [
+                4.6,
+                1.0,
+                4.6
+              ],
+              "uv": [
+                60,
+                0
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

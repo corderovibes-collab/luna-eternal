@@ -68,6 +68,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.economy.EconomyStats stats;
     private static net.pokereport.luna.hunt.HuntService hunts;
     private static net.pokereport.luna.rank.RankService ranks;
+    private static net.pokereport.luna.traje.TrajeService trajes;
     private static net.pokereport.luna.backpack.BackpackService backpacks;
     private static net.pokereport.luna.world.Regreso regresos;
     private static net.pokereport.luna.cosmetics.CosmeticsService cosmetics;
@@ -134,6 +135,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                         () -> server.execute(() -> {
                             if (!player.isRemoved()) {
                                 Tablist.refrescarClan(server, player);
+                                cargarTraje(player);
                             }
                         }));
             }
@@ -176,6 +178,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.world.Regreso.apuntar(player);
             net.pokereport.luna.backpack.Abiertas.guardarYOlvidar(player);
             net.pokereport.luna.rank.RankService.olvidar(player.getUuid());
+            net.pokereport.luna.traje.TrajeService.olvidar(player.getUuid());
             Tablist.onLeave(server, player);
         });
 
@@ -253,6 +256,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             stats = new net.pokereport.luna.economy.EconomyStats(database);
             hunts = new net.pokereport.luna.hunt.HuntService(database);
             ranks = new net.pokereport.luna.rank.RankService(database);
+            trajes = new net.pokereport.luna.traje.TrajeService(database);
             backpacks = new net.pokereport.luna.backpack.BackpackService(database);
             regresos = new net.pokereport.luna.world.Regreso(database);
             cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
@@ -311,6 +315,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.hunt.HuntService hunts() { return hunts; }
 
     public static net.pokereport.luna.rank.RankService ranks() { return ranks; }
+    public static net.pokereport.luna.traje.TrajeService trajes() { return trajes; }
 
     public static net.pokereport.luna.backpack.BackpackService backpacks() {
         return backpacks;
@@ -327,4 +332,60 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.clan.ClanService clans() { return clans; }
     public static net.pokereport.luna.quest.QuestService quests() { return quests; }
     public static net.pokereport.luna.economy.EconomyStats stats() { return stats; }
+
+    /**
+     * Carga el traje de quien entra y lo reparte.
+     *
+     * <h2>⚠⚠ VA DENTRO DEL CALLBACK DEL RANGO, Y NO AL LADO</h2>
+     *
+     * `revisar()` necesita saber el escalon, y el escalon lo carga `ranks`
+     * <b>de forma asincrona</b>. Llamado en paralelo leeria el rango ANTERIOR
+     * --o ninguno-- y le quitaria el traje a alguien que si puede llevarlo. Es
+     * exactamente la trampa de `conceder()` en la pantalla del inicial: un
+     * metodo que encola y vuelve PARECE sincrono.
+     *
+     * <h2>⚠⚠ Y HACE LAS DOS MITADES DEL REPARTO</h2>
+     *
+     * <ul>
+     *   <li>{@code repartirTraje} — decirle a los demas lo que lleva este;</li>
+     *   <li>{@code ponerAlDia} — decirle a este lo que llevan los demas.</li>
+     * </ul>
+     *
+     * La segunda es la que se olvida siempre, y sin ella quien entra ve a todo
+     * el mundo sin traje hasta que alguien se cambie de ropa.
+     */
+    private static void cargarTraje(net.minecraft.server.network.ServerPlayerEntity player) {
+        if (trajes == null) {
+            return;
+        }
+        submit(() -> {
+            final long id;
+            try {
+                id = players.resolve(player.getUuid(),
+                        player.getGameProfile().getName());
+            } catch (java.sql.SQLException e) {
+                LOG.error("No se pudo resolver el jugador para su traje", e);
+                return;
+            }
+            trajes.cargar(id, player.getUuid());
+            player.getServer().execute(() -> {
+                if (player.isRemoved()) {
+                    return;
+                }
+                // ⚠ El rango se puede BAJAR, y el permiso solo se mira al
+                //   ponerselo. Sin esta revision, quien baje de MAESTRO seguiria
+                //   con el traje de MAESTRO para siempre.
+                submit(() -> {
+                    trajes.revisar(player, id);
+                    player.getServer().execute(() -> {
+                        if (player.isRemoved()) {
+                            return;
+                        }
+                        net.pokereport.luna.net.Red.repartirTraje(player);
+                        net.pokereport.luna.net.Red.ponerAlDia(player);
+                    });
+                });
+            });
+        });
+    }
 }

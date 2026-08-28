@@ -1,0 +1,107 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.unknown",
+        "texture_width": 128,
+        "texture_height": 128,
+        "visible_bounds_width": 3,
+        "visible_bounds_height": 3.5,
+        "visible_bounds_offset": [
+          0,
+          1.25,
+          0
+        ]
+      },
+      "bones": [
+        {
+          "name": "armorRightBoot",
+          "parent": "armorRightLeg",
+          "pivot": [
+            -1.9,
+            12,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -4.3,
+                0.9,
+                -2.4
+              ],
+              "size": [
+                4.8,
+                2.6,
+                4.8
+              ],
+              "uv": [
+                0,
+                0
+              ]
+            },
+            {
+              "origin": [
+                -4.35,
+                0.0,
+                -2.45
+              ],
+              "size": [
+                4.9,
+                1.0,
+                4.9
+              ],
+              "uv": [
+                40,
+                0
+              ]
+            }
+          ]
+        },
+        {
+          "name": "armorLeftBoot",
+          "parent": "armorLeftLeg",
+          "pivot": [
+            1.9,
+            12,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -0.5,
+                0.9,
+                -2.4
+              ],
+              "size": [
+                4.8,
+                2.6,
+                4.8
+              ],
+              "uv": [
+                20,
+                0
+              ]
+            },
+            {
+              "origin": [
+                -0.55,
+                0.0,
+                -2.45
+              ],
+              "size": [
+                4.9,
+                1.0,
+                4.9
+              ],
+              "uv": [
+                60,
+                0
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

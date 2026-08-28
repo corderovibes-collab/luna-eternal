@@ -42,7 +42,11 @@ public record App(String id, boolean abierta) {
         // ⚠ Se enciende con su pantalla (2026-08-25). La logica
         //   --HuntService-- llevaba escrita desde PHASE 5.
         new App("cazas",      true),
-        new App("kits",       false),
+        // ⚠ Se enciende con su pantalla (2026-08-28): los TRAJES DE RANGO.
+        //   El usuario los puso aqui, no en un icono propio, y tiene
+        //   razon: un traje ES un kit de rango. De paso no hace falta
+        //   arte nuevo -- este icono ya estaba dibujado desde el v4.
+        new App("kits",       true),
         // ⚠ Se enciende con su pantalla (2026-08-26). Es la unica del Pad
         //   con CONTENEDOR: arrastrar objetos lo hace Minecraft, no nosotros.
         new App("mochila",    true),

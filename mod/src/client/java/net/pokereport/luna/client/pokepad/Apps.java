@@ -68,6 +68,7 @@ public final class Apps {
             case "mochila" -> abrirMochila();
             case "explorar" -> abrirExplorar();
             case "warps" -> abrirViajes();
+            case "kits" -> abrirKits();
             default -> false;
         };
     }
@@ -102,6 +103,13 @@ public final class Apps {
     private static boolean abrirMochila() {
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking
                 .send(new net.pokereport.luna.net.Red.AbrirMochila());
+        return true;
+    }
+
+    /** Kits: los trajes de rango, y lo que venga despues. */
+    private static boolean abrirKits() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new KitsScreen(cliente.currentScreen));
         return true;
     }
 

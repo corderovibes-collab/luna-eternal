@@ -104,7 +104,21 @@ public final class LunaCommand {
                         "\u00a7a" + n + " \u00a77Miraidon colocados en las paradas."),
                         false);
                     return n;
-                }))
+                })
+                // ⚠ Existe porque `/luna decorar quitar` solo borra ALREDEDOR
+                //   de quien lo ejecuta, y las paradas estan repartidas por toda
+                //   la ciudadela: quitarlas obligaba a ir andando a las siete, y
+                //   andando es facil dejarse una -- que ademas no se puede
+                //   atacar ni capturar, asi que se quedaria ahi para siempre.
+                .then(literal("quitar")
+                    .executes(ctx -> {
+                        int n = net.pokereport.luna.world.Paradas
+                                .quitarTodas(ctx.getSource().getServer());
+                        ctx.getSource().sendFeedback(() -> Text.literal(
+                            "§e" + n + " §7decorativos quitados de las "
+                            + "siete paradas."), false);
+                        return n;
+                    })))
 
             .then(literal("decorar")
                 // ⚠ Nivel 4: coloca entidades permanentes en el mundo. Es

@@ -103,6 +103,32 @@ public final class Paradas {
     }
 
     /**
+     * Quita los Miraidon de las siete paradas.
+     *
+     * <p>⚠ Existe porque {@code /luna decorar quitar} solo borra <b>alrededor
+     * de quien lo ejecuta</b>, y las paradas están repartidas por toda la
+     * ciudadela: quitarlas obligaba a ir andando a las siete. Y andando es fácil
+     * dejarse una — que además no se puede atacar ni capturar, así que se
+     * quedaría ahí para siempre sin que nadie sepa por qué.
+     *
+     * <p>⚠ El radio es 3, el mismo que usa {@link #colocarTodas} para limpiar
+     * antes de poner. Los dos números tienen que ser el mismo: si quitar barriera
+     * menos que poner, quedarían restos justo fuera del alcance.
+     */
+    public static int quitarTodas(net.minecraft.server.MinecraftServer servidor) {
+        var mundo = servidor.getWorld(LunaDimensions.CIUDADELA);
+        if (mundo == null) {
+            return 0;
+        }
+        int n = 0;
+        for (Parada p : TODAS) {
+            n += Decorativos.quitar(mundo, p.pos(), 3);
+        }
+        LunaEternal.LOG.info("Paradas: {} decorativos quitados", n);
+        return n;
+    }
+
+    /**
      * Pone un Miraidon en cada parada.
      *
      * <p>⚠ Primero BORRA los que hubiera cerca. Sin eso, llamarlo dos veces

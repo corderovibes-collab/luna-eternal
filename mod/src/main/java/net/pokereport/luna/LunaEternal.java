@@ -69,6 +69,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.hunt.HuntService hunts;
     private static net.pokereport.luna.rank.RankService ranks;
     private static net.pokereport.luna.backpack.BackpackService backpacks;
+    private static net.pokereport.luna.world.Regreso regresos;
     private static net.pokereport.luna.cosmetics.CosmeticsService cosmetics;
     private static ExecutorService io;
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
@@ -163,6 +164,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.pokedex.ScanListener.olvidar(player);
             // ⚠⚠ ANTES de `players.forget`: guardar necesita resolver el id,
             //    y si ya se ha olvidado hay que volver a la base a buscarlo.
+            // ⚠ ANTES de olvidar al jugador: apuntar necesita resolver su id.
+            net.pokereport.luna.world.Regreso.apuntar(player);
             net.pokereport.luna.backpack.Abiertas.guardarYOlvidar(player);
             net.pokereport.luna.rank.RankService.olvidar(player.getUuid());
             Tablist.onLeave(server, player);
@@ -243,6 +246,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             hunts = new net.pokereport.luna.hunt.HuntService(database);
             ranks = new net.pokereport.luna.rank.RankService(database);
             backpacks = new net.pokereport.luna.backpack.BackpackService(database);
+            regresos = new net.pokereport.luna.world.Regreso(database);
             cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
@@ -302,6 +306,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
 
     public static net.pokereport.luna.backpack.BackpackService backpacks() {
         return backpacks;
+    }
+
+    public static net.pokereport.luna.world.Regreso regresos() {
+        return regresos;
     }
     public static net.pokereport.luna.cosmetics.CosmeticsService cosmetics() { return cosmetics; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }

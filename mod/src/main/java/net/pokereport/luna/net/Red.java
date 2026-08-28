@@ -3160,12 +3160,15 @@ public class Red implements ModInitializer {
             return;
         }
         if (destino.equals("hogar")) {
-            net.pokereport.luna.world.TravelService.travel(jugador,
-                    net.pokereport.luna.world.LunaDimensions.HOGAR, "Mundo Hogar");
+            net.pokereport.luna.world.Hogar.llevar(jugador);
             enviarExplorar(jugador);
             return;
         }
         if (destino.equals("salvaje")) {
+            // ⚠⚠ SE APUNTA ANTES DE MOVER. Después el jugador ya está en el
+            //    otro mundo, y lo que se guardaría sería la posición DE
+            //    DESTINO — o sea, volver a casa te dejaría en el salvaje.
+            net.pokereport.luna.world.Regreso.apuntar(jugador);
             if (!net.pokereport.luna.world.Salvaje.llevar(jugador)) {
                 jugador.sendMessage(net.minecraft.text.Text.literal(
                         "§cNo se encontró sitio. Inténtalo otra vez."), true);
@@ -3189,6 +3192,7 @@ public class Red implements ModInitializer {
                     "§cSolo puedes ir con alguien de tu clan."), true);
             return;
         }
+        net.pokereport.luna.world.Regreso.apuntar(jugador);
         if (!net.pokereport.luna.world.Salvaje.conJugador(jugador, otro)) {
             jugador.sendMessage(net.minecraft.text.Text.literal(
                     "§cNo se pudo llegar hasta él."), true);

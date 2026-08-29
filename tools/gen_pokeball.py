@@ -42,7 +42,7 @@ ROJO = (216, 62, 54)
 BLANCO = (238, 240, 246)
 NEGRO = (32, 33, 40)
 
-LADO = 64        # la textura
+LADO = 128       # la textura
 RADIO = 3.0      # de la bola
 
 
@@ -56,15 +56,20 @@ def bola(cx, cy, cz):
 
     # ⚠ Cada capa lleva su ALTURA y su COLOR; el ANCHO se calcula. Los tramos no
     #   son todos iguales: el del ecuador es fino porque ahí va la banda.
-    tramos = [
-        (-3.0, -2.0, BLANCO),
-        (-2.0, -1.0, BLANCO),
-        (-1.0, -0.4, BLANCO),
-        (-0.4, 0.4, NEGRO),     # la banda
-        (0.4, 1.0, ROJO),
-        (1.0, 2.0, ROJO),
-        (2.0, 3.0, ROJO),
-    ]
+    # ⚠⚠ CAPAS DE MEDIO BLOQUE, NO DE UNO ENTERO. Con capas de 1 la bola solo
+    #    se estrecha en los extremos y el resto es un CILINDRO: es lo que salio
+    #    la primera vez. A medio bloque hay trece escalones y ya se lee redonda.
+    tramos = []
+    paso = 0.5
+    y = -RADIO
+    while y < -0.25 - 1e-6:
+        tramos.append((y, min(y + paso, -0.25), BLANCO))
+        y += paso
+    tramos.append((-0.25, 0.25, NEGRO))     # la banda
+    y = 0.25
+    while y < RADIO - 1e-6:
+        tramos.append((y, min(y + paso, RADIO), ROJO))
+        y += paso
     for y0, y1, color in tramos:
         # El radio de la capa se mide en su borde MAS ANCHO -- el más cercano al
         # ecuador -- o la bola queda mordida por dentro.
@@ -86,6 +91,29 @@ def bola(cx, cy, cz):
 
 
 # ---------------------------------------------------------------- .bbmodel
+
+# Como se llama cada cara en Blockbench. Es el mismo reparto que usa el pintor
+# de `trajes/modelo.py`, asi que lo que se ve en Blockbench es lo que se ve en
+# el juego.
+#
+# ⚠ `derecha` es la DERECHA DEL MODELO, que mirandolo de frente cae a tu
+#   izquierda -- por eso es `west` (-X) y no `east`.
+NOMBRE_CARA = {
+    "derecha": "west", "frente": "north", "izquierda": "east",
+    "espalda": "south", "arriba": "up", "abajo": "down",
+}
+
+
+def caras_de(c):
+    """Las seis caras con su rectangulo real en la textura."""
+    salida = {}
+    for ox, oy, aw, ah, cara in _caras(c):
+        salida[NOMBRE_CARA[cara]] = {
+            "uv": [ox, oy, ox + aw, oy + ah],
+            "texture": 0,
+        }
+    return salida
+
 
 def bbmodel(cubos, png_bytes):
     """
@@ -113,10 +141,12 @@ def bbmodel(cubos, png_bytes):
             "color": i % 8,
             "origin": [0, 0, 0],
             "uv_offset": [c.uv[0], c.uv[1]],
-            "faces": {
-                cara: {"uv": [0, 0, 0, 0], "texture": 0}
-                for cara in ("north", "east", "south", "west", "up", "down")
-            },
+            # ⚠⚠⚠ LAS SEIS CARAS VAN CON SU UV DE VERDAD, Y AQUI ESTUVO EL
+            #    FALLO: las escribi como [0,0,0,0] pensando que con `box_uv` no
+            #    se miraban. Blockbench SI las mira, y un rectangulo de tamaño
+            #    cero es una cara VACIA -- se veian las capas sueltas, como
+            #    platos flotando, porque las tapas no se dibujaban.
+            "faces": caras_de(c),
             "uuid": eid,
         })
     return {

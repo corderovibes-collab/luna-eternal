@@ -198,7 +198,28 @@ public final class LunaCommand {
                     //    obligatorios, el combate SE JUEGA IGUAL --con los
                     //    Pokemon donde caigan-- y no hay ni un aviso.
                     .then(literal("posiciones")
-                        .executes(ctx -> comprobarPosiciones(ctx))))
+                        .executes(ctx -> comprobarPosiciones(ctx)))
+                    // ⚠⚠ BORRA LAS COPIAS. `clonar` NO copia el aire, asi que un
+                    //    bloque QUITADO del maestro se queda en la copia para
+                    //    siempre y volver a clonar no lo arregla. Mientras se
+                    //    construye hace falta; despues, casi nunca.
+                    .then(literal("limpiarranuras")
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            var g = net.pokereport.luna.gym.Gimnasio.de(
+                                    StringArgumentType.getString(ctx, "cual"));
+                            if (g == null) {
+                                s.sendError(Text.literal("§cNo existe"));
+                                return 0;
+                            }
+                            int n = net.pokereport.luna.gym.Arenas.limpiarRanuras(
+                                    s.getServer(), g);
+                            s.sendFeedback(() -> Text.literal(
+                                "§a" + n + " §7bloques quitados de las ranuras de "
+                                + "§f" + g.id() + "§7. Se volveran a clonar del "
+                                + "maestro."), false);
+                            return 1;
+                        })))
                 // Los lideres de la CIUDADELA: los que reciben y abren el
                 // dialogo. Van aparte de `<cual>` porque no son de un gimnasio
                 // sino de todos los que ya tengan sitio construido.

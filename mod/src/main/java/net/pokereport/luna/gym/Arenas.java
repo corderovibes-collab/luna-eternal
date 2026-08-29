@@ -45,14 +45,24 @@ public final class Arenas {
      * @return {@code {minX, minY, minZ, ancho, alto, fondo}} relativo al origen,
      *         o {@code null} si no hay nada construido
      */
+    /**
+     * Cuántas capas de Z vacías seguidas se aceptan dentro de una sala.
+     *
+     * <p>Una sala tiene suelo, así que <b>ninguna capa de Z interior está
+     * completamente vacía</b>: si aparecen varias seguidas, se ha salido del
+     * edificio. Ocho da margen para un cartel suelto o una farola apartada, y es
+     * mucho menos que el hueco que queda entre una copia y la siguiente.
+     */
+    private static final int AIRE_QUE_CORTA = 8;
+
     public static int[] medir(MinecraftServer servidor, Gimnasio.Gimnasio_ g) {
         ServerWorld mundo = mundo(servidor);
         if (mundo == null) {
             return null;
         }
         BlockPos o = Gimnasio.maestro(g);
-        int minX = 9999, minY = 9999, minZ = 9999;
-        int maxX = -9999, maxY = -9999, maxZ = -9999;
+        int minX = 9999, minY = 9999;
+        int maxX = -9999, maxY = -9999;
         var pos = new BlockPos.Mutable();
         // ⚠ Se barre un area GENEROSA (medio hueco de gimnasio) porque medir es
         //   barato y quedarse corto al medir es el mismo fallo que se venia a
@@ -61,8 +71,8 @@ public final class Arenas {
         //    lo hacia: medi el gimnasio de Brock y salio «64 de fondo», que era
         //    EXACTAMENTE el limite del barrido. Medir con la regla que estas
         //    intentando validar solo te devuelve la regla.
-        //    Hoy barre medio hueco de gimnasio en los dos ejes.
         int alcance = Gimnasio.SEPARACION / 2;
+        boolean[] ocupada = new boolean[alcance];
         for (int dy = -16; dy < 120; dy++) {
             for (int dz = 0; dz < alcance; dz++) {
                 for (int dx = 0; dx < alcance; dx++) {
@@ -70,20 +80,64 @@ public final class Arenas {
                     if (mundo.getBlockState(pos).isAir()) {
                         continue;
                     }
+                    ocupada[dz] = true;
                     if (dx < minX) minX = dx;
                     if (dy < minY) minY = dy;
-                    if (dz < minZ) minZ = dz;
                     if (dx > maxX) maxX = dx;
                     if (dy > maxY) maxY = dy;
-                    if (dz > maxZ) maxZ = dz;
                 }
             }
         }
         if (maxX < minX) {
             return null;
         }
-        return new int[] {minX, minY, minZ,
-                          maxX - minX + 1, maxY - minY + 1, maxZ - minZ + 1};
+
+        // ⚠⚠⚠ Y AHORA LA PARTE QUE FALTABA, Y QUE COSTO UN «PELIGRO» EN VIVO.
+        //
+        //    Barrer ancho arreglo el fallo circular y creo otro: a partir de la
+        //    primera vez que se clona una ranura, EL BARRIDO SE COME LA COPIA.
+        //    El gimnasio de Brock mide 86 y la copia de la ranura 1 empieza en
+        //    128, asi que la medicion daba 214 -- «el maestro mas su copia».
+        //
+        //    Y eso no es un numero feo y ya: `clonar` MIDE ANTES DE COPIAR, o
+        //    sea que la siguiente copia habria sido de 214 de fondo y habria
+        //    escrito encima de las ranuras 1 y 2.
+        //
+        //    ⚠⚠ Las dos versiones anteriores estaban mal por el mismo motivo de
+        //       fondo: usaban un LIMITE en vez de mirar LO QUE HAY. Una sala
+        //       tiene suelo, asi que sus capas de Z estan todas ocupadas; entre
+        //       una copia y la siguiente hay AIRE. El aire es el dato, y no
+        //       depende de ningun numero que estemos intentando validar.
+        int primera = 0;
+        while (primera < alcance && !ocupada[primera]) {
+            primera++;
+        }
+        int fin = primera;
+        int vacias = 0;
+        for (int dz = primera; dz < alcance; dz++) {
+            if (ocupada[dz]) {
+                fin = dz + 1;
+                vacias = 0;
+            } else if (++vacias >= AIRE_QUE_CORTA) {
+                break;
+            }
+        }
+        // ¿Queda algo mas alla? Se dice, en vez de ignorarlo en silencio: casi
+        // siempre seran las copias de las ranuras, y saberlo evita la duda.
+        int masAlla = 0;
+        for (int dz = fin; dz < alcance; dz++) {
+            if (ocupada[dz]) {
+                masAlla++;
+            }
+        }
+        if (masAlla > 0) {
+            LunaEternal.LOG.info("Gimnasio {}: medido hasta z={} ({} de fondo). "
+                    + "Hay {} capas mas alla, separadas por aire: son las copias "
+                    + "de las ranuras y NO se cuentan.",
+                    g.id(), fin, fin - primera, masAlla);
+        }
+        return new int[] {minX, minY, primera,
+                          maxX - minX + 1, maxY - minY + 1, fin - primera};
     }
 
     public static ServerWorld mundo(MinecraftServer servidor) {
@@ -182,6 +236,60 @@ public final class Arenas {
             }
         }
         LunaEternal.LOG.info("Gimnasio {}: ranura {} clonada, {} bloques de una sala de {}x{}x{}", g.id(), ranura, puestos, ancho, alto, fondo);
+    }
+
+    /**
+     * BORRA LAS COPIAS DE LAS RANURAS.
+     *
+     * <h2>⚠⚠ HACE FALTA MIENTRAS SE CONSTRUYE, Y NO ES OBVIO POR QUE</h2>
+     *
+     * {@link #clonar} <b>no copia el aire</b>: recorre el maestro y escribe lo
+     * que no es aire. Así que si se <i>quita</i> un bloque del maestro —una
+     * pared mal puesta, una prueba— la copia se lo queda para siempre, y volver
+     * a clonar no lo arregla.
+     *
+     * <p>⚠ Es lento a propósito y no se llama solo: borra cientos de miles de
+     * bloques. Se ejecuta a mano, cuando toca.
+     *
+     * <p>⚠ Y se salta las ranuras vacías mirando una sola capa: casi siempre
+     * solo hay una o dos copias hechas, y barrer las siete enteras costaría
+     * segundos de hilo de servidor para no borrar nada.
+     *
+     * @return cuántos bloques se quitaron
+     */
+    public static int limpiarRanuras(MinecraftServer servidor,
+                                     Gimnasio.Gimnasio_ g) {
+        ServerWorld mundo = mundo(servidor);
+        if (mundo == null) {
+            return 0;
+        }
+        int[] m = medir(servidor, g);
+        if (m == null) {
+            return 0;
+        }
+        int x0 = m[0], y0 = m[1], z0 = m[2], ancho = m[3], alto = m[4], fondo = m[5];
+        var aire = Blocks.AIR.getDefaultState();
+        var pos = new BlockPos.Mutable();
+        int quitados = 0;
+        for (int ranura = 1; ranura < Gimnasio.RANURAS; ranura++) {
+            BlockPos dst = Gimnasio.origen(g, ranura);
+            for (int dy = y0; dy < y0 + alto; dy++) {
+                for (int dz = z0; dz < z0 + fondo; dz++) {
+                    for (int dx = x0; dx < x0 + ancho; dx++) {
+                        pos.set(dst.getX() + dx, dst.getY() + dy, dst.getZ() + dz);
+                        if (mundo.getBlockState(pos).isAir()) {
+                            continue;
+                        }
+                        mundo.setBlockState(pos, aire, 2);
+                        quitados++;
+                    }
+                }
+            }
+        }
+        Ranuras.olvidarConstruidas();
+        LunaEternal.LOG.info("Gimnasio {}: {} bloques quitados de las ranuras",
+                g.id(), quitados);
+        return quitados;
     }
 
     /**

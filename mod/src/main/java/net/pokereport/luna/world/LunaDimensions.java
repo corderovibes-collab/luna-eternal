@@ -56,6 +56,20 @@ public final class LunaDimensions {
     /** El Mundo Hogar es el overworld de toda la vida. */
     public static final RegistryKey<World> HOGAR = World.OVERWORLD;
 
+    /**
+     * LAS ARENAS DE LOS GIMNASIOS.
+     *
+     * <p>⚠⚠ UNA SOLA DIMENSION PARA LOS OCHO, y ademas para todas sus copias.
+     * Fabric no crea dimensiones en caliente, asi que una por gimnasio serian
+     * ocho ficheros hoy y un reinicio general el dia que haya un noveno. Y cada
+     * dimension arrastra su carpeta de mundo en un disco que no tiene ni una
+     * ranura de copia de seguridad.
+     *
+     * <p>Repartidas por coordenada: el gimnasio manda en X y la copia en Z.
+     * Añadir un gimnasio es una linea en {@code Gimnasio.TODOS}.
+     */
+    public static final RegistryKey<World> GIMNASIOS = key("gimnasios");
+
     private LunaDimensions() {}
 
     private static RegistryKey<World> key(String path) {

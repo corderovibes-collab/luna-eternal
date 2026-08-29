@@ -1,0 +1,21 @@
+{
+  "_comment": "Gimnasios: una arena por lider, separadas 512 bloques dentro de la MISMA dimension. Fabric no crea dimensiones en caliente, asi que ocho dimensiones habria que declararlas todas de antemano y cada una arrastra su carpeta de mundo; una sola con las salas repartidas hace lo mismo y se amplia moviendo un numero. monster_spawn_light_level 0 porque una arena de combate con un zombi dentro no es una arena. fixed_time 6000: mediodia fijo -- aqui SI interesa ver, al reves que en la ciudadela, porque lo que se mira es el combate y no el ambiente.",
+  "ultrawarm": false,
+  "natural": false,
+  "piglin_safe": false,
+  "respawn_anchor_works": false,
+  "bed_works": false,
+  "has_raids": false,
+  "has_skylight": true,
+  "has_ceiling": false,
+  "coordinate_scale": 1.0,
+  "ambient_light": 0.5,
+  "fixed_time": 6000,
+  "logical_height": 384,
+  "effects": "minecraft:overworld",
+  "infiniburn": "#minecraft:infiniburn_overworld",
+  "min_y": -64,
+  "height": 384,
+  "monster_spawn_light_level": 0,
+  "monster_spawn_block_light_limit": 0
+}

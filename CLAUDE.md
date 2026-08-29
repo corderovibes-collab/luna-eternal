@@ -1048,7 +1048,7 @@ Comprobar     UN SELECTOR NO VE LO QUE ESTA EN UN CHUNK DESCARGADO
               coloque a Brock y su Geodude, el log dijo COLOCADO, y
                 execute in <dim> run data get entity @e[type=cobblemon:pokemon]
               contesto "No entity was found". Parecia que el Pokemon no nacia
-              ⚠⚠⚠ ESTABA AHI, EN -137.544 69.0 52.0 EXACTOS.  solo recorre
+              ⚠⚠⚠ ESTABA AHI, EN -137.544 69.0 52.0 EXACTOS. @e solo recorre
                  las entidades CARGADAS, y en una dimension sin nadie cerca no
                  hay ninguna. La comprobacion era la que fallaba, no el codigo
               ⚠⚠ Y LO QUE MAS DESPISTO: el TrainerMob SI aparecia y el Pokemon
@@ -1061,8 +1061,9 @@ Comprobar     UN SELECTOR NO VE LO QUE ESTA EN UN CHUNK DESCARGADO
                 execute in <dim> run forceload remove all
               ⚠ y QUITAR el forceload despues: un chunk cargado para siempre se
                 tickea para siempre
-              ⚠ para CONTAR,  dice "Added tag to N entities";
-                 ensena uno y no dice cuantos hay
+              ⚠ para CONTAR, «tag @e[...] add x» dice "Added tag to N
+                entities"; «data get ... limit=1» ensena UNO y no dice cuantos
+                hay -- que es lo que casi me deja dos Brocks superpuestos
 
 Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
               dimension `lunaeternal:gimnasios` . los 8 de Kanto

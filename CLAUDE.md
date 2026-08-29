@@ -1043,6 +1043,27 @@ EL ARTE       tools/gen_trajes.py . tools/trajes/ . docs/ui/prompts-trajes.md
                 blanco sobre un cuerpo gris no se ve. Lleva el ROJO DEL
                 ENTRENADOR. Los otros cuatro si llevan el suyo
 
+Comprobar     UN SELECTOR NO VE LO QUE ESTA EN UN CHUNK DESCARGADO
+              (2026-08-29) . COSTO CUATRO DIAGNOSTICOS Y NO HABIA NADA ROTO
+              coloque a Brock y su Geodude, el log dijo COLOCADO, y
+                execute in <dim> run data get entity @e[type=cobblemon:pokemon]
+              contesto "No entity was found". Parecia que el Pokemon no nacia
+              ⚠⚠⚠ ESTABA AHI, EN -137.544 69.0 52.0 EXACTOS.  solo recorre
+                 las entidades CARGADAS, y en una dimension sin nadie cerca no
+                 hay ninguna. La comprobacion era la que fallaba, no el codigo
+              ⚠⚠ Y LO QUE MAS DESPISTO: el TrainerMob SI aparecia y el Pokemon
+                 no, estando en el MISMO CHUNK. Un dato que parece una pista
+                 sobre el tipo de entidad y era ruido de que chunk estaba
+                 cargado en cada momento
+              LA FORMA DE COMPROBARLO DE VERDAD, y son dos lineas:
+                execute in <dim> run forceload add <x1> <z1> <x2> <z2>
+                ... la consulta ...
+                execute in <dim> run forceload remove all
+              ⚠ y QUITAR el forceload despues: un chunk cargado para siempre se
+                tickea para siempre
+              ⚠ para CONTAR,  dice "Added tag to N entities";
+                 ensena uno y no dice cuantos hay
+
 Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
               dimension `lunaeternal:gimnasios` . los 8 de Kanto
                 x = gimnasio * 1024      brock en 0 64 0

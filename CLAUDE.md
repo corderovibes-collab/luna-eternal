@@ -167,7 +167,16 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 423/423 correctos (2026-08-29, en vivo)
+Autotest      /luna autotest -> 423 + los de gimnasios (2026-08-29)
+              +los de MEDALLAS Y RECEPCIONES, y los que importan son:
+              que el bit de cada medalla sea SU SALA (si no, ganar a Brock
+              enciende la de Misty sin dar ningun error), que la entrada y la
+              tarima caigan DENTRO de su ranura (fuera, el jugador de la ranura
+              1 aparece en la sala del de la 2), que ningun gimnasio pida mas
+              medallas de las que hay (seria INALCANZABLE y se quedaria gris
+              para siempre) y que una tarea programada que falla NO cancele a la
+              siguiente -- si no, la vuelta de uno se la lleva la de otro y el
+              jugador se queda encerrado en la arena
               +8 de Viajes, y la que importa es LA REJILLA: 4x2 son
               OCHO huecos, asi que una NOVENA parada seria
               INALCANZABLE sin dar ningun error
@@ -1034,13 +1043,40 @@ EL ARTE       tools/gen_trajes.py . tools/trajes/ . docs/ui/prompts-trajes.md
                 blanco sobre un cuerpo gris no se ve. Lleva el ROJO DEL
                 ENTRENADOR. Los otros cuatro si llevan el suyo
 
-Gimnasios     LA DIMENSION Y LAS RANURAS (2026-08-29) . EN CURSO
+Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
               dimension `lunaeternal:gimnasios` . los 8 de Kanto
                 x = gimnasio * 1024      brock en 0 64 0
                 z = ranura   * 128       ocho copias por gimnasio
-              /luna gimnasio                 donde esta cada uno
-              /luna gimnasio brock plataforma  el ancla 9x9 (oro = origen)
-              /luna gimnasio brock medir       cuanto mide lo construido
+              EL RECORRIDO ENTERO:
+                clic derecho al Brock de la CIUDADELA  -> dialogo propio
+                "ESTOY LISTO"  -> ranura + arena + lider + viaje
+                clic derecho al Brock de DENTRO        -> combate
+                ganar -> MEDALLA en el PokePad (abajo a la izquierda)
+              /luna gimnasio                    donde esta cada uno
+              /luna gimnasio brock plataforma   el ancla 9x9 (oro = origen)
+              /luna gimnasio brock medir        cuanto mide lo construido
+              /luna gimnasio brock lider        pone a Brock para MIRARLO
+              /luna gimnasio brock posiciones   los bloques de Battle Position
+              /luna gimnasio ciudadela [grados] Brock y su Geodude, en la plaza
+              /luna gimnasio reclonar           al cambiar el maestro
+              ⚠⚠⚠ EL COMBATE NO PASA POR `startBattleWith`, Y ESO ES LO QUE HACE
+                 QUE FUNCIONE. Ese metodo llama primero a `canBattleAgainst`, que
+                 comprueba LA PROGRESION DE RCTMOD -- y la config real de este
+                 servidor, leida del panel, dice:
+                   initialLevelCap  = 15      y el Onix de Brock es nivel 20
+                   initialSeries    = "empty" y Brock es de la serie "kanto"
+                   allowOverLeveling = false
+                 o sea que a un jugador normal LE HABRIA DICHO QUE NO. Y no con
+                 un error: CON UN DIALOGO POR EL CHAT, que es justo lo que el
+                 usuario pidio que no hubiera. El clic derecho habria parecido no
+                 hacer nada
+                 se usa `RCTMod.makeBattle`, que es PUBLICO, es lo mismo que
+                 llama rctmod por debajo y no comprueba nada de eso. LA PUERTA
+                 DEL GIMNASIO ES NUESTRA: las medallas que hacen falta, en
+                 nuestra base y en nuestra pantalla
+              ⚠⚠ Y LA VICTORIA SE ESCUCHA EN COBBLEMON (`BATTLE_VICTORY`), no en
+                 rctmod: es la fuente mas cercana al hecho y no depende de la
+                 contabilidad que acabamos de rodear
               ⚠⚠⚠ VARIOS JUGADORES RETAN AL MISMO LIDER A LA VEZ, y lo cazo el
                  usuario antes de que lo escribiera mal. Con una sala y un Brock,
                  el segundo retador ve el combate del primero y no tiene contra
@@ -1050,12 +1086,69 @@ Gimnasios     LA DIMENSION Y LAS RANURAS (2026-08-29) . EN CURSO
               ⚠⚠ LA RANURA 0 ES EL MAESTRO Y NO SE JUEGA EN ELLA: es donde se
                  pega el esquema. Las demas se clonan de ella LA PRIMERA VEZ que
                  hacen falta, y la copia se queda hecha
+                 ⚠ mientras se construye, `/luna gimnasio reclonar`: una ranura
+                   se clona UNA VEZ por arranque, asi que mover a Brock o poner
+                   los bloques de posicion NO llega a las copias ya hechas
               ⚠⚠⚠ LAS RANURAS VIVEN EN MEMORIA, NO EN LA BASE. Guardarlas tendria
                  un fallo mudo y PERMANENTE: al reiniciar las ocho figurarian
                  ocupadas para siempre y nadie podria retar a Brock nunca mas,
                  sin un solo error en el log
                  ⚠⚠ y hay que soltarlas en TRES caminos: ganar, perder y
                     DESCONECTARSE. El tercero es el que se olvida
+                 ⚠ y al VOLVER a entrar dentro de una arena, fuera: de esa
+                   dimension no se sale andando
+              LAS POSICIONES SON DESFASES, NO COORDENADAS. Absolutas parecerian
+              mas simples y en la ranura 3 el jugador apareceria FUERA de su copia
+                entrada  48 78 17.26  -> desfase (48, 14, 17.26)
+                tarima   48 72 40.45  -> desfase (48,  8, 40.45)
+                ⚠⚠ LA TARIMA ESTA SEIS BLOQUES MAS ABAJO QUE LA ENTRADA, y no es
+                   un error de medida: se entra por arriba y se combate abajo. Si
+                   algun dia alguien "corrige" uno para que cuadren, el jugador
+                   aparece dentro del suelo
+              LA CIUDADELA (medido por el usuario):
+                Brock    -137.95  69 49.37
+                Geodude  -137.544 69 52      SOLO ESTETICO
+                ⚠ Geodude porque es el PRIMERO de su equipo (Geodude 16, Bonsly
+                  16, Cranidos 18, Onix 20), leido del datapack. Y porque entre
+                  los dos puntos hay 2,66 bloques: un Onix mide casi nueve de
+                  largo y se comeria la sala
+                ⚠ el giro se pasa por comando (`ciudadela <grados>`): hacia donde
+                  mira Brock depende de como quede la sala, y eso no se sabe
+                  desde el codigo
+              ⚠⚠⚠ Y BROCK NO PUEDE RETAR SOLO: la config trae
+                 forceBattleOnSight=true con OCHO BLOQUES de alcance, o sea que un
+                 Brock en la plaza retaria a quien pase por delante. Eso vive en
+                 `ForceIntoBattleGoal`, que es un GOAL, y los Goals no corren con
+                 `setAiDisabled(true)`. Comprobado en el jar, no supuesto
+              ⚠⚠ Y NO SE LE PUEDE PEGAR NI EN CREATIVO: lleva la etiqueta de los
+                 decorativos para heredar SU proteccion, que es la unica que cubre
+                 el creativo. La leccion ya estaba pagada; esto es reutilizarla
+              LOS BLOQUES DE «BATTLE POSITION» (`cobblemonbattlepositions`, MIT,
+              YA instalado en servidor y cliente) son los que colocan a los
+              Pokemon y a los entrenadores en la arena. Se ponen UNA VEZ en el
+              maestro y las ocho copias los heredan al clonarse
+                player_pokemon_position   OBLIGATORIO
+                trainer_pokemon_position  OBLIGATORIO
+                player_stand_position     opcional (teletransporta al jugador)
+                trainer_stand_position    opcional (teletransporta al lider)
+              ⚠⚠ SIN LOS DOS OBLIGATORIOS EL COMBATE NO FALLA: SALE MAL Y SE
+                 CALLA. Cobblemon coloca los Pokemon donde caiga --encima de una
+                 grada, dentro de una pared, detras del jugador-- y no hay ni un
+                 aviso. `/luna gimnasio brock posiciones` lo comprueba
+              ⚠⚠⚠ Y BUSCA EL BLOQUE MAS CERCANO EN UN RADIO DE 48 (leido de
+                 config/cobblemonbattlepositions.json, no supuesto). Las ranuras
+                 van a 128 y son copias identicas: si los bloques quedaran muy al
+                 norte de una sala de 86 de fondo, DESDE EL FONDO EL BLOQUE DE LA
+                 RANURA SIGUIENTE ESTARIA MAS CERCA QUE EL PROPIO -- y el combate
+                 colocaria los Pokemon en la sala de otro jugador, sin error
+                 lo comprueba `posiciones`, que es donde estan los dos numeros que
+                 hacen falta (cuanto mide la sala y donde estan los bloques). En
+                 el autotest seria comparar constantes contra constantes, o sea la
+                 confianza falsa que ya nos mordio
+                 ⚠ el mod TAMBIEN reserva la arena por su cuenta (ArenaKey =
+                   dimension + las dos posiciones), y como cada ranura esta en
+                   otra Z, cada copia es una arena distinta para el. El instanciado
+                   encaja con su diseño sin tocar nada
               ⚠⚠⚠ PASO_RANURA ESTABA A OJO EN 64 Y EL GIMNASIO MIDE 86 DE FONDO.
                  Las copias se habrian pisado 22 bloques: sin error, dos
                  gimnasios fundidos y el segundo jugador dentro de la pared del
@@ -1072,18 +1165,56 @@ Gimnasios     LA DIMENSION Y LAS RANURAS (2026-08-29) . EN CURSO
                     y pasaba mientras el numero estaba mal. UNA COMPROBACION QUE
                     COMPARA COSAS QUE NO SE TOCAN DA CONFIANZA FALSA, y eso es
                     peor que no tenerla
-              ⚠⚠ LAS POSICIONES SON DESFASES, NO COORDENADAS. Absolutas
-                 parecerian mas simples y en la ranura 3 el jugador apareceria
-                 FUERA de su copia. Brock: entrada medida por el usuario en
-                 48 78 17.26, o sea desfase (48, 14, 17.26)
-              ⚠ Brock YA EXISTE ENTERO en el datapack (`kanto_brock`): Geodude
-                nivel 16, su IA, dos Full Restore, maxTrainerDefeats 1. Y
-                spawnWeightFactor 0, o sea que NO aparece solo por el mundo
-              ⚠ rctapi da `BattleManager.startSingle(entrenador, jugador)`: el
-                combate se puede lanzar desde codigo
-              LO QUE FALTA: la tarima del lider (SIN MEDIR, hoy es una
-              suposicion), Brock en la ciudadela, la pantalla de dialogo, el
-              combate y la medalla
+              ⚠ Brock YA EXISTE ENTERO en el datapack (`kanto_brock`): Geodude 16,
+                Bonsly 16, Cranidos 18, Onix 20, dos Full Restore,
+                maxTrainerDefeats 1 y spawnWeightFactor 0 (no aparece solo)
+              ⚠ rctapi y rctmod pasan a ser `modCompileOnly` (IDs de version de
+                Modrinth, NO numeros: el numero sirve el jar de NeoForge)
+                ⚠⚠ Y TODO LO QUE LOS TOCA VA DETRAS DE `hayEntrenadores()`. Sin
+                   esa guarda, un servidor sin rctmod se cae al arrancar con
+                   NoClassDefFoundError -- un error que NO NOMBRA al mod que falta
+              LO QUE FALTA: verificarlo en el juego, poner los cuatro bloques de
+              posicion en el maestro, y los otros siete gimnasios
+
+Medallas      NO SON UN OBJETO, Y ES ORDEN DEL USUARIO (2026-08-29, V024)
+              «obtiene la medalla pero no fisica, la obtienen ya en el PokePad»
+              el PokePad YA las dibujaba --dieciseis casillas abajo a la
+              izquierda, apagadas las que no se tienen-- y lo unico que faltaba
+              era que alguien rellenara el numero
+              ⚠⚠ MISMA DECISION QUE LOS TRAJES Y POR EL MISMO MOTIVO: un objeto
+                 se tira, se pierde al morir y SE PUEDE REGALAR -- y una medalla
+                 regalada deja de decir «yo gane a Brock», que es lo unico que una
+                 medalla significa
+              ⚠⚠⚠ LA CLAVE PRIMARIA ES (player_id, gym), Y ESA ES LA REGLA. No la
+                 dice una comprobacion en Java: la dice la clave, asi que ganarla
+                 dos veces FALLA EN LA BASE venga de donde venga la peticion --
+                 dos combates que acaban a la vez, un cliente modificado, un
+                 reintento. Misma decision que `clan_member`
+              ⚠⚠ LA MASCARA SE COMPONE AL LEER, NO SE GUARDA. Guardarla seria mas
+                 compacto y NO SE PODRIA CONSULTAR: «cuanta gente tiene la de
+                 Brock» seria un barrido con aritmetica de bits, y «cuando la
+                 gano» no cabria en ninguna parte
+              ⚠⚠ LA CACHE NO ES UNA OPTIMIZACION, ES UN REQUISITO: la mascara la
+                 pregunta el dialogo EN EL MOMENTO DEL CLIC, en el hilo del
+                 servidor. Se lee una vez al entrar. Misma razon que los rangos
+                 ⚠ y conceder escribe EN LOS DOS SITIOS, la base PRIMERO
+              ⚠⚠⚠ TRES LISTAS DE MEDALLAS ERAN UNA SOLA. El orden estaba escrito a
+                 mano en `Gimnasio.TODOS`, en `PokePadScreen` y en la pantalla
+                 nueva, y NADA las obligaba a coincidir: desordenadas, ganar a
+                 Brock encenderia la medalla de MISTY sin dar ningun error -- el
+                 jugador veria una que no ha ganado y no veria la que si
+                 hoy las pantallas leen de `Gimnasio.insignias()`. ES MEJOR QUE
+                 UNA COMPROBACION QUE LO DETECTE: asi no puede pasar
+              ⚠ el bit de una medalla es `sala()`, y las texturas se REFERENCIAN
+                al mod de medallas (van instaladas en el cliente): cero bytes en
+                nuestro jar y no se redistribuye nada suyo
+              ⚠ EL PROTOCOLO: viaja LA CLAVE del motivo («faltan», «ya_ganada») y
+                su numero, no la frase. Un servidor no tiene idioma
+              ⚠⚠ Y `EstadoGimnasio` TENIA SIETE CAMPOS. La tupla admite seis, y el
+                 septimo --`yaGanada`-- decia lo mismo que `motivo`: dos campos
+                 que dicen lo mismo son dos campos que un dia se contradicen. El
+                 limite del codec destapo un campo que sobraba de verdad
+              ⚠ SIN VERIFICAR EN EL JUEGO todavia
 
 MESHY         DE UN MODELO 3D A BLOQUES (2026-08-29)
               tools/malla_a_construccion.py  .obj -> bloques del mundo
@@ -1815,6 +1946,7 @@ Interfaz      TRECE PANTALLAS. Nueve verificadas en el juego:
                 Explorar    2026-08-27   2 mundos, arte 768x512
                 Viajes      2026-08-27   7 paradas . rejilla 4x2
                 Kits        2026-08-28   trajes de rango . 3D
+                Gimnasio    2026-08-29   el dialogo del lider . 8 medallas
               11 de los 16 iconos abren algo: pokedex (la de Cobblemon),
               cosmeticos, trabajos, misiones, clan, tienda, curar, mercado,
               cazas, explorar y viajes
@@ -1897,7 +2029,12 @@ Acceso        SIN whitelist · EasyAuth 3.4.4 (/register /login)
               guia del equipo en EQUIPO.md
 Ciudadela     NOCHE PERMANENTE (fixed_time 18000) · ambient_light 0.45
               SIN borde de mundo mientras se construye
-              llegada en 4,69,0 (centro de la plaza, medido en el juego)
+              llegada en 4.27 70 0.36 (medido por el usuario, 29-ago)
+              ⚠⚠ ES UN Vec3d Y NO UN BlockPos, Y NO ES UN CAPRICHO: con un
+                 bloque se sumaba medio ("la casilla mas 0,5"), asi que el
+                 jugador caia en 4,5 · 69 · 0,5 -- que NO es donde el usuario se
+                 puso a medir. Los decimales SON la posicion
+              antes: 4,69,0
               la luna gigante hay que CONSTRUIRLA: //hsphere
               UNA isla de 56x56 flotando en el vacio: la plaza central
               -28..27 en los dos ejes · suelo y=63 · se camina en 64

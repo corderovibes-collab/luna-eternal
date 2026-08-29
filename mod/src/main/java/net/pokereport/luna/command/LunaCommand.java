@@ -94,6 +94,41 @@ public final class LunaCommand {
                         return 1;
                     })))
 
+            .then(literal("gimnasio")
+                // ⚠ Nivel 4: escribe bloques en el mundo y mueve gente entre
+                //   dimensiones. No es para jugadores.
+                .requires(x -> x.hasPermissionLevel(4))
+                // `/luna gimnasio` a secas: donde esta cada uno
+                .executes(ctx -> {
+                    var s = ctx.getSource();
+                    s.sendFeedback(() -> Text.literal(
+                        "\u00a76Los gimnasios \u00a77(dimension "
+                        + "lunaeternal:gimnasios)"), false);
+                    for (var g : net.pokereport.luna.gym.Gimnasio.TODOS) {
+                        var o = net.pokereport.luna.gym.Gimnasio.maestro(g);
+                        int libres = net.pokereport.luna.gym.Ranuras.libres(g);
+                        s.sendFeedback(() -> Text.literal(String.format(
+                            "  \u00a7f%-9s \u00a77maestro en \u00a7b%d %d %d"
+                            + "  \u00a78%d/%d ranuras libres",
+                            g.id(), o.getX(), o.getY(), o.getZ(),
+                            libres, net.pokereport.luna.gym.Gimnasio.RANURAS - 1)),
+                            false);
+                    }
+                    return net.pokereport.luna.gym.Gimnasio.TODOS.size();
+                })
+                .then(argument("cual", StringArgumentType.word())
+                    .suggests((c, b) -> {
+                        for (var g : net.pokereport.luna.gym.Gimnasio.TODOS) {
+                            b.suggest(g.id());
+                        }
+                        return b.buildFuture();
+                    })
+                    // `/luna gimnasio brock` -> te lleva a su MAESTRO
+                    .executes(ctx -> irAlMaestro(ctx, false))
+                    // `/luna gimnasio brock plataforma` -> ademas la pone
+                    .then(literal("plataforma")
+                        .executes(ctx -> irAlMaestro(ctx, true)))))
+
             .then(literal("paradas")
                 // ⚠ Nivel 4: coloca entidades permanentes en la ciudadela.
                 .requires(x -> x.hasPermissionLevel(4))
@@ -837,5 +872,51 @@ public final class LunaCommand {
 
     private static void reply(ServerPlayerEntity p, String msg) {
         p.getServer().execute(() -> p.sendMessage(Text.literal(msg), false));
+    }
+
+    /**
+     * Lleva al maestro de un gimnasio, y opcionalmente pone su plataforma.
+     *
+     * <h2>⚠⚠ LA PLATAFORMA NO SE PONE SOLA AL VIAJAR</h2>
+     *
+     * Hace falta pedirla (`plataforma`). Puesta en cada viaje, <b>pisaria el
+     * gimnasio ya construido</b> cada vez que alguien entrara a mirarlo -- y un
+     * cuadrado de piedra en medio del suelo del gimnasio no se ve hasta que
+     * alguien pasa por encima.
+     */
+    private static int irAlMaestro(
+            com.mojang.brigadier.context.CommandContext<ServerCommandSource> ctx,
+            boolean poner) {
+        var s = ctx.getSource();
+        String cual = StringArgumentType.getString(ctx, "cual");
+        var g = net.pokereport.luna.gym.Gimnasio.de(cual);
+        if (g == null) {
+            s.sendError(Text.literal("\u00a7cNo existe el gimnasio \u00a7f"
+                    + cual + "\u00a7c. Usa \u00a7f/luna gimnasio"));
+            return 0;
+        }
+        var servidor = s.getServer();
+        var mundo = net.pokereport.luna.gym.Arenas.mundo(servidor);
+        if (mundo == null) {
+            s.sendError(Text.literal("\u00a7cLa dimension de gimnasios no existe. "
+                    + "\u00a77Hace falta reiniciar tras instalar el mod."));
+            return 0;
+        }
+        if (poner) {
+            net.pokereport.luna.gym.Arenas.preparar(servidor, g);
+        }
+        var o = net.pokereport.luna.gym.Gimnasio.maestro(g);
+        var jugador = s.getPlayer();
+        if (jugador != null) {
+            net.pokereport.luna.world.Regreso.apuntar(jugador);
+            jugador.teleport(mundo, o.getX() + 4.5, o.getY() + 1, o.getZ() + 4.5,
+                    java.util.Set.of(), 0f, 0f);
+        }
+        s.sendFeedback(() -> Text.literal(
+            "\u00a76" + g.id().toUpperCase(java.util.Locale.ROOT)
+            + " \u00a77-- pega el esquema con la esquina en \u00a7b"
+            + o.getX() + " " + o.getY() + " " + o.getZ()
+            + "\u00a77 (el bloque de oro)"), false);
+        return 1;
     }
 }

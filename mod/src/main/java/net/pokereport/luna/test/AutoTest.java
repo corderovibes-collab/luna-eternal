@@ -95,6 +95,7 @@ public final class AutoTest {
             testCura();
             testViajes();
             testTrajes();
+            testGimnasios();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -1640,6 +1641,96 @@ public final class AutoTest {
      * pase lo que pase. Los dos se rompen editando una linea del enum, y ninguno
      * da error.
      */
+    /**
+     * LOS GIMNASIOS Y SUS RANURAS.
+     *
+     * <p>⚠ Lo que se vigila es lo que <b>no da error</b>: dos salas que se
+     * pisan, una ranura que se entrega dos veces, y el maestro entregado como
+     * si fuera una copia.
+     */
+    private void testGimnasios() {
+        var todos = net.pokereport.luna.gym.Gimnasio.TODOS;
+        check("hay gimnasios declarados", !todos.isEmpty());
+
+        // ⚠⚠⚠ LAS SALAS NO SE PUEDEN PISAR, y esto es lo que cazaria el fallo
+        //    mas caro: si un gimnasio invadiera al siguiente, el clonado de una
+        //    ranura ESCRIBIRIA ENCIMA del gimnasio de al lado. No daria ningun
+        //    error -- aparecerian bloques de Brock dentro del de Misty, y nadie
+        //    sabria por que.
+        int usado = (net.pokereport.luna.gym.Gimnasio.RANURAS - 1)
+                * net.pokereport.luna.gym.Gimnasio.PASO_RANURA;
+        check("las ranuras de un gimnasio caben en su hueco",
+              usado < net.pokereport.luna.gym.Gimnasio.SEPARACION);
+
+        var vistos = new java.util.HashSet<String>();
+        var salas = new java.util.HashSet<Integer>();
+        boolean ok = true;
+        for (var g : todos) {
+            if (!g.id().matches("[a-z0-9_]+") || !vistos.add(g.id())
+                    || !salas.add(g.sala())) {
+                ok = false;
+                LunaEternal.LOG.error("Gimnasio invalido o repetido: {} (sala {})",
+                        g.id(), g.sala());
+            }
+        }
+        check("cada gimnasio tiene id unico, valido y su propia sala", ok);
+
+        // ⚠ El identificador llega del cliente: uno desconocido no resuelve.
+        check("un gimnasio desconocido no resuelve",
+              net.pokereport.luna.gym.Gimnasio.de("no_existe") == null);
+        check("un nulo no resuelve",
+              net.pokereport.luna.gym.Gimnasio.de(null) == null);
+
+        // ---- las ranuras -----------------------------------------------
+        var g0 = todos.get(0);
+        net.pokereport.luna.gym.Ranuras.olvidarTodo();
+
+        // ⚠⚠ LA RANURA 0 NUNCA SE ENTREGA: es el maestro, donde se pega el
+        //    esquema. Entregarla haria que alguien combatiera sobre el original,
+        //    y un bloque roto ahi estropea la plantilla de TODAS las copias.
+        var dados = new java.util.HashSet<Integer>();
+        var uuids = new java.util.ArrayList<java.util.UUID>();
+        boolean cero = false, repetida = false;
+        for (int i = 0; i < net.pokereport.luna.gym.Gimnasio.RANURAS - 1; i++) {
+            var u = java.util.UUID.randomUUID();
+            uuids.add(u);
+            int r = net.pokereport.luna.gym.Ranuras.reservar(g0, u);
+            if (r == 0) {
+                cero = true;
+            }
+            if (!dados.add(r)) {
+                repetida = true;
+            }
+        }
+        check("la ranura 0 (el maestro) no se entrega nunca", !cero);
+        check("no se entrega la misma ranura dos veces", !repetida);
+
+        // ⚠ Y con todas ocupadas se dice que NO, en vez de meter a dos en la
+        //   misma sala. El diseño entero se cae si esto devuelve una repetida.
+        check("con todas ocupadas, reservar falla",
+              net.pokereport.luna.gym.Ranuras.reservar(
+                  g0, java.util.UUID.randomUUID()) < 0);
+        check("y no quedan libres", net.pokereport.luna.gym.Ranuras.libres(g0) == 0);
+
+        // ⚠⚠ SOLTAR ES LO QUE SE OLVIDA AL DESCONECTAR, y sin ello la ranura
+        //    queda pillada para siempre -- sin dar ningun error.
+        net.pokereport.luna.gym.Ranuras.soltar(uuids.get(0));
+        check("soltar libera la ranura",
+              net.pokereport.luna.gym.Ranuras.libres(g0) == 1);
+        check("y se puede volver a reservar",
+              net.pokereport.luna.gym.Ranuras.reservar(
+                  g0, java.util.UUID.randomUUID()) > 0);
+
+        // ⚠ Cada gimnasio tiene sus propias ranuras: llenar Brock no puede
+        //   dejar sin sitio a Misty.
+        if (todos.size() > 1) {
+            check("las ranuras de un gimnasio no afectan a otro",
+                  net.pokereport.luna.gym.Ranuras.libres(todos.get(1))
+                      == net.pokereport.luna.gym.Gimnasio.RANURAS - 1);
+        }
+        net.pokereport.luna.gym.Ranuras.olvidarTodo();
+    }
+
     private void testTrajes() {
         var todos = net.pokereport.luna.traje.Traje.todos();
         check("hay trajes declarados", !todos.isEmpty());

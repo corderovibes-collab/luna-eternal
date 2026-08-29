@@ -179,6 +179,11 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.backpack.Abiertas.guardarYOlvidar(player);
             net.pokereport.luna.rank.RankService.olvidar(player.getUuid());
             net.pokereport.luna.traje.TrajeService.olvidar(player.getUuid());
+            // ⚠⚠ SIN ESTO LA RANURA DEL GIMNASIO QUEDA PILLADA PARA SIEMPRE.
+            //    Quien cierra el juego a mitad de combate deja su copia
+            //    reservada a un jugador que ya no esta, y al octavo nadie mas
+            //    puede retar al lider. No da ningun error: deja de funcionar.
+            net.pokereport.luna.gym.Ranuras.alSalir(player);
             Tablist.onLeave(server, player);
         });
 

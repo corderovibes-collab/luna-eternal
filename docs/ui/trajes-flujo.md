@@ -19,30 +19,67 @@ es **su arte**.
 
 ## 1. Lo que NO funciona, y por qué
 
-Antes del camino bueno, los dos atajos que parecen buenos y no lo son. Los dos
-se rompen por la misma razón.
+Antes del camino bueno, los dos atajos. **El primero funciona pero no para
+esto**, y el segundo es un malentendido.
 
-### ⚠⚠⚠ Meshy (o cualquier IA de 3D) → Blockbench → armadura: **no llega**
+### Meshy → cubos: **sí se convierte.** Lo que no sirve es para *armadura*
 
-Meshy genera **mallas de triángulos**: miles de caras, orgánicas, con la textura
-horneada encima. Es la tecnología correcta para un videojuego normal.
+> ⚠ **Corrección.** La primera versión de este documento decía que no se podía
+> convertir. **Es falso y hay que decirlo claro.** El usuario insistió en que
+> buscara, y buscando aparecen varias herramientas que lo hacen:
+>
+> - [Convert-Models-Into-Blockbench-Cubes](https://github.com/PublicDark/Convert-Models-Into-Blockbench-Cubes)
+>   — OBJ / STL / PLY → cubos de Blockbench
+> - [OBJ2MC Addon Studio](https://techno-rope.com/) — en web, con fusión de cajas
+> - [ObjToSchematic](https://github.com/LucasDower/ObjToSchematic) — OBJ →
+>   `.schematic` / `.litematic`, o sea **bloques del mundo**
+> - [objmc / obj-cubed](https://github.com/JagerMeistars/obj-cubed) — mete la
+>   malla **de verdad** en Java horneando los vértices en una textura
 
-**Minecraft no dibuja mallas.** Ni la armadura de vainilla, ni GeckoLib, ni el
-formato Bedrock. Todo el arte de personajes de Minecraft son **cajas alineadas a
-los ejes** — `desde (x,y,z)` `hasta (x,y,z)`, y se acabó. No hay triángulos, no
-hay vértices sueltos, no hay curvas.
+Así que la pregunta buena no es *«¿se puede convertir?»* sino **«¿cuántas cajas
+salen, y dónde se pueden pagar?»**. Eso sí se puede medir, y se midió:
 
-Así que un modelo de Meshy en Blockbench **no se puede convertir en armadura**.
-Habría que **volver a construirlo entero a base de cubos**, mirándolo — que es
-exactamente el trabajo que se quería evitar.
+**Un peto orgánico, voxelizado con el detalle que trae una malla:**
 
-> ⚠ Sí existen conversores de malla a vóxel. El resultado son **miles de cubos
-> diminutos**: imposible de texturizar, imposible de animar, y hunde el
-> rendimiento con veinte jugadores en pantalla. No es una opción.
+| Detalle | Vóxeles | Cajas tras fusionarlas |
+|---|---|---|
+| 1 vóxel por bloque *(el detalle de vainilla)* | 81 | **38** |
+| 2 vóxeles por bloque | 713 | **144** |
+| 4 vóxeles por bloque *(lo típico de una malla)* | 5.909 | **672** |
 
-**Dónde Meshy sí vale:** para **ver la idea en tres dimensiones antes de
-construirla**. Girar el diseño y decidir si funciona por detrás. Eso es útil, y
-es exactamente lo mismo que aporta un boceto de tres vistas — solo que girando.
+> Un peto de vainilla son **3 cajas**. El traje de NOVATO entero, hecho a mano,
+> son **15**.
+
+⚠⚠⚠ **Y una armadura se dibuja EN CADA JUGADOR, EN CADA FOTOGRAMA.** 672 cajas
+por pieza × cuatro piezas ≈ **2.700 por jugador**. Con veinte personas a la vista
+son **54.000 cajas por fotograma solo en ropa**. Ahí es donde se paga.
+
+**Y hay tres problemas más, aparte del número:**
+
+- Los conversores dan **un color por cubo**, no una textura con UV. O sea que
+  **no se puede retocar después**: si el rojo no te gusta, hay que reconvertir.
+- No reparten el modelo en **las cuatro piezas** con los nombres de hueso que
+  hacen falta (`armorHead`, `armorBody`…). Eso hay que rehacerlo igual.
+- `objmc` sí mete mallas de verdad en Java, pero **a costa de core shaders**, y
+  nuestro pack lleva Iris con Complementary. Se pelean.
+
+### ⚠⚠ DONDE SÍ VALE, Y ES UNA BUENA IDEA: la ciudadela
+
+**Todo lo anterior se cae si el modelo no se lleva puesto.** Una estatua, un
+monumento, una fuente, un Pokémon gigante en una plaza: **se dibuja una vez, en
+un sitio**, no veinte veces por fotograma.
+
+Ahí Meshy encaja perfectamente, y el camino ya está montado:
+
+```
+  Meshy  →  .obj  →  ObjToSchematic  →  .litematic
+                                            ↓
+                              Litematica o WorldEdit, que YA están instalados
+```
+
+> ⚠ Y de paso resuelve lo que más cuesta de construir a mano: **las formas
+> orgánicas y grandes**. Una escalera de hormigón se pone en un minuto con
+> WorldEdit; un Charizard de veinte metros, no.
 
 ### ⚠⚠ MCreator «para pegarlo al juego de los jugadores»: **no es eso**
 
@@ -154,10 +191,20 @@ Para que quede claro cuánto camino queda: **esto ya funciona.**
 
 ## Last Decision
 
-2026-08-28 — Meshy y MCreator **quedan fuera del camino**: el primero produce
-mallas y Minecraft solo dibuja cajas; el segundo fabrica un mod que ya tenemos.
-El arte se construye en Blockbench, y el reparto lo hace `lunaeternal`.
+2026-08-28 — El arte de los trajes se construye **en Blockbench, a base de
+cubos**, y el reparto lo hace `lunaeternal`.
+
+**Meshy queda fuera de los TRAJES pero entra en la CIUDADELA.** Convertir una
+malla a cubos sí se puede —hay varias herramientas— y lo que no se puede pagar es
+llevarla puesta: 672 cajas por pieza contra las 3 de vainilla, dibujadas en cada
+jugador y en cada fotograma. Para una estatua, que se dibuja una vez, esa cuenta
+no existe.
+
+**MCreator queda fuera del todo**: fabrica un mod que ya tenemos.
 
 ## Next Actions
 
 Elegir A, B o C del paso 2 para el NOVATO.
+
+Y aparte: probar el camino de Meshy → ObjToSchematic → Litematica con **una
+estatua de la ciudadela**, que es donde sí sale a cuenta.

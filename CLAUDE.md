@@ -430,6 +430,20 @@ Cosmeticos    LA PRIMERA SUB-PANTALLA YA EXISTE Y FUNCIONA EN EL JUEGO
                  del manifiesto. Subir solo al servidor deja a todo el
                  mundo con el jar viejo, y el sintoma es una pantalla
                  que "no abre" -- se comporta como debe, y eso despista
+                 ⚠⚠⚠ Y CON UNA DIMENSION NUEVA NO ES UNA PANTALLA QUE NO
+                    ABRE: ES QUE NADIE PUEDE ENTRAR (2026-08-29).
+                    Un dimension_type se SINCRONIZA, y el cliente lo
+                    valida contra SU COPIA LOCAL del JSON. Sin el jar
+                    nuevo:
+                      Errors in registry minecraft:dimension_type
+                      Caused by: FileNotFoundException:
+                        lunaeternal:dimension_type/gimnasios.json
+                      -> "Error de protocolo de red"
+                    ⚠⚠ Y POR ESO EL ORDEN IMPORTA: PUBLICAR EL
+                       MANIFIESTO **ANTES** DE REINICIAR. Al reves hay
+                       una ventana en la que el servidor ya tiene la
+                       dimension y los clientes no, y en esa ventana no
+                       entra nadie
               ⚠⚠⚠ EL TITILEO DE LOS MODELOS COSTO CUATRO INTENTOS.
                  `drawProfilePokemon` hace `rotation.conjugate()`, que
                  MUTA el cuaternion que se le pasa. Con una constante

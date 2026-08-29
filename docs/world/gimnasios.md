@@ -14,8 +14,20 @@ se pisen, y por qué el combate **no** pasa por el método obvio.
 
 ## Current Status
 
-**Brock funciona de punta a punta en el código. Sin verificar en el juego.**
-Los otros siete gimnasios están declarados y no construidos.
+Desplegado y **verificado en el servidor** (2026-08-29):
+
+| | |
+|---|---|
+| Migración `V024` | aplicada |
+| Autotest | 445/445 |
+| Brock en la ciudadela | `-137.95 69 49.37`, uno solo |
+| Su Geodude | `-137.544 69 52`, uno solo |
+| Brock en el maestro | `48 72 40.45`, giro 180 |
+| Los cuatro bloques de posición | puestos, en el desfase `z=66` |
+| Separación entre copias | 108 contra los 48 que busca el mod |
+
+**Lo que NO está verificado: el combate.** Hace falta entrar y retarle. Los otros
+siete gimnasios están declarados y no construidos.
 
 ---
 

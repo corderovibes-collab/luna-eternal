@@ -127,7 +127,34 @@ public final class LunaCommand {
                     .executes(ctx -> irAlMaestro(ctx, false))
                     // `/luna gimnasio brock plataforma` -> ademas la pone
                     .then(literal("plataforma")
-                        .executes(ctx -> irAlMaestro(ctx, true)))))
+                        .executes(ctx -> irAlMaestro(ctx, true)))
+                    // ⚠ Mide lo construido de verdad, para que el area a
+                    //   clonar deje de ser una suposicion.
+                    .then(literal("medir")
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            var g = net.pokereport.luna.gym.Gimnasio.de(
+                                    StringArgumentType.getString(ctx, "cual"));
+                            if (g == null) {
+                                s.sendError(Text.literal("§cNo existe"));
+                                return 0;
+                            }
+                            var m = net.pokereport.luna.gym.Arenas.medir(
+                                    s.getServer(), g);
+                            if (m == null) {
+                                s.sendFeedback(() -> Text.literal(
+                                    "§eNo hay nada construido en el maestro "
+                                    + "de §f" + g.id()), false);
+                                return 0;
+                            }
+                            s.sendFeedback(() -> Text.literal(String.format(
+                                "§6%s§7 mide §b%d x %d x %d"
+                                + "§7, desde el desfase §f%d %d %d"
+                                + "§7 del origen",
+                                g.id(), m[3], m[4], m[5], m[0], m[1], m[2])),
+                                false);
+                            return 1;
+                        }))))
 
             .then(literal("paradas")
                 // ⚠ Nivel 4: coloca entidades permanentes en la ciudadela.

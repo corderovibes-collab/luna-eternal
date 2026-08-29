@@ -111,23 +111,70 @@ public final class Gimnasio {
     }
 
     /**
-     * Dónde aparece el jugador al entrar en una ranura.
+     * DÓNDE APARECE CADA COSA DENTRO DE UNA SALA.
      *
-     * <p>⚠ Por delante del origen y mirando hacia dentro: apareciendo justo en
-     * la esquina entraría de espaldas a la sala.
+     * <h2>⚠⚠⚠ SON DESFASES DESDE EL ORIGEN, NO COORDENADAS ABSOLUTAS</h2>
+     *
+     * El usuario los mide <b>en el maestro</b>, que está en (0, 64, 0), así que
+     * lo que dice es directamente el desfase. Guardarlos como coordenadas
+     * absolutas parecería más simple y estaría mal: <b>en la ranura 3 el jugador
+     * aparecería fuera de su sala</b>, dentro del vacío o encima de la de otro.
+     *
+     * <p>⚠ Y viven aquí, los dos juntos y en dos líneas. Cuando el gimnasio
+     * cambie —o cuando se construya el de Misty— se ajustan aquí y no hay que
+     * buscarlos repartidos por el código.
      */
-    public static BlockPos entrada(Gimnasio_ g, int ranura) {
-        return origen(g, ranura).add(0, 1, 4);
-    }
+    private record Punto(double x, double y, double z, float giro) {}
 
     /**
-     * Dónde aparece el líder.
+     * La entrada de cada gimnasio, medida en su maestro.
      *
-     * <p>⚠ Provisional hasta que se pegue el esquema: 24 bloques al fondo.
-     * Cuando el gimnasio esté construido se ajusta a su tarima, y por eso vive
-     * aquí en <b>una línea</b> y no repartido por el código.
+     * <p>⚠ Brock: medido por el usuario tras pegar el esquema (48, 78, 17.26)
+     * sobre un origen en (0, 64, 0).
      */
-    public static BlockPos lider(Gimnasio_ g, int ranura) {
-        return origen(g, ranura).add(0, 1, 24);
+    private static final java.util.Map<String, Punto> ENTRADAS = java.util.Map.of(
+        "brock", new Punto(48.0, 14.0, 17.26, 0f));
+
+    /**
+     * La tarima del líder.
+     *
+     * <p>⚠ Sin medir todavía: hasta que el usuario diga dónde está la tarima de
+     * Brock, se usa el respaldo —24 bloques al fondo de la entrada— que es una
+     * SUPOSICIÓN. Un líder que aparezca dentro de una pared no da ningún error:
+     * aparece, y no se le ve.
+     */
+    private static final java.util.Map<String, Punto> LIDERES = java.util.Map.of();
+
+    /** Dónde aparece el jugador al entrar en una ranura. */
+    public static net.minecraft.util.math.Vec3d entrada(Gimnasio_ g, int ranura) {
+        Punto p = ENTRADAS.get(g.id());
+        BlockPos o = origen(g, ranura);
+        if (p == null) {
+            // ⚠ Respaldo para los gimnasios aún sin construir: al lado del
+            //   origen, sobre la plataforma de anclaje. No es «dentro del
+            //   gimnasio», pero al menos no es dentro de una pared ni el vacío.
+            return new net.minecraft.util.math.Vec3d(
+                    o.getX() + 4.5, o.getY() + 1, o.getZ() + 4.5);
+        }
+        return new net.minecraft.util.math.Vec3d(
+                o.getX() + p.x(), o.getY() + p.y(), o.getZ() + p.z());
+    }
+
+    /** Hacia dónde mira al aparecer. */
+    public static float giroEntrada(Gimnasio_ g) {
+        Punto p = ENTRADAS.get(g.id());
+        return p == null ? 0f : p.giro();
+    }
+
+    /** Dónde aparece el líder. */
+    public static net.minecraft.util.math.Vec3d lider(Gimnasio_ g, int ranura) {
+        Punto p = LIDERES.get(g.id());
+        BlockPos o = origen(g, ranura);
+        if (p == null) {
+            var e = entrada(g, ranura);
+            return new net.minecraft.util.math.Vec3d(e.x, e.y, e.z + 20);
+        }
+        return new net.minecraft.util.math.Vec3d(
+                o.getX() + p.x(), o.getY() + p.y(), o.getZ() + p.z());
     }
 }

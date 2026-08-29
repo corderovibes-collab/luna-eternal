@@ -41,6 +41,13 @@ from PIL import Image
 #    En `trajes/` no los mira nadie más que nosotros.
 CARPETA = "trajes"
 
+# ⚠⚠⚠ CUANTOS TEXELES POR UNIDAD DE MODELO. A 1, un cubo de 8 ocupa 8 pixeles y
+#    NO CABE NINGUN DETALLE dentro de una cara. Subiendolo, el detalle se pinta
+#    en vez de construirse -- que es como funciona Minecraft: el jugador de
+#    vainilla son SEIS CAJAS y parece una persona por su piel.
+#    ⚠ Y es lo unico gratis de todo esto: subir texeles NO añade ni un cubo.
+ESCALA_UV = 1
+
 # ---------------------------------------------------------------- el esqueleto
 
 # ⚠ Sale del modelo de jugador de vanilla, no de la nada: si el pivote no
@@ -116,7 +123,8 @@ class Cubo:
 
     def huella(self):
         """Lo que ocupa en la textura: (2*fondo + 2*ancho) x (fondo + alto)."""
-        w, h, d = (max(1, int(math.ceil(v))) for v in self.tam)
+        e = ESCALA_UV
+        w, h, d = (max(1, int(math.ceil(v * e))) for v in self.tam)
         return (2 * d + 2 * w, d + h)
 
 
@@ -217,7 +225,8 @@ def _caras(cubo):
        o cambiada de cara, y solo se veria mirandolo.
     """
     u, v = cubo.uv
-    w, h, d = (max(1, int(math.ceil(t))) for t in cubo.tam)
+    e = ESCALA_UV
+    w, h, d = (max(1, int(math.ceil(t * e))) for t in cubo.tam)
     return [
         (u, v + d, d, h, "derecha"),                 # -X, la derecha del modelo
         (u + d, v + d, w, h, "frente"),              # -Z, la cara

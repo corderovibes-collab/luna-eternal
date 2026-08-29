@@ -48,14 +48,24 @@ public final class Gimnasio {
     public static final int SEPARACION = 1024;
 
     /**
-     * Cuánto separa una ranura de la siguiente.
+     * Cuánto separa una ranura de la siguiente, en Z.
      *
-     * <p>⚠ 64 y no 48: la sala que medimos son 40 de fondo, y hay que dejar
-     * hueco por si un gimnasio sale más largo. Con las ocho ranuras se ocupan
-     * 512 de los 1024 que separan un gimnasio del siguiente, así que aún cabe
-     * el doble sin tocar nada.
+     * <h2>⚠⚠⚠ 128 PORQUE EL GIMNASIO DE BROCK MIDE 86 DE FONDO</h2>
+     *
+     * Estaba en 64 <b>a ojo</b>, y el gimnasio de verdad no cabía: las copias se
+     * habrían pisado 22 bloques cada una. No habría dado ningún error — habría
+     * dado dos gimnasios fundidos, con el segundo jugador apareciendo dentro de
+     * la pared del primero.
+     *
+     * <p>⚠ Y no lo caza ninguna comprobación de arranque, porque el tamaño del
+     * gimnasio <b>está en el mundo, no en el código</b>. Lo que sí lo caza es
+     * {@code Arenas.clonar}, que mide antes de copiar y <b>se niega</b> si no
+     * cabe.
+     *
+     * <p>⚠ Las ranuras crecen en Z y los gimnasios se separan en X, así que
+     * subir esto <b>no acerca un gimnasio a otro</b>: son ejes distintos.
      */
-    public static final int PASO_RANURA = 64;
+    public static final int PASO_RANURA = 128;
 
     /** Cuántos pueden estar retando al mismo líder a la vez. */
     public static final int RANURAS = 8;

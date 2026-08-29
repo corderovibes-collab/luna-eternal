@@ -57,9 +57,14 @@ public final class Arenas {
         // ⚠ Se barre un area GENEROSA (medio hueco de gimnasio) porque medir es
         //   barato y quedarse corto al medir es el mismo fallo que se venia a
         //   arreglar.
+        // ⚠⚠⚠ EL BARRIDO NO SE LIMITA CON `PASO_RANURA`, y la primera version
+        //    lo hacia: medi el gimnasio de Brock y salio «64 de fondo», que era
+        //    EXACTAMENTE el limite del barrido. Medir con la regla que estas
+        //    intentando validar solo te devuelve la regla.
+        //    Hoy barre medio hueco de gimnasio en los dos ejes.
         int alcance = Gimnasio.SEPARACION / 2;
         for (int dy = -16; dy < 120; dy++) {
-            for (int dz = 0; dz < Gimnasio.PASO_RANURA; dz++) {
+            for (int dz = 0; dz < alcance; dz++) {
                 for (int dx = 0; dx < alcance; dx++) {
                     pos.set(o.getX() + dx, o.getY() + dy, o.getZ() + dz);
                     if (mundo.getBlockState(pos).isAir()) {
@@ -147,6 +152,18 @@ public final class Arenas {
             return;
         }
         int x0 = m[0], y0 = m[1], z0 = m[2], ancho = m[3], alto = m[4], fondo = m[5];
+        // ⚠⚠⚠ SI LA SALA NO CABE EN SU RANURA, NO SE CLONA. Con un gimnasio mas
+        //    profundo que `PASO_RANURA`, la copia se escribiria ENCIMA de la
+        //    ranura siguiente -- y eso no da ningun error: da dos gimnasios
+        //    fundidos, y el segundo jugador aparece dentro de la pared del
+        //    primero. Mejor negarse y decirlo.
+        if (z0 + fondo > Gimnasio.PASO_RANURA) {
+            LunaEternal.LOG.error("Gimnasio {}: la sala mide {} de fondo y las "
+                    + "ranuras van cada {}. NO SE CLONA: la copia pisaria la "
+                    + "ranura siguiente. Sube PASO_RANURA.",
+                    g.id(), z0 + fondo, Gimnasio.PASO_RANURA);
+            return;
+        }
         int puestos = 0;
         var pos = new BlockPos.Mutable();
         var destino = new BlockPos.Mutable();

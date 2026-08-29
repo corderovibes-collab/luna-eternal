@@ -1652,15 +1652,21 @@ public final class AutoTest {
         var todos = net.pokereport.luna.gym.Gimnasio.TODOS;
         check("hay gimnasios declarados", !todos.isEmpty());
 
-        // ⚠⚠⚠ LAS SALAS NO SE PUEDEN PISAR, y esto es lo que cazaria el fallo
-        //    mas caro: si un gimnasio invadiera al siguiente, el clonado de una
-        //    ranura ESCRIBIRIA ENCIMA del gimnasio de al lado. No daria ningun
-        //    error -- aparecerian bloques de Brock dentro del de Misty, y nadie
-        //    sabria por que.
-        int usado = (net.pokereport.luna.gym.Gimnasio.RANURAS - 1)
-                * net.pokereport.luna.gym.Gimnasio.PASO_RANURA;
-        check("las ranuras de un gimnasio caben en su hueco",
-              usado < net.pokereport.luna.gym.Gimnasio.SEPARACION);
+        // ⚠⚠⚠ ESTA COMPROBACION ESTABA MAL Y NO VIGILABA NADA. Comparaba el
+        //    fondo de las ranuras (eje Z) contra la separacion de los gimnasios
+        //    (eje X): EJES DISTINTOS, asi que pasaba siempre. Y mientras pasaba,
+        //    PASO_RANURA valia 64 y el gimnasio de Brock mide 86 de fondo -- las
+        //    copias se habrian pisado 22 bloques.
+        //    UNA COMPROBACION QUE COMPARA COSAS QUE NO SE TOCAN DA CONFIANZA
+        //    FALSA, que es peor que no tenerla.
+        //
+        //    Lo que de verdad protege es `Arenas.clonar`, que MIDE la sala antes
+        //    de copiar y se niega si no cabe. Aqui solo se puede vigilar que los
+        //    numeros sean sensatos para las salas que ya conocemos.
+        check("PASO_RANURA da para una sala de tamaño normal (Brock: 86)",
+              net.pokereport.luna.gym.Gimnasio.PASO_RANURA >= 96);
+        check("SEPARACION da para una sala de tamaño normal (Brock: 96 de ancho)",
+              net.pokereport.luna.gym.Gimnasio.SEPARACION >= 256);
 
         var vistos = new java.util.HashSet<String>();
         var salas = new java.util.HashSet<Integer>();

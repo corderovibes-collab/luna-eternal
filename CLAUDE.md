@@ -4,11 +4,12 @@
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
 **Última actualización:** 2026-08-27
-**Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela)
+**Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela) ·
+PHASE 4 — Gimnasios (arrancando)
 **Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
 D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, ocho vías de progresión, y **ocho pantallas** en el PokePad.
-Autotest **411/411** en vivo. **El recorrido del jugador nuevo está completo.**
+Autotest **423/423** en vivo. **El recorrido del jugador nuevo está completo.**
 
 > **2026-08-27 — RANGOS, MOCHILA, MUNDOS Y ESCALADO. Y tres lecciones que se
 > repiten.**
@@ -166,7 +167,7 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 411/411 correctos (2026-08-28, en vivo)
+Autotest      /luna autotest -> 423/423 correctos (2026-08-29, en vivo)
               +8 de Viajes, y la que importa es LA REJILLA: 4x2 son
               OCHO huecos, asi que una NOVENA parada seria
               INALCANZABLE sin dar ningun error
@@ -1033,6 +1034,83 @@ EL ARTE       tools/gen_trajes.py . tools/trajes/ . docs/ui/prompts-trajes.md
                 blanco sobre un cuerpo gris no se ve. Lleva el ROJO DEL
                 ENTRENADOR. Los otros cuatro si llevan el suyo
 
+Gimnasios     LA DIMENSION Y LAS RANURAS (2026-08-29) . EN CURSO
+              dimension `lunaeternal:gimnasios` . los 8 de Kanto
+                x = gimnasio * 1024      brock en 0 64 0
+                z = ranura   * 128       ocho copias por gimnasio
+              /luna gimnasio                 donde esta cada uno
+              /luna gimnasio brock plataforma  el ancla 9x9 (oro = origen)
+              /luna gimnasio brock medir       cuanto mide lo construido
+              ⚠⚠⚠ VARIOS JUGADORES RETAN AL MISMO LIDER A LA VEZ, y lo cazo el
+                 usuario antes de que lo escribiera mal. Con una sala y un Brock,
+                 el segundo retador ve el combate del primero y no tiene contra
+                 quien luchar. Se INSTANCIA, y se puede porque UN COMBATE DE
+                 COBBLEMON NO NECESITA LA SALA: el combate es una interfaz y la
+                 sala es la puesta en escena
+              ⚠⚠ LA RANURA 0 ES EL MAESTRO Y NO SE JUEGA EN ELLA: es donde se
+                 pega el esquema. Las demas se clonan de ella LA PRIMERA VEZ que
+                 hacen falta, y la copia se queda hecha
+              ⚠⚠⚠ LAS RANURAS VIVEN EN MEMORIA, NO EN LA BASE. Guardarlas tendria
+                 un fallo mudo y PERMANENTE: al reiniciar las ocho figurarian
+                 ocupadas para siempre y nadie podria retar a Brock nunca mas,
+                 sin un solo error en el log
+                 ⚠⚠ y hay que soltarlas en TRES caminos: ganar, perder y
+                    DESCONECTARSE. El tercero es el que se olvida
+              ⚠⚠⚠ PASO_RANURA ESTABA A OJO EN 64 Y EL GIMNASIO MIDE 86 DE FONDO.
+                 Las copias se habrian pisado 22 bloques: sin error, dos
+                 gimnasios fundidos y el segundo jugador dentro de la pared del
+                 primero. Hoy 128, y `clonar` MIDE antes de copiar y SE NIEGA si
+                 no cabe
+                 ⚠⚠⚠ Y LA MEDICION MINTIO POR UN FALLO CIRCULAR: el barrido se
+                    limitaba a PASO_RANURA, o sea al numero que la medicion tenia
+                    que validar. Salio «64 de fondo», que era el limite del
+                    barrido. MEDIR CON LA REGLA QUE INTENTAS VALIDAR SOLO TE
+                    DEVUELVE LA REGLA
+                 ⚠⚠⚠ Y LA COMPROBACION DEL AUTOTEST NO VIGILABA NADA: comparaba
+                    el fondo de las ranuras (eje Z) contra la separacion de los
+                    gimnasios (eje X). EJES DISTINTOS, asi que pasaba siempre --
+                    y pasaba mientras el numero estaba mal. UNA COMPROBACION QUE
+                    COMPARA COSAS QUE NO SE TOCAN DA CONFIANZA FALSA, y eso es
+                    peor que no tenerla
+              ⚠⚠ LAS POSICIONES SON DESFASES, NO COORDENADAS. Absolutas
+                 parecerian mas simples y en la ranura 3 el jugador apareceria
+                 FUERA de su copia. Brock: entrada medida por el usuario en
+                 48 78 17.26, o sea desfase (48, 14, 17.26)
+              ⚠ Brock YA EXISTE ENTERO en el datapack (`kanto_brock`): Geodude
+                nivel 16, su IA, dos Full Restore, maxTrainerDefeats 1. Y
+                spawnWeightFactor 0, o sea que NO aparece solo por el mundo
+              ⚠ rctapi da `BattleManager.startSingle(entrenador, jugador)`: el
+                combate se puede lanzar desde codigo
+              LO QUE FALTA: la tarima del lider (SIN MEDIR, hoy es una
+              suposicion), Brock en la ciudadela, la pantalla de dialogo, el
+              combate y la medalla
+
+MESHY         DE UN MODELO 3D A BLOQUES (2026-08-29)
+              tools/malla_a_construccion.py  .obj -> bloques del mundo
+              tools/simplificar_malla.py     decimacion quadric
+              tools/malla_a_armadura.py      .obj -> armadura (NO sirve, ver
+                                              docs/ui/trajes-flujo.md)
+              ⚠⚠⚠ SIRVE PARA CONSTRUCCION Y NO PARA ARMADURA, y la razon es una
+                 sola: UNA SALA YA ES LO QUE MINECRAFT SABE HACER. Un muro recto
+                 voxelizado sigue siendo un muro recto; un personaje organico se
+                 convierte en papilla
+                 medido: el gimnasio de Brock 46x16x40 con 8.175 bloques a la
+                 primera; la armadura, 710 cajas y «no se aprecia nada»
+              ⚠⚠ EL % DE RELLENO ES LA COMPROBACION: una sala hueca ronda el
+                 15-35 %. Si sale el 80 %, Meshy devolvio un MACIZO con la
+                 fachada bonita. Y se puede saber ANTES de convertir, contando
+                 los triangulos que miran HACIA DENTRO (una sala trae ~64 %)
+              ⚠⚠ Y MESHY NO HACE MODELOS DE BLOQUES: hace modelos LISOS QUE
+                 PARECEN de bloques. Los cubitos de su render son sombreado
+                 pintado, no geometria. Por eso al voxelizar sale papilla
+              ⚠ decimar: por CELDAS sale deforme (aplasta una cara igual que una
+                plancha); QUADRIC conserva la forma. Y las UV se transfieren POR
+                TRIANGULO, no por vertice: la textura es un ATLAS y dos vertices
+                pegados pueden estar en orillas opuestas de una costura
+              ⚠ el paso que hace viable convertir: FUSIONAR SIN MIRAR EL COLOR y
+                pintar el detalle en la textura. 710 -> 286 cajas. Es como
+                funciona Minecraft: el jugador de vainilla son SEIS CAJAS
+
 Textos        ⚠⚠⚠ UNA CLAVE DE TRADUCCION QUE NO EXISTE SE VE CRUDA
               `Text.translatable("clave.que.no.existe")` NO DA NINGUN ERROR:
               ni al compilar, ni al arrancar, ni al dibujar. Minecraft pinta
@@ -1685,7 +1763,8 @@ Launcher      EL QUE USA LA GENTE ES EL FORK QT. Ya no es "el nuevo"
                 y ya habia mordido antes (world-structure.md)
 Cliente       (respaldo) mrpack jugador 185 MB · constructor 233 MB
               Fabric Loader 0.19.3 (Cobblemon exige >= 0.17.2)
-Dimensiones   lobby · ciudadela · salvaje (+ overworld = Mundo Hogar)
+Dimensiones   lobby · ciudadela · salvaje · gimnasios
+              (+ overworld = Mundo Hogar)
 Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
               Y LA POKEDEX TAMBIEN, desde el 2026-08-22 (antes NO)
               docs/pokemon/generations.md §3-ter y §4

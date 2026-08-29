@@ -213,6 +213,70 @@ arena distinta para él. El instanciado encaja con su diseño sin tocar nada.
 
 ---
 
+## 6-bis. ⚠⚠⚠ Medir la sala: dos fallos con la misma raíz
+
+`Arenas.medir` recorre el maestro y devuelve la caja de lo que no es aire.
+`clonar` la llama **antes de copiar**, así que si miente, se copia mal.
+
+Ha mentido dos veces en dos días, y las dos veces por lo mismo.
+
+### Primera: el límite era el número que se validaba
+
+El barrido se limitaba a `PASO_RANURA`. Medí el gimnasio y salió **«64 de
+fondo»** — que era exactamente el límite del barrido.
+
+> **Medir con la regla que intentas validar solo te devuelve la regla.**
+
+### Segunda: barrer ancho se come las copias
+
+Lo arreglé barriendo `SEPARACION / 2`. Y en cuanto existió una copia, el barrido
+se la comió: el gimnasio mide 86, la copia de la ranura 1 empieza en 128, y la
+medición dio **214** — «el maestro más su copia».
+
+Y no era un número feo y ya: la siguiente copia habría sido de 214 de fondo y
+habría escrito **encima de las ranuras 1 y 2**.
+
+### La raíz, que es la misma
+
+> **Las dos versiones usaban un LÍMITE en vez de mirar LO QUE HAY.**
+
+Una sala tiene suelo, así que **sus capas de Z están todas ocupadas**; entre una
+copia y la siguiente hay **aire**. Hoy corta en el aire (`AIRE_QUE_CORTA = 8`),
+que es un dato del mundo y no un número nuestro.
+
+Y **dice lo que se deja fuera**, en vez de ignorarlo en silencio:
+
+```
+Gimnasio brock: medido hasta z=86 (86 de fondo). Hay 86 capas más allá,
+separadas por aire: son las copias de las ranuras y NO se cuentan.
+```
+
+### Y lo destapó una comprobación escrita para otra cosa
+
+`/luna gimnasio brock posiciones` existía para vigilar que las copias no se
+robaran los bloques de posición unas a otras. Con la medición mal, escupió un
+número imposible —«del fondo de una sala al bloque de la siguiente hay **−20**»—
+y eso fue lo que mandó a mirar.
+
+⚠ Verificado antes de tocar nada, no supuesto:
+
+```
+execute if blocks 40 70 40  55 85 55  40 70 168 all
+  → "LA COPIA EN z=128 EXISTE Y ES IDENTICA"
+y entre z=86 y z=127 no hay un solo bloque
+```
+
+### `limpiarranuras`
+
+`clonar` **no copia el aire**: recorre el maestro y escribe lo que no es aire.
+Así que un bloque que se *quite* del maestro **se queda en la copia para
+siempre**, y volver a clonar no lo arregla.
+
+`/luna gimnasio <cual> limpiarranuras` las borra. Es lento a propósito —46.354
+bloques y 2,8 s de retraso, medidos en vivo— y por eso no se llama solo.
+
+---
+
 ## 7. Las medallas
 
 **No son un objeto**, y es orden del usuario: *«obtiene la medalla pero no

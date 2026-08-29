@@ -1081,6 +1081,13 @@ Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
               /luna gimnasio brock posiciones   los bloques de Battle Position
               /luna gimnasio ciudadela [grados] Brock y su Geodude, en la plaza
               /luna gimnasio reclonar           al cambiar el maestro
+              /luna gimnasio brock limpiarranuras  borra las copias
+              ⚠⚠ `limpiarranuras` HACE FALTA MIENTRAS SE CONSTRUYE, y no es
+                 obvio por que: `clonar` NO COPIA EL AIRE, asi que un bloque que
+                 QUITES del maestro se queda en la copia para siempre y volver a
+                 clonar no lo arregla
+                 ⚠ es lento a proposito (46.354 bloques y 2,8 s de retraso
+                   medidos en vivo). Se ejecuta a mano, cuando toca
               ⚠⚠⚠ EL COMBATE NO PASA POR `startBattleWith`, Y ESO ES LO QUE HACE
                  QUE FUNCIONE. Ese metodo llama primero a `canBattleAgainst`, que
                  comprueba LA PROGRESION DE RCTMOD -- y la config real de este
@@ -1176,11 +1183,27 @@ Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
                  gimnasios fundidos y el segundo jugador dentro de la pared del
                  primero. Hoy 128, y `clonar` MIDE antes de copiar y SE NIEGA si
                  no cabe
-                 ⚠⚠⚠ Y LA MEDICION MINTIO POR UN FALLO CIRCULAR: el barrido se
-                    limitaba a PASO_RANURA, o sea al numero que la medicion tenia
-                    que validar. Salio «64 de fondo», que era el limite del
-                    barrido. MEDIR CON LA REGLA QUE INTENTAS VALIDAR SOLO TE
-                    DEVUELVE LA REGLA
+                 ⚠⚠⚠ Y LA MEDICION MINTIO DOS VECES, CON LA MISMA CARA Y CON
+                    LA CONTRARIA. Es la leccion mas cara de estos dos dias:
+                      1) el barrido se limitaba a PASO_RANURA, o sea AL NUMERO
+                         QUE TENIA QUE VALIDAR. Salio «64 de fondo», que era el
+                         limite del barrido. MEDIR CON LA REGLA QUE INTENTAS
+                         VALIDAR SOLO TE DEVUELVE LA REGLA
+                      2) lo arregle barriendo ANCHO, y en cuanto existio una
+                         copia EL BARRIDO SE LA COMIO: 86 de gimnasio + copia en
+                         128 = «214 de fondo». Y `clonar` MIDE ANTES DE COPIAR,
+                         asi que la copia siguiente habria sido de 214 y habria
+                         escrito encima de las ranuras 1 y 2
+                    ⚠⚠ LAS DOS ESTABAN MAL POR EL MISMO MOTIVO DE FONDO: USABAN
+                       UN LIMITE EN VEZ DE MIRAR LO QUE HAY. Una sala tiene
+                       suelo, asi que sus capas de Z estan TODAS ocupadas; entre
+                       una copia y la siguiente hay AIRE. Hoy corta en el aire,
+                       que es un dato del mundo y no un numero nuestro
+                    ⚠ y DICE lo que se deja fuera: «hay 86 capas mas alla,
+                      separadas por aire: son las copias y NO se cuentan»
+                    lo destapo `/luna gimnasio brock posiciones` con un numero
+                    imposible (-20 de separacion): la comprobacion que se escribio
+                    para otra cosa cazo esta
                  ⚠⚠⚠ Y LA COMPROBACION DEL AUTOTEST NO VIGILABA NADA: comparaba
                     el fondo de las ranuras (eje Z) contra la separacion de los
                     gimnasios (eje X). EJES DISTINTOS, asi que pasaba siempre --

@@ -1735,6 +1735,184 @@ public final class AutoTest {
                       == net.pokereport.luna.gym.Gimnasio.RANURAS - 1);
         }
         net.pokereport.luna.gym.Ranuras.olvidarTodo();
+
+        // ---- las posiciones dentro de la sala ---------------------------
+        //
+        // ⚠⚠⚠ UN DESFASE MAYOR QUE `PASO_RANURA` SACA AL JUGADOR DE SU COPIA.
+        //    Las posiciones son desfases desde el origen de la ranura, y las
+        //    ranuras van una detras de otra en Z. Un desfase en Z de 130 con un
+        //    paso de 128 deja al jugador de la ranura 1 apareciendo DENTRO DE LA
+        //    RANURA 2 -- en la sala de otro, o en su pared. No da ningun error.
+        boolean dentroDeSuSala = true;
+        for (var g : todos) {
+            var e = net.pokereport.luna.gym.Gimnasio.entrada(g, 0);
+            var l = net.pokereport.luna.gym.Gimnasio.lider(g, 0);
+            int paso = net.pokereport.luna.gym.Gimnasio.PASO_RANURA;
+            if (e.z < 0 || e.z >= paso || l.z < 0 || l.z >= paso) {
+                dentroDeSuSala = false;
+                LunaEternal.LOG.error("Gimnasio {}: entrada z={} lider z={} "
+                        + "fuera de [0, {})", g.id(), e.z, l.z, paso);
+            }
+        }
+        check("la entrada y el lider caen dentro de su propia ranura",
+              dentroDeSuSala);
+
+        // ⚠ Y el lider no puede aparecer ENCIMA del jugador: si coincidieran, el
+        //   jugador entraria empotrado contra el, y hablar con el seria imposible.
+        boolean separados = true;
+        for (var g : todos) {
+            if (!net.pokereport.luna.gym.Gimnasio.tieneTarima(g)) {
+                continue;   // sin medir: usa el respaldo, que ya va a 20 de lejos
+            }
+            var e = net.pokereport.luna.gym.Gimnasio.entrada(g, 1);
+            var l = net.pokereport.luna.gym.Gimnasio.lider(g, 1);
+            if (e.squaredDistanceTo(l) < 4) {
+                separados = false;
+                LunaEternal.LOG.error("Gimnasio {}: el lider aparece encima de "
+                        + "la entrada", g.id());
+            }
+        }
+        check("el lider no aparece encima de la entrada", separados);
+
+        // ⚠⚠ Y LAS DOS TIENEN QUE MOVERSE CON LA RANURA. Si alguien escribiera
+        //    las posiciones como coordenadas absolutas --que parece mas simple--
+        //    todos los retadores acabarian en la ranura 0, la del maestro, y
+        //    combatirian unos encima de otros sobre el original.
+        var e0 = net.pokereport.luna.gym.Gimnasio.entrada(todos.get(0), 0);
+        var e3 = net.pokereport.luna.gym.Gimnasio.entrada(todos.get(0), 3);
+        check("la entrada se desplaza con la ranura",
+              Math.abs((e3.z - e0.z)
+                       - 3.0 * net.pokereport.luna.gym.Gimnasio.PASO_RANURA) < 0.001);
+
+        // ---- las medallas ----------------------------------------------
+        //
+        // ⚠⚠⚠ EL BIT DE LA MEDALLA ES LA SALA, y de eso depende que la medalla
+        //    que enciende el PokePad sea la que has ganado. Si dejaran de
+        //    coincidir, ganar a Brock encenderia la de Misty SIN DAR NINGUN
+        //    ERROR: verias una medalla que no tienes y no verias la que si.
+        boolean bits = true;
+        for (var g : todos) {
+            if (net.pokereport.luna.gym.Gimnasio.bitMedalla(g) != (1 << g.sala())) {
+                bits = false;
+            }
+        }
+        check("el bit de cada medalla es su sala", bits);
+
+        // ⚠⚠ LAS DIECISEIS INSIGNIAS SON UNA SOLA LISTA. Antes habia tres --esta,
+        //    la del PokePad y la del dialogo del gimnasio-- y nada las obligaba a
+        //    coincidir. Hoy las pantallas leen de aqui; esto vigila que la lista
+        //    siga teniendo dieciseis nombres distintos y en orden.
+        var insignias = net.pokereport.luna.gym.Gimnasio.insignias();
+        check("hay dieciseis insignias", insignias.size() == 16);
+        check("ninguna insignia se repite",
+              new java.util.HashSet<>(insignias).size() == insignias.size());
+        boolean enOrden = true;
+        for (var g : todos) {
+            if (!insignias.get(g.sala()).equals(g.insignia())) {
+                enOrden = false;
+                LunaEternal.LOG.error("Gimnasio {}: su insignia {} no esta en el "
+                        + "hueco {} de la lista", g.id(), g.insignia(), g.sala());
+            }
+        }
+        check("cada insignia esta en el hueco de su sala", enOrden);
+
+        // ⚠ La mascara: leer un bit no puede depender del orden del bucle.
+        var quien = java.util.UUID.randomUUID();
+        net.pokereport.luna.gym.MedallaService.olvidarTodo();
+        check("sin cache, cero medallas",
+              net.pokereport.luna.gym.MedallaService.cuantas(quien) == 0);
+        check("y no tiene la de Brock",
+              !net.pokereport.luna.gym.MedallaService.tiene(quien, todos.get(0)));
+        net.pokereport.luna.gym.MedallaService.ponerEnCache(quien,
+              net.pokereport.luna.gym.Gimnasio.bitMedalla(todos.get(0))
+            | net.pokereport.luna.gym.Gimnasio.bitMedalla(todos.get(2)));
+        check("dos medallas se cuentan como dos",
+              net.pokereport.luna.gym.MedallaService.cuantas(quien) == 2);
+        check("tiene la de Brock",
+              net.pokereport.luna.gym.MedallaService.tiene(quien, todos.get(0)));
+        check("y NO la de Misty, que esta en medio de las dos",
+              !net.pokereport.luna.gym.MedallaService.tiene(quien, todos.get(1)));
+        net.pokereport.luna.gym.MedallaService.olvidar(quien);
+        check("olvidar deja la cache a cero",
+              net.pokereport.luna.gym.MedallaService.cuantas(quien) == 0);
+
+        // ⚠⚠ CADA GIMNASIO PIDE MENOS MEDALLAS DE LAS QUE HAY. Un gimnasio que
+        //    pidiera ocho seria INALCANZABLE --nunca tendrias ocho sin ganarle a
+        //    el-- y no daria ningun error: se quedaria gris para siempre. Es la
+        //    misma familia que la novena parada de Viajes.
+        boolean alcanzables = true;
+        for (var g : todos) {
+            if (g.medallas() < 0 || g.medallas() >= todos.size()) {
+                alcanzables = false;
+                LunaEternal.LOG.error("Gimnasio {}: pide {} medallas y solo hay {}",
+                        g.id(), g.medallas(), todos.size());
+            }
+        }
+        check("ningun gimnasio pide mas medallas de las que se pueden tener",
+              alcanzables);
+
+        // ⚠ Y el orden tiene que ser un camino: el gimnasio de la sala N no puede
+        //   pedir mas medallas que N, o no habria forma de llegar hasta el.
+        boolean camino = true;
+        for (var g : todos) {
+            if (g.medallas() > g.sala()) {
+                camino = false;
+                LunaEternal.LOG.error("Gimnasio {} (sala {}) pide {} medallas: "
+                        + "no se puede llegar", g.id(), g.sala(), g.medallas());
+            }
+        }
+        check("se puede llegar a todos los gimnasios en orden", camino);
+
+        // ---- las recepciones de la ciudadela ----------------------------
+        //
+        // ⚠⚠ EL POKEMON DEL LIDER NO PUEDE ESTAR ENCIMA DE EL. Con los dos en el
+        //    mismo punto, el clic derecho acertaria a veces a uno y a veces a
+        //    otro -- y tocar al Pokemon no hace nada, asi que el dialogo
+        //    "a veces no abre".
+        boolean recepcionesOk = true;
+        for (var g : net.pokereport.luna.gym.Gimnasio.conRecepcion()) {
+            var r = net.pokereport.luna.gym.Gimnasio.recepcion(g);
+            if (r.lider().squaredDistanceTo(r.pokemon()) < 1.0
+                    || r.especie() == null || r.especie().isBlank()) {
+                recepcionesOk = false;
+                LunaEternal.LOG.error("Gimnasio {}: su recepcion esta mal puesta",
+                        g.id());
+            }
+        }
+        check("cada recepcion separa al lider de su Pokemon", recepcionesOk);
+
+        // ⚠⚠⚠ Y BROCK TIENE QUE TENER RECEPCION. Sin ella no hay forma de entrar
+        //    al gimnasio: el dialogo SOLO se abre tocando al lider de la
+        //    ciudadela. Un gimnasio construido al que no se puede llegar no da
+        //    ningun error -- simplemente no existe para el jugador.
+        check("Brock tiene sitio en la ciudadela",
+              net.pokereport.luna.gym.Gimnasio.recepcion(todos.get(0)) != null);
+
+        // ---- el programador de la vuelta --------------------------------
+        //
+        // ⚠ Es lo que devuelve al jugador tras el combate. Si no disparara, se
+        //   quedaria encerrado en la arena: de esa dimension no se sale andando.
+        net.pokereport.luna.gym.Programador.olvidarTodo();
+        final boolean[] corrio = {false};
+        net.pokereport.luna.gym.Programador.en(1, () -> corrio[0] = true);
+        check("una tarea programada queda pendiente",
+              net.pokereport.luna.gym.Programador.pendientes() == 1);
+        net.pokereport.luna.gym.Programador.tick(null);
+        check("y corre en su tick", corrio[0]);
+        check("y no se queda encolada",
+              net.pokereport.luna.gym.Programador.pendientes() == 0);
+
+        // ⚠⚠ UNA TAREA QUE FALLA NO SE LLEVA A LAS DEMAS POR DELANTE. Si una
+        //    excepcion vaciara la lista, un jugador se quedaria dentro de la
+        //    arena porque LA VUELTA DE OTRO revento.
+        net.pokereport.luna.gym.Programador.en(1, () -> {
+            throw new RuntimeException("a proposito");
+        });
+        final boolean[] segunda = {false};
+        net.pokereport.luna.gym.Programador.en(1, () -> segunda[0] = true);
+        net.pokereport.luna.gym.Programador.tick(null);
+        check("una tarea que falla no cancela a la siguiente", segunda[0]);
+        net.pokereport.luna.gym.Programador.olvidarTodo();
     }
 
     private void testTrajes() {

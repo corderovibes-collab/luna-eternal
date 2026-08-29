@@ -154,7 +154,101 @@ public final class LunaCommand {
                                 g.id(), m[3], m[4], m[5], m[0], m[1], m[2])),
                                 false);
                             return 1;
-                        }))))
+                        }))
+                    // ⚠⚠ PONE AL LIDER EN EL MAESTRO PARA PODER MIRARLO. La
+                    //    tarima se mide de pie en el juego, y hasta que alguien
+                    //    ve a Brock ahi de verdad, la coordenada es un numero en
+                    //    un fichero. Un lider dentro de una pared NO DA NINGUN
+                    //    ERROR: aparece, y no se le ve.
+                    //    Va en la ranura 0 a proposito: es la unica en la que no
+                    //    combate nadie.
+                    .then(literal("lider")
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            var g = net.pokereport.luna.gym.Gimnasio.de(
+                                    StringArgumentType.getString(ctx, "cual"));
+                            if (g == null) {
+                                s.sendError(Text.literal("§cNo existe"));
+                                return 0;
+                            }
+                            var mob = net.pokereport.luna.gym.Lideres.enArena(
+                                    s.getServer(), g, 0);
+                            if (mob == null) {
+                                s.sendError(Text.literal(
+                                    "§cNo se pudo poner a §f" + g.lider()
+                                    + "§c. Mira el log: lo mas probable es que "
+                                    + "el entrenador §f" + g.entrenador()
+                                    + "§c no exista en el datapack."));
+                                return 0;
+                            }
+                            var sitio = net.pokereport.luna.gym.Gimnasio.lider(g, 0);
+                            s.sendFeedback(() -> Text.literal(String.format(
+                                "§6%s§7 puesto en §b%.2f %.2f %.2f"
+                                + "§7 (giro %.0f)%s",
+                                g.lider(), sitio.x, sitio.y, sitio.z,
+                                net.pokereport.luna.gym.Gimnasio.giroLider(g),
+                                net.pokereport.luna.gym.Gimnasio.tieneTarima(g)
+                                    ? "" : " §eSIN MEDIR: es una suposicion")),
+                                false);
+                            return 1;
+                        }))
+                    // ⚠⚠⚠ COMPRUEBA LOS BLOQUES DE «BATTLE POSITION».
+                    //    Son de `cobblemonbattlepositions` y son los que colocan
+                    //    a los Pokemon en la arena. Si falta alguno de los dos
+                    //    obligatorios, el combate SE JUEGA IGUAL --con los
+                    //    Pokemon donde caigan-- y no hay ni un aviso.
+                    .then(literal("posiciones")
+                        .executes(ctx -> comprobarPosiciones(ctx))))
+                // Los lideres de la CIUDADELA: los que reciben y abren el
+                // dialogo. Van aparte de `<cual>` porque no son de un gimnasio
+                // sino de todos los que ya tengan sitio construido.
+                .then(literal("ciudadela")
+                    .executes(ctx -> {
+                        var s = ctx.getSource();
+                        int n = net.pokereport.luna.gym.Lideres
+                                .colocarRecepciones(s.getServer(), null);
+                        s.sendFeedback(() -> Text.literal(
+                            "§a" + n + " §7lider(es) en la ciudadela, con "
+                            + "su Pokemon al lado."), false);
+                        return n;
+                    })
+                    // ⚠ El giro se puede forzar porque hacia donde mira Brock
+                    //   depende de como quede la sala, y eso no se sabe desde
+                    //   aqui. Un numero, y se vuelve a ejecutar.
+                    .then(argument("grados", com.mojang.brigadier.arguments.IntegerArgumentType.integer(-180, 360))
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            float giro = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "grados");
+                            int n = net.pokereport.luna.gym.Lideres
+                                    .colocarRecepciones(s.getServer(), giro);
+                            s.sendFeedback(() -> Text.literal(
+                                "§a" + n + " §7lider(es) mirando a §f"
+                                + (int) giro + "°"), false);
+                            return n;
+                        }))
+                    .then(literal("quitar")
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            int n = net.pokereport.luna.gym.Lideres
+                                    .quitarRecepciones(s.getServer());
+                            s.sendFeedback(() -> Text.literal(
+                                "§a" + n + " §7quitados."), false);
+                            return n;
+                        })))
+                // ⚠⚠ VUELVE A CLONAR LAS RANURAS. Hace falta MIENTRAS SE
+                //    CONSTRUYE: una ranura se clona UNA VEZ por arranque, asi que
+                //    un cambio en el maestro --mover a Brock, poner los bloques
+                //    de posicion-- no llega a las copias ya hechas.
+                //    ⚠ Solo olvida la marca: los bloques viejos siguen ahi y el
+                //      clonado no borra aire. Para una copia limpia, reiniciar.
+                .then(literal("reclonar")
+                    .executes(ctx -> {
+                        net.pokereport.luna.gym.Ranuras.olvidarConstruidas();
+                        ctx.getSource().sendFeedback(() -> Text.literal(
+                            "§7Las ranuras se volveran a clonar del maestro la "
+                            + "proxima vez que alguien entre."), false);
+                        return 1;
+                    })))
 
             .then(literal("paradas")
                 // ⚠ Nivel 4: coloca entidades permanentes en la ciudadela.
@@ -945,5 +1039,152 @@ public final class LunaCommand {
             + o.getX() + " " + o.getY() + " " + o.getZ()
             + "\u00a77 (el bloque de oro)"), false);
         return 1;
+    }
+
+    /**
+     * COMPRUEBA LOS BLOQUES DE POSICION DE COMBATE EN EL MAESTRO.
+     *
+     * <h2>⚠⚠⚠ SIN ELLOS EL COMBATE NO FALLA: SALE MAL Y SE CALLA</h2>
+     *
+     * Los cuatro bloques son de {@code cobblemonbattlepositions} y dicen donde
+     * se pone cada Pokemon y cada entrenador. Si faltan los dos obligatorios
+     * --el del Pokemon del jugador y el del entrenador-- el mod se desentiende y
+     * Cobblemon los coloca donde caiga: encima de una grada, dentro de una
+     * pared, o detras del jugador. <b>No hay error, no hay aviso, y desde dentro
+     * parece que el gimnasio esta roto.</b>
+     *
+     * <p>⚠ Los dos «stand» si son opcionales de verdad: sin ellos, el jugador y
+     * el lider se quedan donde esten. Se dice cual falta, sin fingir que da igual.
+     *
+     * <p>⚠⚠ Y SE MIRA EN EL MAESTRO, que es donde se construye: las ranuras se
+     * clonan de el, asi que un bloque puesto ahi aparece en las ocho copias solo.
+     */
+    private static int comprobarPosiciones(
+            com.mojang.brigadier.context.CommandContext<ServerCommandSource> ctx) {
+        var s = ctx.getSource();
+        var g = net.pokereport.luna.gym.Gimnasio.de(
+                StringArgumentType.getString(ctx, "cual"));
+        if (g == null) {
+            s.sendError(Text.literal("§cNo existe"));
+            return 0;
+        }
+        var mundo = net.pokereport.luna.gym.Arenas.mundo(s.getServer());
+        if (mundo == null) {
+            s.sendError(Text.literal("§cLa dimension de gimnasios no existe"));
+            return 0;
+        }
+        String[][] cuales = {
+            {"player_pokemon_position",  "Pokemon del jugador", "OBLIGATORIO"},
+            {"trainer_pokemon_position", "Pokemon del lider",   "OBLIGATORIO"},
+            {"player_stand_position",    "donde se pone el jugador", "opcional"},
+            {"trainer_stand_position",   "donde se pone el lider",   "opcional"},
+        };
+        var origen = net.pokereport.luna.gym.Gimnasio.maestro(g);
+        int alcance = net.pokereport.luna.gym.Gimnasio.PASO_RANURA;
+        int encontrados = 0;
+        s.sendFeedback(() -> Text.literal(
+            "§6Bloques de posicion en el maestro de §f" + g.id()), false);
+        for (String[] c : cuales) {
+            var id = net.minecraft.util.Identifier.of("cobblemonbattlepositions", c[0]);
+            var bloque = net.minecraft.registry.Registries.BLOCK.get(id);
+            if (bloque == net.minecraft.block.Blocks.AIR) {
+                s.sendError(Text.literal(
+                    "§cEl mod cobblemonbattlepositions NO esta en el servidor. "
+                    + "Sin el, los bloques que coloques no hacen nada."));
+                return 0;
+            }
+            var donde = buscarBloque(mundo, origen, alcance, bloque);
+            if (donde == null) {
+                boolean grave = "OBLIGATORIO".equals(c[2]);
+                s.sendFeedback(() -> Text.literal(
+                    (grave ? "  §cFALTA  " : "  §e falta ")
+                    + "§f" + c[1] + " §8(" + c[2] + ")"), false);
+            } else {
+                encontrados++;
+                s.sendFeedback(() -> Text.literal(String.format(
+                    "  §aOK     §f%s §8en desfase %d %d %d",
+                    c[1], donde.getX() - origen.getX(),
+                    donde.getY() - origen.getY(), donde.getZ() - origen.getZ())),
+                    false);
+            }
+        }
+        final int n = encontrados;
+        s.sendFeedback(() -> Text.literal(n >= 2
+            ? "§aLos dos obligatorios estan: el combate se colocara bien."
+            : "§cFaltan obligatorios. El combate se jugara igual, con los "
+              + "Pokemon donde caigan, y NO avisara de nada."), false);
+
+        // ⚠⚠⚠ Y AHORA LA COMPROBACION QUE NO SE VE VENIR: QUE LAS COPIAS NO SE
+        //    ROBEN LOS BLOQUES UNAS A OTRAS.
+        //
+        //    `cobblemonbattlepositions` busca EL BLOQUE MAS CERCANO al jugador,
+        //    con un radio que su configuracion pone en 48 (leido de
+        //    config/cobblemonbattlepositions.json, no supuesto). Las ranuras van
+        //    a PASO_RANURA una de otra, y son copias identicas.
+        //
+        //    Si desde el fondo de una sala el bloque de la ranura SIGUIENTE
+        //    quedara mas cerca que el propio, el combate colocaria los Pokemon
+        //    EN LA SALA DE OTRO JUGADOR. No hay error: los Pokemon salen en otra
+        //    parte y el jugador ve una arena vacia.
+        //
+        //    ⚠ Y solo se puede comprobar AQUI, porque hacen falta dos numeros que
+        //      viven en el mundo: cuanto mide la sala y donde estan los bloques.
+        //      En el autotest seria comparar constantes contra constantes -- la
+        //      confianza falsa que ya nos mordio una vez.
+        var m = net.pokereport.luna.gym.Arenas.medir(s.getServer(), g);
+        if (m != null && encontrados > 0) {
+            int fondo = m[2] + m[5];
+            var pp = buscarBloque(mundo, origen, alcance,
+                    net.minecraft.registry.Registries.BLOCK.get(
+                        net.minecraft.util.Identifier.of(
+                            "cobblemonbattlepositions", "player_pokemon_position")));
+            if (pp != null) {
+                int zb = pp.getZ() - origen.getZ();
+                // Lo peor posible: alguien de pie en el borde sur de su sala.
+                int aLaSiguiente = net.pokereport.luna.gym.Gimnasio.PASO_RANURA
+                        + zb - fondo;
+                boolean seguro = aLaSiguiente > RADIO_POSICIONES;
+                s.sendFeedback(() -> Text.literal(seguro
+                    ? String.format("§aLas copias no se pisan: del fondo de una "
+                        + "sala al bloque de la siguiente hay %d, y el mod busca "
+                        + "en %d.", aLaSiguiente, RADIO_POSICIONES)
+                    : String.format("§cPELIGRO: del fondo de una sala al bloque "
+                        + "de la SIGUIENTE hay %d, y el mod busca en %d. Un "
+                        + "combate podria colocar los Pokemon en la sala de otro. "
+                        + "Sube PASO_RANURA o baja horizontalSearchRadius.",
+                        aLaSiguiente, RADIO_POSICIONES)), false);
+            }
+        }
+        return n;
+    }
+
+    /**
+     * El radio en el que {@code cobblemonbattlepositions} busca sus bloques.
+     *
+     * <p>⚠ Es su valor por defecto y el que tiene el servidor ahora mismo, leido
+     * de {@code config/cobblemonbattlepositions.json}. Está aquí para poder
+     * comprobar contra él; si algún día se cambia allí, hay que cambiarlo aquí —
+     * y si no, esta comprobación deja de decir la verdad.
+     */
+    private static final int RADIO_POSICIONES = 48;
+
+    /** Busca un bloque dentro de la caja del maestro. Devuelve el primero. */
+    private static net.minecraft.util.math.BlockPos buscarBloque(
+            net.minecraft.server.world.ServerWorld mundo,
+            net.minecraft.util.math.BlockPos origen, int alcance,
+            net.minecraft.block.Block bloque) {
+        var pos = new net.minecraft.util.math.BlockPos.Mutable();
+        for (int dy = -16; dy < 120; dy++) {
+            for (int dz = 0; dz < alcance; dz++) {
+                for (int dx = 0; dx < alcance; dx++) {
+                    pos.set(origen.getX() + dx, origen.getY() + dy,
+                            origen.getZ() + dz);
+                    if (mundo.getBlockState(pos).isOf(bloque)) {
+                        return pos.toImmutable();
+                    }
+                }
+            }
+        }
+        return null;
     }
 }

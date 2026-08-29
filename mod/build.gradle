@@ -47,6 +47,17 @@ dependencies {
     // y arriesgarse a que dos versiones convivan.
     modCompileOnly "maven.modrinth:cobblemon:${project.cobblemon_version}"
 
+    // Radical Cobblemon Trainers: tambien solo para compilar. De aqui salen
+    // TrainerMob (la entidad del lider) y RCTMod.makeBattle (el combate).
+    //
+    // ⚠⚠ EL MOD ARRANCA SIN ELLOS. Todo lo que los toca vive en el paquete
+    //    `gym` y se registra solo si rctmod esta cargado -- comprobado en
+    //    LunaEternal con isModLoaded. Sin esa guarda, un servidor sin rctmod
+    //    reventaria al arrancar con NoClassDefFoundError, que es un error que
+    //    no nombra al mod que falta.
+    modCompileOnly "maven.modrinth:rctapi:${project.rctapi_version}"
+    modCompileOnly "maven.modrinth:rctmod:${project.rctmod_version}"
+
     // Cobblemon esta escrito en Kotlin y sus firmas usan tipos de Kotlin
     // (Function1). Sin el stdlib, el compilador de Java no puede resolver
     // que sobrecarga de subscribe() estamos llamando.

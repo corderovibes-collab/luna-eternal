@@ -71,6 +71,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.traje.TrajeService trajes;
     private static net.pokereport.luna.backpack.BackpackService backpacks;
     private static net.pokereport.luna.world.Regreso regresos;
+    private static net.pokereport.luna.gym.MedallaService medallas;
     private static net.pokereport.luna.cosmetics.CosmeticsService cosmetics;
     private static ExecutorService io;
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
@@ -87,6 +88,21 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.world.Decorativos.protegerlos();
         net.pokereport.luna.world.Decorativos.fueraDeLaPokedex();
         net.pokereport.luna.world.Decorativos.abrirViajesAlTocar();
+        // ⚠⚠⚠ TODO LO DE GIMNASIOS VA DETRAS DE ESTA GUARDA, Y NO ES PARANOIA.
+        //    El paquete `gym` toca clases de rctmod --TrainerMob, RCTMod-- que
+        //    son `modCompileOnly`: existen al compilar y puede que no al
+        //    arrancar. Sin la guarda, un servidor sin rctmod se cae con
+        //    NoClassDefFoundError, que es un error que NO NOMBRA al mod que
+        //    falta y manda a buscar el fallo a nuestro codigo.
+        //    ⚠ Y basta con mirarlo una vez: un mod no se carga a media partida.
+        if (hayEntrenadores()) {
+            // El clic derecho en un lider: dialogo en la ciudadela, combate en
+            // la arena. Va aqui --y no en SERVER_STARTED-- porque
+            // `UseEntityCallback` se registra una vez, como los de arriba.
+            net.pokereport.luna.gym.Combate.registrarClic();
+        } else {
+            LOG.warn("rctmod no esta instalado: los gimnasios quedan apagados");
+        }
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> boot());
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> shutdown());
@@ -102,6 +118,11 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // Los OFICIOS: mineria, pesca, cultivo y cria.
             net.pokereport.luna.progression.OficiosListener.register();
             net.pokereport.luna.pokedex.ScanListener.register();
+            // ⚠ Aqui y no antes: se suscribe a un evento de Cobblemon, y
+            //   hasta SERVER_STARTED no esta cargado del todo.
+            if (hayEntrenadores()) {
+                net.pokereport.luna.gym.Combate.escuchar();
+            }
 
             // ⚠ Las ordenes vencidas se cierran AL ARRANCAR y se devuelve lo
             //   retenido. Y las consultas del libro filtran ademas por
@@ -139,6 +160,32 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                             }
                         }));
             }
+            // ⚠⚠ LAS MEDALLAS SE CARGAN AL ENTRAR, y por el mismo motivo que
+            //    el rango: las pregunta el dialogo del gimnasio EN EL MOMENTO
+            //    DEL CLIC, que corre en el hilo del servidor. La cache no es una
+            //    optimizacion, es lo que permite contestar sin ir a la base.
+            if (medallas != null) {
+                var perfilM = player.getGameProfile();
+                medallas.cargar(perfilM.getId(), perfilM.getName(),
+                        () -> server.execute(() -> {
+                            if (!player.isRemoved()) {
+                                // ⚠ Y se reenvia la ficha: al entrar ya se mando
+                                //   una con cero medallas --porque aun no habian
+                                //   llegado-- y sin este reenvio el PokePad las
+                                //   ensenaria todas apagadas hasta reabrirlo.
+                                net.pokereport.luna.net.Red.enviarSaldo(player);
+                            }
+                        }));
+            }
+            // ⚠⚠ SI VUELVE DENTRO DE UNA ARENA, FUERA. Pasa de verdad: alguien
+            //    se desconecta a mitad de combate, o el servidor se reinicia con
+            //    gente dentro. Al volver aparece en una copia que ya no tiene
+            //    reservada, sin lider y SIN SALIDA -- de la dimension de
+            //    gimnasios no se sale andando.
+            if (hayEntrenadores()) {
+                net.pokereport.luna.gym.Combate.alEntrar(player);
+            }
+
             // La etiqueta del clan, que va en el mismo equipo que el rango.
             Tablist.refrescarClan(server, player);
             PlayerCache.refresh(player);
@@ -183,7 +230,12 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             //    Quien cierra el juego a mitad de combate deja su copia
             //    reservada a un jugador que ya no esta, y al octavo nadie mas
             //    puede retar al lider. No da ningun error: deja de funcionar.
-            net.pokereport.luna.gym.Ranuras.alSalir(player);
+            if (hayEntrenadores()) {
+                net.pokereport.luna.gym.Combate.alSalir(player);
+            } else {
+                net.pokereport.luna.gym.Ranuras.alSalir(player);
+            }
+            net.pokereport.luna.gym.MedallaService.olvidar(player.getUuid());
             Tablist.onLeave(server, player);
         });
 
@@ -214,6 +266,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // Va ANTES del corte de 20 ticks: lleva su propio ritmo, y
             // encadenarlo al de aqui lo ataria a un numero que no es suyo.
             net.pokereport.luna.world.ConstructorBuffs.tick(server);
+            // Lo mismo: lleva su propio ritmo (ticks exactos), asi que va
+            // ANTES del corte de 20.
+            net.pokereport.luna.gym.Programador.tick(server);
 
             if (server.getTicks() % 20 != 0) return;
             // El contador de conectados cambia con cada entrada y salida;
@@ -264,6 +319,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             trajes = new net.pokereport.luna.traje.TrajeService(database);
             backpacks = new net.pokereport.luna.backpack.BackpackService(database);
             regresos = new net.pokereport.luna.world.Regreso(database);
+            medallas = new net.pokereport.luna.gym.MedallaService(database);
             cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
@@ -320,6 +376,21 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.hunt.HuntService hunts() { return hunts; }
 
     public static net.pokereport.luna.rank.RankService ranks() { return ranks; }
+    public static net.pokereport.luna.gym.MedallaService medallas() {
+        return medallas;
+    }
+
+    /**
+     * ¿Esta rctmod instalado?
+     *
+     * <p>⚠ De el salen los lideres de gimnasio y sus combates. Es
+     * {@code modCompileOnly}: existe al compilar y puede no existir al arrancar,
+     * asi que todo lo que lo toca se pregunta esto primero.
+     */
+    public static boolean hayEntrenadores() {
+        return net.fabricmc.loader.api.FabricLoader.getInstance()
+                .isModLoaded("rctmod");
+    }
     public static net.pokereport.luna.traje.TrajeService trajes() { return trajes; }
 
     public static net.pokereport.luna.backpack.BackpackService backpacks() {

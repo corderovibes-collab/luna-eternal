@@ -339,12 +339,19 @@ public class PokePadScreen extends Screen {
      * un hueco vacio no dice cuantas faltan, y saber cuantas faltan es justo lo
      * que hace que alguien vaya a por la siguiente.
      */
-    private static final String[] MEDALLAS = {
-            "kanto_boulder", "kanto_cascade", "kanto_thunder", "kanto_rainbow",
-            "kanto_soul", "kanto_marsh", "kanto_volcano", "kanto_earth",
-            "johto_zephyr", "johto_hive", "johto_plain", "johto_fog",
-            "johto_storm", "johto_mineral", "johto_glacier", "johto_rising",
-    };
+    /**
+     * ⚠⚠⚠ YA NO ES UN ARRAY AQUI: SALE DE {@code Gimnasio.insignias()}.
+     *
+     * <p>Estaba escrita a mano, y era la <b>tercera</b> copia del mismo orden —
+     * la del servidor, la del dialogo del gimnasio y esta. Nada las obligaba a
+     * coincidir, y si se desordenaran, ganar a Brock encenderia la medalla de
+     * Misty <b>sin dar ningun error</b>.
+     *
+     * <p>El bit <i>i</i> de la mascara es el gimnasio de la sala <i>i</i>, asi
+     * que el orden lo manda quien reparte las medallas. Ahora lo lee de ahi.
+     */
+    private static final java.util.List<String> MEDALLAS =
+            net.pokereport.luna.gym.Gimnasio.insignias();
     private static final int MEDALLAS_X = 97, MEDALLAS_Y = 662;
     private static final int MEDALLA = 30, MEDALLA_SEP = 3;
     private static final int MEDALLA_COLS = 8;
@@ -901,7 +908,7 @@ public class PokePadScreen extends Screen {
 
         int lado = Math.round(MEDALLA * k);
         int paso = MEDALLA + MEDALLA_SEP;
-        for (int i = 0; i < MEDALLAS.length; i++) {
+        for (int i = 0; i < MEDALLAS.size(); i++) {
             int artX = MEDALLAS_X + (i % MEDALLA_COLS) * paso;
             int artY = MEDALLAS_Y + (i / MEDALLA_COLS) * paso;
             boolean tiene = ficha != null && (ficha.medallas() & (1 << i)) != 0;
@@ -913,12 +920,14 @@ public class PokePadScreen extends Screen {
     }
 
     /** Los identificadores, resueltos una sola vez. */
-    private static final Identifier[] MEDALLA_TEX = new Identifier[MEDALLAS.length];
+    private static final Identifier[] MEDALLA_TEX =
+            new Identifier[MEDALLAS.size()];
 
     static {
-        for (int i = 0; i < MEDALLAS.length; i++) {
+        for (int i = 0; i < MEDALLAS.size(); i++) {
             MEDALLA_TEX[i] = Identifier.of(
-                    "cobbleversebadges", "textures/item/" + MEDALLAS[i] + "_badge.png");
+                    "cobbleversebadges",
+                    "textures/item/" + MEDALLAS.get(i) + "_badge.png");
         }
     }
 

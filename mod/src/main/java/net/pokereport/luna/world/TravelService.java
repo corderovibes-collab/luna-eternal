@@ -8,6 +8,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.pokereport.luna.LunaEternal;
 
@@ -31,16 +32,24 @@ public final class TravelService {
     /**
      * Dónde aterriza cada dimensión vacía.
      *
-     * <p><b>La ciudadela ya no es 0,64,0.</b> Se construyó la plaza y su centro
-     * quedó en {@code 4, 69, 0} — medido dentro del juego, no calculado. Dejarlo
-     * en el origen soltaba al jugador seis bloques por debajo del suelo nuevo.
+     * <p><b>La ciudadela ya no es 0,64,0.</b> Se construyó la plaza y el punto
+     * de llegada quedó en {@code 4,27 · 70 · 0,36} — medido por el usuario
+     * dentro del juego, no calculado. Dejarlo en el origen soltaba al jugador
+     * por debajo del suelo nuevo.
+     *
+     * <h2>⚠⚠ ES UN {@code Vec3d} Y NO UN {@code BlockPos}, Y NO ES UN CAPRICHO</h2>
+     *
+     * Con un bloque, lo que se hacía era «la casilla, más medio bloque»: el
+     * jugador caía en (4,5 · 69 · 0,5), que <b>no es donde el usuario se puso a
+     * medir</b>. Los decimales que midió <i>son</i> la posición; redondearlos la
+     * mueve media casilla a un lado y un bloque hacia abajo.
      *
      * <p>Es una constante y no un ajuste porque cambiarla es una línea y un
      * despliegue, y no va a cambiar a menudo. Cuando la ciudadela esté acabada,
      * esto pasará a leerse de la base de datos junto con los puntos de viaje.
      */
-    private static final BlockPos SPAWN_CIUDADELA = new BlockPos(4, 69, 0);
-    private static final BlockPos SPAWN_LOBBY = new BlockPos(0, 64, 0);
+    private static final Vec3d SPAWN_CIUDADELA = new Vec3d(4.27, 70, 0.36);
+    private static final Vec3d SPAWN_LOBBY = new Vec3d(0.5, 64, 0.5);
     /** Radio de la plataforma de emergencia. */
     private static final int PLATFORM_RADIUS = 4;
 
@@ -68,11 +77,13 @@ public final class TravelService {
             return true;
         }
 
-        BlockPos destination = safeSpawn(world);
+        Vec3d destination = safeSpawn(world);
 
         player.closeHandledScreen();
-        player.teleport(world,
-            destination.getX() + 0.5, destination.getY(), destination.getZ() + 0.5,
+        // ⚠ Sin sumar medio bloque: `safeSpawn` ya devuelve la posición EXACTA.
+        //   Sumarlo aquí --como se hacía-- desplazaba media casilla el punto que
+        //   el usuario había medido de pie en el juego.
+        player.teleport(world, destination.x, destination.y, destination.z,
             Set.of(), player.getYaw(), player.getPitch());
 
         player.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL,
@@ -85,14 +96,19 @@ public final class TravelService {
      * Punto seguro de una dimensión. En las vacías construye la plataforma si
      * hace falta; en las generadas busca la superficie.
      */
-    private static BlockPos safeSpawn(ServerWorld world) {
+    private static Vec3d safeSpawn(ServerWorld world) {
         boolean isVoid = world.getRegistryKey().equals(LunaDimensions.LOBBY)
                       || world.getRegistryKey().equals(LunaDimensions.CIUDADELA);
 
         if (isVoid) {
-            BlockPos punto = world.getRegistryKey().equals(LunaDimensions.CIUDADELA)
+            Vec3d punto = world.getRegistryKey().equals(LunaDimensions.CIUDADELA)
                 ? SPAWN_CIUDADELA : SPAWN_LOBBY;
-            ensurePlatform(world, punto.down());
+            // ⚠ El suelo es la casilla de DEBAJO de los pies. Con el punto en
+            //   y=70, eso es y=69. Pasarle el punto en vez del suelo fue lo que
+            //   un día plantó nueve por nueve bloques de piedra en mitad de la
+            //   plaza: el aire estaba ENCIMA del suelo, así que la comprobación
+            //   «¿es aire?» decía que sí.
+            ensurePlatform(world, BlockPos.ofFloored(punto).down());
             return punto;
         }
 
@@ -103,7 +119,8 @@ public final class TravelService {
 
         int y = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES,
                              spawn.getX(), spawn.getZ());
-        return new BlockPos(spawn.getX(), Math.max(y, world.getBottomY() + 1), spawn.getZ());
+        return new Vec3d(spawn.getX() + 0.5,
+                Math.max(y, world.getBottomY() + 1), spawn.getZ() + 0.5);
     }
 
     /**

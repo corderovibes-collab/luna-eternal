@@ -142,6 +142,22 @@ public class LunaCliente implements ClientModInitializer {
                     }
                 });
 
+        // ⚠⚠ ESTE TAMPOCO SOLO GUARDA: ABRE EL DIALOGO DEL GIMNASIO. Es lo
+        //    que convierte el clic derecho en el lider en una pantalla, y por
+        //    eso NO hay un `PedirGimnasio`: al dialogo solo se llega tocandole.
+        //    ⚠ Y solo si no hay otra pantalla delante --salvo que ya sea esta,
+        //      que es el caso de «te he dicho que no puedes»: ahi hay que
+        //      refrescar la que ya esta abierta, no abrir otra.
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoGimnasio.ID,
+                (carga, ctx) -> {
+                    EstadoCliente.guardar(carga);
+                    var cliente = ctx.client();
+                    if (cliente.currentScreen == null) {
+                        cliente.setScreen(new net.pokereport.luna.client.pokepad
+                                .GimnasioScreen());
+                    }
+                });
+
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoExplorar.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 

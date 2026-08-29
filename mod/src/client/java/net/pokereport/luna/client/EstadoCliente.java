@@ -30,6 +30,7 @@ public final class EstadoCliente {
     private static Red.EstadoCazas cazas;
     private static Red.EstadoExplorar explorar;
     private static Red.EstadoViajes viajes;
+    private static Red.EstadoGimnasio gimnasio;
     private static Red.EstadoTrajes trajes;
 
     private EstadoCliente() {}
@@ -159,6 +160,14 @@ public final class EstadoCliente {
 
     public static Red.EstadoViajes viajes() {
         return viajes;
+    }
+
+    public static void guardar(Red.EstadoGimnasio nuevo) {
+        gimnasio = nuevo;
+    }
+
+    public static Red.EstadoGimnasio gimnasio() {
+        return gimnasio;
     }
 
     public static void guardar(Red.EstadoExplorar nuevo) {

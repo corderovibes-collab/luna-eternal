@@ -118,6 +118,24 @@ public final class Ranuras {
                 .equals(jugador.getServerWorld().getRegistryKey());
     }
 
+    /**
+     * Olvida QUE RANURAS ESTAN CLONADAS, sin tocar quien las ocupa.
+     *
+     * <p>⚠⚠ Existe para MIENTRAS SE CONSTRUYE. Una ranura se clona una sola vez
+     * por arranque, asi que cualquier cambio en el maestro --mover al lider,
+     * poner los bloques de posicion de combate-- <b>no llega a las copias que ya
+     * estaban hechas</b>, y eso no da ningun error: da un gimnasio en el que
+     * unos jugadores ven una cosa y otros otra.
+     *
+     * <p>⚠ Solo olvida la marca. Los bloques viejos siguen en el mundo y el
+     * clonado no borra el aire, asi que lo que se quito del maestro se queda en
+     * la copia. Para una copia limpia de verdad hace falta reiniciar.
+     */
+    public static void olvidarConstruidas() {
+        CONSTRUIDAS.clear();
+        LunaEternal.LOG.info("Gimnasios: las ranuras se volveran a clonar");
+    }
+
     public static void olvidarTodo() {
         OCUPADAS.clear();
         CONSTRUIDAS.clear();

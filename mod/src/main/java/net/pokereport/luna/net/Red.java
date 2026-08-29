@@ -1121,6 +1121,86 @@ public class Red implements ModInitializer {
         }
     }
 
+    /**
+     * EL ESTADO DE UN GIMNASIO, para el diálogo del líder.
+     *
+     * <h2>⚠⚠ VIAJA LA CLAVE DEL MOTIVO, NO LA FRASE</h2>
+     *
+     * {@code motivo} es el sufijo de {@code gimnasio.lunaeternal.no.*} —
+     * «faltan», «ya_ganada», «lleno»— y {@code dato} el número que la frase
+     * necesita. <b>Un servidor no tiene idioma</b>: componer la frase aquí la
+     * congelaría en inglés, que es el único que existe en el servidor. La regla
+     * está pagada desde el 25-ago y esta es su aplicación literal.
+     *
+     * <p>⚠ Vacío en {@code motivo} significa «puedes retar». No se manda un
+     * booleano aparte: dos campos que dicen lo mismo son dos campos que un día
+     * se contradicen.
+     *
+     * @param medallas la máscara del jugador, para que el diálogo enseñe cuántas
+     *                 lleva sin tener que pedir la ficha entera
+     */
+    public record EstadoGimnasio(String gimnasio, int medallas, int requiere,
+                                 String motivo, int dato, int libres)
+            implements CustomPayload {
+
+        /**
+         * ⚠⚠ NO HAY CAMPO «ya ganada», Y NO ES POR EL LIMITE DEL CODEC.
+         *
+         * <p>Lo habia, y sobraba: {@code motivo} ya vale {@code "ya_ganada"} en
+         * ese caso. <b>Dos campos que dicen lo mismo son dos campos que un dia
+         * se contradicen</b> — y el dia que lo hagan, la pantalla enseñara «ya
+         * la tienes» con el boton encendido, o al reves.
+         *
+         * <p>⚠ Que ademas la tupla admita <b>seis campos y no siete</b> es lo
+         * que lo destapo. El limite ya estaba anotado en {@code Ficha.medallas};
+         * aqui volvio a aparecer, y esta vez señalando un campo de verdad de
+         * sobra.
+         */
+        public static final Id<EstadoGimnasio> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_gimnasio"));
+        public static final PacketCodec<RegistryByteBuf, EstadoGimnasio> CODEC =
+                PacketCodec.tuple(
+                        CADENA, EstadoGimnasio::gimnasio,
+                        PacketCodecs.VAR_INT, EstadoGimnasio::medallas,
+                        PacketCodecs.VAR_INT, EstadoGimnasio::requiere,
+                        CADENA, EstadoGimnasio::motivo,
+                        PacketCodecs.VAR_INT, EstadoGimnasio::dato,
+                        PacketCodecs.VAR_INT, EstadoGimnasio::libres,
+                        EstadoGimnasio::new);
+
+        /** ¿Ya tiene esta medalla? Lo dice el motivo, no un campo aparte. */
+        public boolean yaGanada() {
+            return "ya_ganada".equals(motivo);
+        }
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Acepto el reto».
+     *
+     * <h2>⚠ VIAJA EL IDENTIFICADOR DEL GIMNASIO Y NADA MÁS</h2>
+     *
+     * Ni la ranura, ni las medallas que el cliente cree tener, ni si puede. Todo
+     * eso lo mira el servidor en su copia (P6): un cliente modificado que
+     * mandara «puedo» se saltaría los ocho gimnasios de golpe.
+     */
+    public record AccionGimnasio(String gimnasio) implements CustomPayload {
+        public static final Id<AccionGimnasio> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_gimnasio"));
+        public static final PacketCodec<RegistryByteBuf, AccionGimnasio> CODEC =
+                PacketCodec.tuple(CADENA, AccionGimnasio::gimnasio,
+                                  AccionGimnasio::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame las paradas», al abrir Viajes. */
     public record PedirViajes() implements CustomPayload {
         public static final Id<PedirViajes> ID =
@@ -1987,6 +2067,10 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(EstadoTrajes.ID, EstadoTrajes.CODEC);
         PayloadTypeRegistry.playS2C().register(TrajeDe.ID, TrajeDe.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirViajes.ID, PedirViajes.CODEC);
+        PayloadTypeRegistry.playC2S().register(
+                AccionGimnasio.ID, AccionGimnasio.CODEC);
+        PayloadTypeRegistry.playS2C().register(
+                EstadoGimnasio.ID, EstadoGimnasio.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionViaje.ID, AccionViaje.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoViajes.ID, EstadoViajes.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionCaza.ID, AccionCaza.CODEC);
@@ -2086,6 +2170,22 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(PedirViajes.ID, (carga, ctx) ->
                 enviarViajes(ctx.player(), false));
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionGimnasio.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var g = net.pokereport.luna.gym.Gimnasio.de(carga.gimnasio());
+            if (g == null) {
+                // ⚠ Un identificador desconocido NO revienta: el cliente puede
+                //   ser mas viejo que el servidor, o mas nuevo. Se ignora.
+                return;
+            }
+            var no = net.pokereport.luna.gym.Combate.retar(jugador, g);
+            if (no != null) {
+                // Se reenvia el estado con el motivo: la pantalla lo enseña en
+                // su sitio, sin sacar a nadie de la interfaz.
+                enviarGimnasio(jugador, g);
+            }
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(AccionViaje.ID, (carga, ctx) -> {
             net.pokereport.luna.world.Paradas.llevar(ctx.player(), carga.parada());
@@ -2558,7 +2658,14 @@ public class Red implements ModInitializer {
                     // no puede dejar al jugador sin saldo ni sin vias.
                     LunaEternal.LOG.debug("Sin clan para la ficha: {}", e.toString());
                 }
-                var ficha = new Ficha(vias, clan, "", "", 0);
+                // ⚠⚠ LAS MEDALLAS YA NO VAN A CERO. El PokePad las dibujaba
+                // desde el principio --dieciseis casillas abajo a la
+                // izquierda-- y lo unico que faltaba era que alguien
+                // rellenara el numero. La mascara sale de la CACHE, que es
+                // lo unico que se puede leer desde aqui sin volver a la base.
+                int medallas = net.pokereport.luna.gym.MedallaService
+                        .enCache(jugador.getUuid());
+                var ficha = new Ficha(vias, clan, "", "", medallas);
                 // Volver al hilo del servidor para enviar: la red no es
                 // segura desde un hilo cualquiera.
                 jugador.getServer().execute(() -> {
@@ -3411,6 +3518,27 @@ public class Red implements ModInitializer {
      *
      * @param abrir si además hay que abrirle la pantalla (clic en un Miraidon)
      */
+    /**
+     * Manda el estado de un gimnasio, y con eso el cliente abre el diálogo.
+     *
+     * <p>⚠ No hay un {@code PedirGimnasio}: al diálogo <b>solo se llega tocando
+     * al líder</b>, y en ese momento el servidor ya sabe cuál es. Un «pídemelo
+     * tú» sobraría y además dejaría abrir el diálogo de un gimnasio al que no te
+     * has acercado.
+     */
+    public static void enviarGimnasio(
+            net.minecraft.server.network.ServerPlayerEntity jugador,
+            net.pokereport.luna.gym.Gimnasio.Gimnasio_ g) {
+        var no = net.pokereport.luna.gym.Combate.porQueNo(jugador, g);
+        ServerPlayNetworking.send(jugador, new EstadoGimnasio(
+                g.id(),
+                net.pokereport.luna.gym.MedallaService.enCache(jugador.getUuid()),
+                g.medallas(),
+                no == null ? "" : no.clave(),
+                no == null ? 0 : no.dato(),
+                net.pokereport.luna.gym.Ranuras.libres(g)));
+    }
+
     public static void enviarViajes(
             net.minecraft.server.network.ServerPlayerEntity jugador, boolean abrir) {
         boolean dentro = net.pokereport.luna.world.LunaDimensions.CIUDADELA

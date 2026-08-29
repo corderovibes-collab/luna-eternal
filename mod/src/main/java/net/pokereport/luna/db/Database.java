@@ -57,7 +57,8 @@ public final class Database implements AutoCloseable {
         "V020__rangos.sql",
         "V021__mochila.sql",
         "V022__regreso.sql",
-        "V023__trajes.sql"
+        "V023__trajes.sql",
+        "V024__medallas.sql"
     };
 
     private final HikariDataSource ds;

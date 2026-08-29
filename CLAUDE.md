@@ -1059,11 +1059,54 @@ Comprobar     UN SELECTOR NO VE LO QUE ESTA EN UN CHUNK DESCARGADO
                 execute in <dim> run forceload add <x1> <z1> <x2> <z2>
                 ... la consulta ...
                 execute in <dim> run forceload remove all
+              ⚠⚠⚠ Y PEOR: `execute in <dim> run ... @e` NO ACOTA EL SELECTOR EN
+                 ESTE SERVIDOR. Comprobado: desde `lunaeternal:lobby`, donde no
+                 hay NADA colocado, `@e[tag=luna_lider]` ve los dos --el de la
+                 ciudadela y el de la dimension de gimnasios--. Tres censos
+                 seguidos me dijeron «hay un Brock en la ciudadela» cuando estaba
+                 en otra dimension, y casi me pongo a arreglar algo que no
+                 estaba roto
+                 LA SONDA QUE SI DICE LA VERDAD ES POR BLOQUE, porque los
+                 bloques SI van por la dimension de ejecucion:
+                   execute at @e[tag=X] run setblock ~ ~6 ~ minecraft:glowstone
+                   execute in <dim> if block <x> <y> <z> minecraft:glowstone
+                       run say ESTA EN <dim>
+                 (y luego se quita el bloque)
               ⚠ y QUITAR el forceload despues: un chunk cargado para siempre se
                 tickea para siempre
               ⚠ para CONTAR, «tag @e[...] add x» dice "Added tag to N
                 entities"; «data get ... limit=1» ensena UNO y no dice cuantos
                 hay -- que es lo que casi me deja dos Brocks superpuestos
+
+Teletransporte ⚠⚠⚠ NO TELETRANSPORTAR DENTRO DEL EVENTO DE CONEXION
+              (2026-08-29) . ROMPIO LA SESION DE UN JUGADOR Y LA TRAZA NO
+              NOMBRA LA CAUSA POR NINGUN LADO
+              `Combate.alEntrar` sacaba de la arena a quien volviera dentro, y
+              lo hacia EN EL ACTO, dentro de ServerPlayConnectionEvents.JOIN
+              ⚠⚠⚠ NO FALLA AHI. El jugador acaba de ser añadido al mundo y el
+                 gestor de tickets de chunk todavia no lo tiene apuntado en su
+                 seccion; sacarlo de la dimension en ese instante deja el apunte
+                 A MEDIAS, y el apunte roto SE QUEDA TODA LA SESION
+                 reviento SIETE MINUTOS DESPUES, en el siguiente cambio de
+                 dimension:
+                   NullPointerException: Cannot invoke ObjectSet.remove
+                     at ChunkTicketManager.handleChunkLeave
+                     at ServerWorld.removePlayer
+                     at ServerPlayerEntity.teleport
+              ⚠⚠ Y EL VIAJE SE QUEDA A LA MITAD: el jugador SALE de un mundo y
+                 NO LLEGA al otro. Real: acabo en el Mundo Hogar con las
+                 coordenadas de la ciudadela, y su cliente dibujando al Brock de
+                 la ARENA flotando sobre la plaza -- recibio las entidades del
+                 mundo nuevo sin haber cambiado de mundo. Un fantasma de cliente
+                 que parece un bloque colocado donde no toca
+              HOY espera 40 ticks y vuelve a comprobar que sigue conectado
+              ⚠ Y AL LLEGAR, EL CHUNK DE DESTINO SE CARGA ANTES DE MOVER: en una
+                dimension sin jugadores no hay ni un chunk cargado. Es la misma
+                leccion que ya estaba escrita en `TravelService.ensurePlatform`
+                para los bloques, aplicada a las entidades
+              ⚠ LA REGLA QUE QUEDA: si hay que mover a alguien al entrar, se
+                encola. Dos segundos no los nota nadie y se ahorra un fallo que
+                aparece en otro sitio y otro dia
 
 Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
               dimension `lunaeternal:gimnasios` . los 8 de Kanto

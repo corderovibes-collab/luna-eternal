@@ -289,6 +289,58 @@ bloques y 2,8 s de retraso, medidos en vivo— y por eso no se llama solo.
 
 ---
 
+## 6-ter. ⚠⚠⚠ No teletransportar dentro del evento de conexión
+
+`Combate.alEntrar` saca de la arena a quien vuelva a conectarse dentro de una.
+Lo hacía **en el acto**, dentro de `ServerPlayConnectionEvents.JOIN`.
+
+**Y no falla ahí.** El jugador acaba de ser añadido al mundo y el gestor de
+tickets de chunk todavía no lo tiene apuntado en su sección; sacarlo de la
+dimensión en ese instante deja el apunte a medias — y el apunte roto **se queda
+toda la sesión**.
+
+Reventó **siete minutos después**, en el siguiente cambio de dimensión:
+
+```
+NullPointerException: Cannot invoke "ObjectSet.remove(Object)"
+  at ChunkTicketManager.handleChunkLeave
+  at ServerWorld.removePlayer
+  at ServerPlayerEntity.teleport
+  at Arenas.llevar
+```
+
+> ⚠⚠ **Y el viaje se queda a la mitad**: el jugador sale de un mundo y no llega
+> al otro. Visto de verdad — acabó en el Mundo Hogar con las coordenadas de la
+> ciudadela, y su cliente dibujando **al Brock de la arena flotando sobre la
+> plaza**, porque recibió las entidades del mundo nuevo sin haber cambiado de
+> mundo. Un fantasma de cliente que parece una entidad colocada donde no toca.
+
+Hoy espera **40 ticks** y vuelve a comprobar que sigue conectado. Y al llegar,
+**el chunk de destino se carga antes de mover a nadie**: en una dimensión sin
+jugadores no hay ni un chunk cargado.
+
+**La regla que queda:** si hay que mover a alguien al entrar, se encola. Dos
+segundos no los nota nadie, y se ahorra un fallo que aparece en otro sitio y otro
+día.
+
+### ⚠⚠ Y cómo se diagnosticó, porque el camino también engaña
+
+Tres censos seguidos me dijeron «hay un Brock de más en la ciudadela». No lo
+había: **`execute in <dim> run ... @e` no acota el selector en este servidor**.
+Desde el lobby, donde no hay nada colocado, ve los Brocks de las otras dos
+dimensiones.
+
+La sonda que sí dice la verdad es **por bloque**, porque los bloques sí van por
+la dimensión de ejecución:
+
+```
+execute at @e[tag=luna_arena] run setblock ~ ~6 ~ minecraft:glowstone
+execute in lunaeternal:gimnasios if block 48 78 40 minecraft:glowstone run say AQUI
+execute in lunaeternal:gimnasios run setblock 48 78 40 minecraft:air
+```
+
+---
+
 ## 7. Las medallas
 
 **No son un objeto**, y es orden del usuario: *«obtiene la medalla pero no

@@ -256,7 +256,10 @@ public final class Lideres {
             return null;
         }
         Vec3d donde = Gimnasio.lider(g, ranura);
-        quitar(mundo, donde, 6);
+        // ⚠⚠ SE LIMPIA LA RANURA ENTERA, no un radio alrededor de la tarima.
+        //    El motivo esta en `quitarDeRanura`, y se resume en que el lider NO
+        //    se queda donde lo pusiste.
+        quitarDeRanura(mundo, g, ranura);
         var mob = colocar(mundo, g, donde, Gimnasio.giroLider(g), MARCA_ARENA);
         if (mob != null && !Gimnasio.tieneTarima(g)) {
             // ⚠ Si la tarima no está medida, el sitio es una SUPOSICIÓN: 20
@@ -275,7 +278,59 @@ public final class Lideres {
                                      Gimnasio.Gimnasio_ g, int ranura) {
         ServerWorld mundo = Arenas.mundo(servidor);
         if (mundo != null) {
-            quitar(mundo, Gimnasio.lider(g, ranura), 6);
+            quitarDeRanura(mundo, g, ranura);
         }
+    }
+
+    /**
+     * BORRA TODOS LOS LÍDERES DE UNA RANURA, ESTÉN DONDE ESTÉN DENTRO DE ELLA.
+     *
+     * <h2>⚠⚠⚠ EL LÍDER NO SE QUEDA DONDE LO PONES, Y POR ESO ESTO NO ES UN RADIO</h2>
+     *
+     * Se limpiaba «en un radio de 6 alrededor de la tarima», que parecía de
+     * sobra. Y no lo era: cuando empieza el combate, <b>el mod de posiciones
+     * teletransporta al líder a su bloque {@code trainer_stand_position}</b> —
+     * en el gimnasio de Brock, 26 bloques al fondo. Al acabar el combate se
+     * queda ahí.
+     *
+     * <p>Así que la limpieza no lo encontraba, y el siguiente reto ponía otro:
+     * <b>un Brock más por cada combate</b>. No daba ningún error; el usuario lo
+     * vio en el juego, en la segunda pelea.
+     *
+     * <p>⚠⚠ La lección: <b>un radio solo vale si sabes que la cosa no se
+     * mueve.</b> Y aquí no lo sabíamos — lo mueve un mod ajeno, con unas
+     * coordenadas que pone quien construye la sala. La ranura entera sí es un
+     * límite que conocemos, porque lo definimos nosotros.
+     *
+     * <p>⚠ La caja no llega a la ranura siguiente ni al gimnasio de al lado: las
+     * ranuras van a {@code PASO_RANURA} en Z y los gimnasios a
+     * {@code SEPARACION} en X, así que se para antes de las dos.
+     *
+     * <p>⚠ Solo alcanza a los que estén en chunks cargados. En el momento en que
+     * se llama —al empezar un reto o al acabar un combate— el jugador está o
+     * acaba de estar dentro, así que lo están.
+     */
+    public static int quitarDeRanura(ServerWorld mundo, Gimnasio.Gimnasio_ g,
+                                     int ranura) {
+        var o = Gimnasio.origen(g, ranura);
+        // ⚠ Un pelo por debajo del paso: un líder justo en el borde es de la
+        //   ranura siguiente, no de esta.
+        Box caja = new Box(
+                o.getX() - 8, o.getY() - 64, o.getZ() - 4,
+                o.getX() + Gimnasio.SEPARACION / 2.0, o.getY() + 256,
+                o.getZ() + Gimnasio.PASO_RANURA - 0.01);
+        int n = 0;
+        for (var e : mundo.getEntitiesByClass(TrainerMob.class, caja,
+                x -> x.getCommandTags().contains(MARCA))) {
+            e.discard();
+            n++;
+        }
+        if (n > 1) {
+            // Si alguna vez sale más de uno, es que algo los estaba dejando
+            // atrás. Decirlo es más barato que descubrirlo en una captura.
+            LunaEternal.LOG.warn("Gimnasio {}: habia {} lideres en la ranura {}",
+                    g.id(), n, ranura);
+        }
+        return n;
     }
 }

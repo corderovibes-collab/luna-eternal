@@ -28,8 +28,8 @@ from simplificar_malla import leer_obj                 # noqa: E402
 from trajes import visor, modelo as M                   # noqa: E402
 from trajes.modelo import Cubo                          # noqa: E402
 
-OBJ = Path("D:/KITRANGO/skinarceusmodelo/skinarceusmodelo_detalle.obj")
-TEX = Path("D:/KITRANGO/skinarceusmodelo/skinarceusmodelo.png")
+OBJ = Path("D:/KITRANGO/skinaceur/skin.obj")
+TEX = Path("D:/KITRANGO/skinaceur/skin.png")
 ALTO = 32          # un jugador
 TEXELES = 4        # texeles por bloque. ⚠ ESTO ES GRATIS EN CUBOS
 
@@ -184,7 +184,7 @@ for cu, (bx, by, bz, bw, bh, bd) in zip(cubos, cajas):
                         break
                 if not puesto:
                     px[ox+i, oy+j] = (200, 160, 40)   # oro, que es lo dominante
-img.save("build/trajes/pintado_tex.png")
+img.save("build/trajes/leyenda2_tex.png")
 
 t = M.Traje("pintado", "forma en cajas + detalle pintado (%d)" % len(cajas))
 # ⚠ Repartido por ALTURA: lo de la cabeza al casco --el halo incluido, que
@@ -199,8 +199,9 @@ for k, v in piezas.items():
         t.poner(k, *v)
         print("    %-16s %d cubos" % (k, len(v)))
 visor.SUELO = 34
-visor.lamina(t, "build/trajes/armadura_pintada.png", 11.0, {"body": img.convert("RGBA")})
-print("  -> build/trajes/armadura_pintada.png")
+visor.VISTAS = [("FRENTE", 180, 0), ("3/4", 215, 10), ("LADO", 270, 0), ("ESPALDA", 0, 0)]
+visor.lamina(t, "build/trajes/leyenda2.png", 11.0, {"body": img.convert("RGBA")})
+print("  -> build/trajes/leyenda2.png")
 from trajes import blockbench
-for r in blockbench.escribir_todo(t, "build/trajes/pintado_bb", lado):
+for r in blockbench.escribir_todo(t, "build/trajes/leyenda2_bb", lado):
     print("    -> %s" % r.name)

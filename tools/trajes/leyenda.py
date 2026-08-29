@@ -139,10 +139,18 @@ def casco():
     c.append(Cubo((-4.4, 30.0, -4.5), (8.8, 1.6, 0.9), ORO, "metal"))
     c.append(Cubo((-0.8, 30.2, -4.9), (1.6, 1.2, 0.5), MAGENTA, "neon"))
     # ---- las placas de las mejillas, que enmarcan la cara
-    # ⚠ Mas anchas y mas hacia delante: a 0,8 en el borde no se veian de frente
-    #   y la cara quedaba como un cuadrado de piel suelto.
-    for x in (-4.6, 3.0):
-        c.append(Cubo((x, 25.0, -4.7), (1.6, 5.2, 2.6), ORO, "metal"))
+    # ⚠⚠ EL MARCO DE LA CARA ES LO QUE MAS CAMBIA EL CASCO. Con las mejillas en
+    #    el borde, la cara quedaba como un cuadrado de piel suelto en medio del
+    #    oro. Ahora entran hasta 2,6 y hay ceja: se lee un yelmo con visera
+    #    abierta, no una caja con un agujero.
+    #    ⚠ Y NO SE CIERRA MAS. Lo que queda al aire es la SKIN DEL JUGADOR, la
+    #      unica parte que sigue siendo suya -- taparla es quitarle la cara.
+    for x in (-4.7, 2.6):
+        c.append(Cubo((x, 25.0, -4.8), (2.1, 5.4, 2.8), ORO, "metal"))
+    c.append(Cubo((-4.7, 29.4, -4.9), (9.4, 0.9, 1.1), ORO_OSC, "metal"))
+    # las dos mechas doradas que caen a los lados, del boceto
+    for x in (-5.0, 3.4):
+        c.append(Cubo((x, 24.0, -3.6), (1.6, 3.0, 2.4), ORO_OSC, "metal"))
 
     # ---- LOS CUERNOS. Cada uno es una escalera de cubos que se estrecha: es la
     #      unica forma de curvar con cajas alineadas a los ejes.
@@ -150,8 +158,8 @@ def casco():
     #        remate se ve como una mota que parpadea, no como una punta.
     tramo = [
         # (separacion del centro, altura, ancho, alto, fondo)
-        (3.9, 30.4, 2.8, 2.0, 3.4),
-        (5.3, 32.0, 2.5, 2.0, 3.0),
+        (3.9, 30.2, 3.2, 2.2, 3.8),
+        (5.5, 31.9, 2.8, 2.1, 3.2),
         (6.3, 33.8, 2.1, 2.0, 2.5),
         (6.9, 35.6, 1.7, 1.9, 2.0),
         (7.0, 37.2, 1.3, 1.7, 1.6),
@@ -184,11 +192,15 @@ def pecho():
     for x in (-4.7, 3.7):
         c.append(Cubo((x, 14.4, -3.0), (1.0, 8.6, 6.0), ORO, "metal"))
     c.append(Cubo((-3.2, 21.4, -3.0), (6.4, 1.6, 0.6), ORO, "metal"))
-    # ---- la gema del esternon, en su aro
-    c.append(Cubo((-1.6, 18.6, -3.1), (3.2, 3.2, 0.5), ORO, "metal"))
-    c.append(Cubo((-1.1, 19.1, -3.4), (2.2, 2.2, 0.4), MAGENTA, "neon"))
-    # ---- el ovalo morado del vientre, escalonado para que se lea redondo
-    for r, y0, y1 in ((1.0, 17.4, 18.2), (1.5, 15.4, 17.4), (1.0, 14.6, 15.4)):
+    # ---- la gema del esternon, en su aro. ⚠ GRANDE: en el boceto es el centro
+    #      del pecho y de lejos es lo primero que se ve. Pequeña se pierde.
+    #      El aro va escalonado, como el anillo, para que se lea redondo.
+    for r, y0, y1 in ((1.3, 20.6, 21.4), (2.1, 19.2, 20.6), (1.3, 18.4, 19.2)):
+        c.append(Cubo((round(-r, 3), y0, -3.05), (round(r * 2, 3),
+                      round(y1 - y0, 3), 0.5), ORO, "metal"))
+    c.append(Cubo((-1.2, 19.3, -3.45), (2.4, 1.3, 0.45), MAGENTA, "neon"))
+    # ---- el ovalo morado del vientre, tambien escalonado
+    for r, y0, y1 in ((1.2, 17.2, 18.0), (1.9, 15.2, 17.2), (1.2, 14.4, 15.2)):
         c.append(Cubo((round(-r, 3), y0, -3.05), (round(r * 2, 3),
                       round(y1 - y0, 3), 0.45), MORADO_CLARO, "tela"))
     # ---- el cinturon
@@ -222,13 +234,23 @@ def brazos():
         # ---- LA HOMBRERA: tres hojas escalonadas que salen y bajan, como en el
         #      boceto. Es lo que le da la silueta al traje.
         c.append(Cubo((base - 0.5, 20.8, -2.5), (5.0, 3.4, 5.0), ORO, "metal"))
-        # ⚠⚠ GRANDES Y BAJANDO. En el boceto la hombrera es un ALA que sale y
-        #    cae; con escalones pequeños se lee como una coraza cualquiera y el
-        #    traje pierde justo lo que lo hace reconocible de lejos.
-        hojas = [(0.4, 20.6, 3.2, 4.2, 5.2),
-                 (3.0, 19.2, 3.0, 3.8, 4.4),
-                 (5.4, 17.9, 2.6, 3.2, 3.6),
-                 (7.3, 16.8, 2.0, 2.6, 2.8)]
+        # ⚠⚠⚠ LA HOMBRERA ES UNA MASA MACIZA ESCALONADA, NO HOJAS SUELTAS.
+        #    Lo probe con dos alas de piezas separadas y quedo como PATAS DE
+        #    ARAÑA: entre pieza y pieza se veia el fondo y se leian como pinchos.
+        #    En el boceto es una plancha que se escalona hacia fuera y abajo.
+        #    ⚠ La clave es que CADA PIEZA SOLAPA CON LA ANTERIOR (sep < ancho de
+        #      la previa). Sin solape no hay masa, hay puas.
+        # ⚠⚠ Y CORTAS. Con cuatro tramos la punta llegaba a x=15, casi el doble
+        #    de ancho que la figura entera, y de frente se leia como BRAZOS
+        #    EXTRA. En el boceto la hombrera no pasa de una cabeza mas alla del
+        #    brazo. Tres tramos, mas altos, y ya es una plancha.
+        hojas = [
+            (0.1, 19.8, 3.6, 5.4, 5.4),
+            (2.3, 18.6, 3.2, 4.6, 4.6),
+            (4.2, 17.6, 2.6, 3.8, 3.8),
+            # el remate que sube junto a la cabeza
+            (0.2, 24.6, 3.2, 2.4, 4.8),
+        ]
         for sep, y, w, h, d in hojas:
             x = base + (4.0 + sep - w if fuera > 0 else -sep)
             c.append(Cubo((round(x, 3), y, round(-d / 2, 3)), (w, h, d),

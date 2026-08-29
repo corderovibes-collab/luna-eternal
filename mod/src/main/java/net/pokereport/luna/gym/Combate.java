@@ -477,6 +477,9 @@ public final class Combate {
         VUELTAS.remove(jugador.getUuid());
     }
 
+    /** Cuánto se espera antes de sacar a alguien que entró dentro de una arena. */
+    private static final int TICKS_RESCATE = 40;   // 2 s
+
     /**
      * Al entrar: si se quedó dentro de una arena, fuera.
      *
@@ -484,14 +487,60 @@ public final class Combate {
      * combate, o el servidor se reinicia con gente dentro. Al volver aparece en
      * una copia que ya no tiene reservada, sin líder y sin salida — porque de la
      * dimensión de gimnasios no se sale andando.
+     *
+     * <h2>⚠⚠⚠ PERO NO SE LE SACA EN EL ACTO, Y ESTO COSTO UNA SESION ENTERA</h2>
+     *
+     * <b>Teletransportar a un jugador dentro del evento de conexión rompe su
+     * contabilidad de chunks.</b> Acaba de ser añadido al mundo y el gestor de
+     * tickets todavía no lo tiene apuntado en su sección; sacarlo de la
+     * dimensión en ese instante deja el apunte a medias.
+     *
+     * <p>Y lo peor es <b>cuándo se nota</b>: no ahí. El jugador juega
+     * normalmente, y <b>siete minutos después</b>, en el siguiente cambio de
+     * dimensión, revienta con
+     *
+     * <pre>
+     *   NullPointerException: Cannot invoke "ObjectSet.remove(Object)"
+     *     at ChunkTicketManager.handleChunkLeave
+     *     at ServerWorld.removePlayer
+     *     at ServerPlayerEntity.teleport
+     * </pre>
+     *
+     * <p>El viaje se queda a medias: el jugador sale de un mundo y no llega al
+     * otro. Visto de verdad — el usuario acabó en el Mundo Hogar con las
+     * coordenadas de la ciudadela, y su cliente dibujando <b>al Brock de la
+     * arena flotando sobre la plaza</b>, porque recibió las entidades del mundo
+     * nuevo sin haber cambiado de mundo.
+     *
+     * <p>⚠ La traza <b>no nombra el evento de conexión por ningún lado</b>: es
+     * un fallo a distancia. Por eso queda escrito aquí y no en un comentario de
+     * una línea.
+     *
+     * <p>Dos segundos de espera bastan, y de propina el chunk de destino ya está
+     * cargado cuando llega.
      */
     public static void alEntrar(ServerPlayerEntity jugador) {
         if (!Ranuras.estabaEnArena(jugador)) {
             return;
         }
-        LunaEternal.LOG.info("{} volvió dentro de una arena: se le saca",
-                jugador.getName().getString());
-        net.pokereport.luna.world.TravelService.travel(jugador,
-                net.pokereport.luna.world.LunaDimensions.CIUDADELA, "la Ciudadela");
+        var servidor = jugador.getServer();
+        if (servidor == null) {
+            return;
+        }
+        UUID uuid = jugador.getUuid();
+        LunaEternal.LOG.info("{} volvió dentro de una arena: se le saca en {} ticks",
+                jugador.getName().getString(), TICKS_RESCATE);
+        Programador.en(TICKS_RESCATE, () -> {
+            // ⚠ Se vuelve a buscar: en dos segundos le da tiempo a
+            //   desconectarse otra vez, y mover a alguien que ya no está
+            //   revienta el tick del servidor.
+            var vivo = servidor.getPlayerManager().getPlayer(uuid);
+            if (vivo == null || !Ranuras.estabaEnArena(vivo)) {
+                return;
+            }
+            net.pokereport.luna.world.TravelService.travel(vivo,
+                    net.pokereport.luna.world.LunaDimensions.CIUDADELA,
+                    "la Ciudadela");
+        });
     }
 }

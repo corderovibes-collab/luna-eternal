@@ -310,8 +310,20 @@ public final class Arenas {
             LunaEternal.LOG.error("No existe la dimension de gimnasios");
             return false;
         }
+        // ⚠ Un jugador que ya se ha ido no se mueve: entre que acepta el reto y
+        //   que llega aqui puede haberse desconectado, y teletransportar a una
+        //   entidad retirada revienta el tick del servidor.
+        if (jugador.isRemoved() || jugador.isDisconnected()) {
+            return false;
+        }
         net.pokereport.luna.world.Regreso.apuntar(jugador);
         var p = Gimnasio.entrada(g, ranura);
+        // ⚠⚠ EL CHUNK DE DESTINO SE CARGA ANTES DE MOVER A NADIE. En una
+        //    dimension sin jugadores NO hay ni un chunk cargado, y llegar a uno
+        //    que no existe todavia es la mitad de los problemas raros de
+        //    teletransporte. Es la misma leccion que ya estaba escrita en
+        //    `TravelService.ensurePlatform` para los bloques.
+        mundo.getChunk(net.minecraft.util.math.BlockPos.ofFloored(p));
         jugador.closeHandledScreen();
         // ⚠ Con giro fijo: sin fijarlo entra mirando a donde estuviera mirando
         //   en la ciudadela, que puede ser a una pared.

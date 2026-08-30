@@ -1136,6 +1136,31 @@ Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
               /luna gimnasio brock posiciones   los bloques de Battle Position
               /luna gimnasio ciudadela [grados] Brock y su Geodude, en la plaza
               /luna gimnasio reclonar           al cambiar el maestro
+              /luna gimnasio brock comprobar    las 7 copias, una por una
+              /luna reiniciarmedalla brock [jugador]  para volver a pelear
+              ⚠⚠⚠ EL BLOQUE DE POSICION NO TIENE COLISION. `getCollisionShape`
+                 devuelve VoxelShapes.empty(), leido del jar. Puesto EN la capa
+                 del suelo es un AGUJERO por el que se cae, y eso no se ve en
+                 ninguna captura: se descubre andando
+                 LAS TRES COLOCACIONES POSIBLES, y ninguna es gratis:
+                   enterrado y=68   offset 2.0  suelo entero, marcador INVISIBLE
+                   en el suelo y=69 offset 1.0  AGUJERO en el suelo
+                   encima     y=70  offset 0.0  suelo entero, se ve el cubo a
+                                                los pies de los luchadores
+                 PUESTO: ENCIMA (y=70, offset 0.0), decision del usuario tras
+                 verlo en un combate: «ya quedaron, es arriba»
+                 ⚠ el 2.0 por defecto del mod NO es arbitrario: es el valor que
+                   cuadra con el marcador enterrado, que es como su autor lo
+                   pensó. Aqui se usa otro a proposito
+              ⚠⚠ Y EL LIDER SE PONE UN SEGUNDO DESPUES DE QUE LLEGUE EL JUGADOR,
+                 no antes. `getEntitiesByClass` solo ve lo CARGADO, y aunque se
+                 carguen los chunks a mano LAS ENTIDADES NO LLEGAN EN EL MISMO
+                 TICK: la limpieza miraba una sala vacia, no borraba al de la vez
+                 anterior y ponia uno al lado. UN BROCK MAS POR COMBATE
+                 ⚠ si no aparece, se saca al jugador: de esa dimension no se
+                   sale andando
+              ⚠ `medir` se RECUERDA (millones de lecturas). Se olvida al tocar el
+                maestro: `limpiarranuras` y `reclonar`
               /luna gimnasio brock limpiarranuras  borra las copias y lideres
               /luna reiniciarmedalla brock [jugador]  para volver a pelear
               ⚠⚠ EL LIDER FLOTABA, Y LA CULPA ERA DE UN NUMERO DE OTRO MOD.

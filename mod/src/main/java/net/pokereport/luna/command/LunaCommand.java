@@ -295,6 +295,10 @@ public final class LunaCommand {
                 .then(literal("reclonar")
                     .executes(ctx -> {
                         net.pokereport.luna.gym.Ranuras.olvidarConstruidas();
+                        // ⚠ Y lo MEDIDO tambien: si el maestro ha cambiado de
+                        //   tamaño, clonar con la medida vieja copiaria de menos
+                        //   --y un gimnasio cortado no da ningun error.
+                        net.pokereport.luna.gym.Arenas.olvidarMedidas();
                         ctx.getSource().sendFeedback(() -> Text.literal(
                             "§7Las ranuras se volveran a clonar del maestro la "
                             + "proxima vez que alguien entre."), false);

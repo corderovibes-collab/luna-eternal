@@ -28,6 +28,48 @@ public final class Arenas {
     /** El lado de la plataforma de anclaje. */
     private static final int LADO = 9;
 
+    /**
+     * LO QUE MIDE CADA GIMNASIO, RECORDADO.
+     *
+     * <h2>⚠⚠ NO ES UNA OPTIMIZACION BONITA: SE NOTA AL ENTRAR</h2>
+     *
+     * {@link #medir} barre medio hueco de gimnasio en X y en Z, que son
+     * <b>millones de lecturas de bloque</b>. Y {@link #clonar} lo llamaba cada
+     * vez, o sea <b>una vez por ranura</b>. Medido en vivo comprobando las
+     * siete: un tirón de <b>2,3 s</b> en la primera.
+     *
+     * <p>Eso mismo le pasa a un jugador que entra a una ranura que aún no
+     * estaba hecha — que es justo el peor momento, porque está esperando a
+     * aparecer dentro.
+     *
+     * <p>⚠ Se olvida al tocar el maestro ({@link #limpiarRanuras} y el comando
+     * {@code reclonar}): si no, un cambio en la sala no llegaría a las copias y
+     * eso <b>no daría ningún error</b> — daría copias viejas.
+     *
+     * <p>⚠ Y el comando {@code medir} sigue midiendo de verdad, sin caché: es
+     * el diagnóstico, y un diagnóstico que contesta de memoria no sirve.
+     */
+    private static final java.util.Map<String, int[]> MEDIDAS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Se olvida lo medido: el maestro ha cambiado. */
+    public static void olvidarMedidas() {
+        MEDIDAS.clear();
+    }
+
+    /** Lo que mide, de memoria si ya se sabía. */
+    public static int[] medida(MinecraftServer servidor, Gimnasio.Gimnasio_ g) {
+        int[] m = MEDIDAS.get(g.id());
+        if (m != null) {
+            return m;
+        }
+        m = medir(servidor, g);
+        if (m != null) {
+            MEDIDAS.put(g.id(), m);
+        }
+        return m;
+    }
+
     private Arenas() {}
 
     /**
@@ -199,7 +241,7 @@ public final class Arenas {
         //    (96x48x56): de menos deja el gimnasio CORTADO --y eso no se ve
         //    hasta que alguien camina hasta el borde de su copia y se encuentra
         //    media pared-- y de mas puede llegar a copiar la sala de al lado.
-        int[] m = medir(servidor, g);
+        int[] m = medida(servidor, g);
         if (m == null) {
             LunaEternal.LOG.warn("Gimnasio {}: el maestro esta vacio, "
                     + "no hay nada que clonar", g.id());
@@ -263,7 +305,10 @@ public final class Arenas {
         if (mundo == null) {
             return 0;
         }
-        int[] m = medir(servidor, g);
+        // ⚠ El maestro puede haber cambiado desde la última vez: aquí se mide
+        //   de verdad, y de paso se tira lo recordado.
+        olvidarMedidas();
+        int[] m = medida(servidor, g);
         if (m == null) {
             return 0;
         }
@@ -338,7 +383,10 @@ public final class Arenas {
     public static void comprobarRanuras(MinecraftServer servidor,
                                         Gimnasio.Gimnasio_ g,
                                         java.util.function.Consumer<String> decir) {
-        int[] m = medir(servidor, g);
+        // ⚠ Se mide UNA VEZ y se reparte a las siete: medir por ranura era lo
+        //   que costaba los tirones.
+        olvidarMedidas();
+        int[] m = medida(servidor, g);
         if (m == null) {
             decir.accept("§cNo hay nada construido en el maestro de §f"
                     + g.id());

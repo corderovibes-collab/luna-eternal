@@ -363,5 +363,8 @@
   "gimnasio.lunaeternal.tipo.giovanni": "Tipo Tierra · Ciudad Verde",
   "gimnasio.lunaeternal.dice.giovanni.reto": "Soy el último obstáculo. Y no soy de los que se apartan.",
   "gimnasio.lunaeternal.dice.giovanni.ya_ganada": "Ya me has ganado. Esa medalla es tuya.",
-  "gimnasio.lunaeternal.dice.giovanni.no_puedes": "Todavía no. Vuelve cuando estés preparado."
+  "gimnasio.lunaeternal.dice.giovanni.no_puedes": "Todavía no. Vuelve cuando estés preparado.",
+  "espera.lunaeternal.empieza": "§8» §7No te muevas durante §f%s segundos§7 y serás teletransportado.",
+  "espera.lunaeternal.barra": "§eTeletransporte en §f%s§e…  §7no te muevas",
+  "espera.lunaeternal.cancelada": "§8» §cViaje cancelado: §7te has movido."
 }

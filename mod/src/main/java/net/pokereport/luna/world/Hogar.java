@@ -101,9 +101,10 @@ public final class Hogar {
             }
             destino = new Vec3d(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);
         }
-        jugador.closeHandledScreen();
-        jugador.teleport(mundo, destino.x, destino.y, destino.z,
-                java.util.Set.of(), jugador.getYaw(), jugador.getPitch());
+        // ⚠ Por `Traslado`: carga el chunk de destino. En el Hogar importa
+        //   especialmente la PRIMERA vez, que cae en un punto al azar donde no
+        //   ha estado nadie nunca.
+        Traslado.ir(jugador, mundo, destino);
         jugador.playSoundToPlayer(net.minecraft.sound.SoundEvents.BLOCK_PORTAL_TRAVEL,
                 net.minecraft.sound.SoundCategory.MASTER, 0.2f, 1.4f);
         jugador.sendMessage(net.minecraft.text.Text.literal(primera

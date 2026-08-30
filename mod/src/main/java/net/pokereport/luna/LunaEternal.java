@@ -236,6 +236,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                 net.pokereport.luna.gym.Ranuras.alSalir(player);
             }
             net.pokereport.luna.gym.MedallaService.olvidar(player.getUuid());
+            // ⚠ Y su cuenta atras, que ademas SUELTA lo que tuviera reservado:
+            //   irse a mitad de la cuenta del gimnasio dejaba la ranura pillada.
+            net.pokereport.luna.world.Espera.olvidar(player.getUuid());
             Tablist.onLeave(server, player);
         });
 
@@ -271,6 +274,12 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.gym.Programador.tick(server);
 
             if (server.getTicks() % 20 != 0) return;
+            // ⚠ La cuenta atras de los viajes va AQUI, en el corte de 20 ticks:
+            //   lo que ensena es un numero de SEGUNDOS, y mirar la posicion
+            //   veinte veces por segundo no la haria mas justa, solo mas
+            //   quisquillosa -- un tiron de red moveria al jugador medio bloque
+            //   y volveria, cancelandole el viaje sin que el tocara nada.
+            net.pokereport.luna.world.Espera.tick(server);
             // El contador de conectados cambia con cada entrada y salida;
             // recalcularlo aquí evita tener que engancharlo a cada evento.
             Tablist.updateHeaderFooter(server);

@@ -230,6 +230,27 @@ public final class Combate {
             Ranuras.soltar(jugador.getUuid());
             return new Motivo("sin_lider", 0);
         }
+        // ⚠⚠ CINCO SEGUNDOS QUIETO ANTES DE ENTRAR (peticion del usuario). La
+        //    ranura ya esta apartada, asi que si se mueve HAY QUE SOLTARLA: si
+        //    no, esa copia queda reservada a alguien que no va a ir, y al octavo
+        //    nadie puede retar al lider. No da ningun error: deja de funcionar.
+        RETANDO.put(jugador.getUuid(), g.id());
+        net.pokereport.luna.world.Espera.pedir(jugador, "gimnasio",
+                () -> entrar(jugador, g, ranura),
+                () -> {
+                    Ranuras.soltar(jugador.getUuid());
+                    RETANDO.remove(jugador.getUuid());
+                });
+        return null;
+    }
+
+    /** Lo que pasa cuando la cuenta atras termina sin moverse. */
+    private static void entrar(ServerPlayerEntity jugador, Gimnasio.Gimnasio_ g,
+                               int ranura) {
+        var servidor = jugador.getServer();
+        if (servidor == null) {
+            return;
+        }
         try {
             // Una vez por ranura y por arranque: copiar ocho mil bloques en cada
             // combate sí se notaría en el hilo del servidor.
@@ -244,7 +265,12 @@ public final class Combate {
             RETANDO.put(jugador.getUuid(), g.id());
             if (!Arenas.llevar(jugador, g, ranura)) {
                 soltar(jugador, g.id());
-                return new Motivo("sin_dimension", 0);
+                // ⚠ Ya no se puede devolver un motivo: la pantalla se cerro
+                //   hace cinco segundos. Se dice por el chat, que es lo unico
+                //   que le queda al jugador aqui.
+                jugador.sendMessage(Text.translatable(
+                        "gimnasio.lunaeternal.no.sin_dimension"), false);
+                return;
             }
             // ⚠⚠⚠ EL LIDER SE PONE DESPUES DE QUE LLEGUE EL JUGADOR, Y ESTO NO
             //    ES ESTETICA: ES LO QUE HACE QUE LA LIMPIEZA FUNCIONE.
@@ -282,11 +308,12 @@ public final class Combate {
             LunaEternal.LOG.error("No se pudo llevar a {} al gimnasio {}",
                     jugador.getName().getString(), g.id(), e);
             soltar(jugador, g.id());
-            return new Motivo("sin_dimension", 0);
+            jugador.sendMessage(Text.translatable(
+                    "gimnasio.lunaeternal.no.sin_dimension"), false);
+            return;
         }
         LunaEternal.LOG.info("Gimnasio {}: {} entra en la ranura {}",
                 g.id(), jugador.getName().getString(), ranura);
-        return null;
     }
 
     // ---------------------------------------------------------------- combatir
@@ -459,9 +486,8 @@ public final class Combate {
         if (v != null) {
             var mundo = servidor.getWorld(v.mundo());
             if (mundo != null) {
-                jugador.closeHandledScreen();
-                jugador.teleport(mundo, v.donde().x, v.donde().y, v.donde().z,
-                        java.util.Set.of(), v.giro(), 0f);
+                net.pokereport.luna.world.Traslado.ir(
+                        jugador, mundo, v.donde(), v.giro(), 0f);
                 return;
             }
         }

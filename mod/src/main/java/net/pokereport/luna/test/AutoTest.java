@@ -96,6 +96,7 @@ public final class AutoTest {
             testViajes();
             testTrajes();
             testGimnasios();
+            testEspera();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -1913,6 +1914,61 @@ public final class AutoTest {
         net.pokereport.luna.gym.Programador.tick(null);
         check("una tarea que falla no cancela a la siguiente", segunda[0]);
         net.pokereport.luna.gym.Programador.olvidarTodo();
+    }
+
+    /**
+     * LA CUENTA ATRAS DE LOS VIAJES.
+     *
+     * <p>⚠⚠ Lo que se vigila no es que cuente bien --eso se ve-- sino que
+     * <b>cancelarla suelte lo que habia reservado</b>. Retar a un gimnasio
+     * aparta una ranura ANTES de empezar a contar; si el jugador se mueve y
+     * nadie la suelta, esa copia queda apartada para alguien que no va a ir. Al
+     * octavo, nadie puede retar al lider — y no da ningun error.
+     */
+    private void testEspera() {
+        net.pokereport.luna.world.Espera.olvidarTodo();
+        net.pokereport.luna.gym.Ranuras.olvidarTodo();
+        var g = net.pokereport.luna.gym.Gimnasio.TODOS.get(0);
+        int libresAntes = net.pokereport.luna.gym.Ranuras.libres(g);
+
+        // ---- moverse (o irse) suelta la ranura
+        var uno = java.util.UUID.randomUUID();
+        int r = net.pokereport.luna.gym.Ranuras.reservar(g, uno);
+        check("la cuenta empieza con la ranura ya apartada", r > 0);
+        net.pokereport.luna.world.Espera.pedirDePrueba(uno, () -> { },
+                () -> net.pokereport.luna.gym.Ranuras.soltar(uno));
+        check("mientras cuenta, hay una espera pendiente",
+              net.pokereport.luna.world.Espera.pendientes() == 1);
+        net.pokereport.luna.world.Espera.olvidar(uno);
+        check("cancelar SUELTA la ranura",
+              net.pokereport.luna.gym.Ranuras.libres(g) == libresAntes);
+        check("y no queda ninguna espera",
+              net.pokereport.luna.world.Espera.pendientes() == 0);
+
+        // ---- pedir dos veces cancela la primera
+        // ⚠ Sin esto, pulsar «ir» dos veces apartaria DOS ranuras y solo
+        //   soltaria una: la fuga mas facil de provocar, y sin querer.
+        var dos = java.util.UUID.randomUUID();
+        int r1 = net.pokereport.luna.gym.Ranuras.reservar(g, dos);
+        final boolean[] cancelada = {false};
+        net.pokereport.luna.world.Espera.pedirDePrueba(dos, () -> { },
+                () -> cancelada[0] = true);
+        net.pokereport.luna.world.Espera.pedirDePrueba(dos, () -> { }, () -> { });
+        check("pedir dos veces cancela la anterior", cancelada[0]);
+        check("y sigue habiendo una sola espera",
+              net.pokereport.luna.world.Espera.pendientes() == 1);
+        net.pokereport.luna.world.Espera.olvidarTodo();
+        net.pokereport.luna.gym.Ranuras.soltar(dos);
+        check("la ranura de prueba queda libre",
+              net.pokereport.luna.gym.Ranuras.libres(g) == libresAntes && r1 > 0);
+
+        // ⚠ Cinco segundos es la espera; cero la anularia y treinta seria un
+        //   castigo. Se comprueba que sea un numero razonable porque cambiarlo
+        //   es una linea y nadie mira lo que pasa con el resto.
+        check("la espera dura entre 1 y 10 segundos",
+              net.pokereport.luna.world.Espera.SEGUNDOS >= 1
+              && net.pokereport.luna.world.Espera.SEGUNDOS <= 10);
+        net.pokereport.luna.gym.Ranuras.olvidarTodo();
     }
 
     private void testTrajes() {

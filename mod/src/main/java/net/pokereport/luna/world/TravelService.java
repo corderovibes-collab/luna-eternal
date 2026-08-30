@@ -79,13 +79,13 @@ public final class TravelService {
 
         Vec3d destination = safeSpawn(world);
 
-        player.closeHandledScreen();
         // ⚠ Sin sumar medio bloque: `safeSpawn` ya devuelve la posición EXACTA.
         //   Sumarlo aquí --como se hacía-- desplazaba media casilla el punto que
         //   el usuario había medido de pie en el juego.
-        player.teleport(world, destination.x, destination.y, destination.z,
-            Set.of(), player.getYaw(), player.getPitch());
-
+        // ⚠⚠ Y por `Traslado`, que carga el chunk y apunta de dónde vienes.
+        if (!Traslado.ir(player, world, destination)) {
+            return false;
+        }
         player.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL,
             SoundCategory.MASTER, 0.2f, 1.4f);
         player.sendMessage(Text.literal("§8» §fHas llegado a §6" + displayName), false);

@@ -530,19 +530,12 @@ public final class Arenas {
         if (jugador.isRemoved() || jugador.isDisconnected()) {
             return false;
         }
-        net.pokereport.luna.world.Regreso.apuntar(jugador);
         var p = Gimnasio.entrada(g, ranura);
-        // ⚠⚠ EL CHUNK DE DESTINO SE CARGA ANTES DE MOVER A NADIE. En una
-        //    dimension sin jugadores NO hay ni un chunk cargado, y llegar a uno
-        //    que no existe todavia es la mitad de los problemas raros de
-        //    teletransporte. Es la misma leccion que ya estaba escrita en
-        //    `TravelService.ensurePlatform` para los bloques.
-        mundo.getChunk(net.minecraft.util.math.BlockPos.ofFloored(p));
-        jugador.closeHandledScreen();
         // ⚠ Con giro fijo: sin fijarlo entra mirando a donde estuviera mirando
         //   en la ciudadela, que puede ser a una pared.
-        jugador.teleport(mundo, p.x, p.y, p.z, java.util.Set.of(),
-                Gimnasio.giroEntrada(g), 0f);
-        return true;
+        // ⚠⚠ Y por `Traslado`, que carga el chunk de destino: en una dimension
+        //    sin jugadores no hay ni uno cargado.
+        return net.pokereport.luna.world.Traslado.ir(
+                jugador, mundo, p, Gimnasio.giroEntrada(g), 0f);
     }
 }

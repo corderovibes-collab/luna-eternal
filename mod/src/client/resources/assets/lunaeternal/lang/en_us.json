@@ -363,5 +363,8 @@
   "gimnasio.lunaeternal.tipo.giovanni": "Ground type - Viridian City",
   "gimnasio.lunaeternal.dice.giovanni.reto": "I am the last obstacle. And I am not one to step aside.",
   "gimnasio.lunaeternal.dice.giovanni.ya_ganada": "You have already beaten me. That badge is yours.",
-  "gimnasio.lunaeternal.dice.giovanni.no_puedes": "Not yet. Come back when you are ready."
+  "gimnasio.lunaeternal.dice.giovanni.no_puedes": "Not yet. Come back when you are ready.",
+  "espera.lunaeternal.empieza": "§8» §7Don't move for §f%s seconds§7 and you'll be teleported.",
+  "espera.lunaeternal.barra": "§eTeleporting in §f%s§e…  §7don't move",
+  "espera.lunaeternal.cancelada": "§8» §cTravel cancelled: §7you moved."
 }

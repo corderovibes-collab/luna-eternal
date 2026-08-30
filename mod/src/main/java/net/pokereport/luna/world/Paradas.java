@@ -97,11 +97,21 @@ public final class Paradas {
         if (mundo == null) {
             return false;
         }
-        jugador.closeHandledScreen();
-        jugador.teleport(mundo, p.x(), p.y(), p.z(), java.util.Set.of(),
-                jugador.getYaw(), jugador.getPitch());
-        jugador.playSoundToPlayer(net.minecraft.sound.SoundEvents.BLOCK_PORTAL_TRAVEL,
-                net.minecraft.sound.SoundCategory.MASTER, 0.2f, 1.6f);
+        // ⚠⚠ CINCO SEGUNDOS QUIETO. Petición del usuario, y de propina da
+        //    tiempo a que el chunk de destino esté listo cuando llegue.
+        net.pokereport.luna.world.Espera.pedir(jugador, "viajar", () -> {
+            // ⚠⚠⚠ Y POR `Traslado`, QUE CARGA EL DESTINO. Aquí se
+            //    teletransportaba a pelo: si nadie estaba cerca de esa parada,
+            //    el chunk estaba frío y el jugador llegaba a un sitio sin
+            //    suelo. La ciudadela es un vacío con una isla, así que eso es
+            //    caerse. Es el fallo que el usuario vio al viajar desde el
+            //    Salvaje o el Hogar, donde el chunk NUNCA está caliente.
+            if (net.pokereport.luna.world.Traslado.ir(jugador, mundo, p.pos())) {
+                jugador.playSoundToPlayer(
+                        net.minecraft.sound.SoundEvents.BLOCK_PORTAL_TRAVEL,
+                        net.minecraft.sound.SoundCategory.MASTER, 0.2f, 1.6f);
+            }
+        });
         return true;
     }
 

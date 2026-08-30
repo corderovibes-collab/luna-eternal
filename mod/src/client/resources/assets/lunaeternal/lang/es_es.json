@@ -366,5 +366,17 @@
   "gimnasio.lunaeternal.dice.giovanni.no_puedes": "Todavía no. Vuelve cuando estés preparado.",
   "espera.lunaeternal.empieza": "§8» §7No te muevas durante §f%s segundos§7 y serás teletransportado.",
   "espera.lunaeternal.barra": "§eTeletransporte en §f%s§e…  §7no te muevas",
-  "espera.lunaeternal.cancelada": "§8» §cViaje cancelado: §7te has movido."
+  "espera.lunaeternal.cancelada": "§8» §cViaje cancelado: §7te has movido.",
+  "gimnasio.lunaeternal.titulo.victoria": "§6§l¡VICTORIA!",
+  "gimnasio.lunaeternal.sub.victoria": "§fHas derrotado a §e%s",
+  "gimnasio.lunaeternal.titulo.derrota": "§c§lDERROTA",
+  "gimnasio.lunaeternal.sub.derrota": "§7%s§7 ha sido demasiado para ti",
+  "gimnasio.lunaeternal.dice.brock.lleno": "Ahora mismo no puedo: hay una enfermera nueva en el Centro Pokémon y necesito presentarme. Vuelve en un rato… o en dos.",
+  "gimnasio.lunaeternal.dice.misty.lleno": "Estoy ocupada. Sigo buscando a cierto entrenador que me debe una bicicleta desde hace años. ¿Tú no serás amigo suyo?",
+  "gimnasio.lunaeternal.dice.surge.lleno": "¡Todas las pistas ocupadas, recluta! Aprovecha para hacer flexiones. ¡Te quiero aquí en cinco minutos!",
+  "gimnasio.lunaeternal.dice.erika.lleno": "Perdona… me he vuelto a quedar dormida entre las flores. Y encima está todo lleno. Vuelve luego, ¿sí?",
+  "gimnasio.lunaeternal.dice.koga.lleno": "Un buen ninja sabe esperar. Y ahora mismo no te queda otra: el gimnasio está completo.",
+  "gimnasio.lunaeternal.dice.sabrina.lleno": "Ya sabía que ibas a venir hoy. Lo que no vi es que estaría lleno. Al parecer ni yo lo veo todo.",
+  "gimnasio.lunaeternal.dice.blaine.lleno": "¡Adivina! ¿Qué está a tope, no admite a nadie más y quema? Respuesta: mi gimnasio. Vuelve luego.",
+  "gimnasio.lunaeternal.dice.giovanni.lleno": "Mi agenda está completa. Y créeme: no querrás ver lo que hago con quien insiste."
 }

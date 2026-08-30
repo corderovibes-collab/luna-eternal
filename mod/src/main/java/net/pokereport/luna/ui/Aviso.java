@@ -2,6 +2,7 @@ package net.pokereport.luna.ui;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
@@ -88,6 +89,53 @@ public final class Aviso {
             jugador.sendMessage(Text.literal("§6" + titulo + " §8· §f" + detalle), false);
             jugador.playSound(sonido, 0.8f, tono);
         });
+    }
+
+    /**
+     * UN TÍTULO A PANTALLA COMPLETA, con su sonido.
+     *
+     * <h2>Por qué esto y no un toast</h2>
+     *
+     * Un toast es para lo que pasa <b>mientras juegas</b> y no debe
+     * interrumpir: una captura, una subida de oficio. Ganar a un líder de
+     * gimnasio es lo contrario — es el final de algo, y merece parar la pantalla
+     * un segundo. Petición del usuario, y es la decisión correcta.
+     *
+     * <h2>⚠⚠ ESTO SÍ LLEGA A TODO EL MUNDO, TENGA O NO NUESTRO MOD</h2>
+     *
+     * El título es un paquete de <b>vainilla</b> ({@code TitleS2CPacket}), al
+     * contrario que el toast, que solo lo dibuja quien tiene el mod. Para algo
+     * que marca un hito eso importa: nadie se queda sin enterarse de que ha
+     * ganado.
+     *
+     * <p>⚠ Y los tiempos van explícitos. Si no se mandan, se queda el último que
+     * usara <b>otro mod o el propio servidor</b>, y un día el mensaje aparece y
+     * desaparece en dos fotogramas sin que nadie sepa por qué.
+     *
+     * @param titulo  la línea grande
+     * @param sub     la pequeña, debajo. Puede ser {@code null}
+     */
+    public static void titulo(ServerPlayerEntity jugador, Text titulo, Text sub,
+                              SoundEvent sonido, float tono) {
+        if (jugador == null || jugador.isRemoved()) {
+            return;
+        }
+        var red = jugador.networkHandler;
+        if (red == null) {
+            return;
+        }
+        // fundido de entrada, tiempo visible, fundido de salida — en ticks
+        red.sendPacket(new net.minecraft.network.packet.s2c.play.TitleFadeS2CPacket(
+                10, 60, 20));
+        if (sub != null) {
+            red.sendPacket(
+                    new net.minecraft.network.packet.s2c.play.SubtitleS2CPacket(sub));
+        }
+        red.sendPacket(
+                new net.minecraft.network.packet.s2c.play.TitleS2CPacket(titulo));
+        if (sonido != null) {
+            jugador.playSoundToPlayer(sonido, SoundCategory.MASTER, 1.0f, tono);
+        }
     }
 
     /**

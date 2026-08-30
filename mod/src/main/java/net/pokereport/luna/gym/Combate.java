@@ -412,6 +412,14 @@ public final class Combate {
             //   lección del 25-ago, que costó una pantalla entera.
             jugador.sendMessage(Text.translatable(
                     "gimnasio.lunaeternal.derrota", g.lider()), false);
+            net.pokereport.luna.ui.Aviso.titulo(jugador,
+                    Text.translatable("gimnasio.lunaeternal.titulo.derrota"),
+                    Text.translatable("gimnasio.lunaeternal.sub.derrota", g.lider()),
+                    // ⚠ Grave y lento. Se probaron los de vainilla y este es el
+                    //   único que suena a «se acabó» sin sonar a muerte: el de
+                    //   morir asusta, y perder un combate de gimnasio no es eso.
+                    net.minecraft.sound.SoundEvents.ENTITY_ELDER_GUARDIAN_CURSE,
+                    0.8f);
             devolverEn(jugador, cual, TICKS_VUELTA);
             return;
         }
@@ -421,6 +429,14 @@ public final class Combate {
             return;
         }
         medallas.conceder(jugador, g, nueva -> {
+            // ⚠ El título va SIEMPRE, sea la medalla nueva o no: has ganado el
+            //   combate igual. Lo que solo pasa la primera vez es el toast de
+            //   la medalla.
+            net.pokereport.luna.ui.Aviso.titulo(jugador,
+                    Text.translatable("gimnasio.lunaeternal.titulo.victoria"),
+                    Text.translatable("gimnasio.lunaeternal.sub.victoria", g.lider()),
+                    net.minecraft.sound.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
+                    1.0f);
             if (nueva) {
                 // ⚠ El toast viaja como TEXTO YA COMPUESTO: así lo pide `Aviso`,
                 //   y por un motivo escrito ahí — si viajaran las piezas, el

@@ -248,12 +248,19 @@ public class GimnasioScreen extends Screen {
         y += 20;
 
         // Lo que dice. La clave depende del estado: ya la ganaste, te falta
-        // algo, o está listo para pelear.
+        // algo, está lleno, o está listo para pelear.
+        //
+        // ⚠⚠ «LLENO» TIENE FRASE PROPIA POR PERSONAJE, y es petición del
+        //    usuario: si las ocho salas están ocupadas, en vez de un «vuelve
+        //    luego» seco sale algo del personaje —Brock persiguiendo
+        //    enfermeras, Misty buscando a Ash para que le pague la bici—. Es el
+        //    único mensaje que un jugador va a leer entero, porque es el único
+        //    que le obliga a esperar.
         String clave = estado.yaGanada() ? "ya_ganada"
-                     : estado.motivo().isEmpty() ? "reto" : estado.motivo();
-        var frase = Text.translatable("gimnasio.lunaeternal.dice." + id + "."
-                + (clave.equals("reto") || clave.equals("ya_ganada")
-                   ? clave : "no_puedes"));
+                     : estado.motivo().isEmpty() ? "reto"
+                     : estado.motivo().equals("lleno") ? "lleno" : "no_puedes";
+        var frase = Text.translatable(
+                "gimnasio.lunaeternal.dice." + id + "." + clave);
         for (String l : partir(frase.getString(), PANT_W - 2 * MARGEN, 22)) {
             texto(ctx, Text.literal(l), PANT_X + MARGEN, y, 22, TINTA, false, 0);
             y += 30;

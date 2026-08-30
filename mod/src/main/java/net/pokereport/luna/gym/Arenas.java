@@ -305,6 +305,142 @@ public final class Arenas {
     }
 
     /**
+     * COMPRUEBA QUE LAS SIETE COPIAS ESTAN BIEN.
+     *
+     * <h2>Por que hace falta un comando y no basta con mirar</h2>
+     *
+     * Una ranura mal clonada <b>no da ningun error</b>: el jugador que le toque
+     * entra en una sala con media pared, o sin los bloques de posicion, y desde
+     * dentro parece que el gimnasio esta roto. Y solo le pasa a el, porque las
+     * otras seis estan bien.
+     *
+     * <p>Peor todavia: las copias se hacen <b>la primera vez que hacen falta</b>,
+     * asi que una ranura alta puede llevar semanas sin clonarse y estrenarse el
+     * dia que hay ocho personas retando a la vez.
+     *
+     * <h2>⚠⚠ QUE SE COMPRUEBA, Y POR QUE ESO</h2>
+     *
+     * <ol>
+     *   <li><b>Bloque a bloque contra el maestro</b>, solo lo que no es aire —
+     *       que es exactamente lo que {@code clonar} escribe. Un bloque distinto
+     *       es una copia que se hizo antes de un cambio.</li>
+     *   <li><b>Los cuatro bloques de posicion</b>. Sin los dos obligatorios el
+     *       combate se juega igual, con los Pokemon donde caigan, y se calla.</li>
+     * </ol>
+     *
+     * <h2>⚠⚠⚠ VA UNA RANURA POR VEZ, REPARTIDA EN VARIOS TICKS</h2>
+     *
+     * Siete ranuras son ~325.000 lecturas y hasta 250 chunks que cargar. Hacerlo
+     * de golpe congela el servidor varios segundos — {@code limpiarranuras} ya
+     * dejo el hilo 2,6 s atras con la tercera parte del trabajo. Repartido, cada
+     * ranura cuesta lo suyo y entre medias el servidor respira.
+     */
+    public static void comprobarRanuras(MinecraftServer servidor,
+                                        Gimnasio.Gimnasio_ g,
+                                        java.util.function.Consumer<String> decir) {
+        int[] m = medir(servidor, g);
+        if (m == null) {
+            decir.accept("§cNo hay nada construido en el maestro de §f"
+                    + g.id());
+            return;
+        }
+        decir.accept("§6Comprobando las " + (Gimnasio.RANURAS - 1)
+                + " ranuras de §f" + g.id()
+                + "§7 (sala de " + m[3] + "x" + m[4] + "x" + m[5]
+                + "). Va una por vez.");
+        siguiente(servidor, g, 1, m, decir);
+    }
+
+    /** Una ranura, y encola la siguiente. */
+    private static void siguiente(MinecraftServer servidor, Gimnasio.Gimnasio_ g,
+                                  int ranura, int[] m,
+                                  java.util.function.Consumer<String> decir) {
+        if (ranura >= Gimnasio.RANURAS) {
+            decir.accept("§aListo. Las ranuras que digan OK estan igual que "
+                    + "el maestro.");
+            return;
+        }
+        ServerWorld mundo = mundo(servidor);
+        if (mundo == null) {
+            return;
+        }
+        // ⚠ Se clona si no estaba: comprobar una ranura vacia y decir «faltan
+        //   46.000 bloques» seria verdad y no serviria de nada. Lo util es
+        //   dejarla hecha Y comprobada.
+        clonar(servidor, g, ranura);
+
+        BlockPos src = Gimnasio.maestro(g);
+        BlockPos dst = Gimnasio.origen(g, ranura);
+        int x0 = m[0], y0 = m[1], z0 = m[2], ancho = m[3], alto = m[4], fondo = m[5];
+        int distintos = 0, total = 0;
+        var a = new BlockPos.Mutable();
+        var b = new BlockPos.Mutable();
+        for (int dy = y0; dy < y0 + alto; dy++) {
+            for (int dz = z0; dz < z0 + fondo; dz++) {
+                for (int dx = x0; dx < x0 + ancho; dx++) {
+                    a.set(src.getX() + dx, src.getY() + dy, src.getZ() + dz);
+                    var esperado = mundo.getBlockState(a);
+                    if (esperado.isAir()) {
+                        continue;   // el aire no se copia
+                    }
+                    total++;
+                    b.set(dst.getX() + dx, dst.getY() + dy, dst.getZ() + dz);
+                    if (!mundo.getBlockState(b).equals(esperado)) {
+                        distintos++;
+                    }
+                }
+            }
+        }
+        // Los cuatro bloques de posicion, en la COPIA.
+        int puestos = 0, obligatorios = 0;
+        String[] ids = {"player_pokemon_position", "trainer_pokemon_position",
+                        "player_stand_position", "trainer_stand_position"};
+        for (int i = 0; i < ids.length; i++) {
+            var bloque = net.minecraft.registry.Registries.BLOCK.get(
+                    net.minecraft.util.Identifier.of(
+                            "cobblemonbattlepositions", ids[i]));
+            if (bloque == net.minecraft.block.Blocks.AIR) {
+                continue;
+            }
+            if (buscarEn(mundo, dst, m, bloque)) {
+                puestos++;
+                if (i < 2) {
+                    obligatorios++;
+                }
+            }
+        }
+        final int d = distintos, tt = total, pp = puestos, oo = obligatorios;
+        final int r = ranura;
+        decir.accept(String.format(
+            "  %sranura %d§7  %s  §8%d/%d bloques de posicion%s",
+            d == 0 && oo == 2 ? "§a" : "§c", r,
+            d == 0 ? "§aigual que el maestro"
+                   : "§c" + d + " de " + tt + " bloques DISTINTOS",
+            pp, ids.length,
+            oo < 2 ? "  §cFALTA UN OBLIGATORIO" : ""));
+
+        Programador.en(2, () -> siguiente(servidor, g, r + 1, m, decir));
+    }
+
+    /** ¿Está ese bloque dentro de la caja de una copia? */
+    private static boolean buscarEn(ServerWorld mundo, BlockPos origen, int[] m,
+                                    net.minecraft.block.Block bloque) {
+        var pos = new BlockPos.Mutable();
+        for (int dy = m[1]; dy < m[1] + m[4]; dy++) {
+            for (int dz = m[2]; dz < m[2] + m[5]; dz++) {
+                for (int dx = m[0]; dx < m[0] + m[3]; dx++) {
+                    pos.set(origen.getX() + dx, origen.getY() + dy,
+                            origen.getZ() + dz);
+                    if (mundo.getBlockState(pos).isOf(bloque)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * Lleva a un jugador a su ranura.
      *
      * <p>⚠ Se apunta dónde estaba ANTES de moverlo. Después ya está en la

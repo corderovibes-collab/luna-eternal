@@ -203,6 +203,36 @@ public final class LunaCommand {
                     //    bloque QUITADO del maestro se queda en la copia para
                     //    siempre y volver a clonar no lo arregla. Mientras se
                     //    construye hace falta; despues, casi nunca.
+                    // ⚠ Una ranura mal clonada NO da ningun error: le toca a
+                    //   una persona, entra en una sala con media pared o sin los
+                    //   bloques de posicion, y desde dentro parece que el
+                    //   gimnasio esta roto. Y las otras seis estan bien.
+                    .then(literal("comprobar")
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            var g = net.pokereport.luna.gym.Gimnasio.de(
+                                    StringArgumentType.getString(ctx, "cual"));
+                            if (g == null) {
+                                s.sendError(Text.literal("§cNo existe"));
+                                return 0;
+                            }
+                            net.pokereport.luna.gym.Arenas.comprobarRanuras(
+                                s.getServer(), g,
+                                linea -> {
+                                    // ⚠ El informe llega repartido en varios
+                                    //   ticks, asi que quien lo pidio puede
+                                    //   haberse ido. Al log siempre; al jugador
+                                    //   solo si sigue ahi.
+                                    LunaEternal.LOG.info(linea.replace("\u00a7", "&"));
+                                    try {
+                                        s.sendFeedback(() -> Text.literal(linea),
+                                                false);
+                                    } catch (Exception ignorado) {
+                                        // se fue: el log ya lo tiene
+                                    }
+                                });
+                            return 1;
+                        }))
                     .then(literal("limpiarranuras")
                         .executes(ctx -> {
                             var s = ctx.getSource();

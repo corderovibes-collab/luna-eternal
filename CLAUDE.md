@@ -903,6 +903,18 @@ Decorativos   POKEMON QUIETOS, Y SON DIEZ COSAS QUE APAGAR (2026-08-26/27)
                   Minecraft: `&& !fuente.isSourceCreativePlayer()`. Y aqui TODOS
                   los que colocan son operadores en creativo. Hoy tambien se
                   corta con ServerLivingEntityEvents.ALLOW_DAMAGE
+                  ⚠⚠⚠ Y ESO SIGNIFICA QUE `/kill` TAMPOCO FUNCIONA CON ELLOS.
+                     Aqui ponia que si, y era FALSO: el evento corta el daño
+                     ANTES de que Minecraft decida nada, asi que corta el de
+                     `/kill` y el del vacio igual que el de una espada. La
+                     consola dice «Killed 3 entities» y no muere ninguno
+                     LA UNICA FORMA DE QUITARLOS ES `discard()`, o sea NUESTROS
+                     comandos: `/luna decorar quitar [radio]`, `/luna paradas
+                     quitar`, `/luna gimnasio <cual> limpiarranuras` y
+                     `/luna gimnasio ciudadela quitar`
+                     ⚠ se descubrio intentando limpiar tres Brocks apilados, y
+                       el sintoma fue el peor posible: el comando DICE que los
+                       ha matado
               ⚠⚠ `uncatchable` NO IMPIDE EL COMBATE: sin `UNBATTLEABLE`, el
                  Miraidon de una parada seria el jefe final del servidor
               ⚠⚠ LA POKEDEX SON DOS EVENTOS, no uno: POKEMON_SEEN («lo he visto»)

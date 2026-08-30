@@ -386,6 +386,25 @@ public final class LunaCommand {
                             com.mojang.brigadier.arguments.StringArgumentType
                                     .getString(ctx, "id")))))
 
+            // ⚠ Una medalla se gana UNA VEZ por cuenta --lo dice la clave
+            //   primaria de `gym_badge`-- y eso es lo correcto en el juego y lo
+            //   que estorba al probarlo. Mismo motivo que `reiniciarinicial`.
+            .then(literal("reiniciarmedalla")
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(argument("cual", StringArgumentType.word())
+                    .suggests((c, b) -> {
+                        for (var g : net.pokereport.luna.gym.Gimnasio.TODOS) {
+                            b.suggest(g.id());
+                        }
+                        return b.buildFuture();
+                    })
+                    .executes(ctx -> reiniciarMedalla(ctx, null))
+                    .then(argument("jugador",
+                            net.minecraft.command.argument.EntityArgumentType.player())
+                        .executes(ctx -> reiniciarMedalla(ctx,
+                                net.minecraft.command.argument.EntityArgumentType
+                                        .getPlayer(ctx, "jugador"))))))
+
             .then(literal("reiniciarinicial")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> reiniciarInicial(ctx.getSource())))
@@ -1207,5 +1226,52 @@ public final class LunaCommand {
             }
         }
         return null;
+    }
+
+    /**
+     * Quita una medalla para poder volver a retar al gimnasio.
+     *
+     * <p>⚠ Sin jugador, se la quita a quien ejecuta. Desde consola hay que
+     * decir a quién: ahí no hay «yo», y fallar con un mensaje claro es mejor
+     * que no hacer nada.
+     *
+     * <p>⚠⚠ Y REENVIA LA FICHA. La medalla ya no está en la base ni en la
+     * caché, pero el PokePad dibuja lo que le mandaron la última vez: sin el
+     * reenvío seguiría enseñándola encendida hasta reabrirlo. Es la lección del
+     * 23-ago, la misma que aplica al ganarla.
+     */
+    private static int reiniciarMedalla(
+            com.mojang.brigadier.context.CommandContext<ServerCommandSource> ctx,
+            ServerPlayerEntity otro)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var s = ctx.getSource();
+        var g = net.pokereport.luna.gym.Gimnasio.de(
+                StringArgumentType.getString(ctx, "cual"));
+        if (g == null) {
+            s.sendError(Text.literal("\u00a7cNo existe ese gimnasio. "
+                    + "Usa \u00a7f/luna gimnasio\u00a7c para verlos."));
+            return 0;
+        }
+        ServerPlayerEntity quien = otro != null ? otro : s.getPlayer();
+        if (quien == null) {
+            s.sendError(Text.literal("\u00a7cDesde consola hay que decir a quien: "
+                    + "\u00a7f/luna reiniciarmedalla " + g.id() + " <jugador>"));
+            return 0;
+        }
+        var svc = LunaEternal.medallas();
+        if (svc == null) {
+            s.sendError(Text.literal("\u00a7cEl sistema de medallas no esta listo."));
+            return 0;
+        }
+        svc.quitar(quien, g, habia -> {
+            net.pokereport.luna.net.Red.enviarSaldo(quien);
+            s.sendFeedback(() -> Text.literal(habia
+                ? "\u00a7aMedalla de \u00a7f" + g.lider() + "\u00a7a retirada a "
+                  + "\u00a7f" + quien.getName().getString()
+                  + "\u00a77. Ya puede volver a retarle."
+                : "\u00a7e" + quien.getName().getString() + " no tenia la medalla "
+                  + "de \u00a7f" + g.lider()), false);
+        });
+        return 1;
     }
 }

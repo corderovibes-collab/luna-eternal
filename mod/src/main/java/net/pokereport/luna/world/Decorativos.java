@@ -108,8 +108,13 @@ public final class Decorativos {
      * aplicaba a quien lo probó.
      *
      * <p>Este evento se dispara <b>antes</b> de decidir nada, así que corta
-     * también el creativo. Lo que sigue funcionando es {@code /kill}, y está
-     * bien: tiene que haber una forma de quitarlos si algo va mal.
+     * también el creativo.
+     *
+     * <p>⚠⚠⚠ Y por eso hay que dejar pasar {@code BYPASSES_INVULNERABILITY} a
+     * mano: sin esa excepción cortaba también {@code /kill} y el vacío, y un
+     * decorativo mal puesto se volvía <b>imposible de quitar</b>. Aquí ponía que
+     * {@code /kill} seguía funcionando y era falso — la consola contesta
+     * «Killed N entities» y no muere ninguno.
      */
     /** ¿Este Pokémon es de decoración? */
     public static boolean esDecorativo(com.cobblemon.mod.common.pokemon.Pokemon p) {
@@ -206,9 +211,29 @@ public final class Decorativos {
                     // ⚠ Se mira LA ETIQUETA y no si es un PokemonEntity: así
                     //   protege a cualquier decorativo, sea de la especie que
                     //   sea, y no protege a los Pokémon de verdad.
-                    return !entidad.getCommandTags().contains(MARCA);
+                    if (!entidad.getCommandTags().contains(MARCA)) {
+                        return true;
+                    }
+                    // ⚠⚠⚠ PERO `/kill` TIENE QUE SEGUIR FUNCIONANDO, Y NO LO
+                    //    HACIA. Aquí se cortaba TODO el daño, y eso incluye el
+                    //    de `/kill` y el del vacío: un decorativo mal puesto se
+                    //    volvía IMPOSIBLE de quitar salvo con nuestros propios
+                    //    comandos. Y el síntoma era el peor posible — la consola
+                    //    contesta «Killed 3 entities» y no muere ninguno.
+                    //
+                    //    Se descubrió intentando limpiar tres Brocks apilados en
+                    //    una arena, y la documentación decía desde el principio
+                    //    que `/kill` seguía funcionando. No era verdad.
+                    //
+                    //    ⚠ Esta etiqueta es la que el propio Minecraft usa para
+                    //      «esto atraviesa la invulnerabilidad»: el vacío,
+                    //      `/kill` y poco más. Un jugador en creativo NO está
+                    //      ahí, así que la protección que importa se mantiene.
+                    return fuente.isIn(net.minecraft.registry.tag.DamageTypeTags
+                            .BYPASSES_INVULNERABILITY);
                 });
-        LunaEternal.LOG.info("Decorativos: protegidos del daño, creativo incluido");
+        LunaEternal.LOG.info("Decorativos: protegidos del daño, creativo incluido "
+                + "(pero /kill sigue funcionando)");
     }
 
     /**

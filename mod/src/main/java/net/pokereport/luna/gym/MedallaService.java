@@ -194,6 +194,50 @@ public final class MedallaService {
         });
     }
 
+    /**
+     * QUITA UNA MEDALLA. <b>Va por el executor de E/S.</b>
+     *
+     * <h2>⚠ Existe para PROBAR, y por eso es de nivel 4</h2>
+     *
+     * Sin esto, un gimnasio solo se puede pelear <b>una vez por cuenta</b> —
+     * que es justo lo que se quiere en el juego y justo lo que estorba al
+     * probarlo. Mismo motivo que {@code /luna reiniciarinicial}.
+     *
+     * <p>⚠⚠ Y borra en <b>los dos sitios</b>, la base primero. Si solo se
+     * borrara la fila, la caché seguiría diciendo que la tiene y el diálogo
+     * seguiría contestando «ya la tienes» hasta que el jugador volviera a
+     * entrar — el fallo mudo de siempre, con la mitad del estado vieja.
+     *
+     * @param despues se le pasa {@code true} si de verdad había una que quitar
+     */
+    public void quitar(ServerPlayerEntity jugador, Gimnasio.Gimnasio_ g,
+                       java.util.function.Consumer<Boolean> despues) {
+        UUID uuid = jugador.getUuid();
+        String nombre = jugador.getName().getString();
+        var servidor = jugador.getServer();
+        LunaEternal.submit(() -> {
+            boolean habia = false;
+            try {
+                long id = LunaEternal.players().resolve(uuid, nombre);
+                try (Connection c = db.connection();
+                     PreparedStatement ps = c.prepareStatement(
+                         "DELETE FROM gym_badge WHERE player_id = ? AND gym = ?")) {
+                    ps.setLong(1, id);
+                    ps.setString(2, g.id());
+                    habia = ps.executeUpdate() > 0;
+                }
+                CACHE.computeIfPresent(uuid, (k, v) -> v & ~(1 << g.sala()));
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo quitar la medalla {} a {}",
+                        g.id(), nombre, e);
+            }
+            final boolean fue = habia;
+            if (despues != null && servidor != null) {
+                servidor.execute(() -> despues.accept(fue));
+            }
+        });
+    }
+
     /** Cuánta gente tiene cada medalla. Para el informe de administración. */
     public Map<String, Integer> reparto() throws SQLException {
         var salida = new java.util.LinkedHashMap<String, Integer>();

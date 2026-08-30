@@ -271,8 +271,20 @@ public final class Arenas {
         var aire = Blocks.AIR.getDefaultState();
         var pos = new BlockPos.Mutable();
         int quitados = 0;
+        int lideres = 0;
         for (int ranura = 1; ranura < Gimnasio.RANURAS; ranura++) {
             BlockPos dst = Gimnasio.origen(g, ranura);
+            // ⚠⚠⚠ Y SE LLEVA TAMBIEN A LOS LIDERES, porque NO HAY OTRA FORMA DE
+            //    QUITARLOS. `/kill` NO funciona con ellos: llevan la etiqueta de
+            //    los decorativos y nuestra propia proteccion
+            //    (ServerLivingEntityEvents.ALLOW_DAMAGE) corta el daño ANTES de
+            //    que Minecraft decida nada -- incluido el daño de `/kill` y el
+            //    del vacio. La consola dice «Killed 3 entities» y no muere
+            //    ninguno.
+            //    ⚠ Esto contradice lo que decia CLAUDE.md («lo que sigue
+            //      funcionando es /kill»). Era falso, y se descubrio intentando
+            //      limpiar tres Brocks apilados.
+            lideres += Lideres.quitarDeRanura(mundo, g, ranura);
             for (int dy = y0; dy < y0 + alto; dy++) {
                 for (int dz = z0; dz < z0 + fondo; dz++) {
                     for (int dx = x0; dx < x0 + ancho; dx++) {
@@ -287,8 +299,8 @@ public final class Arenas {
             }
         }
         Ranuras.olvidarConstruidas();
-        LunaEternal.LOG.info("Gimnasio {}: {} bloques quitados de las ranuras",
-                g.id(), quitados);
+        LunaEternal.LOG.info("Gimnasio {}: {} bloques y {} lideres quitados de "
+                + "las ranuras", g.id(), quitados, lideres);
         return quitados;
     }
 

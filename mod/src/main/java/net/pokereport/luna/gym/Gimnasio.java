@@ -111,19 +111,49 @@ public final class Gimnasio {
     public static final int SUELO = 64;
 
     /**
-     * Los ocho de Kanto, en el orden del juego.
+     * LOS DIECISEIS, en el orden del juego: Kanto y despues Johto.
      *
-     * <p>⚠⚠ Los identificadores de entrenador <b>no se inventan</b>: salen del
-     * datapack que ya está instalado ({@code data/rctmod/trainers/}). Uno mal
-     * escrito <b>no da error al arrancar</b>: da un gimnasio en el que no
-     * aparece nadie, y eso se descubre con el jugador dentro.
+     * <h2>⚠⚠ LOS IDENTIFICADORES DE ENTRENADOR NO SE INVENTAN</h2>
+     *
+     * Salen del datapack que ya esta instalado ({@code data/rctmod/trainers/}),
+     * leidos uno a uno. Uno mal escrito <b>no da error al arrancar</b>: da un
+     * gimnasio en el que no aparece nadie, y eso se descubre con el jugador
+     * dentro. Ya paso: {@code kanto_lt_surge} no existe — es
+     * {@code kanto_ltsurge}, sin guion. Lo caza el autotest.
+     *
+     * <h2>⚠⚠⚠ Y LOS DE JOHTO TIENEN NOMBRE ITALIANO EN EL DATAPACK</h2>
+     *
+     * No hay ningun {@code johto_falkner}. Se identificaron <b>por su equipo</b>
+     * y se confirmaron por el nivel, que sube en orden de gimnasio (20 → 70):
+     *
+     * <pre>
+     *   valerio    hoothoot, pidgeotto, corvisquire  volador  → Falkner
+     *   raffaello  butterfree, beedrill, scyther     bicho    → Bugsy
+     *   chiara     miltank, clefairy, lickitung      normal   → Whitney
+     *   angelo     gengar, mismagius, dusknoir       fantasma → Morty
+     *   furio      hariyama, primeape, poliwrath     lucha    → Chuck
+     *   jasmine    steelix, metagross, skarmory      acero    → Jasmine
+     *   alfredo    mamoswine, avalugg, dewgong       hielo    → Pryce
+     *   sandra     dragonite, kingdra, salamence     dragon   → Clair
+     * </pre>
+     *
+     * <p>⚠ Adivinar por el nombre habria dado ocho gimnasios vacios sin un solo
+     * error en el log.
+     *
+     * <h2>⚠ NINGUNO DE JOHTO ESTA CONSTRUIDO TODAVIA</h2>
+     *
+     * Estan declarados a proposito: la pantalla los enseña como «proximamente»
+     * en vez de esconderlos, porque <b>saber lo que viene es lo que hace que
+     * alguien vaya a por la siguiente medalla</b>. Y {@link #construido} es lo
+     * que impide entrar a una sala que no existe.
      */
     public static final List<Gimnasio_> TODOS = Arrays.asList(
         new Gimnasio_("brock",    "kanto_brock",    0, 0,
                       "Brock",    "Roca",     "kanto_boulder"),
         new Gimnasio_("misty",    "kanto_misty",    1, 1,
                       "Misty",    "Cascada",  "kanto_cascade"),
-        new Gimnasio_("surge",    "kanto_lt_surge", 2, 2,
+        // ⚠ `kanto_ltsurge`, SIN guion. `kanto_lt_surge` no existe.
+        new Gimnasio_("surge",    "kanto_ltsurge",  2, 2,
                       "Teniente Surge", "Trueno", "kanto_thunder"),
         new Gimnasio_("erika",    "kanto_erika",    3, 3,
                       "Erika",    "Arcoíris", "kanto_rainbow"),
@@ -134,31 +164,41 @@ public final class Gimnasio {
         new Gimnasio_("blaine",   "kanto_blaine",   6, 6,
                       "Blaine",   "Volcán",   "kanto_volcano"),
         new Gimnasio_("giovanni", "kanto_giovanni", 7, 7,
-                      "Giovanni", "Tierra",   "kanto_earth"));
+                      "Giovanni", "Tierra",   "kanto_earth"),
+
+        new Gimnasio_("falkner",  "johto_valerio",   8,  8,
+                      "Falkner",  "Céfiro",   "johto_zephyr"),
+        new Gimnasio_("bugsy",    "johto_raffaello", 9,  9,
+                      "Bugsy",    "Colmena",  "johto_hive"),
+        new Gimnasio_("whitney",  "johto_chiara",   10, 10,
+                      "Whitney",  "Llanura",  "johto_plain"),
+        new Gimnasio_("morty",    "johto_angelo",   11, 11,
+                      "Morty",    "Niebla",   "johto_fog"),
+        new Gimnasio_("chuck",    "johto_furio",    12, 12,
+                      "Chuck",    "Tormenta", "johto_storm"),
+        new Gimnasio_("jasmine",  "johto_jasmine",  13, 13,
+                      "Jasmine",  "Mineral",  "johto_mineral"),
+        new Gimnasio_("pryce",    "johto_alfredo",  14, 14,
+                      "Pryce",    "Glaciar",  "johto_glacier"),
+        new Gimnasio_("clair",    "johto_sandra",   15, 15,
+                      "Clair",    "Alzamiento", "johto_rising"));
 
     /**
-     * LAS OCHO DE JOHTO, que todavía no tienen gimnasio construido.
+     * Las dieciseis insignias en orden de medalla.
      *
-     * <p>⚠ Están aquí y no en la pantalla por lo mismo que las de Kanto: para
-     * que exista <b>una sola lista</b>. El día que se declare el gimnasio de
-     * Falkner, su nombre sale de aquí y entra en {@link #TODOS}.
-     */
-    public static final List<String> INSIGNIAS_JOHTO = Arrays.asList(
-        "johto_zephyr", "johto_hive", "johto_plain", "johto_fog",
-        "johto_storm", "johto_mineral", "johto_glacier", "johto_rising");
-
-    /**
-     * Las dieciséis insignias en orden de medalla: Kanto y después Johto.
+     * <p>⚠⚠ El indice <b>es</b> el bit de la mascara, porque el bit es
+     * {@code sala()} y las salas van 0..15 en este mismo orden. Es lo que
+     * dibuja el PokePad.
      *
-     * <p>⚠⚠ El índice <b>es</b> el bit de la máscara, porque el de Kanto es
-     * {@code sala()} y Johto va detrás. Es lo que dibuja el PokePad.
+     * <p>⚠ Antes habia una segunda lista suelta para Johto, que es justo lo que
+     * este fichero avisa de no hacer: dos listas que nada obliga a coincidir.
+     * Hoy sale de {@link #TODOS}.
      */
     public static List<String> insignias() {
-        var salida = new java.util.ArrayList<String>(16);
+        var salida = new java.util.ArrayList<String>(TODOS.size());
         for (Gimnasio_ g : TODOS) {
             salida.add(g.insignia());
         }
-        salida.addAll(INSIGNIAS_JOHTO);
         return salida;
     }
 
@@ -302,6 +342,22 @@ public final class Gimnasio {
     /** ¿Está medida la tarima de su líder, o se va a usar el respaldo? */
     public static boolean tieneTarima(Gimnasio_ g) {
         return LIDERES.containsKey(g.id());
+    }
+
+    /**
+     * ¿ESTA CONSTRUIDO SU GIMNASIO?
+     *
+     * <p>Lo dice {@link #ENTRADAS}: si nadie ha medido dónde aparece el jugador,
+     * es que la sala no existe. <b>No hay una bandera aparte</b>, y es a
+     * propósito — una bandera es un segundo sitio que decir la verdad, y el día
+     * que se contradiga con las coordenadas, el jugador entra a una sala vacía.
+     *
+     * <p>⚠ Los ocho de Johto están declarados y no construidos. Se enseñan como
+     * «próximamente» en vez de esconderse: saber lo que viene es lo que hace que
+     * alguien vaya a por la siguiente medalla.
+     */
+    public static boolean construido(Gimnasio_ g) {
+        return ENTRADAS.containsKey(g.id());
     }
 
     /** Dónde aparece el jugador al entrar en una ranura. */

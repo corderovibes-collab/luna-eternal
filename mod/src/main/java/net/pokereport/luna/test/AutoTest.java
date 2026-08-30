@@ -1650,8 +1650,8 @@ public final class AutoTest {
      * si fuera una copia.
      */
     private void testGimnasios() {
-        var todos = net.pokereport.luna.gym.Gimnasio.TODOS;
-        check("hay gimnasios declarados", !todos.isEmpty());
+        var todos_ = net.pokereport.luna.gym.Gimnasio.TODOS;
+        check("hay gimnasios declarados", !todos_.isEmpty());
 
         // ⚠⚠⚠ ESTA COMPROBACION ESTABA MAL Y NO VIGILABA NADA. Comparaba el
         //    fondo de las ranuras (eje Z) contra la separacion de los gimnasios
@@ -1672,7 +1672,7 @@ public final class AutoTest {
         var vistos = new java.util.HashSet<String>();
         var salas = new java.util.HashSet<Integer>();
         boolean ok = true;
-        for (var g : todos) {
+        for (var g : todos_) {
             if (!g.id().matches("[a-z0-9_]+") || !vistos.add(g.id())
                     || !salas.add(g.sala())) {
                 ok = false;
@@ -1682,6 +1682,32 @@ public final class AutoTest {
         }
         check("cada gimnasio tiene id unico, valido y su propia sala", ok);
 
+        // ⚠⚠⚠ QUE EL ENTRENADOR EXISTA DE VERDAD EN EL DATAPACK. Un id mal
+        //    escrito NO da error al arrancar: da un gimnasio en el que no
+        //    aparece nadie, y eso se descubre con el jugador dentro.
+        //    Ya paso: `kanto_lt_surge` no existe --es `kanto_ltsurge`-- y
+        //    llevaba dias escrito. Esta comprobacion lo habria cazado el primer
+        //    dia, y por eso pregunta a rctmod en vez de comparar contra una
+        //    lista nuestra: una lista nuestra repetiria el mismo error.
+        if (net.pokereport.luna.LunaEternal.hayEntrenadores()) {
+            boolean todos = true;
+            for (var g : todos_) {
+                if (!net.pokereport.luna.gym.Lideres.idValido(g)) {
+                    todos = false;
+                    LunaEternal.LOG.error("Gimnasio {}: el entrenador '{}' NO "
+                            + "existe en el datapack", g.id(), g.entrenador());
+                }
+            }
+            check("el entrenador de cada gimnasio existe en el datapack", todos);
+        }
+
+        // ⚠ Las insignias son 16 y ninguna se repite: el indice ES el bit de la
+        //   mascara, asi que una repetida encenderia dos medallas a la vez.
+        var ins = net.pokereport.luna.gym.Gimnasio.insignias();
+        check("hay una insignia por gimnasio", ins.size() == todos_.size());
+        check("y ninguna se repite",
+              new java.util.HashSet<>(ins).size() == ins.size());
+
         // ⚠ El identificador llega del cliente: uno desconocido no resuelve.
         check("un gimnasio desconocido no resuelve",
               net.pokereport.luna.gym.Gimnasio.de("no_existe") == null);
@@ -1689,7 +1715,7 @@ public final class AutoTest {
               net.pokereport.luna.gym.Gimnasio.de(null) == null);
 
         // ---- las ranuras -----------------------------------------------
-        var g0 = todos.get(0);
+        var g0 = todos_.get(0);
         net.pokereport.luna.gym.Ranuras.olvidarTodo();
 
         // ⚠⚠ LA RANURA 0 NUNCA SE ENTREGA: es el maestro, donde se pega el
@@ -1730,9 +1756,9 @@ public final class AutoTest {
 
         // ⚠ Cada gimnasio tiene sus propias ranuras: llenar Brock no puede
         //   dejar sin sitio a Misty.
-        if (todos.size() > 1) {
+        if (todos_.size() > 1) {
             check("las ranuras de un gimnasio no afectan a otro",
-                  net.pokereport.luna.gym.Ranuras.libres(todos.get(1))
+                  net.pokereport.luna.gym.Ranuras.libres(todos_.get(1))
                       == net.pokereport.luna.gym.Gimnasio.RANURAS - 1);
         }
         net.pokereport.luna.gym.Ranuras.olvidarTodo();
@@ -1745,7 +1771,7 @@ public final class AutoTest {
         //    paso de 128 deja al jugador de la ranura 1 apareciendo DENTRO DE LA
         //    RANURA 2 -- en la sala de otro, o en su pared. No da ningun error.
         boolean dentroDeSuSala = true;
-        for (var g : todos) {
+        for (var g : todos_) {
             var e = net.pokereport.luna.gym.Gimnasio.entrada(g, 0);
             var l = net.pokereport.luna.gym.Gimnasio.lider(g, 0);
             int paso = net.pokereport.luna.gym.Gimnasio.PASO_RANURA;
@@ -1761,7 +1787,7 @@ public final class AutoTest {
         // ⚠ Y el lider no puede aparecer ENCIMA del jugador: si coincidieran, el
         //   jugador entraria empotrado contra el, y hablar con el seria imposible.
         boolean separados = true;
-        for (var g : todos) {
+        for (var g : todos_) {
             if (!net.pokereport.luna.gym.Gimnasio.tieneTarima(g)) {
                 continue;   // sin medir: usa el respaldo, que ya va a 20 de lejos
             }
@@ -1779,8 +1805,8 @@ public final class AutoTest {
         //    las posiciones como coordenadas absolutas --que parece mas simple--
         //    todos los retadores acabarian en la ranura 0, la del maestro, y
         //    combatirian unos encima de otros sobre el original.
-        var e0 = net.pokereport.luna.gym.Gimnasio.entrada(todos.get(0), 0);
-        var e3 = net.pokereport.luna.gym.Gimnasio.entrada(todos.get(0), 3);
+        var e0 = net.pokereport.luna.gym.Gimnasio.entrada(todos_.get(0), 0);
+        var e3 = net.pokereport.luna.gym.Gimnasio.entrada(todos_.get(0), 3);
         check("la entrada se desplaza con la ranura",
               Math.abs((e3.z - e0.z)
                        - 3.0 * net.pokereport.luna.gym.Gimnasio.PASO_RANURA) < 0.001);
@@ -1792,7 +1818,7 @@ public final class AutoTest {
         //    coincidir, ganar a Brock encenderia la de Misty SIN DAR NINGUN
         //    ERROR: verias una medalla que no tienes y no verias la que si.
         boolean bits = true;
-        for (var g : todos) {
+        for (var g : todos_) {
             if (net.pokereport.luna.gym.Gimnasio.bitMedalla(g) != (1 << g.sala())) {
                 bits = false;
             }
@@ -1808,7 +1834,7 @@ public final class AutoTest {
         check("ninguna insignia se repite",
               new java.util.HashSet<>(insignias).size() == insignias.size());
         boolean enOrden = true;
-        for (var g : todos) {
+        for (var g : todos_) {
             if (!insignias.get(g.sala()).equals(g.insignia())) {
                 enOrden = false;
                 LunaEternal.LOG.error("Gimnasio {}: su insignia {} no esta en el "
@@ -1823,16 +1849,16 @@ public final class AutoTest {
         check("sin cache, cero medallas",
               net.pokereport.luna.gym.MedallaService.cuantas(quien) == 0);
         check("y no tiene la de Brock",
-              !net.pokereport.luna.gym.MedallaService.tiene(quien, todos.get(0)));
+              !net.pokereport.luna.gym.MedallaService.tiene(quien, todos_.get(0)));
         net.pokereport.luna.gym.MedallaService.ponerEnCache(quien,
-              net.pokereport.luna.gym.Gimnasio.bitMedalla(todos.get(0))
-            | net.pokereport.luna.gym.Gimnasio.bitMedalla(todos.get(2)));
+              net.pokereport.luna.gym.Gimnasio.bitMedalla(todos_.get(0))
+            | net.pokereport.luna.gym.Gimnasio.bitMedalla(todos_.get(2)));
         check("dos medallas se cuentan como dos",
               net.pokereport.luna.gym.MedallaService.cuantas(quien) == 2);
         check("tiene la de Brock",
-              net.pokereport.luna.gym.MedallaService.tiene(quien, todos.get(0)));
+              net.pokereport.luna.gym.MedallaService.tiene(quien, todos_.get(0)));
         check("y NO la de Misty, que esta en medio de las dos",
-              !net.pokereport.luna.gym.MedallaService.tiene(quien, todos.get(1)));
+              !net.pokereport.luna.gym.MedallaService.tiene(quien, todos_.get(1)));
         net.pokereport.luna.gym.MedallaService.olvidar(quien);
         check("olvidar deja la cache a cero",
               net.pokereport.luna.gym.MedallaService.cuantas(quien) == 0);
@@ -1842,11 +1868,11 @@ public final class AutoTest {
         //    el-- y no daria ningun error: se quedaria gris para siempre. Es la
         //    misma familia que la novena parada de Viajes.
         boolean alcanzables = true;
-        for (var g : todos) {
-            if (g.medallas() < 0 || g.medallas() >= todos.size()) {
+        for (var g : todos_) {
+            if (g.medallas() < 0 || g.medallas() >= todos_.size()) {
                 alcanzables = false;
                 LunaEternal.LOG.error("Gimnasio {}: pide {} medallas y solo hay {}",
-                        g.id(), g.medallas(), todos.size());
+                        g.id(), g.medallas(), todos_.size());
             }
         }
         check("ningun gimnasio pide mas medallas de las que se pueden tener",
@@ -1855,7 +1881,7 @@ public final class AutoTest {
         // ⚠ Y el orden tiene que ser un camino: el gimnasio de la sala N no puede
         //   pedir mas medallas que N, o no habria forma de llegar hasta el.
         boolean camino = true;
-        for (var g : todos) {
+        for (var g : todos_) {
             if (g.medallas() > g.sala()) {
                 camino = false;
                 LunaEternal.LOG.error("Gimnasio {} (sala {}) pide {} medallas: "
@@ -1887,7 +1913,7 @@ public final class AutoTest {
         //    ciudadela. Un gimnasio construido al que no se puede llegar no da
         //    ningun error -- simplemente no existe para el jugador.
         check("Brock tiene sitio en la ciudadela",
-              net.pokereport.luna.gym.Gimnasio.recepcion(todos.get(0)) != null);
+              net.pokereport.luna.gym.Gimnasio.recepcion(todos_.get(0)) != null);
 
         // ---- el programador de la vuelta --------------------------------
         //

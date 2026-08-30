@@ -68,6 +68,7 @@ public final class Apps {
             case "mochila" -> abrirMochila();
             case "explorar" -> abrirExplorar();
             case "warps" -> abrirViajes();
+            case "gyms" -> abrirGimnasios();
             case "kits" -> abrirKits();
             default -> false;
         };
@@ -81,6 +82,18 @@ public final class Apps {
      * volver -- si volviera creando un PokePadScreen nuevo, se perderia en que
      * pagina de aplicaciones estaba el jugador.
      */
+    /**
+     * La liga: los dieciseis gimnasios.
+     *
+     * <p>⚠ No pide nada al servidor. La lista es fija y las medallas ya viajan
+     * en la ficha del PokePad, asi que la pantalla se dibuja con lo que hay.
+     */
+    private static boolean abrirGimnasios() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new GimnasiosScreen(cliente.currentScreen));
+        return true;
+    }
+
     /** El mercado. Misma regla que las demas: NUESTRA pantalla, sin reflexion. */
     private static boolean abrirMercado() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();

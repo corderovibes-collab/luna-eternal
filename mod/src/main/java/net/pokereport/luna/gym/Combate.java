@@ -164,6 +164,13 @@ public final class Combate {
         if (MedallaService.tiene(uuid, g)) {
             return new Motivo("ya_ganada", 0);
         }
+        // ⚠⚠ LO PRIMERO: ¿existe la sala? Los ocho de Johto estan declarados y
+        //    NO construidos. Sin esta comprobacion, aceptar el reto llevaria al
+        //    jugador a una plataforma de 9x9 flotando en el vacio, con un lider
+        //    puesto donde cayera -- y de esa dimension no se sale andando.
+        if (!Gimnasio.construido(g)) {
+            return new Motivo("sin_construir", 0);
+        }
         int tengo = MedallaService.cuantas(uuid);
         if (tengo < g.medallas()) {
             return new Motivo("faltan", g.medallas() - tengo);

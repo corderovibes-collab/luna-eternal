@@ -50,7 +50,10 @@ public record App(String id, boolean abierta) {
         // ⚠ Se enciende con su pantalla (2026-08-26). Es la unica del Pad
         //   con CONTENEDOR: arrastrar objetos lo hace Minecraft, no nosotros.
         new App("mochila",    true),
-        new App("gyms",       false),
+        // ⚠ Se enciende con su pantalla: los DIECISEIS gimnasios, ocho por
+        //   region. La logica --medallas, requisitos-- llevaba escrita desde
+        //   que existe `Gimnasio`; lo unico que faltaba era la puerta.
+        new App("gyms",       true),
         // ⚠ Se enciende con su pantalla (2026-08-27): los dos mundos.
         new App("explorar",   true),
         // ⚠ LA DECIMOSEXTA, y por eso cae en la PAGINA 2. No hubo que

@@ -404,8 +404,9 @@ public final class Arenas {
                                   int ranura, int[] m,
                                   java.util.function.Consumer<String> decir) {
         if (ranura >= Gimnasio.RANURAS) {
-            decir.accept("§aListo. Las ranuras que digan OK estan igual que "
-                    + "el maestro.");
+            decir.accept("§7Listo. Una ranura con bloques que §eSOBRAN§7 se "
+                    + "arregla con §f/luna gimnasio <cual> limpiarranuras§7: "
+                    + "clonar no borra, solo escribe.");
             return;
         }
         ServerWorld mundo = mundo(servidor);
@@ -420,19 +421,33 @@ public final class Arenas {
         BlockPos src = Gimnasio.maestro(g);
         BlockPos dst = Gimnasio.origen(g, ranura);
         int x0 = m[0], y0 = m[1], z0 = m[2], ancho = m[3], alto = m[4], fondo = m[5];
-        int distintos = 0, total = 0;
+        int distintos = 0, total = 0, sobran = 0;
         var a = new BlockPos.Mutable();
         var b = new BlockPos.Mutable();
         for (int dy = y0; dy < y0 + alto; dy++) {
             for (int dz = z0; dz < z0 + fondo; dz++) {
                 for (int dx = x0; dx < x0 + ancho; dx++) {
                     a.set(src.getX() + dx, src.getY() + dy, src.getZ() + dz);
+                    b.set(dst.getX() + dx, dst.getY() + dy, dst.getZ() + dz);
                     var esperado = mundo.getBlockState(a);
                     if (esperado.isAir()) {
-                        continue;   // el aire no se copia
+                        // ⚠⚠⚠ EL PUNTO CIEGO QUE ESTO TENIA, Y ES EL QUE MAS
+                        //    IMPORTA: `clonar` NO COPIA EL AIRE, asi que un
+                        //    bloque QUITADO del maestro se queda en la copia
+                        //    PARA SIEMPRE. Comparar solo lo que el maestro tiene
+                        //    no lo ve nunca -- la copia pasaba como «igual».
+                        //
+                        //    Paso de verdad con los bloques de posicion: se
+                        //    movieron de sitio en el maestro y las copias
+                        //    acabaron con DOS, el viejo y el nuevo. Y dos
+                        //    marcadores del mismo tipo es que el mod elige el
+                        //    mas cercano, que puede no ser el que quieres.
+                        if (!mundo.getBlockState(b).isAir()) {
+                            sobran++;
+                        }
+                        continue;
                     }
                     total++;
-                    b.set(dst.getX() + dx, dst.getY() + dy, dst.getZ() + dz);
                     if (!mundo.getBlockState(b).equals(esperado)) {
                         distintos++;
                     }
@@ -458,12 +473,15 @@ public final class Arenas {
             }
         }
         final int d = distintos, tt = total, pp = puestos, oo = obligatorios;
+        final int so = sobran;
         final int r = ranura;
+        boolean bien = d == 0 && so == 0 && oo == 2;
         decir.accept(String.format(
-            "  %sranura %d§7  %s  §8%d/%d bloques de posicion%s",
-            d == 0 && oo == 2 ? "§a" : "§c", r,
-            d == 0 ? "§aigual que el maestro"
-                   : "§c" + d + " de " + tt + " bloques DISTINTOS",
+            "  %sranura %d§7  %s%s  §8%d/%d bloques de posicion%s",
+            bien ? "§a" : "§c", r,
+            d == 0 ? (so == 0 ? "§aigual que el maestro" : "§aigual")
+                   : "§c" + d + " de " + tt + " DISTINTOS",
+            so == 0 ? "" : "  §e+" + so + " que SOBRAN (de un clonado viejo)",
             pp, ids.length,
             oo < 2 ? "  §cFALTA UN OBLIGATORIO" : ""));
 

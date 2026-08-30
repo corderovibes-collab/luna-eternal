@@ -1136,7 +1136,21 @@ Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
               /luna gimnasio brock posiciones   los bloques de Battle Position
               /luna gimnasio ciudadela [grados] Brock y su Geodude, en la plaza
               /luna gimnasio reclonar           al cambiar el maestro
-              /luna gimnasio brock limpiarranuras  borra las copias
+              /luna gimnasio brock limpiarranuras  borra las copias y lideres
+              /luna reiniciarmedalla brock [jugador]  para volver a pelear
+              ⚠⚠ EL LIDER FLOTABA, Y LA CULPA ERA DE UN NUMERO DE OTRO MOD.
+                 `cobblemonbattlepositions` teletransporta al entrenador a
+                 `bloque.y + spawnHeightOffset`, y ese valor venia en 2.0:
+                 con el marcador en y=69 lo dejaba en 71 y el suelo es 70
+                 ⚠⚠⚠ Y SE VE PORQUE NOSOTROS LE APAGAMOS LA IA: un mob normal
+                    se habria puesto de pie solo. NoAI no cae. Nuestra propia
+                    decision es la que convierte el desajuste en algo visible
+                 arreglado en SU config (spawnHeightOffset = 1.0) y no en
+                 nuestro codigo: es su numero, afecta igual a los Pokemon
+                 --que tambien salian flotando un bloque-- y corregirlo por
+                 nuestro lado seria pelearse con el en cada colocacion
+                 ⚠ medido antes de tocar: los tres Brocks apilados estaban en
+                   y=71.0 exactos, y el bytecode dice `+ spawnHeightOffset`
               ⚠⚠ `limpiarranuras` HACE FALTA MIENTRAS SE CONSTRUYE, y no es
                  obvio por que: `clonar` NO COPIA EL AIRE, asi que un bloque que
                  QUITES del maestro se queda en la copia para siempre y volver a

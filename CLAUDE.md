@@ -1315,6 +1315,86 @@ Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
               LO QUE FALTA: verificarlo en el juego, poner los cuatro bloques de
               posicion en el maestro, y los otros siete gimnasios
 
+La Liga       LOS DIECISEIS GIMNASIOS, OCHO POR REGION (2026-08-30)
+              icono `gyms` . dos columnas . pastilla de color por estado
+              ganada . puedes retarle . te faltan N . proximamente
+              ⚠⚠ NO PIDE NADA AL SERVIDOR: la lista es fija y las medallas ya
+                 viajan en la ficha del PokePad. Un paquete propio seria un ida
+                 y vuelta mas y un sitio mas donde la mascara llega vieja
+              ⚠⚠⚠ Y BUSCANDO JOHTO SALIO UN FALLO DE DIAS: `kanto_lt_surge` NO
+                 EXISTE, es `kanto_ltsurge` sin guion. Eso NO da error al
+                 arrancar: da un gimnasio donde NO APARECE NADIE, y se descubre
+                 con el jugador dentro
+                 hoy el autotest le pregunta A RCTMOD si cada entrenador existe
+                 --no a una lista nuestra, que repetiria el mismo error
+              ⚠⚠⚠ LOS DE JOHTO TIENEN NOMBRE ITALIANO en el datapack: no hay
+                 ningun `johto_falkner`. Se identificaron POR SU EQUIPO y se
+                 confirmaron por el nivel, que sube en orden (20 -> 70):
+                   valerio volador->Falkner    angelo fantasma->Morty
+                   raffaello bicho->Bugsy      furio lucha->Chuck
+                   chiara normal->Whitney      jasmine acero->Jasmine
+                   alfredo hielo->Pryce        sandra dragon->Clair
+                 adivinar por el nombre habria dado OCHO GIMNASIOS VACIOS sin un
+                 solo error en el log
+              ⚠ los de Johto se enseñan como «proximamente» y NO se esconden: un
+                hueco vacio no dice lo que falta. Y `construido()` impide entrar
+                a una sala que no existe -- sin el, aceptar el reto te deja en
+                una plataforma de 9x9 flotando en el vacio
+              ⚠ cada lider tiene su frase de reto, de ya-ganada, y LA COÑA DE
+                CUANDO ESTA LLENO (Brock y las enfermeras, Misty y la bici de
+                Ash): es el unico mensaje que un jugador lee entero, porque es
+                el unico que le obliga a esperar
+
+Viajar        CINCO SEGUNDOS QUIETO, Y UN SOLO SITIO PARA MOVER GENTE (2026-08-30)
+              `world/Espera` avisa por el chat, cuenta en la barra de accion y
+              se cancela si te mueves. Vale para viajes y para retar
+              ⚠ se cancela por MOVERSE, no por mirar: si mirara la rotacion,
+                girar el raton cancelaria el viaje. Medio bloque de margen
+              ⚠⚠ Y CANCELAR TIENE QUE SOLTAR LO RESERVADO: retar aparta una
+                 ranura ANTES de contar. Sin eso, moverse la deja apartada para
+                 alguien que no va a ir y al octavo nadie puede retar
+                 ⚠⚠ y esa regla vive en el NUCLEO, no en el envoltorio. La
+                    escribi en el envoltorio y el autotest la cazo al instante:
+                    por el otro camino la cuenta vieja se sustituia sin soltar
+              ⚠⚠⚠ NO SE PODIA VIAJAR DESDE EL SALVAJE NI EL HOGAR, y eran OCHO
+                 teletransportes cada uno a su manera: unos apuntaban de donde
+                 venias y otros no, unos cargaban el destino y otros no.
+                 `Paradas.llevar` no lo cargaba, y la ciudadela es un VACIO CON
+                 UNA ISLA: llegar a un chunk frio es CAERSE. Desde la propia
+                 ciudadela el chunk suele estar caliente, y por eso parecia que
+                 solo fallaba al cambiar de dimension
+                 hoy todos pasan por `world/Traslado`: chunk, apunte, mover
+
+Sonido        ⚠⚠⚠ `playSound` EN UN JUGADOR ES AL REVES DE LO QUE PARECE
+              (2026-08-30) . leido del bytecode de 1.21.1:
+                PlayerEntity.playSound(s,v,p) -> World.playSound(this, ...)
+              y ese primer parametro es `except`. O SEA QUE EL JUGADOR QUE TOCA
+              EL SONIDO ES EL UNICO QUE NO LO OYE, y si lo oyen los de alrededor
+              llevaba asi en TODOS los logros: Pokedex, oficios, misiones,
+              medalla. Lo destapo una pregunta del usuario («que el sonido de
+              victoria solo lo oiga el jugador»), no una revision
+              para uno solo: `playSoundToPlayer`
+
+Posiciones    LA REGLA DE LOS BLOQUES DE COMBATE (2026-08-30)
+                Y DE LOS PIES = Y DEL MARCADOR + spawnHeightOffset
+              y los pies tienen que caer en la superficie del suelo
+                marcador 70 -> offset 0   se ve el cubo a los pies
+                marcador 69 -> offset 1   AGUJERO: el marcador NO tiene colision
+                marcador 68 -> offset 2   invisible y suelo entero  <- PUESTO
+              ⚠⚠ MOVER EL MARCADOR SIN MOVER EL OFFSET es lo que enterraba a
+                 Brock, y el usuario lo probo dos veces. Los dos numeros van
+                 juntos SIEMPRE
+              ⚠ el 2.0 por defecto del mod ya lo decia: esta pensado para un
+                marcador enterrado
+              ⚠⚠⚠ Y LOS BLOQUES SE MUEVEN EN EL MAESTRO, NUNCA EN TU COPIA. El
+                 usuario los movia dentro de su ranura: se pierden al reclonar y
+                 las otras seis no se enteran. Lo cazo `comprobar` solo --
+                 «ranura 1: 9 DISTINTOS, +10 que SOBRAN» con las otras limpias
+              ⚠⚠ `comprobar` mira TAMBIEN LO QUE SOBRA, y era su punto ciego:
+                 `clonar` NO COPIA EL AIRE, asi que un bloque QUITADO del maestro
+                 se queda en la copia PARA SIEMPRE y comparar solo lo que el
+                 maestro TIENE no lo ve nunca
+
 Medallas      NO SON UN OBJETO, Y ES ORDEN DEL USUARIO (2026-08-29, V024)
               «obtiene la medalla pero no fisica, la obtienen ya en el PokePad»
               el PokePad YA las dibujaba --dieciseis casillas abajo a la
@@ -2069,7 +2149,7 @@ Generaciones  Kanto + Johto activas · 608 spawns apagados por datapack
                 jugador conectado; desde consola solo consta que el
                 datapack carga sin errores. Es el mismo PKM-004 de
                 siempre
-Interfaz      TRECE PANTALLAS. Nueve verificadas en el juego:
+Interfaz      DIECISIETE PANTALLAS. Nueve verificadas en el juego:
                 PokePad     2026-08-16   la principal, 15 iconos
                 Cosmeticos  2026-08-22   4 pestanias
                 Trabajos    2026-08-23   8 Vias y oficios, paginado
@@ -2086,6 +2166,7 @@ Interfaz      TRECE PANTALLAS. Nueve verificadas en el juego:
                 Viajes      2026-08-27   7 paradas . rejilla 4x2
                 Kits        2026-08-28   trajes de rango . 3D
                 Gimnasio    2026-08-29   el dialogo del lider . 8 medallas
+                La Liga     2026-08-30   los 16 . dos regiones . sin paquete
               11 de los 16 iconos abren algo: pokedex (la de Cobblemon),
               cosmeticos, trabajos, misiones, clan, tienda, curar, mercado,
               cazas, explorar y viajes

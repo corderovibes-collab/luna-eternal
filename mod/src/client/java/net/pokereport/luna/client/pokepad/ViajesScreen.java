@@ -70,20 +70,60 @@ public class ViajesScreen extends Screen {
      * siete destinos del mismo tono, elegir obliga a leerlos todos cada vez —
      * con color, a la tercera visita ya vas al cuadro naranja sin leer.
      */
-    private record Parada(String id, int color, int icono) {}
+    /**
+     * @param objeto qué objeto del juego se dibuja como icono
+     */
+    private record Parada(String id, int color, String objeto) {}
 
-    private static final int IC_ESPADA = 0, IC_MATRAZ = 1, IC_CORONA = 2,
-            IC_COLUMNA = 3, IC_MONEDA = 4, IC_CRUZ = 5, IC_MONTE = 6;
-
+    /**
+     * Las siete, con un OBJETO DE VERDAD por icono.
+     *
+     * <h2>⚠⚠ ANTES ERAN FORMAS DIBUJADAS A MANO, Y SE VEÍAN MAL</h2>
+     *
+     * Petición del usuario, y tenía razón. Una espada de tres rectángulos a 58
+     * píxeles no parece una espada: parece tres rectángulos. Un objeto del juego
+     * trae su arte hecho, con su sombreado y su perspectiva, y encima <b>el
+     * jugador ya sabe lo que es</b> — reconoce una esmeralda antes de leer
+     * «Torre Comercial».
+     *
+     * <p>⚠⚠⚠ Y LOS IDENTIFICADORES SE COMPROBARON CONTRA EL JUEGO, no de
+     * memoria. Uno que no exista <b>no da ningún error</b>: devuelve aire y se
+     * dibuja un hueco. Es el fallo de los 62 cosméticos que no existían, y por
+     * eso hay una comprobación abajo que lo caza al abrir la pantalla.
+     *
+     * <p>⚠ Se usan de vainilla salvo la Poké Ball curativa, que es de Cobblemon
+     * y está confirmada en su jar. Un objeto de vainilla no puede faltarle a
+     * nadie.
+     */
     private static final Parada[] PARADAS = {
-        new Parada("torre_batalla",   0xFF8C3A2E, IC_ESPADA),
-        new Parada("laboratorio",     0xFF2E6E8C, IC_MATRAZ),
-        new Parada("palacio",         0xFF7A5C1E, IC_CORONA),
-        new Parada("monumentos",      0xFF5A5A6E, IC_COLUMNA),
-        new Parada("torre_comercial", 0xFF2E7A4E, IC_MONEDA),
-        new Parada("centro_curacion", 0xFF9E3A5C, IC_CRUZ),
-        new Parada("montana",         0xFF4A6E8C, IC_MONTE),
+        new Parada("torre_batalla",   0xFF8C3A2E, "minecraft:netherite_sword"),
+        new Parada("laboratorio",     0xFF2E6E8C, "minecraft:brewing_stand"),
+        new Parada("palacio",         0xFF7A5C1E, "minecraft:golden_helmet"),
+        new Parada("monumentos",      0xFF5A5A6E, "minecraft:chiseled_stone_bricks"),
+        new Parada("torre_comercial", 0xFF2E7A4E, "minecraft:emerald"),
+        new Parada("centro_curacion", 0xFF9E3A5C, "cobblemon:heal_ball"),
+        new Parada("montana",         0xFF4A6E8C, "minecraft:mossy_cobblestone"),
     };
+
+    /** El objeto ya resuelto de cada parada. Se monta una vez. */
+    private static final java.util.Map<String, net.minecraft.item.ItemStack> PILAS =
+            new java.util.HashMap<>();
+
+    static {
+        for (Parada p : PARADAS) {
+            var item = net.minecraft.registry.Registries.ITEM.get(
+                    net.minecraft.util.Identifier.of(p.objeto()));
+            if (item == net.minecraft.item.Items.AIR) {
+                // ⚠ Se dice, y no se calla. Un icono que falta se ve como un
+                //   hueco y parece un fallo de dibujado, no un identificador
+                //   mal escrito.
+                net.pokereport.luna.LunaEternal.LOG.error(
+                        "Viajes: el objeto '{}' de la parada '{}' NO EXISTE; "
+                        + "esa ficha saldrá sin icono", p.objeto(), p.id());
+            }
+            PILAS.put(p.id(), new net.minecraft.item.ItemStack(item));
+        }
+    }
 
     /** Rejilla: cuatro columnas, dos filas. */
     private static final int COLS = 4;
@@ -246,8 +286,7 @@ public class ViajesScreen extends Screen {
                     sel && dentro ? BORDE_ENCIMA : (dentro ? 0x60000000 : 0xFF2A3040),
                     Math.max(2, pl(sel ? 4 : 2)));
 
-            icono(ctx, p.icono(), px(cx + w / 2), py(cy + (h - 46) / 2),
-                    pl(58), dentro ? 0xFFFFFFFF : 0xFF6E7899);
+            icono(ctx, p, px(cx + w / 2), py(cy + (h - 46) / 2), pl(58));
 
             var et = Text.translatable("pokepad.lunaeternal.parada." + p.id());
             int alto = 16;
@@ -267,68 +306,30 @@ public class ViajesScreen extends Screen {
     }
 
     /**
-     * Los iconos, dibujados por código.
+     * EL ICONO DE UNA PARADA: un objeto del juego, escalado.
      *
-     * <p>⚠ Trazo grueso, como los del mercado: a este tamaño un trazo fino con
-     * filtrado lineal se convierte en una mancha. La lección ya está pagada.
+     * <h2>⚠⚠ SE ESCALA CON LA MATRIZ, no con un tamaño de dibujo</h2>
+     *
+     * {@code drawItem} dibuja siempre a 16×16 y no acepta tamaño. Para que el
+     * icono crezca con el chasis —que es toda la idea de {@link Escalado}— hay
+     * que escalar la matriz y dibujar en el origen.
+     *
+     * <p>⚠ Y hay que devolverla ({@code pop}) aunque se dibuje mal: dejar la
+     * matriz escalada se lleva por delante <b>todo lo que se dibuje después</b>,
+     * y el síntoma serían los textos gigantes de la mitad de abajo.
      */
-    private void icono(DrawContext ctx, int cual, int cx, int cy, int lado, int color) {
-        int g = Math.max(2, lado / 7);
-        int b = lado / 2;
-        switch (cual) {
-            case IC_ESPADA -> {
-                ctx.fill(cx - g / 2, cy - b, cx + (g + 1) / 2, cy + b / 2, color);
-                ctx.fill(cx - b / 2, cy + b / 4, cx + b / 2, cy + b / 4 + g, color);
-                ctx.fill(cx - g, cy + b / 2, cx + g, cy + b, color);
-            }
-            case IC_MATRAZ -> {
-                ctx.fill(cx - g, cy - b, cx + g, cy - b / 3, color);
-                for (int i = 0; i < b + b / 3; i++) {
-                    int w = g + i * (b - g) / Math.max(1, b);
-                    ctx.fill(cx - w, cy - b / 3 + i, cx + w, cy - b / 3 + i + 1, color);
-                }
-                ctx.fill(cx - b / 2, cy - b - g, cx + b / 2, cy - b, color);
-            }
-            case IC_CORONA -> {
-                for (int i = 0; i < 3; i++) {
-                    int px0 = cx - b + i * b;
-                    ctx.fill(px0 - g / 2, cy - b + (i == 1 ? -g : 0),
-                            px0 + (g + 1) / 2, cy + b / 3, color);
-                }
-                ctx.fill(cx - b, cy + b / 3, cx + b, cy + b / 3 + g + 2, color);
-            }
-            case IC_COLUMNA -> {
-                ctx.fill(cx - b, cy - b, cx + b, cy - b + g, color);
-                ctx.fill(cx - b, cy + b - g, cx + b, cy + b, color);
-                for (int i = -1; i <= 1; i++) {
-                    ctx.fill(cx + i * b / 2 - g / 2, cy - b + g,
-                            cx + i * b / 2 + (g + 1) / 2, cy + b - g, color);
-                }
-            }
-            case IC_MONEDA -> {
-                // ⚠ Un ARO y no dos discos: rellenar el interior con alfa 0 no
-                //   borra nada -- `fill` mezcla, y mezclar con transparente es no
-                //   hacer nada. Saldría un disco macizo.
-                Iconos.aro(ctx, cx, cy, b, g, color);
-                ctx.fill(cx - g / 2, cy - b / 2, cx + (g + 1) / 2, cy + b / 2, color);
-            }
-            case IC_CRUZ -> {
-                ctx.fill(cx - b, cy - g, cx + b, cy + g + 1, color);
-                ctx.fill(cx - g, cy - b, cx + g + 1, cy + b, color);
-            }
-            default -> {
-                // La montaña: dos triángulos macizos.
-                for (int i = 0; i < b * 2; i++) {
-                    int w = i / 2;
-                    ctx.fill(cx - w, cy + b - i, cx + w, cy + b - i + 1, color);
-                }
-                for (int i = 0; i < b; i++) {
-                    int w = i / 2;
-                    ctx.fill(cx + b / 2 - w, cy + b - i, cx + b / 2 + w,
-                            cy + b - i + 1, color);
-                }
-            }
+    private void icono(DrawContext ctx, Parada p, int cx, int cy, int lado) {
+        var pila = PILAS.get(p.id());
+        if (pila == null || pila.isEmpty()) {
+            return;
         }
+        float escala = lado / 16f;
+        MatrixStack m = ctx.getMatrices();
+        m.push();
+        m.translate(cx - lado / 2f, cy - lado / 2f, 0);
+        m.scale(escala, escala, 1f);
+        ctx.drawItem(pila, 0, 0);
+        m.pop();
     }
 
     // ---- el panel ----------------------------------------------------------
@@ -344,8 +345,7 @@ public class ViajesScreen extends Screen {
                 listo() ? p.color() : 0xFF3A4050);
         marco(ctx, px(PANEL_X + 30), py(y), pl(rw), pl(rh), 0xFF20283C,
                 Math.max(2, pl(2)));
-        icono(ctx, p.icono(), px(PANEL_X + PANEL_W / 2), py(y + rh / 2), pl(56),
-                listo() ? 0xFFFFFFFF : 0xFF6E7899);
+        icono(ctx, p, px(PANEL_X + PANEL_W / 2), py(y + rh / 2), pl(56));
         y += rh + 18;
 
         for (String l : partir(Text.translatable(

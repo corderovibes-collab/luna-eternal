@@ -89,13 +89,6 @@ public final class Espera {
      */
     public static void pedir(ServerPlayerEntity jugador, String motivo,
                              Runnable accion, Runnable alCancelar) {
-        // ⚠ Si ya habia una cuenta, la anterior se cancela DE VERDAD: su
-        //   `alCancelar` tiene que correr, o lo que tuviera reservado se queda
-        //   reservado.
-        var previa = CUENTAS.remove(jugador.getUuid());
-        if (previa != null && previa.alCancelar() != null) {
-            previa.alCancelar().run();
-        }
         anotar(jugador.getUuid(), jugador.getPos(), accion, alCancelar, motivo);
         jugador.sendMessage(Text.translatable(
                 "espera.lunaeternal.empieza", SEGUNDOS), false);
@@ -112,6 +105,21 @@ public final class Espera {
      */
     static void anotar(UUID uuid, Vec3d desde, Runnable accion,
                        Runnable alCancelar, String motivo) {
+        // ⚠⚠⚠ SUSTITUIR UNA CUENTA CANCELA LA ANTERIOR DE VERDAD, y esto tiene
+        //    que estar AQUI y no en quien llama. Lo escribi en el envoltorio que
+        //    recibe un jugador, y el autotest lo cazó al instante: por el otro
+        //    camino la cuenta vieja se sustituía sin soltar lo que tenía
+        //    reservado.
+        //    Y es la fuga más fácil de provocar sin querer: pulsar «ir» dos
+        //    veces apartaba DOS ranuras y soltaba una.
+        var previa = CUENTAS.remove(uuid);
+        if (previa != null && previa.alCancelar() != null) {
+            try {
+                previa.alCancelar().run();
+            } catch (Throwable t) {
+                LunaEternal.LOG.error("Fallo al cancelar la espera anterior", t);
+            }
+        }
         CUENTAS.put(uuid, new Cuenta(desde, SEGUNDOS, accion, alCancelar, motivo));
     }
 

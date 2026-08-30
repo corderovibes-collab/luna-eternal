@@ -87,7 +87,17 @@ public final class Aviso {
             // mismo en los dos sitios es ruido.
             jugador.sendMessage(Text.literal("§6§l" + titulo), true);
             jugador.sendMessage(Text.literal("§6" + titulo + " §8· §f" + detalle), false);
-            jugador.playSound(sonido, 0.8f, tono);
+            // ⚠⚠⚠ `playSoundToPlayer` Y NO `playSound`, Y ES AL REVÉS DE LO QUE
+            //    PARECE. Leído del bytecode de 1.21.1:
+            //
+            //      PlayerEntity.playSound(s, v, p)
+            //          -> World.playSound(this, ...)   // «this» es `except`
+            //
+            //    O sea que el jugador que «toca» el sonido es EL ÚNICO QUE NO LO
+            //    OYE, y sí lo oyen los de alrededor. Un aviso personal sonaba
+            //    para todo el vecindario menos para su dueño.
+            //    Llevaba así en TODOS los logros: Pokédex, oficios, misiones.
+            jugador.playSoundToPlayer(sonido, SoundCategory.MASTER, 0.8f, tono);
         });
     }
 

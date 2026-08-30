@@ -67,6 +67,9 @@ public final class Combate {
     /** Cuánto se espera antes de devolver a alguien a la ciudadela. */
     private static final int TICKS_VUELTA = 100;   // 5 s
 
+    /** Cuánto se espera, tras el viaje, para poner al líder en su tarima. */
+    private static final int TICKS_LIDER = 20;     // 1 s
+
     /**
      * DÓNDE ESTABA CADA UNO ANTES DE ENTRAR.
      *
@@ -220,14 +223,17 @@ public final class Combate {
         if (ranura < 0) {
             return new Motivo("lleno", 0);
         }
+        // ⚠ Que el entrenador EXISTA se comprueba antes de mover a nadie: es lo
+        //   único que se puede saber sin estar dentro, y es el fallo que dejaría
+        //   al jugador en una sala vacía.
+        if (!Lideres.idValido(g)) {
+            Ranuras.soltar(jugador.getUuid());
+            return new Motivo("sin_lider", 0);
+        }
         try {
             // Una vez por ranura y por arranque: copiar ocho mil bloques en cada
             // combate sí se notaría en el hilo del servidor.
             Arenas.clonar(servidor, g, ranura);
-            if (Lideres.enArena(servidor, g, ranura) == null) {
-                Ranuras.soltar(jugador.getUuid());
-                return new Motivo("sin_lider", 0);
-            }
             // ⚠ Se apunta la vuelta ANTES de mover. Después ya está en la arena
             //   y se guardaría la posición de destino: volver le devolvería a la
             //   arena. Es la misma trampa que ya estaba resuelta en el viaje al
@@ -240,6 +246,38 @@ public final class Combate {
                 soltar(jugador, g.id());
                 return new Motivo("sin_dimension", 0);
             }
+            // ⚠⚠⚠ EL LIDER SE PONE DESPUES DE QUE LLEGUE EL JUGADOR, Y ESTO NO
+            //    ES ESTETICA: ES LO QUE HACE QUE LA LIMPIEZA FUNCIONE.
+            //
+            //    Ponerlo antes parecía lo natural --que esté esperando cuando
+            //    llegues-- y tenía un fallo mudo: los chunks de la ranura pueden
+            //    estar FRIOS, y aunque se carguen a mano, <b>las entidades no
+            //    llegan en el mismo tick</b>: el gestor de entidades las trae
+            //    después. Así que la limpieza miraba una sala que para ella
+            //    estaba vacía, no borraba al de la vez anterior, y ponía uno al
+            //    lado. Un Brock más por combate.
+            //
+            //    Con el jugador ya dentro, la sala está viva y sus entidades
+            //    cargadas: limpiar encuentra lo que hay de verdad.
+            //
+            //    ⚠ Un segundo de retraso no se nota --el jugador está mirando
+            //      dónde ha caído-- y evita un fallo que solo aparece cuando la
+            //      sala llevaba un rato sin nadie, que es justo cuando nadie
+            //      está mirando.
+            Programador.en(TICKS_LIDER, () -> {
+                var vivo = servidor.getPlayerManager().getPlayer(jugador.getUuid());
+                if (vivo == null) {
+                    return;   // se fue; `alSalir` ya soltó la ranura
+                }
+                if (Lideres.enArena(servidor, g, ranura) == null) {
+                    // ⚠⚠ Y SI NO APARECE, SE LE SACA. De esta dimensión no se
+                    //    sale andando: dejarlo dentro con una sala vacía sería
+                    //    dejarlo encerrado.
+                    vivo.sendMessage(Text.translatable(
+                            "gimnasio.lunaeternal.no.sin_lider"), false);
+                    devolver(vivo, g.id());
+                }
+            });
         } catch (Exception e) {
             LunaEternal.LOG.error("No se pudo llevar a {} al gimnasio {}",
                     jugador.getName().getString(), g.id(), e);

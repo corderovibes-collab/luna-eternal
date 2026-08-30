@@ -66,6 +66,16 @@ public final class Lideres {
     public static final String MARCA_ARENA = "luna_arena";
 
     /**
+     * Cuánto se barre en X al limpiar una ranura.
+     *
+     * <p>⚠ El gimnasio de Brock mide 96 de ancho y los gimnasios van a 1024 uno
+     * de otro, así que 128 cubre la sala de sobra y no llega ni de lejos al
+     * vecino. Se acota porque de este número salen los chunks que hay que
+     * cargar, y barrer medio hueco serían más de cien.
+     */
+    private static final int ANCHO_MAX = 128;
+
+    /**
      * Qué gimnasio es.
      *
      * <p>⚠ Va en una etiqueta y no se deduce del {@code trainerId}: el día que
@@ -313,11 +323,23 @@ public final class Lideres {
     public static int quitarDeRanura(ServerWorld mundo, Gimnasio.Gimnasio_ g,
                                      int ranura) {
         var o = Gimnasio.origen(g, ranura);
+        // ⚠⚠⚠ LOS CHUNKS PRIMERO, Y ESTA ES LA MITAD QUE FALTABA.
+        //    `getEntitiesByClass` solo ve lo que esta CARGADO. Si la ranura
+        //    esta fria, la limpieza no encuentra nada, no borra nada, y el
+        //    lider que iba a sustituir aparece AL LADO del anterior.
+        //    Cuando ya estan cargados esto es una busqueda en una tabla, asi
+        //    que no cuesta nada en el caso normal.
+        for (int cx = o.getX() >> 4; cx <= (o.getX() + ANCHO_MAX) >> 4; cx++) {
+            for (int cz = o.getZ() >> 4;
+                 cz <= (o.getZ() + Gimnasio.PASO_RANURA) >> 4; cz++) {
+                mundo.getChunk(cx, cz);
+            }
+        }
         // ⚠ Un pelo por debajo del paso: un líder justo en el borde es de la
         //   ranura siguiente, no de esta.
         Box caja = new Box(
                 o.getX() - 8, o.getY() - 64, o.getZ() - 4,
-                o.getX() + Gimnasio.SEPARACION / 2.0, o.getY() + 256,
+                o.getX() + ANCHO_MAX, o.getY() + 256,
                 o.getZ() + Gimnasio.PASO_RANURA - 0.01);
         int n = 0;
         for (var e : mundo.getEntitiesByClass(TrainerMob.class, caja,

@@ -44,40 +44,62 @@ public final class Gimnasio {
      *
      * @param id         identificador estable. Da la clave de traducción
      * @param entrenador el id del entrenador en rctmod, tal cual
-     * @param sala       a qué sala de la dimensión pertenece. <b>Y también qué
-     *                   bit de medalla es</b>: ver {@link #bitMedalla}
+     * @param sala       a qué sala de la dimensión pertenece: da su X
+     * @param bit        QUÉ BIT DE LA MÁSCARA ES SU MEDALLA. Ver {@link #bitMedalla}
      * @param medallas   cuántas medallas hay que traer para entrar
+     * @param nivel      A QUÉ NIVEL SE PELEA. Ver {@link #NIVELES} arriba
+     * @param pericia    lo lista que juega su IA, 0..5. Ver {@link #PERICIA}
      * @param lider      cómo se llama. Es un nombre propio: igual en los dos
      *                   idiomas, así que no pasa por el fichero de textos
      * @param medalla    cómo se llama su medalla
-     * @param insignia   el nombre de su textura en el mod de medallas
+     * @param insignia   el nombre COMPLETO de su textura, sin `.png`
+     * @param propia     ¿la textura es NUESTRA en vez del mod de medallas?
      */
-    public record Gimnasio_(String id, String entrenador, int sala, int medallas,
-                            String lider, String medalla, String insignia) {
+    public record Gimnasio_(String id, String entrenador, int sala, int bit,
+                            int medallas, int nivel, int pericia,
+                            String lider, String medalla, String insignia,
+                            boolean propia) {
 
         /**
          * LA TEXTURA DE SU MEDALLA.
          *
          * <h2>⚠⚠⚠ ESTO EXISTE PARA QUE HAYA UNA SOLA LISTA</h2>
          *
-         * El PokePad dibuja dieciséis medallas y el diálogo del gimnasio ocho, y
+         * El PokePad dibuja las medallas y el diálogo del gimnasio también, y
          * cada pantalla tenía <b>su propio array</b> de nombres en orden de
-         * gimnasio. Tres listas —esta, la del Pad y la del diálogo— que nada
-         * obligaba a mantener sincronizadas.
+         * gimnasio. Tres listas que nada obligaba a mantener sincronizadas.
          *
          * <p>Si se desordenaran, ganar a Brock encendería la medalla de Misty
-         * <b>sin dar ningún error</b>: el jugador vería una medalla que no ha
-         * ganado y no vería la que sí. Ahora las pantallas leen de aquí y el
-         * problema no puede existir, que es mejor que una comprobación que lo
-         * detecte.
+         * <b>sin dar ningún error</b>. Ahora las pantallas leen de aquí y el
+         * problema no puede existir, que es mejor que una comprobación.
          *
-         * <p>⚠ Se <b>referencia</b> y no se copia: el mod de medallas va
-         * instalado en el cliente, así que apuntar su textura cuesta cero bytes
-         * en nuestro jar y no redistribuye nada suyo.
+         * <p>⚠ Las de Kanto y Johto se <b>referencian</b> al mod de medallas,
+         * que va instalado en el cliente: cuesta cero bytes en nuestro jar y no
+         * redistribuye nada suyo.
+         *
+         * <p>⚠⚠ LAS DE LA LIGA NARANJA SON NUESTRAS, y por un motivo medido: se
+         * abrió {@code CobbleverseBadges-1.3.jar} y tiene <b>45 texturas</b>,
+         * las de Kanto, Johto, Hoenn y Sinnoh. <b>Del Equipo Naranja no hay
+         * ninguna</b> — ni ahí ni en el datapack de entrenadores, donde de 156
+         * no aparece ni Cissy, ni Danny, ni Rudy, ni Luana (el único Drake que
+         * hay es el Alto Mando de Hoenn).
+         *
+         * <p>⚠ Y el nombre va <b>completo</b>, sin añadirle {@code _badge}
+         * detrás: los trofeos de campeón se llaman {@code kanto_league_trophy}
+         * y no {@code kanto_league_trophy_badge}. Pegar el sufijo a mano daba
+         * una textura que no existe, que se ve como el cuadro morado.
          */
         public net.minecraft.util.Identifier textura() {
-            return net.minecraft.util.Identifier.of("cobbleversebadges",
-                    "textures/item/" + insignia + "_badge.png");
+            return propia
+                ? net.minecraft.util.Identifier.of("lunaeternal",
+                        "textures/gui/medallas/" + insignia + ".png")
+                : net.minecraft.util.Identifier.of("cobbleversebadges",
+                        "textures/item/" + insignia + ".png");
+        }
+
+        /** ¿Es un campeón de región? Los trofeos se dibujan un poco mayores. */
+        public boolean campeon() {
+            return insignia.endsWith("_trophy") || insignia.endsWith("_trofeo");
         }
     }
 
@@ -111,80 +133,132 @@ public final class Gimnasio {
     public static final int SUELO = 64;
 
     /**
-     * LOS DIECISEIS, en el orden del juego: Kanto y despues Johto.
+     * LOS VEINTITRÉS, en el orden en que se juegan.
+     *
+     * <h2>⚠⚠⚠ EL BIT ES UNA COLUMNA, NO LA POSICIÓN EN ESTA LISTA</h2>
+     *
+     * Hasta el 2026-08-30 el bit de una medalla era {@code sala()}, o sea la
+     * posición. Y entonces entró el Equipo Naranja <b>en mitad de la lista</b>,
+     * entre Giovanni y el Campeón de Kanto.
+     *
+     * <p>Con el bit posicional eso habría corrido cinco puestos todo lo de
+     * abajo: quien tuviera la medalla del Campeón de Kanto se habría despertado
+     * con la de Cissy, y quien tuviera la de Débora con otra cualquiera.
+     * <b>Sin un solo error</b>, porque la máscara es un número y un número
+     * siempre se puede leer.
+     *
+     * <p>Es exactamente la lección del ENUM de MariaDB —que guarda el índice, y
+     * reordenar convierte a unos jugadores en otros— y la del {@code escalon}
+     * de los rangos, que es un número explícito por lo mismo. Aquí, tercera vez.
+     *
+     * <p><b>Un bit, una vez, para siempre.</b> Un gimnasio nuevo coge el
+     * siguiente libre y no toca los demás.
      *
      * <h2>⚠⚠ LOS IDENTIFICADORES DE ENTRENADOR NO SE INVENTAN</h2>
      *
-     * Salen del datapack que ya esta instalado ({@code data/rctmod/trainers/}),
-     * leidos uno a uno. Uno mal escrito <b>no da error al arrancar</b>: da un
-     * gimnasio en el que no aparece nadie, y eso se descubre con el jugador
-     * dentro. Ya paso: {@code kanto_lt_surge} no existe — es
-     * {@code kanto_ltsurge}, sin guion. Lo caza el autotest.
+     * Salen del datapack instalado ({@code COBBLEVERSE-RCT-DP-v20.zip}), leídos
+     * uno a uno. Uno mal escrito <b>no da error al arrancar</b>: da un gimnasio
+     * en el que no aparece nadie, y eso se descubre con el jugador dentro. Ya
+     * pasó: {@code kanto_lt_surge} no existe — es {@code kanto_ltsurge}, sin
+     * guion. Lo caza el autotest, que se lo pregunta a rctmod.
      *
-     * <h2>⚠⚠⚠ Y LOS DE JOHTO TIENEN NOMBRE ITALIANO EN EL DATAPACK</h2>
-     *
-     * No hay ningun {@code johto_falkner}. Se identificaron <b>por su equipo</b>
-     * y se confirmaron por el nivel, que sube en orden de gimnasio (20 → 70):
+     * <p>⚠⚠⚠ Y LOS DE JOHTO TIENEN NOMBRE ITALIANO EN EL DATAPACK. No hay
+     * ningún {@code johto_falkner}. Se identificaron <b>por su equipo</b> y se
+     * confirmaron por el nivel, que sube en orden de gimnasio:
      *
      * <pre>
-     *   valerio    hoothoot, pidgeotto, corvisquire  volador  → Falkner
-     *   raffaello  butterfree, beedrill, scyther     bicho    → Bugsy
-     *   chiara     miltank, clefairy, lickitung      normal   → Whitney
-     *   angelo     gengar, mismagius, dusknoir       fantasma → Morty
-     *   furio      hariyama, primeape, poliwrath     lucha    → Chuck
-     *   jasmine    steelix, metagross, skarmory      acero    → Jasmine
-     *   alfredo    mamoswine, avalugg, dewgong       hielo    → Pryce
-     *   sandra     dragonite, kingdra, salamence     dragon   → Clair
+     *   valerio    volador  → Pegaso     angelo   fantasma → Morti
+     *   raffaello  bicho    → Antón      furio    lucha    → Aníbal
+     *   chiara     normal   → Blanca     jasmine  acero    → Yasmina
+     *   alfredo    hielo    → Fredo      sandra   dragón   → Débora
      * </pre>
      *
-     * <p>⚠ Adivinar por el nombre habria dado ocho gimnasios vacios sin un solo
-     * error en el log.
+     * <p>⚠ Los nombres visibles son los <b>españoles</b>, que es como los llamó
+     * el usuario. El identificador de rctmod sigue siendo el italiano: son cosas
+     * distintas y mezclarlas es lo que da ocho gimnasios vacíos.
      *
-     * <h2>⚠ NINGUNO DE JOHTO ESTA CONSTRUIDO TODAVIA</h2>
+     * <h2>⚠⚠ EL EQUIPO NARANJA NO EXISTE EN NINGÚN DATO, Y VA IGUAL</h2>
      *
-     * Estan declarados a proposito: la pantalla los enseña como «proximamente»
-     * en vez de esconderlos, porque <b>saber lo que viene es lo que hace que
-     * alguien vaya a por la siguiente medalla</b>. Y {@link #construido} es lo
-     * que impide entrar a una sala que no existe.
+     * Ni entrenadores ni medallas: comprobado abriendo los dos ficheros. Se
+     * declaran aquí para que la pantalla enseñe hacia dónde va la progresión,
+     * y {@link #construido} impide entrar a una sala que no existe.
+     *
+     * <p>⚠ Sus cinco identificadores {@code naranja_*} son <b>nuestros</b> y
+     * todavía no los sirve nadie. El autotest los excluye de la comprobación
+     * contra rctmod a propósito, y lo dice: si los diera por buenos, el día que
+     * se construya la sala aparecería vacía.
+     *
+     * <h2>Los niveles, decisión del usuario (2026-08-30)</h2>
+     *
+     * A ese nivel se pelea, y <b>los dos lados</b>: ver {@code Adaptador}. El
+     * Campeón de Kanto pasó de 60 a 63 para dejar sitio a la Liga Naranja, que
+     * en el anime va justo después de los ocho gimnasios de Kanto.
      */
     public static final List<Gimnasio_> TODOS = Arrays.asList(
-        new Gimnasio_("brock",    "kanto_brock",    0, 0,
-                      "Brock",    "Roca",     "kanto_boulder"),
-        new Gimnasio_("misty",    "kanto_misty",    1, 1,
-                      "Misty",    "Cascada",  "kanto_cascade"),
+        //             id          entrenador             sala bit  med niv per
+        new Gimnasio_("brock",     "kanto_brock",           0,  0,   0,  15, 3,
+                      "Brock",     "Roca",       "kanto_boulder_badge",  false),
+        new Gimnasio_("misty",     "kanto_misty",           1,  1,   1,  19, 3,
+                      "Misty",     "Cascada",    "kanto_cascade_badge",  false),
         // ⚠ `kanto_ltsurge`, SIN guion. `kanto_lt_surge` no existe.
-        new Gimnasio_("surge",    "kanto_ltsurge",  2, 2,
-                      "Teniente Surge", "Trueno", "kanto_thunder"),
-        new Gimnasio_("erika",    "kanto_erika",    3, 3,
-                      "Erika",    "Arcoíris", "kanto_rainbow"),
-        new Gimnasio_("koga",     "kanto_koga",     4, 4,
-                      "Koga",     "Alma",     "kanto_soul"),
-        new Gimnasio_("sabrina",  "kanto_sabrina",  5, 5,
-                      "Sabrina",  "Pantano",  "kanto_marsh"),
-        new Gimnasio_("blaine",   "kanto_blaine",   6, 6,
-                      "Blaine",   "Volcán",   "kanto_volcano"),
-        new Gimnasio_("giovanni", "kanto_giovanni", 7, 7,
-                      "Giovanni", "Tierra",   "kanto_earth"),
+        new Gimnasio_("surge",     "kanto_ltsurge",         2,  2,   2,  24, 3,
+                      "Teniente Surge", "Trueno", "kanto_thunder_badge", false),
+        new Gimnasio_("erika",     "kanto_erika",           3,  3,   3,  28, 4,
+                      "Erika",     "Arcoíris",   "kanto_rainbow_badge",  false),
+        new Gimnasio_("koga",      "kanto_koga",            4,  4,   4,  33, 4,
+                      "Koga",      "Alma",       "kanto_soul_badge",     false),
+        new Gimnasio_("sabrina",   "kanto_sabrina",         5,  5,   5,  37, 4,
+                      "Sabrina",   "Pantano",    "kanto_marsh_badge",    false),
+        new Gimnasio_("blaine",    "kanto_blaine",          6,  6,   6,  42, 4,
+                      "Blaine",    "Volcán",     "kanto_volcano_badge",  false),
+        new Gimnasio_("giovanni",  "kanto_giovanni",        7,  7,   7,  46, 5,
+                      "Giovanni",  "Tierra",     "kanto_earth_badge",    false),
 
-        new Gimnasio_("falkner",  "johto_valerio",   8,  8,
-                      "Falkner",  "Céfiro",   "johto_zephyr"),
-        new Gimnasio_("bugsy",    "johto_raffaello", 9,  9,
-                      "Bugsy",    "Colmena",  "johto_hive"),
-        new Gimnasio_("whitney",  "johto_chiara",   10, 10,
-                      "Whitney",  "Llanura",  "johto_plain"),
-        new Gimnasio_("morty",    "johto_angelo",   11, 11,
-                      "Morty",    "Niebla",   "johto_fog"),
-        new Gimnasio_("chuck",    "johto_furio",    12, 12,
-                      "Chuck",    "Tormenta", "johto_storm"),
-        new Gimnasio_("jasmine",  "johto_jasmine",  13, 13,
-                      "Jasmine",  "Mineral",  "johto_mineral"),
-        new Gimnasio_("pryce",    "johto_alfredo",  14, 14,
-                      "Pryce",    "Glaciar",  "johto_glacier"),
-        new Gimnasio_("clair",    "johto_sandra",   15, 15,
-                      "Clair",    "Alzamiento", "johto_rising"));
+        // ---- LIGA NARANJA. Ni entrenador ni medalla existen todavía. -------
+        new Gimnasio_("cissy",     "naranja_cissy",         8,  8,   8,  49, 4,
+                      "Cissy",     "Ojo de Coral",  "naranja_ojo_coral",  true),
+        new Gimnasio_("danny",     "naranja_danny",         9,  9,   9,  52, 4,
+                      "Danny",     "Rubí Marino",   "naranja_rubi_marino", true),
+        new Gimnasio_("rudy",      "naranja_rudy",         10, 10,  10,  55, 4,
+                      "Rudy",      "Caracol",       "naranja_caracol",    true),
+        new Gimnasio_("luana",     "naranja_luana",        11, 11,  11,  58, 5,
+                      "Luana",     "Estrella de Jade", "naranja_jade",    true),
+        new Gimnasio_("drake",     "naranja_drake",        12, 12,  12,  62, 5,
+                      "Drake",     "Liga Naranja",  "naranja_trofeo",     true),
+
+        new Gimnasio_("campeon_kanto", "kanto_champion_blue", 13, 13, 13, 63, 5,
+                      "Blue",      "Campeón de Kanto", "kanto_league_trophy", false),
+
+        new Gimnasio_("pegaso",    "johto_valerio",        14, 14,  14,  64, 4,
+                      "Pegaso",    "Céfiro",     "johto_zephyr_badge",   false),
+        new Gimnasio_("anton",     "johto_raffaello",      15, 15,  15,  68, 4,
+                      "Antón",     "Colmena",    "johto_hive_badge",     false),
+        new Gimnasio_("blanca",    "johto_chiara",         16, 16,  16,  71, 4,
+                      "Blanca",    "Llanura",    "johto_plain_badge",    false),
+        new Gimnasio_("morti",     "johto_angelo",         17, 17,  17,  75, 4,
+                      "Morti",     "Niebla",     "johto_fog_badge",      false),
+        new Gimnasio_("anibal",    "johto_furio",          18, 18,  18,  79, 5,
+                      "Aníbal",    "Tormenta",   "johto_storm_badge",    false),
+        new Gimnasio_("yasmina",   "johto_jasmine",        19, 19,  19,  82, 5,
+                      "Yasmina",   "Mineral",    "johto_mineral_badge",  false),
+        new Gimnasio_("fredo",     "johto_alfredo",        20, 20,  20,  86, 5,
+                      "Fredo",     "Glaciar",    "johto_glacier_badge",  false),
+        new Gimnasio_("debora",    "johto_sandra",         21, 21,  21,  90, 5,
+                      "Débora",    "Alzamiento", "johto_rising_badge",   false),
+
+        new Gimnasio_("campeon_johto", "johto_champion_lance", 22, 22, 22, 100, 5,
+                      "Lance",     "Campeón de Johto", "johto_league_trophy", false));
+
+    /** El prefijo de los entrenadores que todavía no sirve nadie. */
+    public static final String PREFIJO_PROPIO = "naranja_";
+
+    /** ¿Su entrenador lo sirve rctmod, o es uno nuestro que aún no existe? */
+    public static boolean entrenadorDeRct(Gimnasio_ g) {
+        return !g.entrenador().startsWith(PREFIJO_PROPIO);
+    }
 
     /**
-     * Las dieciseis insignias en orden de medalla.
+     * Las veintitrés insignias, en orden de BIT.
      *
      * <p>⚠⚠ El indice <b>es</b> el bit de la mascara, porque el bit es
      * {@code sala()} y las salas van 0..15 en este mismo orden. Es lo que
@@ -195,8 +269,13 @@ public final class Gimnasio {
      * Hoy sale de {@link #TODOS}.
      */
     public static List<String> insignias() {
-        var salida = new java.util.ArrayList<String>(TODOS.size());
-        for (Gimnasio_ g : TODOS) {
+        // ⚠⚠ ORDENADAS POR BIT, no por posición en la lista. Son lo mismo hoy
+        //    y no tienen por qué serlo mañana: quien dibuja lee el bit i-ésimo
+        //    de la máscara y espera la insignia i-ésima de aquí.
+        var orden = new java.util.ArrayList<>(TODOS);
+        orden.sort(java.util.Comparator.comparingInt(Gimnasio_::bit));
+        var salida = new java.util.ArrayList<String>(orden.size());
+        for (Gimnasio_ g : orden) {
             salida.add(g.insignia());
         }
         return salida;
@@ -312,16 +391,21 @@ public final class Gimnasio {
     /**
      * Las recepciones, medidas por el usuario dentro del juego.
      *
-     * <p>⚠ El Pokémon de Brock es <b>Geodude</b>, que es el primero de su
-     * equipo (Geodude 16, Bonsly 16, Cranidos 18, Onix 20). Leído del datapack
-     * que ya está instalado, no de memoria. Y encaja con el hueco: entre Brock y
-     * su sitio hay <b>2,66 bloques</b>, y un Onix mide casi nueve de largo — se
-     * comería la sala entera. Cambiar de Pokémon es cambiar esta palabra.
+     * <p>⚠⚠ El Pokémon de Brock es <b>Onix</b> desde el 2026-08-30, por orden
+     * del usuario. Antes era Geodude, y el motivo por el que lo era sigue siendo
+     * verdad y hay que dejarlo escrito: entre Brock y el sitio del Pokémon hay
+     * <b>2,66 bloques</b>, y un Onix mide casi nueve de largo. <b>Va a ocupar
+     * mucho más sitio que Geodude</b>, y si en la sala no cabe, lo que se mueve
+     * es esta coordenada — no hace falta recompilar nada más.
+     *
+     * <p>⚠ Los dos son de su equipo real, leído del datapack instalado:
+     * Geodude 16, Bonsly 16, Cranidos 18, <b>Onix 20</b>. Cambiar de Pokémon es
+     * cambiar esta palabra.
      */
     private static final java.util.Map<String, Recepcion> RECEPCIONES =
         java.util.Map.of(
             "brock", new Recepcion(-137.95, 69, 49.37, 0f,
-                                   -137.544, 69, 52, "geodude"));
+                                   -137.544, 69, 52, "onix"));
 
     /** Dónde espera un líder en la ciudadela, o {@code null} si aún no tiene sitio. */
     public static Recepcion recepcion(Gimnasio_ g) {
@@ -417,6 +501,18 @@ public final class Gimnasio {
      * las medallas y no una casualidad.
      */
     public static int bitMedalla(Gimnasio_ g) {
-        return 1 << g.sala();
+        return 1 << g.bit();
+    }
+
+    /**
+     * Las medallas ORDENADAS POR BIT, que es como se dibujan.
+     *
+     * <p>⚠ Hace falta porque {@link #insignias} da solo el nombre de la textura
+     * y las pantallas necesitan también saber si es propia y si es un trofeo.
+     */
+    public static List<Gimnasio_> porBit() {
+        var orden = new java.util.ArrayList<>(TODOS);
+        orden.sort(java.util.Comparator.comparingInt(Gimnasio_::bit));
+        return orden;
     }
 }

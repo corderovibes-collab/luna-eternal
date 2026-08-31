@@ -353,8 +353,38 @@ public class PokePadScreen extends Screen {
     private static final java.util.List<String> MEDALLAS =
             net.pokereport.luna.gym.Gimnasio.insignias();
     private static final int MEDALLAS_X = 97, MEDALLAS_Y = 662;
-    private static final int MEDALLA = 30, MEDALLA_SEP = 3;
-    private static final int MEDALLA_COLS = 8;
+    private static final int MEDALLA_SEP = 3;
+
+    /**
+     * LA REJILLA DE MEDALLAS SE CALCULA. NO SE ESCRIBE.
+     *
+     * <h2>⚠⚠⚠ Estaba a 8 columnas y 30 px, y con 23 medallas se salia del pad</h2>
+     *
+     * Con dieciseis cuadraba: 8x2 son dieciseis justos. Al entrar la Liga
+     * Naranja pasaron a ser <b>veintitres</b>, y ocho columnas dan tres filas —
+     * la tercera cae por debajo del hueco y se dibuja <b>encima del chasis</b>.
+     * No da ningun error: se ve como medallas sueltas flotando sobre el borde.
+     *
+     * <p>Es exactamente lo que ya paso con la rejilla de aplicaciones cuando
+     * llego la decimosexta, y con la paginacion de Cosmeticos. Tercera vez, asi
+     * que esta vez <b>no hay numero que puedas dejar viejo</b>:
+     *
+     * <ul>
+     *   <li>siempre DOS filas, que es el hueco que hay;</li>
+     *   <li>las columnas salen de cuantas medallas haya;</li>
+     *   <li>el paso sale del ancho disponible, que es el mismo que el de las
+     *       filas de datos de encima ({@link #FICHA_X0}..{@link #FICHA_X1}).</li>
+     * </ul>
+     *
+     * <p>Asi, una medalla mas encoge las que hay en vez de salirse. El autotest
+     * comprueba que la tira quepa.
+     */
+    private static final int MEDALLA_FILAS = 2;
+    private static final int MEDALLA_COLS =
+            (MEDALLAS.size() + MEDALLA_FILAS - 1) / MEDALLA_FILAS;
+    private static final int MEDALLA_PASO =
+            (FICHA_X1 - MEDALLAS_X) / Math.max(1, MEDALLA_COLS);
+    private static final int MEDALLA = MEDALLA_PASO - MEDALLA_SEP;
 
     /** El tinte de una medalla que no se tiene: oscura, pero se ve que es. */
     private static final int MEDALLA_APAGADA = 0xFF3C4258;
@@ -895,7 +925,7 @@ public class PokePadScreen extends Screen {
     }
 
     /**
-     * Las dieciseis medallas, ocho por fila.
+     * Las medallas, en dos filas que se ajustan solas.
      *
      * <p>Las que no se tienen se dibujan <b>oscurecidas, no ocultas</b>: se ve
      * cual es cada una y cuantas faltan. El tinte MULTIPLICA, asi que basta un
@@ -907,7 +937,7 @@ public class PokePadScreen extends Screen {
               false, false);
 
         int lado = Math.round(MEDALLA * k);
-        int paso = MEDALLA + MEDALLA_SEP;
+        int paso = MEDALLA_PASO;
         for (int i = 0; i < MEDALLAS.size(); i++) {
             int artX = MEDALLAS_X + (i % MEDALLA_COLS) * paso;
             int artY = MEDALLAS_Y + (i / MEDALLA_COLS) * paso;
@@ -924,10 +954,16 @@ public class PokePadScreen extends Screen {
             new Identifier[MEDALLAS.size()];
 
     static {
-        for (int i = 0; i < MEDALLAS.size(); i++) {
-            MEDALLA_TEX[i] = Identifier.of(
-                    "cobbleversebadges",
-                    "textures/item/" + MEDALLAS.get(i) + "_badge.png");
+        // ⚠⚠ LA RUTA LA DA EL PROPIO GIMNASIO, no se compone aqui. Pegar
+        //    «_badge» detras funcionaba con las dieciseis de Kanto y Johto, y
+        //    deja de funcionar con los TROFEOS de campeon --se llaman
+        //    `kanto_league_trophy`, no `kanto_league_trophy_badge`-- y con las
+        //    cinco de la Liga Naranja, que son NUESTRAS y viven en otro mod.
+        //    Componer la ruta en dos sitios distintos es como se llega a una
+        //    textura que no existe: se ve como el cuadro morado.
+        var porBit = net.pokereport.luna.gym.Gimnasio.porBit();
+        for (int i = 0; i < MEDALLAS.size() && i < porBit.size(); i++) {
+            MEDALLA_TEX[i] = porBit.get(i).textura();
         }
     }
 

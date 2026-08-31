@@ -1692,6 +1692,14 @@ public final class AutoTest {
         if (net.pokereport.luna.LunaEternal.hayEntrenadores()) {
             boolean todos = true;
             for (var g : todos_) {
+                // ⚠⚠ LOS DE LA LIGA NARANJA SE SALTAN, Y SE DICE POR QUE. Sus
+                //    cinco entrenadores son NUESTROS y todavia no los sirve
+                //    nadie: preguntarle a rctmod por ellos daria rojo siempre.
+                //    Darlos por buenos en silencio seria peor -- el dia que se
+                //    construya la sala apareceria vacia y nadie sabria por que.
+                if (!net.pokereport.luna.gym.Gimnasio.entrenadorDeRct(g)) {
+                    continue;
+                }
                 if (!net.pokereport.luna.gym.Lideres.idValido(g)) {
                     todos = false;
                     LunaEternal.LOG.error("Gimnasio {}: el entrenador '{}' NO "
@@ -1713,6 +1721,131 @@ public final class AutoTest {
               net.pokereport.luna.gym.Gimnasio.de("no_existe") == null);
         check("un nulo no resuelve",
               net.pokereport.luna.gym.Gimnasio.de(null) == null);
+
+        // ---- LOS NIVELES Y LA PERICIA ----------------------------------
+
+        // ⚠⚠ LOS NIVELES SUBEN, SIEMPRE. Si dos empataran o uno bajara, el orden
+        //    de las medallas dejaria de significar nada: alguien se encontraria
+        //    el gimnasio 9 mas facil que el 8, y la progresion --que es lo unico
+        //    que ordena 23 gimnasios-- seria mentira. NO da ningun error.
+        boolean suben = true;
+        int anterior = 0;
+        for (var g : todos_) {
+            if (g.nivel() <= anterior) {
+                suben = false;
+                LunaEternal.LOG.error("Gimnasio {}: nivel {} y el anterior {}",
+                        g.id(), g.nivel(), anterior);
+            }
+            anterior = g.nivel();
+        }
+        check("los niveles de gimnasio suben, uno a uno", suben);
+
+        boolean rango = true, periciaOk = true;
+        for (var g : todos_) {
+            if (g.nivel() < 1 || g.nivel() > 100) {
+                rango = false;
+            }
+            // ⚠ 0..5 porque `StrongBattleAI.checkSkillLevel` hace
+            //   `skill == 5 ? true : rnd(100) < skill*20`. Un 7 no da error:
+            //   se comporta igual que 5 y engaña al que lo lea.
+            if (g.pericia() < 0 || g.pericia() > 5) {
+                periciaOk = false;
+            }
+        }
+        check("todos los niveles estan entre 1 y 100", rango);
+        check("la pericia de la IA esta entre 0 y 5", periciaOk);
+
+        // ---- EL REPERTORIO Y LA ADAPTACION -----------------------------
+
+        // ⚠⚠⚠ CADA ESPECIE Y CADA MOVIMIENTO EXISTEN DE VERDAD. Esto es lo mas
+        //    importante de este bloque, porque el fallo es MUDO: un movimiento
+        //    que esa especie no puede aprender NO da ningun error -- sale un
+        //    Pokemon con tres ataques en vez de cuatro, y el jugador solo nota
+        //    que el lider juega raro. Es el fallo de los 62 cosmeticos que no
+        //    existian, otra vez.
+        boolean especies = true, ataques = true, habilidades = true;
+        boolean suTipo = true, bastantes = true;
+        for (String gid : net.pokereport.luna.gym.Repertorio.conRepertorio()) {
+            var g = net.pokereport.luna.gym.Gimnasio.de(gid);
+            var pool = net.pokereport.luna.gym.Repertorio.de(gid);
+
+            // ⚠ Seis o mas, porque un jugador puede traer SEIS. Con cinco, la
+            //   paridad se rompe justo en el combate mas dificil.
+            if (pool.size() < 6) {
+                bastantes = false;
+                LunaEternal.LOG.error("Gimnasio {}: solo {} en el repertorio,"
+                        + " y un jugador puede traer 6", gid, pool.size());
+            }
+            for (var f : pool) {
+                var sp = net.pokereport.luna.gym.Adaptador.especie(f.especie());
+                if (sp == null) {
+                    especies = false;
+                    LunaEternal.LOG.error("Repertorio de {}: la especie '{}' NO"
+                            + " existe", gid, f.especie());
+                    continue;
+                }
+                // ⚠⚠ QUE SEA DE SU TIPO. Es el limite que separa un gimnasio de
+                //    un espejo: si el rival se genera SOLO para contrarrestar,
+                //    Brock deja de ser Brock. Lo unico que hace memorable a un
+                //    gimnasio es que sabes a que vas.
+                var tp = net.pokereport.luna.gym.Tipos.deEspecie(sp);
+                boolean esSuyo = false;
+                for (String x : tp) {
+                    if (x != null && x.equalsIgnoreCase(net.pokereport.luna.gym.Repertorio.tipoDe(gid))) {
+                        esSuyo = true;
+                    }
+                }
+                if (!esSuyo) {
+                    suTipo = false;
+                    LunaEternal.LOG.error("Repertorio de {}: {} no es de tipo {}",
+                            gid, f.especie(), net.pokereport.luna.gym.Repertorio.tipoDe(gid));
+                }
+                // la habilidad tiene que ser de esa especie
+                boolean tieneHab = false;
+                for (var ab : sp.getAbilities()) {
+                    if (ab.getTemplate().getName().equalsIgnoreCase(f.habilidad())) {
+                        tieneHab = true;
+                    }
+                }
+                if (!tieneHab) {
+                    habilidades = false;
+                    LunaEternal.LOG.error("Repertorio de {}: {} no tiene la"
+                            + " habilidad '{}'", gid, f.especie(), f.habilidad());
+                }
+                // ⚠ De cuatro a seis: con menos de cuatro el Pokemon sale con
+                //   huecos, y eso tampoco da error.
+                if (f.ataques().size() < 4) {
+                    ataques = false;
+                    LunaEternal.LOG.error("Repertorio de {}: {} solo tiene {}"
+                            + " ataques", gid, f.especie(), f.ataques().size());
+                }
+            }
+        }
+        check("cada especie del repertorio existe", especies);
+        check("cada habilidad es de esa especie", habilidades);
+        check("cada ficha declara al menos 4 ataques", ataques);
+        check("todo el repertorio es del tipo de su lider", suTipo);
+        check("cada repertorio llega a 6, que es lo que puede traer un jugador",
+              bastantes);
+
+        // ⚠⚠ LA TABLA DE TIPOS, contra pares que se saben de memoria. Se genero
+        //    de los datos de Showdown, y una tabla generada puede salir
+        //    TRASPUESTA sin que nada se queje: agua->roca y roca->agua darian
+        //    los dos un numero, solo que el equivocado.
+        check("agua contra roca es x2",
+              net.pokereport.luna.gym.Tipos.contra("water", "rock", null) == 2.0);
+        check("fuego contra roca es x0,5",
+              net.pokereport.luna.gym.Tipos.contra("fire", "rock", null) == 0.5);
+        check("electrico contra tierra es x0",
+              net.pokereport.luna.gym.Tipos.contra("electric", "ground", null) == 0.0);
+        check("roca contra volador es x2",
+              net.pokereport.luna.gym.Tipos.contra("rock", "flying", null) == 2.0);
+        // ⚠ Y uno de DOS tipos, que es donde se ve si multiplica de verdad:
+        //   agua contra roca/tierra es 2 x 2 = 4.
+        check("agua contra roca/tierra es x4",
+              net.pokereport.luna.gym.Tipos.contra("water", "rock", "ground") == 4.0);
+        check("un tipo desconocido no revienta y vale x1",
+              net.pokereport.luna.gym.Tipos.contra("chicle", "rock", null) == 1.0);
 
         // ---- las ranuras -----------------------------------------------
         var g0 = todos_.get(0);
@@ -1813,35 +1946,51 @@ public final class AutoTest {
 
         // ---- las medallas ----------------------------------------------
         //
-        // ⚠⚠⚠ EL BIT DE LA MEDALLA ES LA SALA, y de eso depende que la medalla
-        //    que enciende el PokePad sea la que has ganado. Si dejaran de
-        //    coincidir, ganar a Brock encenderia la de Misty SIN DAR NINGUN
-        //    ERROR: verias una medalla que no tienes y no verias la que si.
+        // ⚠⚠⚠ EL BIT DE LA MEDALLA ES SU COLUMNA `bit`, NO SU POSICION. Hasta
+        //    el 30-ago era `sala()`, y entonces entro la Liga Naranja EN MITAD
+        //    de la lista: con el bit posicional, quien tuviera la medalla del
+        //    Campeon de Kanto se habria despertado con la de Cissy. SIN UN SOLO
+        //    ERROR, porque una mascara es un numero y un numero siempre se lee.
+        //
+        //    ⚠⚠ Y por eso lo que se comprueba aqui es que sea UNICO Y QUEPA, no
+        //       que coincida con la posicion: comparar contra la posicion seria
+        //       volver a atar las dos cosas que acabamos de separar.
         boolean bits = true;
+        var vistosBit = new java.util.HashSet<Integer>();
         for (var g : todos_) {
-            if (net.pokereport.luna.gym.Gimnasio.bitMedalla(g) != (1 << g.sala())) {
+            if (net.pokereport.luna.gym.Gimnasio.bitMedalla(g) != (1 << g.bit())) {
                 bits = false;
             }
+            // ⚠ Hasta 30: `1 << 31` es NEGATIVO y `1 << 32` vale 1 -- o sea que
+            //   el gimnasio 32 encenderia la medalla de Brock. Ninguno da error.
+            if (g.bit() < 0 || g.bit() > 30 || !vistosBit.add(g.bit())) {
+                bits = false;
+                LunaEternal.LOG.error("Gimnasio {}: bit {} repetido o fuera de"
+                        + " rango", g.id(), g.bit());
+            }
         }
-        check("el bit de cada medalla es su sala", bits);
+        check("cada medalla tiene un bit unico que cabe en la mascara", bits);
 
         // ⚠⚠ LAS DIECISEIS INSIGNIAS SON UNA SOLA LISTA. Antes habia tres --esta,
         //    la del PokePad y la del dialogo del gimnasio-- y nada las obligaba a
         //    coincidir. Hoy las pantallas leen de aqui; esto vigila que la lista
         //    siga teniendo dieciseis nombres distintos y en orden.
         var insignias = net.pokereport.luna.gym.Gimnasio.insignias();
-        check("hay dieciseis insignias", insignias.size() == 16);
+        // ⚠ Contra `todos_.size()` y NO contra un 16 escrito a mano: el numero
+        //   ya cambio dos veces (8 -> 16 -> 23) y un literal solo avisa la vez
+        //   que alguien se acuerda de tocarlo.
+        check("hay una insignia por gimnasio", insignias.size() == todos_.size());
         check("ninguna insignia se repite",
               new java.util.HashSet<>(insignias).size() == insignias.size());
         boolean enOrden = true;
         for (var g : todos_) {
-            if (!insignias.get(g.sala()).equals(g.insignia())) {
+            if (!insignias.get(g.bit()).equals(g.insignia())) {
                 enOrden = false;
                 LunaEternal.LOG.error("Gimnasio {}: su insignia {} no esta en el "
-                        + "hueco {} de la lista", g.id(), g.insignia(), g.sala());
+                        + "hueco {} de la lista", g.id(), g.insignia(), g.bit());
             }
         }
-        check("cada insignia esta en el hueco de su sala", enOrden);
+        check("cada insignia esta en el hueco de su BIT", enOrden);
 
         // ⚠ La mascara: leer un bit no puede depender del orden del bucle.
         var quien = java.util.UUID.randomUUID();

@@ -210,25 +210,41 @@ public final class Lideres {
         int n = 0;
         for (Gimnasio.Gimnasio_ g : Gimnasio.conRecepcion()) {
             var r = Gimnasio.recepcion(g);
+            // ⚠⚠ EL GIRO SE GUARDA, no solo se aplica. Antes el número viajaba
+            //    como parámetro, giraba al líder, y se perdía al reiniciar: el
+            //    comando decía «hecho» y días después Brock «se había girado
+            //    solo». Ahora, si viene uno, se escribe; y si no, manda el que
+            //    haya guardado. Detalle en Orientacion.
+            float suGiro;
+            if (giro != null) {
+                Orientacion.poner(g.id(), giro);
+                suGiro = Orientacion.giro(g.id(), r.giro());
+            } else {
+                suGiro = Orientacion.giro(g.id(), r.giro());
+            }
+
             // Primero limpiar: el radio es el mismo con el que se pone.
             quitar(mundo, r.lider(), 4);
             Decorativos.quitar(mundo, r.pokemon(), 4);
+            Cartel.quitar(mundo, g, r.lider());
 
-            var mob = colocar(mundo, g, r.lider(),
-                    giro == null ? r.giro() : giro, MARCA_RECEPCION);
+            var mob = colocar(mundo, g, r.lider(), suGiro, MARCA_RECEPCION);
             if (mob == null) {
                 continue;
             }
             var poke = Decorativos.colocar(mundo, r.especie(),
-                    Decorativos.Postura.QUIETO, r.pokemon(),
-                    giro == null ? r.giro() : giro);
+                    Decorativos.Postura.QUIETO, r.pokemon(), suGiro);
             if (poke == null) {
                 LunaEternal.LOG.warn("Gimnasio {}: no se pudo poner su {}",
                         g.id(), r.especie());
             }
+            // ⚠ El cartel va DESPUÉS del líder: si la colocación falla no se
+            //   queda un rótulo flotando sobre un sitio vacío, que es la clase
+            //   de resto que luego nadie sabe de dónde salió.
+            Cartel.poner(mundo, g, r.lider());
             n++;
             LunaEternal.LOG.info("Gimnasio {}: recepción en {} {} {} (giro {})",
-                    g.id(), r.x(), r.y(), r.z(), giro == null ? r.giro() : giro);
+                    g.id(), r.x(), r.y(), r.z(), suGiro);
         }
         return n;
     }
@@ -244,6 +260,10 @@ public final class Lideres {
             var r = Gimnasio.recepcion(g);
             n += quitar(mundo, r.lider(), 4);
             Decorativos.quitar(mundo, r.pokemon(), 4);
+            // ⚠ El cartel también. Es una entidad, se queda en el mundo, y a un
+            //   TextDisplay el daño NO le llega: `/kill` diría que lo ha matado
+            //   y seguiría ahí. La única forma es `discard`, que es lo que hace.
+            Cartel.quitar(mundo, g, r.lider());
         }
         return n;
     }
@@ -271,6 +291,13 @@ public final class Lideres {
         //    se queda donde lo pusiste.
         quitarDeRanura(mundo, g, ranura);
         var mob = colocar(mundo, g, donde, Gimnasio.giroLider(g), MARCA_ARENA);
+        if (mob != null) {
+            // ⚠ El mismo cartel que en la ciudadela. Aquí sirve para otra cosa:
+            //   el jugador ya aceptó el reto, así que lo que le recuerda es A
+            //   QUÉ NIVEL se pelea -- que es lo que explica por qué su Pokémon
+            //   de nivel 40 aparece de 15.
+            Cartel.poner(mundo, g, donde);
+        }
         if (mob != null && !Gimnasio.tieneTarima(g)) {
             // ⚠ Si la tarima no está medida, el sitio es una SUPOSICIÓN: 20
             //   bloques al fondo de la entrada. Puede caer dentro de una pared,

@@ -65,8 +65,21 @@ public class GimnasiosScreen extends Screen {
     private static final List<Gimnasio.Gimnasio_> GIMNASIOS = Gimnasio.TODOS;
 
     /** Dos columnas de ocho: los dieciséis caben sin paginar. */
-    private static final int COLS = 2;
-    private static final int FILAS = 8;
+    /**
+     * ⚠⚠⚠ LAS FILAS SE CALCULAN. Estaba a 2x8 = DIECISEIS JUSTOS, que es lo que
+     *    habia cuando se escribio, y con la Liga Naranja son VEINTITRES: los
+     *    siete ultimos caian en una tercera columna que no existe y se dibujaban
+     *    <b>fuera del marco</b>. Desde dentro se ve como «faltan gimnasios»,
+     *    igual que la cadena `oficios` del arbol de misiones.
+     *
+     *    <p>Es la cuarta vez que este proyecto tropieza con «cabia por
+     *    casualidad»: la rejilla del PokePad, la paginacion de Cosmeticos, las
+     *    medallas de la ficha, y esto. Aqui las columnas se fijan --tres, que es
+     *    lo que se lee bien-- y <b>las filas salen de cuantos gimnasios haya</b>.
+     */
+    private static final int COLS = 3;
+    private static final int FILAS =
+            (Gimnasio.TODOS.size() + COLS - 1) / COLS;
 
     private final Screen anterior;
 

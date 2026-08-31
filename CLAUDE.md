@@ -1253,7 +1253,7 @@ Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
                    aparece dentro del suelo
               LA CIUDADELA (medido por el usuario):
                 Brock    -137.95  69 49.37
-                Geodude  -137.544 69 52      SOLO ESTETICO
+                Onix     -137.544 69 52      SOLO ESTETICO (era Geodude)
                 ⚠ Geodude porque es el PRIMERO de su equipo (Geodude 16, Bonsly
                   16, Cranidos 18, Onix 20), leido del datapack. Y porque entre
                   los dos puntos hay 2,66 bloques: un Onix mide casi nueve de
@@ -1338,8 +1338,130 @@ Gimnasios     BROCK RECIBE, BROCK COMBATE Y LA MEDALLA LLEGA (2026-08-29, V024)
               LO QUE FALTA: verificarlo en el juego, poner los cuatro bloques de
               posicion en el maestro, y los otros siete gimnasios
 
-La Liga       LOS DIECISEIS GIMNASIOS, OCHO POR REGION (2026-08-30)
-              icono `gyms` . dos columnas . pastilla de color por estado
+Combate       MISMO NIVEL, MISMA CANTIDAD, Y EL LIDER SE PREPARA (2026-08-30)
+              auditoria completa en docs/pokemon/combate-gimnasios.md
+              /luna gimnasio brock equipo   que sacaria contra TU equipo
+              ⚠⚠⚠ EL EQUIPO DE UN ENTRENADOR DE rctmod ES UN FICHERO, o sea
+                 ESTATICO. Todo lo que reaccione al jugador --cuantos trae, de
+                 que tipos, a que nivel-- NO PUEDE VIVIR AHI. Se construye un
+                 `TrainerModel` propio POR COMBATE y se registra con
+                 `TrainerRegistry.registerNPC`, que es publico
+                 ⚠⚠⚠ Y HAY QUE BORRARLO: el registro es un mapa que no se vacia
+                    solo. Sin `unregisterById` crece con CADA reto del servidor,
+                    para siempre, sin dar ningun error
+                    va en los TRES caminos --ganar, perder, DESCONECTARSE-- y por
+                    eso vive en `Combate.soltar`, que es el unico embudo
+                 ⚠⚠ MUTAR `TrainerNPC.getTeam()` PARECIA MAS FACIL Y ESTA MAL
+                    DOS VECES: la longitud del array es FIJA (Brock tiene 4 y un
+                    jugador puede traer 6), y el TrainerNPC es COMPARTIDO -- dos
+                    retadores a la vez se cambiarian el equipo el uno al otro EN
+                    MITAD DEL COMBATE. Por eso el id lleva el UUID
+              LA IGUALDAD DE NIVEL LA HACE COBBLEMON: `BattleFormat.adjustLevel`
+              + `BattleRules.withAdjustPlayerLevels/NPCLevels`
+              ⚠⚠⚠ Y NO TOCA EL POKEMON DEL JUGADOR. Comprobado EN EL BYTECODE
+                 antes de escribir una linea, porque si fuera falso le bajaria el
+                 nivel a la gente DE VERDAD y no habria vuelta atras:
+                   toBattlePokemons(t, copiar) con copiar = adjustLevel > 0
+                     -> original.clone(true, null) + BattleCloneProperty
+                     -> new BattlePokemon(original, CLON, ...)
+                   initParty -> setLevel sobre getEffectedPokemon() = EL CLON
+              ⚠⚠ IGUALA, NO ACOTA: un inicial de nivel 5 SUBE a 15. Por eso el
+                 cartel dice «Combate a nivel 15» y no «nivel maximo 15»
+              ⚠⚠⚠ EL FORMATO SE COPIA, NO SE MUTA. `BattleFormat.GEN_9_SINGLES`
+                 de rctapi es un ENUM: su formato de Cobblemon es UNA instancia
+                 compartida. `setAdjustLevel` sobre ella pondria el nivel del
+                 gimnasio a TODOS los combates del servidor -- salvajes incluidos
+              LA IA ES `StrongBattleAI(pericia)`, la de Cobblemon, y la pericia
+              es 0..5. Leido del bytecode:
+                checkSkillLevel() = skill==5 ? true : rnd(100) < skill*20
+              o sea que ES EL PORCENTAJE DE TURNOS EN QUE JUEGA OPTIMO
+                Brock->Surge 3 . Erika->Blaine 4 . Giovanni y campeones 5
+              ⚠ el defecto de rctapi es 2 (40%). Se sube porque la paridad de
+                nivel YA quita la ventaja del jugador: con la IA fallando mas de
+                la mitad de los turnos, Brock volveria a ser un tramite
+              ⚠⚠⚠ EL LIDER NO DEJA DE SER DE SU TIPO, Y ESE ES EL LIMITE. Un
+                 rival generado SOLO para contrarrestar es un espejo, no un
+                 gimnasio: lo unico que hace memorable a un gimnasio es que SABES
+                 A QUE VAS. Se adapta nivel, cantidad, quien sale, movimientos,
+                 habilidad y EVs. La lista de especies es de roca y sigue siendo
+                 de roca -- y el autotest lo comprueba
+              ⚠ y el POKEMON DE FIRMA lleva ventaja fija: sin ella, con el equipo
+                adecuado te encontrarias un gimnasio de Brock SIN ONIX
+              ⚠⚠ NADA DEL REPERTORIO SE ESCRIBIO DE MEMORIA: las 11 especies, sus
+                 habilidades y sus 66 movimientos se validaron contra
+                 data/cobblemon/species/ del jar ANTES de escribirlos, y el
+                 autotest los revalida en cada arranque. Un movimiento que esa
+                 especie no aprende NO DA ERROR: sale con tres ataques
+              ⚠⚠ ONCE Y NO CUATRO, porque un jugador puede traer SEIS. Con los
+                 cuatro canonicos la paridad se rompe justo en el combate mas
+                 dificil, y sin dar ningun error
+              LA TABLA DE TIPOS SE GENERO DE LOS DATOS DEL JUEGO:
+              data/cobblemon/showdown.zip!/data/typechart.js, con 11 pares
+              conocidos comprobados. 324 multiplicadores a mano es donde un error
+              no se ve nunca
+              ⚠ la de rctapi (`TypeChart.getEffectiveness`) NO servia: pide
+                BattlePokemon, o sea que solo existe DENTRO de un combate -- y el
+                equipo hay que elegirlo ANTES
+
+Carteles      TEXTO FLOTANTE SOBRE CADA LIDER (2026-08-30, peticion del usuario)
+              nombre . tipo . a que nivel se pelea . medallas que pide
+              ⚠⚠ NO ES `setCustomName`: eso es UNA linea y aqui hacen falta
+                 cuatro. Es un TextDisplay, que ademas mira siempre al jugador
+              ⚠⚠⚠ SE BORRA ANTES DE PONER. Es una entidad y se queda en el mundo:
+                 sin limpiar quedaria un cartel MAS en cada colocacion. Y a un
+                 TextDisplay `/kill` NO le llega -- solo `discard`
+              ⚠ el texto va COMPUESTO Y EN ESPAnOL, al reves de la regla del
+                idioma: un TextDisplay guarda el Text EN EL MUNDO, asi que una
+                clave se resolveria al ponerlo y quedaria congelada para todos
+              ⚠ `setShadow(boolean)` NO EXISTE: la sombra es un bit de
+                `setDisplayFlags(byte)`
+
+Orientacion   HACIA DONDE MIRA CADA LIDER, Y AHORA SE GUARDA (2026-08-30)
+              /luna gimnasio <cual> mirar <grados>   .  ... nomirar
+              config/luna-recepciones.properties
+              ⚠⚠⚠ EL GIRO YA SE PODIA PASAR Y SE PERDIA AL REINICIAR. El comando
+                 decia «hecho», el lider giraba de verdad, y el fallo aparecia
+                 dias despues con cara de otra cosa: «Brock se ha girado solo»
+              ⚠ un fichero y no una tabla porque se lee AL ARRANCAR, en el hilo
+                del servidor, donde consultar la base esta prohibido. De propina
+                se puede editar a mano mientras se construye
+
+La Liga       VEINTITRES RETOS: KANTO 8 + LIGA NARANJA 5 + JOHTO 8, Y DOS
+              CAMPEONES (2026-08-30)
+              icono `gyms` . tres columnas . pastilla de color por estado
+              NIVELES (decision del usuario):
+                brock 15 . misty 19 . surge 24 . erika 28 . koga 33
+                sabrina 37 . blaine 42 . giovanni 46
+                cissy 49 . danny 52 . rudy 55 . luana 58 . drake 62
+                CAMPEON KANTO 63  (era 60: subio para dejar sitio al naranja)
+                pegaso 64 . anton 68 . blanca 71 . morti 75 . anibal 79
+                yasmina 82 . fredo 86 . debora 90 . CAMPEON JOHTO 100
+              ⚠⚠⚠ EL BIT DE LA MEDALLA ES UNA COLUMNA, NO LA POSICION EN LA
+                 LISTA. Era `sala()`, y entonces la Liga Naranja entro EN MITAD:
+                 con el bit posicional, quien tuviera la del Campeon de Kanto se
+                 habria despertado con la de Cissy. SIN UN SOLO ERROR, porque una
+                 mascara es un numero y un numero siempre se lee
+                 misma leccion que el ENUM de MariaDB y que el `escalon` de los
+                 rangos. TERCERA VEZ. Un bit, una vez, para siempre
+              ⚠⚠ EL EQUIPO NARANJA NO EXISTE EN NINGUN DATO, y se comprobo:
+                   entrenadores  156 en el datapack, NI Cissy ni Danny ni Rudy
+                                 ni Luana (el unico Drake es el de Hoenn)
+                   medallas      45 texturas en CobbleverseBadges, ninguna suya
+                 hay que CREAR los cinco entrenadores y el arte de las cinco
+                 medallas (lo manda el usuario). Van declarados como
+                 «proximamente» y `construido()` impide entrar
+                 ⚠ el autotest SALTA sus ids a proposito y lo dice: darlos por
+                   buenos dejaria una sala vacia el dia que se construya
+              ⚠⚠ LOS DOS TROFEOS DE CAMPEON YA EXISTEN: `kanto_league_trophy` y
+                 `johto_league_trophy`, en el mod de medallas que todos tienen
+                 instalado. No hubo que dibujar nada
+                 ⚠ y por eso la ruta la da `Gimnasio_.textura()` y no se compone
+                   pegando «_badge»: un trofeo no se llama asi
+              ⚠⚠⚠ LAS DOS REJILLAS SE SALIAN DEL MARCO CON 23. Ni la del PokePad
+                 (8x2 = dieciseis JUSTOS) ni la de esta pantalla (2x8) cabian, y
+                 el sintoma no es un error: son medallas flotando sobre el chasis
+                 y siete gimnasios dibujados fuera. CUARTA VEZ que este proyecto
+                 tropieza con «cabia por casualidad». Hoy las dos SE CALCULAN
               ganada . puedes retarle . te faltan N . proximamente
               ⚠⚠ NO PIDE NADA AL SERVIDOR: la lista es fija y las medallas ya
                  viajan en la ficha del PokePad. Un paquete propio seria un ida

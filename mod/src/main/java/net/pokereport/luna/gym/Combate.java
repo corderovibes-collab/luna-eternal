@@ -344,6 +344,19 @@ public final class Combate {
             return;
         }
         try {
+            // ⚠⚠⚠ PRIMERO SE INTENTA EL EQUIPO ADAPTADO, Y SI NO HAY, EL DE
+            //    SIEMPRE. `Adaptador.pelear` compone el equipo del líder contra
+            //    lo que trae el jugador --misma cantidad, mismo nivel-- y empieza
+            //    el combate él mismo. Devuelve `false` cuando ese gimnasio
+            //    todavía no tiene repertorio, y entonces manda el datapack.
+            //
+            //    ⚠⚠ CAER AL CAMINO DE SIEMPRE NO ES UN RESPALDO DECORATIVO: el
+            //       jugador YA ESTÁ DENTRO DE LA ARENA, y de esa dimensión no se
+            //       sale andando. Un reto que no empieza lo deja encerrado.
+            if (Adaptador.pelear(jugador, mob, g)) {
+                RCTMod.getInstance().getTrainerManager().addBattle(jugador, mob);
+                return;
+            }
             // ⚠⚠⚠ `makeBattle` Y NO `startBattleWith`. El motivo está entero en
             //    la cabecera de esta clase, y se resume así: `startBattleWith`
             //    pregunta primero a la progresión de rctmod --tope de nivel,
@@ -536,6 +549,14 @@ public final class Combate {
     private static void soltar(ServerPlayerEntity jugador, String cual) {
         var servidor = jugador.getServer();
         RETANDO.remove(jugador.getUuid());
+        // ⚠⚠⚠ Y AQUÍ SE BORRA EL ENTRENADOR FABRICADO. `Adaptador` registra uno
+        //    por combate en el registro de rctapi, y ese registro es un mapa que
+        //    no se vacía solo: sin esta línea crecería con cada reto del
+        //    servidor, para siempre, sin dar ningún error.
+        //    Va aquí porque este método es el ÚNICO embudo de los tres caminos
+        //    --ganar, perder y desconectarse--, que es justo la lista de tres
+        //    que ya tienen las ranuras.
+        Adaptador.soltar(jugador.getUuid());
         if (servidor != null && cual != null) {
             var g = Gimnasio.de(cual);
             if (g != null) {

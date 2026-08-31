@@ -207,6 +207,88 @@ public final class LunaCommand {
                     //   una persona, entra en una sala con media pared o sin los
                     //   bloques de posicion, y desde dentro parece que el
                     //   gimnasio esta roto. Y las otras seis estan bien.
+                    // ⚠⚠ MIRAR: guarda hacia donde mira ese lider EN DISCO.
+                    //    El giro ya se podia pasar a `ciudadela <grados>` y se
+                    //    perdia al reiniciar: el comando decia «hecho», el lider
+                    //    giraba, y dias despues «Brock se ha girado solo».
+                    .then(literal("mirar")
+                        .then(argument("grados",
+                                com.mojang.brigadier.arguments.FloatArgumentType
+                                        .floatArg(-360f, 360f))
+                            .executes(ctx -> {
+                                var s = ctx.getSource();
+                                var g = net.pokereport.luna.gym.Gimnasio.de(
+                                        StringArgumentType.getString(ctx, "cual"));
+                                if (g == null) {
+                                    s.sendError(Text.literal("§cNo existe"));
+                                    return 0;
+                                }
+                                float grados = com.mojang.brigadier.arguments
+                                        .FloatArgumentType.getFloat(ctx, "grados");
+                                if (!net.pokereport.luna.gym.Orientacion
+                                        .poner(g.id(), grados)) {
+                                    s.sendError(Text.literal(
+                                        "§cNo se pudo guardar. Mira el log."));
+                                    return 0;
+                                }
+                                // Y se aplica ya, para verlo sin reiniciar.
+                                int n = net.pokereport.luna.gym.Lideres
+                                        .colocarRecepciones(s.getServer(), null);
+                                s.sendFeedback(() -> Text.literal(
+                                    "§a" + g.lider() + " §7mira a §f" + grados
+                                    + "°§7, guardado. (" + n + " recepciones"
+                                    + " recolocadas)\n"
+                                    + "§80 sur · 90 oeste · 180 norte · -90 este"),
+                                    false);
+                                return 1;
+                            })))
+                    // ⚠ Y poder QUITARLO: sin esto, un giro mal puesto no se
+                    //   puede deshacer sin editar el fichero a mano.
+                    .then(literal("nomirar")
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            var g = net.pokereport.luna.gym.Gimnasio.de(
+                                    StringArgumentType.getString(ctx, "cual"));
+                            if (g == null) {
+                                s.sendError(Text.literal("§cNo existe"));
+                                return 0;
+                            }
+                            boolean habia = net.pokereport.luna.gym.Orientacion
+                                    .quitar(g.id());
+                            net.pokereport.luna.gym.Lideres
+                                    .colocarRecepciones(s.getServer(), null);
+                            s.sendFeedback(() -> Text.literal(habia
+                                ? "§a" + g.lider() + " §7vuelve a su giro de origen"
+                                : "§7" + g.lider() + " no tenia ninguno guardado"),
+                                false);
+                            return 1;
+                        }))
+                    // ⚠⚠ EQUIPO: enseña QUE SACARIA el lider contra el equipo de
+                    //    quien lo pide. Es la unica forma de ver la adaptacion
+                    //    sin pelear, y por tanto la unica forma de notar que
+                    //    esta eligiendo mal -- que es un fallo que NO da error.
+                    .then(literal("equipo")
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            var g = net.pokereport.luna.gym.Gimnasio.de(
+                                    StringArgumentType.getString(ctx, "cual"));
+                            if (g == null) {
+                                s.sendError(Text.literal("§cNo existe"));
+                                return 0;
+                            }
+                            var jugador = s.getPlayer();
+                            if (jugador == null) {
+                                s.sendError(Text.literal(
+                                    "§cDesde la consola no: hace falta tu equipo"));
+                                return 0;
+                            }
+                            for (String linea :
+                                    net.pokereport.luna.gym.Adaptador
+                                        .ensayo(jugador, g)) {
+                                s.sendFeedback(() -> Text.literal(linea), false);
+                            }
+                            return 1;
+                        }))
                     .then(literal("comprobar")
                         .executes(ctx -> {
                             var s = ctx.getSource();

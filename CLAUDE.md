@@ -794,14 +794,37 @@ Clanes        EL PRIMER SISTEMA SOCIAL (2026-08-23, V013)
               ⚠ SIN VERIFICAR EN EL JUEGO todavia: hacen falta DOS cuentas
               desplegado y V013 aplicada (2026-08-23) . Done (9,2 s)
 
-Rangos        NOVATO . ELITE . CAMPEON . MAESTRO . LEYENDA (2026-08-27, V020)
+Rangos        ENTRENADOR . ELITE . CAMPEON . MAESTRO . LEYENDA (V020, V025)
               y encima ADMIN . DEV . MODERADOR, que son de equipo
               /luna rango                   los que hay y cuanta gente
               /luna rango <jugador> <RANGO> nivel 4, SIN que este conectado
-              ⚠⚠ SALIO GRATIS PORQUE EL SISTEMA NO EXISTIA. `Tablist.rankOf`
-                 decia la verdad en su comentario: «Provisional... todo el mundo
-                 es JUGADOR salvo los operadores». NO habia ni un rango guardado,
-                 asi que renombrarlos no le cambio el rango a nadie
+              ⚠⚠⚠ EL MAS BAJO SE LLAMABA NOVATO Y HOY ES ENTRENADOR (V025,
+                  2026-08-30, decision del usuario). Y ESTA VEZ NO SALIO GRATIS:
+                  `player.rank_id` es un VARCHAR con el NOMBRE dentro, asi que
+                  renombrar la constante deja las filas viejas diciendo 'NOVATO'
+                  ⚠⚠ Y NO DARIA NINGUN ERROR, que es lo peor: `Rank.de` cae al
+                     rango por defecto ante lo que no reconoce --y el por
+                     defecto es JUSTO ESTE-- asi que todo seguiria funcionando
+                     con un aviso en el log por jugador. Una fila que nombra
+                     algo que ya no existe, y un sistema que lo disimula
+                  ⚠⚠ HAY QUE CAMBIAR TAMBIEN EL DEFAULT DE LA COLUMNA. Sin eso
+                     las filas viejas quedan bien y cada jugador NUEVO nace con
+                     'NOVATO': el mismo fallo, solo para los que lleguen
+                     despues, que es como se descubre tarde
+                  ⚠ Y HAY OTRO ENTRENADOR EN EL JUEGO: la Via `Path.ENTRENADOR`,
+                    la que sube combatiendo. No chocan en el codigo --son enums
+                    distintos-- pero el jugador ve la palabra dos veces
+                  ⚠ el traje del rango se llama como el rango, asi que su id
+                    cambio con el. ESO si salio gratis: construye la ruta del
+                    arte y el arte todavia no existe (`listo` esta a false)
+                  ⚠⚠ y de paso cayo una LISTA PARALELA en KitsScreen: un switch
+                     por indice con los cinco rangos escritos a mano. Renombrar
+                     la habria dejado mintiendo SIN ERROR. Hoy sale de `t.id()`
+              ⚠⚠ EL PRIMER RENOMBRADO (V020) SI SALIO GRATIS, y por que importa:
+                 `Tablist.rankOf` decia la verdad en su comentario --«Provisional...
+                 todo el mundo es JUGADOR salvo los operadores»-- o sea que NO
+                 habia ni un rango guardado. Esa ventana se cerro el dia que se
+                 guardo el primero
               ⚠⚠⚠ VARCHAR Y NO UN ENUM DE MARIADB, y esto ya nos mordio con los
                   oficios (V012): un ENUM guarda EL INDICE, asi que reordenar
                   convierte a unos jugadores en otros, y meter un valor que no
@@ -822,7 +845,7 @@ Rangos        NOVATO . ELITE . CAMPEON . MAESTRO . LEYENDA (2026-08-27, V020)
 
 Mochila       SIETE FILAS QUE SE ABREN POR RANGO (2026-08-27, V021)
               tecla N o el icono del PokePad
-                NOVATO 1 . ELITE 3 . CAMPEON 4 . MAESTRO 6 . LEYENDA 7
+                ENTRENADOR 1 . ELITE 3 . CAMPEON 4 . MAESTRO 6 . LEYENDA 7
               ⚠⚠ SIETE Y NO SEIS, y sale de la aritmetica del usuario: «1, otras
                  2 mas, otra mas, otras 2 mas, y LEYENDA todas» -> 1,3,4,6... y
                  «todas» TENIA que ser mas de 6 o LEYENDA no daria nada nuevo
@@ -986,7 +1009,7 @@ Viajes        LAS PARADAS, POR FIN EN SU SITIO (2026-08-27)
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
 
 Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
-              5 trajes . NOVATO hecho . los otros 4 «en preparacion»
+              5 trajes . ENTRENADOR hecho . los otros 4 «en preparacion»
               3 pestañas: KITS DE RANGO . KITS EXCLUSIVOS . MIS KITS
               saldo de LunaCoins con su «+» . previsualizador 3D
               ⚠⚠⚠ NO HAY OBJETO EN NINGUNA PARTE, y hay CUATRO motivos. Los tres
@@ -1035,7 +1058,7 @@ EL ARTE       tools/gen_trajes.py . tools/trajes/ . docs/ui/prompts-trajes.md
                  se escribe A CIEGAS: generas un fichero que dice «cubo aqui,
                  cubo alla» y no ves el resultado hasta compilar, desplegar,
                  reiniciar y ponertelo. Media hora por intento = UN intento
-                 `--ver novato` dibuja las 4 vistas y NO TOCA NADA
+                 `--ver entrenador` dibuja las 4 vistas y NO TOCA NADA
               ⚠⚠ Y DIBUJA EL MANIQUI DEBAJO, que es lo que caza el fallo de
                  verdad. En su segunda pasada encontro DOS SITIOS CON PIEL
                  ASOMANDO --el cinturon no llegaba al final del torso y la
@@ -1046,12 +1069,12 @@ EL ARTE       tools/gen_trajes.py . tools/trajes/ . docs/ui/prompts-trajes.md
                  textura envuelta-- pero SI el boceto, y con el dejo de inventar.
                  Vale el boceto PLANO Y ORTOGRAFICO, no un render bonito
                  ⚠ LA VISTA DE ESPALDA SE GANO EL SUELDO EN EL PRIMERO: la Poke
-                   Ball del NOVATO no se ve de frente, asi que sin esa vista no
+                   Ball del ENTRENADOR no se ve de frente, y sin esa vista no
                    se habria puesto nunca
               ⚠ el reparto de la textura SE CALCULA: escrito a mano cuadra hasta
                 que alguien cambia un cubo, y entonces dos cubos comparten
                 pixeles -- la cara de la bota dibujada en el hombro
-              ⚠ NOVATO no usa el color de su rango (§f, casi blanco): un traje
+              ⚠ ENTRENADOR no usa el color de su rango (§f, casi blanco): un traje
                 blanco sobre un cuerpo gris no se ve. Lleva el ROJO DEL
                 ENTRENADOR. Los otros cuatro si llevan el suyo
 

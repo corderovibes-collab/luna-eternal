@@ -47,7 +47,7 @@ salen, y dónde se pueden pagar?»**. Eso sí se puede medir, y se midió:
 | 2 vóxeles por bloque | 713 | **144** |
 | 4 vóxeles por bloque *(lo típico de una malla)* | 5.909 | **672** |
 
-> Un peto de vainilla son **3 cajas**. El traje de NOVATO entero, hecho a mano,
+> Un peto de vainilla son **3 cajas**. El traje de ENTRENADOR entero, hecho a mano,
 > son **15**.
 
 ⚠⚠⚠ **Y una armadura se dibuja EN CADA JUGADOR, EN CADA FOTOGRAMA.** 672 cajas
@@ -125,7 +125,7 @@ Un boceto **plano y de frente**, no un render bonito. Los prompts están en
 [prompts-trajes.md](prompts-trajes.md), con el bloque técnico que hay que pegar
 siempre.
 
-> ⚠ **Las tres vistas, siempre.** En el NOVATO, la Poké Ball iba en la espalda y
+> ⚠ **Las tres vistas, siempre.** En el ENTRENADOR, la Poké Ball iba en la espalda y
 > de frente no se ve nada: sin la vista de espalda no se habría puesto nunca.
 
 ### Paso 2 — Los cubos
@@ -204,7 +204,7 @@ no existe.
 
 ## Next Actions
 
-Elegir A, B o C del paso 2 para el NOVATO.
+Elegir A, B o C del paso 2 para el ENTRENADOR.
 
 Y aparte: probar el camino de Meshy → ObjToSchematic → Litematica con **una
 estatua de la ciudadela**, que es donde sí sale a cuenta.

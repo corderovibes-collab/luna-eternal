@@ -1003,7 +1003,7 @@ public final class LunaCommand {
         }
         var r = net.pokereport.luna.ui.Tablist.Rank.de(rango);
         if (r.equipo || !r.name().equalsIgnoreCase(rango.trim())) {
-            // ⚠ `Rank.de` devuelve NOVATO ante un nombre desconocido, asi que
+            // ⚠ `Rank.de` devuelve ENTRENADOR ante un nombre desconocido, asi que
             //   sin esta comprobacion un error de tecleo DEGRADARIA al jugador
             //   en silencio en vez de dar error.
             src.sendFeedback(() -> Text.literal(

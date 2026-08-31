@@ -146,7 +146,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             Tablist.onJoin(server, player);
             // ⚠⚠ EL RANGO SE CARGA Y LUEGO SE REPINTA LA ETIQUETA. `onJoin` ya
             //    la puso, pero con el rango que hubiera en cache -- y al entrar
-            //    no hay ninguno. Sin este repintado, quien entra se ve NOVATO
+            //    no hay ninguno. Sin este repintado, quien entra se ve ENTRENADOR
             //    hasta la siguiente vez que algo toque su prefijo, que puede
             //    ser nunca. Es la leccion del 23-ago: si el servidor cambia un
             //    estado que el cliente dibuja, el servidor lo reenvia.

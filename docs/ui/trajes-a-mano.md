@@ -43,7 +43,7 @@ En Blockbench eso es el campo **Inflate = 0.4** (o más). Con 0,25 titila. Con
 0,3 titila a veces, según la distancia. **Con 0,4 no titila nunca.**
 
 > ⚠ Y hay un caso en que **sí** quieres pegarte al cuerpo: cuando la parte va
-> **al aire**, como los antebrazos del NOVATO. Ahí sencillamente **no pongas
+> **al aire**, como los antebrazos del ENTRENADOR. Ahí sencillamente **no pongas
 > cubo**, y se ve la piel del jugador. No lo tapes con algo transparente.
 
 ---
@@ -145,14 +145,14 @@ Exportar: `File → Export → Export Bedrock Geometry`.
 Por cada traje, **ocho ficheros** en una carpeta con el nombre del rango:
 
 ```
-novato/
+entrenador/
   novato_head.geo.json      novato_head.png
   novato_body.geo.json      novato_body.png
   novato_legs.geo.json      novato_legs.png
   novato_boots.geo.json     novato_boots.png
 ```
 
-Los nombres de rango son exactamente: `novato`, `elite`, `campeon`, `maestro`,
+Los nombres de rango son exactamente: `entrenador`, `elite`, `campeon`, `maestro`,
 `leyenda`.
 
 **No hace falta que estén los cuatro.** Un traje que solo sea una gorra se manda
@@ -196,4 +196,4 @@ nunca al mod.
 
 ## Next Actions
 
-Dibujar NOVATO en Blockbench y mandar los ocho ficheros.
+Dibujar ENTRENADOR en Blockbench y mandar los ocho ficheros.

@@ -2,12 +2,12 @@
 """
 LOS TRAJES DE RANGO.
 
-    python tools/gen_trajes.py --ver novato     dibuja la lamina y no toca nada
+    python tools/gen_trajes.py --ver entrenador dibuja la lamina y no toca nada
     python tools/gen_trajes.py --generar        escribe geo + texturas al mod
     python tools/gen_trajes.py --verificar      comprueba los invariantes
 
 ⚠⚠⚠ LOS COLORES NO SE ELIGEN: SON LOS DEL RANGO EN EL CHAT.
-   NOVATO §f blanco · ELITE §a verde · CAMPEON §b turquesa · MAESTRO §5 morado
+   ENTRENADOR §f blanco · ELITE §a verde · CAMPEON §b turquesa · MAESTRO §5 morado
    · LEYENDA §6 oro. Es la misma decision que ya se tomo con el neon y el
    hormigon (D-032): si los 16 colores salen de la misma tabla, PEGAN POR
    CONSTRUCCION en vez de porque alguien los emparejara a ojo. Aqui ademas
@@ -21,7 +21,7 @@ LOS TRAJES DE RANGO.
 
 ⚠ SILUETA COMPARTIDA, DETALLE CRECIENTE. Los cinco tienen la misma base
   (hombreras + cinturon + botas) y lo que sube con el rango es lo que se AÑADE:
-  NOVATO una gorra; LEYENDA corona, capa y que brille de noche. Si cada rango
+  ENTRENADOR una gorra; LEYENDA corona, capa y que brille de noche. Si cada rango
   fuera un diseño distinto, no se leerian como una familia y subir de rango no
   se notaria.
 """
@@ -50,7 +50,7 @@ LAMINAS = RAIZ / "build" / "trajes"
 
 # El color del rango, y dos derivados que salen POR FORMULA y no a mano.
 RANGOS = {
-    "novato":  ("NOVATO",  (198, 204, 214)),
+    "entrenador": ("ENTRENADOR", (198, 204, 214)),
     "elite":   ("ELITE",   (88, 200, 108)),
     "campeon": ("CAMPEON", (86, 200, 214)),
     "maestro": ("MAESTRO", (150, 92, 200)),
@@ -66,7 +66,7 @@ def claro(c, k=0.35):
     return tuple(int(v + (255 - v) * k) for v in c)
 
 
-# ⚠⚠ EL TRAJE NO USA EL COLOR DEL CHAT DE NOVATO, Y ES A PROPOSITO. El rango es
+# ⚠⚠ EL TRAJE NO USA EL COLOR DEL CHAT DE ENTRENADOR, Y ES A PROPOSITO. El rango es
 #    §f -- casi blanco -- y un traje blanco sobre un cuerpo gris no se ve. La
 #    regla sigue siendo «el color dice el rango», pero al mas bajo se le da el
 #    ROJO DEL ENTRENADOR CLASICO, que es lo que hace que se lea «Pokemon» desde
@@ -81,11 +81,11 @@ CUERO = (74, 58, 46)
 BASE = (44, 50, 68)
 
 
-# ---------------------------------------------------------------- NOVATO
+# ------------------------------------------------------------ ENTRENADOR
 
-def novato():
+def entrenador():
     """
-    NOVATO: el entrenador que acaba de salir de casa.
+    ENTRENADOR: el que acaba de salir de casa.
 
     ⚠⚠⚠ ESTE NO SALE DE MI CABEZA: SALE DE UN BOCETO DEL USUARIO. Lo genero con
        Gemini como hoja de personaje (frente, lado y espalda, plano y sin
@@ -105,7 +105,7 @@ def novato():
       apareciendo al subir. Si el primero ya llevara placas, ELITE no tendria
       por donde crecer.
     """
-    t = Traje("novato", "Traje NOVATO")
+    t = Traje("entrenador", "Traje ENTRENADOR")
 
     # ---- la gorra ------------------------------------------------------
     # ⚠⚠ LA CABEZA DE VANILLA VA DE y=24 A y=32. Una gorra que empiece en 30 es
@@ -175,7 +175,7 @@ def novato():
     return t
 
 
-TRAJES = {"novato": novato}
+TRAJES = {"entrenador": entrenador}
 
 
 # ---------------------------------------------------------------- comprobar

@@ -46,7 +46,15 @@ public final class Tablist {
         MAESTRO   ("40_maestro", "§5§lMAESTRO", "§5", 4, false),
         CAMPEON   ("50_campeon", "§b§lCAMPEÓN", "§b", 3, false),
         ELITE     ("60_elite",   "§a§lÉLITE",   "§a", 2, false),
-        NOVATO    ("90_novato",  "§7NOVATO",    "§f", 1, false);
+        // ⚠⚠ SE LLAMABA NOVATO Y HOY ES ENTRENADOR (decision del usuario,
+        //    2026-08-30). El renombrado NO ES GRATIS como lo fue el de V020:
+        //    entonces no habia ni un rango guardado, y hoy `player.rank_id`
+        //    lleva el NOMBRE dentro. Lo migra V025.
+        //
+        //    ⚠ Y hay OTRO ENTRENADOR en el juego: la Via `Path.ENTRENADOR`,
+        //      la que sube combatiendo. Son cosas distintas y no chocan en el
+        //      codigo, pero un jugador ve las dos palabras.
+        ENTRENADOR("90_entrenador", "§7ENTRENADOR", "§f", 1, false);
 
         public final String teamName;
         /** Etiqueta visible antes del nombre. */
@@ -71,13 +79,13 @@ public final class Tablist {
 
         /** El rango por defecto. Todo el mundo empieza aqui. */
         public static Rank porDefecto() {
-            return NOVATO;
+            return ENTRENADOR;
         }
 
         /**
-         * El rango con ese nombre, o {@link #NOVATO}.
+         * El rango con ese nombre, o {@link #ENTRENADOR}.
          *
-         * <p>⚠ Un nombre que no exista devuelve NOVATO y <b>lo dice en el
+         * <p>⚠ Un nombre que no exista devuelve ENTRENADOR y <b>lo dice en el
          * log</b>. Devolverlo en silencio convertiria un error de tecleo en
          * «este jugador perdio su rango», que es la clase de fallo que nadie
          * relaciona con su causa.

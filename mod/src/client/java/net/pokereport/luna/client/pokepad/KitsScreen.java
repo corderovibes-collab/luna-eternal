@@ -326,8 +326,13 @@ public class KitsScreen extends Screen {
                     t.puede() ? COLOR_RANGO[Math.min(i, COLOR_RANGO.length - 1)]
                               : 0xFF3C4356);
 
-            var nombre = Text.translatable("pokepad.lunaeternal.rango."
-                    + rangoDe(i).toLowerCase(java.util.Locale.ROOT));
+            // ⚠⚠ EL NOMBRE SALE DEL PROPIO TRAJE, NO DE UNA LISTA PARALELA.
+            //    Aqui habia un `switch` por indice con los cinco rangos escritos
+            //    a mano: una SEGUNDA lista que nada obligaba a coincidir con la
+            //    del servidor. Al renombrar NOVATO se habria quedado mintiendo
+            //    SIN DAR NINGUN ERROR -- la trampa de las tres listas de
+            //    medallas, que ya nos costo una vez.
+            var nombre = Text.translatable("pokepad.lunaeternal.rango." + t.id());
             texto(ctx, nombre, listaX() + 24, y + 8, 20,
                     t.puede() ? 0xFFFFFFFF : 0xFF8892AC, false, CONTORNO_OSCURO);
 
@@ -340,8 +345,11 @@ public class KitsScreen extends Screen {
                 pie = Text.translatable("pokepad.lunaeternal.trajes.preparacion");
                 colorPie = TEXTO_SUAVE;
             } else if (!t.puede()) {
+                // ⚠ Y el nombre del rango va como Text TRADUCIBLE, no como
+                //   cadena: metido en crudo saldria en español dentro de una
+                //   frase en ingles.
                 pie = Text.translatable("pokepad.lunaeternal.trajes.bloqueado",
-                        rangoDe(i));
+                        Text.translatable("pokepad.lunaeternal.rango." + t.id()));
                 colorPie = 0xFFB07A3A;
             } else {
                 pie = Text.translatable("pokepad.lunaeternal.trajes.disponible");
@@ -359,16 +367,6 @@ public class KitsScreen extends Screen {
                 Text.translatable(llevo ? "pokepad.lunaeternal.trajes.quitar"
                                         : "pokepad.lunaeternal.trajes.poner"),
                 activo, llevo ? ROJO : VERDE);
-    }
-
-    private static String rangoDe(int i) {
-        return switch (i) {
-            case 0 -> "NOVATO";
-            case 1 -> "ELITE";
-            case 2 -> "CAMPEON";
-            case 3 -> "MAESTRO";
-            default -> "LEYENDA";
-        };
     }
 
     /**

@@ -20,7 +20,7 @@ import net.pokereport.luna.ui.Tablist;
  *
  * <h2>⚠⚠ SE PUEDE LLEVAR CUALQUIERA HASTA EL TUYO, NO SOLO EL TUYO</h2>
  *
- * Un LEYENDA puede vestirse de NOVATO si le apetece. Es deliberado: un traje es
+ * Un LEYENDA puede vestirse de ENTRENADOR si le apetece. Es deliberado: un traje es
  * un disfraz, y obligar a llevar el más alto convierte una recompensa en un
  * uniforme. Además evita el efecto raro de que subir de rango te <b>quite</b> el
  * aspecto con el que la gente te conocía.
@@ -43,7 +43,10 @@ public enum Traje {
     //    progresion-- y NO SE PUEDE PONER.
     //    Se enciende cambiando su `false` por `true`, y nada mas.
 
-    NOVATO("novato", Tablist.Rank.NOVATO, false),
+    // ⚠ El identificador cambio con el rango (NOVATO -> ENTRENADOR). Salio
+    //   gratis porque construye la ruta del arte --textures/armor/<id>/-- y
+    //   ese arte todavia NO EXISTE: `listo` esta a false en los cinco.
+    ENTRENADOR("entrenador", Tablist.Rank.ENTRENADOR, false),
     ELITE("elite", Tablist.Rank.ELITE, false),
     CAMPEON("campeon", Tablist.Rank.CAMPEON, false),
     MAESTRO("maestro", Tablist.Rank.MAESTRO, false),

@@ -12,7 +12,7 @@ Los bocetos de los cinco trajes de rango, para generarlos con IA de imagen y
 
 ## Current Status
 
-NOVATO hecho y traducido de un boceto real. Faltan ÉLITE, CAMPEÓN, MAESTRO y
+ENTRENADOR hecho y traducido de un boceto real. Faltan ÉLITE, CAMPEÓN, MAESTRO y
 LEYENDA.
 
 ---
@@ -28,7 +28,7 @@ va cada cubo**. Lo que sirve es una **hoja de personaje**: plana, de frente, con
 colores lisos.
 
 > ⚠⚠ **LA VISTA DE ESPALDA SE GANÓ EL SUELDO EN EL PRIMERO.** La Poké Ball del
-> NOVATO va en la espalda y **de frente no se ve nada**: sin esa vista no se
+> ENTRENADOR va en la espalda y **de frente no se ve nada**: sin esa vista no se
 > habría puesto jamás. **Las tres vistas siempre.**
 
 > ⚠ **Y una imagen por rango.** Las cinco juntas salen pequeñas y borrosas, y lo
@@ -72,7 +72,7 @@ La familia sube así, y **cada rango añade sin quitar**:
 
 | | Cabeza | Torso | Espalda | Material nuevo |
 |---|---|---|---|---|
-| NOVATO | gorra | chaleco | Poké Ball | tela |
+| ENTRENADOR | gorra | chaleco | Poké Ball | tela |
 | ÉLITE | cinta | chaqueta sin mangas | insignia | primer metal |
 | CAMPEÓN | diadema | coraza ligera | capa corta | placas |
 | MAESTRO | capucha | abrigo largo | capa entera | guanteletes |
@@ -84,7 +84,7 @@ La familia sube así, y **cada rango añade sin quitar**:
 > the parts that should glow»* y aquí se marcan esos cubos como emisivos — que
 > es lo que produce el `_glowmask.png` y hace que brillen de noche de verdad.
 
-### NOVATO — *el que acaba de salir de casa* ✅ hecho
+### ENTRENADOR — *el que acaba de salir de casa* ✅ hecho
 
 ```
 Character reference sheet of a blocky Minecraft-style Pokemon trainer,
@@ -234,7 +234,7 @@ aparecen, se pide de nuevo:
   dentro de un hilo, y lo que hace familia a los cinco trajes es que se parezcan
   entre ellos, no que cada uno sea bonito por su cuenta.
 - **Empieza pidiendo ÉLITE**, que es el siguiente al que ya está hecho. Si sale
-  con el mismo aire que el NOVATO, el resto va rodado.
+  con el mismo aire que el ENTRENADOR, el resto va rodado.
 - Si un boceto sale bien pero con un detalle imposible, **mándalo igual**: se
   traduce lo que se pueda y el detalle se sustituye por su equivalente en cubos.
 

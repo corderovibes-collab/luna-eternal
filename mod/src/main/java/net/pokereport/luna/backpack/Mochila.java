@@ -18,7 +18,7 @@ public final class Mochila {
     /**
      * ⚠ SIETE, y de aquí sale el porqué.
      *
-     * <p>El usuario dio la progresión sumando: <i>«NOVATO una fila, ÉLITE otras
+     * <p>El usuario dio la progresión sumando: <i>«ENTRENADOR una fila, ÉLITE otras
      * 2 más, CAMPEÓN otra más, MAESTRO otras 2 más, LEYENDA se desbloquea
      * todas»</i>. Eso da 1 → 3 → 4 → 6, y entonces <b>«todas» tenía que ser más
      * de 6</b> o LEYENDA no desbloquearía nada que MAESTRO no tuviera ya.
@@ -45,7 +45,7 @@ public final class Mochila {
      */
     public static int filasDe(int escalon) {
         return switch (Math.max(1, escalon)) {
-            case 1 -> 1;    // NOVATO
+            case 1 -> 1;    // ENTRENADOR
             case 2 -> 3;    // ÉLITE     +2
             case 3 -> 4;    // CAMPEÓN   +1
             case 4 -> 6;    // MAESTRO   +2

@@ -17,7 +17,7 @@ import net.pokereport.luna.ui.Tablist.Rank;
  *
  * <h2>Qué es un rango y qué no</h2>
  *
- * NOVATO · ÉLITE · CAMPEÓN · MAESTRO · LEYENDA. Se conceden desde fuera del
+ * ENTRENADOR · ÉLITE · CAMPEÓN · MAESTRO · LEYENDA. Se conceden desde fuera del
  * juego —los da la administración— y <b>desbloquean comodidad</b>, empezando
  * por las filas de la mochila.
  *

@@ -67,8 +67,8 @@ PIVOTES = {
 # ⚠⚠⚠ LAS BOTAS COLGABAN DE `armorRightLeg` Y ESO TUMBO EL CLIENTE (2026-08-28).
 #    Parecia lo natural --una bota va en una pierna-- y tiene un fallo mortal:
 #    las botas y las perneras son PIEZAS DISTINTAS, o sea FICHEROS DISTINTOS.
-#    `novato_boots.geo.json` declaraba `armorRightBoot -> armorRightLeg` y ese
-#    padre vive en `novato_legs.geo.json`. Dentro de su fichero, el padre NO
+#    `entrenador_boots.geo.json` declaraba `armorRightBoot -> armorRightLeg` y ese
+#    padre vive en `entrenador_legs.geo.json`. Dentro de su fichero, el padre NO
 #    EXISTE.
 #
 #    Y no se quedo en un aviso: GeckoLib valida TODO .geo.json que encuentre,

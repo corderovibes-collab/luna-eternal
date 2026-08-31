@@ -1265,7 +1265,7 @@ public final class AutoTest {
      * degrade a nadie en silencio</b>. {@code Rank.de} devuelve el más bajo
      * ante lo que no reconoce —que es lo correcto para leer una fila vieja—,
      * pero por eso mismo un error de tecleo en el comando bajaría a un LEYENDA
-     * a NOVATO sin decir nada. El comando lo comprueba aparte, y esto vigila
+     * a ENTRENADOR sin decir nada. El comando lo comprueba aparte, y esto vigila
      * que la pieza de abajo siga comportándose como se espera.
      */
     private void testRangos(long jugador) throws Exception {
@@ -1280,7 +1280,7 @@ public final class AutoTest {
               net.pokereport.luna.ui.Tablist.Rank.deJugador().size() == 5);
         check("el rango por defecto es el más bajo",
               net.pokereport.luna.ui.Tablist.Rank.porDefecto()
-                  == net.pokereport.luna.ui.Tablist.Rank.NOVATO);
+                  == net.pokereport.luna.ui.Tablist.Rank.ENTRENADOR);
 
         // ⚠ Los escalones son 1..5 SIN HUECOS Y SIN REPETIRSE. Un hueco o un
         //   empate haría que dos rangos desbloquearan lo mismo, y entonces
@@ -1329,7 +1329,7 @@ public final class AutoTest {
         var reparto = svc.reparto();
         check("el reparto cuenta a alguien en CAMPEON",
               reparto.getOrDefault(net.pokereport.luna.ui.Tablist.Rank.CAMPEON, 0) >= 1);
-        svc.cambiar(jugador, null, net.pokereport.luna.ui.Tablist.Rank.NOVATO);
+        svc.cambiar(jugador, null, net.pokereport.luna.ui.Tablist.Rank.ENTRENADOR);
     }
 
     /**
@@ -1351,9 +1351,9 @@ public final class AutoTest {
         var M = net.pokereport.luna.backpack.Mochila.class;
 
         // ---- las filas por rango --------------------------------------------
-        check("NOVATO abre 1 fila",
+        check("ENTRENADOR abre 1 fila",
               net.pokereport.luna.backpack.Mochila.filasDe(
-                  net.pokereport.luna.ui.Tablist.Rank.NOVATO) == 1);
+                  net.pokereport.luna.ui.Tablist.Rank.ENTRENADOR) == 1);
         check("LEYENDA abre todas",
               net.pokereport.luna.backpack.Mochila.filasDe(
                   net.pokereport.luna.ui.Tablist.Rank.LEYENDA)
@@ -2071,7 +2071,7 @@ public final class AutoTest {
         //    pidiera mas que el rango de partida, un jugador nuevo abriria la
         //    pantalla y no podria ponerse NADA -- que se lee como «esto no
         //    funciona», no como «te falta rango».
-        var base = net.pokereport.luna.ui.Tablist.Rank.NOVATO;
+        var base = net.pokereport.luna.ui.Tablist.Rank.ENTRENADOR;
         check("el traje mas bajo lo abre el rango de partida",
               todos.get(0).pide().escalon <= base.escalon);
     }

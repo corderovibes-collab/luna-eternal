@@ -850,6 +850,142 @@ public class Red implements ModInitializer {
      * pasa un minuto, y la pantalla estaría contando desde un valor que ya no
      * es cierto. Con el instante, el reloj lo lleva el cliente y siempre acierta.
      */
+    /**
+     * PEDIR EL ESTADO DE TESOROS.
+     *
+     * <p>⚠ Se PIDE al abrir, no se empuja: es la misma decisión que el saldo
+     * del PokePad. Empujarlo a todo el mundo cada vez que cambia una llave
+     * sería mandar un paquete por cada apertura del servidor a gente que no
+     * tiene la pantalla abierta.
+     */
+    public record PedirTesoros() implements CustomPayload {
+        public static final Id<PedirTesoros> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_tesoros"));
+        public static final PacketCodec<RegistryByteBuf, PedirTesoros> CODEC =
+                PacketCodec.unit(new PedirTesoros());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * EL ESTADO DE TESOROS.
+     *
+     * <p>⚠⚠ NO VIAJA LA TABLA DE PREMIOS. El cliente la tiene: {@code Cofre}
+     * vive en {@code main} y la leen los dos lados. Mandarla sería una segunda
+     * copia que un día dice otra cosa que la que sortea — y las probabilidades
+     * públicas dejarían de ser las de verdad, que es justo lo que D-020 hizo
+     * obligatorio.
+     *
+     * @param llaves         cuántas tiene de cada cofre, en orden de Cofre.TODOS
+     * @param piedad         cuántas aperturas lleva sin mayor, mismo orden
+     * @param saldo          sus LunaCoins
+     * @param segundosHoy    tiempo de juego activo de hoy
+     * @param reclamadaHoy   ¿ya se llevó la llave diaria?
+     */
+    public record EstadoTesoros(List<Integer> llaves, List<Integer> piedad,
+                                long saldo, int segundosHoy,
+                                boolean reclamadaHoy) implements CustomPayload {
+        public static final Id<EstadoTesoros> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_tesoros"));
+        public static final PacketCodec<RegistryByteBuf, EstadoTesoros> CODEC =
+                PacketCodec.ofStatic(EstadoTesoros::escribir, EstadoTesoros::leer);
+
+        private static void escribir(RegistryByteBuf buf, EstadoTesoros e) {
+            buf.writeVarInt(e.llaves.size());
+            for (Integer x : e.llaves) {
+                buf.writeVarInt(x == null ? 0 : x);
+            }
+            buf.writeVarInt(e.piedad.size());
+            for (Integer x : e.piedad) {
+                buf.writeVarInt(x == null ? 0 : x);
+            }
+            buf.writeVarLong(e.saldo);
+            buf.writeVarInt(e.segundosHoy);
+            buf.writeBoolean(e.reclamadaHoy);
+        }
+
+        private static EstadoTesoros leer(RegistryByteBuf buf) {
+            int n = buf.readVarInt();
+            List<Integer> ll = new ArrayList<>(n);
+            for (int i = 0; i < n; i++) {
+                ll.add(buf.readVarInt());
+            }
+            int m = buf.readVarInt();
+            List<Integer> pi = new ArrayList<>(m);
+            for (int i = 0; i < m; i++) {
+                pi.add(buf.readVarInt());
+            }
+            return new EstadoTesoros(ll, pi, buf.readVarLong(),
+                    buf.readVarInt(), buf.readBoolean());
+        }
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * LO QUE EL JUGADOR PIDE HACER EN TESOROS.
+     *
+     * @param que    "abrir", "comprar" o "diaria"
+     * @param cofre  cuál
+     * @param cuanto solo para comprar
+     *
+     * <p>⚠⚠⚠ EL PRECIO NO VIAJA. Llega el identificador del cofre y el servidor
+     * mira su tabla. Si viniera del cliente, un cliente modificado compraría la
+     * llave del cofre shiny por 1 (P6). Misma regla que la tienda.
+     */
+    public record AccionTesoro(String que, String cofre, int cuanto)
+            implements CustomPayload {
+        public static final Id<AccionTesoro> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_tesoro"));
+        public static final PacketCodec<RegistryByteBuf, AccionTesoro> CODEC =
+                PacketCodec.tuple(
+                        CADENA, AccionTesoro::que,
+                        CADENA, AccionTesoro::cofre,
+                        PacketCodecs.VAR_INT, AccionTesoro::cuanto,
+                        AccionTesoro::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * LO QUE SALIÓ DE UN COFRE.
+     *
+     * <p>⚠⚠ Viaja el IDENTIFICADOR del premio y su índice en la tabla, no su
+     * nombre: un servidor no tiene idioma, y el cliente ya sabe pintar el
+     * nombre de un objeto o de una especie. Es la regla del 25-ago.
+     *
+     * @param indice   qué posición de la tabla del cofre salió. La ruleta para ahí
+     * @param porPiedad ¿salió porque tocaba, y no por suerte? Se dice
+     */
+    public record ResultadoCofre(String cofre, int indice, boolean porPiedad,
+                                 int llavesRestantes, int piedadActual)
+            implements CustomPayload {
+        public static final Id<ResultadoCofre> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "resultado_cofre"));
+        public static final PacketCodec<RegistryByteBuf, ResultadoCofre> CODEC =
+                PacketCodec.tuple(
+                        CADENA, ResultadoCofre::cofre,
+                        PacketCodecs.VAR_INT, ResultadoCofre::indice,
+                        PacketCodecs.BOOL, ResultadoCofre::porPiedad,
+                        PacketCodecs.VAR_INT, ResultadoCofre::llavesRestantes,
+                        PacketCodecs.VAR_INT, ResultadoCofre::piedadActual,
+                        ResultadoCofre::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record EstadoCazas(List<ObjetivoCaza> objetivos, long terminaEn,
                               long saldo) implements CustomPayload {
         public static final Id<EstadoCazas> ID =
@@ -2075,6 +2211,11 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(EstadoViajes.ID, EstadoViajes.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionCaza.ID, AccionCaza.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoCazas.ID, EstadoCazas.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirTesoros.ID, PedirTesoros.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoTesoros.ID, EstadoTesoros.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionTesoro.ID, AccionTesoro.CODEC);
+        PayloadTypeRegistry.playS2C().register(
+                ResultadoCofre.ID, ResultadoCofre.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirTienda.ID, PedirTienda.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionTienda.ID, AccionTienda.CODEC);
         PayloadTypeRegistry.playS2C().register(Tienda.ID, Tienda.CODEC);
@@ -2469,6 +2610,52 @@ public class Red implements ModInitializer {
                 // que solo se aplica donde hoy se nota deja de aplicarse el dia
                 // que se añada el numero a la pantalla.
                 enviarSaldo(jugador);
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirTesoros.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> enviarTesoros(jugador));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionTesoro.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                try {
+                    long id = LunaEternal.players().resolve(
+                            jugador.getUuid(), jugador.getGameProfile().getName());
+                    switch (carga.que()) {
+                        case "diaria" -> {
+                            if (net.pokereport.luna.crate.Actividad.reclamar(
+                                    id, jugador.getUuid())) {
+                                // ⚠ El toast lleva el texto YA COMPUESTO, no
+                                //   una clave: `Aviso` recibe cadenas porque el
+                                //   formato tiene que vivir en UN sitio. Es la
+                                //   regla del bloque Avisos de CLAUDE.md.
+                                jugador.getServer().execute(() ->
+                                    net.pokereport.luna.ui.Aviso.logro(jugador,
+                                        "Llave diaria",
+                                        "Una hora jugada: ya puedes abrir el Gacha",
+                                        "minecraft:tripwire_hook"));
+                            }
+                        }
+                        case "comprar" -> {
+                            try {
+                                LunaEternal.crates().comprarLlave(
+                                        id, carga.cofre(), carga.cuanto());
+                            } catch (net.pokereport.luna.economy.EconomyException e) {
+                                avisar(jugador, "tesoros.lunaeternal.sin_saldo");
+                            } catch (IllegalArgumentException e) {
+                                avisar(jugador, "tesoros.lunaeternal.no_se_vende");
+                            }
+                        }
+                        case "abrir" -> abrirCofre(jugador, id, carga.cofre());
+                        default -> { }
+                    }
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo en Tesoros", e);
+                }
+                enviarTesoros(jugador);
             });
         });
 
@@ -3304,6 +3491,133 @@ public class Red implements ModInitializer {
 
 
     /** Manda las cazas del ciclo en curso. Va por el executor de E/S. */
+    /** Un aviso corto por la barra de accion. El servidor manda la CLAVE. */
+    private static void avisar(net.minecraft.server.network.ServerPlayerEntity jugador, String clave) {
+        jugador.getServer().execute(() ->
+                jugador.sendMessage(net.minecraft.text.Text.translatable(clave), true));
+    }
+
+    /**
+     * ABRE UN COFRE Y ENTREGA LO QUE SALGA.
+     *
+     * <h2>⚠⚠⚠ LA CLAVE DE IDEMPOTENCIA LA PONE EL SERVIDOR</h2>
+     *
+     * Si viniera del cliente, un cliente modificado mandaría siempre la misma y
+     * la segunda apertura fallaría —eso da igual— o mandaría una distinta por
+     * cada reenvío y <b>abriría dos veces con una llave</b>. Aquí se genera un
+     * UUID por petición y la clave única de la tabla hace el resto.
+     *
+     * <h2>⚠⚠ LA ENTREGA VA DESPUÉS DEL COMMIT, Y EN EL HILO DEL SERVIDOR</h2>
+     *
+     * Un equipo Pokémon y un inventario no son tablas: no caben en la
+     * transacción. Lo que hace que sea seguro es que la fila de
+     * {@code crate_open} ya dice qué le tocó, así que una entrega fallida se
+     * puede repetir sin volver a sortear ni volver a cobrar.
+     */
+    private static void abrirCofre(net.minecraft.server.network.ServerPlayerEntity jugador, long playerId,
+                                   String cofreId) {
+        var cofre = net.pokereport.luna.crate.Cofre.de(cofreId);
+        if (cofre == null) {
+            return;
+        }
+        net.pokereport.luna.crate.CrateService.Resultado r;
+        try {
+            r = LunaEternal.crates().abrir(playerId, cofreId,
+                    "crate:" + playerId + ":" + java.util.UUID.randomUUID());
+        } catch (Exception e) {
+            LunaEternal.LOG.error("No se pudo abrir el cofre {}", cofreId, e);
+            avisar(jugador, "tesoros.lunaeternal.error");
+            return;
+        }
+        if (r == null) {
+            avisar(jugador, "tesoros.lunaeternal.sin_llaves");
+            return;
+        }
+        int indice = cofre.premios().indexOf(r.premio());
+        jugador.getServer().execute(() -> {
+            entregar(jugador, r.premio());
+            ServerPlayNetworking.send(jugador, new ResultadoCofre(
+                    cofreId, indice, r.porPiedad(),
+                    r.llavesRestantes(), r.piedadActual()));
+        });
+    }
+
+    /**
+     * Entrega un premio. <b>En el hilo del servidor.</b>
+     *
+     * <p>⚠ La Plata ya se movió dentro de la transacción, así que aquí no se
+     * toca: hacerlo otra vez la pagaría dos veces.
+     */
+    private static void entregar(net.minecraft.server.network.ServerPlayerEntity jugador,
+                                 net.pokereport.luna.crate.Cofre.Premio premio) {
+        try {
+            switch (premio.tipo()) {
+                case POKEMON -> {
+                    var props = com.cobblemon.mod.common.api.pokemon.PokemonProperties
+                            .Companion.parse(premio.id() + " level=50"
+                                    + (premio.shiny() ? " shiny=true" : ""));
+                    com.cobblemon.mod.common.Cobblemon.INSTANCE.getStorage()
+                            .getParty(jugador).add(props.create());
+                }
+                case OBJETO -> {
+                    var item = net.minecraft.registry.Registries.ITEM.get(
+                            Identifier.of(premio.id()));
+                    if (item == net.minecraft.item.Items.AIR) {
+                        // ⚠ Un identificador que no existe NO da error: daría un
+                        //   cofre que cobra y no entrega. Se dice en el log.
+                        LunaEternal.LOG.error(
+                                "Premio de cofre inexistente: {}", premio.id());
+                        return;
+                    }
+                    var pila = new net.minecraft.item.ItemStack(item, premio.cantidad());
+                    // ⚠ Si no cabe en el inventario, al suelo. Perderlo por
+                    //   tener la mochila llena sería cobrar y no entregar.
+                    if (!jugador.getInventory().insertStack(pila)) {
+                        jugador.dropItem(pila, false);
+                    }
+                }
+                // La Plata y las LunaCoins van por el libro de asientos.
+                default -> { }
+            }
+        } catch (Throwable t) {
+            LunaEternal.LOG.error("No se pudo entregar {}", premio.id(), t);
+        }
+    }
+
+    /** El estado completo de Tesoros. <b>Va por el executor de E/S.</b> */
+    private static void enviarTesoros(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        try {
+            long id = LunaEternal.players().resolve(
+                    jugador.getUuid(), jugador.getGameProfile().getName());
+            int[] llaves = LunaEternal.crates().todasLasLlaves(id);
+            int[] piedad = LunaEternal.crates().todaLaPiedad(id);
+            long saldo = LunaEternal.economy().balance(
+                    id, net.pokereport.luna.economy.Currency.REPORTCOIN);
+            var ll = new ArrayList<Integer>();
+            for (int x : llaves) {
+                ll.add(x);
+            }
+            var pi = new ArrayList<Integer>();
+            for (int x : piedad) {
+                pi.add(x);
+            }
+            int seg = net.pokereport.luna.crate.Actividad.segundosHoy(jugador.getUuid());
+            boolean ya = net.pokereport.luna.crate.Actividad.reclamadaHoy(
+                    jugador.getUuid());
+            var servidor = jugador.getServer();
+            if (servidor != null) {
+                servidor.execute(() -> {
+                    if (!jugador.isRemoved()) {
+                        ServerPlayNetworking.send(jugador,
+                                new EstadoTesoros(ll, pi, saldo, seg, ya));
+                    }
+                });
+            }
+        } catch (Exception e) {
+            LunaEternal.LOG.error("No se pudo enviar el estado de Tesoros", e);
+        }
+    }
+
     private static void enviarCazas(
             net.minecraft.server.network.ServerPlayerEntity jugador) {
         var svc = LunaEternal.hunts();

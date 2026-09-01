@@ -67,6 +67,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.quest.QuestService quests;
     private static net.pokereport.luna.economy.EconomyStats stats;
     private static net.pokereport.luna.hunt.HuntService hunts;
+    private static net.pokereport.luna.crate.CrateService crates;
     private static net.pokereport.luna.rank.RankService ranks;
     private static net.pokereport.luna.traje.TrajeService trajes;
     private static net.pokereport.luna.backpack.BackpackService backpacks;
@@ -160,6 +161,23 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                             }
                         }));
             }
+            // ⚠ El tiempo de juego de hoy: se lee al entrar y se lleva en
+            //   memoria. La pantalla de Tesoros ensena cuanto falta para la
+            //   llave diaria, y eso se pregunta EN EL HILO DEL SERVIDOR.
+            submit(() -> {
+                try {
+                    var perfilA = player.getGameProfile();
+                    long id = players.resolve(perfilA.getId(), perfilA.getName());
+                    server.execute(() -> {
+                        if (!player.isRemoved()) {
+                            net.pokereport.luna.crate.Actividad.alEntrar(player, id);
+                        }
+                    });
+                } catch (Exception e) {
+                    LOG.warn("No se pudo iniciar la actividad de {}",
+                            player.getGameProfile().getName(), e);
+                }
+            });
             // ⚠⚠ LAS MEDALLAS SE CARGAN AL ENTRAR, y por el mismo motivo que
             //    el rango: las pregunta el dialogo del gimnasio EN EL MOMENTO
             //    DEL CLIC, que corre en el hilo del servidor. La cache no es una
@@ -225,6 +243,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.world.Regreso.apuntar(player);
             net.pokereport.luna.backpack.Abiertas.guardarYOlvidar(player);
             net.pokereport.luna.rank.RankService.olvidar(player.getUuid());
+            // ⚠⚠ ANTES de `players.forget`: el volcado necesita resolver el
+            //    id, y si ya se olvido tendria que volver a la base.
+            net.pokereport.luna.crate.Actividad.alSalir(player);
             net.pokereport.luna.traje.TrajeService.olvidar(player.getUuid());
             // ⚠⚠ SIN ESTO LA RANURA DEL GIMNASIO QUEDA PILLADA PARA SIEMPRE.
             //    Quien cierra el juego a mitad de combate deja su copia
@@ -280,6 +301,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             //   quisquillosa -- un tiron de red moveria al jugador medio bloque
             //   y volveria, cancelandole el viaje sin que el tocara nada.
             net.pokereport.luna.world.Espera.tick(server);
+            // ⚠ El tiempo de juego ACTIVO va aqui, en el corte de 20 ticks: lo
+            //   que cuenta son SEGUNDOS, y mirar la posicion veinte veces por
+            //   segundo no lo haria mas justo -- solo veinte veces mas caro.
+            net.pokereport.luna.crate.Actividad.tick(server);
             // El contador de conectados cambia con cada entrada y salida;
             // recalcularlo aquí evita tener que engancharlo a cada evento.
             Tablist.updateHeaderFooter(server);
@@ -329,6 +354,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             backpacks = new net.pokereport.luna.backpack.BackpackService(database);
             regresos = new net.pokereport.luna.world.Regreso(database);
             medallas = new net.pokereport.luna.gym.MedallaService(database);
+            crates = new net.pokereport.luna.crate.CrateService(database);
+            net.pokereport.luna.crate.Actividad.arrancar(database);
             cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
@@ -383,6 +410,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.market.MarketService market() { return market; }
     public static net.pokereport.luna.market.Tasador tasador() { return tasador; }
     public static net.pokereport.luna.hunt.HuntService hunts() { return hunts; }
+    public static net.pokereport.luna.crate.CrateService crates() { return crates; }
 
     public static net.pokereport.luna.rank.RankService ranks() { return ranks; }
     public static net.pokereport.luna.gym.MedallaService medallas() {

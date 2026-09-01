@@ -45,6 +45,19 @@ public final class PlayerService {
      * aceptable para invitar —se invita a quien está jugando— y no lo sería para
      * nada económico, que va siempre por {@code player_id} (D-010).
      */
+    /**
+     * El {@code player_id} de alguien que YA esta dentro, sin tocar la base.
+     *
+     * <p>⚠ Devuelve {@code null} si no esta en la cache, y quien llama tiene que
+     * tratarlo. Es a proposito: esto lo usa codigo que corre en el hilo del
+     * servidor, donde consultar esta prohibido -- si aqui hubiera un respaldo
+     * que consulta, la prohibicion dejaria de notarse y volveria por la puerta
+     * de atras.
+     */
+    public Long cachedId(UUID mcUuid) {
+        return cache.get(mcUuid);
+    }
+
     public Long resolveByName(String username) throws SQLException {
         if (username == null || username.isBlank()) {
             return null;

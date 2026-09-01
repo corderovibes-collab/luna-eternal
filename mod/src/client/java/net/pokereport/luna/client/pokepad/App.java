@@ -37,7 +37,10 @@ public record App(String id, boolean abierta) {
         //   medio. Es literalmente lo que hace esta pantalla.
         new App("gts",        true),
         new App("tienda",     true),
-        new App("tesoros",    false),
+        // ⚠ Se enciende con su pantalla (2026-08-31). El sistema lo decidio
+        //   D-020 y estaba diseñado en docs/economy/treasures.md desde PHASE 3:
+        //   otra vez logica esperando una puerta.
+        new App("tesoros",    true),
         new App("wiki",       false),
         // ⚠ Se enciende con su pantalla (2026-08-25). La logica
         //   --HuntService-- llevaba escrita desde PHASE 5.

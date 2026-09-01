@@ -70,6 +70,7 @@ public final class Apps {
             case "warps" -> abrirViajes();
             case "gyms" -> abrirGimnasios();
             case "kits" -> abrirKits();
+            case "tesoros" -> abrirTesoros();
             default -> false;
         };
     }
@@ -123,6 +124,13 @@ public final class Apps {
     private static boolean abrirKits() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
         cliente.setScreen(new KitsScreen(cliente.currentScreen));
+        return true;
+    }
+
+    /** Tesoros: los cofres. D-020, y docs/economy/treasures.md. */
+    private static boolean abrirTesoros() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new TesorosScreen(cliente.currentScreen));
         return true;
     }
 

@@ -96,6 +96,7 @@ public final class AutoTest {
             testViajes();
             testTrajes();
             testGimnasios();
+            testTesoros();
             testEspera();
 
         } catch (Exception e) {
@@ -593,6 +594,148 @@ public final class AutoTest {
 
         var rapido = new net.pokereport.luna.pokedex.Cooldown(0);
         check("con espera cero siempre toca", rapido.toca("z") && rapido.toca("z"));
+    }
+
+    /**
+     * TESOROS.
+     *
+     * <h2>⚠⚠⚠ LO QUE SE COMPRUEBA ES QUE UN COFRE NO COBRE SIN ENTREGAR</h2>
+     *
+     * Un identificador de premio mal escrito <b>no da ningun error</b>: gasta la
+     * llave, anota la apertura, y la entrega se encuentra con que ese objeto no
+     * existe. El jugador paga y no recibe. Es el fallo de los 62 cosmeticos que
+     * no existian, aplicado a algo que cuesta dinero de verdad.
+     */
+    private void testTesoros() throws Exception {
+        var cofres = net.pokereport.luna.crate.Cofre.TODOS;
+        check("hay al menos un cofre", !cofres.isEmpty());
+
+        // ⚠⚠ CADA PREMIO EXISTE DE VERDAD, y se le pregunta al REGISTRO, no a
+        //    una lista nuestra: una lista nuestra repetiria el mismo error.
+        boolean existen = true, pesos = true, unicos = true;
+        var vistos = new java.util.HashSet<String>();
+        for (var c : cofres) {
+            if (!vistos.add(c.id())) {
+                unicos = false;
+            }
+            if (c.premios().isEmpty() || c.pesoTotal() <= 0) {
+                pesos = false;
+                LunaEternal.LOG.error("Cofre {}: sin premios o sin peso", c.id());
+            }
+            for (var pr : c.premios()) {
+                if (pr.peso() <= 0) {
+                    pesos = false;
+                    LunaEternal.LOG.error("Cofre {}: {} pesa {}", c.id(),
+                            pr.id(), pr.peso());
+                }
+                switch (pr.tipo()) {
+                    case OBJETO -> {
+                        var item = net.minecraft.registry.Registries.ITEM.get(
+                                net.minecraft.util.Identifier.of(pr.id()));
+                        if (item == net.minecraft.item.Items.AIR) {
+                            existen = false;
+                            LunaEternal.LOG.error("Cofre {}: el objeto '{}' NO"
+                                    + " EXISTE", c.id(), pr.id());
+                        }
+                    }
+                    case POKEMON -> {
+                        if (com.cobblemon.mod.common.api.pokemon.PokemonSpecies
+                                .INSTANCE.getByName(pr.id()) == null) {
+                            existen = false;
+                            LunaEternal.LOG.error("Cofre {}: la especie '{}' NO"
+                                    + " EXISTE", c.id(), pr.id());
+                        }
+                    }
+                    default -> { }
+                }
+            }
+        }
+        check("cada premio de cada cofre existe de verdad", existen);
+        check("todos los pesos son positivos", pesos);
+        check("cada cofre tiene un identificador unico", unicos);
+
+        // ⚠⚠ LAS PROBABILIDADES SUMAN 1. Es la condicion de D-020 --que sean
+        //    publicas-- convertida en algo que se puede comprobar: si no
+        //    sumaran, el numero que ve el jugador seria decoracion.
+        boolean suman = true;
+        for (var c : cofres) {
+            double s = 0;
+            for (var pr : c.premios()) {
+                s += c.probabilidad(pr);
+            }
+            if (Math.abs(s - 1.0) > 1e-9) {
+                suman = false;
+                LunaEternal.LOG.error("Cofre {}: las probabilidades suman {}",
+                        c.id(), s);
+            }
+        }
+        check("las probabilidades de cada cofre suman el 100%", suman);
+
+        // ⚠⚠ UN COFRE CON PIEDAD TIENE PREMIO MAYOR. Sin el, la piedad no puede
+        //    garantizar nada y la pantalla prometeria algo que no llega nunca:
+        //    «premio mayor en 3 aperturas» y no hay ninguno que dar.
+        boolean coherente = true;
+        for (var c : cofres) {
+            if (c.piedad() > 0 && !c.tieneMayor()) {
+                coherente = false;
+                LunaEternal.LOG.error("Cofre {}: promete piedad y no tiene"
+                        + " premio mayor", c.id());
+            }
+        }
+        check("todo cofre que promete piedad tiene premio mayor", coherente);
+
+        // ⚠ Solo el diario es gratis. Si otro lo fuera, el precio no se cobraria
+        //   y nadie lo notaria hasta mirar la caja.
+        boolean precios = true;
+        for (var c : cofres) {
+            boolean premium = c.llave()
+                    == net.pokereport.luna.crate.Cofre.Llave.PREMIUM;
+            if (premium && c.precio() <= 0) {
+                precios = false;
+                LunaEternal.LOG.error("Cofre {}: es premium y cuesta {}",
+                        c.id(), c.precio());
+            }
+            if (!premium && c.precio() != 0) {
+                precios = false;
+            }
+        }
+        check("cada cofre premium tiene precio y los de juego no", precios);
+
+        // ⚠⚠⚠ EL SORTEO SIEMPRE DEVUELVE ALGO. Un `null` aqui seria una llave
+        //    gastada y ningun premio -- y la transaccion ya habria pasado.
+        var rnd = new java.util.Random(1234);
+        boolean siempre = true, forzado = true;
+        for (var c : cofres) {
+            for (int i = 0; i < 500; i++) {
+                if (net.pokereport.luna.crate.Cofre.sortear(c, rnd, false) == null) {
+                    siempre = false;
+                    break;
+                }
+            }
+            // Y con la piedad forzada, si tiene mayores, TIENE que salir uno.
+            if (c.tieneMayor()) {
+                for (int i = 0; i < 200; i++) {
+                    var pr = net.pokereport.luna.crate.Cofre.sortear(c, rnd, true);
+                    if (pr == null || !pr.mayor()) {
+                        forzado = false;
+                        break;
+                    }
+                }
+            }
+        }
+        check("el sorteo siempre devuelve un premio", siempre);
+        check("con la piedad forzada sale un premio mayor", forzado);
+
+        // ⚠ Y un cofre desconocido no resuelve: el identificador llega del
+        //   cliente y un cliente modificado puede mandar cualquier cosa (P6).
+        check("un cofre desconocido no resuelve",
+              net.pokereport.luna.crate.Cofre.de("no_existe") == null);
+        check("un nulo no resuelve",
+              net.pokereport.luna.crate.Cofre.de(null) == null);
+
+        // ⚠ La llave diaria pide una hora. Un cero aqui la regalaria al entrar.
+        check("la llave diaria pide tiempo de juego",
+              net.pokereport.luna.crate.Actividad.SEGUNDOS_LLAVE > 0);
     }
 
     private void testCazas(long jugador) throws Exception {

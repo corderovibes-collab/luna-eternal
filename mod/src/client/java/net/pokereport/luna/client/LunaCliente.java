@@ -125,6 +125,24 @@ public class LunaCliente implements ClientModInitializer {
                 (carga, ctx) -> EstadoCliente.guardar(carga));
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoCazas.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoTesoros.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+        // ⚠⚠ ESTE ABRE LA RULETA. Es lo que convierte «he pulsado abrir» en la
+        //    animacion: el servidor ya sorteo, gasto la llave y lo anoto, asi
+        //    que lo que llega aqui es un HECHO. La ruleta solo lo enseña.
+        //    ⚠ Y por eso la animacion NO decide nada: si decidiera ella, el
+        //      premio de la pantalla y el de la base podrian no coincidir.
+        ClientPlayNetworking.registerGlobalReceiver(Red.ResultadoCofre.ID,
+                (carga, ctx) -> {
+                    EstadoCliente.guardar(carga);
+                    ctx.client().execute(() -> {
+                        var pantalla = ctx.client().currentScreen;
+                        if (pantalla instanceof net.pokereport.luna.client.pokepad
+                                .TesorosScreen tes) {
+                            tes.alLlegarResultado(carga);
+                        }
+                    });
+                });
         // ⚠⚠ ESTE NO SOLO GUARDA: PUEDE ABRIR LA PANTALLA. Es lo que hace que
         //    el clic derecho en un Miraidon lleve a Viajes -- el servidor manda
         //    el estado con la bandera puesta y el cliente abre.

@@ -28,6 +28,16 @@ public final class EstadoCliente {
     private static Red.EstadoMercado mercado;
     private static Red.EstadoGts gts;
     private static Red.EstadoCazas cazas;
+    private static Red.EstadoTesoros tesoros;
+    /**
+     * Lo ultimo que salio de un cofre.
+     *
+     * <p>⚠⚠ NO SE BORRA AL LEERLO, y por eso la ruleta lleva su propio testigo:
+     * si se borrara aqui, un redibujado --que ocurre 60 veces por segundo--
+     * podria llegar antes que la pantalla y el resultado se perderia. El fallo
+     * seria «abri el cofre y no salio nada», con la llave ya gastada.
+     */
+    private static Red.ResultadoCofre resultado;
     private static Red.EstadoExplorar explorar;
     private static Red.EstadoViajes viajes;
     private static Red.EstadoGimnasio gimnasio;
@@ -186,6 +196,23 @@ public final class EstadoCliente {
         return cazas;
     }
 
+    public static void guardar(Red.EstadoTesoros nuevo) {
+        tesoros = nuevo;
+    }
+
+    /** Llaves, piedad y tiempo de juego. {@code null} hasta que contesta. */
+    public static Red.EstadoTesoros tesoros() {
+        return tesoros;
+    }
+
+    public static void guardar(Red.ResultadoCofre nuevo) {
+        resultado = nuevo;
+    }
+
+    public static Red.ResultadoCofre resultado() {
+        return resultado;
+    }
+
     public static void guardar(Red.EstadoGts nuevo) {
         gts = nuevo;
     }
@@ -201,6 +228,8 @@ public final class EstadoCliente {
 
     /** Al salir del mundo se olvida: el saldo es de esa partida, no del cliente. */
     public static void olvidar() {
+        tesoros = null;
+        resultado = null;
         trabajos = null;
         misiones = null;
         iniciales = null;

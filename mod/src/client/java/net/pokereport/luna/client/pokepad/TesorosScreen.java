@@ -88,13 +88,39 @@ public class TesorosScreen extends Screen {
         0xFFC79A2E,   // legendario shiny: oro
     };
 
-    /** Qué objeto se dibuja como icono de cada cofre. */
-    private static final String[] ICONO = {
-        "minecraft:tripwire_hook",
-        "minecraft:barrel",
-        "minecraft:ender_chest",
-        "minecraft:chest",
-    };
+    /**
+     * LA ILUSTRACIÓN DE CADA COFRE.
+     *
+     * <h2>⚠⚠ ANTES ERAN OBJETOS DEL JUEGO, Y SE VEÍAN CUADRICULADOS</h2>
+     *
+     * Un objeto de Minecraft es una textura de <b>16×16</b>, y aquí se dibujaba
+     * a 56 y a 72 píxeles del chasis — o sea ampliada tres y cuatro veces y
+     * media. Eso no es un fallo de dibujado: es lo que pasa al ampliar un
+     * sprite pequeño, y se ve exactamente como lo que es.
+     *
+     * <p>Es el mismo camino que ya recorrieron los iconos de Viajes: formas
+     * dibujadas a mano, después objetos del juego, y hoy arte propio.
+     *
+     * <p>⚠ El color de {@link #COLOR} <b>se queda</b> aunque ya no pinte el
+     * fondo: es el borde al pasar por encima, y es el tono que se le pidió al
+     * arte, así que los cuatro pegan por construcción y no porque alguien los
+     * emparejara a ojo. Igual que en Viajes.
+     *
+     * <p>⚠⚠ Y los cuatro son de NOCHE con la misma luna que las siete de
+     * Viajes, a propósito: se ven en el mismo PokePad y tienen que leerse como
+     * una familia, no como cuatro dibujos sueltos.
+     */
+    private static final int ARTE_W = 1024, ARTE_H = 512;
+
+    private static final java.util.Map<String, Identifier> ARTE =
+            new java.util.HashMap<>();
+
+    static {
+        for (var c : Cofre.TODOS) {
+            ARTE.put(c.id(), Identifier.of("lunaeternal",
+                    "textures/gui/tesoros/" + c.id() + ".png"));
+        }
+    }
 
     private static final int COLS = 2;
 
@@ -305,14 +331,17 @@ public class TesorosScreen extends Screen {
         var c = cofre();
         int y = PANEL_Y + NAV_ALTO + 16;
 
-        // el icono, grande
-        int lado = 72;
-        ctx.fill(px(PANEL_X + 30), py(y), px(PANEL_X + PANEL_W - 30),
-                py(y + lado + 16), 0x33000000);
-        icono(ctx, new ItemStack(Registries.ITEM.get(
-                        Identifier.of(ICONO[Math.min(elegido, ICONO.length - 1)]))),
-                px(PANEL_X + PANEL_W / 2), py(y + 8 + lado / 2), pl(lado));
-        y += lado + 26;
+        // ⚠ El arte, de banda: el hueco del panel es APAISADO (255x110) y el
+        //   PNG también, así que apenas se recorta. Se dibuja dentro del marco
+        //   con 3 px de holgura para que el borde no quede pisado.
+        int bandaW = PANEL_W - 60, bandaH = 110;
+        ctx.fill(px(PANEL_X + 30), py(y), px(PANEL_X + 30 + bandaW),
+                py(y + bandaH), 0x33000000);
+        arte(ctx, c.id(), px(PANEL_X + 33), py(y + 3),
+                pl(bandaW - 6), pl(bandaH - 6), bandaW - 6, bandaH - 6);
+        marco(ctx, px(PANEL_X + 30), py(y), pl(bandaW), pl(bandaH),
+                COLOR[Math.min(elegido, COLOR.length - 1)], Math.max(1, pl(2)));
+        y += bandaH + 16;
 
         texto(ctx, Text.translatable("tesoros.lunaeternal.cofre." + c.id()),
                 PANEL_X + PANEL_W / 2, y, 22, 0xFFFFFFFF, true, CONTORNO_OSCURO);
@@ -399,19 +428,23 @@ public class TesorosScreen extends Screen {
             boolean sel = i == elegido;
             boolean enc = dentro(rx, ry, px(cx), py(cy), pl(w), pl(h));
 
-            int fondo = COLOR[Math.min(i, COLOR.length - 1)];
-            ctx.fill(px(cx), py(cy), px(cx + w), py(cy + h),
-                    enc ? aclarar(fondo) : fondo);
-            ctx.fill(px(cx), py(cy + h - 40), px(cx + w), py(cy + h), 0x66000000);
+            // ⚠⚠ EL ARTE LLENA LA FICHA, RECORTADO Y NO ESTIRADO. La ficha es
+            //    383x207 y el PNG 1024x512: casi la misma proporción, así que
+            //    el recorte es de unos pocos píxeles por los lados. Se CALCULA
+            //    de w y h -- escrito a mano dejaría de cuadrar el día que la
+            //    rejilla cambie de tamaño, y nadie lo notaría.
+            arte(ctx, c.id(), px(cx), py(cy), pl(w), pl(h), w, h);
+            if (enc) {
+                ctx.fill(px(cx), py(cy), px(cx + w), py(cy + h), 0x22FFFFFF);
+            }
+            // La banda del nombre: sobre una ilustración el texto se pierde.
+            ctx.fill(px(cx), py(cy + h - 40), px(cx + w), py(cy + h), 0x99000000);
             marco(ctx, px(cx), py(cy), pl(w), pl(h),
-                    sel ? BORDE_ENCIMA : 0x60000000, Math.max(2, pl(sel ? 4 : 2)));
-
-            icono(ctx, new ItemStack(Registries.ITEM.get(
-                            Identifier.of(ICONO[Math.min(i, ICONO.length - 1)]))),
-                    px(cx + w / 2), py(cy + (h - 40) / 2), pl(56));
+                    sel ? BORDE_ENCIMA : aclarar(COLOR[Math.min(i, COLOR.length - 1)]),
+                    Math.max(2, pl(sel ? 4 : 2)));
 
             texto(ctx, Text.translatable("tesoros.lunaeternal.cofre." + c.id()),
-                    cx + w / 2, cy + h - 34, 15, 0xFFFFFFFF, true, CONTORNO_OSCURO);
+                    cx + w / 2, cy + h - 34, 16, 0xFFFFFFFF, true, CONTORNO_OSCURO);
 
             // Cuántas llaves tienes, arriba a la derecha de la ficha.
             int n = llavesDe(i);
@@ -713,6 +746,38 @@ public class TesorosScreen extends Screen {
         int g = (c >> 8) & 0xFF, b = c & 0xFF;
         return (a << 24) | (Math.min(255, r + 28) << 16)
                 | (Math.min(255, g + 28) << 8) | Math.min(255, b + 28);
+    }
+
+    /**
+     * EL ARTE DE UN COFRE, recortado para llenar un hueco sin deformarse.
+     *
+     * <p>Se coge <b>el trozo centrado</b> del PNG con la misma proporción que
+     * el hueco. Estirar sería una línea menos y se notaría: la luna saldría
+     * ovalada, que es justo lo que ya pasó en Viajes.
+     *
+     * @param destW,destH el hueco en píxeles del CHASIS, que es de donde sale
+     *                    la proporción. Los otros dos son ya de pantalla
+     */
+    private void arte(DrawContext ctx, String cofre, int x, int y, int w, int h,
+                      int destW, int destH) {
+        Identifier tex = ARTE.get(cofre);
+        if (tex == null) {
+            return;
+        }
+        int regW = ARTE_W, regH = ARTE_H;
+        // ⚠ Se compara en cruz para no dividir: `destW/destH > ARTE_W/ARTE_H`
+        //   con enteros truncaría y daría el recorte equivocado en los casos
+        //   ajustados, que son justo estos --1,85 contra 2,00--.
+        if (destW * ARTE_H > destH * ARTE_W) {
+            regH = Math.max(1, ARTE_W * destH / destW);
+        } else {
+            regW = Math.max(1, ARTE_H * destW / destH);
+        }
+        int u = (ARTE_W - regW) / 2, v = (ARTE_H - regH) / 2;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        ctx.drawTexture(tex, x, y, w, h, u, v, regW, regH, ARTE_W, ARTE_H);
+        RenderSystem.disableBlend();
     }
 
     /**

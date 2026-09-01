@@ -1755,6 +1755,38 @@ public final class AutoTest {
         check("todos los niveles estan entre 1 y 100", rango);
         check("la pericia de la IA esta entre 0 y 5", periciaOk);
 
+        // ---- LAS REGIONES ----------------------------------------------
+        //
+        // ⚠⚠ NINGUN GIMNASIO SE QUEDA FUERA DE SU PESTAÑA. La Liga solo dibuja
+        //    los de la region que miras, asi que uno que no cuadre NO DA ERROR:
+        //    DESAPARECE de la pantalla, y desde dentro se lee como «me falta un
+        //    gimnasio». Mismo sintoma que la cadena `oficios` del arbol.
+        int suma = 0;
+        boolean vacias = false;
+        for (var r : net.pokereport.luna.gym.Gimnasio.Region.values()) {
+            int n = net.pokereport.luna.gym.Gimnasio.deRegion(r).size();
+            suma += n;
+            if (n == 0) {
+                vacias = true;
+                LunaEternal.LOG.error("La region {} no tiene ni un gimnasio", r);
+            }
+        }
+        check("las regiones suman todos los gimnasios", suma == todos_.size());
+        check("ninguna region esta vacia", !vacias);
+
+        // ⚠⚠ Y CABEN EN LA REJILLA DE SU PESTAÑA, que es de 2x5 = DIEZ huecos.
+        //    Una region con once se saldria del marco sin dar ningun error, que
+        //    es la CUARTA vez que este proyecto tropieza con lo mismo.
+        boolean cabenRegiones = true;
+        for (var r : net.pokereport.luna.gym.Gimnasio.Region.values()) {
+            int n = net.pokereport.luna.gym.Gimnasio.deRegion(r).size();
+            if (n > 10) {
+                cabenRegiones = false;
+                LunaEternal.LOG.error("La region {} tiene {} y solo caben 10", r, n);
+            }
+        }
+        check("ninguna region pasa de los 10 huecos de su pestaña", cabenRegiones);
+
         // ---- EL REPERTORIO Y LA ADAPTACION -----------------------------
 
         // ⚠⚠⚠ CADA ESPECIE Y CADA MOVIMIENTO EXISTEN DE VERDAD. Esto es lo mas

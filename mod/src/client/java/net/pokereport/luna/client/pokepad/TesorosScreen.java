@@ -273,7 +273,21 @@ public class TesorosScreen extends Screen {
         if (enRuleta()) {
             dibujarRuleta(ctx);
         }
-        super.render(ctx, rx, ry, delta);
+        // ⚠⚠⚠ NO SE LLAMA A `super.render` AQUI, Y ESTO COSTO UNA PANTALLA
+        //    ENTERA BORROSA (2026-09-01).
+        //
+        //    `Screen.render` PINTA EL FONDO, y desde 1.20.5 ese fondo es un
+        //    DESENFOQUE del juego (`menuBackgroundBlurriness`). Llamarlo al
+        //    FINAL se lo aplica ENCIMA de todo lo ya dibujado: el chasis, los
+        //    cofres y el texto salen emborronados.
+        //
+        //    ⚠ Y no da ningun error: se ve "como con blur", que es justo como
+        //      lo describio el usuario. Se diagnostico COMPARANDO: las otras
+        //      pantallas del Pad o no lo llaman, o lo llaman AL PRINCIPIO
+        //      (CosmeticosScreen). Esta era la unica que lo llamaba al final.
+        //
+        //    ⚠ Aqui no hace falta para nada: esta pantalla no usa widgets de
+        //      vanilla, dibuja todo a mano.
     }
 
     private void dibujarNavegacion(DrawContext ctx, int rx, int ry) {

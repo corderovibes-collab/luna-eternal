@@ -42,6 +42,34 @@ public final class Gimnasio {
      * bastaría con insertar un gimnasio en medio para que Brock diera la medalla
      * de Misty, y eso no da ningún error.
      *
+    /**
+     * A QUÉ REGIÓN PERTENECE UN RETO.
+     *
+     * <h2>⚠⚠ EXPLÍCITA, Y NO DEDUCIDA DEL IDENTIFICADOR DEL ENTRENADOR</h2>
+     *
+     * Hoy se podría sacar del prefijo —{@code kanto_}, {@code naranja_},
+     * {@code johto_}— y saldría bien en los veintitrés. Y sería <b>atar cómo se
+     * agrupan las medallas en pantalla al nombre que rctmod le dio a un
+     * entrenador</b>: el día que uno se renombre, un gimnasio cambia de región
+     * sin que nada falle.
+     *
+     * <p>Es la misma decisión que el bit de la medalla y que el {@code escalon}
+     * de los rangos: lo que importa se declara, no se adivina.
+     */
+    public enum Region {
+        KANTO("Kanto"),
+        NARANJA("Liga Naranja"),
+        JOHTO("Johto");
+
+        /** Cómo se llama en pantalla. Nombre propio: igual en los dos idiomas. */
+        public final String nombre;
+
+        Region(String nombre) {
+            this.nombre = nombre;
+        }
+    }
+
+    /**
      * @param id         identificador estable. Da la clave de traducción
      * @param entrenador el id del entrenador en rctmod, tal cual
      * @param sala       a qué sala de la dimensión pertenece: da su X
@@ -54,11 +82,12 @@ public final class Gimnasio {
      * @param medalla    cómo se llama su medalla
      * @param insignia   el nombre COMPLETO de su textura, sin `.png`
      * @param propia     ¿la textura es NUESTRA en vez del mod de medallas?
+     * @param region     en qué pestaña de La Liga sale
      */
     public record Gimnasio_(String id, String entrenador, int sala, int bit,
                             int medallas, int nivel, int pericia,
                             String lider, String medalla, String insignia,
-                            boolean propia) {
+                            boolean propia, Region region) {
 
         /**
          * LA TEXTURA DE SU MEDALLA.
@@ -222,57 +251,73 @@ public final class Gimnasio {
     public static final List<Gimnasio_> TODOS = Arrays.asList(
         //             id          entrenador             sala bit  med niv per
         new Gimnasio_("brock",     "kanto_brock",           0,  0,   0,  15, 3,
-                      "Brock",     "Roca",       "kanto_boulder_badge",  false),
+                      "Brock",     "Roca",       "kanto_boulder_badge",  false, Region.KANTO),
         new Gimnasio_("misty",     "kanto_misty",           1,  1,   1,  19, 3,
-                      "Misty",     "Cascada",    "kanto_cascade_badge",  false),
+                      "Misty",     "Cascada",    "kanto_cascade_badge",  false, Region.KANTO),
         // ⚠ `kanto_ltsurge`, SIN guion. `kanto_lt_surge` no existe.
         new Gimnasio_("surge",     "kanto_ltsurge",         2,  2,   2,  24, 3,
-                      "Teniente Surge", "Trueno", "kanto_thunder_badge", false),
+                      "Teniente Surge", "Trueno", "kanto_thunder_badge", false, Region.KANTO),
         new Gimnasio_("erika",     "kanto_erika",           3,  3,   3,  28, 4,
-                      "Erika",     "Arcoíris",   "kanto_rainbow_badge",  false),
+                      "Erika",     "Arcoíris",   "kanto_rainbow_badge",  false, Region.KANTO),
         new Gimnasio_("koga",      "kanto_koga",            4,  4,   4,  33, 4,
-                      "Koga",      "Alma",       "kanto_soul_badge",     false),
+                      "Koga",      "Alma",       "kanto_soul_badge",     false, Region.KANTO),
         new Gimnasio_("sabrina",   "kanto_sabrina",         5,  5,   5,  37, 4,
-                      "Sabrina",   "Pantano",    "kanto_marsh_badge",    false),
+                      "Sabrina",   "Pantano",    "kanto_marsh_badge",    false, Region.KANTO),
         new Gimnasio_("blaine",    "kanto_blaine",          6,  6,   6,  42, 4,
-                      "Blaine",    "Volcán",     "kanto_volcano_badge",  false),
+                      "Blaine",    "Volcán",     "kanto_volcano_badge",  false, Region.KANTO),
         new Gimnasio_("giovanni",  "kanto_giovanni",        7,  7,   7,  46, 5,
-                      "Giovanni",  "Tierra",     "kanto_earth_badge",    false),
+                      "Giovanni",  "Tierra",     "kanto_earth_badge",    false, Region.KANTO),
 
         // ---- LIGA NARANJA. Ni entrenador ni medalla existen todavía. -------
         new Gimnasio_("cissy",     "naranja_cissy",         8,  8,   8,  49, 4,
-                      "Cissy",     "Ojo de Coral",  "naranja_ojo_coral",  true),
+                      "Cissy",     "Ojo de Coral",  "naranja_ojo_coral",  true, Region.NARANJA),
         new Gimnasio_("danny",     "naranja_danny",         9,  9,   9,  52, 4,
-                      "Danny",     "Rubí Marino",   "naranja_rubi_marino", true),
+                      "Danny",     "Rubí Marino",   "naranja_rubi_marino", true, Region.NARANJA),
         new Gimnasio_("rudy",      "naranja_rudy",         10, 10,  10,  55, 4,
-                      "Rudy",      "Caracol",       "naranja_caracol",    true),
+                      "Rudy",      "Caracol",       "naranja_caracol",    true, Region.NARANJA),
         new Gimnasio_("luana",     "naranja_luana",        11, 11,  11,  58, 5,
-                      "Luana",     "Estrella de Jade", "naranja_jade",    true),
+                      "Luana",     "Estrella de Jade", "naranja_jade",    true, Region.NARANJA),
         new Gimnasio_("drake",     "naranja_drake",        12, 12,  12,  62, 5,
-                      "Drake",     "Liga Naranja",  "naranja_trofeo",     true),
+                      "Drake",     "Liga Naranja",  "naranja_trofeo",     true, Region.NARANJA),
 
         new Gimnasio_("campeon_kanto", "kanto_champion_blue", 13, 13, 13, 63, 5,
-                      "Blue",      "Campeón de Kanto", "kanto_league_trophy", false),
+                      "Blue",      "Campeón de Kanto", "kanto_league_trophy", false, Region.KANTO),
 
         new Gimnasio_("pegaso",    "johto_valerio",        14, 14,  14,  64, 4,
-                      "Pegaso",    "Céfiro",     "johto_zephyr_badge",   false),
+                      "Pegaso",    "Céfiro",     "johto_zephyr_badge",   false, Region.JOHTO),
         new Gimnasio_("anton",     "johto_raffaello",      15, 15,  15,  68, 4,
-                      "Antón",     "Colmena",    "johto_hive_badge",     false),
+                      "Antón",     "Colmena",    "johto_hive_badge",     false, Region.JOHTO),
         new Gimnasio_("blanca",    "johto_chiara",         16, 16,  16,  71, 4,
-                      "Blanca",    "Llanura",    "johto_plain_badge",    false),
+                      "Blanca",    "Llanura",    "johto_plain_badge",    false, Region.JOHTO),
         new Gimnasio_("morti",     "johto_angelo",         17, 17,  17,  75, 4,
-                      "Morti",     "Niebla",     "johto_fog_badge",      false),
+                      "Morti",     "Niebla",     "johto_fog_badge",      false, Region.JOHTO),
         new Gimnasio_("anibal",    "johto_furio",          18, 18,  18,  79, 5,
-                      "Aníbal",    "Tormenta",   "johto_storm_badge",    false),
+                      "Aníbal",    "Tormenta",   "johto_storm_badge",    false, Region.JOHTO),
         new Gimnasio_("yasmina",   "johto_jasmine",        19, 19,  19,  82, 5,
-                      "Yasmina",   "Mineral",    "johto_mineral_badge",  false),
+                      "Yasmina",   "Mineral",    "johto_mineral_badge",  false, Region.JOHTO),
         new Gimnasio_("fredo",     "johto_alfredo",        20, 20,  20,  86, 5,
-                      "Fredo",     "Glaciar",    "johto_glacier_badge",  false),
+                      "Fredo",     "Glaciar",    "johto_glacier_badge",  false, Region.JOHTO),
         new Gimnasio_("debora",    "johto_sandra",         21, 21,  21,  90, 5,
-                      "Débora",    "Alzamiento", "johto_rising_badge",   false),
+                      "Débora",    "Alzamiento", "johto_rising_badge",   false, Region.JOHTO),
 
         new Gimnasio_("campeon_johto", "johto_champion_lance", 22, 22, 22, 100, 5,
-                      "Lance",     "Campeón de Johto", "johto_league_trophy", false));
+                      "Lance",     "Campeón de Johto", "johto_league_trophy", false, Region.JOHTO));
+
+    /**
+     * Los de una región, en orden de bit.
+     *
+     * <p>⚠ Ordenados por BIT y no por posición en la lista: es el orden en que
+     * se dibujan las medallas, y tienen que ser el mismo en las dos pantallas.
+     */
+    public static List<Gimnasio_> deRegion(Region r) {
+        var salida = new java.util.ArrayList<Gimnasio_>();
+        for (Gimnasio_ g : porBit()) {
+            if (g.region() == r) {
+                salida.add(g);
+            }
+        }
+        return salida;
+    }
 
     /** El prefijo de los entrenadores que todavía no sirve nadie. */
     public static final String PREFIJO_PROPIO = "naranja_";

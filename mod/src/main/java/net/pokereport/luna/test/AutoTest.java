@@ -1789,9 +1789,17 @@ public final class AutoTest {
                 //    Brock deja de ser Brock. Lo unico que hace memorable a un
                 //    gimnasio es que sabes a que vas.
                 var tp = net.pokereport.luna.gym.Tipos.deEspecie(sp);
-                boolean esSuyo = false;
+                // ⚠⚠ UN LIDER SIN TIPO DECLARADO ES MIXTO A PROPOSITO --hoy solo
+                //    Drake, que es campeon-- y se salta esta comprobacion.
+                //    Se pregunta con `esDeUnTipo` y no con `tipoDe(gid) != null`
+                //    para que la excepcion sea EXPLICITA: un tipo que falte por
+                //    descuido se leeria igual que uno que falta queriendo, y
+                //    entonces la comprobacion que protege a los gimnasios
+                //    dejaria de proteger a nadie sin avisar.
+                boolean esSuyo = !net.pokereport.luna.gym.Repertorio.esDeUnTipo(gid);
                 for (String x : tp) {
-                    if (x != null && x.equalsIgnoreCase(net.pokereport.luna.gym.Repertorio.tipoDe(gid))) {
+                    if (x != null && !esSuyo && x.equalsIgnoreCase(
+                            net.pokereport.luna.gym.Repertorio.tipoDe(gid))) {
                         esSuyo = true;
                     }
                 }

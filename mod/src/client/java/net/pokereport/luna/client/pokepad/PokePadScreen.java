@@ -350,8 +350,24 @@ public class PokePadScreen extends Screen {
      * <p>El bit <i>i</i> de la mascara es el gimnasio de la sala <i>i</i>, asi
      * que el orden lo manda quien reparte las medallas. Ahora lo lee de ahi.
      */
-    private static final java.util.List<String> MEDALLAS =
-            net.pokereport.luna.gym.Gimnasio.insignias();
+    /**
+     * AQUI SOLO SALEN LAS DE KANTO. Las demas viven en la pantalla de La Liga.
+     *
+     * <h2>⚠⚠⚠ Orden del usuario, y viene de un problema que yo cause</h2>
+     *
+     * Al pasar de dieciseis retos a veintitres meti los veintitres en esta
+     * tira, que mide 264 px de ancho. Para que cupieran hubo que bajar cada
+     * medalla de 30 px a 19: se veian, pero <b>no se distinguian</b> -- y una
+     * medalla que no se distingue no dice nada, que es justo lo unico que hace
+     * una medalla.
+     *
+     * <p>Con las nueve de Kanto caben en UNA FILA a 26 px, casi el tamaño
+     * original. Y el sitio es el correcto: esto es la ficha de un vistazo, no
+     * el catalogo -- el catalogo es el icono de gimnasios.
+     */
+    private static final java.util.List<net.pokereport.luna.gym.Gimnasio.Gimnasio_>
+            MEDALLAS_KANTO = net.pokereport.luna.gym.Gimnasio.deRegion(
+                    net.pokereport.luna.gym.Gimnasio.Region.KANTO);
     private static final int MEDALLAS_X = 97, MEDALLAS_Y = 662;
     private static final int MEDALLA_SEP = 3;
 
@@ -379,9 +395,9 @@ public class PokePadScreen extends Screen {
      * <p>Asi, una medalla mas encoge las que hay en vez de salirse. El autotest
      * comprueba que la tira quepa.
      */
-    private static final int MEDALLA_FILAS = 2;
+    private static final int MEDALLA_FILAS = 1;
     private static final int MEDALLA_COLS =
-            (MEDALLAS.size() + MEDALLA_FILAS - 1) / MEDALLA_FILAS;
+            (MEDALLAS_KANTO.size() + MEDALLA_FILAS - 1) / MEDALLA_FILAS;
     private static final int MEDALLA_PASO =
             (FICHA_X1 - MEDALLAS_X) / Math.max(1, MEDALLA_COLS);
     private static final int MEDALLA = MEDALLA_PASO - MEDALLA_SEP;
@@ -925,7 +941,7 @@ public class PokePadScreen extends Screen {
     }
 
     /**
-     * Las medallas, en dos filas que se ajustan solas.
+     * Las medallas de Kanto, en una fila. Las demas, en La Liga.
      *
      * <p>Las que no se tienen se dibujan <b>oscurecidas, no ocultas</b>: se ve
      * cual es cada una y cuantas faltan. El tinte MULTIPLICA, asi que basta un
@@ -938,10 +954,17 @@ public class PokePadScreen extends Screen {
 
         int lado = Math.round(MEDALLA * k);
         int paso = MEDALLA_PASO;
-        for (int i = 0; i < MEDALLAS.size(); i++) {
+        for (int i = 0; i < MEDALLAS_KANTO.size(); i++) {
             int artX = MEDALLAS_X + (i % MEDALLA_COLS) * paso;
             int artY = MEDALLAS_Y + (i / MEDALLA_COLS) * paso;
-            boolean tiene = ficha != null && (ficha.medallas() & (1 << i)) != 0;
+            // ⚠⚠ POR EL BIT DEL GIMNASIO, NO POR LA POSICION EN ESTA TIRA.
+            //    Aqui solo salen las de Kanto, y sus bits NO son 0..8 seguidos:
+            //    el Campeon de Kanto lleva el 13 porque la Liga Naranja se
+            //    metio en medio. Con `1 << i` esta pantalla encenderia la
+            //    medalla equivocada SIN DAR NINGUN ERROR.
+            boolean tiene = ficha != null && (ficha.medallas()
+                    & net.pokereport.luna.gym.Gimnasio.bitMedalla(
+                            MEDALLAS_KANTO.get(i))) != 0;
             dibujar(ctx, MEDALLA_TEX[i],
                     x0 + Math.round(artX * k), y0 + Math.round(artY * k),
                     lado, lado, MEDALLA_LADO[i], MEDALLA_LADO[i],
@@ -951,7 +974,7 @@ public class PokePadScreen extends Screen {
 
     /** Los identificadores, resueltos una sola vez. */
     private static final Identifier[] MEDALLA_TEX =
-            new Identifier[MEDALLAS.size()];
+            new Identifier[MEDALLAS_KANTO.size()];
 
     /**
      * Cuanto mide la textura de cada una.
@@ -960,7 +983,7 @@ public class PokePadScreen extends Screen {
      * Pedirle 16 a una de 64 no da error: dibuja su esquina de arriba a la
      * izquierda estirada, que se ve como una medalla borrosa y cortada.
      */
-    private static final int[] MEDALLA_LADO = new int[MEDALLAS.size()];
+    private static final int[] MEDALLA_LADO = new int[MEDALLAS_KANTO.size()];
 
     static {
         // ⚠⚠ LA RUTA LA DA EL PROPIO GIMNASIO, no se compone aqui. Pegar
@@ -970,10 +993,9 @@ public class PokePadScreen extends Screen {
         //    cinco de la Liga Naranja, que son NUESTRAS y viven en otro mod.
         //    Componer la ruta en dos sitios distintos es como se llega a una
         //    textura que no existe: se ve como el cuadro morado.
-        var porBit = net.pokereport.luna.gym.Gimnasio.porBit();
-        for (int i = 0; i < MEDALLAS.size() && i < porBit.size(); i++) {
-            MEDALLA_TEX[i] = porBit.get(i).textura();
-            MEDALLA_LADO[i] = porBit.get(i).lado();
+        for (int i = 0; i < MEDALLAS_KANTO.size(); i++) {
+            MEDALLA_TEX[i] = MEDALLAS_KANTO.get(i).textura();
+            MEDALLA_LADO[i] = MEDALLAS_KANTO.get(i).lado();
         }
     }
 

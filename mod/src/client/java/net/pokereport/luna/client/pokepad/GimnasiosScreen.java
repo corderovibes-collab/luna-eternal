@@ -62,24 +62,47 @@ public class GimnasiosScreen extends Screen {
     /** El tinte de una medalla que no se tiene: oscura, pero se ve que es. */
     private static final int MEDALLA_APAGADA = 0xFF3C4258;
 
-    private static final List<Gimnasio.Gimnasio_> GIMNASIOS = Gimnasio.TODOS;
-
-    /** Dos columnas de ocho: los dieciséis caben sin paginar. */
     /**
-     * ⚠⚠⚠ LAS FILAS SE CALCULAN. Estaba a 2x8 = DIECISEIS JUSTOS, que es lo que
-     *    habia cuando se escribio, y con la Liga Naranja son VEINTITRES: los
-     *    siete ultimos caian en una tercera columna que no existe y se dibujaban
-     *    <b>fuera del marco</b>. Desde dentro se ve como «faltan gimnasios»,
-     *    igual que la cadena `oficios` del arbol de misiones.
+     * UNA PESTAÑA POR REGIÓN, Y NO LOS VEINTITRÉS DE GOLPE.
      *
-     *    <p>Es la cuarta vez que este proyecto tropieza con «cabia por
-     *    casualidad»: la rejilla del PokePad, la paginacion de Cosmeticos, las
-     *    medallas de la ficha, y esto. Aqui las columnas se fijan --tres, que es
-     *    lo que se lee bien-- y <b>las filas salen de cuantos gimnasios haya</b>.
+     * <h2>⚠⚠⚠ Petición del usuario, y arregla un problema real de sitio</h2>
+     *
+     * Con dieciséis cabían en dos columnas de ocho. Con veintitrés no cabían de
+     * ninguna manera: probé tres columnas y salieron filas tan bajas que la
+     * medalla y el nombre no entraban juntos.
+     *
+     * <p>Repartidos por región son <b>nueve como mucho</b> —Kanto 9, Naranja 5,
+     * Johto 9— y eso entra en <b>dos columnas de cinco</b> con filas del doble
+     * de alto. Además agrupa como el jugador piensa: primero Kanto entera,
+     * después el Equipo Naranja, después Johto.
+     *
+     * <p>⚠ Las filas se siguen calculando y no se escriben. Diez huecos para
+     * nueve es holgura de UNO: si algún día entra un décimo reto en una región,
+     * con un número a mano se quedaría fuera del marco sin dar ningún error.
      */
-    private static final int COLS = 3;
-    private static final int FILAS =
-            (Gimnasio.TODOS.size() + COLS - 1) / COLS;
+    private static final Gimnasio.Region[] REGIONES = Gimnasio.Region.values();
+
+    private static final int COLS = 2;
+    private static final int FILAS = calcularFilas();
+
+    private static int calcularFilas() {
+        int mayor = 0;
+        for (var r : REGIONES) {
+            mayor = Math.max(mayor, Gimnasio.deRegion(r).size());
+        }
+        return (mayor + COLS - 1) / COLS;
+    }
+
+    /** Alto de la banda de pestañas. */
+    private static final int PESTANA_ALTO = 34;
+
+    /** Qué región se está mirando. */
+    private int region = 0;
+
+    /** Los de la región elegida, en orden de bit. */
+    private List<Gimnasio.Gimnasio_> visibles() {
+        return Gimnasio.deRegion(REGIONES[region]);
+    }
 
     private final Screen anterior;
 
@@ -91,11 +114,23 @@ public class GimnasiosScreen extends Screen {
         super(Text.translatable("pokepad.lunaeternal.app.gyms"));
         this.anterior = anterior;
         // Se abre en el primero que aún no tengas: es el que te interesa.
+        // ⚠⚠ SE ABRE EN EL PRIMERO QUE TE FALTA, Y AHORA TAMBIÉN EN SU PESTAÑA.
+        //    Sin lo segundo, a alguien con todo Kanto ganado se le abriría la
+        //    pantalla en Kanto con el primero de Johto «elegido» — o sea con el
+        //    panel enseñando un gimnasio que no está en la lista de al lado.
+        //
+        //    ⚠ Y por el BIT, no por la sala: son lo mismo hoy y el bit es el que
+        //      manda en la máscara.
         int m = mascara();
-        for (int i = 0; i < GIMNASIOS.size(); i++) {
-            if ((m & (1 << GIMNASIOS.get(i).sala())) == 0) {
-                elegido = i;
-                break;
+        buscar:
+        for (int r = 0; r < REGIONES.length; r++) {
+            var lista = Gimnasio.deRegion(REGIONES[r]);
+            for (int i = 0; i < lista.size(); i++) {
+                if ((m & Gimnasio.bitMedalla(lista.get(i))) == 0) {
+                    region = r;
+                    elegido = i;
+                    break buscar;
+                }
             }
         }
     }
@@ -197,7 +232,11 @@ public class GimnasiosScreen extends Screen {
 
     /** El panel: el gimnasio elegido, en grande. */
     private void dibujarPanel(DrawContext ctx) {
-        var g = GIMNASIOS.get(Math.max(0, Math.min(elegido, GIMNASIOS.size() - 1)));
+        var lista = visibles();
+        if (lista.isEmpty()) {
+            return;
+        }
+        var g = lista.get(Math.max(0, Math.min(elegido, lista.size() - 1)));
         var e = estadoDe(g);
         int y = PANEL_Y + NAV_ALTO + 22;
 
@@ -241,7 +280,7 @@ public class GimnasiosScreen extends Screen {
 
         // Cuántas llevas, abajo del todo. Es el número que importa.
         texto(ctx, Text.translatable("gimnasios.lunaeternal.llevas",
-                        Integer.bitCount(mascara()), GIMNASIOS.size()),
+                        Integer.bitCount(mascara()), Gimnasio.TODOS.size()),
                 PANEL_X + PANEL_W / 2, PANEL_Y + PANEL_H - 52, 22, ORO, true,
                 CONTORNO_OSCURO);
     }
@@ -253,7 +292,8 @@ public class GimnasiosScreen extends Screen {
     }
 
     private int filaH() {
-        return (PANT_H - MARGEN - 44 - MARGEN - (FILAS - 1) * 4) / FILAS;
+        return (PANT_H - MARGEN - 44 - PESTANA_ALTO - MARGEN
+                - (FILAS - 1) * 4) / FILAS;
     }
 
     private int filaX(int i) {
@@ -261,7 +301,15 @@ public class GimnasiosScreen extends Screen {
     }
 
     private int filaY(int i) {
-        return PANT_Y + MARGEN + 44 + (i % FILAS) * (filaH() + 4);
+        return PANT_Y + MARGEN + 44 + PESTANA_ALTO + (i % FILAS) * (filaH() + 4);
+    }
+
+    /** La caja de una pestaña: {x, y, ancho, alto}. */
+    private int[] cajaPestana(int i) {
+        int ancho = (PANT_W - 2 * MARGEN - (REGIONES.length - 1) * 6)
+                / REGIONES.length;
+        return new int[] {PANT_X + MARGEN + i * (ancho + 6),
+                          PANT_Y + MARGEN + 40, ancho, PESTANA_ALTO - 6};
     }
 
     private void dibujarLista(DrawContext ctx, int rx, int ry) {
@@ -270,9 +318,35 @@ public class GimnasiosScreen extends Screen {
         textoDer(ctx, Text.translatable("gimnasios.lunaeternal.regiones"),
                 PANT_X + PANT_W - MARGEN, PANT_Y + MARGEN + 10, 14, TINTA_SUAVE);
 
+        // Las pestañas. Cada una dice cuántas llevas de esa región: es el
+        // número que hace que quieras entrar a mirar.
+        for (int i = 0; i < REGIONES.length; i++) {
+            int[] c = cajaPestana(i);
+            boolean act = i == region;
+            boolean enc = dentro(rx, ry, px(c[0]), py(c[1]), pl(c[2]), pl(c[3]));
+            ctx.fill(px(c[0]), py(c[1]), px(c[0] + c[2]), py(c[1] + c[3]),
+                    act ? 0x44FFFFFF : (enc ? 0x28000000 : 0x14000000));
+            if (act) {
+                marco(ctx, px(c[0]), py(c[1]), pl(c[2]), pl(c[3]),
+                        BORDE_ENCIMA, Math.max(2, pl(2)));
+            }
+            var lista = Gimnasio.deRegion(REGIONES[i]);
+            int tengo = 0;
+            for (var g : lista) {
+                if ((mascara() & Gimnasio.bitMedalla(g)) != 0) {
+                    tengo++;
+                }
+            }
+            texto(ctx, Text.literal(REGIONES[i].nombre + "  " + tengo + "/"
+                            + lista.size()),
+                    c[0] + c[2] / 2, c[1] + 6, 16,
+                    act ? TINTA : TINTA_SUAVE, true, 0);
+        }
+
+        var lista = visibles();
         int w = filaW(), h = filaH();
-        for (int i = 0; i < GIMNASIOS.size(); i++) {
-            var g = GIMNASIOS.get(i);
+        for (int i = 0; i < lista.size(); i++) {
+            var g = lista.get(i);
             var e = estadoDe(g);
             int cx = filaX(i), cy = filaY(i);
             boolean enc = dentro(rx, ry, px(cx), py(cy), pl(w), pl(h));
@@ -298,9 +372,11 @@ public class GimnasiosScreen extends Screen {
             texto(ctx, Text.translatable("gimnasio.lunaeternal.tipo." + g.id()),
                     tx, cy + 6 + 20, 12, TINTA_SUAVE, false, 0);
 
-            // Y a la derecha, el número de orden. Ordena la lectura.
-            textoDer(ctx, Text.literal("#" + (i + 1)), cx + w - 10, cy + 10, 14,
-                    TINTA_SUAVE);
+            // ⚠ El número que se enseña es el NIVEL al que se pelea, no el
+            //   orden: el orden ya lo dice la posición, y el nivel es lo único
+            //   que le dice al jugador si ese reto le viene grande.
+            textoDer(ctx, Text.literal("Nv " + g.nivel()), cx + w - 10, cy + 10,
+                    15, TINTA_SUAVE);
         }
     }
 
@@ -324,8 +400,22 @@ public class GimnasiosScreen extends Screen {
             close();
             return true;
         }
+        for (int i = 0; i < REGIONES.length; i++) {
+            int[] c = cajaPestana(i);
+            if (dentro(rx, ry, px(c[0]), py(c[1]), pl(c[2]), pl(c[3]))) {
+                sonar();
+                // ⚠ Al cambiar de pestaña el elegido vuelve a 0. Sin esto,
+                //   venir de Kanto con el noveno elegido y saltar a Naranja
+                //   --que tiene cinco-- dejaría el panel leyendo fuera de la
+                //   lista. Eso SÍ da error, y encima al dibujar.
+                region = i;
+                elegido = 0;
+                return true;
+            }
+        }
+        var lista = visibles();
         int w = filaW(), h = filaH();
-        for (int i = 0; i < GIMNASIOS.size(); i++) {
+        for (int i = 0; i < lista.size(); i++) {
             if (dentro(rx, ry, px(filaX(i)), py(filaY(i)), pl(w), pl(h))) {
                 elegido = i;
                 sonar();

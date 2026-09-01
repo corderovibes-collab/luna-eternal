@@ -412,6 +412,48 @@ def loader_estable():
 # apunta a un 404 deja tirado a todo el que actualice.
 FIJADOS = {}
 
+# ---------------------------------------------------------------------------
+# VERSIONES CLAVADAS A MANO
+# ---------------------------------------------------------------------------
+#
+# ⚠⚠⚠ ESTO NO ES `FIJADOS`. Aquel sirve mods que DESAPARECIERON de Modrinth;
+#    esto clava un mod que SIGUE ahi pero cuya ultima version esta rota.
+#
+# ⚠⚠⚠ AXIOM 6.0.2 REVIENTA EL CLIENTE AL ENTRAR AL MUNDO (2026-09-01).
+#
+#    Salio ese mismo dia y trae un mixin de compatibilidad con Sodium que no
+#    existia en 5.4.2:
+#
+#      Mixin apply for mod axiom failed
+#        axiom.mixins.json:compat.MixinSodiumRenderSectionManager
+#      Critical injection failure: @Inject on prepareRender could not find any
+#        targets matching 'prepareRender' in RenderSectionManager
+#
+#    O sea: inyecta en un metodo que Sodium 0.8.12 YA NO TIENE. Comprobado
+#    abriendo los tres jars -- 5.4.2 y 5.4.1 NO LLEVAN ese mixin, asi que no
+#    pueden fallar por ahi.
+#
+# ⚠⚠⚠ Y LO PEOR ES QUE SU DECLARACION MIENTE: Axiom 6.0.2 dice
+#    `breaks: sodium <=0.5.0`, o sea que asegura funcionar con 0.8.12. Por eso
+#    el resolutor de Fabric lo deja cargar y por eso la comprobacion de
+#    dependencias de este mismo fichero NO LO CAZA: comprueba rangos
+#    declarados, y el rango declarado esta bien.
+#
+#    Una declaracion que miente es peor que no tenerla: el pack se genera, se
+#    publica y se instala sin una sola queja, y el fallo aparece al ENTRAR AL
+#    MUNDO, en la maquina del jugador.
+#
+# ⚠⚠ Y NO SE PUEDE ARREGLAR POR EL OTRO LADO: Iris 1.8.14 declara
+#    `depends: sodium 0.8.x`, asi que bajar Sodium a 0.6.x para contentar a
+#    Axiom dejaria a Iris sin arrancar. Solo cabe clavar Axiom.
+#
+# ⚠ Se quita en cuanto Axiom publique una version que arregle su mixin. La
+#   forma de comprobarlo es la de siempre: abrir el jar y mirar si su
+#   `MixinSodiumRenderSectionManager` sigue nombrando `prepareRender`.
+CLAVADOS = {
+    "axiom": "5.4.2",
+}
+
 
 def fijado(slug):
     """La copia guardada de un proyecto que ya no esta, si su URL responde."""
@@ -460,6 +502,20 @@ def version_de(slug, loader="fabric"):
         if e.code != 404:
             raise
         return fijado(slug)
+    # ⚠ Una version clavada manda sobre todo lo demas. Ver CLAVADOS.
+    clavada = CLAVADOS.get(slug)
+    if clavada:
+        for v in d:
+            if v.get("version_number") == clavada:
+                print(f"  CLAVADO {slug:<25} {clavada:<22} la ultima esta rota; "
+                      f"ver CLAVADOS en gen_modpack.py")
+                return v
+        # ⚠ Si la version clavada desaparece, se PARA. Seguir con la ultima
+        #   volveria a publicar justo la que rompe el cliente, y el aviso se
+        #   perderia entre el resto de la salida.
+        raise SystemExit(
+            f"{slug}: la version clavada {clavada} ya no esta en Modrinth para "
+            f"{MC}. Hay que elegir otra a mano y actualizar CLAVADOS.")
     # 'release' antes que beta: el cliente de un servidor no es sitio para
     # probar versiones inestables.
     return ([v for v in d if v.get("version_type") == "release"] or d or [None])[0]

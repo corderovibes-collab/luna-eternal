@@ -25,8 +25,28 @@ import net.pokereport.luna.world.LunaDimensions;
  */
 public final class Arenas {
 
-    /** El lado de la plataforma de anclaje. */
-    private static final int LADO = 9;
+    /**
+     * EL LADO DE LA PLATAFORMA DE ANCLAJE.
+     *
+     * <p>⚠⚠ TRES Y NO NUEVE (2026-08-31, decisión del usuario). Nueve era un
+     * suelo en el que ponerse a mirar; tres es <b>una marca</b>. Con veintitrés
+     * gimnasios por levantar, lo que hace falta es que el origen se vea y que la
+     * plataforma <b>estorbe lo menos posible</b> al pegar el esquema encima:
+     * cuanto más grande, más piedra que sobra por debajo de la sala.
+     *
+     * <p>⚠⚠⚠ Y ESTE NÚMERO NO VIAJA SOLO. Al bajarlo de 9 a 3, el
+     * teletransporte —que llevaba al jugador al centro con un {@code +4.5}
+     * escrito a mano— lo habría dejado <b>fuera de la plataforma</b>, cayendo al
+     * vacío de la dimensión. Hoy el centro se calcula de aquí, así que los dos
+     * números no se pueden separar. Es la misma trampa que el marcador de
+     * combate y su {@code spawnHeightOffset}.
+     */
+    public static final int LADO = 3;
+
+    /** El centro de la plataforma, para dejar ahí al que va a construir. */
+    public static double centro() {
+        return LADO / 2.0;
+    }
 
     /**
      * LO QUE MIDE CADA GIMNASIO, RECORDADO.
@@ -199,6 +219,7 @@ public final class Arenas {
             return null;
         }
         BlockPos o = Gimnasio.maestro(g);
+        cargar(mundo, o);
         for (int dx = 0; dx < LADO; dx++) {
             for (int dz = 0; dz < LADO; dz++) {
                 // ⚠ Piedra pulida y no hierba: al pegar el esquema encima, lo
@@ -212,6 +233,55 @@ public final class Arenas {
         LunaEternal.LOG.info("Gimnasio {}: maestro en {} {} {}",
                 g.id(), o.getX(), o.getY(), o.getZ());
         return o;
+    }
+
+    /**
+     * ¿HAY YA UNA SALA CONSTRUIDA EN ESTE MAESTRO?
+     *
+     * <h2>⚠⚠⚠ Existe para que «ponlas todas» no pise lo ya construido</h2>
+     *
+     * {@link #preparar} escribe piedra en el origen. Lanzarlo sobre un gimnasio
+     * que ya tiene sala <b>le mete un cuadrado de andesita en mitad del
+     * suelo</b>, y eso no da ningún error: se descubre cuando alguien pasa por
+     * encima, o peor, cuando se clona a las siete ranuras.
+     *
+     * <p>⚠ Mira una caja pequeña sobre el origen y no toda la sala: es un
+     * vistazo, no una medición. {@link #medir} barre millones de bloques y aquí
+     * hay que preguntarlo veintitrés veces seguidas.
+     *
+     * <p>⚠ Y la propia plataforma NO cuenta como construido: si contara, poner
+     * una plataforma una vez impediría volver a ponerla.
+     */
+    public static boolean hayObra(ServerWorld mundo, Gimnasio.Gimnasio_ g) {
+        BlockPos o = Gimnasio.maestro(g);
+        cargar(mundo, o);
+        var pos = new BlockPos.Mutable();
+        for (int dx = 0; dx < 16; dx++) {
+            for (int dz = 0; dz < 16; dz++) {
+                for (int dy = 0; dy < 8; dy++) {
+                    pos.set(o.getX() + dx, o.getY() + dy, o.getZ() + dz);
+                    var b = mundo.getBlockState(pos).getBlock();
+                    if (b == Blocks.AIR || b == Blocks.POLISHED_ANDESITE
+                            || b == Blocks.GOLD_BLOCK) {
+                        continue;
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Carga el chunk del origen.
+     *
+     * <p>⚠⚠ HACE FALTA, Y ES LA LECCIÓN QUE YA PAGAMOS DOS VECES: en una
+     * dimensión sin nadie dentro <b>no hay ni un chunk cargado</b>, así que leer
+     * un bloque contesta lo que haya en memoria —nada— y escribirlo se pierde.
+     * El censo que decía «no hay ningún Geodude» fue esto mismo.
+     */
+    private static void cargar(ServerWorld mundo, BlockPos o) {
+        mundo.getChunk(o);
     }
 
     /**

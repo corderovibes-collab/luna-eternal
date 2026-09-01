@@ -374,6 +374,50 @@ public final class LunaCommand {
                 //    de posicion-- no llega a las copias ya hechas.
                 //    ⚠ Solo olvida la marca: los bloques viejos siguen ahi y el
                 //      clonado no borra aire. Para una copia limpia, reiniciar.
+                // ⚠⚠ TODAS DE GOLPE, para empezar a mapear los 22 que faltan.
+                //    Salta los que YA tienen sala: `preparar` escribe piedra en
+                //    el origen, y sobre una sala construida eso le mete un
+                //    cuadrado de andesita en mitad del suelo SIN DAR ERROR.
+                .then(literal("plataformas")
+                    .requires(s -> s.hasPermissionLevel(2))
+                    .executes(ctx -> {
+                        var s = ctx.getSource();
+                        var mundo = net.pokereport.luna.gym.Arenas.mundo(
+                                s.getServer());
+                        if (mundo == null) {
+                            s.sendError(Text.literal(
+                                "\u00a7cLa dimension de gimnasios no existe."));
+                            return 0;
+                        }
+                        int puestas = 0, saltadas = 0;
+                        var saltados = new StringBuilder();
+                        for (var g : net.pokereport.luna.gym.Gimnasio.TODOS) {
+                            if (net.pokereport.luna.gym.Arenas.hayObra(mundo, g)) {
+                                saltadas++;
+                                if (saltados.length() > 0) {
+                                    saltados.append(", ");
+                                }
+                                saltados.append(g.id());
+                                continue;
+                            }
+                            net.pokereport.luna.gym.Arenas.preparar(
+                                    s.getServer(), g);
+                            puestas++;
+                        }
+                        final int pp = puestas, ss = saltadas;
+                        final String lista = saltados.toString();
+                        s.sendFeedback(() -> Text.literal(
+                            "\u00a7a" + pp + " plataformas de "
+                            + net.pokereport.luna.gym.Arenas.LADO + "x"
+                            + net.pokereport.luna.gym.Arenas.LADO
+                            + " puestas\u00a77, el bloque de oro es el origen.\n"
+                            + (ss == 0 ? ""
+                               : "\u00a7e" + ss + " saltados por tener sala ya: "
+                                 + "\u00a7f" + lista + "\n")
+                            + "\u00a77Ve a cada uno con \u00a7f/luna gimnasio <cual>"),
+                            false);
+                        return 1;
+                    }))
                 .then(literal("reclonar")
                     .executes(ctx -> {
                         net.pokereport.luna.gym.Ranuras.olvidarConstruidas();
@@ -1186,7 +1230,12 @@ public final class LunaCommand {
         var jugador = s.getPlayer();
         if (jugador != null) {
             net.pokereport.luna.world.Regreso.apuntar(jugador);
-            jugador.teleport(mundo, o.getX() + 4.5, o.getY() + 1, o.getZ() + 4.5,
+            // ⚠⚠ EL CENTRO SE CALCULA. Estaba a `+4.5` a mano --el centro de
+            //    una plataforma de 9-- y al bajarla a 3 habria dejado al
+            //    jugador FUERA, cayendo al vacio de la dimension. Los dos
+            //    numeros van juntos siempre.
+            double c = net.pokereport.luna.gym.Arenas.centro();
+            jugador.teleport(mundo, o.getX() + c, o.getY() + 1, o.getZ() + c,
                     java.util.Set.of(), 0f, 0f);
         }
         s.sendFeedback(() -> Text.literal(

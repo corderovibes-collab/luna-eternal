@@ -97,6 +97,31 @@ public final class Gimnasio {
                         "textures/item/" + insignia + ".png");
         }
 
+        /**
+         * CUÁNTO MIDE SU TEXTURA, en píxeles.
+         *
+         * <h2>⚠⚠ NO ES SIEMPRE 16, Y ESTABA ESCRITO A MANO EN CUATRO SITIOS</h2>
+         *
+         * Las dieciocho de Kanto y Johto vienen del mod de medallas y son de
+         * 16×16. Las cinco de la Liga Naranja las genero el usuario con IA y
+         * <b>son de 64×64</b>.
+         *
+         * <p>⚠ Se probo reducirlas a 16 para que todas midieran lo mismo, y se
+         * descarto <b>mirando el resultado</b>: a 16 px la estrella de jade
+         * pierde las puntas, el trofeo pierde las asas y la concha pierde su
+         * estrella de mar. El original se ve mejor, y Minecraft dibuja una
+         * textura de 64 sin ningun problema.
+         *
+         * <p>⚠⚠⚠ Y EL NUMERO EQUIVOCADO NO DA ERROR: `drawTexture` usa este
+         * valor para saber que trozo del PNG coger, asi que pedirle 16 a una
+         * textura de 64 <b>dibuja la esquina de arriba a la izquierda</b>
+         * estirada. Se ve como una medalla borrosa y cortada, no como un fallo.
+         * Por eso vive aqui, junto a la ruta, y no repetido en cada pantalla.
+         */
+        public int lado() {
+            return propia ? 64 : 16;
+        }
+
         /** ¿Es un campeón de región? Los trofeos se dibujan un poco mayores. */
         public boolean campeon() {
             return insignia.endsWith("_trophy") || insignia.endsWith("_trofeo");

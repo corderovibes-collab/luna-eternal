@@ -200,7 +200,7 @@ public class GimnasioScreen extends Screen {
             var g = GIMNASIOS.get(i);
             boolean tiene = (mascara & (1 << g.sala())) != 0;
             dibujarTextura(ctx, g.textura(), px(mx), py(my), pl(lado), pl(lado),
-                    16, 16, tiene ? 0xFFFFFFFF : MEDALLA_APAGADA);
+                    g.lado(), g.lado(), tiene ? 0xFFFFFFFF : MEDALLA_APAGADA);
         }
         y += 2 * lado + sep + 22;
 

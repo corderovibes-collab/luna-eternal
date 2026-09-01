@@ -944,7 +944,7 @@ public class PokePadScreen extends Screen {
             boolean tiene = ficha != null && (ficha.medallas() & (1 << i)) != 0;
             dibujar(ctx, MEDALLA_TEX[i],
                     x0 + Math.round(artX * k), y0 + Math.round(artY * k),
-                    lado, lado, 16, 16,
+                    lado, lado, MEDALLA_LADO[i], MEDALLA_LADO[i],
                     tiene ? 0xFFFFFFFF : MEDALLA_APAGADA);
         }
     }
@@ -952,6 +952,15 @@ public class PokePadScreen extends Screen {
     /** Los identificadores, resueltos una sola vez. */
     private static final Identifier[] MEDALLA_TEX =
             new Identifier[MEDALLAS.size()];
+
+    /**
+     * Cuanto mide la textura de cada una.
+     *
+     * <p>⚠ Las de Kanto y Johto son de 16 y las cinco de la Liga Naranja de 64.
+     * Pedirle 16 a una de 64 no da error: dibuja su esquina de arriba a la
+     * izquierda estirada, que se ve como una medalla borrosa y cortada.
+     */
+    private static final int[] MEDALLA_LADO = new int[MEDALLAS.size()];
 
     static {
         // ⚠⚠ LA RUTA LA DA EL PROPIO GIMNASIO, no se compone aqui. Pegar
@@ -964,6 +973,7 @@ public class PokePadScreen extends Screen {
         var porBit = net.pokereport.luna.gym.Gimnasio.porBit();
         for (int i = 0; i < MEDALLAS.size() && i < porBit.size(); i++) {
             MEDALLA_TEX[i] = porBit.get(i).textura();
+            MEDALLA_LADO[i] = porBit.get(i).lado();
         }
     }
 

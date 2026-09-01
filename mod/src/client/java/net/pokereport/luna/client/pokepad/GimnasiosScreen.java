@@ -208,7 +208,8 @@ public class GimnasiosScreen extends Screen {
                 0x33000000);
         dibujarTextura(ctx, g.textura(),
                 px(PANEL_X + (PANEL_W - lado) / 2), py(y + 12), pl(lado), pl(lado),
-                16, 16, e == Estado.GANADA ? 0xFFFFFFFF : MEDALLA_APAGADA);
+                g.lado(), g.lado(),
+                e == Estado.GANADA ? 0xFFFFFFFF : MEDALLA_APAGADA);
         y += lado + 34;
 
         texto(ctx, Text.literal(g.lider()), PANEL_X + PANEL_W / 2, y, 28,
@@ -288,7 +289,7 @@ public class GimnasiosScreen extends Screen {
 
             int lado = h - 8;
             dibujarTextura(ctx, g.textura(), px(cx + 12), py(cy + 4), pl(lado),
-                    pl(lado), 16, 16,
+                    pl(lado), g.lado(), g.lado(),
                     e == Estado.GANADA ? 0xFFFFFFFF : MEDALLA_APAGADA);
 
             int tx = cx + 12 + lado + 10;

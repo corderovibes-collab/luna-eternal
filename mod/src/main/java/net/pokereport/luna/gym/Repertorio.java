@@ -279,6 +279,198 @@ public final class Repertorio {
         f("exeggutor",  "chlorophyll", "modest",  "leftovers", false,
           "gigadrain", "psychic", "sleeppowder", "leechseed", "eggbomb", "lightscreen"));
 
+    // ======================================================================
+    //  LOS SIETE QUE FALTABAN DE KANTO, Y EL CAMPEÓN
+    //
+    //  ⚠⚠ ESTOS NO SE ESCRIBIERON A MANO: SE GENERARON DE LOS DATOS DEL JUEGO
+    //     (tools/... en el historial de la sesión del 2026-08-31). La habilidad
+    //     de cada uno sale de su propio fichero de especie y la naturaleza de
+    //     sus estadísticas base, así que NO PUEDEN estar mal.
+    //
+    //     Escribir 68 fichas a mano es exactamente donde se cuela la habilidad
+    //     de otra especie, y eso NO DA NINGÚN ERROR: Cobblemon se queda con la
+    //     primera que tenga y el líder juega con otra cosa de la que dice.
+    //
+    //  ⚠ Los 414 movimientos se validaron uno a uno ANTES de generar nada.
+    //    Salieron dos fallos, y los dos eran de grafía: `vicegrip` se escribe
+    //    `visegrip` en Cobblemon, y Girafarig no aprende `babydolleyes`.
+    //
+    //  ⚠ El objeto sale del ROL, calculado: el de firma lleva Life Orb porque
+    //    es el que tiene que doler, un muro lleva Restos porque su trabajo es
+    //    aguantar, y uno frágil lleva Focus Sash porque si no muere antes de
+    //    hacer nada.
+    // ======================================================================
+
+    /** El repertorio de MISTY. Generado y validado: ver el javadoc de
+     *  la clase. */
+    private static final List<Ficha> MISTY = List.of(
+        f("starmie",      "illuminate",    "timid",    "life_orb", true,
+          "surf", "icebeam", "psychic", "recover", "rapidspin", "thunderbolt"),
+        f("staryu",       "illuminate",    "modest",   "life_orb", true,
+          "watergun", "swift", "rapidspin", "recover", "bubblebeam", "harden"),
+        f("psyduck",      "damp",          "modest",   "focus_sash", false,
+          "watergun", "confusion", "disable", "waterpulse", "screech", "aquatail"),
+        f("poliwhirl",    "waterabsorb",   "jolly",    null, false,
+          "bubblebeam", "bodyslam", "hypnosis", "doubleslap", "mudshot", "icepunch"),
+        f("goldeen",      "swiftswim",     "adamant",  "focus_sash", false,
+          "hornattack", "waterpulse", "flail", "agility", "icebeam", "peck"),
+        f("horsea",       "swiftswim",     "modest",   "focus_sash", false,
+          "watergun", "smokescreen", "bubblebeam", "twister", "agility", "icebeam"),
+        f("shellder",     "shellarmor",    "adamant",  "focus_sash", false,
+          "iciclespear", "withdraw", "supersonic", "watergun", "leer", "protect"),
+        f("tentacool",    "clearbody",     "modest",   "focus_sash", false,
+          "acid", "wrap", "watergun", "supersonic", "poisonsting", "bubblebeam"),
+        f("krabby",       "hypercutter",   "adamant",  "focus_sash", false,
+          "bubblebeam", "visegrip", "harden", "mudshot", "protect", "leer"));
+
+    /** El repertorio de SURGE. Generado y validado: ver el javadoc de
+     *  la clase. */
+    private static final List<Ficha> SURGE = List.of(
+        f("raichu",       "static",        "jolly",    "life_orb", true,
+          "thunderbolt", "quickattack", "thunderwave", "irontail", "swift", "surf"),
+        f("pikachu",      "static",        "jolly",    "life_orb", true,
+          "thunderbolt", "quickattack", "thunderwave", "irontail", "doubleteam", "swift"),
+        f("magneton",     "magnetpull",    "modest",   "focus_sash", false,
+          "thunderbolt", "flashcannon", "thunderwave", "lightscreen", "swift", "supersonic"),
+        f("magnemite",    "magnetpull",    "modest",   "focus_sash", false,
+          "thundershock", "thunderwave", "magnetbomb", "supersonic", "swift", "lightscreen"),
+        f("electrode",    "soundproof",    "timid",    null, false,
+          "thunderbolt", "explosion", "screech", "swift", "thunderwave", "lightscreen"),
+        f("voltorb",      "soundproof",    "timid",    "focus_sash", false,
+          "thundershock", "screech", "sonicboom", "swift", "thunderwave", "rollout"),
+        f("chinchou",     "voltabsorb",    "modest",   null, false,
+          "thunderbolt", "waterpulse", "confuseray", "thunderwave", "bubblebeam", "supersonic"),
+        f("mareep",       "static",        "modest",   null, false,
+          "thundershock", "thunderwave", "cottonspore", "bodyslam", "swift", "lightscreen"));
+
+    /** El repertorio de ERIKA. Generado y validado: ver el javadoc de
+     *  la clase. */
+    private static final List<Ficha> ERIKA = List.of(
+        f("vileplume",    "chlorophyll",   "modest",   "life_orb", true,
+          "petalblizzard", "sludgebomb", "sleeppowder", "moonlight", "gigadrain", "stunspore"),
+        f("gloom",        "chlorophyll",   "modest",   "life_orb", true,
+          "megadrain", "sludgebomb", "sleeppowder", "acid", "stunspore", "moonlight"),
+        f("tangela",      "chlorophyll",   "modest",   null, false,
+          "vinewhip", "gigadrain", "sleeppowder", "ancientpower", "bind", "growth"),
+        f("exeggcute",    "chlorophyll",   "modest",   null, false,
+          "gigadrain", "psychic", "sleeppowder", "leechseed", "reflect", "bulletseed"),
+        f("victreebel",   "chlorophyll",   "adamant",  null, false,
+          "razorleaf", "sludgebomb", "sleeppowder", "gigadrain", "acid", "stunspore"),
+        f("weepinbell",   "chlorophyll",   "adamant",  null, false,
+          "razorleaf", "acid", "sleeppowder", "gigadrain", "stunspore", "poisonpowder"),
+        f("bellossom",    "chlorophyll",   "modest",   "leftovers", false,
+          "petalblizzard", "magicalleaf", "sleeppowder", "moonlight", "gigadrain", "stunspore"),
+        f("sunflora",     "chlorophyll",   "modest",   null, false,
+          "gigadrain", "solarbeam", "sunnyday", "petalblizzard", "growth", "razorleaf"),
+        f("jumpluff",     "chlorophyll",   "jolly",    null, false,
+          "gigadrain", "sleeppowder", "leechseed", "aerialace", "stunspore", "cottonspore"));
+
+    /** El repertorio de KOGA. Generado y validado: ver el javadoc de
+     *  la clase. */
+    private static final List<Ficha> KOGA = List.of(
+        f("weezing",      "levitate",      "adamant",  "life_orb", true,
+          "sludgebomb", "flamethrower", "explosion", "willowisp", "clearsmog", "thunderbolt"),
+        f("muk",          "stench",        "adamant",  "life_orb", true,
+          "sludgebomb", "gunkshot", "shadowsneak", "poisongas", "acidarmor", "brickbreak"),
+        f("koffing",      "levitate",      "adamant",  "focus_sash", false,
+          "sludge", "smokescreen", "explosion", "clearsmog", "willowisp", "thunderbolt"),
+        f("venomoth",     "shielddust",    "timid",    null, false,
+          "sludgebomb", "psychic", "sleeppowder", "bugbuzz", "supersonic", "doubleteam"),
+        f("arbok",        "intimidate",    "adamant",  null, false,
+          "gunkshot", "crunch", "glare", "earthquake", "acid", "screech"),
+        f("golbat",       "innerfocus",    "jolly",    null, false,
+          "airslash", "sludgebomb", "confuseray", "leechlife", "bite", "supersonic"),
+        f("ariados",      "swarm",         "adamant",  null, false,
+          "sludgebomb", "xscissor", "spiderweb", "suckerpunch", "poisonsting", "agility"),
+        f("qwilfish",     "poisonpoint",   "adamant",  null, false,
+          "sludgebomb", "waterfall", "spikes", "toxicspikes", "poisonsting", "minimize"));
+
+    /** El repertorio de SABRINA. Generado y validado: ver el javadoc de
+     *  la clase. */
+    private static final List<Ficha> SABRINA = List.of(
+        f("alakazam",     "synchronize",   "timid",    "life_orb", true,
+          "psychic", "shadowball", "recover", "calmmind", "psybeam", "reflect"),
+        f("kadabra",      "synchronize",   "timid",    "life_orb", true,
+          "psybeam", "shadowball", "recover", "reflect", "confusion", "disable"),
+        f("mrmime",       "soundproof",    "timid",    "focus_sash", false,
+          "psychic", "lightscreen", "reflect", "dazzlinggleam", "barrier", "encore"),
+        f("hypno",        "insomnia",      "adamant",  "leftovers", false,
+          "psychic", "hypnosis", "shadowball", "nastyplot", "confusion", "headbutt"),
+        f("exeggutor",    "chlorophyll",   "modest",   "leftovers", false,
+          "psychic", "gigadrain", "sleeppowder", "leechseed", "reflect", "eggbomb"),
+        f("slowbro",      "oblivious",     "modest",   "leftovers", false,
+          "psychic", "surf", "slackoff", "calmmind", "waterpulse", "yawn"),
+        f("espeon",       "synchronize",   "timid",    null, false,
+          "psychic", "shadowball", "morningsun", "calmmind", "swift", "psybeam"),
+        f("xatu",         "synchronize",   "timid",    null, false,
+          "psychic", "airslash", "reflect", "lightscreen", "confuseray", "nightshade"),
+        f("girafarig",    "innerfocus",    "modest",   null, false,
+          "psychic", "crunch", "agility", "lightscreen", "confusion", "stomp"));
+
+    /** El repertorio de BLAINE. Generado y validado: ver el javadoc de
+     *  la clase. */
+    private static final List<Ficha> BLAINE = List.of(
+        f("arcanine",     "intimidate",    "jolly",    "life_orb", true,
+          "flamethrower", "extremespeed", "crunch", "willowisp", "firefang", "roar"),
+        f("magmar",       "flamebody",     "timid",    "life_orb", true,
+          "flamethrower", "thunderpunch", "confuseray", "firepunch", "crosschop", "smokescreen"),
+        f("rapidash",     "runaway",       "jolly",    null, false,
+          "flareblitz", "megahorn", "bounce", "willowisp", "stomp", "agility"),
+        f("ninetales",    "flashfire",     "timid",    null, false,
+          "flamethrower", "confuseray", "willowisp", "energyball", "firespin", "safeguard"),
+        f("flareon",      "flashfire",     "adamant",  null, false,
+          "flamethrower", "quickattack", "bite", "firefang", "doublekick", "smog"),
+        f("growlithe",    "intimidate",    "adamant",  null, false,
+          "flamethrower", "bite", "willowisp", "firefang", "roar", "reversal"),
+        f("ponyta",       "runaway",       "jolly",    "focus_sash", false,
+          "flamewheel", "stomp", "agility", "firespin", "bounce", "tailwhip"),
+        f("magcargo",     "magmaarmor",    "modest",   "leftovers", false,
+          "lavaplume", "powergem", "rockslide", "amnesia", "flamethrower", "harden"));
+
+    /** El repertorio de GIOVANNI. Generado y validado: ver el javadoc de
+     *  la clase. */
+    private static final List<Ficha> GIOVANNI = List.of(
+        f("rhydon",       "lightningrod",  "adamant",  "life_orb", true,
+          "earthquake", "rockslide", "megahorn", "hammerarm", "stomp", "drillrun"),
+        f("nidoking",     "poisonpoint",   "adamant",  "life_orb", true,
+          "earthquake", "sludgebomb", "megahorn", "icebeam", "poisonjab", "thunderbolt"),
+        f("nidoqueen",    "poisonpoint",   "adamant",  "leftovers", false,
+          "earthquake", "sludgebomb", "bodyslam", "icebeam", "poisonjab", "crunch"),
+        f("dugtrio",      "sandveil",      "jolly",    "focus_sash", false,
+          "earthquake", "rockslide", "suckerpunch", "sandtomb", "slash", "mudslap"),
+        f("sandslash",    "sandveil",      "adamant",  null, false,
+          "earthquake", "rockslide", "swordsdance", "crushclaw", "slash", "sandtomb"),
+        f("marowak",      "rockhead",      "adamant",  "leftovers", false,
+          "bonemerang", "earthquake", "rockslide", "firepunch", "boneclub", "thrash"),
+        f("golem",        "rockhead",      "adamant",  "leftovers", false,
+          "earthquake", "rockslide", "explosion", "bulldoze", "rockthrow", "rollout"),
+        f("donphan",      "sturdy",        "adamant",  "leftovers", false,
+          "earthquake", "rockslide", "rapidspin", "knockoff", "bulldoze", "rollout"),
+        f("steelix",      "rockhead",      "adamant",  "leftovers", false,
+          "earthquake", "ironhead", "rockslide", "irondefense", "dragonbreath", "screech"));
+
+    /** El repertorio de BLUE. Generado y validado: ver el javadoc de
+     *  la clase. */
+    private static final List<Ficha> BLUE = List.of(
+        f("pidgeot",      "keeneye",       "jolly",    "life_orb", true,
+          "bravebird", "airslash", "uturn", "featherdance", "quickattack", "roost"),
+        f("alakazam",     "synchronize",   "timid",    "life_orb", true,
+          "psychic", "shadowball", "recover", "calmmind", "psybeam", "reflect"),
+        f("rhydon",       "lightningrod",  "adamant",  "leftovers", false,
+          "earthquake", "rockslide", "megahorn", "hammerarm", "stomp", "drillrun"),
+        f("arcanine",     "intimidate",    "jolly",    "leftovers", false,
+          "flamethrower", "extremespeed", "crunch", "willowisp", "firefang", "roar"),
+        f("gyarados",     "intimidate",    "adamant",  "leftovers", false,
+          "waterfall", "crunch", "icefang", "dragondance", "bounce", "bite"),
+        f("exeggutor",    "chlorophyll",   "modest",   "leftovers", false,
+          "psychic", "gigadrain", "sleeppowder", "leechseed", "reflect", "eggbomb"),
+        f("blastoise",    "torrent",       "modest",   "leftovers", false,
+          "hydropump", "icebeam", "flashcannon", "rapidspin", "waterpulse", "bite"),
+        f("machamp",      "guts",          "adamant",  "leftovers", false,
+          "crosschop", "earthquake", "rockslide", "bulkup", "knockoff", "bulletpunch"));
+
+
+
     /**
      * La bolsa de cada líder: qué objetos puede usar en combate.
      *
@@ -306,6 +498,34 @@ public final class Repertorio {
         //    seis. Si se le acaban a mitad, la segunda mitad es un paseo.
         BOLSAS.put("drake", List.of("cobblemon:full_restore", "cobblemon:full_restore",
                                     "cobblemon:full_restore", "cobblemon:full_restore"));
+
+        // ⚠⚠ LA BOLSA CRECE CON EL NIVEL, y es la palanca de dificultad más
+        //    barata que hay: no cambia el equipo, cambia cuántos turnos hay que
+        //    aguantar. Misty pelea a 19 con dos pociones; Giovanni a 46 con
+        //    tres Full Restore.
+        BOLSAS.put("misty", List.of("cobblemon:super_potion",
+                                    "cobblemon:super_potion"));
+        BOLSAS.put("surge", List.of("cobblemon:super_potion",
+                                    "cobblemon:super_potion"));
+        BOLSAS.put("erika", List.of("cobblemon:hyper_potion",
+                                    "cobblemon:hyper_potion"));
+        BOLSAS.put("koga", List.of("cobblemon:hyper_potion",
+                                   "cobblemon:hyper_potion",
+                                   "cobblemon:full_heal"));
+        BOLSAS.put("sabrina", List.of("cobblemon:hyper_potion",
+                                      "cobblemon:hyper_potion",
+                                      "cobblemon:full_restore"));
+        BOLSAS.put("blaine", List.of("cobblemon:full_restore",
+                                     "cobblemon:full_restore"));
+        BOLSAS.put("giovanni", List.of("cobblemon:full_restore",
+                                       "cobblemon:full_restore",
+                                       "cobblemon:full_restore"));
+        // ⚠ El campeón lleva cuatro, igual que Drake: es el último de la región
+        //   y si se le acaban a mitad, la segunda mitad del combate es un paseo.
+        BOLSAS.put("campeon_kanto", List.of("cobblemon:full_restore",
+                                            "cobblemon:full_restore",
+                                            "cobblemon:full_restore",
+                                            "cobblemon:full_restore"));
     }
 
     private static final Map<String, List<Ficha>> POR_GIMNASIO = new LinkedHashMap<>();
@@ -341,6 +561,23 @@ public final class Repertorio {
         //    mixto. Ver el javadoc de DRAKE -- ahí está por qué, y por qué el
         //    dragón (que es lo que parecía) no daba ni para seis candidatos.
         POR_GIMNASIO.put("drake", DRAKE);
+
+        POR_GIMNASIO.put("misty", MISTY);
+        TIPO_LIDER.put("misty", "water");
+        POR_GIMNASIO.put("surge", SURGE);
+        TIPO_LIDER.put("surge", "electric");
+        POR_GIMNASIO.put("erika", ERIKA);
+        TIPO_LIDER.put("erika", "grass");
+        POR_GIMNASIO.put("koga", KOGA);
+        TIPO_LIDER.put("koga", "poison");
+        POR_GIMNASIO.put("sabrina", SABRINA);
+        TIPO_LIDER.put("sabrina", "psychic");
+        POR_GIMNASIO.put("blaine", BLAINE);
+        TIPO_LIDER.put("blaine", "fire");
+        POR_GIMNASIO.put("giovanni", GIOVANNI);
+        TIPO_LIDER.put("giovanni", "ground");
+        POR_GIMNASIO.put("campeon_kanto", BLUE);
+        // ⚠ BLUE es MIXTO: campeon, sin tipo. Ver DRAKE.
     }
 
     /**

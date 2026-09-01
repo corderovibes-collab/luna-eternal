@@ -70,62 +70,52 @@ public class ViajesScreen extends Screen {
      * siete destinos del mismo tono, elegir obliga a leerlos todos cada vez —
      * con color, a la tercera visita ya vas al cuadro naranja sin leer.
      */
-    /**
-     * @param objeto qué objeto del juego se dibuja como icono
-     */
-    private record Parada(String id, int color, String objeto) {}
+    private record Parada(String id, int color) {}
 
     /**
-     * Las siete, con un OBJETO DE VERDAD por icono.
+     * LAS SIETE, cada una con su ilustración propia.
      *
-     * <h2>⚠⚠ ANTES ERAN FORMAS DIBUJADAS A MANO, Y SE VEÍAN MAL</h2>
+     * <h2>⚠⚠ Ya no es un icono sobre un cuadro de color: es la ficha entera</h2>
      *
-     * Petición del usuario, y tenía razón. Una espada de tres rectángulos a 58
-     * píxeles no parece una espada: parece tres rectángulos. Un objeto del juego
-     * trae su arte hecho, con su sombreado y su perspectiva, y encima <b>el
-     * jugador ya sabe lo que es</b> — reconoce una esmeralda antes de leer
-     * «Torre Comercial».
+     * Empezaron siendo formas dibujadas a mano (se veían mal), después objetos
+     * del juego (se veían bien pero eran de Minecraft, no del servidor), y hoy
+     * son <b>ilustraciones propias</b> que el usuario generó con IA a partir de
+     * los prompts de {@code docs/ui/prompts-viajes.md}.
      *
-     * <p>⚠⚠⚠ Y LOS IDENTIFICADORES SE COMPROBARON CONTRA EL JUEGO, no de
-     * memoria. Uno que no exista <b>no da ningún error</b>: devuelve aire y se
-     * dibuja un hueco. Es el fallo de los 62 cosméticos que no existían, y por
-     * eso hay una comprobación abajo que lo caza al abrir la pantalla.
+     * <p>⚠ EL COLOR SE QUEDA aunque ya no pinte el fondo. Sigue haciendo dos
+     * cosas: es el color del borde al pasar por encima, y es <b>el que se le
+     * pidió al arte</b> — cada ilustración tiene ese tono como dominante, así
+     * que la serie pega por construcción y no porque alguien la emparejara a
+     * ojo. Es la misma idea que los 16 colores del neón y del hormigón (D-032).
      *
-     * <p>⚠ Se usan de vainilla salvo la Poké Ball curativa, que es de Cobblemon
-     * y está confirmada en su jar. Un objeto de vainilla no puede faltarle a
-     * nadie.
+     * <p>⚠⚠ Y las siete son de NOCHE con la misma luna, a propósito: la
+     * ciudadela tiene noche permanente y el servidor se llama Luna Eternal. Sin
+     * eso serían siete dibujos sueltos en vez de una serie.
      */
     private static final Parada[] PARADAS = {
-        new Parada("torre_batalla",   0xFF8C3A2E, "minecraft:netherite_sword"),
-        new Parada("laboratorio",     0xFF2E6E8C, "minecraft:brewing_stand"),
-        new Parada("palacio",         0xFF7A5C1E, "minecraft:golden_helmet"),
-        new Parada("monumentos",      0xFF5A5A6E, "minecraft:chiseled_stone_bricks"),
-        new Parada("torre_comercial", 0xFF2E7A4E, "minecraft:emerald"),
-        new Parada("centro_curacion", 0xFF9E3A5C, "cobblemon:heal_ball"),
-        new Parada("montana",         0xFF4A6E8C, "minecraft:mossy_cobblestone"),
+        new Parada("torre_batalla",   0xFF8C3A2E),
+        new Parada("laboratorio",     0xFF2E6E8C),
+        new Parada("palacio",         0xFF7A5C1E),
+        new Parada("monumentos",      0xFF5A5A6E),
+        new Parada("torre_comercial", 0xFF2E7A4E),
+        new Parada("centro_curacion", 0xFF9E3A5C),
+        new Parada("montana",         0xFF4A6E8C),
     };
 
-    /** El objeto ya resuelto de cada parada. Se monta una vez. */
-    private static final java.util.Map<String, net.minecraft.item.ItemStack> PILAS =
+    /** Cuánto mide el PNG de cada parada. Las siete son cuadradas de 512. */
+    private static final int ARTE_LADO = 512;
+
+    /** La ruta del arte de cada parada, resuelta una vez. */
+    private static final java.util.Map<String, Identifier> ARTE =
             new java.util.HashMap<>();
 
     static {
         for (Parada p : PARADAS) {
-            var item = net.minecraft.registry.Registries.ITEM.get(
-                    net.minecraft.util.Identifier.of(p.objeto()));
-            if (item == net.minecraft.item.Items.AIR) {
-                // ⚠ Se dice, y no se calla. Un icono que falta se ve como un
-                //   hueco y parece un fallo de dibujado, no un identificador
-                //   mal escrito.
-                net.pokereport.luna.LunaEternal.LOG.error(
-                        "Viajes: el objeto '{}' de la parada '{}' NO EXISTE; "
-                        + "esa ficha saldrá sin icono", p.objeto(), p.id());
-            }
-            PILAS.put(p.id(), new net.minecraft.item.ItemStack(item));
+            ARTE.put(p.id(), Identifier.of("lunaeternal",
+                    "textures/gui/viajes/" + p.id() + ".png"));
         }
     }
 
-    /** Rejilla: cuatro columnas, dos filas. */
     private static final int COLS = 4;
     private static final int SEP = 10;
 
@@ -275,18 +265,27 @@ public class ViajesScreen extends Screen {
             boolean sel = i == elegida;
             boolean enc = dentro && dentro(rx, ry, px(cx), py(cy), pl(w), pl(h));
 
-            int fondo = dentro ? p.color() : 0xFF3A4050;
-            ctx.fill(px(cx), py(cy), px(cx + w), py(cy + h),
-                    enc ? aclarar(fondo) : fondo);
+            // ⚠⚠ EL ARTE LLENA LA FICHA, RECORTADO Y NO ESTIRADO. La ficha es
+            //    186x200 y el PNG es cuadrado: dibujarlo tal cual lo estiraria
+            //    un 7% a lo alto. Se recorta por los lados, y el recorte SE
+            //    CALCULA de w y h -- escrito a mano dejaria de cuadrar el dia
+            //    que la rejilla cambie de tamaño, y nadie lo notaria.
+            arte(ctx, p, px(cx), py(cy), pl(w), pl(h), w, h);
+            if (!dentro) {
+                // Fuera de la ciudadela se apaga, no se esconde: que exista y
+                // no se pueda usar ES informacion.
+                ctx.fill(px(cx), py(cy), px(cx + w), py(cy + h), 0xB4101828);
+            } else if (enc) {
+                ctx.fill(px(cx), py(cy), px(cx + w), py(cy + h), 0x22FFFFFF);
+            }
             // ⚠ Una banda más oscura abajo para el nombre: sobre un color plano
             //   el texto se lee, pero la banda es lo que separa «el cuadro» de
             //   «lo que dice el cuadro» y hace que la rejilla se lea como fichas.
             ctx.fill(px(cx), py(cy + h - 46), px(cx + w), py(cy + h), 0x66000000);
             marco(ctx, px(cx), py(cy), pl(w), pl(h),
-                    sel && dentro ? BORDE_ENCIMA : (dentro ? 0x60000000 : 0xFF2A3040),
+                    sel && dentro ? BORDE_ENCIMA
+                                  : (dentro ? aclarar(p.color()) : 0xFF2A3040),
                     Math.max(2, pl(sel ? 4 : 2)));
-
-            icono(ctx, p, px(cx + w / 2), py(cy + (h - 46) / 2), pl(58));
 
             var et = Text.translatable("pokepad.lunaeternal.parada." + p.id());
             int alto = 16;
@@ -306,30 +305,35 @@ public class ViajesScreen extends Screen {
     }
 
     /**
-     * EL ICONO DE UNA PARADA: un objeto del juego, escalado.
+     * EL ARTE DE UNA PARADA, recortado para llenar un hueco sin deformarse.
      *
-     * <h2>⚠⚠ SE ESCALA CON LA MATRIZ, no con un tamaño de dibujo</h2>
+     * <p>El PNG es cuadrado y el hueco no tiene por qué serlo, así que se coge
+     * <b>el trozo centrado</b> del PNG que tiene la misma proporción que el
+     * hueco. Estirarlo sería más corto de escribir y se notaría: en la rejilla
+     * la luna saldría ovalada.
      *
-     * {@code drawItem} dibuja siempre a 16×16 y no acepta tamaño. Para que el
-     * icono crezca con el chasis —que es toda la idea de {@link Escalado}— hay
-     * que escalar la matriz y dibujar en el origen.
-     *
-     * <p>⚠ Y hay que devolverla ({@code pop}) aunque se dibuje mal: dejar la
-     * matriz escalada se lleva por delante <b>todo lo que se dibuje después</b>,
-     * y el síntoma serían los textos gigantes de la mitad de abajo.
+     * @param destW,destH el tamaño del hueco en píxeles del CHASIS, que es de
+     *                    donde sale la proporción. Los otros son ya de pantalla
      */
-    private void icono(DrawContext ctx, Parada p, int cx, int cy, int lado) {
-        var pila = PILAS.get(p.id());
-        if (pila == null || pila.isEmpty()) {
+    private void arte(DrawContext ctx, Parada p, int x, int y, int w, int h,
+                      int destW, int destH) {
+        Identifier tex = ARTE.get(p.id());
+        if (tex == null) {
             return;
         }
-        float escala = lado / 16f;
-        MatrixStack m = ctx.getMatrices();
-        m.push();
-        m.translate(cx - lado / 2f, cy - lado / 2f, 0);
-        m.scale(escala, escala, 1f);
-        ctx.drawItem(pila, 0, 0);
-        m.pop();
+        int regW = ARTE_LADO, regH = ARTE_LADO;
+        if (destW > destH) {
+            // más ancho que alto: se recorta arriba y abajo
+            regH = Math.max(1, ARTE_LADO * destH / destW);
+        } else {
+            regW = Math.max(1, ARTE_LADO * destW / destH);
+        }
+        int u = (ARTE_LADO - regW) / 2, v = (ARTE_LADO - regH) / 2;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        ctx.drawTexture(tex, x, y, w, h, u, v, regW, regH,
+                ARTE_LADO, ARTE_LADO);
+        RenderSystem.disableBlend();
     }
 
     // ---- el panel ----------------------------------------------------------
@@ -345,7 +349,11 @@ public class ViajesScreen extends Screen {
                 listo() ? p.color() : 0xFF3A4050);
         marco(ctx, px(PANEL_X + 30), py(y), pl(rw), pl(rh), 0xFF20283C,
                 Math.max(2, pl(2)));
-        icono(ctx, p, px(PANEL_X + PANEL_W / 2), py(y + rh / 2), pl(56));
+        // ⚠ Aquí el hueco es APAISADO (255x120) y el PNG cuadrado, así que se
+        //   recorta por arriba y por abajo. Se dibuja DENTRO del marco, con 3
+        //   px de holgura, para que el borde no quede pisado por el arte.
+        arte(ctx, p, px(PANEL_X + 33), py(y + 3), pl(rw - 6), pl(rh - 6),
+                rw - 6, rh - 6);
         y += rh + 18;
 
         for (String l : partir(Text.translatable(

@@ -144,8 +144,31 @@ public final class CrateService {
         try (Connection c = db.connection()) {
             c.setAutoCommit(false);
             try {
-                String idem = "crate_key:" + playerId + ":" + cofreId + ":"
-                        + java.util.UUID.randomUUID();
+                // ⚠⚠⚠ UN UUID PELADO, Y SE ROMPIO POR UN SOLO CARACTER.
+                //    `ledger_entry.idempotency_key` es VARCHAR(64) (V002) y yo
+                //    componia «crate_key:<id>:<cofre>:<uuid>»:
+                //
+                //      gachapon          57  cabia
+                //      legendario        59  cabia
+                //      legendario_shiny  65  NO CABIA, por uno
+                //
+                //    ⚠⚠⚠ Y POR ESO SOLO FALLABA UN COFRE DE TRES, que es lo que
+                //       hace este fallo tan dificil de creer desde fuera: los
+                //       otros dos se compraban perfectamente. La diferencia
+                //       entre funcionar y no funcionar era LA LONGITUD DEL
+                //       NOMBRE DEL COFRE -- «legendario_shiny» tiene seis
+                //       letras mas que «gachapon».
+                //       Un cofre nuevo con nombre largo habria vuelto a caer.
+                //
+                //    ⚠⚠ Y NO SE VEIA COMO UN ERROR: el boton se apagaba, el
+                //       saldo no bajaba y no llegaba la llave. Desde fuera,
+                //       «no me deja comprar llaves».
+                //
+                //    ⚠ El contexto NO se pierde: para eso estan `reason` y
+                //      `ref_type`, que son columnas propias con sitio de sobra.
+                //      Meterlo TAMBIEN en la clave era duplicarlo justo donde
+                //      no cabia.
+                String idem = java.util.UUID.randomUUID().toString();
                 LunaEternal.economy().applyInTransaction(
                         c, playerId, Currency.REPORTCOIN, -coste,
                         "compra de llave " + cofreId, "crate_key", null, idem);
@@ -267,7 +290,21 @@ public final class CrateService {
                     LunaEternal.economy().applyInTransaction(
                             c, playerId, Currency.POKEDOLLAR, premio.cantidad(),
                             "premio de cofre " + cofreId, "crate_open", null,
-                            "crate_prize:" + idem);
+                            // ⚠⚠ `idem` TAL CUAL, sin prefijo. Antes llevaba
+                            //    «crate_prize:» delante Y `idem` era la cadena
+                            //    compuesta, o sea 69-77 caracteres sobre una
+                            //    columna de 64: CUALQUIER cofre que diera Plata
+                            //    fallaba ENTERO --la transaccion se deshace--
+                            //    gastando la llave sin dar nada.
+                            //    ⚠ No llego a verse porque el unico cofre con
+                            //      premios en Plata es el diario, y su llave
+                            //      pide una hora de juego.
+                            //    ⚠ Y no colisiona: la clave es unica en
+                            //      `ledger_entry`, y `crate_open.idem` es otra
+                            //      tabla. Compartirla ADEMAS enlaza las dos
+                            //      filas, que es justo lo que quiere una
+                            //      auditoria.
+                            idem);
                 }
 
                 int quedan = llaves(c, playerId, cofreId);

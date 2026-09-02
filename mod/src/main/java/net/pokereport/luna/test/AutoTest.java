@@ -748,6 +748,77 @@ public final class AutoTest {
                   svcCofres.todasLasLlaves(jugador).length == cofres.size());
             check("la piedad llega una por cofre",
                   svcCofres.todaLaPiedad(jugador).length == cofres.size());
+
+            // ⚠⚠⚠ AQUI SE COMPRA Y SE ABRE DE VERDAD, CONTRA LA BASE, Y ESA ES
+            //    LA UNICA PARTE DE ESTE BLOQUE QUE VIGILA ALGO.
+            //
+            //    Las once comprobaciones de arriba validan LAS TABLAS --que los
+            //    pesos sumen, que los premios existan, que los precios sean
+            //    positivos-- y ninguna llegaba a tocar MariaDB. Con todas en
+            //    verde, COMPRAR UNA LLAVE PREMIUM FALLABA SIEMPRE:
+            //
+            //      Data too long for column 'idempotency_key' at row 1
+            //
+            //    `ledger_entry.idempotency_key` es VARCHAR(64) y yo escribia
+            //    «crate_key:<id>:legendario_shiny:<uuid>», o sea 65: UNO DE MAS.
+            //    Lo descubrio el usuario --«no me deja comprar llaves»--, no el
+            //    autotest, y es la SEGUNDA vez en este proyecto que una columna
+            //    corta rompe una funcion entera en silencio: la primera fueron
+            //    las transferencias, y tambien la cazo ejercitar el camino.
+            //
+            //    ⚠⚠⚠ Y SOLO FALLABA UNO DE LOS TRES COFRES DE PAGO. `gachapon`
+            //       (57) y `legendario` (59) cabian; el shiny no, porque su
+            //       identificador tiene seis letras mas. O sea que lo que
+            //       decidia si la compra funcionaba era LA LONGITUD DEL NOMBRE.
+            //       Por eso el bucle los recorre TODOS: probar uno solo tenia
+            //       dos tercios de probabilidad de pasar con el fallo dentro.
+            //
+            //    ⚠ Comparar longitudes contra 36 aqui seria comparar constantes
+            //      contra constantes --la confianza falsa que ya nos mordio con
+            //      la separacion de las ranuras--. Lo que dice la verdad es que
+            //      MariaDB acepte la fila.
+            for (var cofre : cofres) {
+                if (cofre.llave() != net.pokereport.luna.crate.Cofre.Llave.PREMIUM) continue;
+
+                long saldo = LunaEternal.economy().balance(jugador, Currency.REPORTCOIN);
+                LunaEternal.economy().apply(jugador, Currency.REPORTCOIN,
+                        cofre.precio(), "autotest tesoros", "test", null,
+                        java.util.UUID.randomUUID().toString());
+
+                int antes = svcCofres.llaves(jugador, cofre.id());
+                int quedan = svcCofres.comprarLlave(jugador, cofre.id(), 1);
+                check("se puede comprar la llave de " + cofre.id(),
+                      quedan == antes + 1);
+                check("comprar la llave de " + cofre.id() + " cobra su precio",
+                      LunaEternal.economy().balance(jugador, Currency.REPORTCOIN) == saldo);
+
+                // Y abrirlo, que es donde el premio en Plata vuelve a pasar por
+                // el libro de asientos con esa misma clave.
+                var r = svcCofres.abrir(jugador, cofre.id(),
+                                        java.util.UUID.randomUUID().toString());
+                check("se puede abrir " + cofre.id(), r != null && r.premio() != null);
+                check("abrir " + cofre.id() + " gasta la llave",
+                      r != null && r.llavesRestantes() == antes);
+            }
+
+            // ⚠ El diario NO se compra --su llave la da el tiempo de juego--
+            //   asi que se le dan por la via normal y se abre igual: es el
+            //   unico cofre cuyo premio puede ser Plata, o sea el unico que
+            //   ejercita el asiento del PREMIO.
+            var diario = net.pokereport.luna.crate.Cofre.de("gacha_diario");
+            if (diario != null) {
+                svcCofres.darLlaves(jugador, diario.id(), 1);
+                var r = svcCofres.abrir(jugador, diario.id(),
+                                        java.util.UUID.randomUUID().toString());
+                check("se puede abrir el gacha diario",
+                      r != null && r.premio() != null);
+            }
+
+            // ⚠⚠ SIN LLAVE NO SE ABRE, Y DEVUELVE NULO EN VEZ DE REVENTAR. Si
+            //    abriera igual, el cofre seria gratis y no lo diria nadie.
+            check("sin llave no se abre",
+                  svcCofres.abrir(jugador, "legendario_shiny",
+                                  java.util.UUID.randomUUID().toString()) == null);
         }
     }
 
@@ -2565,6 +2636,14 @@ public final class AutoTest {
                         + "ON p.player_id = ci.player_id WHERE p.mc_uuid = ?",
                     "DELETE cl FROM clan cl JOIN player p "
                         + "ON p.player_id = cl.leader_id WHERE p.mc_uuid = ?",
+                    "DELETE ck FROM crate_key ck JOIN player p "
+                        + "ON p.player_id = ck.player_id WHERE p.mc_uuid = ?",
+                    "DELETE co FROM crate_open co JOIN player p "
+                        + "ON p.player_id = co.player_id WHERE p.mc_uuid = ?",
+                    "DELETE cp FROM crate_pity cp JOIN player p "
+                        + "ON p.player_id = cp.player_id WHERE p.mc_uuid = ?",
+                    "DELETE pa FROM player_activity pa JOIN player p "
+                        + "ON p.player_id = pa.player_id WHERE p.mc_uuid = ?",
                     "DELETE hp FROM hunt_progress hp JOIN player p "
                         + "ON p.player_id = hp.player_id WHERE p.mc_uuid = ?",
                     "DELETE qp FROM quest_progress qp JOIN player p "

@@ -3522,8 +3522,12 @@ public class Red implements ModInitializer {
         }
         net.pokereport.luna.crate.CrateService.Resultado r;
         try {
+            // ⚠ Un UUID pelado: `crate_open.idem` da para mas, pero esta MISMA
+            //   cadena viaja al libro de asientos cuando el premio es Plata, y
+            //   alli la columna es VARCHAR(64). Una sola forma para las dos, y
+            //   asi la fila del asiento y la de la apertura se enlazan.
             r = LunaEternal.crates().abrir(playerId, cofreId,
-                    "crate:" + playerId + ":" + java.util.UUID.randomUUID());
+                    java.util.UUID.randomUUID().toString());
         } catch (Exception e) {
             LunaEternal.LOG.error("No se pudo abrir el cofre {}", cofreId, e);
             avisar(jugador, "tesoros.lunaeternal.error");

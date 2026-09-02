@@ -120,6 +120,12 @@ class Cubo:
     material: str = "tela"   # tela / metal / cuero / neon
     inflate: float = 0.0
     uv: tuple = field(default=None)   # lo asigna empaquetar()
+    # ⚠⚠ El espejo NO es un adorno: en las skins de 64x32 el brazo y la pierna
+    #    izquierdos NO tienen dibujo propio, son el derecho reflejado. Sin esta
+    #    bandera comparten UV con el derecho y salen del reves -- las costuras
+    #    y los detalles caen al lado contrario, que se ve como un traje que
+    #    "no cuadra" sin que nada falle.
+    espejo: bool = False
 
     def huella(self):
         """Lo que ocupa en la textura: (2*fondo + 2*ancho) x (fondo + alto)."""
@@ -135,6 +141,12 @@ class Traje:
     id: str
     nombre: str
     huesos: dict = field(default_factory=dict)   # hueso -> [Cubo]
+    # ⚠⚠ UN TRAJE IMPORTADO TRAE SU TEXTURA HECHA. Los trajes de casa se pintan
+    #    del color de cada cubo (`pintar`); uno que viene de Blockbench ya tiene
+    #    el dibujo del autor, y repintarlo seria tirarlo. Si esto no es None,
+    #    manda esto.
+    textura: object = None
+    lado: int = 128
 
     def poner(self, hueso, *cubos):
         self.huesos.setdefault(hueso, []).extend(cubos)
@@ -158,7 +170,13 @@ def empaquetar(cubos, lado=128):
     Estanteria simple: se ordenan por altura y se van llenando filas.
     Devuelve el alto usado, o lanza si no caben.
     """
-    orden = sorted(cubos, key=lambda c: -c.huella()[1])
+    # ⚠⚠⚠ LOS CUBOS QUE YA TRAEN UV NO SE TOCAN. Un traje importado llega con
+    #    las coordenadas que dibujo su autor, y repartirlas otra vez las
+    #    PISARIA: el modelo seguiria compilando y saldria con la textura
+    #    cambiada de sitio -- la cara de la bota en el hombro, que es
+    #    exactamente el fallo que este reparto existe para evitar.
+    orden = sorted([c for c in cubos if c.uv is None],
+                   key=lambda c: -c.huella()[1])
     x = y = fila_alta = 0
     for c in orden:
         w, h = c.huella()
@@ -287,6 +305,8 @@ def geo(traje, pieza, lado=128):
                     "uv": list(c.uv)}
             if c.inflate:
                 cubo["inflate"] = c.inflate
+            if getattr(c, "espejo", False):
+                cubo["mirror"] = True
             b["cubes"].append(cubo)
         salida.append(b)
     return {
@@ -318,9 +338,16 @@ def escribir(traje, destino, lado=128):
         alto = empaquetar(cubos, lado)
         (geo_dir / ("%s_%s.geo.json" % (traje.id, pieza))).write_text(
             json.dumps(geo(traje, pieza, lado), indent=2), encoding="utf-8")
-        semilla = sum(ord(ch) for ch in traje.id + pieza)
-        pintar(cubos, lado, semilla).save(
-            tex_dir / ("%s_%s.png" % (traje.id, pieza)))
+        if traje.textura is not None:
+            # ⚠ La MISMA imagen para las cuatro piezas, a proposito: recortar lo
+            #   de cada una obligaria a recalcular todas las UV, y ahi es donde
+            #   se cuelan los fallos que no dan error. Sobra PNG y no sobra
+            #   ninguna coordenada reinventada.
+            traje.textura.save(tex_dir / ("%s_%s.png" % (traje.id, pieza)))
+        else:
+            semilla = sum(ord(ch) for ch in traje.id + pieza)
+            pintar(cubos, lado, semilla).save(
+                tex_dir / ("%s_%s.png" % (traje.id, pieza)))
         brillo = mascara_brillo(cubos, lado)
         if brillo:
             brillo.save(tex_dir / ("%s_%s_glowmask.png" % (traje.id, pieza)))

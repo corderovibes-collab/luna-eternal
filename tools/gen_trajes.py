@@ -175,7 +175,13 @@ def entrenador():
     return t
 
 
-TRAJES = {"entrenador": entrenador}
+def arceus():
+    """El LEYENDA de Arceus, importado del Blockbench del usuario."""
+    from trajes.arceus import traje
+    return traje()
+
+
+TRAJES = {"entrenador": entrenador, "arceus": arceus}
 
 
 # ---------------------------------------------------------------- comprobar
@@ -239,12 +245,13 @@ def verificar(t):
         if not cubos:
             continue
         try:
-            alto = modelo.empaquetar(list(cubos))
+            alto = modelo.empaquetar(list(cubos), t.lado)
         except ValueError as e:
             fallos.append("pieza %s: %s" % (pieza, e))
         else:
-            if alto > 128:
-                fallos.append("pieza %s necesita %d px de alto" % (pieza, alto))
+            if alto > t.lado:
+                fallos.append("pieza %s necesita %d px de alto sobre %d"
+                              % (pieza, alto, t.lado))
     return fallos
 
 
@@ -283,7 +290,7 @@ def main():
         print("    invariantes correctos")
 
         if args.generar:
-            for pieza, n, alto, brillo in escribir(t, DESTINO):
+            for pieza, n, alto, brillo in escribir(t, DESTINO, t.lado):
                 print("    %-6s %2d cubos · textura %d px%s"
                       % (pieza, n, alto, " · con brillo" if brillo else ""))
             print("    -> %s" % DESTINO)
@@ -304,9 +311,9 @@ def main():
                 for pieza in M.PIEZAS:
                     cubos = [c for l in t.de_pieza(pieza).values() for c in l]
                     if cubos:
-                        M.empaquetar(cubos)
-                        texturas[pieza] = M.pintar(
-                            cubos, 128, sum(ord(ch) for ch in t.id + pieza))
+                        M.empaquetar(cubos, t.lado)
+                        texturas[pieza] = t.textura if t.textura is not None                             else M.pintar(cubos, t.lado,
+                                          sum(ord(ch) for ch in t.id + pieza))
             destino = LAMINAS / ("%s.png" % t.id)
             visor.lamina(t, destino, args.escala, texturas)
             print("    lamina -> %s" % destino)

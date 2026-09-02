@@ -208,6 +208,23 @@ public final class Trajes {
                 float[] uv = dos(cubo.getAsJsonArray("uv"));
                 float inflate = cubo.has("inflate")
                         ? cubo.get("inflate").getAsFloat() : 0f;
+                // ⚠⚠⚠ EL ESPEJO. Sin esto, un traje IMPORTADO de una skin de
+                //    64x32 sale con los detalles del lado cambiado: en esas
+                //    skins el brazo y la pierna izquierdos NO tienen dibujo
+                //    propio --son el derecho reflejado-- y comparten las mismas
+                //    UV con una instruccion de reflejo dentro.
+                //    ⚠⚠ Y leerlo mal NO DA NINGUN ERROR: el traje se dibuja
+                //       entero, con su silueta correcta, y solo las costuras
+                //       caen al lado que no es. Se lee como «algo no cuadra»
+                //       sin poder decir el que.
+                //    ⚠ `mirrored` es de ida y vuelta: se apaga despues de cada
+                //      cubo o se lo lleva TODO lo que venga detras en el mismo
+                //      hueso.
+                boolean espejo = cubo.has("mirror")
+                        && cubo.get("mirror").getAsBoolean();
+                if (espejo) {
+                    constructor.mirrored();
+                }
                 // ⚠⚠ AQUI ESTA LA CONVERSION, Y ES LA LINEA QUE MAS DUELE SI SE
                 //    EQUIVOCA: Bedrock mide Y hacia arriba desde los pies y Java
                 //    hacia abajo desde el pivote del hueso.
@@ -216,6 +233,9 @@ public final class Trajes {
                         (24f - o[1] - s[1]) - pv[1],
                         (-o[2] - s[2]) - pv[2],
                         s[0], s[1], s[2], new Dilation(inflate));
+                if (espejo) {
+                    constructor.mirrored(false);
+                }
             }
             datos.getRoot().addChild(nombre, constructor,
                     ModelTransform.pivot(pv[0], pv[1], pv[2]));

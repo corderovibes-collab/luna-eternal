@@ -168,7 +168,12 @@ public final class Especies {
                 }
                 if (rara) continue;
 
-                out.add(new Especie(s.getName().toLowerCase(), dex,
+                // ⚠⚠⚠ EL IDENTIFICADOR, NO EL NOMBRE VISIBLE. Con
+                //    `getName().toLowerCase()` esto sorteaba cazas de
+                //    «mr. mime» y «farfetch’d», que NO son identificadores
+                //    validos: la primera vez que salio una, tumbo el autotest
+                //    entero. Ver net.pokereport.luna.pokedex.ClaveEspecie.
+                out.add(new Especie(net.pokereport.luna.pokedex.ClaveEspecie.de(s), dex,
                         rarezaDe(s)));
             }
         } catch (Throwable t) {

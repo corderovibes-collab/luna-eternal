@@ -68,7 +68,8 @@ public final class CaptureListener {
     private static void eclosion(ServerPlayerEntity player,
                                  com.cobblemon.mod.common.pokemon.Pokemon pokemon) {
         if (player == null || pokemon == null) return;
-        String especie = pokemon.getSpecies().getName().toLowerCase();
+        // ⚠ El identificador, no el nombre visible (ver ClaveEspecie).
+        String especie = ClaveEspecie.de(pokemon);
         UUID uuid = player.getGameProfile().getId();
         String username = player.getGameProfile().getName();
 
@@ -101,6 +102,12 @@ public final class CaptureListener {
 
         var species = pokemon.getSpecies();
         String name = species.getName();
+        // ⚠⚠ `name` es lo que SE LEE y `clave` es lo que SE GUARDA, y no son lo
+        //    mismo: «Nidoran-F» se enseña asi y se guarda `nidoranf`. Antes se
+        //    guardaba `name.toLowerCase()`, o sea «nidoran-f», que es un
+        //    identificador VALIDO Y QUE NO EXISTE -- se resolvia a null sin dar
+        //    ningun error, y asi lleva meses en la Pokedex de alguien.
+        String clave = ClaveEspecie.de(species);
         int dex = species.getNationalPokedexNumber();
         boolean shiny = pokemon.getShiny();
         int level = pokemon.getLevel();
@@ -115,11 +122,11 @@ public final class CaptureListener {
                 long id = LunaEternal.players().resolve(uuid, username);
 
                 boolean nueva = LunaEternal.pokedex()
-                    .recordCapture(id, name.toLowerCase(), dex, shiny, level, moon);
+                    .recordCapture(id, clave, dex, shiny, level, moon);
 
                 // Cazas: capturar es lo UNICO que las avanza (HUNT-001).
                 if (LunaEternal.hunts() != null) {
-                    LunaEternal.hunts().avanzar(id, name.toLowerCase(),
+                    LunaEternal.hunts().avanzar(id, clave,
                         net.pokereport.luna.hunt.HuntService.Tipo.CAPTURA);
                 }
 

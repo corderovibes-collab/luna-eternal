@@ -639,8 +639,8 @@ public final class AutoTest {
                         }
                     }
                     case POKEMON -> {
-                        if (com.cobblemon.mod.common.api.pokemon.PokemonSpecies
-                                .INSTANCE.getByName(pr.id()) == null) {
+                        if (net.pokereport.luna.pokedex.ClaveEspecie
+                                .buscar(pr.id()) == null) {
                             existen = false;
                             LunaEternal.LOG.error("Cofre {}: la especie '{}' NO"
                                     + " EXISTE", c.id(), pr.id());
@@ -1461,14 +1461,52 @@ public final class AutoTest {
         //   Se pregunta al registro, que es de donde salen.
         boolean enRango = true;
         for (var o : ciclo.objetivos()) {
-            var esp = com.cobblemon.mod.common.api.pokemon.PokemonSpecies.INSTANCE
-                    .getByName(o.especie());
+            // ⚠⚠⚠ `getByName` LANZA, no devuelve null, si la cadena no vale
+            //    como ruta de Identifier --construye uno por dentro--. Una caza
+            //    de «mr. mime» reventaba AQUI y se llevaba por delante las 300
+            //    comprobaciones siguientes: «1 FALLOS de 171» con el fallo real
+            //    a trescientas de distancia.
+            //    ⚠ Un autotest que aborta no informa de una cosa: ESCONDE todo
+            //      lo que venia detras.
+            var esp = net.pokereport.luna.pokedex.ClaveEspecie.buscar(o.especie());
             if (esp == null || esp.getNationalPokedexNumber() > 251) {
                 enRango = false;
                 LunaEternal.LOG.error("Caza fuera de Kanto/Johto: {}", o.especie());
             }
         }
         check("todas las especies son de Kanto o Johto", enRango);
+
+        // ⚠⚠⚠ EL CATALOGO ENTERO, NO EL SORTEO DE HOY. Las tres comprobaciones
+        //    de arriba miran los objetivos del ciclo vigente, o sea SEIS
+        //    especies de las 251 sorteadas al azar. Con eso, una especie cuyo
+        //    identificador no resuelve tiene DOS TERCIOS DE PROBABILIDAD DE NO
+        //    SALIR en una ejecucion cualquiera -- y cuando por fin sale, no da
+        //    un fallo: LANZA, y se lleva por delante las 300 comprobaciones que
+        //    venian detras.
+        //
+        //    Paso de verdad el 2026-09-01: «1 FALLOS de 171» con el fallo real
+        //    a trescientas de distancia, porque al ciclo le toco «mr. mime».
+        //
+        //    ⚠⚠ Y lo que estaba mal no era el sorteo: era que las cazas
+        //       guardaban `getName().toLowerCase()` --el NOMBRE VISIBLE-- como
+        //       si fuera un identificador. Acierta con 247 de 251, que es
+        //       justo bastante para no enterarse nunca.
+        //
+        //    Esto recorre las 251 y no depende de la suerte.
+        int rotas = 0;
+        String primera = null;
+        for (var e : net.pokereport.luna.hunt.Especies.disponibles()) {
+            if (net.pokereport.luna.pokedex.ClaveEspecie.buscar(e.nombre()) == null) {
+                rotas++;
+                if (primera == null) primera = e.nombre();
+                LunaEternal.LOG.error("Caza imposible: la especie '{}' no"
+                        + " resuelve en el registro de Cobblemon", e.nombre());
+            }
+        }
+        check("las " + net.pokereport.luna.hunt.Especies.disponibles().size()
+              + " especies cazables resuelven"
+              + (primera == null ? "" : " (falla '" + primera + "' y " + (rotas - 1) + " mas)"),
+              rotas == 0);
 
         // ⚠ La entrega se recoge UNA vez. Si se pudiera leer dos, un cobro
         //   entregaría el objeto dos veces.

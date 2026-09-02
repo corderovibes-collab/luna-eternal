@@ -602,8 +602,17 @@ public class TesorosScreen extends Screen {
             int n = i - desde;
             int cx = PANT_X + MARGEN + (n % PREMIO_COLS) * (w + 10);
             int cy = PANT_Y + MARGEN + 46 + (n / PREMIO_COLS) * (h + 10);
+            // ⚠⚠ LA CAJA ES LA QUE MANDA EN EL TAMAÑO: `Mascota3D` escala con
+            //    `min(ancho,alto) * 0.45`, asi que agrandar la caja agranda el
+            //    modelo. Estaba en 68 --la mitad que la de Cazas, que usa 116--
+            //    y por eso los legendarios salian diminutos en una celda vacia.
+            //    Hoy ocupa TODO el hueco libre de la celda: desde arriba hasta
+            //    justo encima de la banda del porcentaje.
+            int cajaAlto = h - 58;
+            int cajaLado = Math.min(cajaAlto, w - 16);
             pokemon(ctx, pr, "tabla:" + c.id() + ":" + i,
-                    px(cx + w / 2 - 34), py(cy + 6), pl(68), pl(68), delta);
+                    px(cx + (w - cajaLado) / 2), py(cy + 2),
+                    pl(cajaLado), pl(cajaAlto), delta);
         }
     }
 
@@ -620,8 +629,13 @@ public class TesorosScreen extends Screen {
         if (id == null) {
             return;
         }
+        // ⚠⚠ EL ANCLAJE ES 0.10 Y ESTABA A 0, que es otra mitad del problema:
+        //    el modelo CUELGA HACIA ABAJO desde su origen, asi que con 0 el
+        //    origen cae en el borde de arriba de la caja y el Pokemon aparece
+        //    pegado al techo con todo el hueco vacio debajo. 0.10 es lo que usa
+        //    CazasScreen, y esta medido: ver el javadoc de `Mascota3D`.
         Mascota3D.dibujarEspecie(ctx, id, clave, pr.shiny() ? "shiny" : "",
-                x, y, w, h, 0f, delta, true);
+                x, y, w, h, 0.10f, delta, true);
     }
 
     /**
@@ -704,7 +718,7 @@ public class TesorosScreen extends Screen {
             if (pr.tipo() != Cofre.Tipo.POKEMON) {
                 icono(ctx, pilaDe(pr), px(tiraX + 46), py(cy + FICHA / 2 - 2), pl(46));
             } else {
-                enTira.add(new int[] {tiraX + 12, cy + 2});
+                enTira.add(new int[] {tiraX + 6, cy - 4});
                 quienes.add(pr);
             }
             texto(ctx, nombreDe(pr), tiraX + 88, cy + FICHA / 2 - 13, 19,
@@ -735,8 +749,11 @@ public class TesorosScreen extends Screen {
         // ⚠ El 3D de la tira, al final y junto: la misma regla de siempre.
         for (int i = 0; i < enTira.size(); i++) {
             int[] pos = enTira.get(i);
+            // ⚠ En la tira la caja se pasa un poco del alto de la ficha a
+            //   proposito: `Mascota3D` recorta con `enableScissor`, asi que lo
+            //   que sobra no invade la fila de al lado -- solo gana tamaño.
             pokemon(ctx, quienes.get(i), "ruleta:" + i,
-                    px(pos[0]), py(pos[1]), pl(FICHA - 8), pl(FICHA - 8), delta);
+                    px(pos[0]), py(pos[1]), pl(FICHA + 4), pl(FICHA + 4), delta);
         }
     }
 

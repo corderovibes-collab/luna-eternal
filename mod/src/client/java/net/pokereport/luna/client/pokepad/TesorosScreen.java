@@ -230,13 +230,30 @@ public class TesorosScreen extends Screen {
         this.sonoElPremio = false;
     }
 
+    /**
+     * Un sonido de interfaz.
+     *
+     * <h2>⚠⚠⚠ `master`, NO EL CONSTRUCTOR DE OCHO ARGUMENTOS</h2>
+     *
+     * Yo usaba {@code new PositionedSoundInstance(ev, cat, vol, tono, rnd,
+     * 0, 0, 0)}, y esos tres ceros no son «sin posición»: son las
+     * <b>coordenadas del mundo</b> (0, 0, 0). El sonido se reproducía allí, a
+     * cientos de bloques del jugador, así que <b>no se oía absolutamente
+     * nada</b> — sin un error, sin un aviso, sin nada en el log.
+     *
+     * <p>{@code PositionedSoundInstance.master} es el que no tiene posición, y
+     * es el que ya usaba {@link #sonar} tres métodos más abajo. Tenía la
+     * respuesta al lado.
+     *
+     * <p>⚠ Y ojo al orden: {@code master(sonido, TONO, VOLUMEN)}. Están
+     * invertidos respecto al constructor, y equivocarse no da error: da un
+     * sonido con el tono del volumen.
+     */
     private void sonido(net.minecraft.sound.SoundEvent ev, float tono, float vol) {
         if (client != null) {
             client.getSoundManager().play(
-                new net.minecraft.client.sound.PositionedSoundInstance(
-                    ev, net.minecraft.sound.SoundCategory.MASTER,
-                    vol, tono, net.minecraft.util.math.random.Random.create(),
-                    0, 0, 0));
+                net.minecraft.client.sound.PositionedSoundInstance.master(
+                    ev, tono, vol));
         }
     }
 
@@ -511,6 +528,19 @@ public class TesorosScreen extends Screen {
             boolean puede = saldo >= c.precio() && !esperando() && !enRuleta();
             boton(ctx, rx, ry, PANEL_X + 30, by, PANEL_W - 60, 46,
                     Text.translatable("tesoros.lunaeternal.comprar"), puede, ORO);
+            // ⚠⚠⚠ SE DICE POR QUE NO PUEDES, Y ESTO ES EL ARREGLO DE VERDAD.
+            //    El boton gris era CORRECTO --la llave shiny cuesta 3.000 y no
+            //    le llegaba-- pero no lo decia, asi que desde fuera se lee como
+            //    «no me deja comprar», o sea como una averia.
+            //    Es la misma leccion que ya esta escrita en Viajes: un boton
+            //    apagado SIN la razon al lado parece roto; CON la razon es una
+            //    regla que se entiende.
+            texto(ctx, puede
+                        ? Text.translatable("tesoros.lunaeternal.tu_saldo", saldo)
+                        : Text.translatable("tesoros.lunaeternal.te_faltan",
+                                            c.precio() - saldo),
+                    PANEL_X + PANEL_W / 2, by + 52, 14,
+                    puede ? TINTA_SUAVE : 0xFFD9704E, true, 0);
         }
     }
 

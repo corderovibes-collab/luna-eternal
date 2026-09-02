@@ -96,7 +96,7 @@ public final class AutoTest {
             testViajes();
             testTrajes();
             testGimnasios();
-            testTesoros();
+            testTesoros(a);
             testEspera();
 
         } catch (Exception e) {
@@ -606,7 +606,7 @@ public final class AutoTest {
      * existe. El jugador paga y no recibe. Es el fallo de los 62 cosmeticos que
      * no existian, aplicado a algo que cuesta dinero de verdad.
      */
-    private void testTesoros() throws Exception {
+    private void testTesoros(long jugador) throws Exception {
         var cofres = net.pokereport.luna.crate.Cofre.TODOS;
         check("hay al menos un cofre", !cofres.isEmpty());
 
@@ -736,6 +736,19 @@ public final class AutoTest {
         // ⚠ La llave diaria pide una hora. Un cero aqui la regalaria al entrar.
         check("la llave diaria pide tiempo de juego",
               net.pokereport.luna.crate.Actividad.SEGUNDOS_LLAVE > 0);
+
+        // ⚠⚠ LAS LLAVES VIAJAN COMO UNA LISTA Y LA PANTALLA LAS LEE POR
+        //    POSICION, asi que su tamaño TIENE que ser el numero de cofres. Si
+        //    no coincidiera, el jugador veria las llaves de otro cofre --o
+        //    ninguna-- SIN QUE NADA FALLARA. Es la misma familia que las tres
+        //    listas de medallas.
+        var svcCofres = LunaEternal.crates();
+        if (svcCofres != null) {
+            check("las llaves llegan una por cofre",
+                  svcCofres.todasLasLlaves(jugador).length == cofres.size());
+            check("la piedad llega una por cofre",
+                  svcCofres.todaLaPiedad(jugador).length == cofres.size());
+        }
     }
 
     private void testCazas(long jugador) throws Exception {

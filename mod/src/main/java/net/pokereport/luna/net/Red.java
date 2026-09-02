@@ -3539,7 +3539,45 @@ public class Red implements ModInitializer {
             ServerPlayNetworking.send(jugador, new ResultadoCofre(
                     cofreId, indice, r.porPiedad(),
                     r.llavesRestantes(), r.piedadActual()));
+            // ⚠⚠⚠ Y TAMBIEN POR EL CHAT, SIEMPRE. La ruleta solo se ve si la
+            //    pantalla sigue abierta: quien pulse abrir y cierre --o se
+            //    caiga-- RECIBE EL PREMIO Y NO SE ENTERA DE CUAL FUE. Con la
+            //    llave ya gastada, eso se lee como «no me dio nada».
+            //    El chat ademas PERSISTE: es lo unico que se puede releer.
+            anunciarPremio(jugador, r.premio());
         });
+    }
+
+    /**
+     * Dice por el chat qué salió.
+     *
+     * <p>⚠ El nombre viaja SIN resolver ({@code Text.translatable} y
+     * {@code pila.getName()}), así que lo pinta el cliente en su idioma. Un
+     * servidor no tiene idioma — es la regla del 25-ago.
+     */
+    private static void anunciarPremio(
+            net.minecraft.server.network.ServerPlayerEntity jugador,
+            net.pokereport.luna.crate.Cofre.Premio premio) {
+        net.minecraft.text.Text nombre;
+        switch (premio.tipo()) {
+            case POKEMON -> nombre = net.minecraft.text.Text.literal(
+                    premio.shiny() ? "✦ " : "").append(
+                    net.minecraft.text.Text.translatable(
+                            "cobblemon.species." + premio.id() + ".name"));
+            case PLATA -> nombre = net.minecraft.text.Text.literal(
+                    premio.cantidad() + " de Plata");
+            default -> {
+                var item = net.minecraft.registry.Registries.ITEM.get(
+                        Identifier.of(premio.id()));
+                var pila = new net.minecraft.item.ItemStack(item,
+                        Math.max(1, premio.cantidad()));
+                nombre = net.minecraft.text.Text.literal(
+                        premio.cantidad() > 1 ? premio.cantidad() + "x " : "")
+                        .append(pila.getName());
+            }
+        }
+        jugador.sendMessage(net.minecraft.text.Text.literal(
+                LunaEternal.PREFIJO + "§7Del cofre: §f").append(nombre), false);
     }
 
     /**

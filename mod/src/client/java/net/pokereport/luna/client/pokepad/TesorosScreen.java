@@ -163,6 +163,46 @@ public class TesorosScreen extends Screen {
     /** Para no repetir el sonido de premio en cada fotograma. */
     private boolean sonoElPremio = false;
 
+    /**
+     * El último estado visto, para saber cuándo llega uno nuevo.
+     *
+     * <h2>⚠⚠⚠ SIN ESTO, COMPRAR DEJABA LOS BOTONES MUERTOS CINCO SEGUNDOS</h2>
+     *
+     * {@code pulsado} apaga los botones mientras vuela el paquete, y solo se
+     * limpiaba al llegar el resultado de una apertura. Comprar una llave no
+     * devuelve resultado —devuelve estado— así que el temporizador se agotaba
+     * entero: el estado nuevo llegaba en milisegundos y el botón seguía apagado
+     * casi cinco segundos más.
+     *
+     * <p>Y no daba ningún error. Se veía como «la tienda va lenta».
+     *
+     * <p>⚠ Se compara por IDENTIDAD y no por contenido: cada paquete crea un
+     * objeto nuevo, así que basta con que sea otro. Comparar el contenido haría
+     * que comprar una llave <b>teniendo ya el mismo número</b> —imposible— no
+     * contara, pero sobre todo obligaría a mantener un {@code equals} al día.
+     */
+    private Red.EstadoTesoros ultimoEstado;
+
+    /**
+     * Cuándo se pidió el estado por última vez.
+     *
+     * <h2>⚠⚠⚠ EL RELOJ DEL GACHA DIARIO NO SE PUEDE CALCULAR EN EL CLIENTE</h2>
+     *
+     * En Cazas la cuenta atrás la lleva el cliente restando de un instante
+     * absoluto, y ahí es lo correcto. Aquí <b>no vale</b>: lo que falta no
+     * depende del reloj sino del <b>tiempo activo</b>, y solo el servidor sabe
+     * si te está contando. Un cliente que restara un segundo por segundo diría
+     * que avanzas estando parado.
+     *
+     * <p>Así que se vuelve a pedir, una vez por segundo y <b>solo mientras hace
+     * falta</b>: con la pantalla abierta, mirando el cofre diario y sin haberla
+     * cogido aún. Es un paquete diminuto y deja de mandarse en cuanto la coges.
+     *
+     * <p>⚠ Sin esto el número se quedaba <b>congelado</b> en el que llegó al
+     * abrir la pantalla, y eso se lee como que no funciona.
+     */
+    private long ultimaPeticion = 0;
+
     public TesorosScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.tesoros"));
         this.anterior = anterior;
@@ -198,6 +238,28 @@ public class TesorosScreen extends Screen {
                     vol, tono, net.minecraft.util.math.random.Random.create(),
                     0, 0, 0));
         }
+    }
+
+    /**
+     * Vuelve a pedir el estado si hace falta el reloj. Ver {@link #ultimaPeticion}.
+     *
+     * <p>⚠ Se pide SOLO si el cofre elegido es el diario, aún no está cogida y
+     * no hay ruleta delante. Pedirlo siempre serían sesenta consultas por
+     * minuto y por jugador con la pantalla abierta, para nada.
+     */
+    private void refrescarReloj(Red.EstadoTesoros e) {
+        if (e == null || enRuleta()) {
+            return;
+        }
+        if (cofre().llave() != Cofre.Llave.JUEGO || e.reclamadaHoy()) {
+            return;
+        }
+        long ahora = System.currentTimeMillis();
+        if (ahora - ultimaPeticion < 1000) {
+            return;
+        }
+        ultimaPeticion = ahora;
+        ClientPlayNetworking.send(new Red.PedirTesoros());
     }
 
     private boolean girando() {
@@ -308,6 +370,17 @@ public class TesorosScreen extends Screen {
     public void render(DrawContext ctx, int rx, int ry, float delta) {
         recalcular();
         renderBackground(ctx, rx, ry, delta);
+
+        // ⚠⚠ EN CUANTO LLEGA ESTADO NUEVO, LOS BOTONES VUELVEN. Es lo que hace
+        //    que comprar se sienta instantaneo: el servidor contesta en
+        //    milisegundos y la espera se corta ahi, no a los cinco segundos.
+        var ahora = EstadoCliente.tesoros();
+        if (ahora != null && ahora != ultimoEstado) {
+            ultimoEstado = ahora;
+            pulsado = 0;
+        }
+        refrescarReloj(ahora);
+
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
         dibujarNavegacion(ctx, rx, ry);
         dibujarPanel(ctx, rx, ry);

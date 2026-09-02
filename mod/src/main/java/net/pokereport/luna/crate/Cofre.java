@@ -129,29 +129,63 @@ public final class Cofre {
     // ⚠ Los identificadores se comprobaron contra data/cobblemon/species/ del
     //   jar antes de escribirlos. `hooh` va SIN guion bajo; `ho_oh` no existe y
     //   no habría dado ningún error: habría dado un cofre que no entrega nada.
-    private static final String[] LEGENDARIOS_MENORES = {
-        "articuno", "zapdos", "moltres", "raikou", "entei", "suicune"
-    };
-
     /**
-     * Los cinco de arriba: los que la piedad garantiza.
+     * LOS ONCE, Y TODOS CON LA MISMA PROBABILIDAD (orden del usuario).
      *
-     * <p>⚠⚠ Mewtwo, Mew, Lugia, Ho-Oh y Celebi salen <b>mucho menos</b> que los
-     * otros seis, y son los que cuentan como premio mayor. Si todos pesaran lo
-     * mismo, el cofre no tendría nada que perseguir — y la piedad, que es lo
-     * que acota el gasto, no tendría a qué apuntar.
+     * <h2>⚠⚠⚠ ANTES NO ERAN IGUALES, Y AL IGUALARLOS CAEN DOS COSAS MAS</h2>
+     *
+     * Había seis a peso 150 y cinco a peso 20 —Mewtwo, Mew, Lugia, Ho-Oh y
+     * Celebi—, o sea un 15 % contra un 2 %. Igualarlos <b>no es cambiar un
+     * número</b>: arrastra a las otras dos cosas que colgaban de esa
+     * diferencia, y dejar cualquiera de las dos sin tocar habría dejado la
+     * pantalla contradiciéndose a sí misma.
+     *
+     * <ol>
+     *   <li><b>El resalte dorado.</b> La pantalla pinta en oro los premios
+     *       mayores y en verde los demás. Con los once al mismo porcentaje,
+     *       cinco en oro y seis en verde sería <b>contradecir la cifra que
+     *       está escrita justo al lado</b>. Así que ahora los once son mayores:
+     *       en un cofre de legendarios, cualquiera de los once lo es.</li>
+     *   <li><b>La piedad.</b> Existe para acotar lo que cuesta llegar a lo
+     *       raro, y aquí <b>ya no hay nada raro</b>: cada tirada da un
+     *       legendario, sin excepción. Un contador de «te faltan N para el
+     *       premio mayor» cuando todo es premio mayor no acota nada — solo
+     *       ocupa sitio y confunde. Por eso los dos cofres pasan a piedad 0.</li>
+     * </ol>
+     *
+     * <p>⚠⚠ Y ese acoplamiento ya estaba vigilado: el autotest comprueba que un
+     * cofre con piedad tenga premio mayor. Bajar la piedad sin más lo habría
+     * dejado pasar, pero dejar la piedad puesta con los once iguales habría
+     * hecho que la pantalla contara para un premio que sale siempre.
+     *
+     * <p>⚠ Lo que se pierde, dicho claro: <b>el cofre deja de tener nada que
+     * perseguir</b>. Antes se abría buscando a Mewtwo; ahora se abre buscando
+     * un legendario cualquiera, y el que toque toca. Es una decisión de
+     * producto, no un descuido — queda escrito para que dentro de seis meses
+     * nadie lo «arregle» devolviendo los pesos viejos.
+     *
+     * <p>⚠ Los once identificadores se comprobaron contra los datos del juego
+     * antes de escribirlos. {@code hooh} va <b>sin</b> guion bajo: {@code ho_oh}
+     * no existe y no habría dado ningún error — habría dado un cofre que a
+     * veces no entrega nada.
      */
-    private static final String[] LEGENDARIOS_MAYORES = {
+    private static final String[] LEGENDARIOS = {
+        "articuno", "zapdos", "moltres", "raikou", "entei", "suicune",
         "mewtwo", "mew", "lugia", "hooh", "celebi"
     };
 
+    /**
+     * ⚠ El peso es el MISMO para los once, así que el porcentaje sale de la
+     *   división: 1/11 = 9,09 %. No se escribe en ninguna parte — igual que
+     *   antes, la pantalla lo calcula. Un porcentaje escrito a mano es un
+     *   número que un día deja de cuadrar con los pesos y nadie se entera.
+     */
+    private static final int PESO_LEGENDARIO = 100;
+
     private static List<Premio> tablaLegendarios(boolean shiny) {
         var salida = new ArrayList<Premio>();
-        for (String e : LEGENDARIOS_MENORES) {
-            salida.add(poke(e, 150, false, shiny));
-        }
-        for (String e : LEGENDARIOS_MAYORES) {
-            salida.add(poke(e, 20, true, shiny));
+        for (String e : LEGENDARIOS) {
+            salida.add(poke(e, PESO_LEGENDARIO, true, shiny));
         }
         return salida;
     }
@@ -295,7 +329,9 @@ public final class Cofre {
             objMayor("master_ball", 1, 3))),
 
         // ---- LEGENDARIOS ---------------------------------------------------
-        new Cofre_("legendario", Llave.PREMIUM, 1200, 25, tablaLegendarios(false)),
+        // ⚠ Piedad 0: con los once al mismo porcentaje no hay nada raro que
+        //   garantizar. Ver el javadoc de LEGENDARIOS.
+        new Cofre_("legendario", Llave.PREMIUM, 1200, 0, tablaLegendarios(false)),
 
         // ---- LEGENDARIOS SHINY ---------------------------------------------
         //
@@ -303,7 +339,7 @@ public final class Cofre {
         //    `treasures.md` §5 proponía «nunca shiny» como mitigación y que la
         //    decisión fue la contraria, a sabiendas: dentro de seis meses nadie
         //    tiene que reconstruir el razonamiento.
-        new Cofre_("legendario_shiny", Llave.PREMIUM, 3000, 25, tablaLegendarios(true))
+        new Cofre_("legendario_shiny", Llave.PREMIUM, 3000, 0, tablaLegendarios(true))
     );
 
     /** El cofre con ese identificador, o {@code null}. */

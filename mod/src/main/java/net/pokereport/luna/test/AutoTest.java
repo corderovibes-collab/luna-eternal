@@ -726,6 +726,43 @@ public final class AutoTest {
         check("el sorteo siempre devuelve un premio", siempre);
         check("con la piedad forzada sale un premio mayor", forzado);
 
+        // ⚠⚠⚠ LOS DOS COFRES DE LEGENDARIOS TIENEN QUE SEGUIR PLANOS. Es orden
+        //    del usuario --«que todos sean iguales»-- y es exactamente el tipo
+        //    de regla que se cae sola: basta con que alguien añada un
+        //    legendario con otro peso, o toque uno de los once, para que la
+        //    tabla vuelva a estar sesgada. Y NO DARIA NINGUN ERROR: el cofre
+        //    seguiria funcionando, repartiendo, cobrando y celebrando. Lo
+        //    unico que cambiaria son unos porcentajes que casi nadie compara.
+        //
+        //    ⚠ Se comprueba sobre LA PROBABILIDAD y no sobre el peso, que es
+        //      lo que el jugador ve. Dos pesos distintos que dieran la misma
+        //      probabilidad estarian bien; dos pesos iguales en cofres con
+        //      distinto total, no.
+        boolean planos = true;
+        for (String id : new String[] {"legendario", "legendario_shiny"}) {
+            var c = net.pokereport.luna.crate.Cofre.de(id);
+            if (c == null || c.premios().isEmpty()) { planos = false; continue; }
+            double primera = c.probabilidad(c.premios().get(0));
+            for (var pr : c.premios()) {
+                if (Math.abs(c.probabilidad(pr) - primera) > 1e-9) {
+                    planos = false;
+                    LunaEternal.LOG.error("Cofre {}: '{}' sale al {}% y '{}' al"
+                            + " {}%, y tenian que ser iguales", id, pr.id(),
+                            c.probabilidad(pr) * 100,
+                            c.premios().get(0).id(), primera * 100);
+                }
+            }
+            // ⚠⚠ Y CON TODOS IGUALES, LA PIEDAD SOBRA. Si alguien la volviera
+            //    a poner, la pantalla contaria «te faltan N para el premio
+            //    mayor» de algo que sale en CADA tirada.
+            if (c.piedad() != 0) {
+                planos = false;
+                LunaEternal.LOG.error("Cofre {}: piedad {} con todos los premios"
+                        + " al mismo porcentaje", id, c.piedad());
+            }
+        }
+        check("los legendarios salen todos con la misma probabilidad", planos);
+
         // ⚠ Y un cofre desconocido no resuelve: el identificador llega del
         //   cliente y un cliente modificado puede mandar cualquier cosa (P6).
         check("un cofre desconocido no resuelve",

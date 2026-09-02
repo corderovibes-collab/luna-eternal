@@ -147,6 +147,22 @@ public class TesorosScreen extends Screen {
     private Red.ResultadoCofre resultado;
     private long giroDesde = 0;
 
+    /** La página de la tabla de premios. */
+    private int pagina = 0;
+
+    /**
+     * En qué hueco de la tira sonó el último tic.
+     *
+     * <p>⚠⚠ EL SONIDO VA POR HUECO, NO POR TIEMPO. Con un temporizador los tics
+     * suenan igual de seguidos al principio que al final, y entonces la ruleta
+     * <b>no se oye frenar</b> — que es justo lo que hace que una ruleta se
+     * sienta ruleta. Ligado al hueco, los tics se separan solos según decelera.
+     */
+    private int ultimoTic = Integer.MIN_VALUE;
+
+    /** Para no repetir el sonido de premio en cada fotograma. */
+    private boolean sonoElPremio = false;
+
     public TesorosScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.tesoros"));
         this.anterior = anterior;
@@ -170,10 +186,17 @@ public class TesorosScreen extends Screen {
         this.resultado = r;
         this.giroDesde = System.currentTimeMillis();
         this.pulsado = 0;
+        this.ultimoTic = Integer.MIN_VALUE;
+        this.sonoElPremio = false;
+    }
+
+    private void sonido(net.minecraft.sound.SoundEvent ev, float tono, float vol) {
         if (client != null) {
             client.getSoundManager().play(
-                net.minecraft.client.sound.PositionedSoundInstance.master(
-                    SoundEvents.BLOCK_NOTE_BLOCK_HAT.value(), 1.0f));
+                new net.minecraft.client.sound.PositionedSoundInstance(
+                    ev, net.minecraft.sound.SoundCategory.MASTER,
+                    vol, tono, net.minecraft.util.math.random.Random.create(),
+                    0, 0, 0));
         }
     }
 
@@ -294,10 +317,15 @@ public class TesorosScreen extends Screen {
         } else {
             dibujarRejilla(ctx, rx, ry);
         }
+        // ⚠⚠ SEGUNDA PASADA: TODO el 3D junto y despues de todo lo plano. Ver
+        //    el javadoc de `dibujarPremios3D` -- intercalarlos es el titileo.
+        if (verPremios && !enRuleta()) {
+            dibujarPremios3D(ctx, delta);
+        }
         // ⚠ La ruleta va la ULTIMA: se dibuja encima de todo, y mientras esté
         //   nada de abajo responde al ratón (ver mouseClicked).
         if (enRuleta()) {
-            dibujarRuleta(ctx);
+            dibujarRuleta(ctx, delta);
         }
         // ⚠⚠⚠ NO SE LLAMA A `super.render` AQUI, Y ESTO COSTO UNA PANTALLA
         //    ENTERA BORROSA (2026-09-01).
@@ -460,41 +488,140 @@ public class TesorosScreen extends Screen {
      * se <b>calcula</b> de los pesos de {@link Cofre} y no se escribe: ver el
      * javadoc de la clase.
      */
+    /** Cuántos premios entran en una página de la tabla. */
+    private static final int PREMIO_COLS = 4, PREMIO_FILAS = 2;
+    private static final int POR_PAGINA = PREMIO_COLS * PREMIO_FILAS;
+
+    private int paginasDe(Cofre.Cofre_ c) {
+        return Math.max(1, (c.premios().size() + POR_PAGINA - 1) / POR_PAGINA);
+    }
+
+    /**
+     * LA TABLA DE PREMIOS con su porcentaje.
+     *
+     * <p>⚠⚠ Este es el requisito de D-020 hecho pantalla, así que el porcentaje
+     * se <b>calcula</b> de los pesos de {@link Cofre} y no se escribe.
+     *
+     * <h2>⚠⚠ OCHO POR PÁGINA, Y ANTES ERAN QUINCE APRETADOS</h2>
+     *
+     * Con veinte premios en una rejilla de 5×4 la celda se quedaba en 96 px y
+     * el porcentaje en letra de 13: <b>se veía y no se leía</b>, que en la
+     * cifra que D-020 hizo obligatoria es lo mismo que no enseñarla.
+     *
+     * <p>Ahora son 4×2 con celdas del doble y paginación. Cambia un clic por
+     * poder leerlo, y el clic lo hace quien quiere mirar la tabla entera — que
+     * es justo quien se lo va a leer.
+     */
     private void dibujarPremios(DrawContext ctx, int rx, int ry) {
         var c = cofre();
+        int paginas = paginasDe(c);
+        if (pagina >= paginas) {
+            pagina = 0;
+        }
         texto(ctx, Text.translatable("tesoros.lunaeternal.cofre." + c.id()),
                 PANT_X + MARGEN, PANT_Y + MARGEN + 6, 22, TINTA, false, 0);
         textoDer(ctx, Text.translatable("tesoros.lunaeternal.volver_cofres"),
                 PANT_X + PANT_W - MARGEN, PANT_Y + MARGEN + 10, 14, 0xFFD98A2B);
 
         var lista = c.premios();
-        int cols = 5;
-        int w = (PANT_W - 2 * MARGEN - (cols - 1) * 8) / cols;
-        int filas = Math.max(1, (lista.size() + cols - 1) / cols);
-        int h = Math.min(96, (PANT_H - MARGEN - 46 - MARGEN - (filas - 1) * 8) / filas);
+        int w = (PANT_W - 2 * MARGEN - (PREMIO_COLS - 1) * 10) / PREMIO_COLS;
+        int h = (PANT_H - MARGEN - 46 - 40 - MARGEN
+                 - (PREMIO_FILAS - 1) * 10) / PREMIO_FILAS;
 
-        for (int i = 0; i < lista.size(); i++) {
-            var p = lista.get(i);
-            int cx = PANT_X + MARGEN + (i % cols) * (w + 8);
-            int cy = PANT_Y + MARGEN + 46 + (i / cols) * (h + 8);
+        int desde = pagina * POR_PAGINA;
+        for (int i = desde; i < Math.min(lista.size(), desde + POR_PAGINA); i++) {
+            var pr = lista.get(i);
+            int n = i - desde;
+            int cx = PANT_X + MARGEN + (n % PREMIO_COLS) * (w + 10);
+            int cy = PANT_Y + MARGEN + 46 + (n / PREMIO_COLS) * (h + 10);
             ctx.fill(px(cx), py(cy), px(cx + w), py(cy + h),
-                    p.mayor() ? 0x33F2C14E : 0x1A000000);
-            if (p.mayor()) {
-                marco(ctx, px(cx), py(cy), pl(w), pl(h), ORO, Math.max(1, pl(2)));
+                    pr.mayor() ? 0x33F2C14E : 0x1A000000);
+            if (pr.mayor()) {
+                marco(ctx, px(cx), py(cy), pl(w), pl(h), ORO, Math.max(2, pl(2)));
             }
-            icono(ctx, pilaDe(p), px(cx + w / 2), py(cy + 26), pl(32));
-            // El porcentaje, con dos decimales: por debajo del 0,01 % ya no
-            // dice nada y por encima de dos sobra precisión.
-            double pct = c.probabilidad(p) * 100.0;
+            // ⚠ El 3D se dibuja en la SEGUNDA pasada (ver render): aquí solo se
+            //   reserva el hueco. Intercalar 2D y 3D es lo que produce titileo.
+            if (pr.tipo() != Cofre.Tipo.POKEMON) {
+                icono(ctx, pilaDe(pr), px(cx + w / 2), py(cy + h / 2 - 18), pl(56));
+            }
+            double pct = c.probabilidad(pr) * 100.0;
+            // ⚠⚠ SIN CONTORNO Y CON FONDO PROPIO. El contorno de 1 px alrededor
+            //    de letra pequeña la ENGORDA hasta cerrarle los huecos: el 8 y
+            //    el 6 se vuelven la misma mancha. Una banda oscura detrás da el
+            //    mismo contraste y no toca la forma de la letra.
+            int anchoPct = anchoArte(String.format(java.util.Locale.ROOT,
+                    "%.2f%%", pct), 20);
+            ctx.fill(px(cx + w / 2 - anchoPct / 2 - 6), py(cy + h - 52),
+                     px(cx + w / 2 + anchoPct / 2 + 6), py(cy + h - 27),
+                     0xAA0A0E18);
             texto(ctx, Text.literal(String.format(java.util.Locale.ROOT,
                             "%.2f%%", pct)),
-                    cx + w / 2, cy + h - 34, 13,
-                    p.mayor() ? ORO : 0xFF5CD68A, true, CONTORNO_OSCURO);
-            var nom = nombreDe(p);
-            var lineas = partir(nom.getString(), w - 8, 11);
-            texto(ctx, Text.literal(lineas.get(0)), cx + w / 2, cy + h - 18, 11,
-                    TINTA, true, 0);
+                    cx + w / 2, cy + h - 49, 20,
+                    pr.mayor() ? ORO : 0xFF7CE8A8, true, 0);
+
+            for (String l : partir(nombreDe(pr).getString(), w - 10, 14)) {
+                texto(ctx, Text.literal(l), cx + w / 2, cy + h - 24, 14,
+                        TINTA, true, 0);
+                break;   // una línea: la celda no da para dos y sobra
+            }
         }
+
+        // ---- la paginación ------------------------------------------------
+        if (paginas > 1) {
+            int by = PANT_Y + PANT_H - MARGEN - 30;
+            boton(ctx, rx, ry, PANT_X + MARGEN, by, 90, 28,
+                    Text.literal("\u25c0"), pagina > 0, GRIS);
+            boton(ctx, rx, ry, PANT_X + PANT_W - MARGEN - 90, by, 90, 28,
+                    Text.literal("\u25b6"), pagina < paginas - 1, GRIS);
+            texto(ctx, Text.literal((pagina + 1) + " / " + paginas),
+                    PANT_X + PANT_W / 2, by + 6, 17, TINTA, true, 0);
+        }
+    }
+
+    /**
+     * Los Pokémon de la tabla, en 3D. <b>Segunda pasada.</b>
+     *
+     * <p>⚠⚠ VA APARTE Y DESPUÉS DE TODO LO PLANO, y no es una manía: es el
+     * arreglo del titileo que ya está documentado en {@code CosmeticosScreen}.
+     * {@code DrawContext} acumula y vuelca cuando le toca; el 3D dibuja YA.
+     * Intercalados, el orden cambia de un fotograma a otro y eso se ve como
+     * parpadeo — no del modelo, sino de quién pinta primero.
+     */
+    private void dibujarPremios3D(DrawContext ctx, float delta) {
+        var c = cofre();
+        var lista = c.premios();
+        int w = (PANT_W - 2 * MARGEN - (PREMIO_COLS - 1) * 10) / PREMIO_COLS;
+        int h = (PANT_H - MARGEN - 46 - 40 - MARGEN
+                 - (PREMIO_FILAS - 1) * 10) / PREMIO_FILAS;
+        int desde = pagina * POR_PAGINA;
+        for (int i = desde; i < Math.min(lista.size(), desde + POR_PAGINA); i++) {
+            var pr = lista.get(i);
+            if (pr.tipo() != Cofre.Tipo.POKEMON) {
+                continue;
+            }
+            int n = i - desde;
+            int cx = PANT_X + MARGEN + (n % PREMIO_COLS) * (w + 10);
+            int cy = PANT_Y + MARGEN + 46 + (n / PREMIO_COLS) * (h + 10);
+            pokemon(ctx, pr, "tabla:" + c.id() + ":" + i,
+                    px(cx + w / 2 - 34), py(cy + 6), pl(68), pl(68), delta);
+        }
+    }
+
+    /**
+     * Un Pokémon del cofre, en 3D.
+     *
+     * <p>⚠ El shiny se pide por ASPECTO, que es como Cobblemon lo guarda: el
+     * mismo modelo con {@code shiny} puesto. Pedirle otra especie sería
+     * inventarse una que no existe.
+     */
+    private void pokemon(DrawContext ctx, Cofre.Premio pr, String clave,
+                         int x, int y, int w, int h, float delta) {
+        var id = net.minecraft.util.Identifier.tryParse("cobblemon:" + pr.id());
+        if (id == null) {
+            return;
+        }
+        Mascota3D.dibujarEspecie(ctx, id, clave, pr.shiny() ? "shiny" : "",
+                x, y, w, h, 0f, delta, true);
     }
 
     /**
@@ -515,7 +642,7 @@ public class TesorosScreen extends Screen {
      * <p>⚠ Y no hay «casi lo consigues»: la curva es monótona y frena hasta
      * parar. No se pasa de largo para volver.
      */
-    private void dibujarRuleta(DrawContext ctx) {
+    private void dibujarRuleta(DrawContext ctx, float delta) {
         var c = Cofre.de(resultado.cofre());
         if (c == null || c.premios().isEmpty()) {
             resultado = null;
@@ -538,19 +665,33 @@ public class TesorosScreen extends Screen {
         double destino = (4.0 * n + resultado.indice()) * FICHA;
         double offset = destino * suave;
 
-        int centroY = PANT_Y + PANT_H / 2;
-        int tiraX = PANT_X + PANT_W / 2 - 180;
-        int tiraW = 360;
+        // ⚠⚠ EL TIC SUENA AL CAMBIAR DE HUECO, no cada X milisegundos. Ligado al
+        //    hueco, los tics se separan solos segun la ruleta decelera, y ESO es
+        //    lo que se oye como frenar. Con un temporizador sonarian igual de
+        //    seguidos al principio que al final.
+        int huecoActual = (int) Math.floor(offset / FICHA);
+        if (girando() && huecoActual != ultimoTic) {
+            ultimoTic = huecoActual;
+            // El tono sube segun avanza: otro truco barato que se nota mucho.
+            sonido(SoundEvents.BLOCK_NOTE_BLOCK_HAT.value(),
+                    (float) (0.8 + suave * 0.9), 0.55f);
+        }
+
+        int centroY = PANT_Y + PANT_H / 2 + 10;
+        int tiraX = PANT_X + PANT_W / 2 - 190;
+        int tiraW = 380;
 
         // la ventana
         ctx.fill(px(tiraX - 6), py(centroY - VISIBLES * FICHA / 2 - 6),
                 px(tiraX + tiraW + 6), py(centroY + VISIBLES * FICHA / 2 + 6),
                 0xFF0A0E18);
 
+        var enTira = new java.util.ArrayList<int[]>();
+        var quienes = new java.util.ArrayList<Cofre.Premio>();
         for (int i = -VISIBLES; i <= VISIBLES; i++) {
-            int hueco = (int) Math.floor(offset / FICHA) + i;
+            int hueco = huecoActual + i;
             int idx = ((hueco % n) + n) % n;
-            var p = lista.get(idx);
+            var pr = lista.get(idx);
             int dy = (int) (i * FICHA - (offset % FICHA));
             int cy = centroY + dy - FICHA / 2;
             if (cy + FICHA < centroY - VISIBLES * FICHA / 2
@@ -559,9 +700,14 @@ public class TesorosScreen extends Screen {
             }
             boolean centrado = Math.abs(dy) < FICHA / 2;
             ctx.fill(px(tiraX), py(cy), px(tiraX + tiraW), py(cy + FICHA - 4),
-                    p.mayor() ? 0x66F2C14E : (centrado ? 0x44FFFFFF : 0x22FFFFFF));
-            icono(ctx, pilaDe(p), px(tiraX + 44), py(cy + FICHA / 2 - 2), pl(40));
-            texto(ctx, nombreDe(p), tiraX + 80, cy + FICHA / 2 - 12, 17,
+                    pr.mayor() ? 0x66F2C14E : (centrado ? 0x44FFFFFF : 0x22FFFFFF));
+            if (pr.tipo() != Cofre.Tipo.POKEMON) {
+                icono(ctx, pilaDe(pr), px(tiraX + 46), py(cy + FICHA / 2 - 2), pl(46));
+            } else {
+                enTira.add(new int[] {tiraX + 12, cy + 2});
+                quienes.add(pr);
+            }
+            texto(ctx, nombreDe(pr), tiraX + 88, cy + FICHA / 2 - 13, 19,
                     centrado ? 0xFFFFFFFF : 0xFFB8C0D0, false, CONTORNO_OSCURO);
         }
 
@@ -570,23 +716,103 @@ public class TesorosScreen extends Screen {
                 pl(tiraW + 12), pl(FICHA), BORDE_ENCIMA, Math.max(2, pl(3)));
 
         if (!girando()) {
-            var p = lista.get(resultado.indice());
-            texto(ctx, Text.translatable("tesoros.lunaeternal.te_toco"),
-                    PANT_X + PANT_W / 2, PANT_Y + 24, 20, ORO, true, CONTORNO_OSCURO);
-            texto(ctx, nombreDe(p), PANT_X + PANT_W / 2,
-                    centroY + VISIBLES * FICHA / 2 + 20, 22,
-                    0xFFFFFFFF, true, CONTORNO_OSCURO);
-            if (resultado.porPiedad()) {
-                // ⚠ Se DICE que salió por piedad. Callarlo haría creer que fue
-                //   suerte, y la piedad solo sirve si el jugador sabe que está.
-                texto(ctx, Text.translatable("tesoros.lunaeternal.por_piedad"),
-                        PANT_X + PANT_W / 2, centroY + VISIBLES * FICHA / 2 + 48,
-                        14, 0xFF5CD68A, true, 0);
+            var pr = lista.get(resultado.indice());
+            // ⚠⚠ EL SONIDO DE PREMIO SUENA UNA VEZ, no en cada fotograma. Sin el
+            //    testigo se dispararia sesenta veces por segundo y saldria un
+            //    zumbido, no una fanfarria.
+            if (!sonoElPremio) {
+                sonoElPremio = true;
+                if (pr.mayor()) {
+                    sonido(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+                    sonido(SoundEvents.ENTITY_PLAYER_LEVELUP, 1.2f, 0.7f);
+                } else {
+                    sonido(SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP, 1.1f, 0.8f);
+                }
             }
-            texto(ctx, Text.translatable("tesoros.lunaeternal.pulsa_seguir"),
-                    PANT_X + PANT_W / 2, PANT_Y + PANT_H - 30, 14,
-                    0xFFB8C0D0, true, 0);
+            celebrar(ctx, pr, centroY);
         }
+
+        // ⚠ El 3D de la tira, al final y junto: la misma regla de siempre.
+        for (int i = 0; i < enTira.size(); i++) {
+            int[] pos = enTira.get(i);
+            pokemon(ctx, quienes.get(i), "ruleta:" + i,
+                    px(pos[0]), py(pos[1]), pl(FICHA - 8), pl(FICHA - 8), delta);
+        }
+    }
+
+    /**
+     * LA CELEBRACIÓN, cuando la ruleta ya paró.
+     *
+     * <h2>⚠⚠ Es toda la diferencia entre «salió esto» y «¡ME SALIÓ ESTO!»</h2>
+     *
+     * Tres cosas, y ninguna cuesta nada: un rótulo que <b>entra creciendo</b>,
+     * rayos dorados detrás del premio, y el nombre en grande. El premio mayor
+     * añade color y más rayos.
+     *
+     * <p>⚠ El crecimiento del rótulo se calcula del tiempo desde que paró, no
+     * de un contador propio: un contador habría que reiniciarlo, y olvidarse de
+     * hacerlo deja la animación quieta la segunda vez.
+     *
+     * <p>⚠⚠ Y NO hay nada que simule «casi lo consigues»: esto pasa DESPUÉS de
+     * parar, sobre el premio que salió de verdad. Es celebrar, no manipular.
+     */
+    private void celebrar(DrawContext ctx, Cofre.Premio pr, int centroY) {
+        long desde = System.currentTimeMillis() - giroDesde - GIRO_MS;
+        // 0 -> 1 en 400 ms, con rebote al final
+        double e = Math.min(1.0, desde / 400.0);
+        double pop = e < 1 ? 1.0 - Math.pow(1.0 - e, 3) : 1.0;
+        double rebote = e < 1 ? 1.0 + 0.18 * Math.sin(e * Math.PI) : 1.0;
+
+        boolean mayor = pr.mayor();
+        int color = mayor ? ORO : 0xFF7CE8A8;
+
+        // ---- rayos detrás del premio, girando despacio --------------------
+        int rayos = mayor ? 12 : 8;
+        double giro = (System.currentTimeMillis() % 12000) / 12000.0 * Math.PI * 2;
+        int cxr = PANT_X + PANT_W / 2, cyr = centroY;
+        for (int i = 0; i < rayos; i++) {
+            double ang = giro + i * (Math.PI * 2 / rayos);
+            int largo = (int) (240 * pop);
+            int ex = cxr + (int) (Math.cos(ang) * largo);
+            int ey = cyr + (int) (Math.sin(ang) * largo * 0.45);
+            // Un rayo es un rectángulo pequeño en el extremo: barato y se lee.
+            ctx.fill(px(ex - 4), py(ey - 4), px(ex + 4), py(ey + 4),
+                    (mayor ? 0x55F2C14E : 0x337CE8A8));
+        }
+
+        // ---- el rótulo, que entra creciendo -------------------------------
+        var titulo = Text.translatable(mayor
+                ? "tesoros.lunaeternal.felicidades_mayor"
+                : "tesoros.lunaeternal.te_toco");
+        int alto = (int) (30 * rebote);
+        int anchoT = anchoArte(titulo.getString(), alto);
+        int ty = PANT_Y + 26;
+        ctx.fill(px(PANT_X + PANT_W / 2 - anchoT / 2 - 16), py(ty - 6),
+                 px(PANT_X + PANT_W / 2 + anchoT / 2 + 16), py(ty + alto + 8),
+                 0xAA0A0E18);
+        texto(ctx, titulo, PANT_X + PANT_W / 2, ty, alto, color, true,
+                CONTORNO_OSCURO);
+
+        // ---- el nombre del premio, grande ---------------------------------
+        int ny = centroY + VISIBLES * FICHA / 2 + 22;
+        var nom = nombreDe(pr);
+        int anchoN = anchoArte(nom.getString(), 26);
+        ctx.fill(px(PANT_X + PANT_W / 2 - anchoN / 2 - 14), py(ny - 5),
+                 px(PANT_X + PANT_W / 2 + anchoN / 2 + 14), py(ny + 32),
+                 0xAA0A0E18);
+        texto(ctx, nom, PANT_X + PANT_W / 2, ny, 26, 0xFFFFFFFF, true,
+                CONTORNO_OSCURO);
+
+        if (resultado.porPiedad()) {
+            // ⚠ Se DICE que salió por piedad. Callarlo haría creer que fue
+            //   suerte, y la piedad solo sirve si el jugador sabe que está.
+            texto(ctx, Text.translatable("tesoros.lunaeternal.por_piedad"),
+                    PANT_X + PANT_W / 2, ny + 38, 15, 0xFF7CE8A8, true,
+                    CONTORNO_OSCURO);
+        }
+        texto(ctx, Text.translatable("tesoros.lunaeternal.pulsa_seguir"),
+                PANT_X + PANT_W / 2, PANT_Y + PANT_H - 26, 15,
+                0xFFB8C0D0, true, CONTORNO_OSCURO);
     }
 
     // ---- la rejilla --------------------------------------------------------
@@ -643,15 +869,37 @@ public class TesorosScreen extends Screen {
         if (dentro(rx, ry, px(PANT_X + PANT_W - 220), py(PANT_Y + MARGEN + 4),
                 pl(210), pl(28))) {
             verPremios = !verPremios;
+            // ⚠ La pagina vuelve a 0 al cambiar de vista. Sin esto, venir de un
+            //   cofre de 54 premios en la pagina 6 y saltar a uno de 11 dejaria
+            //   la tabla VACIA -- y eso se lee como «este cofre no da nada».
+            pagina = 0;
             sonar(true);
             return true;
         }
 
+        if (verPremios) {
+            var c0 = cofre();
+            int paginas = paginasDe(c0);
+            int by = PANT_Y + PANT_H - MARGEN - 30;
+            if (paginas > 1 && dentro(rx, ry, px(PANT_X + MARGEN), py(by),
+                    pl(90), pl(28)) && pagina > 0) {
+                pagina--;
+                sonar(true);
+                return true;
+            }
+            if (paginas > 1 && dentro(rx, ry, px(PANT_X + PANT_W - MARGEN - 90),
+                    py(by), pl(90), pl(28)) && pagina < paginas - 1) {
+                pagina++;
+                sonar(true);
+                return true;
+            }
+        }
         if (!verPremios) {
             int w = celdaW(), h = celdaH();
             for (int i = 0; i < Cofre.TODOS.size(); i++) {
                 if (dentro(rx, ry, px(celdaX(i)), py(celdaY(i)), pl(w), pl(h))) {
                     elegido = i;
+                    pagina = 0;
                     sonar(true);
                     return true;
                 }

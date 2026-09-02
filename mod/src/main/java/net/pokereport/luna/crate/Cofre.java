@@ -181,38 +181,117 @@ public final class Cofre {
         //    pueda conseguir jugando. Con los legendarios eso no se cumple —
         //    D-020 lo aceptó a sabiendas— pero al menos hay una puerta gratis
         //    que da algo todos los días.
+        //
+        // ⚠⚠ SON COSAS DE EMPEZAR, NO DE COMPETIR (orden del usuario). Balls
+        //    corrientes, curación, curaestados y bayas: lo que a un jugador
+        //    nuevo le falta el primer día. Lo competitivo está en el Gachapón,
+        //    que se paga.
+        //
+        // ⚠ 21 premios y no 10: con pocos, abrirlo tres días seguidos ya lo
+        //   enseña entero y deja de tener gracia. La variedad es lo que hace
+        //   que merezca la pena mirar qué salió.
         new Cofre_("gacha_diario", Llave.JUEGO, 0, 0, Arrays.asList(
-            obj("poke_ball", 10, 260),
-            obj("great_ball", 5, 170),
-            obj("potion", 5, 170),
+            obj("poke_ball", 10, 240),
+            obj("potion", 5, 190),
+            obj("great_ball", 5, 165),
             obj("super_potion", 3, 120),
-            plata(500, 110),
-            obj("revive", 1, 70),
-            obj("ultra_ball", 3, 45),
-            obj("exp_candy_s", 3, 35),
-            plata(2000, 12),
-            obj("rare_candy", 1, 8))),
+            plata(500, 105),
+            obj("antidote", 3, 80),
+            obj("paralyze_heal", 3, 80),
+            obj("burn_heal", 3, 75),
+            obj("awakening", 3, 75),
+            obj("ice_heal", 3, 70),
+            obj("oran_berry", 5, 70),
+            obj("revive", 1, 65),
+            obj("pecha_berry", 5, 60),
+            obj("cheri_berry", 5, 60),
+            obj("nest_ball", 5, 55),
+            obj("net_ball", 5, 50),
+            obj("ultra_ball", 3, 42),
+            obj("exp_candy_s", 3, 38),
+            obj("leppa_berry", 5, 35),
+            obj("sitrus_berry", 3, 30),
+            obj("hyper_potion", 2, 26),
+            obj("timer_ball", 3, 22),
+            obj("quick_ball", 3, 20),
+            plata(2000, 14),
+            obj("full_heal", 2, 12),
+            obj("max_revive", 1, 9),
+            obj("rare_candy", 1, 7),
+            obj("heal_ball", 5, 6))),
 
-        // ---- GACHAPÓN: objetos de progresión ------------------------------
+        // ---- GACHAPÓN: lo competitivo ------------------------------------
+        //
+        // ⚠⚠⚠ AQUÍ ESTÁ LO QUE SIRVE PARA COMPETIR, Y ESO TIENE UN LÍMITE QUE
+        //    NO SE CRUZA: objetos EQUIPABLES, vitaminas y mentas. Nada de
+        //    Modificadores de estadísticas — D-019 los dejó fuera a propósito,
+        //    y sigue fuera: un legendario es UNA pieza, un modificador es una
+        //    mejora repetible sin techo sobre cualquier Pokémon.
+        //
+        // ⚠⚠ Y ninguno de estos ROMPE el equilibrio: todos existen en el juego
+        //    de referencia y se pueden conseguir jugando en cualquier servidor.
+        //    Lo que se compra aquí es SALTARSE LA BÚSQUEDA, que es aceleración
+        //    acotada (P4) y no poder nuevo.
+        //
+        // ⚠ Las mentas cambian la naturaleza en combate. Se meten porque son la
+        //   diferencia entre criar cincuenta huevos y usar uno — que es
+        //   exactamente lo que el usuario pidió: comodidad competitiva.
         new Cofre_("gachapon", Llave.PREMIUM, 250, 40, Arrays.asList(
-            obj("exp_candy_m", 3, 200),
-            obj("hyper_potion", 5, 170),
-            obj("ultra_ball", 5, 150),
-            obj("max_revive", 2, 90),
-            obj("exp_candy_l", 2, 80),
-            obj("fire_stone", 1, 45),
-            obj("water_stone", 1, 45),
-            obj("thunder_stone", 1, 45),
-            obj("leaf_stone", 1, 45),
-            obj("moon_stone", 1, 45),
-            obj("sun_stone", 1, 45),
-            obj("protein", 2, 40),
-            obj("calcium", 2, 40),
-            obj("carbos", 2, 40),
-            obj("rare_candy", 3, 30),
+            obj("exp_candy_m", 3, 150),
+            obj("hyper_potion", 5, 130),
+            obj("ultra_ball", 5, 120),
+            obj("leftovers", 1, 70),
+            obj("max_revive", 2, 68),
+            obj("exp_candy_l", 2, 62),
+            obj("protein", 2, 46),
+            obj("calcium", 2, 46),
+            obj("carbos", 2, 46),
+            obj("hp_up", 2, 46),
+            obj("iron", 2, 44),
+            obj("zinc", 2, 44),
+            obj("fire_stone", 1, 40),
+            obj("water_stone", 1, 40),
+            obj("thunder_stone", 1, 40),
+            obj("leaf_stone", 1, 40),
+            obj("moon_stone", 1, 40),
+            obj("sun_stone", 1, 40),
+            obj("focus_sash", 1, 38),
+            obj("rocky_helmet", 1, 34),
+            obj("muscle_band", 1, 32),
+            obj("wise_glasses", 1, 32),
+            obj("expert_belt", 1, 30),
+            obj("shell_bell", 1, 30),
+            obj("quick_claw", 1, 28),
+            obj("scope_lens", 1, 28),
+            obj("light_clay", 1, 26),
+            obj("safety_goggles", 1, 26),
+            obj("air_balloon", 1, 24),
+            obj("razor_claw", 1, 24),
+            obj("razor_fang", 1, 24),
+            obj("kings_rock", 1, 24),
+            obj("pp_up", 2, 24),
+            obj("black_sludge", 1, 22),
+            obj("eviolite", 1, 22),
+            obj("heavy_duty_boots", 1, 22),
+            obj("weakness_policy", 1, 20),
+            obj("rare_candy", 3, 20),
+            obj("adamant_mint", 1, 18),
+            obj("modest_mint", 1, 18),
+            obj("jolly_mint", 1, 18),
+            obj("timid_mint", 1, 18),
+            obj("bold_mint", 1, 16),
+            obj("careful_mint", 1, 16),
+            obj("impish_mint", 1, 16),
+            obj("assault_vest", 1, 14),
             obj("lucky_egg", 1, 12),
-            // ⚠ Los dos mayores: lo que se persigue de este cofre.
-            objMayor("ability_capsule", 1, 10),
+            obj("pp_max", 1, 10),
+            // ⚠ Los cinco mayores: lo que se persigue de este cofre. Son los
+            //   que la piedad garantiza a las 40 aperturas.
+            objMayor("choice_band", 1, 9),
+            objMayor("choice_specs", 1, 9),
+            objMayor("choice_scarf", 1, 9),
+            objMayor("ability_capsule", 1, 8),
+            objMayor("ability_patch", 1, 5),
             objMayor("master_ball", 1, 3))),
 
         // ---- LEGENDARIOS ---------------------------------------------------

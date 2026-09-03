@@ -3,6 +3,7 @@ package net.pokereport.luna.client;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -67,9 +68,18 @@ import net.pokereport.luna.LunaEternal;
  *   Java      Y hacia ABAJO,  origen en el pivote del hueso
  * </pre>
  *
- * De ahí sale {@code y = 24 - oy - sy} y {@code z = -oz - sz}. Si se copia mal,
- * <b>no hay ningún error</b>: el traje sale del revés, o metido dentro del
- * cuerpo, o flotando debajo de los pies.
+ * De ahí sale {@code y = 24 - oy - sy}. <b>La X y la Z se copian tal cual.</b>
+ * Si se copia mal <b>no hay ningún error</b>: el traje sale del revés, metido
+ * dentro del cuerpo, o flotando debajo de los pies.
+ *
+ * <p>⚠⚠⚠ Y aquí ponía además {@code z = -oz - sz}, que <b>volteaba también la
+ * Z</b>. Con cubos simétricos en Z —que era todo lo que había mientras ningún
+ * traje estuvo {@code listo}— las dos fórmulas dan <b>el mismo número</b>, así
+ * que el fallo no podía verse. Con la corona del CAMPEÓN, cuyas puntas van
+ * delante de la cara, aparecería <b>detrás de la cabeza</b>.
+ *
+ * <p>El detalle de las cuatro conversiones —ejes, giros, caras y textura— está
+ * en {@code tools/trajes/importar.py}, que es la otra mitad del acuerdo.
  */
 public final class Trajes {
 
@@ -184,66 +194,146 @@ public final class Trajes {
         return new Modelo(piezas);
     }
 
+    /**
+     * Convierte los huesos del {@code .geo.json} en {@link ModelPart}.
+     *
+     * <h2>⚠⚠⚠ LOS EJES: X y Z NO SE TOCAN, SOLO LA Y</h2>
+     *
+     * <pre>
+     *   java = (bb_x,  24 - bb_y - alto,  bb_z)
+     * </pre>
+     *
+     * <p>Aquí ponía {@code z = -oz - sz}, o sea que <b>también volteaba la Z</b>.
+     * Con cubos simétricos en Z —que era todo lo que había— eso da
+     * <b>exactamente el mismo número</b>, así que nunca se notó; en cuanto llega
+     * una corona con puntas delante o una visera, la pieza aparece <b>al otro
+     * lado de la cabeza</b>. Sin un solo error.
+     *
+     * <p>Verificado contra vanilla en dos modelos: la cabeza del jugador y las
+     * patas del creeper — pivote bedrock {@code [-2,6,4]} da java
+     * {@code (-2,18,4)}, y el cubo bedrock {@code [-4,0,2]} da
+     * {@code cuboid(-2,0,-2,...)}.
+     *
+     * <h2>⚠⚠⚠ UN CUBO GIRADO ES UN HUESO HIJO, NO UN CUBO MÁS</h2>
+     *
+     * {@link ModelPart} gira <b>partes</b>, nunca cubos sueltos. Por eso cada
+     * cubo con rotación viaja en su propio hueso ({@code armorHead_r3}) y aquí
+     * se cuelga como hijo. Ignorar esos huesos dibujaría la corona con las
+     * puntas <b>rectas</b> — que es un cubo, no una corona.
+     *
+     * <p>Y como el paso de Bedrock a Java es un <b>reflejo</b> y no un giro,
+     * invierte el sentido de dos de los tres ejes:
+     * {@code pitch = -rx}, {@code yaw = +ry}, {@code roll = -rz}.
+     */
     private static List<Pieza> desdeGeo(JsonArray huesos, int lado, Identifier textura) {
-        var salida = new ArrayList<Pieza>();
+        var porNombre = new LinkedHashMap<String, JsonObject>();
+        var hijosDe = new LinkedHashMap<String, List<JsonObject>>();
         for (var elem : huesos) {
             var hueso = elem.getAsJsonObject();
-            String nombre = hueso.get("name").getAsString();
-            String ancla = null;
-            for (String[] par : HUESOS) {
-                if (par[0].equals(nombre)) {
-                    ancla = par[1];
-                }
+            porNombre.put(hueso.get("name").getAsString(), hueso);
+            String padre = hueso.has("parent") ? hueso.get("parent").getAsString() : "";
+            hijosDe.computeIfAbsent(padre, k -> new ArrayList<>()).add(hueso);
+        }
+
+        var salida = new ArrayList<Pieza>();
+        for (String[] par : HUESOS) {
+            var hueso = porNombre.get(par[0]);
+            if (hueso == null) {
+                continue;   // ese hueso no existe en esta pieza: es legítimo
             }
-            if (ancla == null || !hueso.has("cubes")) {
-                continue;   // las anclas `biped*` van vacías a propósito
-            }
+            String ancla = par[1];
             float[] pv = PIVOTE.get(ancla);
+
+            // ⚠⚠ `copyTransform` MACHACA el pivote de este hueso con el de la
+            //    parte de vainilla, así que sus cubos van relativos a ESE
+            //    pivote y no al que traiga el fichero. Si dejaran de coincidir
+            //    el traje saldría desplazado sin dar ningún error, así que se
+            //    comprueba en vez de confiar.
+            float[] suyo = pivoteJava(hueso, pv);
+            if (Math.abs(suyo[0] - pv[0]) > 0.001f || Math.abs(suyo[1] - pv[1]) > 0.001f
+                    || Math.abs(suyo[2] - pv[2]) > 0.001f) {
+                LunaEternal.LOG.error("El hueso {} dice pivote ({}, {}, {}) y vainilla "
+                        + "usa ({}, {}, {}): el traje saldria desplazado",
+                        par[0], suyo[0], suyo[1], suyo[2], pv[0], pv[1], pv[2]);
+            }
+
             var datos = new ModelData();
             var constructor = ModelPartBuilder.create();
-            for (var c : hueso.getAsJsonArray("cubes")) {
-                var cubo = c.getAsJsonObject();
-                float[] o = tres(cubo.getAsJsonArray("origin"));
-                float[] s = tres(cubo.getAsJsonArray("size"));
-                float[] uv = dos(cubo.getAsJsonArray("uv"));
-                float inflate = cubo.has("inflate")
-                        ? cubo.get("inflate").getAsFloat() : 0f;
-                // ⚠⚠⚠ EL ESPEJO. Sin esto, un traje IMPORTADO de una skin de
-                //    64x32 sale con los detalles del lado cambiado: en esas
-                //    skins el brazo y la pierna izquierdos NO tienen dibujo
-                //    propio --son el derecho reflejado-- y comparten las mismas
-                //    UV con una instruccion de reflejo dentro.
-                //    ⚠⚠ Y leerlo mal NO DA NINGUN ERROR: el traje se dibuja
-                //       entero, con su silueta correcta, y solo las costuras
-                //       caen al lado que no es. Se lee como «algo no cuadra»
-                //       sin poder decir el que.
-                //    ⚠ `mirrored` es de ida y vuelta: se apaga despues de cada
-                //      cubo o se lo lleva TODO lo que venga detras en el mismo
-                //      hueso.
-                boolean espejo = cubo.has("mirror")
-                        && cubo.get("mirror").getAsBoolean();
-                if (espejo) {
-                    constructor.mirrored();
-                }
-                // ⚠⚠ AQUI ESTA LA CONVERSION, Y ES LA LINEA QUE MAS DUELE SI SE
-                //    EQUIVOCA: Bedrock mide Y hacia arriba desde los pies y Java
-                //    hacia abajo desde el pivote del hueso.
-                constructor.uv((int) uv[0], (int) uv[1]).cuboid(
-                        o[0] - pv[0],
-                        (24f - o[1] - s[1]) - pv[1],
-                        (-o[2] - s[2]) - pv[2],
-                        s[0], s[1], s[2], new Dilation(inflate));
-                if (espejo) {
-                    constructor.mirrored(false);
-                }
-            }
-            datos.getRoot().addChild(nombre, constructor,
+            cubos(constructor, hueso, pv);
+            var nodo = datos.getRoot().addChild(par[0], constructor,
                     ModelTransform.pivot(pv[0], pv[1], pv[2]));
+            colgar(nodo, hijosDe, par[0], pv);
+
             var parte = TexturedModelData.of(datos, lado, lado)
-                    .createModel().getChild(nombre);
-            salida.add(new Pieza(nombre, ancla, parte, textura));
+                    .createModel().getChild(par[0]);
+            salida.add(new Pieza(par[0], ancla, parte, textura));
         }
         return salida;
+    }
+
+    /** Cuelga los huesos girados, y los suyos, hasta el final del arbol. */
+    private static void colgar(ModelPartData padre,
+                               Map<String, List<JsonObject>> hijosDe,
+                               String nombre, float[] pivotePadre) {
+        for (var hueso : hijosDe.getOrDefault(nombre, List.of())) {
+            String suyo = hueso.get("name").getAsString();
+            float[] pv = pivoteJava(hueso, pivotePadre);
+            float[] giro = giroJava(hueso);
+            var constructor = ModelPartBuilder.create();
+            cubos(constructor, hueso, pv);
+            var nodo = padre.addChild(suyo, constructor,
+                    ModelTransform.of(pv[0] - pivotePadre[0],
+                                      pv[1] - pivotePadre[1],
+                                      pv[2] - pivotePadre[2],
+                                      giro[0], giro[1], giro[2]));
+            colgar(nodo, hijosDe, suyo, pv);
+        }
+    }
+
+    /** Los cubos de un hueso, relativos a {@code referencia} (ya en coords Java). */
+    private static void cubos(ModelPartBuilder constructor, JsonObject hueso,
+                              float[] referencia) {
+        if (!hueso.has("cubes")) {
+            return;
+        }
+        for (var c : hueso.getAsJsonArray("cubes")) {
+            var cubo = c.getAsJsonObject();
+            float[] o = tres(cubo.getAsJsonArray("origin"));
+            float[] s = tres(cubo.getAsJsonArray("size"));
+            float[] uv = dos(cubo.getAsJsonArray("uv"));
+            float inflate = cubo.has("inflate")
+                    ? cubo.get("inflate").getAsFloat() : 0f;
+            // ⚠⚠ AQUÍ ESTÁ LA CONVERSIÓN, y es la línea que más duele si se
+            //    equivoca. Ver el javadoc de `desdeGeo`: solo la Y se voltea, y
+            //    la Z se copia tal cual.
+            constructor.uv((int) uv[0], (int) uv[1]).cuboid(
+                    o[0] - referencia[0],
+                    (24f - o[1] - s[1]) - referencia[1],
+                    o[2] - referencia[2],
+                    s[0], s[1], s[2], new Dilation(inflate));
+        }
+    }
+
+    /** El pivote de un hueso en coordenadas Java, o el del padre si no trae. */
+    private static float[] pivoteJava(JsonObject hueso, float[] porDefecto) {
+        if (!hueso.has("pivot")) {
+            return porDefecto;
+        }
+        float[] p = tres(hueso.getAsJsonArray("pivot"));
+        return new float[] {p[0], 24f - p[1], p[2]};
+    }
+
+    /** El giro de un hueso, en radianes y con los signos de Java. */
+    private static float[] giroJava(JsonObject hueso) {
+        if (!hueso.has("rotation")) {
+            return new float[] {0f, 0f, 0f};
+        }
+        float[] r = tres(hueso.getAsJsonArray("rotation"));
+        return new float[] {
+            (float) Math.toRadians(-r[0]),
+            (float) Math.toRadians(r[1]),
+            (float) Math.toRadians(-r[2]),
+        };
     }
 
     private static float[] tres(JsonArray a) {

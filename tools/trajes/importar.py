@@ -3,31 +3,82 @@
 DE UN .bbmodel DE BLOCKBENCH A UN TRAJE NUESTRO.
 
 Es la mitad que le faltaba a `blockbench.py`, que solo sabia EXPORTAR. El
-usuario dibuja o retoca en Blockbench y esto lo trae de vuelta.
+usuario dibuja en Blockbench y esto lo trae de vuelta, entero.
 
-⚠⚠⚠ LO QUE LLEGO NO ERA UNA ARMADURA: ERA UNA SKIN. Medido sobre
-   `armadura arceus.bbmodel`, las ocho piezas del cuerpo caen a holgura 0,00 y
-   -0,10 sobre el esqueleto de vainilla, y sus UV son las del reparto de una
-   skin de 64x32 (`body` = [20,20,28,32]). O sea que el modelo ES el cuerpo del
-   jugador, pintado.
+⚠⚠⚠ LA REGLA DE ORO: NINGUN ELEMENTO SE PIERDE EN SILENCIO. Cada cubo del
+   fichero acaba importado o con un aviso a su nombre, y las cuentas tienen que
+   cuadrar (`importados + avisos == elementos`). Un `continue` nuevo sin su
+   aviso ROMPE el importador en vez de dejarse una pieza por el camino. Es la
+   unica forma de saber que no se esta callando nada: la primera version se
+   comio el aro de Arceus --una malla-- y la unica pista fue que el traje salia
+   sin su pieza mas caracteristica.
 
-   Eso no lo invalida --al contrario, la textura se aprovecha entera-- pero
-   OBLIGA a inflarlo: la capa exterior de la skin del jugador esta en 0,25
-   CLAVADOS, asi que un traje a holgura cero PARPADEA contra la piel. Se infla
-   al importar, y el UV NO cambia al inflar: el dibujo se conserva.
 
-⚠⚠ Y LOS MIEMBROS IZQUIERDOS VIENEN ESPEJADOS. En las skins de 64x32 el brazo y
-   la pierna izquierdos no tienen dibujo propio: son el derecho reflejado. Sus
-   UV salen invertidas y una comprobacion ingenua los da por rotos. No lo estan:
-   se marcan `espejo` y el formato de destino ya sabe que hacer con eso.
+LAS CUATRO CONVERSIONES QUE HAY QUE ACERTAR, Y NINGUNA DA ERROR SI SE FALLA
+===========================================================================
 
-⚠ SE USA UN SOLO ATLAS PARA LAS CUATRO PIEZAS, y es a proposito. Cada pieza es
-  un PNG distinto en el juego, asi que lo natural seria recortar lo suyo a cada
-  una -- y recortar significa RECALCULAR TODAS LAS UV. Metiendo las texturas
-  originales en un lienzo de 128x128 y desplazando cada UV por el origen de su
-  textura, las UV se conservan tal cual las dibujo el autor. Un poco de PNG de
-  mas a cambio de que no haya ni una coordenada reinventada, que es donde este
-  proyecto se ha quemado siempre.
+1 · LOS EJES.  Blockbench mide Y hacia ARRIBA desde los pies; Minecraft mide Y
+    hacia ABAJO desde el pivote del hueso. X y Z **no se tocan**.
+
+        java = (bb_x,  24 - bb_y - alto,  bb_z)
+
+    ⚠⚠⚠ VOLTEAR TAMBIEN LA Z ES EL FALLO CLASICO, y estaba metido en el
+       dibujado: `z = -oz - sz`. Con cubos simetricos en Z --que es todo lo que
+       se habia probado-- da EXACTAMENTE EL MISMO NUMERO, asi que no se nota;
+       en cuanto llega una visera, una corona o una Poke Ball a la espalda, la
+       pieza aparece AL OTRO LADO del cuerpo. Verificado contra vanilla en dos
+       modelos: la cabeza del jugador y las patas del creeper (bb pivot
+       [-2,6,4] -> java (-2,18,4), cubo bb [-4,0,2] -> `cuboid(-2,0,-2,...)`).
+
+2 · LAS ROTACIONES.  El paso anterior es un REFLEJO (det = -1), no un giro, asi
+    que invierte el sentido de dos de los tres ejes:
+
+        pitch = -rx      yaw = +ry      roll = -rz
+
+    y el orden se conserva (Blockbench usa ZYX para cubos, y `ModelPart` aplica
+    Z, luego Y, luego X: la misma composicion).
+
+    ⚠⚠ Y UN CUBO ROTADO NO CABE EN UN `cuboid()`. `ModelPart` solo sabe girar
+       PARTES enteras, asi que cada cubo con rotacion sale como un HUESO HIJO
+       con un solo cubo dentro. Es lo mismo que hace Blockbench al exportar un
+       modelo de entidad (los `bone_r1`).
+
+3 · LAS CARAS.  El reparto de caja de Minecraft, leido de `ModelPart.Cuboid`:
+
+        [ -X ][ -Z ][ +X ][ +Z ]        <- la fila de los lados
+        [ arriba ][ abajo ]             <- encima, en la franja de fondo `d`
+
+    y los nombres de Blockbench caen en ese orden **tal cual vienen**:
+    east, north, west, south, up, down.
+
+    ⚠⚠ ESO SE COMPROBO, NO SE SUPUSO, y por tres caminos que tenian que dar lo
+       mismo:
+         · el cuerpo de Arceus es una SKIN de 64x32 con los desplazamientos
+           exactos de vanilla (torso 16,16 · pierna 0,16 · brazo 40,16). Con
+           este orden el traje se dibuja EXACTAMENTE como Minecraft dibuja una
+           skin, que es lo que su autor queria;
+         · las piezas con `mirror_uv` traen east y west intercambiados, que es
+           justo lo que hace `mirrored()` en Minecraft;
+         · y el casco, que es un modelo de BLOQUE, pasa por un giro de 180º al
+           llevarse en la cabeza: su cara +X acaba siendo la -X del jugador, o
+           sea el mismo orden.
+
+4 · LA TEXTURA.  Se REHORNEA. Un .bbmodel puede dar a cada cara un trozo
+    cualquiera del PNG (la corona lo hace en sus 44 cubos), y `ModelPart` solo
+    sabe leer cajas. Asi que para cada cubo se recorta lo que su autor puso en
+    cada cara y se pega en el reparto de arriba.
+
+    ⚠⚠ REHORNEAR ES LO QUE HACE QUE LOS DOS MODELOS ENTREN POR LA MISMA PUERTA:
+       la corona (UV por cara) y el cuerpo (UV de caja) dejan de ser dos casos.
+       Y de paso desaparece el `mirror`: un cubo espejado trae sus caras ya
+       intercambiadas y volteadas en el fichero, asi que copiarlas donde dicen
+       reproduce el espejo sin tener que llevar la bandera a ninguna parte.
+
+    ⚠ Minecraft calcula el ancho de cada casilla con el TAMAÑO DEL CUBO, no con
+      los pixeles que le demos: un texel por unidad, siempre. Por eso el
+      horneado usa esas mismas medidas --con decimales incluidos-- y redondea
+      solo al pegar. Reservar un pixel de mas «para que quepa» correria las
+      casillas de al lado y cada cara leeria un trozo de su vecina.
 """
 
 from __future__ import annotations
@@ -35,237 +86,282 @@ from __future__ import annotations
 import base64
 import io
 import json
+import math
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from PIL import Image
 
-from . import modelo as M
-from .modelo import Cubo
+from .modelo import Cubo, casillas, empaquetar, hornear, huella  # noqa: F401
+
+# ---------------------------------------------------------------- lectura
 
 
-# Que clase de pieza es cada nombre, y con cuanta holgura va.
-#
-# ⚠⚠⚠ EL LADO NO SALE DEL NOMBRE: SALE DE LA POSICION. Y es un fallo que ya me
-#    comi entero. El fichero llama `right_arm` al cubo que esta en x=+4 --o sea
-#    el brazo IZQUIERDO del modelo-- porque lo nombra desde el punto de vista de
-#    quien lo mira, que es lo natural dibujando. Asignando por el nombre, los
-#    dos brazos y las dos piernas se cruzan.
-#
-#    ⚠⚠ Y NO DA NINGUN ERROR NI SE VE A SIMPLE VISTA: los miembros son espejos,
-#       asi que el traje se dibuja entero y con la silueta correcta. Lo unico
-#       que cambia es que cada lado lleva la textura del otro, REFLEJADA. Las
-#       costuras y los detalles caen al lado contrario y se lee como "algo no
-#       cuadra" sin poder decir el que.
-#
-#    En Blockbench la derecha del modelo esta en X NEGATIVO. Eso no se
-#    interpreta: se mide.
-#
-# ⚠⚠ `shoe` y `leg` OCUPAN EL MISMO VOLUMEN (los dos van de y=0 a y=12) con
-#    texturas distintas: son DOS CAPAS, no un error. Por eso van a piezas
-#    distintas --perneras y botas-- y con holguras distintas: si compartieran
-#    holgura se pelearian por los mismos pixeles y parpadearian entre ellas.
-#    Lo mismo con `body` y `waist`, que comparten el torso.
-CLASE = {
-    "body":  ("armorBody",  None,             0.40),
-    "waist": ("armorBody",  None,             0.80),
-    "arm":   (None,         ("armorRightArm",  "armorLeftArm"),  0.40),
-    "leg":   (None,         ("armorRightLeg",  "armorLeftLeg"),  0.40),
-    "shoe":  (None,         ("armorRightBoot", "armorLeftBoot"), 0.80),
-}
+@dataclass
+class Elemento:
+    """Un elemento del .bbmodel, con el camino de grupos al que pertenece."""
+
+    nombre: str
+    grupos: tuple            # ("Corona2", "armorHead", "bone")
+    tipo: str
+    f: tuple = None          # esquina minima
+    to: tuple = None         # esquina maxima
+    rot: tuple = (0.0, 0.0, 0.0)
+    pivote: tuple = (0.0, 0.0, 0.0)
+    inflate: float = 0.0
+    caras: dict = field(default_factory=dict)   # nombre -> (idx_textura, rect)
 
 
-def _hueso_de(nombre, f, to):
-    """El hueso y la holgura de un elemento, o None si no se reconoce."""
-    n = nombre.lower()
-    for clave, (fijo, lados, inflate) in CLASE.items():
-        if clave not in n:
-            continue
-        if fijo:
-            return fijo, inflate
-        centro_x = (f[0] + to[0]) / 2.0
-        return (lados[0] if centro_x < 0 else lados[1]), inflate
-    return None
-
-
-def _texturas(d):
-    """Las texturas incrustadas, como imagenes."""
-    out = []
-    for t in d.get("textures", []):
-        s = t.get("source") or ""
-        if not s.startswith("data:"):
-            raise ValueError(
-                "la textura %r no viaja dentro del .bbmodel: en Blockbench hay "
-                "que guardar los pixeles, no la ruta" % t.get("name"))
-        img = Image.open(io.BytesIO(base64.b64decode(s.split(",", 1)[1])))
-        out.append((t.get("name"), img.convert("RGBA")))
-    return out
-
-
-def atlas(texturas, lado=128):
-    """
-    Mete las texturas en un lienzo y devuelve (imagen, desplazamientos).
-
-    ⚠ Se colocan en filas y se ABORTA si no caben, en vez de recortar. Una
-      textura recortada no da ningun error: da un traje con media pieza en
-      blanco, que se descubre en el juego.
-    """
-    lienzo = Image.new("RGBA", (lado, lado), (0, 0, 0, 0))
-    desp, x, y, alto_fila = [], 0, 0, 0
-    for nombre, img in texturas:
-        w, h = img.size
-        if x + w > lado:
-            x, y, alto_fila = 0, y + alto_fila, 0
-        if y + h > lado:
-            raise ValueError("las texturas no caben en %dx%d: se sale %s"
-                             % (lado, lado, nombre))
-        lienzo.paste(img, (x, y))
-        desp.append((x, y))
-        x += w
-        alto_fila = max(alto_fila, h)
-    return lienzo, desp
+@dataclass
+class Documento:
+    ruta: Path
+    elementos: list
+    texturas: list           # [(nombre, Image)]
+    display: dict
 
 
 def _rect(uv):
     """
-    Un UV de Blockbench como rectangulo (u0, v0, u1, v1) con u0 <= u1.
+    Un UV de Blockbench como (u0, v0, u1, v1) normalizado, y sus volteos.
 
-    ⚠⚠⚠ ESTO ES LO QUE HACIA FALLAR A LOS TRES MIEMBROS IZQUIERDOS, y costo un
-       rato porque parecia cosa del espejo. Blockbench guarda un UV VOLTEADO
-       escribiendo las esquinas al reves: la cara norte del pie derecho es
-       [4,20,8,32] y la del izquierdo [8,20,4,32] -- el MISMO rectangulo, con la
-       U dada la vuelta. Tomando `uv[0]` como borde izquierdo, el origen salia
-       corrido justo el ancho del cubo, y las tres piezas parecian «no ser de
-       caja» cuando lo eran perfectamente.
-       Un UV volteado no es un UV distinto: es el mismo con una instruccion de
-       reflejo dentro.
+    ⚠⚠ UN UV «AL REVES» NO ES OTRO UV: es el mismo con una instruccion de
+       reflejo dentro. La cara norte del pie derecho es [4,20,8,32] y la del
+       izquierdo [8,20,4,32] -- el MISMO rectangulo con la U dada la vuelta.
+       Leyendo `uv[0]` como borde izquierdo, el origen sale corrido justo el
+       ancho del cubo y la pieza parece rota cuando esta perfecta.
     """
     u0, v0, u1, v1 = uv
-    return (min(u0, u1), min(v0, v1), max(u0, u1), max(v0, v1))
+    return ((min(u0, u1), min(v0, v1), max(u0, u1), max(v0, v1)),
+            u1 < u0, v1 < v0)
 
 
-def _caja_uv(f, t, caras):
+def leer(ruta):
+    """Lee un .bbmodel y devuelve su Documento, con los grupos resueltos."""
+    ruta = Path(ruta)
+    d = json.loads(ruta.read_text(encoding="utf-8"))
+
+    texturas = []
+    for t in d.get("textures", []):
+        s = t.get("source") or ""
+        if not s.startswith("data:"):
+            raise ValueError(
+                "la textura %r no viaja dentro de %s: en Blockbench hay que "
+                "guardar los pixeles, no la ruta" % (t.get("name"), ruta.name))
+        img = Image.open(io.BytesIO(base64.b64decode(s.split(",", 1)[1])))
+        texturas.append((t.get("name") or "?", img.convert("RGBA")))
+
+    crudos = {e["uuid"]: e for e in d.get("elements", [])}
+    grupos = {g["uuid"]: g for g in d.get("groups", [])}
+
+    elementos = []
+
+    def recorrer(nodo, camino):
+        if isinstance(nodo, str):
+            e = crudos.get(nodo)
+            if e is None:
+                return
+            elementos.append(_elemento(e, camino))
+            return
+        g = grupos.get(nodo.get("uuid"))
+        nombre = g.get("name") if g else "?"
+        # ⚠⚠ UN GRUPO GIRADO MOVERIA TODO LO QUE CUELGA DE EL, y aqui el arbol
+        #    se aplana: los cubos salen en coordenadas absolutas. Mientras el
+        #    giro sea cero eso es exacto; con giro habria que componerlo, asi
+        #    que se PARA en vez de dibujar un traje descolocado.
+        if g and any(abs(float(v)) > 1e-6 for v in (g.get("rotation") or (0, 0, 0))):
+            raise ValueError(
+                "el grupo %r de %s lleva rotacion %s. El importador aplana el "
+                "arbol, asi que un grupo girado descolocaria todo lo que cuelga "
+                "de el sin dar ningun error" % (nombre, ruta.name, g["rotation"]))
+        for hijo in nodo.get("children", []):
+            recorrer(hijo, camino + (nombre,))
+
+    for nodo in d.get("outliner", []):
+        recorrer(nodo, ())
+
+    # ⚠ Un elemento que no cuelgue de ningun sitio del outliner no se dibuja en
+    #   Blockbench, asi que tampoco aqui -- pero se dice.
+    vistos = sum(1 for _ in elementos)
+    if vistos != len(crudos):
+        raise ValueError(
+            "%s tiene %d elementos y el outliner solo alcanza %d: hay piezas "
+            "sueltas fuera del arbol" % (ruta.name, len(crudos), vistos))
+
+    return Documento(ruta=ruta, elementos=elementos, texturas=texturas,
+                     display=d.get("display") or {})
+
+
+def _elemento(e, camino):
+    caras = {}
+    # ⚠ Solo los cubos tienen caras de caja. Una MALLA guarda un UV POR VERTICE
+    #   --tres numeros por triangulo, no cuatro por rectangulo-- y leerla con la
+    #   misma cuchara revienta al desempaquetar. Se deja para el aviso de
+    #   `cubos_de`, que es quien sabe decir que se pierde.
+    caras_crudas = (e.get("faces") or {}) if (e.get("type") or "cube") == "cube" else {}
+    for nombre, cara in caras_crudas.items():
+        uv = cara.get("uv")
+        if not uv or cara.get("texture") is None:
+            continue          # cara sin pintar: se queda transparente
+        if cara.get("rotation"):
+            # ⚠ El giro de UV por cara no se usa en ninguno de los modelos que
+            #   han llegado. Se para en vez de ignorarlo: ignorarlo saldria como
+            #   una textura tumbada, sin error.
+            raise ValueError("la cara %s de %r gira su UV %sº y eso no esta "
+                             "implementado" % (nombre, e.get("name"),
+                                               cara["rotation"]))
+        caras[nombre] = (int(cara["texture"]), _rect(uv))
+    f, to = e.get("from"), e.get("to")
+    return Elemento(
+        nombre=(e.get("name") or "").strip(),
+        grupos=camino,
+        tipo=e.get("type") or "cube",
+        f=tuple(float(v) for v in f) if f else None,
+        to=tuple(float(v) for v in to) if to else None,
+        rot=tuple(float(v) for v in (e.get("rotation") or (0, 0, 0))),
+        pivote=tuple(float(v) for v in (e.get("origin") or (0, 0, 0))),
+        inflate=float(e.get("inflate") or 0.0),
+        caras=caras)
+
+
+# ------------------------------------------------------- cambios de espacio
+
+
+def identidad(p):
+    return p
+
+
+def transformacion_cabeza(display):
     """
-    El origen de UV de caja de un cubo, o None si sus caras no son de caja.
+    La cadena que convierte un modelo de BLOQUE en geometria de la cabeza.
 
-    Devuelve (u, v, espejo).
+    ⚠⚠⚠ EL CASCO DE ARCEUS NO ES UN MODELO DE ENTIDAD: es un modelo de bloque
+       de 0..16 pensado para llevarse en la ranura de la cabeza. Ponerlo tal
+       cual dejaria el casco en una esquina, a un octavo de su tamaño. Lo que
+       lo coloca es la cadena de verdad de Minecraft, y no una estimacion:
+
+         display.head       trasladar (0, 3,75, 0)/16 y escalar 1,6
+         HeadFeatureRenderer  escalar (0,625, -0,625, -0,625), girar 180º en Y
+                              y trasladar (0, -0,25, 0)
+
+    ⚠⚠ Y EL 1,6 NO ES CASUAL: 1,6 x 0,625 = 1,0 EXACTO. El autor lo ajusto para
+       que el casco salga a escala 1:1 sobre la cabeza, asi que la conversion no
+       reescala ni un pixel. Comprobado ademas contra la geometria: la visera
+       (bloque x 3..13, z 3,25..7,25) cae en x -5..5 y z -4,75..-0,75, o sea
+       centrada y por delante de una cabeza que va de -4 a 4.
+
+    Sale: bb = (8 - x,  y + 22,34375,  z - 8), y un REFLEJO en X que obliga a
+    invertir los giros de Y y de Z.
     """
-    w, h, d = (t[0] - f[0], t[1] - f[1], t[2] - f[2])
-    norte = (caras.get("north") or {}).get("uv")
-    if not norte:
-        return None
+    cab = (display or {}).get("head") or {}
+    tx, ty, tz = (list(cab.get("translation") or (0, 0, 0)) + [0, 0, 0])[:3]
+    esc = (list(cab.get("scale") or (1, 1, 1)) + [1, 1, 1])[:3]
+    if any(abs(e - esc[0]) > 1e-6 for e in esc):
+        raise ValueError("la escala de `display.head` no es uniforme (%s) y la "
+                         "conversion supone que si" % (esc,))
+    if cab.get("rotation") and any(abs(float(r)) > 1e-6 for r in cab["rotation"]):
+        raise ValueError("`display.head` lleva rotacion %s y eso no esta "
+                         "implementado" % (cab["rotation"],))
+    k = esc[0] * 0.625        # el factor neto: 1,0 si la escala es 1,6
 
-    def encaja(u, v, espejo):
-        # El reparto de Bedrock. Con espejo, este y oeste se intercambian.
-        oeste, este = u + d + w, u
-        if espejo:
-            oeste, este = u, u + d + w
-        esperado = {
-            "north": [u + d, v + d, u + d + w, v + d + h],
-            "south": [u + d + w + d, v + d, u + 2 * d + 2 * w, v + d + h],
-            "east":  [este, v + d, este + d, v + d + h],
-            "west":  [oeste, v + d, oeste + d, v + d + h],
-            "up":    [u + d, v, u + d + w, v + d],
-            "down":  [u + d + w, v, u + d + 2 * w, v + d],
-        }
-        for cara, esp in esperado.items():
-            real = (caras.get(cara) or {}).get("uv")
-            if real is None:
-                continue
-            # ⚠ Se comparan RECTANGULOS normalizados, no las cuatro cifras en el
-            #   orden en que estan escritas: un UV volteado dice lo mismo.
-            a = tuple(round(x, 3) for x in _rect(real))
-            b = tuple(round(x, 3) for x in _rect(esp))
-            if a != b:
-                return False
-        return True
+    # Los tres ejes se comportan distinto, asi que van explicitos: una formula
+    # compacta aqui es una trampa para quien la lea dentro de seis meses.
+    #   bb_x = cx - k*x   (ESPEJO: el giro de 180º en Y)
+    #   bb_y = dy + k*y   (la Y se invierte dos veces y vuelve a subir)
+    #   bb_z = dz + k*z
+    cx = 8.0 * k - 0.625 * tx
+    dy = 28.0 + 0.625 * ty - 8.0 * k
+    dz = -8.0 * k + 0.625 * tz
 
-    nr = _rect(norte)
-    u, v = nr[0] - d, nr[1] - d
-    for espejo in (False, True):
-        if encaja(u, v, espejo):
-            return (u, v, espejo)
-    return None
+    def convertir(p):
+        x, y, z = p
+        return (cx - k * x, dy + k * y, dz + k * z)
+
+    convertir.espejo_x = True
+    convertir.escala = k
+    return convertir
 
 
-def color_medio(img, u, v, w, h):
-    """El color dominante de una region. Lo usa el visor y los avisos."""
-    caja = img.crop((int(u), int(v), int(u + max(1, w)), int(v + max(1, h))))
+def _giro_de(rot, espejo_x):
+    """
+    El giro del elemento en espacio Blockbench.
+
+    ⚠ Un ESPEJO en X invierte el sentido de los giros de Y y de Z (y deja el de
+      X como estaba). Olvidarlo saca el casco girado al reves y ni compila peor
+      ni avisa.
+    """
+    rx, ry, rz = rot
+    return (rx, -ry, -rz) if espejo_x else (rx, ry, rz)
+
+
+# ---------------------------------------------------------------- importar
+
+
+def color_medio(img, rect):
+    """El color dominante de una region. Solo para el visor y los avisos."""
+    u0, v0, u1, v1 = rect
+    caja = img.crop((int(u0), int(v0), max(int(u1), int(u0) + 1),
+                     max(int(v1), int(v0) + 1)))
     px = [p for p in caja.getdata() if p[3] > 8]
     if not px:
         return (160, 160, 160)
     return tuple(sum(p[i] for p in px) // len(px) for i in range(3))
 
 
-def importar(ruta, id_traje, nombre, lado=128):
+def cubos_de(doc, reparto, espacio=None, base_fuentes=0):
     """
-    Lee un .bbmodel y devuelve (Traje, atlas, avisos).
+    Convierte los elementos de un documento en Cubos, ya colocados en su hueso.
 
-    Los avisos son las piezas que NO se pudieron traer. Se devuelven en vez de
-    lanzar: media armadura importada y dicho cual falta es mas util que un
-    error que no dice cuanto se ha perdido.
+    `reparto(elemento)` devuelve el nombre del hueso, `None` para saltarselo sin
+    ruido (el maniqui de referencia) o lanza si no sabe.
+
+    Devuelve (huesos, avisos) donde huesos es {hueso: [Cubo]}.
     """
-    d = json.loads(Path(ruta).read_text(encoding="utf-8"))
-    lienzo, desp = atlas(_texturas(d), lado)
+    convertir = espacio or identidad
+    espejo_x = bool(getattr(convertir, "espejo_x", False))
+    escala = float(getattr(convertir, "escala", 1.0))
 
-    t = M.Traje(id_traje, nombre)
-    avisos = []
-    for e in d.get("elements", []):
-        n = (e.get("name") or "").strip()
-        f, to = e.get("from"), e.get("to")
-        if not f or not to:
-            # ⚠⚠⚠ ESTO SE CAIA EN SILENCIO Y ES EL FALLO DE SIEMPRE. El aro de
-            #    Arceus es una MALLA (`type: mesh`, 13 vertices y 12 caras
-            #    poligonales), no un cubo, y sin este aviso el importador se lo
-            #    saltaba sin decir nada: la pieza mas caracteristica del traje
-            #    desaparecia y la unica pista era que las cuentas no cuadraban
-            #    -- 8 importadas + 6 avisos sobre 15 elementos.
-            #    ⚠⚠ Y una malla NO se puede convertir: el dibujado de armadura
-            #       de Minecraft son CAJAS y ya esta. Hay que rehacerla con
-            #       cubos, que ademas es como se ve bien en un juego de cubos.
-            avisos.append(
-                "%r es de tipo %r y no un cubo: el dibujado de armadura solo "
-                "sabe hacer cajas, asi que hay que rehacerla con cubos"
-                % (n or "sin nombre", e.get("type") or "?"))
+    huesos, avisos, saltados = {}, [], 0
+    for e in doc.elementos:
+        if e.tipo != "cube" or e.f is None or e.to is None:
+            # ⚠⚠⚠ ESTO SE CAIA EN SILENCIO Y ERA EL FALLO DE SIEMPRE. El aro de
+            #    Arceus es una MALLA (13 vertices, 12 triangulos) y el dibujado
+            #    de armadura son CAJAS: no se puede convertir, hay que ponerla a
+            #    mano. Pero se DICE, que es la diferencia entre una decision y
+            #    una pieza perdida.
+            avisos.append("%r es de tipo %r y no un cubo: el dibujado de "
+                          "armadura solo sabe hacer cajas"
+                          % (e.nombre or "sin nombre", e.tipo))
             continue
 
-        if e.get("rotation"):
-            avisos.append("%s lleva rotacion %s y el destino solo admite cubos "
-                          "rectos: fuera" % (n or "cubo", e["rotation"]))
+        hueso = reparto(e)
+        if hueso is None:
+            saltados += 1
             continue
-        destino = _hueso_de(n, f, to)
-        if destino is None:
-            avisos.append("%r no cae en ningun hueso conocido: fuera"
-                          % (n or "cubo sin nombre"))
-            continue
-        hueso, inflate = destino
 
-        caras = e.get("faces") or {}
-        caja = _caja_uv(f, to, caras)
-        if caja is None:
-            avisos.append("%s no usa UV de caja: fuera" % n)
-            continue
-        u, v, espejo = caja
+        # Los dos extremos pasan por la conversion y luego se reordena, porque
+        # un espejo intercambia el minimo con el maximo.
+        a, b = convertir(e.f), convertir(e.to)
+        origen = tuple(min(a[i], b[i]) for i in range(3))
+        tam = tuple(abs(b[i] - a[i]) for i in range(3))
 
-        # El indice de textura de la cara norte manda: es la que se ve de frente.
-        idx = (caras.get("north") or {}).get("texture") or 0
-        ox, oy = desp[idx]
+        c = Cubo(origen=tuple(round(v, 5) for v in origen),
+                 tam=tuple(round(v, 5) for v in tam),
+                 color=(180, 180, 190),
+                 material="metal",
+                 inflate=round(e.inflate * escala, 5))
+        c.caras_src = {n: (base_fuentes + idx, r) for n, (idx, r) in e.caras.items()}
+        if any(abs(v) > 1e-6 for v in e.rot):
+            c.rot = tuple(round(v, 5) for v in _giro_de(e.rot, espejo_x))
+            c.pivote = tuple(round(v, 5) for v in convertir(e.pivote))
+        for cara, (idx, (rect, _, _)) in e.caras.items():
+            if cara == "north":
+                c.color = color_medio(doc.texturas[idx][1], rect)
+        huesos.setdefault(hueso, []).append(c)
 
-        tam = tuple(round(to[i] - f[i], 4) for i in range(3))
-        c = Cubo(origen=tuple(round(x, 4) for x in f), tam=tam,
-                 color=color_medio(lienzo, ox + u, oy + v, tam[0], tam[1]),
-                 material="metal", inflate=inflate)
-        c.uv = (ox + u, oy + v)
-        c.espejo = espejo
-        t.poner(hueso, c)
-
-    # ⚠⚠ LAS CUENTAS TIENEN QUE CUADRAR. Cada elemento del fichero acaba
-    #    importado o con su aviso, y ninguno se pierde por el camino. Es la
-    #    unica forma de saber que el importador no se esta callando algo: un
-    #    `continue` nuevo sin su aviso rompe esto en vez de perder una pieza.
-    traidos = sum(len(l) for l in t.huesos.values())
-    if traidos + len(avisos) != len(d.get("elements", [])):
+    traidos = sum(len(v) for v in huesos.values())
+    if traidos + len(avisos) + saltados != len(doc.elementos):
         raise AssertionError(
-            "el importador se ha comido algo: %d elementos, %d traidos y %d "
-            "avisos" % (len(d.get("elements", [])), traidos, len(avisos)))
-
-    return t, lienzo, avisos
+            "el importador se ha comido algo en %s: %d elementos, %d traidos, "
+            "%d saltados y %d avisos" % (doc.ruta.name, len(doc.elementos),
+                                         traidos, saltados, len(avisos)))
+    return huesos, avisos

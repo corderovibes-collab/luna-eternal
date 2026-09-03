@@ -35,14 +35,17 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "tools"))
 
+from trajes import modelo                                  # noqa: E402
 from trajes.modelo import Cubo, Traje, escribir            # noqa: E402
 from trajes import visor                                    # noqa: E402
 
-# ⚠⚠ YA NO ESCRIBE EN EL MOD (2026-08-28, decision del usuario). El arte de los
-#    trajes se hace A MANO en Blockbench -- ver docs/ui/trajes-a-mano.md -- y
-#    esto queda como BANCO DE PRUEBAS: genera a `build/` para poder mirar el
-#    visor sin tocar lo que se reparte a los jugadores.
-DESTINO = RAIZ / "build" / "trajes" / "generado"
+# ⚠⚠ EL ARTE SE HACE A MANO EN BLOCKBENCH (2026-08-28, decision del usuario) --
+#    ver docs/ui/trajes-a-mano.md-- y esto lo TRADUCE. Lo que se traduce SI va
+#    al mod: es el jar del cliente quien lo dibuja, asi que un traje que se
+#    quede en `build/` es un traje que no existe.
+#    ⚠ Los trajes de casa (el ENTRENADOR) siguen siendo un banco de pruebas y
+#      no se escriben: `listo` sigue a false para ellos.
+DESTINO = RAIZ / "mod" / "src" / "client" / "resources" / "assets" / "lunaeternal"
 LAMINAS = RAIZ / "build" / "trajes"
 
 
@@ -175,13 +178,30 @@ def entrenador():
     return t
 
 
-def arceus():
-    """El LEYENDA de Arceus, importado del Blockbench del usuario."""
-    from trajes.arceus import traje
-    return traje()
+# ⚠⚠⚠ EL IDENTIFICADOR TIENE QUE SER EL DEL RANGO, y la primera version lo tenia
+#    mal: registraba el traje de Arceus como «arceus». El cliente busca su arte
+#    en `trajes/<id>/`, y el `id` sale del enum `Traje` -- o sea «leyenda». Un
+#    nombre distinto NO DA NINGUN ERROR: el traje se equipa, se sincroniza, y el
+#    jugador NO VE NADA. Es el fallo de los 62 cosmeticos que no existian.
+def _importado(cual):
+    def hacer():
+        from trajes import importados
+        t, avisos = getattr(importados, cual)()
+        for a in avisos:
+            print("      . %s" % a)
+        return t
+    return hacer
 
 
-TRAJES = {"entrenador": entrenador, "arceus": arceus}
+TRAJES = {
+    "entrenador": entrenador,
+    "campeon": _importado("campeon"),
+    "leyenda": _importado("leyenda"),
+}
+
+# Los que se escriben en el mod. El ENTRENADOR es un banco de pruebas: su arte
+# se genera por formula y el usuario decidio que el bueno se dibuja a mano.
+AL_MOD = ("campeon", "leyenda")
 
 
 # ---------------------------------------------------------------- comprobar
@@ -238,6 +258,34 @@ def verificar(t):
                           "el jugador asomaria"
                           % (hueso, max(c.tam[0] for c in cubos), minimo))
 
+    # ⚠⚠⚠ UN CUBO GIRADO SIN PIVOTE GIRA ALREDEDOR DEL ORIGEN DEL MUNDO, o sea
+    #    de los pies del jugador. Con 112º eso manda la pieza a otro barrio, y
+    #    no da ningun error: sale un traje con una punta suelta en el aire.
+    for hueso, cubos in t.huesos.items():
+        for c in cubos:
+            if c.rot and c.pivote is None:
+                fallos.append("%s: un cubo gira %s y no tiene pivote" % (hueso, c.rot))
+            # ⚠ Y un cubo sin caras se dibuja TRANSPARENTE ENTERO: ocupa sitio en
+            #   la textura, tapa lo que tiene detras y no se ve. Peor que faltar.
+            if t.fuentes and not c.caras_src:
+                fallos.append("%s: un cubo en %s no tiene ni una cara pintada"
+                              % (hueso, c.origen))
+
+    # ⚠⚠ UN UV FUERA DE SU TEXTURA NO DA ERROR: `crop` de Pillow rellena con
+    #    transparente y la cara sale en blanco. Se ve en el juego, no aqui.
+    for hueso, cubos in t.huesos.items():
+        for c in cubos:
+            for cara, (idx, (rect, _, _)) in (c.caras_src or {}).items():
+                if idx >= len(t.fuentes):
+                    fallos.append("%s: la cara %s apunta a la textura %d y solo "
+                                  "hay %d" % (hueso, cara, idx, len(t.fuentes)))
+                    continue
+                ancho, alto = t.fuentes[idx].size
+                if (rect[0] < -0.001 or rect[1] < -0.001
+                        or rect[2] > ancho + 0.001 or rect[3] > alto + 0.001):
+                    fallos.append("%s: la cara %s lee %s y su textura mide %dx%d"
+                                  % (hueso, cara, rect, ancho, alto))
+
     # ⚠ Y tiene que caber en la textura. Se comprueba pieza a pieza porque cada
     #   una es un PNG distinto.
     for pieza in modelo.PIEZAS:
@@ -245,13 +293,93 @@ def verificar(t):
         if not cubos:
             continue
         try:
-            alto = modelo.empaquetar(list(cubos), t.lado)
+            if t.fuentes:
+                _, lado = modelo.hornear(cubos, t.fuentes)
+            else:
+                lado = t.lado
+                modelo.empaquetar(list(cubos), lado)
         except ValueError as e:
             fallos.append("pieza %s: %s" % (pieza, e))
-        else:
-            if alto > t.lado:
-                fallos.append("pieza %s necesita %d px de alto sobre %d"
-                              % (pieza, alto, t.lado))
+            continue
+
+        # ⚠⚠⚠ DOS CUBOS QUE COMPARTAN PIXELES ES EL FALLO QUE ESTE REPARTO EXISTE
+        #    PARA EVITAR, y no basta con que el empaquetado «diga» que ha
+        #    cabido: las casillas caen en coordenadas con decimales, asi que un
+        #    fallo de redondeo pondria la cara de la bota en el hombro sin que
+        #    nada se quejara. Se comprueba el resultado, no la intencion.
+        ocupado = {}
+        for c in cubos:
+            u, v = c.uv
+            ancho, alto = modelo.huella(c)
+            for y in range(int(v), int(v) + alto):
+                for x in range(int(u), int(u) + ancho):
+                    if (x, y) in ocupado:
+                        fallos.append("pieza %s: dos cubos comparten el pixel "
+                                      "(%d,%d) de la textura" % (pieza, x, y))
+                        break
+                    ocupado[(x, y)] = c
+                else:
+                    continue
+                break
+
+    return fallos
+
+
+# ------------------------------------------------------------- el enum
+
+ENUM = (RAIZ / "mod" / "src" / "main" / "java" / "net" / "pokereport" / "luna"
+        / "traje" / "Traje.java")
+
+
+def enum_trajes():
+    """Los (id, listo) que declara `Traje.java`, leidos del fuente."""
+    import re
+    texto = ENUM.read_text(encoding="utf-8")
+    return [(m.group(1), m.group(2) == "true") for m in re.finditer(
+        r'\w+\("([a-z]+)",\s*Tablist\.Rank\.\w+,\s*(true|false)\)', texto)]
+
+
+def comprobar_enum():
+    """
+    Que lo que dice el servidor y lo que hay en el cliente sean lo mismo.
+
+    ⚠⚠⚠ ESTE ES EL FALLO QUE MAS CARO SALE Y EL QUE MENOS SE VE. El cliente
+       busca el arte en `trajes/<id>/`, y el <id> lo pone el enum `Traje` del
+       SERVIDOR. Si el generador escribe con otro nombre --la primera version
+       registro el traje de Arceus como «arceus» en vez de «leyenda»--, el traje
+       se equipa, se sincroniza, NO DA NINGUN ERROR y el jugador no ve nada.
+       Es, literalmente, el fallo de los 62 cosmeticos que no existian.
+
+    ⚠⚠ Y va en las dos direcciones: un traje `listo` SIN arte vende humo, y arte
+       de un traje que no esta `listo` es peso muerto en el jar que nadie puede
+       ponerse. Las dos cosas se dicen.
+    """
+    fallos = []
+    declarados = dict(enum_trajes())
+    if not declarados:
+        return ["no he sabido leer los trajes de %s" % ENUM.name]
+
+    for cual in TRAJES:
+        if cual not in declarados:
+            fallos.append("el generador hace %r y `Traje.java` no lo declara: "
+                          "el cliente nunca buscaria ese arte" % cual)
+
+    for id_, listo in declarados.items():
+        piezas = [f for f in ("head", "body", "legs", "boots")
+                  if (DESTINO / "trajes" / id_ / ("%s_%s.geo.json" % (id_, f))).exists()]
+        texturas = [f for f in piezas
+                    if (DESTINO / "textures" / "armor" / id_
+                        / ("%s_%s.png" % (id_, f))).exists()]
+        if listo and not piezas:
+            fallos.append("%s esta `listo` en Traje.java y NO TIENE ARTE en el "
+                          "mod: se equiparia y no se veria nada" % id_)
+        elif listo and len(texturas) != len(piezas):
+            fallos.append("%s tiene %d modelos y solo %d texturas: la pieza que "
+                          "falte se dibujaria en morado" % (id_, len(piezas),
+                                                            len(texturas)))
+        elif not listo and piezas:
+            fallos.append("%s NO esta `listo` y su arte esta en el mod: son "
+                          "bytes que nadie puede ponerse" % id_)
     return fallos
 
 
@@ -290,33 +418,72 @@ def main():
         print("    invariantes correctos")
 
         if args.generar:
-            for pieza, n, alto, brillo in escribir(t, DESTINO, t.lado):
-                print("    %-6s %2d cubos · textura %d px%s"
-                      % (pieza, n, alto, " · con brillo" if brillo else ""))
-            print("    -> %s" % DESTINO)
+            if cual not in AL_MOD:
+                print("    (banco de pruebas: no se escribe en el mod)")
+            else:
+                for pieza, n, lado, brillo in escribir(t, DESTINO):
+                    print("    %-6s %2d cubos · textura %dx%d%s"
+                          % (pieza, n, lado, lado,
+                             " · con brillo" if brillo else ""))
+                print("    -> %s" % DESTINO)
 
         if args.ver or args.generar:
-            # La lamina se dibuja con las texturas de verdad si existen, para
-            # que lo que se mira sea lo que se va a ver en el juego.
+            # La lamina se dibuja con las texturas de verdad, para que lo que se
+            # mira sea lo que se va a ver en el juego.
             texturas = {}
-            from PIL import Image
-            for pieza in ("head", "body", "legs", "boots"):
-                f = (DESTINO / "textures" / "armor" / t.id
-                     / ("%s_%s.png" % (t.id, pieza)))
-                if f.exists():
-                    texturas[pieza] = Image.open(f).convert("RGBA")
-            if not texturas:
-                # Sin generar todavia: se empaqueta en memoria para poder mirar.
-                from trajes import modelo as M
-                for pieza in M.PIEZAS:
-                    cubos = [c for l in t.de_pieza(pieza).values() for c in l]
-                    if cubos:
-                        M.empaquetar(cubos, t.lado)
-                        texturas[pieza] = t.textura if t.textura is not None                             else M.pintar(cubos, t.lado,
-                                          sum(ord(ch) for ch in t.id + pieza))
+            for pieza in modelo.PIEZAS:
+                cubos = [c for l in t.de_pieza(pieza).values() for c in l]
+                if not cubos:
+                    continue
+                if t.fuentes:
+                    texturas[pieza], _ = modelo.hornear(cubos, t.fuentes)
+                else:
+                    modelo.empaquetar(cubos, t.lado)
+                    texturas[pieza] = modelo.pintar(
+                        cubos, t.lado, sum(ord(ch) for ch in t.id + pieza))
             destino = LAMINAS / ("%s.png" % t.id)
             visor.lamina(t, destino, args.escala, texturas)
             print("    lamina -> %s" % destino)
+
+    # ⚠⚠ Y que el fichero escrito diga lo mismo que va a leer Java. Se hace
+    #    DESPUES de generar y leyendo el .geo.json de disco: comparar el objeto
+    #    consigo mismo pasaria siempre.
+    if not args.ver:
+        from trajes import comprobar_java
+        print("")
+        print("  modelo.py <-> Trajes.java")
+        hubo = False
+        for cual in cuales:
+            if cual not in AL_MOD:
+                continue
+            t = TRAJES[cual]()
+            for pieza in modelo.PIEZAS:
+                cubos = [c for l in t.de_pieza(pieza).values() for c in l]
+                if cubos and t.fuentes:
+                    modelo.hornear(cubos, t.fuentes)
+            fallos = comprobar_java.comprobar(t, DESTINO)
+            for f in fallos:
+                print("    x %s" % f)
+                hubo = True
+            if not fallos:
+                print("    %-11s los cubos caen donde su autor los puso" % cual)
+        if hubo:
+            salida = 1
+
+    # ⚠ Al final y siempre: mira lo que hay EN DISCO, asi que tiene que correr
+    #   despues de generar. Si corriera antes, diria que falta el arte que este
+    #   mismo comando acaba de escribir.
+    if not args.ver:
+        fallos = comprobar_enum()
+        print("\n  Traje.java <-> el arte del mod")
+        for f in fallos:
+            print("    x %s" % f)
+        if fallos:
+            salida = 1
+        else:
+            for id_, listo in enum_trajes():
+                print("    %-11s %s" % (id_, "listo, con arte" if listo
+                                        else "sin arte todavia"))
 
     return salida
 

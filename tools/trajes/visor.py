@@ -61,7 +61,27 @@ def _matriz(giro, inclina):
     return rx @ ry
 
 
-def _quads(origen, tam, inflate=0.0):
+def _giro(rot, pivote):
+    """
+    La matriz de un cubo girado, en el orden de Blockbench (ZYX).
+
+    ⚠ Es el MISMO orden que aplica `ModelPart` (Z, luego Y, luego X). Si el
+      visor girara de otra forma, la lamina enseñaria un traje que el juego no
+      va a dibujar -- y entonces mirarla es peor que no mirarla.
+    """
+    rx, ry, rz = (math.radians(v) for v in rot)
+    mx = np.array([[1, 0, 0], [0, math.cos(rx), -math.sin(rx)],
+                   [0, math.sin(rx), math.cos(rx)]])
+    my = np.array([[math.cos(ry), 0, math.sin(ry)], [0, 1, 0],
+                   [-math.sin(ry), 0, math.cos(ry)]])
+    mz = np.array([[math.cos(rz), -math.sin(rz), 0],
+                   [math.sin(rz), math.cos(rz), 0], [0, 0, 1]])
+    m = mz @ my @ mx
+    p = np.array(pivote, dtype=float)
+    return lambda punto: tuple(m @ (np.array(punto, dtype=float) - p) + p)
+
+
+def _quads(origen, tam, inflate=0.0, rot=None, pivote=None):
     """
     Las seis caras de un cubo: (p0, p1, p3, nombre).
 
@@ -74,7 +94,7 @@ def _quads(origen, tam, inflate=0.0):
     """
     x0, y0, z0 = (o - inflate for o in origen)
     x1, y1, z1 = (origen[i] + tam[i] + inflate for i in range(3))
-    return [
+    caras = [
         # -X: mirando desde la izquierda de la imagen; u crece hacia -Z
         ((x0, y1, z1), (x0, y1, z0), (x0, y0, z1), "derecha"),
         # -Z: la cara; u crece hacia +X
@@ -83,11 +103,19 @@ def _quads(origen, tam, inflate=0.0):
         ((x1, y1, z0), (x1, y1, z1), (x1, y0, z0), "izquierda"),
         # +Z: u crece hacia -X
         ((x1, y1, z1), (x0, y1, z1), (x1, y0, z1), "espalda"),
-        # +Y: u hacia +X, v hacia +Z
-        ((x0, y1, z0), (x1, y1, z0), (x0, y1, z1), "arriba"),
+        # +Y: u hacia +X, v hacia -Z
+        # ⚠ La v de la tapa crece de la ESPALDA a LA CARA, no al reves. Es lo
+        #   que hace `ModelPart.Cuboid` y lo que hace una skin: el borde de
+        #   abajo del recuadro de la tapa pega con el borde de arriba de la
+        #   cara. Estaba al reves y la tapa salia girada 180º en la lamina.
+        ((x0, y1, z1), (x1, y1, z1), (x0, y1, z0), "arriba"),
         # -Y: u hacia +X, v hacia -Z
         ((x0, y0, z1), (x1, y0, z1), (x0, y0, z0), "abajo"),
     ]
+    if rot and any(rot):
+        g = _giro(rot, pivote or (0, 0, 0))
+        caras = [(g(a), g(b), g(c), n) for a, b, c, n in caras]
+    return caras
 
 
 def _pintar_quad(color_buf, z_buf, m, p0, p1, p3, escala, cx, cy, muestreo):
@@ -204,7 +232,8 @@ def dibujar(traje, giro, inclina, ancho=280, alto=430, escala=10.5,
         for c in cubos:
             caras = {n: (ox, oy, aw, ah)
                      for ox, oy, aw, ah, n in modelo._caras(c)}
-            for p0, p1, p3, cara in _quads(c.origen, c.tam, c.inflate):
+            for p0, p1, p3, cara in _quads(c.origen, c.tam, c.inflate,
+                                           c.rot, c.pivote):
                 if tex is not None:
                     ox, oy, aw, ah = caras[cara]
                     mu = _muestreo_textura(tex, ox, oy, aw, ah, LUZ[cara] // 2)

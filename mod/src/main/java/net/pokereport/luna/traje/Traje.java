@@ -36,21 +36,25 @@ import net.pokereport.luna.ui.Tablist;
  */
 public enum Traje {
 
-    // ⚠⚠⚠ LOS CINCO ESTAN A `false`, Y ES LO CORRECTO AHORA MISMO.
-    //    El arte generado por script se retiro el 2026-08-28 (decision del
-    //    usuario): se hara A MANO en Blockbench. Hasta que un traje tenga sus
-    //    ficheros, se ve en la pantalla --que dice hacia donde va la
-    //    progresion-- y NO SE PUEDE PONER.
-    //    Se enciende cambiando su `false` por `true`, y nada mas.
+    // ⚠⚠⚠ `listo` SE ENCIENDE CUANDO EL ARTE ESTA EN EL JAR DEL CLIENTE, no
+    //    cuando esta dibujado. El cliente busca `trajes/<id>/<id>_<pieza>.geo.json`
+    //    y `textures/armor/<id>/`, y el <id> es EL DE AQUI: si no coincide, el
+    //    traje se equipa, se sincroniza, no da ningun error Y NO SE VE NADA.
+    //    Es el fallo de los 62 cosmeticos que no existian, y ya nos mordio: la
+    //    primera version del importador registro el traje de Arceus como
+    //    «arceus» en vez de «leyenda».
+    //    Los genera `python tools/gen_trajes.py --generar`.
 
     // ⚠ El identificador cambio con el rango (NOVATO -> ENTRENADOR). Salio
     //   gratis porque construye la ruta del arte --textures/armor/<id>/-- y
-    //   ese arte todavia NO EXISTE: `listo` esta a false en los cinco.
+    //   ese arte todavia no existia.
     ENTRENADOR("entrenador", Tablist.Rank.ENTRENADOR, false),
     ELITE("elite", Tablist.Rank.ELITE, false),
-    CAMPEON("campeon", Tablist.Rank.CAMPEON, false),
+    // ⚠ CAMPEON y LEYENDA vienen de los .bbmodel del usuario, que estan en el
+    //   repo (arte/trajes/). Los otros tres siguen sin arte.
+    CAMPEON("campeon", Tablist.Rank.CAMPEON, true),
     MAESTRO("maestro", Tablist.Rank.MAESTRO, false),
-    LEYENDA("leyenda", Tablist.Rank.LEYENDA, false);
+    LEYENDA("leyenda", Tablist.Rank.LEYENDA, true);
 
     private final String id;
     private final Tablist.Rank pide;

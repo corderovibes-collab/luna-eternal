@@ -137,7 +137,9 @@ cz = (min(c[2] for c in cajas) + max(c[2]+c[5] for c in cajas)) / 2
 cubos = [Cubo((float(x-cx), float(y), float(z-cz)),
               (float(w), float(h), float(d)), (200, 200, 200), "tela")
          for x, y, z, w, h, d in cajas]
-M.ESCALA_UV = TEXELES      # el detalle va en la textura
+# ⚠ `M.ESCALA_UV` se retiro: Minecraft fija un texel por unidad (ver
+#   `trajes/modelo.py`). Este script ya estaba marcado como NO SIRVE en
+#   docs/ui/trajes-flujo.md, y esta linea era parte de por que.
 lado = 1024
 alto_usado = M.empaquetar(cubos, lado)
 print("  textura %dx%d, usados %d px" % (lado, lado, alto_usado))

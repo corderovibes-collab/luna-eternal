@@ -1009,6 +1009,64 @@ Viajes        LAS PARADAS, POR FIN EN SU SITIO (2026-08-27)
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
 
 Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
+              5 trajes . CAMPEON y LEYENDA HECHOS (2026-09-03, del Blockbench
+              del usuario) . ENTRENADOR, ELITE y MAESTRO en preparacion
+              CAMPEON  la corona de gemas y su armadura dorada
+              LEYENDA  el casco de Arceus, su armadura y la rueda de la espalda
+              python tools/gen_trajes.py --generar     lee arte/trajes/*.bbmodel
+              detalle del importador en docs/ui/trajes-flujo.md §5
+              ⚠⚠⚠ LA Z ESTABA VOLTEADA EN EL DIBUJADO DESDE QUE SE ESCRIBIO, y no
+                 se podia ver: `z = -oz - sz`. Con cubos SIMETRICOS EN Z --que es
+                 todo lo que hubo mientras ningun traje estuvo `listo`-- las dos
+                 formulas dan EL MISMO NUMERO. Con la corona, cuyas puntas van
+                 delante de la cara, la pieza sale DETRAS DE LA CABEZA
+                 lo bueno es `java = (x, 24 - y - alto, z)`: solo la Y se voltea.
+                 Verificado contra vanilla (la cabeza del jugador y las patas del
+                 creeper), no supuesto
+              ⚠⚠⚠ UN CUBO GIRADO ES UN HUESO HIJO, NO UN CUBO MAS. `ModelPart`
+                 gira PARTES, nunca cubos sueltos: un giro escrito dentro del
+                 cubo se ignora y la pieza sale RECTA -- y una corona con las
+                 puntas rectas es un cubo. La corona lleva 2 girados y el casco
+                 de Arceus TRECE
+                 ⚠⚠ y el paso a Java es un REFLEJO, no un giro, asi que invierte
+                    dos de los tres ejes: pitch=-rx, yaw=+ry, roll=-rz
+              ⚠⚠ LA TEXTURA SE REHORNEA, y eso es lo que hace que los dos modelos
+                 entren por la misma puerta: la corona pinta sus 44 cubos con UV
+                 POR CARA y el cuerpo con UV DE CAJA, y `ModelPart` solo sabe
+                 leer cajas. Recortando cara a cara los dos casos son uno solo
+                 ⚠ y de propina desaparece la bandera `mirror`: un cubo espejado
+                   ya trae sus caras intercambiadas y volteadas en el fichero
+              ⚠⚠⚠ EL ID DEL ENUM Y LA CARPETA DEL ARTE SON EL MISMO NOMBRE, y la
+                 primera version lo tenia mal: registro el de Arceus como
+                 «arceus» en vez de «leyenda». Eso NO DA NINGUN ERROR -- se
+                 equipa, se sincroniza y el jugador NO VE NADA. Es el fallo de
+                 los 62 cosmeticos que no existian, otra vez
+                 hoy lo comprueba el generador, en las dos direcciones: un traje
+                 `listo` sin arte vende humo, y arte sin `listo` es peso muerto
+              ⚠⚠ Y HAY UNA PRUEBA QUE COMPARA modelo.py CON Trajes.java rehaciendo
+                 en Python lo que hace Java, LEYENDO EL .geo.json DE DISCO. Es el
+                 unico sitio donde se ve un signo cambiado, y esta probada contra
+                 el fallo real de la Z: lo caza en los dos trajes
+                 ⚠ ida y vuelta POR EL FICHERO: comparar el objeto consigo mismo
+                   pasaria siempre
+              ⚠⚠ LAS HOLGURAS SON LAS DEL AUTOR, no unas nuestras: 0,75 en torso,
+                 brazos y botas y 0,5 en cintura y perneras. Son DOS CAPAS
+                 separadas 0,25, y las dos por encima de 0,25 --que es donde esta
+                 la capa exterior de la piel--. Pisarlas con un numero propio
+                 hace que parpadeen entre ellas
+              ⚠⚠ LOS .bbmodel VIVEN EN arte/trajes/, NO EN DESCARGAS. La primera
+                 version los leia de ~/Downloads: es la leccion de las seis
+                 pantallas en magenta, un generador que depende de un fichero que
+                 no esta en git NO SE PUEDE VOLVER A EJECUTAR
+              ⚠ LA RUEDA DE ARCEUS ES UNA MALLA (13 vertices, 12 triangulos) y el
+                dibujado de armadura son CAJAS. Va como una plancha fina con el
+                dibujo del autor, PINTADA POR LAS DOS CARAS -- delante y detras
+                caen en casillas distintas del reparto, y con una sola copia la
+                espalda seria basura sin dar ningun error
+              ⚠ los brazos y las piernas ENSEÑAN PIEL a proposito: las texturas
+                del autor son parciales, no estan incompletas
+              ⚠ SIN VERIFICAR EN EL JUEGO todavia
+              ---- lo de antes, que sigue siendo cierto ------------------
               5 trajes . ENTRENADOR hecho . los otros 4 «en preparacion»
               3 pestañas: KITS DE RANGO . KITS EXCLUSIVOS . MIS KITS
               saldo de LunaCoins con su «+» . previsualizador 3D

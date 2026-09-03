@@ -185,6 +185,59 @@ def _rueda(doc):
     return c, []
 
 
+# ------------------------------------------------- las hombreras al reves
+
+# ⚠⚠⚠ ESTA ES LA UNICA VEZ QUE NO SE RESPETA EL .bbmodel, Y POR ESO SE DICE EN
+#    VOZ ALTA AL GENERAR. Las dos hombreras de Arceus vienen giradas al reves en
+#    el fichero: el extremo que tiene que meterse en la AXILA les queda por
+#    fuera, colgando del hombro hacia afuera. Lo reporto el usuario mirando la
+#    lamina, y se midio antes de tocar nada:
+#
+#      como viene   x[-11,52 .. -3,91]   esquinas dentro de la axila: 0
+#      invertida    x[-11,52 .. -3,91]   esquinas dentro de la axila: 2
+#
+#    (la axila es «pegado al torso, x > -5,5, y por debajo del hombro, y < 23,5»;
+#     el torso va de -4 a 4 y el brazo de -8 a -4)
+#
+# ⚠⚠ SE CORRIGEN SOLO ESTAS DOS, Y NO EL CONVENIO ENTERO. Es la pregunta que hay
+#    que hacerse aqui, porque «los giros salen al reves» tiene dos causas
+#    posibles y el arreglo es distinto:
+#
+#      a) el convenio de giro esta mal   -> habria que invertir TODOS los `roll`
+#      b) esas dos piezas estan mal      -> se corrigen esas dos
+#
+#    Es (b), y lo dicen tres cosas que tendrian que fallar a la vez si fuera (a):
+#    la cresta del casco --que gira en X-- sale barrida hacia ATRAS, que es como
+#    tiene que ser; los cuernos salen hacia arriba y afuera; y la conversion esta
+#    verificada contra vanilla en dos modelos. Si algun dia se ve que tambien la
+#    cresta o los cuernos van al reves, entonces era (a) y el arreglo es invertir
+#    `roll` en `Trajes.giroJava` y en `comprobar_java` -- una linea en cada uno,
+#    no esto.
+#
+# ⚠ Se busca por GIRO y por HUESO, no por nombre: los dos cubos se llaman «cube».
+HOMBRERAS = ("armorRightArm", "armorLeftArm")
+HOMBRERA_GIRO_MINIMO = 45.0
+
+
+def _hombreras_al_reves(t):
+    """Invierte el giro de las hombreras. Devuelve los avisos, para que se vea."""
+    avisos = []
+    for hueso in HOMBRERAS:
+        for c in t.huesos.get(hueso, []):
+            if c.rot and abs(c.rot[2]) >= HOMBRERA_GIRO_MINIMO:
+                c.rot = (c.rot[0], c.rot[1], -c.rot[2])
+                avisos.append(
+                    "hombrera de %s: giro invertido a proposito (venia a %.1f y "
+                    "dejaba fuera del cuerpo lo que va en la axila)"
+                    % (hueso, -c.rot[2]))
+    if not avisos:
+        # ⚠ Si un dia el fichero llega ya corregido, esto deja de encontrar nada
+        #   y hay que quitarlo -- o estaria invirtiendo lo que ya esta bien.
+        avisos.append("no he encontrado ninguna hombrera que girar: si el "
+                      ".bbmodel ya viene corregido, sobra `_hombreras_al_reves`")
+    return avisos
+
+
 def leyenda():
     """El casco de Arceus, su armadura y la rueda."""
     casco = leer(CASCO)
@@ -202,6 +255,8 @@ def leyenda():
         "leyenda", "Traje LEYENDA · Arceus",
         [(casco, solo_cabeza, espacio),
          (cuerpo, _reparto_cuerpo(), None)])
+
+    avisos += _hombreras_al_reves(t)
 
     rueda, mas = _rueda(cuerpo)
     avisos += mas

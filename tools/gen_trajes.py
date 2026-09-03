@@ -466,7 +466,7 @@ def main():
                 print("    x %s" % f)
                 hubo = True
             if not fallos:
-                print("    %-11s los cubos caen donde su autor los puso" % cual)
+                print("    %-11s el fichero y el dibujado dicen lo mismo" % cual)
         if hubo:
             salida = 1
 

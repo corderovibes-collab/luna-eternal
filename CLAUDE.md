@@ -1063,6 +1063,21 @@ Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
                 dibujo del autor, PINTADA POR LAS DOS CARAS -- delante y detras
                 caen en casillas distintas del reparto, y con una sola copia la
                 espalda seria basura sin dar ningun error
+              ⚠⚠ LAS DOS HOMBRERAS DE ARCEUS VIENEN GIRADAS AL REVES EN EL
+                 FICHERO, y es la UNICA vez que no se respeta el .bbmodel. El
+                 extremo que va en la AXILA les quedaba colgando por fuera del
+                 hombro. Lo caza el usuario mirando la lamina, y se MIDIO antes
+                 de tocar: como venia, 0 esquinas dentro de la axila; invertida,
+                 2. Se dice en voz alta al generar, para que no parezca un fallo
+                 ⚠⚠ Y SE CORRIGEN SOLO ESAS DOS, NO EL CONVENIO ENTERO. «Los
+                    giros salen al reves» tiene dos causas y arreglos distintos:
+                    o el convenio esta mal (habria que invertir TODOS los `roll`)
+                    o esas dos piezas lo estan. Es lo segundo, y lo dicen tres
+                    cosas que tendrian que fallar a la vez: la cresta del casco
+                    --que gira en X-- sale barrida hacia ATRAS, los cuernos hacia
+                    arriba y afuera, y la conversion esta verificada contra
+                    vanilla. Si algun dia se ve que la cresta tambien va al
+                    reves, era lo primero: una linea en `giroJava`
               ⚠ los brazos y las piernas ENSEÑAN PIEL a proposito: las texturas
                 del autor son parciales, no estan incompletas
               ⚠ SIN VERIFICAR EN EL JUEGO todavia

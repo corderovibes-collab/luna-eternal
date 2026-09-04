@@ -167,7 +167,15 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 423 + los de gimnasios (2026-08-29)
+Autotest      /luna autotest -> 519 EN VIVO (2026-09-04)
+              +11 con las cartas: sus sobres, la habilidad de
+              aparicion, EL ARTE DE CADA TRAJE Y EL ICONO DE CADA
+              APLICACION DEL POKEPAD. Los dos ultimos se pueden
+              comprobar desde el servidor porque es UN SOLO JAR:
+              `src/client/resources/` acaba dentro del mismo
+              fichero, asi que `getResource` los ve. Una aplicacion
+              sin su PNG sale en MAGENTA y no da ningun error
+              antes 423 + los de gimnasios (2026-08-29)
               +los de MEDALLAS Y RECEPCIONES, y los que importan son:
               que el bit de cada medalla sea SU SALA (si no, ganar a Brock
               enciende la de Misty sin dar ningun error), que la entrada y la
@@ -794,7 +802,19 @@ Clanes        EL PRIMER SISTEMA SOCIAL (2026-08-23, V013)
               ⚠ SIN VERIFICAR EN EL JUEGO todavia: hacen falta DOS cuentas
               desplegado y V013 aplicada (2026-08-23) . Done (9,2 s)
 
-Cartas        TRES ZONAS DE SOBRES (2026-09-02, V028) . SIN DESPLEGAR
+Cartas        TRES ZONAS DE SOBRES (2026-09-02, V028) . DESPLEGADO 2026-09-04
+              ⚠⚠⚠ Y ESTUVO UN DIA DESAPARECIDO DEL POKEPAD SIN QUE NADIE
+                 BORRARA NADA. El sistema entero vivia SIN COMMITEAR en otro
+                 worktree; la rama de armaduras salio del MISMO commit, compilo
+                 `lunaeternal` y publico su jar encima. El icono no se fue: es
+                 que nunca estuvo en el jar que se publico
+                 ⚠⚠ TERCERA VEZ EN LA MISMA SEMANA, Y LAS TRES SON EL MISMO
+                    PROBLEMA -- DOS RAMAS, UN SERVIDOR: la V028 saltandose sola
+                    porque las dos eligieron el numero 28, `cobblemon-cards`
+                    cayendose del manifiesto, y esto
+                 LA REGLA QUE QUEDA: si dos ramas compilan el MISMO jar, la
+                 segunda que despliegue borra a la primera. Commitear al
+                 terminar no es orden: es lo unico que hace que exista
               analisis completo en docs/analysis/cobblemon-cards.md
               icono `cartas` en la PAGINA 1 . la wiki baja a la 2
                 DIARIO gratis 24h . PLATA 24h . LUNA sin limite

@@ -189,6 +189,19 @@ def campeon():
                   [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
 
 
+# ⚠⚠ EL CASCO DE MEWTWO SE QUEDABA ALTO Y ENSEÑABA LA CABEZA POR DEBAJO. No es
+#    que le falte geometria --es un casco ABIERTO a proposito, con placas
+#    laterales y nuca-- sino que TODO EL CONJUNTO empieza en y = 24,92 y la
+#    cabeza del jugador empieza en 24: por esos 0,92 se le ve el cuello.
+#    Bajandolo 1,0 el borde queda en 23,92, justo por debajo de la cabeza.
+#
+#    ⚠ «Cuanto tapa el casco» NO sirve de medida aqui, y lo comprobe: al ser
+#      abierto deja el 99% de la superficie de la cabeza a la vista tanto antes
+#      como despues. Lo que se mide es el BORDE DE ABAJO contra la base de la
+#      cabeza, que es lo que el usuario ve.
+MAESTRO_BAJAR_CASCO = -1.0
+
+
 def _bajar(t, hueso, cuanto):
     """
     Baja un hueso entero. Devuelve el aviso, porque toca el modelo del autor.
@@ -204,17 +217,38 @@ def _bajar(t, hueso, cuanto):
     return ["%s: bajado %.2f" % (hueso, cuanto)]
 
 
-# ⚠⚠ EL CASCO DE MEWTWO SE QUEDABA ALTO Y ENSEÑABA LA CABEZA POR DEBAJO. No es
-#    que le falte geometria --es un casco ABIERTO a proposito, con placas
-#    laterales y nuca-- sino que TODO EL CONJUNTO empieza en y = 24,92 y la
-#    cabeza del jugador empieza en 24: por esos 0,92 se le ve el cuello.
-#    Bajandolo 1,0 el borde queda en 23,92, justo por debajo de la cabeza.
-#
-#    ⚠ «Cuanto tapa el casco» NO sirve de medida aqui, y lo comprobe: al ser
-#      abierto deja el 99% de la superficie de la cabeza a la vista tanto antes
-#      como despues. Lo que se mide es el BORDE DE ABAJO contra la base de la
-#      cabeza, que es lo que el usuario ve.
-MAESTRO_BAJAR_CASCO = -1.0
+# ⚠⚠⚠ DONDE CREE EL AUTOR QUE ESTA LA CABEZA. En vainilla el hueso `bipedHead`
+#    tiene su pivote en y = 24: es la base de la cabeza y no se negocia.
+#    Un .bbmodel puede haberse construido sobre otra referencia --el de ELITE
+#    declara su `bipedHead` en y = 26,5-- y entonces TODO EL CASCO sale esas
+#    unidades mas alto, con la cara del jugador asomando por debajo.
+CABEZA_VAINILLA = 24.0
+
+
+def _alinear_cabeza(doc, t):
+    """
+    Baja (o sube) el casco si el fichero dice que su cabeza esta en otro sitio.
+
+    ⚠⚠ EL NUMERO NO SE CLAVA A MANO: LO DICE EL PROPIO FICHERO. El de ELITE
+       declara un grupo `bipedHead` --que es el nombre del hueso de vainilla, o
+       sea una afirmacion sobre donde va la cabeza-- en y = 26,5, y su cupula es
+       la cabeza de vainilla ([-4,24,-4] a [4,32,4]) subida exactamente 2,5.
+       Restando esa diferencia, la cupula cae clavada sobre la cabeza.
+
+    ⚠ Solo se mira `bipedHead`, y no `armorHead`: el primero es el nombre de un
+      hueso de vainilla y por tanto una referencia; el segundo es un grupo
+      nuestro y su origen puede ser cualquier punto de giro que al autor le
+      viniera bien. Confundirlos movería cascos que estan bien puestos.
+    """
+    origen = doc.grupos.get("bipedHead")
+    if origen is None:
+        return []
+    delta = CABEZA_VAINILLA - float(origen[1])
+    if abs(delta) < 1e-6:
+        return []
+    return _bajar(t, "armorHead", delta) + [
+        "el fichero declara `bipedHead` en y=%.2f y vainilla la tiene en %.0f: "
+        "el casco se mueve %+.2f" % (origen[1], CABEZA_VAINILLA, delta)]
 
 
 # ----------------------------------------------------------------- MAESTRO
@@ -241,8 +275,10 @@ def elite():
       no se llama, en vez de llamarla y que avise de que no encuentra ninguna.
     """
     doc = leer(ELITE)
-    return _traje("elite", "Traje ELITE",
-                  [(doc, _reparto_cuerpo(cabeza=("armorHead", "bipedHead")), None)])
+    t, avisos = _traje("elite", "Traje ELITE",
+                       [(doc, _reparto_cuerpo(cabeza=("armorHead", "bipedHead")), None)])
+    avisos += _alinear_cabeza(doc, t)
+    return t, avisos
 
 
 # ----------------------------------------------------------------- LEYENDA

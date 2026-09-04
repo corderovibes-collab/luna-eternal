@@ -129,6 +129,9 @@ class Documento:
     elementos: list
     texturas: list           # [(nombre, Image)]
     display: dict
+    # nombre de grupo -> su origen. Hace falta para saber DONDE cree el autor
+    # que esta el hueso: ver `_alinear_cabeza` en importados.py.
+    grupos: dict = field(default_factory=dict)
 
 
 def _rect(uv):
@@ -199,7 +202,9 @@ def leer(ruta):
             "sueltas fuera del arbol" % (ruta.name, len(crudos), vistos))
 
     return Documento(ruta=ruta, elementos=elementos, texturas=texturas,
-                     display=d.get("display") or {})
+                     display=d.get("display") or {},
+                     grupos={g.get("name"): tuple(g.get("origin") or (0, 0, 0))
+                             for g in d.get("groups", [])})
 
 
 def _elemento(e, camino):

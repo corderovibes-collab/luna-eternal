@@ -1026,6 +1026,16 @@ Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
                  dejaba fuera lo que estuviera DENTRO de un mismo hueso: las
                  placas laterales del casco del ELITE van emparejadas dentro de
                  `armorHead` y les pasa lo mismo
+              ⚠⚠⚠ DONDE CREE EL AUTOR QUE ESTA LA CABEZA LO DICE EL FICHERO, y hay
+                 que hacerle caso: el de ELITE declara su grupo `bipedHead` --que
+                 es el NOMBRE DEL HUESO DE VAINILLA, o sea una afirmacion-- en
+                 y=26,5, y vainilla la tiene en 24. Su cupula es la cabeza de
+                 vainilla subida EXACTAMENTE 2,5, asi que el casco entero salia
+                 flotando y con la cara del jugador asomando por debajo
+                 el numero NO se clava a mano: se resta la diferencia
+                 ⚠ solo se mira `bipedHead`, no `armorHead`: el primero es un
+                   hueso de vainilla y por tanto una referencia; el segundo es un
+                   grupo nuestro y su origen puede ser cualquier punto de giro
               ⚠ el casco de Mewtwo se bajo 1,0: TODO el conjunto empezaba en
                 y=24,92 y la cabeza empieza en 24, asi que por esos 0,92 se veia
                 el cuello. «Cuanto tapa» NO sirve de medida en un casco ABIERTO

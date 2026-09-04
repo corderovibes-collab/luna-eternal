@@ -1,0 +1,10 @@
+{
+  "maxNationalDex": 251,
+  "enableCardStats": false,
+  "enablePlayerStats": false,
+  "enableSpawnBoostStats": false,
+  "enableBoosterChestSpawn": false,
+  "cardDropChance": 1.0,
+  "allowFakemonCards": false,
+  "lunaGoldGodPackChance": 0.0
+}

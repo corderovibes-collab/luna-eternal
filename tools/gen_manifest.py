@@ -319,6 +319,54 @@ VERSION_PACK = "0.2.0"
 # separarlo en dos mods obligaria a duplicar los tipos que viajan entre
 # cliente y servidor, y eso se desincroniza a la primera. Credenciales NO
 # lleva: se leen de `config/` en el servidor y nunca entran en el jar.
+# ---------------------------------------------------------------------------
+# JARS PARCHEADOS POR NOSOTROS
+# ---------------------------------------------------------------------------
+#
+# ⚠⚠⚠ ESTOS NO SALEN DE NINGUN SITIO AUTOMATICO, Y POR ESO HAY QUE DECLARARLOS
+#    AQUI. `cobblemon-cards-1.0.5-luna1.jar` es una compilacion NUESTRA --el
+#    sufijo `-luna1` lo dice--: no esta en Modrinth, no viene en los overrides
+#    del pack de arriba, y no se compila en este repositorio. Estaba en el
+#    manifiesto publicado y esta en el servidor, y NADA en estas herramientas lo
+#    conocia, asi que la primera regeneracion lo dejo fuera SIN DECIR NADA.
+#
+#    ⚠⚠⚠ Y NO FALLA AL GENERAR: FALLA EN LA PUERTA DEL SERVIDOR. El servidor
+#       sigue teniendolo y manda sus 89 entradas de registro; el cliente que no
+#       lo tiene NO ENTRA:
+#
+#         «Se han recibido 89 entradas de registro desconocidas para este
+#          cliente ... cobblemon-cards»
+#
+#       Paso el 2026-09-03 al republicar el manifiesto por los trajes, y dejo el
+#       servidor inaccesible hasta devolver el puntero atras. Es la regla que ya
+#       estaba escrita para `trinkets` --un mod que registra algo que se
+#       sincroniza tiene que estar en los DOS lados-- mordiendo por el otro
+#       extremo: no por añadirlo al servidor, sino por QUITARLO del cliente.
+#
+# ⚠ Se declaran por URL Y HASH, igual que todo lo demas (D-037): el jar ya esta
+#   subido a la release del pack, asi que regenerar NO exige tenerlo en local.
+#   Si algun dia hay que cambiarlo, se sube el nuevo y se actualizan estas tres
+#   lineas.
+# ⚠⚠ Y SU CONFIGURACION VA CON EL. `cobblemon-cards.json` no viene en los
+#    overrides del pack de arriba --es nuestro-- asi que se inyecta en el zip de
+#    `config` desde aqui. Sin esto el mod llega sin ajustes y el pack le pone los
+#    suyos por defecto: `maxNationalDex` volveria a 1025 en un servidor que se
+#    anuncia Kanto+Johto (D-017).
+#    ⚠ Vive en el REPO y no en `build/`, que es git-ignorado: ahi estaba, y por
+#      eso se perdio en la primera regeneracion.
+EXTRA_CONFIG = RAIZ / "pack-propio"
+
+
+PARCHEADOS = [
+    {
+        "path": "mods/cobblemon-cards-1.0.5-luna1.jar",
+        "sha1": "5beff3063c5940cabebd287f78a7b143e2a79a97",
+        "size": 23519511,
+        "url": f"{BASE_ACTIVOS}/cobblemon-cards-1.0.5-luna1-5beff3063c.jar",
+    },
+]
+
+
 PROPIOS = [
     {"carpeta": "neon", "prefijo": "lunaneon"},
     {"carpeta": "mod", "prefijo": "lunaeternal"},
@@ -484,6 +532,11 @@ def construir() -> dict:
         })
         print(f"  {entrada['prefijo']:<15} {publicado(jar, sha1):<26} nuestro")
 
+    # 4-bis. Los jars parcheados por nosotros, que ya estan publicados.
+    for entrada in PARCHEADOS:
+        ficheros.append(dict(entrada))
+        print(f"  parcheado       {Path(entrada['path']).name:<40} fijado")
+
     # 5. Los OVERRIDES del pack base: su configuracion y sus resource packs.
     #
     # ⚠⚠ VIAJAN COMO UN ZIP POR CARPETA, Y NO SUELTOS. Sueltos eran 176
@@ -512,6 +565,20 @@ def construir() -> dict:
         if "/" not in rel:          # servers.dat y demas sueltos de la raiz
             continue                 # los generamos nosotros; ver el paso 6
         carpetas.setdefault(raiz, []).append((rel, datos))
+
+    # Lo nuestro, encima de lo suyo. Va DESPUES de los overrides del pack base
+    # para que gane si algun dia coinciden en un nombre.
+    for f in sorted(EXTRA_CONFIG.rglob("*")) if EXTRA_CONFIG.exists() else []:
+        if not f.is_file():
+            continue
+        rel = f.relative_to(EXTRA_CONFIG).as_posix()
+        datos = f.read_bytes()
+        destino = dir_cfg / rel
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_bytes(datos)
+        raiz = rel.split("/")[0]
+        carpetas.setdefault(raiz, []).append((rel, datos))
+        print(f"  nuestro         {rel:<40} config")
 
     # `mods/` NUNCA se sirve como carpeta extraible, aunque venga en los
     # overrides. Una entrada `archive` de nombre `mods` se borraria ENTERA el
@@ -644,6 +711,60 @@ def construir() -> dict:
         "server": {"name": "PokeReport : Luna Eternal", "host": host, "port": int(puerto)},
         "files": ficheros,
     }
+
+
+def mods_publicados() -> set:
+    """Los jars que sirve AHORA MISMO el manifiesto vigente, o None si no se puede."""
+    import urllib.request
+    try:
+        puntero = json.loads(urllib.request.urlopen(
+            f"{BASE_PUNTERO}/latest.json", timeout=30).read())
+        vivo = json.loads(urllib.request.urlopen(
+            puntero["manifest"], timeout=60).read())
+    except Exception as e:                       # noqa: BLE001
+        print(f"  no he podido leer el manifiesto vigente ({e}):")
+        print("  NO puedo comprobar si esta publicacion quita algun mod")
+        return None
+    return {f["path"] for f in vivo["files"] if f["path"].startswith("mods/")}
+
+
+def comprobar_bajas(manifiesto: dict, permitir: bool) -> None:
+    """
+    Se niega a publicar si esta version QUITA un mod que hoy esta servido.
+
+    ⚠⚠⚠ ESTA COMPROBACION EXISTE POR UN FALLO REAL Y CARO. El 2026-09-03 una
+       republicacion rutinaria --solo cambiaba nuestro jar-- se dejo fuera
+       `cobblemon-cards`, que el servidor si tiene. Resultado: nadie podia
+       entrar, con un mensaje que habla de «entradas de registro desconocidas» y
+       no de un mod que falta.
+
+    ⚠⚠ QUITAR UN MOD NO SE VE EN LA SALIDA DEL GENERADOR. El generador imprime
+       lo que PONE, mod a mod; lo que se deja fuera no aparece por ningun sitio,
+       porque no hay nada que imprimir. Un diff contra lo que hay publicado es
+       la unica forma de ver una ausencia.
+
+    ⚠ Quitar un mod es legitimo --a veces es justo lo que se quiere-- pero tiene
+      que decirlo alguien: `--permitir-bajas`.
+    """
+    antes = mods_publicados()
+    if antes is None:
+        return
+    ahora = {f["path"] for f in manifiesto["files"] if f["path"].startswith("mods/")}
+    bajas = sorted(antes - ahora)
+    if not bajas:
+        return
+    print()
+    print("  ESTA PUBLICACION QUITARIA %d mod(s) DEL CLIENTE:" % len(bajas))
+    for b in bajas:
+        print("    - %s" % b.rsplit("/", 1)[-1])
+    if not permitir:
+        raise SystemExit(
+            "\n  Me niego a publicar. Si el servidor todavia tiene alguno de "
+            "esos mods,\n  NADIE PODRA ENTRAR: el servidor manda sus entradas "
+            "de registro y el\n  cliente que no las conoce se queda en la "
+            "puerta.\n\n  Comprueba el servidor:  python tools/mods_servidor.py"
+            "\n  Si la baja es a proposito:  --permitir-bajas")
+    print("  ...y se publica igual porque lo has pedido (--permitir-bajas)")
 
 
 def publicar() -> None:
@@ -857,6 +978,10 @@ def main() -> None:
     ap.add_argument("--volver-a", metavar="HUELLA", dest="volver_a",
                     help="devolver el pack a un manifiesto anterior (10 caracteres). "
                          "No regenera nada: solo reescribe el puntero")
+    ap.add_argument("--permitir-bajas", action="store_true",
+                    help="publicar aunque esta version QUITE mods del cliente. "
+                         "Sin esto se aborta: si el servidor todavia los tiene, "
+                         "nadie puede entrar")
     args = ap.parse_args()
 
     # Volver atras no genera nada: si el pack esta roto, lo ultimo que se quiere
@@ -876,6 +1001,9 @@ def main() -> None:
     print(f"     Fabric Loader {manifiesto['fabricLoader']}")
 
     if args.publicar:
+        # ⚠ ANTES de subir nada: una publicacion que QUITA un mod del cliente
+        #   deja fuera a todo el mundo si el servidor todavia lo tiene.
+        comprobar_bajas(manifiesto, args.permitir_bajas)
         publicar()
     else:
         print("\n  Para publicarlo:  python tools/gen_manifest.py --publicar")

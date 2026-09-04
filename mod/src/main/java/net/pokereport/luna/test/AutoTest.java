@@ -1015,15 +1015,36 @@ public final class AutoTest {
         check("todo nombre de categoria queda legible sin sus codigos de color",
                 nombresConColor);
 
-        // ⚠ LAS CATEGORIAS TIENEN QUE CABER EN EL PANEL. Van en una lista
-        //   vertical de tarjetas de 86+8 px que empieza en 156, y debajo van el
-        //   separador y el saldo (~110). El panel acaba en 762.
+        // ⚠⚠⚠ EL PANEL YA NO TIENE UN TOPE DE CINCO: PAGINA (2026-09-04).
+        //    Aqui habia un tope duro --«la SEXTA no cabria»-- con los numeros
+        //    ESCRITOS OTRA VEZ (156 + n*94 + 110). Eran los mismos que
+        //    `TiendaScreen`, en dos sitios, y nada obligaba a que coincidieran:
+        //    la misma forma del fallo de las TRES LISTAS DE MEDALLAS.
+        //    Hoy los dos leen de `PanelTienda`, asi que ya no pueden
+        //    contradecirse -- y lo que se comprueba aqui es otra cosa.
         //
-        //   Hoy son 5 y sobran 26 px. La SEXTA no cabria, y el sintoma no seria
-        //   un error: seria una categoria dibujada fuera del marco -- invisible,
-        //   e imposible de pulsar. Que se entere aqui y no un jugador.
-        int alto = 156 + catalog.categories().size() * (86 + 8) + 110;
-        check("las categorias caben en el panel (" + alto + " de 762)", alto <= 762);
+        // ⚠⚠ LO QUE SE COMPRUEBA ES QUE SE PUEDA LLEGAR A TODAS. Con
+        //    paginacion, desbordar el marco ya no es el riesgo; el riesgo es
+        //    que una categoria quede en una pagina que no existe, y eso NO da
+        //    ningun error: da un panel en blanco. Es exactamente lo que paso
+        //    con los 62 cosmeticos, de los que 54 eran INALCANZABLES porque
+        //    nada cambiaba la pagina.
+        int nCat = catalog.categories().size();
+        int catsPorPagina = net.pokereport.luna.pokepad.PanelTienda.porPagina();
+        int paginas = net.pokereport.luna.pokepad.PanelTienda.paginas(nCat);
+        check("cabe al menos una categoria por pagina", catsPorPagina >= 1);
+        check("se puede llegar a las " + nCat + " categorias ("
+                        + paginas + " pagina(s) de " + catsPorPagina + ")",
+                paginas * catsPorPagina >= nCat);
+
+        // ⚠ Y QUE UNA PAGINA LLENA SIGA CABIENDO. `porPagina()` sale de una
+        //   division, asi que no puede desbordar por si sola -- pero SI si
+        //   alguien engorda la tarjeta o el bloque del saldo, y entonces la
+        //   ultima quedaria medio fuera del marco sin dar ningun error.
+        int alto = net.pokereport.luna.pokepad.PanelTienda.altoOcupado(catsPorPagina, paginas > 1);
+        check("una pagina llena cabe en el panel (" + alto + " de "
+                        + net.pokereport.luna.pokepad.PanelTienda.PANEL_H + ")",
+                alto <= net.pokereport.luna.pokepad.PanelTienda.PANEL_H);
 
         // ⚠ Y LOS ARTICULOS TIENEN QUE CABER EN SU PAGINA. La pantalla pagina
         //   sola, asi que esto no puede desbordar -- pero si una categoria

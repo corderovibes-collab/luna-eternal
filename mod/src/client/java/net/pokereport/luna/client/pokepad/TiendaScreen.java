@@ -14,6 +14,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.pokereport.luna.client.EstadoCliente;
 import net.pokereport.luna.net.Red;
+import net.pokereport.luna.pokepad.PanelTienda;
 
 /**
  * LA TIENDA: comprar y vender, por categorías.
@@ -53,10 +54,22 @@ public class TiendaScreen extends Screen {
     private static final int NAT_ANCHO = 1380, NAT_ALTO = 828;
     private static final int PANEL_X = 63, PANEL_Y = 70, PANEL_W = 315, PANEL_H = 692;
     private static final int PANT_X = 460, PANT_Y = 204, PANT_W = 801, PANT_H = 494;
-    private static final int NAV_ALTO = 72;
+    private static final int NAV_ALTO = PanelTienda.NAV_ALTO;
 
     private static final int MARGEN = 14;
-    private static final int CAT_ALTO = 86, CAT_AIRE = 8;
+    private static final int CAT_ALTO = PanelTienda.CAT_ALTO,
+            CAT_AIRE = PanelTienda.CAT_AIRE;
+
+    /**
+     * ⚠⚠⚠ ESTOS NUMEROS NO ESTAN AQUI: estan en {@link PanelTienda}, que
+     * vive en {@code main} para que el autotest pueda leer LOS MISMOS. Antes
+     * los tenia escritos otra vez, y eso es lo que ya mordio con las medallas
+     * --tres listas que eran una sola-- y con la rejilla del PokePad.
+     */
+    private static final int CAT_Y0 = PanelTienda.CAT_Y0;
+    private static final int PAGER_ALTO = PanelTienda.PAGER_ALTO;
+    private static final int CAT_POR_PAGINA = PanelTienda.porPagina();
+
     private static final int FILA_ALTO = 62, FILA_AIRE = 6;
 
     /** La banda naranja del chasis, medida sobre el PNG. Igual que en Cosméticos. */
@@ -89,6 +102,8 @@ public class TiendaScreen extends Screen {
     private int ancho, alto, x0, y0;
     private Red.Tienda tienda;
     private int categoria = 0;
+    /** Que pagina del PANEL se mira. No es `pagina`, que es la de articulos. */
+    private int paginaCat = 0;
     private int pagina = 0;
     private int cantidad = 0;
 
@@ -236,6 +251,11 @@ public class TiendaScreen extends Screen {
             if (categoria >= categorias().size()) {
                 categoria = 0;
             }
+            // ⚠ La pagina del panel se recoloca SOBRE LA CATEGORIA ELEGIDA, no
+            //   a cero: si el servidor manda un catalogo mas corto estando en
+            //   la pagina 2, quedaria mirando una pagina que ya no existe --
+            //   panel en blanco, sin un solo error.
+            paginaCat = Math.min(categoria / CAT_POR_PAGINA, paginasCat() - 1);
         }
 
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
@@ -269,15 +289,40 @@ public class TiendaScreen extends Screen {
         }
     }
 
+    /** La Y de la ranura {@code i} DENTRO DE LA PAGINA, no del catalogo. */
     private int categoriaY(int i) {
-        return PANEL_Y + NAV_ALTO + 14 + i * (CAT_ALTO + CAT_AIRE);
+        return CAT_Y0 + i * (CAT_ALTO + CAT_AIRE);
+    }
+
+    private int paginasCat() {
+        return PanelTienda.paginas(categorias().size());
+    }
+
+    /**
+     * Donde acaba la lista.
+     *
+     * <p>⚠ Con varias paginas se reserva SIEMPRE el alto entero, aunque la
+     * ultima traiga menos tarjetas: si no, el saldo y las flechas SALTARIAN al
+     * pasar de pagina, y una cosa que se mueve sola se lee como una averia.
+     */
+    private int finDeCategorias() {
+        int filas = paginasCat() > 1 ? CAT_POR_PAGINA
+                : Math.min(categorias().size(), CAT_POR_PAGINA);
+        return categoriaY(filas);
+    }
+
+    /** La Y del separador del saldo. Debajo del pager, si lo hay. */
+    private int saldoY() {
+        return finDeCategorias() + (paginasCat() > 1 ? PAGER_ALTO : 0) + 12;
     }
 
     private void dibujarCategorias(DrawContext ctx, int rx, int ry) {
         var cs = categorias();
-        for (int i = 0; i < cs.size(); i++) {
+        int desde = paginaCat * CAT_POR_PAGINA;
+        int hasta = Math.min(cs.size(), desde + CAT_POR_PAGINA);
+        for (int i = desde; i < hasta; i++) {
             var c = cs.get(i);
-            int y = categoriaY(i);
+            int y = categoriaY(i - desde);
             int ax = PANEL_X + 16, aw = PANEL_W - 32;
             boolean activa = i == categoria;
             boolean encima = dentro(rx, ry, px(ax), py(y), pl(aw), pl(CAT_ALTO));
@@ -302,9 +347,12 @@ public class TiendaScreen extends Screen {
             }
         }
 
+        // Las flechas, si el catálogo no cabe de una vez.
+        dibujarPagerCategorias(ctx, rx, ry);
+
         // El saldo, debajo de las categorías. Es el número que decide si puedes
         // comprar, así que va donde se mira antes de pulsar.
-        int y = categoriaY(cs.size()) + 12;
+        int y = saldoY();
         separador(ctx, y);
         var s = EstadoCliente.saldo();
         texto(ctx, Text.translatable("pokepad.lunaeternal.tienda.tu_saldo"),
@@ -322,9 +370,41 @@ public class TiendaScreen extends Screen {
     /** Los iconos de categoría, en la segunda pasada. */
     private void dibujarIconosCategorias(DrawContext ctx) {
         var cs = categorias();
-        for (int i = 0; i < cs.size(); i++) {
-            objeto(ctx, pila(cs.get(i).icono()), PANEL_X + 26, categoriaY(i) + 26, 34);
+        int desde = paginaCat * CAT_POR_PAGINA;
+        int hasta = Math.min(cs.size(), desde + CAT_POR_PAGINA);
+        for (int i = desde; i < hasta; i++) {
+            objeto(ctx, pila(cs.get(i).icono()), PANEL_X + 26, categoriaY(i - desde) + 26, 34);
         }
+    }
+
+    /** Los rectangulos de las dos flechas del panel. */
+    private int pagerX(boolean atras) {
+        int cx = PANEL_X + PANEL_W / 2;
+        return atras ? cx - 74 : cx + 42;
+    }
+
+    private void dibujarPagerCategorias(DrawContext ctx, int rx, int ry) {
+        if (paginasCat() <= 1) {
+            return;
+        }
+        int y = finDeCategorias() + 4;
+        for (int lado = 0; lado < 2; lado++) {
+            boolean atras = lado == 0;
+            boolean puede = atras ? paginaCat > 0 : paginaCat < paginasCat() - 1;
+            int bx = pagerX(atras);
+            boolean encima = puede && dentro(rx, ry, px(bx), py(y), pl(32), pl(26));
+            ctx.fill(px(bx), py(y), px(bx + 32), py(y + 26),
+                    encima ? FILA_ENCIMA : FILA_FONDO);
+            marco(ctx, px(bx), py(y), pl(32), pl(26),
+                    encima ? BORDE_ENCIMA : FILA_BORDE, Math.max(1, pl(2)));
+            // ⚠ APAGADA, NO ESCONDIDA: un hueco que aparece y desaparece mueve
+            //   la otra flecha de sitio, y entonces pulsar dos veces seguidas
+            //   falla la segunda.
+            texto(ctx, Text.literal(atras ? "<" : ">"), bx + 16, y + 5, 18,
+                    puede ? TEXTO_OSCURO : TEXTO_SUAVE, true, false);
+        }
+        texto(ctx, Text.literal((paginaCat + 1) + " / " + paginasCat()),
+                PANEL_X + PANEL_W / 2, y + 5, 18, TEXTO_SUAVE, true, false);
     }
 
     private int filaY(int n) {
@@ -473,12 +553,33 @@ public class TiendaScreen extends Screen {
         }
 
         var cs = categorias();
-        for (int i = 0; i < cs.size(); i++) {
-            if (dentro(rx, ry, px(PANEL_X + 16), py(categoriaY(i)),
+        int desde = paginaCat * CAT_POR_PAGINA;
+        int hasta = Math.min(cs.size(), desde + CAT_POR_PAGINA);
+        for (int i = desde; i < hasta; i++) {
+            // ⚠⚠ LA RANURA SE CALCULA IGUAL QUE AL DIBUJAR (`i - desde`), y eso
+            //    no es una coincidencia: si el dibujado y el clic la calcularan
+            //    cada uno a su manera, pulsar una tarjeta abriria LA DE AL LADO.
+            //    Es literalmente el fallo que ya tuvo la rejilla del PokePad.
+            if (dentro(rx, ry, px(PANEL_X + 16), py(categoriaY(i - desde)),
                     pl(PANEL_W - 32), pl(CAT_ALTO))) {
                 categoria = i;
                 pagina = 0;
                 aviso = "";
+                sonar();
+                return true;
+            }
+        }
+
+        if (paginasCat() > 1) {
+            int pyCat = finDeCategorias() + 4;
+            if (paginaCat > 0 && dentro(rx, ry, px(pagerX(true)), py(pyCat), pl(32), pl(26))) {
+                paginaCat--;
+                sonar();
+                return true;
+            }
+            if (paginaCat < paginasCat() - 1
+                    && dentro(rx, ry, px(pagerX(false)), py(pyCat), pl(32), pl(26))) {
+                paginaCat++;
                 sonar();
                 return true;
             }

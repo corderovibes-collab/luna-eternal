@@ -123,8 +123,10 @@ def _traje(id_, nombre, partes):
 def campeon():
     """La corona y su armadura. Un solo fichero, cuerpo entero."""
     doc = leer(CORONA)
-    return _traje("campeon", "Traje CAMPEON · Corona",
-                  [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
+    t, avisos = _traje("campeon", "Traje CAMPEON · Corona",
+                       [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
+    avisos += _brazos_media_vuelta(t)
+    return t, avisos
 
 
 # ----------------------------------------------------------------- LEYENDA
@@ -177,27 +179,51 @@ def _rueda(doc):
              tam=(RUEDA_RADIO * 2, RUEDA_RADIO * 2, RUEDA_GROSOR),
              color=color_medio(doc.texturas[idx][1], (0, 0, ancho, alto)),
              material="metal")
-    # ⚠⚠ SE PINTA POR LAS DOS CARAS, Y ESA ES LA PARTE QUE NO SE VE VENIR. En el
-    #    reparto de caja, delante y detras caen en DOS CASILLAS DISTINTAS.
-    #    Pintando solo una, la rueda se veria por delante y por detras seria
-    #    BASURA -- lo que hubiera en el lienzo al lado. Y no daria ningun error.
-    c.caras_src = {"north": (idx, rect), "south": (idx, rect)}
+    # ⚠⚠⚠ SE PINTA UNA SOLA CARA, Y ESO NO ES UN RECORTE: ES EL ARREGLO. La
+    #    primera version pintaba la de delante Y la de detras, que sobre el papel
+    #    es lo correcto --en el reparto de caja caen en casillas distintas-- y en
+    #    el juego se ve como DOS AROS: la plancha tiene grosor, asi que los dos
+    #    dibujos quedan separados y desde cualquier angulo que no sea el frontal
+    #    exacto se ven los dos bordes. El usuario lo describio exactamente asi:
+    #    «como que se duplica».
+    #
+    #    ⚠⚠ Y SE PUEDE PINTAR UNA SOLA PORQUE LA ARMADURA SE DIBUJA SIN DESCARTE
+    #       DE CARAS TRASERAS (`getEntityCutoutNoCull`): un plano se ve por los
+    #       dos lados. Con la de atras transparente, desde detras se ve ESTA
+    #       misma a traves -- un aro, no dos.
+    #
+    #    ⚠ Va en la cara NORTE porque el aro cuelga a la espalda (z positivo): a
+    #      quien mire al jugador de frente le queda detras, y es esa cara la que
+    #      le da.
+    c.caras_src = {"north": (idx, rect)}
     return c, []
 
 
 # ------------------------------------------------- las hombreras al reves
 
 # ⚠⚠⚠ ESTA ES LA UNICA VEZ QUE NO SE RESPETA EL .bbmodel, Y POR ESO SE DICE EN
-#    VOZ ALTA AL GENERAR. Las dos hombreras de Arceus vienen giradas al reves en
-#    el fichero: el extremo que tiene que meterse en la AXILA les queda por
-#    fuera, colgando del hombro hacia afuera. Lo reporto el usuario mirando la
-#    lamina, y se midio antes de tocar nada:
+#    VOZ ALTA AL GENERAR. Las dos hombreras vienen mal puestas en el fichero, y
+#    hacen falta DOS correcciones distintas -- se descubrieron una detras de
+#    otra, y son cosas diferentes aunque las dos se arreglen girando:
 #
-#      como viene   x[-11,52 .. -3,91]   esquinas dentro de la axila: 0
-#      invertida    x[-11,52 .. -3,91]   esquinas dentro de la axila: 2
+#      EL GIRO (roll)      el extremo que va en la AXILA quedaba colgando por
+#                          fuera del hombro. Medido antes de tocar:
+#                            como viene  0 esquinas dentro de la axila
+#                            invertida   2 esquinas dentro de la axila
+#                          (axila = pegado al torso, x > -5,5, y por debajo del
+#                           hombro, y < 23,5; el torso va de -4 a 4)
 #
-#    (la axila es «pegado al torso, x > -5,5, y por debajo del hombro, y < 23,5»;
-#     el torso va de -4 a 4 y el brazo de -8 a -4)
+#      MEDIA VUELTA (yaw)  y aun asi salia LA CARA QUE NO ES hacia afuera: en el
+#                          juego se veia el panel ROJO del interior mirando al
+#                          frente. Eso no es posicion, es ORIENTACION, y por eso
+#                          el primer arreglo no lo toco: invertir el `roll`
+#                          cambia hacia donde SE INCLINA la pieza, no hacia donde
+#                          MIRA. Lo caza el usuario en el juego, no la lamina.
+#
+#    ⚠⚠ LAS DOS SON INDEPENDIENTES, y eso es lo que costo ver. La hombrera es
+#       casi simetrica de perfil, asi que media vuelta NO cambia su silueta --
+#       solo que cara queda fuera--. Por eso la primera correccion parecia
+#       completa mirando la lamina: la silueta ya era la buena.
 #
 # ⚠⚠ SE CORRIGEN SOLO ESTAS DOS, Y NO EL CONVENIO ENTERO. Es la pregunta que hay
 #    que hacerse aqui, porque «los giros salen al reves» tiene dos causas
@@ -206,33 +232,75 @@ def _rueda(doc):
 #      a) el convenio de giro esta mal   -> habria que invertir TODOS los `roll`
 #      b) esas dos piezas estan mal      -> se corrigen esas dos
 #
-#    Es (b), y lo dicen tres cosas que tendrian que fallar a la vez si fuera (a):
-#    la cresta del casco --que gira en X-- sale barrida hacia ATRAS, que es como
-#    tiene que ser; los cuernos salen hacia arriba y afuera; y la conversion esta
-#    verificada contra vanilla en dos modelos. Si algun dia se ve que tambien la
-#    cresta o los cuernos van al reves, entonces era (a) y el arreglo es invertir
-#    `roll` en `Trajes.giroJava` y en `comprobar_java` -- una linea en cada uno,
-#    no esto.
+#    Es (b), y ahora lo dice el juego y no un razonamiento: la corona, el casco,
+#    la cresta, los cuernos y las perneras salen bien en las mismas capturas en
+#    las que las hombreras salen mal. Si fuera el convenio, estarian TODAS mal.
 #
 # ⚠ Se busca por GIRO y por HUESO, no por nombre: los dos cubos se llaman «cube».
 HOMBRERAS = ("armorRightArm", "armorLeftArm")
 HOMBRERA_GIRO_MINIMO = 45.0
+MEDIA_VUELTA = 180.0
+
+
+# ⚠⚠⚠ Y LOS BRAZOS SALEN VOLTEADOS, EN LOS DOS TRAJES. Es un fallo DISTINTO del
+#    de las hombreras y se ve en el juego, no en la lamina: el cubo del brazo
+#    ensena hacia fuera la cara que va hacia dentro. El usuario lo pidio con
+#    estas palabras: «el left_arm y right_arm en ambas skins salen volteadas,
+#    toca darle un giro de 180 grados de manera horizontal a esas 2».
+#
+#    ⚠⚠ MEDIA VUELTA NO CAMBIA LA SILUETA, SOLO QUE CARA MIRA A DONDE. El cubo
+#       del brazo es una caja de 4x12x4 centrada en el brazo, asi que girarla
+#       sobre su propio centro la deja exactamente donde estaba. Por eso esto no
+#       se ve en el visor a menos que mires la TEXTURA, y por eso llego despues.
+#
+#    ⚠ De donde sale, probablemente: en una skin de 64x32 el brazo izquierdo no
+#      tiene dibujo propio, es el derecho reflejado. Los dos ficheros marcan
+#      `mirror_uv` en el miembro que esta en X NEGATIVA --que es el brazo
+#      DERECHO del modelo-- o sea al reves que vanilla, que refleja el de X
+#      positiva. Con el reflejo en el lado que no es, los dos brazos acaban
+#      ensenando su cara interior por fuera.
+BRAZOS = ("armorRightArm", "armorLeftArm")
+
+
+def _brazos_media_vuelta(t):
+    """Da media vuelta a los cubos del brazo (no a las hombreras)."""
+    avisos = []
+    for hueso in BRAZOS:
+        for c in t.huesos.get(hueso, []):
+            # Las hombreras ya llevan su giro y se arreglan aparte; aqui solo
+            # las cajas rectas, que son los brazos.
+            if c.rot:
+                continue
+            # ⚠ El pivote es SU PROPIO CENTRO. Sin el, media vuelta lo mandaria
+            #   al otro lado del cuerpo en vez de girarlo donde esta.
+            c.pivote = tuple(round(c.origen[i] + c.tam[i] / 2.0, 5) for i in range(3))
+            c.rot = (0.0, MEDIA_VUELTA, 0.0)
+            avisos.append("brazo de %s: media vuelta sobre su centro %s"
+                          % (hueso, c.pivote))
+    if not avisos:
+        avisos.append("no he encontrado ningun cubo de brazo que girar")
+    return avisos
 
 
 def _hombreras_al_reves(t):
-    """Invierte el giro de las hombreras. Devuelve los avisos, para que se vea."""
+    """Endereza las hombreras. Devuelve los avisos, para que se vea."""
     avisos = []
     for hueso in HOMBRERAS:
         for c in t.huesos.get(hueso, []):
-            if c.rot and abs(c.rot[2]) >= HOMBRERA_GIRO_MINIMO:
-                c.rot = (c.rot[0], c.rot[1], -c.rot[2])
-                avisos.append(
-                    "hombrera de %s: giro invertido a proposito (venia a %.1f y "
-                    "dejaba fuera del cuerpo lo que va en la axila)"
-                    % (hueso, -c.rot[2]))
+            if not (c.rot and abs(c.rot[2]) >= HOMBRERA_GIRO_MINIMO):
+                continue
+            antes = c.rot
+            # ⚠ El orden es ZYX, asi que poner 180 en la Y significa «date media
+            #   vuelta y DESPUES inclinate»: primero mira a donde tiene que
+            #   mirar, luego cae sobre el hombro.
+            c.rot = (antes[0], antes[1] + MEDIA_VUELTA, -antes[2])
+            avisos.append(
+                "hombrera de %s: venia a (%.1f, %.1f, %.1f) y sale a "
+                "(%.1f, %.1f, %.1f) -- giro invertido y media vuelta, a proposito"
+                % (hueso, antes[0], antes[1], antes[2], *c.rot))
     if not avisos:
         # ⚠ Si un dia el fichero llega ya corregido, esto deja de encontrar nada
-        #   y hay que quitarlo -- o estaria invirtiendo lo que ya esta bien.
+        #   y hay que quitarlo -- o estaria torciendo lo que ya esta bien.
         avisos.append("no he encontrado ninguna hombrera que girar: si el "
                       ".bbmodel ya viene corregido, sobra `_hombreras_al_reves`")
     return avisos
@@ -256,6 +324,7 @@ def leyenda():
         [(casco, solo_cabeza, espacio),
          (cuerpo, _reparto_cuerpo(), None)])
 
+    avisos += _brazos_media_vuelta(t)
     avisos += _hombreras_al_reves(t)
 
     rueda, mas = _rueda(cuerpo)

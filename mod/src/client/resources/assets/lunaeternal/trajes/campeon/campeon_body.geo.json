@@ -92,6 +92,21 @@
             22,
             0
           ],
+          "cubes": []
+        },
+        {
+          "name": "armorRightArm_r1",
+          "parent": "armorRightArm",
+          "pivot": [
+            -6.0,
+            18.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            180.0,
+            0.0
+          ],
           "cubes": [
             {
               "origin": [
@@ -119,6 +134,21 @@
             5,
             22,
             0
+          ],
+          "cubes": []
+        },
+        {
+          "name": "armorLeftArm_r1",
+          "parent": "armorLeftArm",
+          "pivot": [
+            6.0,
+            18.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            180.0,
+            0.0
           ],
           "cubes": [
             {

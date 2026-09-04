@@ -167,7 +167,7 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 519 EN VIVO (2026-09-04)
+Autotest      /luna autotest -> 523 EN VIVO (2026-09-04)
               +11 con las cartas: sus sobres, la habilidad de
               aparicion, EL ARTE DE CADA TRAJE Y EL ICONO DE CADA
               APLICACION DEL POKEPAD. Los dos ultimos se pueden
@@ -658,6 +658,66 @@ Mercado       DOS ESCAPARATES HERMANOS (2026-08-25, D-042)
               ⚠ SIN VERIFICAR EN EL JUEGO con dos cuentas
 
 Tienda        COMPRAR Y VENDER, POR CATEGORIAS (2026-08-23)
+              OCHO CATEGORIAS Y 620 ARTICULOS (2026-09-04, DESPLEGADO)
+                esencial 2 . cuidado 7 . crianza 10 . bayas 71 .
+                cultivos 9 . variedades 8 . muebles 367 . peluches 146
+              ⚠⚠⚠ LOS PELUCHES SON LOS UNICOS EN LUNACOINS, Y LOS DE CRIANZA NO.
+                 Un peluche es IDENTIDAD PURA (T1): no protege, no sube nada, no
+                 desbloquea nada -- misma categoria que los cosmeticos (D-039).
+                 El Destiny Knot y los seis objetos de poder deciden QUE IVs Y
+                 QUE EVs HEREDA UNA CRIA, o sea progresion competitiva, y eso
+                 por moneda de pago es T4, la linea roja de D-007 y D-014
+                 ⚠ y por eso los peluches tienen RECOMPRA CERO: si el banco los
+                   recomprara existiria un tipo de cambio LunaCoin -> Plata por
+                   la puerta de atras, que es justo lo que D-014 prohibe
+              ⚠⚠ BAYAS Y CULTIVOS CHOCAN CON EL OFICIO AGRICULTOR, y es una
+                 decision del usuario tomada sabiendolo (el 23-ago se dejaron
+                 fuera por eso mismo). LA PALANCA SI SE NOTA NO ES QUITAR LA
+                 CATEGORIA: es SUBIR SU ESCALON -- un cultivo caro sigue
+                 existiendo para quien tenga prisa y no compite con cosecharlo
+              ⚠⚠⚠ EL PANEL SE LLENABA EN LA QUINTA Y HOY PAGINA. El tope estaba
+                 escrito como tal («la SEXTA no cabria») y con ocho eran 1.018
+                 px en 692. QUINTA vez que este proyecto tropieza con «cabia por
+                 casualidad». Cuantas caben SE CALCULA
+                 ⚠⚠ y sus numeros estaban EN DOS SITIOS --la pantalla y el
+                    autotest, escritos a mano-- que es la forma exacta del fallo
+                    de LAS TRES LISTAS DE MEDALLAS. Hoy los dos leen de
+                    `PanelTienda`, que vive en `main` porque cliente y servidor
+                    acaban EN EL MISMO JAR
+              ⚠⚠⚠ Y HABIA UN TOPE DE 18 ARTICULOS POR CATEGORIA (3 paginas). Con
+                 146 peluches y 367 muebles eso era NO TENER esas categorias. Su
+                 motivo era bueno --«nadie llegaria al final por pereza»-- y hoy
+                 hay BUSCADOR: se escribe y se filtra
+                 ⚠⚠ el filtro es DEL CLIENTE y el texto NO VIAJA, igual que en el
+                    mercado: un servidor no tiene idioma, y quien escriba
+                    «peluche» no encontraria `pokedoll_eevee` jamas
+                 ⚠⚠ y EL CLIC RECORRE LO FILTRADO, lo mismo que el dibujado. Si
+                    leyera la lista completa, con el buscador puesto comprarias
+                    OTRO articulo del que ves, y cobrado
+              ⚠⚠⚠ «TODO ARTICULO ES DE COBBLEMON» ERA UN INVARIANTE Y FALLO AL
+                 DESPLEGAR ESTO. No estaba roto: estaba diciendo que una
+                 decision escrita habia cambiado, que es para lo que sirve. Se
+                 ACTUALIZO, no se borro -- hoy es una LISTA EXPLICITA de mods
+                 (cobblemon, cobblefurnies, pokeblocks, minecraft), asi que
+                 meter un quinto en la tienda es un acto deliberado y no el
+                 efecto lateral de un patron que casa de mas
+              ⚠⚠ Y `omitidos` DEJA DE SER UNA LINEA DE LOG. `load()` se salta el
+                 objeto que no exista y sigue --correcto-- pero lo contaba solo
+                 para el log. Con 620 articulos de CUATRO mods, basta con que
+                 uno no este en el servidor para que desaparezca una categoria
+                 entera. Comprobados los cuatro en el servidor, y ahora ademas
+                 lo vigila el autotest: 0 omitidos
+              ⚠ el generador BAJA LOS JARS DEL MANIFIESTO PUBLICADO y los cachea
+                por su huella. Antes leia un jar que alguien habia dejado en
+                build/ a mano y que NO ESTA EN GIT: en un clon limpio no se
+                podia ejecutar (la leccion de las seis pantallas en magenta)
+              ⚠ un mod de MUEBLES registra BLOQUES: su clave de idioma es
+                `block.cobblefurnies.oak_chair`, no `item.`. Mirando solo `item.`
+                salian CERO objetos y no daria error: daria una categoria vacia
+              ⚠ un PATRON en vez de 367 lineas: una lista a mano se queda vieja
+                en cuanto el mod cambia y no lo dice nadie
+              ⚠ el paquete pasa a ~38 KB, el 3,8 % del tope de un custom payload
+              ---- lo de antes, que sigue siendo cierto ------------------
               2 categorias . 9 articulos . SIN migracion: la logica
               (ShopService, ShopCatalog) llevaba escrita desde PHASE 3 y
               lo unico que faltaba era la pantalla

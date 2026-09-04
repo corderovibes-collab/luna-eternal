@@ -969,30 +969,55 @@ public final class AutoTest {
                 nombresConColor = false;
             }
         }
-        // ⚠⚠ SOLO ARTICULOS DE COBBLEMON. Decision del usuario (2026-08-23):
-        //    lo de Minecraft se consigue explorando. Y encaja con lo que ya
-        //    habia: las bayas y las bellotas son justo lo que da XP al oficio
-        //    AGRICULTOR, y la madera y la piedra lo del MINERO -- venderlas
-        //    competiria con los oficios que acabamos de construir.
+        // ⚠⚠⚠ AQUI PONIA «SOLO ARTICULOS DE COBBLEMON», Y ESA DECISION SE
+        //    REVOCO (2026-09-04). El usuario pidio seis apartados nuevos, y
+        //    tres de ellos NO son de Cobblemon: los muebles son de
+        //    `cobblefurnies`, los peluches de `pokeblocks` y los cultivos de
+        //    vainilla.
         //
-        //    Se comprueba aqui porque es la clase de regla que se cae sola: el
-        //    catalogo se genera, pero alguien puede editarlo a mano un martes.
-        boolean soloCobblemon = true;
-        boolean iconosCobblemon = true;
+        //    ⚠⚠ Y ESTA COMPROBACION HIZO EXACTAMENTE SU TRABAJO: fallo al
+        //       desplegar el catalogo nuevo. No estaba rota -- estaba diciendo
+        //       que una decision escrita habia cambiado, que es justo para lo
+        //       que sirve. Se ACTUALIZA, no se borra.
+        //
+        // ⚠⚠ LO QUE SE CONSERVA ES EL NUCLEO: la tienda no puede empezar a
+        //    vender cualquier cosa por accidente. Antes eso se decia con un
+        //    solo namespace y hoy con una LISTA EXPLICITA: meter un quinto mod
+        //    en la tienda pasa a ser un acto deliberado --tocar esta linea-- y
+        //    no el efecto lateral de un patron del generador que casa de mas.
+        //
+        //    Lo que dijo el usuario el 2026-08-23 sigue siendo cierto y sigue
+        //    escrito en `gen_tienda.py`: las bayas y los cultivos compiten con
+        //    el oficio AGRICULTOR. Eso ya no lo decide esta comprobacion --lo
+        //    decidio el usuario-- pero la palanca esta documentada: subir su
+        //    escalon, no quitar la categoria.
+        var permitidos = java.util.Set.of(
+                "cobblemon",      // lo de siempre
+                "cobblefurnies",  // muebles (MIT)
+                "pokeblocks",     // peluches
+                "minecraft");     // cultivos y utilidades, la excepcion
+        boolean soloPermitidos = true;
+        boolean iconosPermitidos = true;
         for (var c : catalog.categories()) {
-            if (!net.minecraft.registry.Registries.ITEM.getId(c.icon())
-                    .getNamespace().equals("cobblemon")) {
-                iconosCobblemon = false;
+            String nsIcono = net.minecraft.registry.Registries.ITEM.getId(c.icon())
+                    .getNamespace();
+            if (!permitidos.contains(nsIcono)) {
+                iconosPermitidos = false;
+                LunaEternal.LOG.error("El icono de {} es de «{}», que no esta en "
+                        + "la lista de la tienda", c.id(), nsIcono);
             }
             for (var e : c.entries()) {
-                if (!net.minecraft.registry.Registries.ITEM.getId(e.item())
-                        .getNamespace().equals("cobblemon")) {
-                    soloCobblemon = false;
+                String ns = net.minecraft.registry.Registries.ITEM.getId(e.item())
+                        .getNamespace();
+                if (!permitidos.contains(ns)) {
+                    soloPermitidos = false;
+                    LunaEternal.LOG.error("La tienda vende {} de «{}», que no esta "
+                            + "en la lista", e.item(), ns);
                 }
             }
         }
-        check("todo articulo de la tienda es de Cobblemon", soloCobblemon);
-        check("todo icono de categoria es de Cobblemon", iconosCobblemon);
+        check("todo articulo de la tienda sale de un mod de la lista", soloPermitidos);
+        check("todo icono de categoria sale de un mod de la lista", iconosPermitidos);
 
         // ⚠ NINGUN ARTICULO EN DOS CATEGORIAS. El servidor busca por
         //   (categoria, objeto), asi que dos precios para el mismo objeto se

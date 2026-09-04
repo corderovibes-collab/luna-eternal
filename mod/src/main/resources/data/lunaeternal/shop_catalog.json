@@ -2,20 +2,17 @@
   "_comment": [
     "GENERADO POR tools/gen_tienda.py — NO SE EDITA A MANO.",
     "",
-    "SOLO ARTICULOS DE COBBLEMON (decision del usuario, 2026-08-23). Lo de",
-    "Minecraft se consigue explorando, y las bayas y bellotas son justo lo que",
-    "da XP al oficio AGRICULTOR: venderlas competiria con el.",
+    "Los identificadores se comprueban contra los JARS QUE SIRVE EL MANIFIESTO,",
+    "que es literalmente lo que tiene el cliente. Si uno no existe, el generador",
+    "aborta en vez de publicar un hueco.",
     "",
-    "LOS PRECIOS SON PROVISIONALES. Salen de CINCO escalones definidos en el",
-    "generador, no de ochenta numeros escritos a mano, precisamente para que el",
-    "analisis de economia que falta sea cambiar cinco cifras. Los anclajes",
-    "vienen de la configuracion real de produccion: Poke Ball 400, Pocion 600,",
-    "Superpocion 900, Revivir 3000.",
+    "LOS PRECIOS SON PROVISIONALES. Salen de unos pocos ESCALONES definidos en el",
+    "generador, no articulo a articulo: el analisis de economia sera cambiar esas",
+    "cifras y reejecutar.",
     "",
-    "INVARIANTE: ningun objeto se vende al banco por mas de lo que cuesta.",
-    "El arranque lo comprueba y el autotest tambien. La recompra es un",
-    "PORCENTAJE del precio, no un numero suelto, para que no pueda romperse",
-    "por un despiste al teclear."
+    "Y LOS PELUCHES SE PAGAN EN LUNACOINS porque son identidad pura (T1). Los",
+    "objetos de CRIANZA no: deciden IVs y EVs, o sea progresion competitiva, y",
+    "eso por moneda de pago es la linea roja de D-007 y D-014."
   ],
   "categories": [
     {
@@ -81,6 +78,3113 @@
           "sell": 20
         }
       ]
+    },
+    {
+      "id": "crianza",
+      "name": "§dCrianza",
+      "icon": "cobblemon:destiny_knot",
+      "description": "Lo que decide qué hereda una cría. Se paga en Plata.",
+      "entries": [
+        {
+          "item": "cobblemon:destiny_knot",
+          "buy": 3000,
+          "sell": 300,
+          "label": "§fLazo Destino §8· hereda 5 IVs de los padres"
+        },
+        {
+          "item": "cobblemon:everstone",
+          "buy": 900,
+          "sell": 90,
+          "label": "§fPiedra Eterna §8· no evoluciona, y pasa su naturaleza"
+        },
+        {
+          "item": "cobblemon:oval_stone",
+          "buy": 600,
+          "sell": 60
+        },
+        {
+          "item": "cobblemon:link_cable",
+          "buy": 600,
+          "sell": 60
+        },
+        {
+          "item": "cobblemon:power_weight",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:power_bracer",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:power_belt",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:power_lens",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:power_band",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "cobblemon:power_anklet",
+          "buy": 900,
+          "sell": 90
+        }
+      ]
+    },
+    {
+      "id": "bayas",
+      "name": "§2Bayas",
+      "icon": "cobblemon:oran_berry",
+      "description": "Todas las bayas. Cultivarlas sigue dando XP de Agricultor.",
+      "entries": [
+        {
+          "item": "cobblemon:aguav_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:apicot_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:aspear_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:babiri_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:belue_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:bluk_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:candied_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:charti_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:cheri_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:chesto_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:chilan_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:chople_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:coba_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:colbur_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:cornn_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:custap_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:durin_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:eggant_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:enigma_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:figy_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:ganlon_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:grepa_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:haban_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:hondew_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:hopo_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:iapapa_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:jaboca_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:kasib_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:kebia_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:kee_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:kelpsy_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:lansat_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:leppa_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:liechi_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:lum_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:mago_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:magost_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:maranga_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:micle_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:nanab_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:nomel_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:occa_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:oran_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:pamtre_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:passho_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:payapa_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:pecha_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:persim_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:petaya_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:pinap_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:pomeg_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:qualot_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:rabuta_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:rawst_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:razz_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:rindo_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:roseli_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:rowap_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:salac_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:shuca_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:sitrus_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:spelon_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:starf_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:tamato_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:tanga_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:touga_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:wacan_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:watmel_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:wepear_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:wiki_berry",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "cobblemon:yache_berry",
+          "buy": 200,
+          "sell": 20
+        }
+      ]
+    },
+    {
+      "id": "cultivos",
+      "name": "§6Cultivos",
+      "icon": "minecraft:carrot",
+      "description": "Semillas y cosecha para empezar una huerta.",
+      "entries": [
+        {
+          "item": "minecraft:wheat_seeds",
+          "buy": 50,
+          "sell": 5
+        },
+        {
+          "item": "minecraft:beetroot_seeds",
+          "buy": 50,
+          "sell": 5
+        },
+        {
+          "item": "minecraft:melon_seeds",
+          "buy": 50,
+          "sell": 5
+        },
+        {
+          "item": "minecraft:pumpkin_seeds",
+          "buy": 50,
+          "sell": 5
+        },
+        {
+          "item": "minecraft:carrot",
+          "buy": 50,
+          "sell": 5
+        },
+        {
+          "item": "minecraft:potato",
+          "buy": 50,
+          "sell": 5
+        },
+        {
+          "item": "minecraft:sugar_cane",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "minecraft:cactus",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "minecraft:bamboo",
+          "buy": 120,
+          "sell": 12
+        }
+      ]
+    },
+    {
+      "id": "variedades",
+      "name": "§bVariedades",
+      "icon": "minecraft:water_bucket",
+      "description": "Cubos y utilidades sueltas que hacen falta a diario.",
+      "entries": [
+        {
+          "item": "minecraft:bucket",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "minecraft:water_bucket",
+          "buy": 600,
+          "sell": 60
+        },
+        {
+          "item": "minecraft:lava_bucket",
+          "buy": 900,
+          "sell": 90
+        },
+        {
+          "item": "minecraft:milk_bucket",
+          "buy": 200,
+          "sell": 20,
+          "label": "§fLeche §8· quita cualquier efecto"
+        },
+        {
+          "item": "minecraft:name_tag",
+          "buy": 600,
+          "sell": 60
+        },
+        {
+          "item": "minecraft:lead",
+          "buy": 200,
+          "sell": 20
+        },
+        {
+          "item": "minecraft:shears",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "minecraft:flint_and_steel",
+          "buy": 120,
+          "sell": 12
+        }
+      ]
+    },
+    {
+      "id": "muebles",
+      "name": "§eMuebles",
+      "icon": "cobblefurnies:oak_chair",
+      "description": "Sillas, mesas, armarios y demás, en toda la madera.",
+      "entries": [
+        {
+          "item": "cobblefurnies:acacia_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:acacia_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:acacia_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:acacia_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:acacia_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:apricorn_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:apricorn_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:apricorn_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:apricorn_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:apricorn_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:azure_mosaic",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:bamboo_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:bamboo_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:bamboo_floor",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:bamboo_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:bamboo_planks",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:bamboo_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:bamboo_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:birch_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:birch_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:birch_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:birch_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:birch_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:black_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:blue_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:bonsai_plant",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:brown_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:butter_mosaic",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:ces",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cherry_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cherry_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cherry_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cherry_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cherry_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:crimson_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:crimson_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:crimson_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:crimson_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:crimson_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:cyan_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:dark_fridge",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:dark_oak_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:dark_oak_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:dark_oak_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:dark_oak_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:dark_oak_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:dark_toilet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:furnicrafter",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:goldenrod_mosaic",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:gray_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:green_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:iced_porcelain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:ironlace_ceramic",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:jungle_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:jungle_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:jungle_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:jungle_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:jungle_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:kitchen_floor",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lab_floor",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_blue_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_fridge",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_gray_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:light_toilet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:lime_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:magenta_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:mangrove_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:mangrove_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:mangrove_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:mangrove_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:mangrove_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:mini_topiary",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:minted_porcelain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:oak_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:oak_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:oak_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:oak_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:oak_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:orange_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pale_ceramic",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pink_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:poke_ball_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:poke_ball_desk",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:pool_ceramic",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:potted_pothos",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:purple_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:red_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:saccharine_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:saccharine_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:saccharine_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:saccharine_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:saccharine_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:spruce_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:spruce_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:spruce_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:spruce_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:spruce_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:statue_ancient",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:statue_bulbasaur",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:statue_charmander",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:statue_pikachu",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:statue_squirtle",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:tv",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:vanilla_mosaic",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:warped_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:warped_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:warped_nightstand",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:warped_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:warped_wall_support",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:white_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_armchair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_cabinetry",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_curtain",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_dark_chair",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_dark_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_dark_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_drawer",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_lamp",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_poke_wool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_poke_wool_carpet",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_sink",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_sofa",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_stool",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_stove",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_table",
+          "buy": 120,
+          "sell": 12
+        },
+        {
+          "item": "cobblefurnies:yellow_upper_cabinet",
+          "buy": 120,
+          "sell": 12
+        }
+      ]
+    },
+    {
+      "id": "peluches",
+      "name": "§5Peluches",
+      "icon": "pokeblocks:pokedoll_eevee",
+      "description": "El peluche de tu Pokémon. Se pagan en LunaCoins.",
+      "entries": [
+        {
+          "item": "pokeblocks:pokedoll_absol",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_ampharos",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_arboliva",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_beartic",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_bellossom",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_blastoise",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_bulbasaur",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_bulbasaur_posed",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_calyrex",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_calyrex_animated",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_cetoddle",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_charmander",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_cloyster",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_corviknight",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_corvisquire",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_cubchoo",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_cubchoo_animated",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_delibird",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_dolliv",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_drifloon",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_eevee",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_eiscue",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_eiscue_noice",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_flaaffy",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_frigibax",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_froslass",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_furret",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_gastly",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_gengar",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_gholdengo",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_glalie",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_happiny",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_ivysaur",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_kyogre",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_lickitung",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_luvdisc",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_mareep",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_marshadow",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_marshadow_zenith",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_mimikyu",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_munchlax",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_netherite_gholdengo",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_palossand",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_phantump",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_piloswine",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_pumpkaboo",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_quagsire",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_rabsca",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_rellor",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_riolu",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_rookidee",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_rowlet",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_sableye",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_sandygast",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_sentret",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shellder",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_absol",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_ampharos",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_arboliva",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_beartic",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_bellossom",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_blastoise",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_bulbasaur",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_bulbasaur_posed",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_calyrex",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_calyrex_animated",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_cetoddle",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_charmander",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_cloyster",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_corviknight",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_corvisquire",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_cubchoo",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_cubchoo_animated",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_delibird",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_dolliv",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_drifloon",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_eevee",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_eiscue",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_eiscue_noice",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_flaaffy",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_frigibax",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_froslass",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_furret",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_gastly",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_gengar",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_gholdengo",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_glalie",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_happiny",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_ivysaur",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_kyogre",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_lickitung",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_luvdisc",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_mareep",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_marshadow",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_marshadow_zenith",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_mimikyu",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_munchlax",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_netherite_gholdengo",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_palossand",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_phantump",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_piloswine",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_pumpkaboo",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_quagsire",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_rabsca",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_rellor",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_riolu",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_rookidee",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_rowlet",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_sableye",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_sandygast",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_sentret",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_shellder",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_smoliv",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_snorlax",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_snorunt",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_snorunt_family",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_spheal",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_squirtle",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_stonjourner",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_swinub",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_treecko",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_trevenant",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_tropius",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_venusaur",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_wailmer",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_wailord",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_wartortle",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_wooper",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_skibidi_mewlet",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_smoliv",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_snorlax",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_snorunt",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_snorunt_family",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_spheal",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_squirtle",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_stonjourner",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_swinub",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_treecko",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_trevenant",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_tropius",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_venusaur",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_wailmer",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_wailord",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_wartortle",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_washing_machine",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_wooper",
+          "buy": 40,
+          "sell": 0
+        }
+      ],
+      "currency": "REPORTCOIN"
     }
   ]
 }

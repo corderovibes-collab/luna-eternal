@@ -50,8 +50,30 @@ public final class ShopCatalog {
 
     private final List<Category> categories;
 
-    private ShopCatalog(List<Category> categories) {
+    /**
+     * Cuántos artículos del JSON se han caído por no existir el objeto.
+     *
+     * <h2>⚠⚠⚠ ESTE NÚMERO ERA SOLO UNA LÍNEA DE LOG, Y NADIE MIRA EL LOG</h2>
+     *
+     * {@code load()} se salta el objeto que no exista y sigue. Eso está bien —
+     * un catálogo con un hueco es mejor que un servidor que no arranca— pero
+     * <b>callarlo no</b>: el síntoma es un artículo que se generó, se publicó y
+     * <b>no aparece</b>, sin un solo error a la vista.
+     *
+     * <p>⚠⚠ Y con 620 artículos de <b>cuatro mods distintos</b> deja de ser
+     * teórico: basta con que uno de esos mods no esté en el servidor para que
+     * <b>una categoría entera</b> desaparezca. Hoy lo comprueba el autotest.
+     */
+    private final int omitidos;
+
+    /** Ver {@link #omitidos}. */
+    public int omitidos() {
+        return omitidos;
+    }
+
+    private ShopCatalog(List<Category> categories, int omitidos) {
         this.categories = categories;
+        this.omitidos = omitidos;
     }
 
     public List<Category> categories() {
@@ -111,7 +133,7 @@ public final class ShopCatalog {
                     List.copyOf(entries)));
             }
 
-            ShopCatalog catalog = new ShopCatalog(List.copyOf(categories));
+            ShopCatalog catalog = new ShopCatalog(List.copyOf(categories), skipped);
             catalog.validate();
 
             LunaEternal.LOG.info("Tienda: {} categorías, {} objetos ({} omitidos por no existir)",

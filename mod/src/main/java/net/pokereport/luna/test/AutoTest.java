@@ -1066,6 +1066,15 @@ public final class AutoTest {
         //    menos-- y la comprobacion habria seguido pasando, midiendo una
         //    pantalla que ya no existe. Hoy sale de `PanelTienda`.
         int porPagina = net.pokereport.luna.pokepad.PanelTienda.filasPorPagina();
+        // ⚠⚠⚠ NI UN ARTICULO CAIDO. `ShopCatalog.load` se salta el objeto que no
+        //    exista y sigue --que esta bien: un hueco es mejor que un servidor
+        //    que no arranca-- pero hasta hoy eso solo salia EN UNA LINEA DE LOG
+        //    que nadie mira. Con 620 articulos de CUATRO MODS distintos deja de
+        //    ser teorico: si uno de esos mods no estuviera en el servidor,
+        //    desapareceria UNA CATEGORIA ENTERA sin un solo error.
+        check("ningun articulo del catalogo se ha caido (" + catalog.omitidos()
+                + " omitidos)", catalog.omitidos() == 0);
+
         check("cabe al menos un articulo por pagina", porPagina >= 1);
         boolean alcanzables = true;
         for (var c : catalog.categories()) {

@@ -53,6 +53,34 @@ public final class PanelTienda {
         return Math.max(1, (n + porPagina() - 1) / porPagina());
     }
 
+    // ---- la mitad de la derecha: la lista de artículos ---------------------
+    //
+    // ⚠⚠ ESTABAN ESCRITOS OTRA VEZ EN EL AUTOTEST, igual que los del panel:
+    //    `(494 - 2*14 - 58) / (62 + 6)`. Al meter el buscador esa cuenta pasó a
+    //    mentir --sobra una fila menos-- y nada lo habría dicho: la comprobación
+    //    seguiría pasando, midiendo una pantalla que ya no existe.
+
+    /** La zona de artículos del chasis. */
+    public static final int PANT_H = 494;
+    public static final int MARGEN = 14;
+    /** Fila de artículo, y el aire entre dos. */
+    public static final int FILA_ALTO = 62, FILA_AIRE = 6;
+    /** La franja de abajo: «Cantidad x1 x8 x64» y los avisos. */
+    public static final int PIE_ALTO = 58;
+    /** El buscador, encima de las filas. */
+    public static final int BUSCA_ALTO = 28, BUSCA_AIRE = 6;
+
+    /** Cuántos artículos entran en una página. */
+    public static int filasPorPagina() {
+        return Math.max(1, (PANT_H - 2 * MARGEN - PIE_ALTO - (BUSCA_ALTO + BUSCA_AIRE))
+                / (FILA_ALTO + FILA_AIRE));
+    }
+
+    /** Cuántas páginas hacen falta para {@code n} artículos. */
+    public static int paginasArticulos(int n) {
+        return Math.max(1, (n + filasPorPagina() - 1) / filasPorPagina());
+    }
+
     /**
      * Lo que ocupa la lista, en píxeles, con {@code filas} tarjetas dibujadas
      * y contando el pager si hace falta.

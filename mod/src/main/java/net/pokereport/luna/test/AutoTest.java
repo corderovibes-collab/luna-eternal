@@ -1054,9 +1054,30 @@ public final class AutoTest {
         for (var c : catalog.categories()) {
             mayor = Math.max(mayor, c.entries().size());
         }
-        int porPagina = (494 - 2 * 14 - 58) / (62 + 6);
-        check("ninguna categoria pasa de 3 paginas (" + mayor + " articulos, "
-                + porPagina + " por pagina)", mayor <= porPagina * 3);
+        // ⚠⚠⚠ AQUI HABIA UN TOPE DE TRES PAGINAS, Y CAYO CON EL BUSCADOR
+        //    (2026-09-04). El motivo escrito era bueno --«nadie llegaria nunca
+        //    al final por pereza»-- y la pantalla no tenia otra forma de
+        //    recorrer una lista larga. Ahora si: se escribe y se filtra.
+        //    Con 146 peluches y 372 muebles, un tope de 18 articulos por
+        //    categoria significaba NO TENER ESAS CATEGORIAS.
+        //
+        // ⚠⚠ Y SUS NUMEROS ESTABAN ESCRITOS OTRA VEZ: `(494-2*14-58)/(62+6)`.
+        //    Al meter el buscador esa cuenta paso a mentir --sobra una fila
+        //    menos-- y la comprobacion habria seguido pasando, midiendo una
+        //    pantalla que ya no existe. Hoy sale de `PanelTienda`.
+        int porPagina = net.pokereport.luna.pokepad.PanelTienda.filasPorPagina();
+        check("cabe al menos un articulo por pagina", porPagina >= 1);
+        boolean alcanzables = true;
+        for (var c : catalog.categories()) {
+            int n = c.entries().size();
+            if (net.pokereport.luna.pokepad.PanelTienda.paginasArticulos(n) * porPagina < n) {
+                alcanzables = false;
+                LunaEternal.LOG.error("La categoria {} tiene {} articulos y no se "
+                        + "puede llegar a todos", c.id(), n);
+            }
+        }
+        check("se puede llegar a todos los articulos de cada categoria ("
+                + mayor + " en la mayor, " + porPagina + " por pagina)", alcanzables);
 
         // ⚠ EL DESBORDE DEL PRECIO. La pantalla multiplica precio x cantidad y
         //   la cantidad la elige el CLIENTE. El servidor la acota a 64 antes de

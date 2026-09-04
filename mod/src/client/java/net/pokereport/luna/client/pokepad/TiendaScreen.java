@@ -56,7 +56,7 @@ public class TiendaScreen extends Screen {
     private static final int PANT_X = 460, PANT_Y = 204, PANT_W = 801, PANT_H = 494;
     private static final int NAV_ALTO = PanelTienda.NAV_ALTO;
 
-    private static final int MARGEN = 14;
+    private static final int MARGEN = PanelTienda.MARGEN;
     private static final int CAT_ALTO = PanelTienda.CAT_ALTO,
             CAT_AIRE = PanelTienda.CAT_AIRE;
 
@@ -70,7 +70,27 @@ public class TiendaScreen extends Screen {
     private static final int PAGER_ALTO = PanelTienda.PAGER_ALTO;
     private static final int CAT_POR_PAGINA = PanelTienda.porPagina();
 
-    private static final int FILA_ALTO = 62, FILA_AIRE = 6;
+    private static final int FILA_ALTO = PanelTienda.FILA_ALTO,
+            FILA_AIRE = PanelTienda.FILA_AIRE;
+
+    /**
+     * EL BUSCADOR, Y LO QUE CUESTA.
+     *
+     * <p>⚠⚠⚠ SIN EL, UNA CATEGORIA GRANDE ES INALCANZABLE EN LA PRACTICA.
+     *    Los peluches son <b>146</b> y los muebles <b>372</b>: a seis por
+     *    pagina eran 25 y 62 paginas de pulsar una flecha. Nadie llega al
+     *    final, y el sintoma no es un error -- es un articulo que existe, se
+     *    paga y <b>no se encuentra</b>.
+     *
+     * <p>⚠⚠ CUESTA UNA FILA (de 6 a 5), y se paga a proposito: una fila mas
+     *    no sirve de nada en una lista de 372.
+     *
+     * <p>⚠ Y VA SIEMPRE, no solo en las categorias grandes. Si apareciera y
+     *   desapareciera, las filas se moverian de sitio al cambiar de categoria
+     *   y pulsar dos veces seguidas fallaria la segunda.
+     */
+    private static final int BUSCA_ALTO = PanelTienda.BUSCA_ALTO,
+            BUSCA_AIRE = PanelTienda.BUSCA_AIRE;
 
     /** La banda naranja del chasis, medida sobre el PNG. Igual que en Cosméticos. */
     private static final int PAG_Y = 698 + (745 - 698 - 40) / 2;
@@ -104,6 +124,7 @@ public class TiendaScreen extends Screen {
     private int categoria = 0;
     /** Que pagina del PANEL se mira. No es `pagina`, que es la de articulos. */
     private int paginaCat = 0;
+    private net.minecraft.client.gui.widget.TextFieldWidget campoBusqueda;
     private int pagina = 0;
     private int cantidad = 0;
 
@@ -119,6 +140,18 @@ public class TiendaScreen extends Screen {
     @Override
     protected void init() {
         recalcular();
+        // ⚠ SE CONSERVA LO ESCRITO al recalcular (cambio de tamaño de ventana):
+        //   `init` se vuelve a llamar y perder el filtro a media busqueda
+        //   parece que la pantalla se ha reiniciado sola.
+        String escrito = campoBusqueda == null ? "" : campoBusqueda.getText();
+        campoBusqueda = new net.minecraft.client.gui.widget.TextFieldWidget(
+                textRenderer, px(PANT_X + MARGEN), py(PANT_Y + MARGEN),
+                pl(PANT_W - 2 * MARGEN), Math.max(12, pl(BUSCA_ALTO)),
+                Text.literal(""));
+        campoBusqueda.setMaxLength(48);
+        campoBusqueda.setText(escrito);
+        addSelectableChild(campoBusqueda);
+
         ClientPlayNetworking.send(new Red.PedirTienda());
         // El saldo se pide aparte: la tienda lo enseña arriba y tiene que estar
         // al día antes de la primera compra, no después.
@@ -170,15 +203,50 @@ public class TiendaScreen extends Screen {
     }
 
     private int filasCaben() {
-        return (PANT_H - 2 * MARGEN - 58) / (FILA_ALTO + FILA_AIRE);
+        return PanelTienda.filasPorPagina();
+    }
+
+    /**
+     * Los articulos que se ven: los de la categoria, pasados por el buscador.
+     *
+     * <p>⚠⚠ SE FILTRA EN EL CLIENTE Y EL TEXTO NO VIAJA, igual que en el
+     *    mercado y por el mismo motivo: <b>un servidor no tiene idioma</b>. Lo
+     *    que el servidor tiene guardado son identificadores en ingles, asi que
+     *    quien escriba «peluche» no encontraria {@code pokedoll_eevee} jamas.
+     *    Aqui los nombres ya estan traducidos por el cliente.
+     *
+     * <p>⚠ Busca por el nombre <b>y</b> por el identificador: quien sepa que
+     *   quiere un {@code eevee} no tiene por que escribirlo en español.
+     */
+    private List<Red.EntradaTienda> articulos() {
+        var c = actual();
+        if (c == null) {
+            return List.of();
+        }
+        String q = campoBusqueda == null ? ""
+                : campoBusqueda.getText().trim().toLowerCase(java.util.Locale.ROOT);
+        if (q.isEmpty()) {
+            return c.entradas();
+        }
+        var salida = new java.util.ArrayList<Red.EntradaTienda>();
+        for (var e : c.entradas()) {
+            String nombre = pila(e.item()).getName().getString()
+                    .toLowerCase(java.util.Locale.ROOT);
+            if (nombre.contains(q)
+                    || e.item().toLowerCase(java.util.Locale.ROOT).contains(q)
+                    || limpio(e.etiqueta()).toLowerCase(java.util.Locale.ROOT).contains(q)) {
+                salida.add(e);
+            }
+        }
+        return salida;
     }
 
     private int paginas() {
-        var c = actual();
-        if (c == null || c.entradas().isEmpty()) {
+        int n = articulos().size();
+        if (n == 0) {
             return 1;
         }
-        return (c.entradas().size() + filasCaben() - 1) / filasCaben();
+        return (n + filasCaben() - 1) / filasCaben();
     }
 
     private ItemStack pila(String id) {
@@ -265,6 +333,7 @@ public class TiendaScreen extends Screen {
         // ⚠ DOS PASADAS: todo el 2D primero, luego `ctx.draw()`, y solo entonces
         //   los objetos 3D. Mezclarlos hace que el 2D se pinte ENCIMA de los
         //   modelos, porque van por lotes distintos. Regla 3 de dibujado.md.
+        dibujarBuscador(ctx);
         dibujarFilas(ctx, rx, ry, false);
         dibujarPie(ctx, rx, ry);
         ctx.draw();
@@ -407,8 +476,20 @@ public class TiendaScreen extends Screen {
                 PANEL_X + PANEL_W / 2, y + 5, 18, TEXTO_SUAVE, true, false);
     }
 
+    private void dibujarBuscador(DrawContext ctx) {
+        if (campoBusqueda == null) {
+            return;
+        }
+        campoBusqueda.render(ctx, 0, 0, 0);
+        if (campoBusqueda.getText().isEmpty()) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.tienda.buscar"),
+                    PANT_X + MARGEN + 8, PANT_Y + MARGEN + 8, 14, 0xFF8892AC,
+                    false, false);
+        }
+    }
+
     private int filaY(int n) {
-        return PANT_Y + MARGEN + n * (FILA_ALTO + FILA_AIRE);
+        return PANT_Y + MARGEN + BUSCA_ALTO + BUSCA_AIRE + n * (FILA_ALTO + FILA_AIRE);
     }
 
     /**
@@ -428,15 +509,25 @@ public class TiendaScreen extends Screen {
             }
             return;
         }
+        var visibles = articulos();
         int desde = pagina * filasCaben();
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
 
+        // ⚠ Un filtro que no encuentra nada LO DICE. Una lista vacia sin
+        //   explicacion se lee como «la tienda esta rota».
+        if (visibles.isEmpty() && !objetos) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.tienda.sin_resultados"),
+                    PANT_X + PANT_W / 2, PANT_Y + PANT_H / 2 - 20, 20, TEXTO_SUAVE,
+                    true, false);
+            return;
+        }
+
         for (int n = 0; n < filasCaben(); n++) {
             int i = desde + n;
-            if (i >= c.entradas().size()) {
+            if (i >= visibles.size()) {
                 break;
             }
-            var e = c.entradas().get(i);
+            var e = visibles.get(i);
             int y = filaY(n);
 
             if (objetos) {
@@ -564,6 +655,11 @@ public class TiendaScreen extends Screen {
                     pl(PANEL_W - 32), pl(CAT_ALTO))) {
                 categoria = i;
                 pagina = 0;
+                // ⚠ El filtro es DE LA LISTA QUE MIRAS. Arrastrarlo a otra
+                //   categoria la enseñaria medio vacia sin decir por que.
+                if (campoBusqueda != null) {
+                    campoBusqueda.setText("");
+                }
                 aviso = "";
                 sonar();
                 return true;
@@ -609,7 +705,45 @@ public class TiendaScreen extends Screen {
             }
         }
 
+        if (campoBusqueda != null && campoBusqueda.mouseClicked(mx, my, boton)) {
+            setFocused(campoBusqueda);
+            return true;
+        }
+
         return clicFilas(rx, ry) || super.mouseClicked(mx, my, boton);
+    }
+
+    @Override
+    public boolean keyPressed(int tecla, int escaneo, int mods) {
+        // ⚠ ESCAPE CON EL BUSCADOR ENFOCADO LIMPIA EL FILTRO en vez de cerrar
+        //   la tienda: cerrar una pantalla entera por querer borrar lo escrito
+        //   es de las cosas que mas molestan.
+        if (tecla == 256 && getFocused() == campoBusqueda
+                && !campoBusqueda.getText().isEmpty()) {
+            campoBusqueda.setText("");
+            pagina = 0;
+            return true;
+        }
+        if (getFocused() == campoBusqueda
+                && campoBusqueda.keyPressed(tecla, escaneo, mods)) {
+            pagina = 0;
+            return true;
+        }
+        return super.keyPressed(tecla, escaneo, mods);
+    }
+
+    @Override
+    public boolean charTyped(char c, int mods) {
+        if (getFocused() == campoBusqueda) {
+            // ⚠⚠ VUELTA A LA PAGINA 1 EN CUANTO CAMBIA EL FILTRO. Si estabas en
+            //    la pagina 9 y el filtro deja tres resultados, te quedarias
+            //    mirando una pagina VACIA -- sin error, y con pinta de que no
+            //    hay nada que comprar.
+            boolean r = campoBusqueda.charTyped(c, mods);
+            pagina = 0;
+            return r;
+        }
+        return super.charTyped(c, mods);
     }
 
     private boolean clicFilas(int rx, int ry) {
@@ -617,14 +751,20 @@ public class TiendaScreen extends Screen {
         if (c == null) {
             return false;
         }
+        // ⚠⚠ RECORRE `articulos()`, LO MISMO QUE EL DIBUJADO. Si el clic leyera
+        //    la categoria SIN FILTRAR, con el buscador puesto comprarias el
+        //    articulo que ocupa esa posicion en la lista COMPLETA -- o sea otro
+        //    distinto del que estas viendo, y cobrado. Es el fallo de la
+        //    rejilla del PokePad con dinero de por medio.
+        var visibles = articulos();
         int desde = pagina * filasCaben();
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
         for (int n = 0; n < filasCaben(); n++) {
             int i = desde + n;
-            if (i >= c.entradas().size()) {
+            if (i >= visibles.size()) {
                 break;
             }
-            var e = c.entradas().get(i);
+            var e = visibles.get(i);
             int y = filaY(n);
 
             if (dentro(rx, ry, px(ax + aw - 300), py(y + 13), pl(140), pl(36))) {

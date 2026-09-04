@@ -145,6 +145,29 @@ public class KitsScreen extends Screen {
         return pulsado > 0 && System.currentTimeMillis() - pulsado < 1500;
     }
 
+    /**
+     * ¿Esta fila es un kit de objetos en vez de un traje que se dibuja?
+     *
+     * <p>⚠⚠ LO DICE EL SERVIDOR, no una lista de identificadores aquí. Una lista
+     * paralela en el cliente es exactamente lo que esta misma pantalla ya tuvo
+     * —los cinco rangos escritos a mano— y lo que se queda mintiendo el día que
+     * cambia el otro lado, sin dar ningún error.
+     */
+    private static boolean esKit(Red.FichaTraje f) {
+        return f != null && f.espera() >= 0;
+    }
+
+    /** «2 h 15 min», para el botón y para el pie de la fila. */
+    private static Text cuanto(int segundos) {
+        int h = segundos / 3600;
+        int m = (segundos % 3600) / 60;
+        if (h > 0) {
+            return Text.translatable("pokepad.lunaeternal.trajes.kit_espera_h", h, m);
+        }
+        return Text.translatable("pokepad.lunaeternal.trajes.kit_espera_m",
+                Math.max(1, m));
+    }
+
     private List<Red.FichaTraje> fichas() {
         return estado == null ? List.of() : estado.fichas();
     }
@@ -338,7 +361,17 @@ public class KitsScreen extends Screen {
 
             Text pie;
             int colorPie;
-            if (llevo) {
+            if (esKit(t)) {
+                // ⚠ Un kit no se «lleva puesto»: se reclama. Por eso su pie no
+                //   pasa por ninguno de los estados de abajo.
+                if (t.espera() == 0) {
+                    pie = Text.translatable("pokepad.lunaeternal.trajes.kit_listo");
+                    colorPie = 0xFF5CD68A;
+                } else {
+                    pie = cuanto(t.espera());
+                    colorPie = 0xFF9FB6D8;
+                }
+            } else if (llevo) {
                 pie = Text.translatable("pokepad.lunaeternal.trajes.puesto");
                 colorPie = 0xFF5CD68A;
             } else if (!t.listo()) {
@@ -362,12 +395,24 @@ public class KitsScreen extends Screen {
         // ---- el botón --------------------------------------------------
         var sel = ficha(elegido);
         boolean llevo = loLleva(sel);
-        boolean activo = sel != null && !esperando()
-                && (llevo || (sel.listo() && sel.puede()));
+        Text etiqueta;
+        boolean activo;
+        int color;
+        if (esKit(sel)) {
+            activo = !esperando() && sel.espera() == 0;
+            etiqueta = sel.espera() == 0
+                    ? Text.translatable("pokepad.lunaeternal.trajes.reclamar")
+                    : cuanto(sel.espera());
+            color = VERDE;
+        } else {
+            activo = sel != null && !esperando()
+                    && (llevo || (sel.listo() && sel.puede()));
+            etiqueta = Text.translatable(llevo ? "pokepad.lunaeternal.trajes.quitar"
+                                               : "pokepad.lunaeternal.trajes.poner");
+            color = llevo ? ROJO : VERDE;
+        }
         boton(ctx, rx, ry, listaX(), PANT_Y + PANT_H - MARGEN - 56, listaW(), 50,
-                Text.translatable(llevo ? "pokepad.lunaeternal.trajes.quitar"
-                                        : "pokepad.lunaeternal.trajes.poner"),
-                activo, llevo ? ROJO : VERDE);
+                etiqueta, activo, color);
     }
 
     /**
@@ -463,13 +508,22 @@ public class KitsScreen extends Screen {
             }
             var sel = ficha(elegido);
             boolean llevo = loLleva(sel);
-            if (sel != null && !esperando()
-                    && (llevo || (sel.listo() && sel.puede()))
+            boolean puedePulsar = esKit(sel)
+                    ? sel.espera() == 0
+                    : (sel != null && (llevo || (sel.listo() && sel.puede())));
+            if (sel != null && !esperando() && puedePulsar
                     && dentro(rx, ry, px(listaX()), py(PANT_Y + PANT_H - MARGEN - 56),
                               pl(listaW()), pl(50))) {
                 sonar();
                 pulsado = System.currentTimeMillis();
-                ClientPlayNetworking.send(new Red.AccionTraje(llevo ? "" : sel.id()));
+                // ⚠⚠ DOS PAQUETES DISTINTOS Y NO UNO QUE SIGNIFIQUE DOS COSAS.
+                //    Reutilizar `AccionTraje` mirando si el id es un kit se lee
+                //    bien el dia que se escribe y mal cualquier otro.
+                if (esKit(sel)) {
+                    ClientPlayNetworking.send(new Red.ReclamarKit(sel.id()));
+                } else {
+                    ClientPlayNetworking.send(new Red.AccionTraje(llevo ? "" : sel.id()));
+                }
                 return true;
             }
         }

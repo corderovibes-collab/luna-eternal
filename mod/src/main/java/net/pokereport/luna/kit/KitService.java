@@ -9,6 +9,13 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import net.minecraft.item.ItemStack;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.pokereport.luna.LunaEternal;
+
 /**
  * Reclamación de kits, con el cooldown en la base de datos.
  *
@@ -129,6 +136,96 @@ public final class KitService {
                 c.setAutoCommit(true);
             }
         }
+    }
+
+    /**
+     * Construye la pila de un objeto del kit, con sus encantamientos.
+     *
+     * <p>⚠ Un encantamiento que no exista se salta con un aviso en vez de tumbar
+     * la entrega: el jugador prefiere su armadura sin encantar a no recibir
+     * nada, y el aviso deja rastro para arreglarlo.
+     */
+    public static ItemStack pila(KitCatalog.KitItem it, MinecraftServer servidor) {
+        ItemStack pila = new ItemStack(it.item(), it.count());
+        if (it.encantamientos().isEmpty()) {
+            return pila;
+        }
+        var registro = servidor.getRegistryManager()
+                .getWrapperOrThrow(RegistryKeys.ENCHANTMENT);
+        for (var e : it.encantamientos().entrySet()) {
+            var clave = RegistryKey.of(RegistryKeys.ENCHANTMENT, e.getKey());
+            var entrada = registro.getOptional(clave);
+            if (entrada.isEmpty()) {
+                LunaEternal.LOG.warn("El encantamiento {} no existe: se entrega sin el",
+                        e.getKey());
+                continue;
+            }
+            pila.addEnchantment(entrada.get(), e.getValue());
+        }
+        return pila;
+    }
+
+    /**
+     * Entrega un kit a un jugador conectado.
+     *
+     * <h2>⚠⚠⚠ SE COMPRUEBA EL SITIO ANTES DE RECLAMAR, NO DESPUÉS</h2>
+     *
+     * {@link #claim} marca la fecha y arranca el reloj de 24 h. Si se marcara
+     * primero y luego no cupiera nada, el jugador <b>habría gastado el kit</b> y
+     * las piezas estarían por el suelo o perdidas. Por eso el hueco se cuenta
+     * antes: con la mochila llena no se reclama y no se gasta nada.
+     *
+     * <h2>⚠⚠ Y SI ALGO FALLA DESPUÉS DE MARCAR, SE DESHACE</h2>
+     *
+     * Es la única parte que no puede vivir en la transacción —un inventario no
+     * es una tabla— así que se deshace a mano, igual que hace el escaparate
+     * cuando no se puede pagar la tasa.
+     *
+     * @return {@code null} si fue bien; si no, la razón para enseñársela
+     */
+    public String entregar(ServerPlayerEntity jugador, long playerId,
+                           KitCatalog.Kit kit) throws SQLException {
+        // ⚠ El rango se mira aqui y no en la pantalla: el cliente manda un
+        //   identificador y nada mas (P6).
+        if (kit.requiredRank() != null) {
+            var pide = net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank());
+            if (net.pokereport.luna.ui.Tablist.escalonDe(jugador) < pide.escalon) {
+                return "te falta el rango " + kit.requiredRank();
+            }
+        }
+
+        int libres = 0;
+        var inv = jugador.getInventory();
+        for (int i = 0; i < inv.main.size(); i++) {
+            if (inv.main.get(i).isEmpty()) {
+                libres++;
+            }
+        }
+        if (libres < kit.items().size()) {
+            return "necesitas " + kit.items().size() + " huecos libres en la mochila";
+        }
+
+        if (!claim(playerId, kit)) {
+            return "todavia no toca";
+        }
+
+        var servidor = jugador.getServer();
+        try {
+            for (var it : kit.items()) {
+                ItemStack pila = pila(it, servidor);
+                if (!inv.insertStack(pila)) {
+                    // ⚠ No deberia pasar --el hueco se conto antes-- pero si
+                    //   pasa, al suelo antes que al vacio.
+                    jugador.dropItem(pila, false);
+                }
+            }
+        } catch (Exception e) {
+            LunaEternal.LOG.error("Fallo al entregar el kit {} a {}", kit.id(),
+                    jugador.getGameProfile().getName(), e);
+            undo(playerId, kit);
+            return "no se pudo entregar; vuelve a intentarlo";
+        }
+        return null;
     }
 
     /**

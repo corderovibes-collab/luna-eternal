@@ -1180,14 +1180,32 @@ public class Red implements ModInitializer {
     }
 
     /** Un traje en la pantalla: si se puede llevar, y si no, por que no. */
+    /**
+     * Una fila de la pantalla de KITS.
+     *
+     * <p>⚠⚠ {@code espera} distingue las dos clases de entrada que hay ahi, y por
+     * eso viaja un numero y no un booleano:
+     *
+     * <pre>
+     *   -1   es un TRAJE: se pone y se quita, se dibuja encima
+     *    0   es un KIT y se puede reclamar ya
+     *   &gt;0   es un KIT y faltan N segundos
+     * </pre>
+     *
+     * <p>⚠ Asi el cliente no necesita saber CUALES son kits: se lo dice el
+     * servidor. Una lista de identificadores en el cliente seria una lista
+     * paralela, y esas se quedan viejas -- ya nos paso con los cinco rangos
+     * escritos a mano en esta misma pantalla.
+     */
     public record FichaTraje(String id, int pideEscalon, boolean listo,
-                             boolean puede) {
+                             boolean puede, int espera) {
         public static final PacketCodec<RegistryByteBuf, FichaTraje> CODEC =
                 PacketCodec.tuple(
                         CADENA, FichaTraje::id,
                         PacketCodecs.VAR_INT, FichaTraje::pideEscalon,
                         PacketCodecs.BOOL, FichaTraje::listo,
                         PacketCodecs.BOOL, FichaTraje::puede,
+                        PacketCodecs.VAR_INT, FichaTraje::espera,
                         FichaTraje::new);
     }
 
@@ -1217,6 +1235,27 @@ public class Red implements ModInitializer {
     }
 
     /** «Ponme este traje» -- vacio para quitarselo. */
+    /**
+     * «Dame el kit». Es distinto de {@link AccionTraje} a proposito.
+     *
+     * <p>⚠⚠ Se podria haber reutilizado `AccionTraje` mirando si el id es un kit,
+     * y seria un paquete que significa dos cosas segun el contenido. Eso se lee
+     * bien el dia que se escribe y mal cualquier otro: el que lo toque dentro de
+     * seis meses tiene que saber que «ponerse el entrenador» en realidad entrega
+     * cuatro objetos.
+     */
+    public record ReclamarKit(String kit) implements CustomPayload {
+        public static final Id<ReclamarKit> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "reclamar_kit"));
+        public static final PacketCodec<RegistryByteBuf, ReclamarKit> CODEC =
+                PacketCodec.tuple(CADENA, ReclamarKit::kit, ReclamarKit::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record AccionTraje(String traje) implements CustomPayload {
         public static final Id<AccionTraje> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_traje"));
@@ -2200,6 +2239,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(EstadoExplorar.ID, EstadoExplorar.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirTrajes.ID, PedirTrajes.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionTraje.ID, AccionTraje.CODEC);
+        PayloadTypeRegistry.playC2S().register(ReclamarKit.ID, ReclamarKit.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoTrajes.ID, EstadoTrajes.CODEC);
         PayloadTypeRegistry.playS2C().register(TrajeDe.ID, TrajeDe.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirViajes.ID, PedirViajes.CODEC);
@@ -2283,6 +2323,49 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(PedirTrajes.ID, (carga, ctx) ->
                 enviarTrajes(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(ReclamarKit.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                String fallo;
+                try {
+                    // ⚠ El kit se busca POR IDENTIFICADOR en NUESTRO catalogo, y
+                    //   ademas tiene que ser un traje marcado como kit: asi un
+                    //   cliente modificado no puede pedir el «diario» desde esta
+                    //   pantalla (P6).
+                    var t = net.pokereport.luna.traje.Traje.de(carga.kit());
+                    var kit = t != null && t.esKit()
+                            ? LunaEternal.kits().byId(t.id()) : null;
+                    if (kit == null) {
+                        return;
+                    }
+                    long id = LunaEternal.players().resolve(
+                            jugador.getUuid(), jugador.getGameProfile().getName());
+                    fallo = LunaEternal.kitService().entregar(jugador, id, kit);
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("No se pudo entregar el kit a {}",
+                            jugador.getGameProfile().getName(), e);
+                    return;
+                }
+                final String razon = fallo;
+                jugador.getServer().execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (razon == null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.trajes.kit_entregado"), false);
+                    } else {
+                        jugador.sendMessage(net.minecraft.text.Text.literal(
+                                "§7No se pudo reclamar: " + razon), false);
+                    }
+                    // ⚠ Se reenvia SIEMPRE, salga bien o mal: el reloj de 24 h
+                    //   arranca al entregar y el boton tiene que reflejarlo sin
+                    //   que el jugador reabra la pantalla.
+                    enviarTrajes(jugador);
+                });
+            });
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(AccionTraje.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -4281,22 +4364,60 @@ public class Red implements ModInitializer {
         }
     }
 
-    /** Manda a un jugador su pantalla de trajes. */
+    /**
+     * Manda a un jugador su pantalla de KITS.
+     *
+     * <p>⚠⚠ VA FUERA DEL HILO DEL SERVIDOR porque ahora lee la espera del kit en
+     * la base (R1). Lo que se lee de memoria —el rango y qué trajes tiene— se
+     * podría leer aquí mismo; el reloj de 24 h no. Se calcula todo fuera y se
+     * envía dentro.
+     */
     public static void enviarTrajes(
             net.minecraft.server.network.ServerPlayerEntity jugador) {
-        int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
-        var fichas = new java.util.ArrayList<FichaTraje>();
-        for (var t : net.pokereport.luna.traje.Traje.todos()) {
-            // ⚠ `puede` ya NO sale del rango: sale de lo que ha adquirido.
-            //   El campo del protocolo no cambia -- lo que cambia es quien
-            //   responde-- asi que un cliente viejo sigue entendiendolo.
-            fichas.add(new FichaTraje(t.id(), t.pide().escalon, t.listo(),
-                    net.pokereport.luna.traje.TrajeService.tiene(
-                            jugador.getUuid(), t)));
-        }
-        String puesto = net.pokereport.luna.traje.TrajeService.enCache(jugador.getUuid());
-        ServerPlayNetworking.send(jugador,
-                new EstadoTrajes(puesto == null ? "" : puesto, escalon, fichas));
+        LunaEternal.submit(() -> {
+            int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
+            var fichas = new java.util.ArrayList<FichaTraje>();
+            long id = -1;
+            for (var t : net.pokereport.luna.traje.Traje.todos()) {
+                int espera = -1;
+                if (t.esKit()) {
+                    // ⚠ -1 seguiria significando «no es un kit», asi que un
+                    //   fallo al leer NO puede dejarlo en -1: se dice que falta
+                    //   mucho, que es el lado seguro (no se entrega de mas).
+                    espera = Integer.MAX_VALUE;
+                    var kit = LunaEternal.kits().byId(t.id());
+                    if (kit != null) {
+                        try {
+                            if (id < 0) {
+                                id = LunaEternal.players().resolve(jugador.getUuid(),
+                                        jugador.getGameProfile().getName());
+                            }
+                            var st = LunaEternal.kitService().status(id, kit);
+                            espera = st.claimable() ? 0
+                                    : (int) Math.max(1, java.time.Duration.between(
+                                        java.time.LocalDateTime.now(),
+                                        st.nextAvailable()).getSeconds());
+                        } catch (Exception e) {
+                            LunaEternal.LOG.warn("No se pudo leer la espera del kit {}"
+                                    + " de {}: {}", t.id(),
+                                    jugador.getGameProfile().getName(), e.toString());
+                        }
+                    }
+                }
+                fichas.add(new FichaTraje(t.id(), t.pide().escalon, t.listo(),
+                        net.pokereport.luna.traje.TrajeService.tiene(
+                                jugador.getUuid(), t),
+                        espera));
+            }
+            String puesto = net.pokereport.luna.traje.TrajeService
+                    .enCache(jugador.getUuid());
+            var carga = new EstadoTrajes(puesto == null ? "" : puesto, escalon, fichas);
+            jugador.getServer().execute(() -> {
+                if (!jugador.isRemoved()) {
+                    ServerPlayNetworking.send(jugador, carga);
+                }
+            });
+        });
     }
 
     /**

@@ -1789,6 +1789,46 @@ public final class AutoTest {
         if (catalogo == null) return;
         check("hay kits definidos", !catalogo.kits().isEmpty());
 
+        // ⚠⚠⚠ UN TRAJE MARCADO COMO KIT TIENE QUE TENER SU KIT, Y CON EL MISMO
+        //    NOMBRE. La pantalla ensena el boton RECLAMAR porque el servidor le
+        //    dice que esa fila es un kit; si el identificador no cuadra con
+        //    ninguno del catalogo, el boton sale, se pulsa Y NO PASA NADA. Sin
+        //    error, sin traza. Es el fallo de los 62 cosmeticos que no existian,
+        //    y ya nos mordio este mismo mes con «arceus» en vez de «leyenda».
+        boolean sinKit = false;
+        for (var t : net.pokereport.luna.traje.Traje.todos()) {
+            if (t.esKit() && catalogo.byId(t.id()) == null) {
+                sinKit = true;
+                LunaEternal.LOG.error("El traje {} dice ser un kit y no hay ningun "
+                        + "kit con ese id en kits.json", t.id());
+            }
+        }
+        check("todo traje que dice ser un kit tiene su kit", !sinKit);
+
+        // ⚠⚠ Y SUS ENCANTAMIENTOS TIENEN QUE EXISTIR. Uno mal escrito no da
+        //    error: se salta con un aviso que nadie mira y el jugador recibe la
+        //    armadura SIN encantar. Se comprueba contra el registro de verdad,
+        //    no contra una lista nuestra.
+        boolean encMal = false;
+        // ⚠ Los registros ya los tiene el AutoTest: hacen falta para codificar
+        //   paquetes de verdad, y sirven igual para esto.
+        var registro = registros.getWrapperOrThrow(
+                net.minecraft.registry.RegistryKeys.ENCHANTMENT);
+        for (var k : catalogo.kits()) {
+            for (var it : k.items()) {
+                for (var id : it.encantamientos().keySet()) {
+                    var clave = net.minecraft.registry.RegistryKey.of(
+                            net.minecraft.registry.RegistryKeys.ENCHANTMENT, id);
+                    if (registro.getOptional(clave).isEmpty()) {
+                        encMal = true;
+                        LunaEternal.LOG.error("El kit {} pide el encantamiento {}, "
+                                + "que no existe", k.id(), id);
+                    }
+                }
+            }
+        }
+        check("los encantamientos de los kits existen", !encMal);
+
         long inyeccionDiaria = catalogo.kits().stream()
             .mapToLong(net.pokereport.luna.kit.KitCatalog.Kit::dailyValue).sum();
         check("la inyeccion diaria de los kits esta bajo el tope",

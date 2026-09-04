@@ -1080,6 +1080,29 @@ Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
                     reves, era lo primero: una linea en `giroJava`
               ⚠ los brazos y las piernas ENSEÑAN PIEL a proposito: las texturas
                 del autor son parciales, no estan incompletas
+              ⚠⚠⚠ EL ENTRENADOR NO ES UN TRAJE: ES UN KIT DE OBJETOS (2026-09-03,
+                 decision del usuario). Las cuatro piezas de COTA DE MALLA de
+                 vainilla con Proteccion I, que se quitan, se guardan y se
+                 pierden al morir. Se reclama desde la misma pantalla y vuelve a
+                 estar cada 24 h
+                 ⚠ malla porque en vainilla NO SE CRAFTEA: solo sale por comando
+                   o comerciando, asi que regalarla no compite con ninguna receta
+                 ⚠⚠ Y ESTA SI PROTEGE, al reves que los otros cuatro. Es GRATIS
+                    para todos, asi que no cruza la linea de D-007/D-014 --lo que
+                    prohibe es VENDER poder-- pero es armadura gratis para todo
+                    el mundo y toca el equilibrio de combate
+                 ⚠⚠⚠ `KitService.claim` SOLO APUNTABA LA FECHA: no entregaba nada
+                    y no lo llamaba nadie. El catalogo llevaba escrito desde
+                    PHASE 3 sin puerta, como el inicial y como la tienda
+                 ⚠⚠ EL HUECO SE CUENTA ANTES DE RECLAMAR. `claim` marca la fecha y
+                    arranca el reloj de 24 h: al reves, con la mochila llena el
+                    jugador habria GASTADO el kit y las piezas al suelo
+                 ⚠ y si algo falla despues de marcar, se DESHACE a mano: un
+                   inventario no es una tabla
+                 ⚠ `espera` viaja como NUMERO en la ficha: -1 traje, 0 reclamable,
+                   >0 segundos. Asi el cliente no necesita una lista de cuales son
+                   kits -- que es la lista paralela que ya mordio aqui
+                 ⚠ y son DOS PAQUETES, no uno que signifique dos cosas segun el id
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
               ---- lo de antes, que sigue siendo cierto ------------------
               5 trajes . ENTRENADOR hecho . los otros 4 «en preparacion»

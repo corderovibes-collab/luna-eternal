@@ -204,6 +204,7 @@ def _vainilla():
 
 TRAJES = {
     "entrenador": _vainilla,
+    "elite": _importado("elite"),
     "campeon": _importado("campeon"),
     "maestro": _importado("maestro"),
     "leyenda": _importado("leyenda"),
@@ -211,7 +212,7 @@ TRAJES = {
 
 # Los que se escriben en el mod. El ENTRENADOR es un banco de pruebas: su arte
 # se genera por formula y el usuario decidio que el bueno se dibuja a mano.
-AL_MOD = ("entrenador", "campeon", "maestro", "leyenda")
+AL_MOD = ("entrenador", "elite", "campeon", "maestro", "leyenda")
 
 
 # ---------------------------------------------------------------- comprobar

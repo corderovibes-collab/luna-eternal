@@ -49,6 +49,7 @@ CORONA = ARTE / "campeon-corona.bbmodel"
 CASCO = ARTE / "leyenda-arceus-casco.bbmodel"
 CUERPO = ARTE / "leyenda-arceus-cuerpo.bbmodel"
 MEWTWO = ARTE / "maestro-mewtwo.bbmodel"
+ELITE = ARTE / "elite.bbmodel"
 
 
 # ------------------------------------------------------------- el reparto
@@ -111,41 +112,53 @@ def _reparto_cuerpo(cabeza=()):
     return reparto
 
 
-# Los pares de miembros que en una skin COMPARTEN dibujo.
-PARES = (("armorRightArm", "armorLeftArm"),
-         ("armorRightLeg", "armorLeftLeg"),
-         ("armorRightBoot", "armorLeftBoot"))
-
-
 def _espejar_pares(t):
     """
-    Marca el espejo en el miembro de X POSITIVA cuando los dos comparten caja.
+    Marca el espejo en la pieza de X POSITIVA cuando dos comparten recuadro.
 
-    ⚠⚠⚠ ESTO ES LA REGLA DE VAINILLA, NO UNA CORRECCION AL AUTOR. En una skin de
-       64x32 los dos brazos leen EL MISMO recuadro de textura, y Minecraft dibuja
-       el de +X con `mirrored()`. La casilla 1 del reparto cae siempre en la cara
-       de X MINIMA: en el brazo de x negativa esa es la cara de FUERA, y en el de
-       x positiva es la de DENTRO. Sin el espejo, un brazo sale bien y el otro
-       con el dibujo cambiado de lado.
+    ⚠⚠⚠ ESTO ES LA REGLA DE VAINILLA, NO UNA CORRECCION AL AUTOR. Cuando dos
+       piezas leen EL MISMO recuadro de textura, Minecraft dibuja la de +X con
+       `mirrored()`. La casilla 1 del reparto cae siempre en la cara de X MINIMA:
+       en la pieza de x negativa esa es la cara de FUERA, y en la de x positiva
+       es la de DENTRO. Sin el espejo, una sale bien y la otra con el dibujo
+       cambiado de lado.
 
-    ⚠⚠ Y ASI SALIO: «la manga derecha quedo bien y la izquierda volteada». Un
-       brazo correcto y el otro no es la firma de este fallo -- si fuera el
-       convenio de caras, estarian mal los dos.
+    ⚠⚠ Y ASI SALIO EN EL JUEGO: «la manga derecha quedo bien y la izquierda
+       volteada». UNA correcta y la otra no es la firma de este fallo -- si
+       fuera el convenio de caras, estarian mal las dos.
 
-    ⚠ Se mira si COMPARTEN CAJA, no si el fichero trae `mirror_uv`. Dos motivos:
-      el .bbmodel marca el espejo en el miembro de X NEGATIVA --al reves que
-      vainilla-- y ademas, si algun dia cada brazo tiene su propio dibujo, no hay
+    ⚠⚠ SE BUSCA POR RECUADRO COMPARTIDO, NO POR HUESO. La primera version solo
+       miraba los tres pares de miembros (brazo, pierna, bota) y se dejaba fuera
+       lo que estuviera DENTRO de un mismo hueso: el casco del ELITE tiene sus
+       placas laterales emparejadas dos a dos dentro de `armorHead`, y les pasa
+       exactamente lo mismo. Agrupando por `caja_src` da igual donde vivan.
+
+    ⚠ Y se mira si COMPARTEN CAJA, no si el fichero trae `mirror_uv`: los
+      .bbmodel marcan el espejo en la pieza de X NEGATIVA --al reves que
+      vainilla-- y ademas, si algun dia cada lado tiene su propio dibujo, no hay
       nada que espejar y esto no hace nada.
     """
+    porCaja = {}
+    for hueso, cubos in t.huesos.items():
+        for c in cubos:
+            if c.caja_src:
+                porCaja.setdefault(c.caja_src, []).append((hueso, c))
+
     avisos = []
-    for der, izq in PARES:
-        a = [c for c in t.huesos.get(der, []) if c.caja_src]
-        b = [c for c in t.huesos.get(izq, []) if c.caja_src]
-        if len(a) != 1 or len(b) != 1 or a[0].caja_src != b[0].caja_src:
-            continue
-        b[0].espejo = True
-        avisos.append("%s comparte dibujo con %s: se espeja (la regla de vainilla)"
-                      % (izq, der))
+    for caja, lista in sorted(porCaja.items()):
+        if len(lista) != 2:
+            continue          # o es unica, o son mas de dos: no es un par
+        (h1, c1), (h2, c2) = lista
+        x1 = c1.origen[0] + c1.tam[0] / 2.0
+        x2 = c2.origen[0] + c2.tam[0] / 2.0
+        if x1 * x2 >= 0:
+            continue          # no son un par izquierda/derecha
+        derecha, izquierda = (c1, c2) if x1 < 0 else (c2, c1)
+        nombre = h2 if x1 < 0 else h1
+        izquierda.espejo = True
+        avisos.append("%s: la pieza en x=%+.1f comparte recuadro con la de "
+                      "x=%+.1f, se espeja (la regla de vainilla)"
+                      % (nombre, max(x1, x2), min(x1, x2)))
     return avisos
 
 
@@ -176,6 +189,34 @@ def campeon():
                   [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
 
 
+def _bajar(t, hueso, cuanto):
+    """
+    Baja un hueso entero. Devuelve el aviso, porque toca el modelo del autor.
+
+    ⚠ Mueve TAMBIEN el pivote de los cubos girados. Bajar solo el origen dejaria
+      cada pieza girando alrededor de un punto que ya no le corresponde: las que
+      no giran bajarian y las que giran ademas se DESPLAZARIAN de lado.
+    """
+    for c in t.huesos.get(hueso, []):
+        c.origen = (c.origen[0], round(c.origen[1] + cuanto, 5), c.origen[2])
+        if c.pivote:
+            c.pivote = (c.pivote[0], round(c.pivote[1] + cuanto, 5), c.pivote[2])
+    return ["%s: bajado %.2f" % (hueso, cuanto)]
+
+
+# ⚠⚠ EL CASCO DE MEWTWO SE QUEDABA ALTO Y ENSEÑABA LA CABEZA POR DEBAJO. No es
+#    que le falte geometria --es un casco ABIERTO a proposito, con placas
+#    laterales y nuca-- sino que TODO EL CONJUNTO empieza en y = 24,92 y la
+#    cabeza del jugador empieza en 24: por esos 0,92 se le ve el cuello.
+#    Bajandolo 1,0 el borde queda en 23,92, justo por debajo de la cabeza.
+#
+#    ⚠ «Cuanto tapa el casco» NO sirve de medida aqui, y lo comprobe: al ser
+#      abierto deja el 99% de la superficie de la cabeza a la vista tanto antes
+#      como despues. Lo que se mide es el BORDE DE ABAJO contra la base de la
+#      cabeza, que es lo que el usuario ve.
+MAESTRO_BAJAR_CASCO = -1.0
+
+
 # ----------------------------------------------------------------- MAESTRO
 
 def maestro():
@@ -186,7 +227,22 @@ def maestro():
     t, avisos = _traje("maestro", "Traje MAESTRO · Mewtwo",
                        [(doc, _reparto_cuerpo(cabeza=("armorHead",)), None)])
     avisos += _hombreras_al_reves(t)
+    avisos += _bajar(t, "armorHead", MAESTRO_BAJAR_CASCO)
     return t, avisos
+
+
+# ------------------------------------------------------------------- ELITE
+
+def elite():
+    """El casco y la armadura de ELITE. Un solo fichero, cuerpo entero.
+
+    ⚠ No lleva hombreras: sus dos barras del torso son de 2x2x1 y viven en
+      `armorBody`, asi que `_hombreras_al_reves` no toca nada aqui -- y por eso
+      no se llama, en vez de llamarla y que avise de que no encuentra ninguna.
+    """
+    doc = leer(ELITE)
+    return _traje("elite", "Traje ELITE",
+                  [(doc, _reparto_cuerpo(cabeza=("armorHead", "bipedHead")), None)])
 
 
 # ----------------------------------------------------------------- LEYENDA

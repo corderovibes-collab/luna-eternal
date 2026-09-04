@@ -65,10 +65,10 @@ public enum Traje {
     //      consigue por comando o comerciando, asi que darla no compite con
     //      ninguna receta.
     ENTRENADOR("entrenador", Tablist.Rank.ENTRENADOR, false),
-    ELITE("elite", Tablist.Rank.ELITE, false),
-    // ⚠ CAMPEON, MAESTRO y LEYENDA vienen de los .bbmodel del usuario, que
-    //   estan en el repo (arte/trajes/). ELITE sigue sin arte, y el ENTRENADOR
-    //   no es un traje sino un kit.
+    ELITE("elite", Tablist.Rank.ELITE, true),
+    // ⚠ ELITE, CAMPEON, MAESTRO y LEYENDA vienen de los .bbmodel del usuario,
+    //   que estan en el repo (arte/trajes/). El ENTRENADOR no es un traje sino
+    //   un kit de objetos.
     CAMPEON("campeon", Tablist.Rank.CAMPEON, true),
     MAESTRO("maestro", Tablist.Rank.MAESTRO, true),
     LEYENDA("leyenda", Tablist.Rank.LEYENDA, true);

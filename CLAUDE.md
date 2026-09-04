@@ -1009,10 +1009,28 @@ Viajes        LAS PARADAS, POR FIN EN SU SITIO (2026-08-27)
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
 
 Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
-              5 trajes . CAMPEON y LEYENDA HECHOS (2026-09-03, del Blockbench
-              del usuario) . ENTRENADOR, ELITE y MAESTRO en preparacion
-              CAMPEON  la corona de gemas y su armadura dorada
-              LEYENDA  el casco de Arceus, su armadura y la rueda de la espalda
+              LOS CINCO PUESTOS (2026-09-03), y el ENTRENADOR no es un traje
+              ENTRENADOR  KIT de objetos: cota de malla de vainilla con
+                          Proteccion I, se reclama cada 24 h (ver abajo)
+              ELITE       casco con cresta, hombreras y bandas doradas
+              CAMPEON     la corona de gemas y su armadura dorada
+              MAESTRO     el casco de Mewtwo, con orejas y tubo en la nuca
+              LEYENDA     el casco de Arceus, su armadura y la rueda
+              ⚠⚠ EL ARBOL DEL .bbmodel NO MANDA: en el de Mewtwo el grupo
+                 `armorHead` cuelga DENTRO de `right_arm` --un arrastre en
+                 Blockbench, que alli no cambia nada-- y mirando solo el grupo
+                 raiz los 21 cubos del casco se habrian ido AL BRAZO, girando con
+                 el. Hoy la cabeza se busca EN TODO EL CAMINO de grupos
+              ⚠⚠ EL ESPEJO SE DECIDE POR RECUADRO COMPARTIDO, no por hueso. La
+                 primera version solo miraba los tres pares de miembros y se
+                 dejaba fuera lo que estuviera DENTRO de un mismo hueso: las
+                 placas laterales del casco del ELITE van emparejadas dentro de
+                 `armorHead` y les pasa lo mismo
+              ⚠ el casco de Mewtwo se bajo 1,0: TODO el conjunto empezaba en
+                y=24,92 y la cabeza empieza en 24, asi que por esos 0,92 se veia
+                el cuello. «Cuanto tapa» NO sirve de medida en un casco ABIERTO
+                --deja el 99% de la cabeza a la vista antes y despues--: lo que
+                se mide es el BORDE DE ABAJO contra la base de la cabeza
               python tools/gen_trajes.py --generar     lee arte/trajes/*.bbmodel
               detalle del importador en docs/ui/trajes-flujo.md §5
               ⚠⚠⚠ LA Z ESTABA VOLTEADA EN EL DIBUJADO DESDE QUE SE ESCRIBIO, y no

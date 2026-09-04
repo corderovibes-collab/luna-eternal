@@ -93,6 +93,14 @@ public final class CatalogoPad {
             new Ficha("explorar",   true),
             // ⚠ LA DECIMOSEXTA, y por eso cae en la PÁGINA 2. No hubo que quitar
             //   ninguna: la rejilla ya pagina y reordena (OrdenPad).
+            // ⚠ LA DECIMOSEPTIMA, y cae en la PAGINA 2 SIN DESPLAZAR A NADIE:
+            //   la pagina 1 son quince y ya estaban llenas. Ponerla arriba
+            //   habria bajado a `explorar`, y eso es una decision del usuario,
+            //   no mia -- y ademas cada jugador reordena la rejilla (OrdenPad).
+            // ⚠⚠ ARRANCA APAGADA: su pantalla todavia no existe. La celda sale
+            //    bloqueada en vez de desaparecer, que es la regla de esta lista
+            //    -- enseñar lo que va a haber es informacion; esconderlo, no.
+            new Ficha("protecciones", false),
             new Ficha("curar",      true),
             // ⚠ La WIKI baja aquí desde el hueco 10. Sigue bloqueada, y ese es
             //   justo el motivo: lo que todavía no lleva a ningún sitio no ocupa

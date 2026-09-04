@@ -163,10 +163,37 @@ TEXTO_SOLAPE = TEXTO_ALTO // 2
 #    (2026-09-02, decision del usuario). `wiki` lleva bloqueada desde que
 #    existe el Pad, asi que estaba gastando uno de los quince huecos que se
 #    ven al abrir para no llevar a ningun sitio.
-ORDEN = ["pokedex", "cosmeticos", "trabajos", "misiones", "warps",
-         "clan", "gts", "tienda", "tesoros", "cartas",
-         "cazas", "kits", "mochila", "gyms", "explorar",
-         "curar", "wiki"]
+def _orden_del_catalogo():
+    """
+    Las aplicaciones del Pad, LEIDAS DE `CatalogoPad.java`.
+
+    ⚠⚠⚠ AQUI HABIA UNA SEGUNDA LISTA ESCRITA A MANO, y es exactamente la
+       forma del fallo de LAS TRES LISTAS DE MEDALLAS: nada obligaba a que
+       coincidiera con la de Java. Desordenadas, este generador escribiria el
+       icono de una aplicacion con el nombre de otra --y el jugador veria el
+       dibujo equivocado en la celda equivocada, SIN UN SOLO ERROR--. Con una
+       de mas, un PNG que no usa nadie; con una de menos, una celda en MAGENTA.
+
+    ⚠⚠ Se lee del fuente y no se duplica, que es mejor que comprobarlo: asi
+       no puede pasar. Y si el fichero cambiara de forma, esto ABORTA en vez de
+       devolver una lista a medias -- una lista vacia aqui borraria los
+       diecisiete iconos sin decir nada.
+    """
+    import re
+    java = (RAIZ / "mod" / "src" / "main" / "java" / "net" / "pokereport" / "luna"
+            / "pokepad" / "CatalogoPad.java")
+    if not java.exists():
+        raise SystemExit(f"No encuentro {java}: sin el no se en que orden van "
+                         f"las aplicaciones del Pad")
+    ids = re.findall(r'new Ficha\(\s*"([a-z_]+)"', java.read_text(encoding="utf-8"))
+    if len(ids) < 10:
+        raise SystemExit(f"Solo he sacado {len(ids)} aplicaciones de "
+                         f"CatalogoPad.java: ha cambiado de forma, y seguir "
+                         f"borraria iconos que si existen")
+    return ids
+
+
+ORDEN = _orden_del_catalogo()
 
 # El grosor del borde de la celda y el tamano de la esquina mordida, tambien
 # x4. A 1 px sobre una celda de 124 ninguno de los dos se ve.

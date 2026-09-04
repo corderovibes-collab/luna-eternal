@@ -423,6 +423,7 @@
   "pokepad.lunaeternal.tienda.cantidad": "CANTIDAD",
   "pokepad.lunaeternal.tienda.comprar": "COMPRAR",
   "pokepad.lunaeternal.tienda.no_vendible": "NO SE VENDE",
+  "pokepad.lunaeternal.tienda.recompra": "Se recompra por %s %s",
   "pokepad.lunaeternal.tienda.sin_resultados": "No hay nada que coincida.",
   "pokepad.lunaeternal.tienda.tienes": "tienes %s",
   "pokepad.lunaeternal.tienda.tu_saldo": "TU SALDO",

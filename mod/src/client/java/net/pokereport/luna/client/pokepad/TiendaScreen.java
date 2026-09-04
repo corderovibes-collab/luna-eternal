@@ -125,6 +125,8 @@ public class TiendaScreen extends Screen {
     /** Que pagina del PANEL se mira. No es `pagina`, que es la de articulos. */
     private int paginaCat = 0;
     private net.minecraft.client.gui.widget.TextFieldWidget campoBusqueda;
+    /** El articulo bajo el raton, para la ventanita. Se pone al dibujar. */
+    private Red.EntradaTienda bajoElRaton;
     private int pagina = 0;
     private int cantidad = 0;
 
@@ -333,12 +335,79 @@ public class TiendaScreen extends Screen {
         // ⚠ DOS PASADAS: todo el 2D primero, luego `ctx.draw()`, y solo entonces
         //   los objetos 3D. Mezclarlos hace que el 2D se pinte ENCIMA de los
         //   modelos, porque van por lotes distintos. Regla 3 de dibujado.md.
+        bajoElRaton = null;
         dibujarBuscador(ctx);
         dibujarFilas(ctx, rx, ry, false);
         dibujarPie(ctx, rx, ry);
         ctx.draw();
         dibujarIconosCategorias(ctx);
         dibujarFilas(ctx, rx, ry, true);
+
+        // ⚠⚠ LA VENTANITA VA LA ULTIMA, y no es una preferencia: se dibuja
+        //    ENCIMA de todo, modelos 3D incluidos. Puesta antes, las filas
+        //    siguientes y los objetos se pintarian por encima de ella.
+        dibujarVentanita(ctx, rx, ry);
+    }
+
+    /**
+     * La ventanita del articulo bajo el raton.
+     *
+     * <p>⚠⚠ AQUI VA LO QUE NO CABE EN LA FILA. La fila tiene sitio para el
+     * nombre y el precio y ya; la descripcion, cuantos tienes y por cuanto se
+     * recompra se leen aqui. Antes la descripcion se metia en la fila y se
+     * salia por debajo del boton.
+     *
+     * <p>⚠ El nombre del objeto se pide al CLIENTE ({@code getName}), que lo
+     * resuelve en el idioma del jugador. El servidor no tiene idioma.
+     */
+    private void dibujarVentanita(DrawContext ctx, int rx, int ry) {
+        var e = bajoElRaton;
+        if (e == null) {
+            return;
+        }
+        var lineas = new java.util.ArrayList<Text>();
+        lineas.add(pila(e.item()).getName().copy()
+                .formatted(net.minecraft.util.Formatting.WHITE));
+        if (!e.etiqueta().isEmpty()) {
+            // La etiqueta trae sus propios codigos de color del catalogo.
+            for (String linea : partir(e.etiqueta(), 260, 12)) {
+                lineas.add(Text.literal(linea)
+                        .formatted(net.minecraft.util.Formatting.GRAY));
+            }
+        }
+        lineas.add(Text.literal(String.format("%,d", e.compra()) + " "
+                + nombreMoneda(e.moneda()))
+                .formatted(net.minecraft.util.Formatting.GOLD));
+        if (e.venta() > 0) {
+            lineas.add(Text.translatable("pokepad.lunaeternal.tienda.recompra",
+                    String.format("%,d", e.venta()), nombreMoneda(e.moneda()))
+                    .formatted(net.minecraft.util.Formatting.DARK_GRAY));
+        }
+        int mios = tengo(e.item());
+        if (mios > 0) {
+            lineas.add(Text.translatable("pokepad.lunaeternal.tienda.tienes", mios)
+                    .formatted(net.minecraft.util.Formatting.DARK_GRAY));
+        }
+        ctx.drawTooltip(textRenderer, lineas, rx, ry);
+    }
+
+    /**
+     * El texto, recortado a lo que cabe, con puntos suspensivos.
+     *
+     * <p>⚠ Se mide con {@link #anchoArte}, que es el ancho REAL de la fuente a
+     * ese tamaño: contar caracteres no vale, porque una «i» y una «M» no miden
+     * lo mismo y el recorte quedaria corto o seguiria saliendose.
+     */
+    private String recortar(String texto, int anchoMax, int alto) {
+        if (anchoArte(texto, alto) <= anchoMax) {
+            return texto;
+        }
+        String puntos = "…";
+        int n = texto.length();
+        while (n > 0 && anchoArte(texto.substring(0, n) + puntos, alto) > anchoMax) {
+            n--;
+        }
+        return texto.substring(0, n).stripTrailing() + puntos;
     }
 
     private void dibujarNavegacion(DrawContext ctx, int rx, int ry) {
@@ -540,10 +609,24 @@ public class TiendaScreen extends Screen {
                     encima ? FILA_ENCIMA : FILA_FONDO);
             marco(ctx, px(ax), py(y), pl(aw), pl(FILA_ALTO), FILA_BORDE, Math.max(1, pl(2)));
 
+            if (encima) {
+                bajoElRaton = e;
+            }
+
+            // ⚠⚠⚠ EL NOMBRE SE RECORTA, Y ANTES NO. «Máx. Revivir · para la
+            //    Máquina Curativa» se metia POR DEBAJO del boton COMPRAR: el
+            //    texto se dibujaba entero y el boton encima, asi que la
+            //    etiqueta salia cortada a media palabra y con el fondo del
+            //    boton detras. No daba ningun error -- solo se veia mal.
+            //    El hueco es lo que hay ENTRE el icono y el primer boton, y se
+            //    CALCULA de las dos posiciones: escrito a mano volveria a
+            //    mentir el dia que un boton se mueva.
+            int huecoNombre = (aw - 300) - 58 - 12;
             String nombre = e.etiqueta().isEmpty()
                     ? pila(e.item()).getName().getString()
                     : limpio(e.etiqueta());
-            texto(ctx, Text.literal(nombre), ax + 58, y + 10, 21, TEXTO_OSCURO, false, true);
+            texto(ctx, Text.literal(recortar(nombre, huecoNombre, 21)),
+                    ax + 58, y + 10, 21, TEXTO_OSCURO, false, true);
 
             long total = e.compra() * CANTIDADES[cantidad];
             long saldo = saldoDe(e.moneda());

@@ -1130,6 +1130,18 @@ Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
                    nunca-- y esa fila es justo la que un dia falta
                  ⚠ la clave primaria es (player_id, suit): conceder dos veces
                    FALLA EN LA BASE. Un webhook de Tebex reintenta
+                 ⚠⚠⚠ NACIO COMO V028 Y NO SE APLICO: los numeros 28 y 29 ya
+                    estaban cogidos por las CARTAS, que salen de OTRA RAMA y ya
+                    estaban en la base. El runner solo miraba «?esta aplicada la
+                    28?», dijo que si, Y SE LA SALTO SIN UNA LINEA EN EL LOG
+                    ⚠⚠ el fallo aparecio DESPUES Y CON OTRA CARA: «Table
+                       player_suit_owned doesn't exist», una vez por cada
+                       jugador que entraba. Nada apuntaba a la migracion
+                    hoy el runner compara tambien LA DESCRIPCION --que ya estaba
+                    guardada, asi que no hizo falta tocar el esquema-- y se
+                    NIEGA A ARRANCAR diciendo que renumeres
+                    ⚠ y por eso esta lista NO tiene la 28 ni la 29: son de otra
+                      rama. En una base NUEVA este jar no crearia sus tablas
               ⚠⚠ EL ESTADO NO ES DE QUIEN LO MIRA, y aqui es literal: un traje
                  lo ve TODO EL MUNDO MENOS TU. Se reparte a todos al cambiarlo
                  Y se pone al dia a quien entra -- esa segunda mitad es la que

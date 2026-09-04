@@ -60,6 +60,13 @@ SELECT player_id, LOWER(rank_id)
   FROM player
  WHERE rank_id IN ('ELITE', 'CAMPEON', 'MAESTRO', 'LEYENDA');
 
+-- ⚠⚠⚠ ESTO NACIO COMO V028 Y NO SE APLICO NUNCA. Los numeros 28 y 29 ya
+--    estaban cogidos por las migraciones de las CARTAS, que salieron de otra
+--    rama y ya estaban en la base. El runner solo miraba «¿esta ya aplicada la
+--    version 28?», dijo que si, y SE SALTO ESTA SIN UNA LINEA EN EL LOG. El
+--    fallo aparecio despues, con cara de otra cosa: «Table player_suit_owned
+--    doesn't exist» cada vez que alguien entraba.
+--    Hoy el runner compara tambien la DESCRIPCION y se niega a arrancar.
 INSERT INTO schema_version (version, description)
-VALUES (28, 'que trajes ha adquirido cada jugador')
+VALUES (30, 'que trajes ha adquirido cada jugador')
 ON DUPLICATE KEY UPDATE version = version;

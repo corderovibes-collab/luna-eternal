@@ -4287,8 +4287,12 @@ public class Red implements ModInitializer {
         int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
         var fichas = new java.util.ArrayList<FichaTraje>();
         for (var t : net.pokereport.luna.traje.Traje.todos()) {
+            // ⚠ `puede` ya NO sale del rango: sale de lo que ha adquirido.
+            //   El campo del protocolo no cambia -- lo que cambia es quien
+            //   responde-- asi que un cliente viejo sigue entendiendolo.
             fichas.add(new FichaTraje(t.id(), t.pide().escalon, t.listo(),
-                    t.puede(escalon)));
+                    net.pokereport.luna.traje.TrajeService.tiene(
+                            jugador.getUuid(), t)));
         }
         String puesto = net.pokereport.luna.traje.TrajeService.enCache(jugador.getUuid());
         ServerPlayNetworking.send(jugador,

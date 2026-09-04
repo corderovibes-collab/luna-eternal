@@ -1105,9 +1105,31 @@ Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
                     ABAJO desde el pivote del hueso. De ahi y = 24 - oy - sy y
                     z = -oz - sz. Copiada mal NO DA NINGUN ERROR: el traje sale
                     del reves, dentro del cuerpo, o flotando bajo los pies
-              ⚠⚠ NO HAY TABLA DE «QUE TRAJES TIENES»: se DERIVA del rango. Una
-                 segunda tabla seria una copia que puede quedarse vieja. De
-                 propina, BAJAR DE RANGO RETIRA EL TRAJE SOLO
+              ⚠⚠⚠ CADA TRAJE SE ADQUIERE POR SEPARADO (2026-09-03, V028, decision
+                 del usuario). REVOCA lo que decia V023. Comprar LEYENDA da
+                 LEYENDA Y NADA MAS; el ENTRENADOR es gratis; quien suba de ELITE
+                 a CAMPEON con descuento SE QUEDA CON LOS DOS
+                 /luna traje <jugador>                 que tiene y que lleva
+                 /luna traje dar|quitar <jug> <traje>  nivel 4, lo llama Tebex
+                 ⚠⚠ ESO NO SE PUEDE DERIVAR DEL RANGO, y por eso hay tabla: un
+                    jugador tiene UN rango y puede tener VARIOS trajes. V023 decia
+                    lo contrario --«se deriva, asi no puede desincronizarse»-- y
+                    era correcto PARA EL MODELO DE ENTONCES
+                 ⚠⚠ Y LO QUE V023 DABA GRATIS AHORA SE PAGA A MANO: alli, bajar de
+                    rango retiraba el traje alto SIN ESCRIBIR UNA LINEA. Hoy no, y
+                    es lo correcto: lo comprado no se quita porque cambie el rango.
+                    Lo que si retira es una DEVOLUCION, y de eso se encarga
+                    `revisar` al entrar
+                 ⚠⚠ LA MIGRACION RELLENA. Sin el relleno, el permiso pasa de salir
+                    del rango a salir de una tabla que NACE VACIA: todo LEYENDA
+                    entraria y no podria ponerse el suyo, sin un solo error. Se le
+                    concede EL DE SU RANGO, que es lo que pago
+                 ⚠ EL ENTRENADOR NO VA EN LA TABLA: es gratis, y un traje gratis
+                   es una REGLA (`Traje.gratis()`), no un dato. En la tabla haria
+                   falta una fila por jugador --incluidos los que no han entrado
+                   nunca-- y esa fila es justo la que un dia falta
+                 ⚠ la clave primaria es (player_id, suit): conceder dos veces
+                   FALLA EN LA BASE. Un webhook de Tebex reintenta
               ⚠⚠ EL ESTADO NO ES DE QUIEN LO MIRA, y aqui es literal: un traje
                  lo ve TODO EL MUNDO MENOS TU. Se reparte a todos al cambiarlo
                  Y se pone al dia a quien entra -- esa segunda mitad es la que

@@ -345,11 +345,12 @@ public class KitsScreen extends Screen {
                 pie = Text.translatable("pokepad.lunaeternal.trajes.preparacion");
                 colorPie = TEXTO_SUAVE;
             } else if (!t.puede()) {
-                // ⚠ Y el nombre del rango va como Text TRADUCIBLE, no como
-                //   cadena: metido en crudo saldria en español dentro de una
-                //   frase en ingles.
-                pie = Text.translatable("pokepad.lunaeternal.trajes.bloqueado",
-                        Text.translatable("pokepad.lunaeternal.rango." + t.id()));
+                // ⚠⚠ YA NO DICE «necesitas el rango X», y el cambio no es de
+                //    estilo: desde V028 cada traje se adquiere por separado, asi
+                //    que tener el rango NO lo desbloquea. El mensaje viejo
+                //    mandaba a la gente a subir de rango para conseguir algo que
+                //    subir de rango no da.
+                pie = Text.translatable("pokepad.lunaeternal.trajes.bloqueado");
                 colorPie = 0xFFB07A3A;
             } else {
                 pie = Text.translatable("pokepad.lunaeternal.trajes.disponible");

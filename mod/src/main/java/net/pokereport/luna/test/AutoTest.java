@@ -2496,19 +2496,53 @@ public final class AutoTest {
         //    impide vender humo: sin esto, se equipa, se sincroniza, no da
         //    ningun error y el jugador NO VE NADA. Es el fallo de los 62
         //    cosmeticos que no existian, otra vez.
+        // Un jugador de mentira que lo tiene TODO comprado: si aun asi no puede
+        // ponerse un traje sin arte, la guarda esta donde tiene que estar.
+        var quienSea = java.util.UUID.randomUUID();
         boolean humo = false;
         for (var t : todos) {
-            if (!t.listo() && t.puede(99)) {
+            if (!t.listo() && net.pokereport.luna.traje.TrajeService.tiene(quienSea, t)) {
                 humo = true;
                 LunaEternal.LOG.error("El traje {} no tiene arte y se puede poner",
                         t.id());
             }
         }
-        check("un traje sin arte no se puede poner ni con el escalon mas alto", !humo);
+        check("un traje sin arte no se puede poner aunque lo tengas", !humo);
 
-        // ⚠⚠ LA ESCALERA SUBE Y NO BAJA. Si un rango alto abriera MENOS trajes
-        //    que uno bajo, subir de rango QUITARIA aspecto -- que es lo contrario
-        //    de una recompensa. Se rompe reordenando el enum.
+        // ⚠⚠⚠ EL ENTRENADOR ES EL UNICO GRATIS, y esto no es una perogrullada:
+        //    `gratis()` es lo que salta la tabla de propiedad. Si otro traje
+        //    devolviera true, se REGALARIA a todo el mundo -- sin error, sin
+        //    traza, y sin que nadie lo comprara. Es lo contrario de vender humo:
+        //    es regalar lo que se vende.
+        int gratis = 0;
+        for (var t : todos) {
+            if (t.gratis()) {
+                gratis++;
+            }
+        }
+        check("solo hay UN traje gratis", gratis == 1);
+        check("y es el ENTRENADOR",
+                net.pokereport.luna.traje.Traje.ENTRENADOR.gratis());
+
+        // ⚠⚠ NADIE TIENE NADA POR DEFECTO. Un jugador que no ha comprado nada
+        //    solo puede ponerse el gratis. Se rompe el dia que alguien haga que
+        //    `tiene` caiga a true ante un uuid desconocido -- y entonces todo el
+        //    mundo llevaria el traje de LEYENDA.
+        boolean regalado = false;
+        for (var t : todos) {
+            if (!t.gratis() && net.pokereport.luna.traje.TrajeService.tiene(quienSea, t)) {
+                regalado = true;
+                LunaEternal.LOG.error("El traje {} se puede poner sin haberlo "
+                        + "adquirido", t.id());
+            }
+        }
+        check("sin comprar nada, solo se puede poner el gratis", !regalado);
+
+        // ⚠⚠ LA ESCALERA SUBE Y NO BAJA. Ya no gobierna el permiso --eso lo
+        //    hace la propiedad (V028)-- pero sigue siendo el ORDEN en que se
+        //    dibujan y el que empareja cada traje con su rango en la tienda. Se
+        //    rompe reordenando el enum, y entonces la pantalla los lista al
+        //    reves de como se venden.
         int previo = -1;
         boolean crece = true;
         for (var t : todos) {
@@ -2522,19 +2556,19 @@ public final class AutoTest {
         }
         check("cada traje pide un escalon MAS ALTO que el anterior", crece);
 
-        // ⚠ Y lo que abre un escalon lo abre tambien el siguiente: se puede
-        //   llevar cualquiera hasta el tuyo, no solo el tuyo.
-        boolean acumula = true;
-        for (int e = 0; e <= 6; e++) {
-            for (var t : todos) {
-                if (t.puede(e) && !t.puede(e + 1)) {
-                    acumula = false;
-                    LunaEternal.LOG.error("El escalon {} abre {} y el {} no",
-                            e, t.id(), e + 1);
-                }
+        // ⚠⚠⚠ CADA TRAJE TIENE SU PROPIO RANGO, Y NINGUNO SE REPITE. Es lo que
+        //    hace que «comprar CAMPEON» signifique una sola cosa: con dos trajes
+        //    apuntando al mismo rango, la tienda no sabria cual esta vendiendo y
+        //    el jugador se llevaria el que decidiera el orden del enum.
+        var rangos = new java.util.HashSet<String>();
+        boolean unicos = true;
+        for (var t : todos) {
+            if (!rangos.add(t.pide().name())) {
+                unicos = false;
+                LunaEternal.LOG.error("Dos trajes piden el rango {}", t.pide().name());
             }
         }
-        check("un escalon abre todo lo del anterior", acumula);
+        check("no hay dos trajes para el mismo rango", unicos);
 
         // ⚠ El identificador llega DEL CLIENTE: uno desconocido no puede caer al
         //   primero, o un cliente modificado siempre acertaria con algo (P6).

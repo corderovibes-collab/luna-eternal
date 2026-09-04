@@ -506,6 +506,38 @@ public final class LunaCommand {
                             StringArgumentType.getString(ctx, "jugador"),
                             StringArgumentType.getString(ctx, "rango"))))))
 
+            .then(literal("traje")
+                // ⚠ Nivel 4, como `rango`: esto es lo que Tebex ejecuta por
+                //   consola cuando alguien paga. Un traje es una compra.
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(argument("jugador", StringArgumentType.word())
+                    .executes(ctx -> verTrajes(ctx.getSource(),
+                        StringArgumentType.getString(ctx, "jugador"))))
+                .then(literal("dar")
+                    .then(argument("jugador", StringArgumentType.word())
+                        .then(argument("traje", StringArgumentType.word())
+                            .suggests((c, b) -> {
+                                for (var t : net.pokereport.luna.traje.Traje.todos()) {
+                                    b.suggest(t.id());
+                                }
+                                return b.buildFuture();
+                            })
+                            .executes(ctx -> darTraje(ctx.getSource(),
+                                StringArgumentType.getString(ctx, "jugador"),
+                                StringArgumentType.getString(ctx, "traje"), true)))))
+                .then(literal("quitar")
+                    .then(argument("jugador", StringArgumentType.word())
+                        .then(argument("traje", StringArgumentType.word())
+                            .suggests((c, b) -> {
+                                for (var t : net.pokereport.luna.traje.Traje.todos()) {
+                                    b.suggest(t.id());
+                                }
+                                return b.buildFuture();
+                            })
+                            .executes(ctx -> darTraje(ctx.getSource(),
+                                StringArgumentType.getString(ctx, "jugador"),
+                                StringArgumentType.getString(ctx, "traje"), false))))))
+
             .then(literal("rotarcazas")
                 .requires(s -> s.hasPermissionLevel(3))
                 .executes(ctx -> rotarCazas(ctx.getSource())))
@@ -1163,6 +1195,109 @@ public final class LunaCommand {
                 });
             } catch (Exception e) {
                 LunaEternal.LOG.error("No se pudo cambiar el rango de {}", jugador, e);
+            }
+        });
+        return 1;
+    }
+
+    /**
+     * Da o quita un traje. Es la puerta por la que entra una compra de Tebex.
+     *
+     * <h2>⚠⚠ FUNCIONA CON EL JUGADOR DESCONECTADO, Y TIENE QUE FUNCIONAR</h2>
+     *
+     * Una compra llega cuando llega. Por eso se resuelve el {@code player_id}
+     * por nombre igual que {@code /luna rango}, y el {@code uuid} solo se usa
+     * para refrescar la caché de quien esté dentro.
+     *
+     * <p>⚠ Si está conectado se le reenvía la pantalla: el estado no es de quien
+     * lo mira. Sin eso, alguien que acaba de pagar abre KITS y ve su traje
+     * bloqueado hasta reconectar — y eso parece que no le ha llegado la compra.
+     */
+    private static int darTraje(ServerCommandSource src, String jugador,
+                                String traje, boolean dar) {
+        var svc = LunaEternal.trajes();
+        if (svc == null) {
+            src.sendFeedback(() -> Text.literal("§cEl sistema de trajes no está listo."), false);
+            return 0;
+        }
+        var t = net.pokereport.luna.traje.Traje.de(traje);
+        if (t == null) {
+            // ⚠ `Traje.de` devuelve null ante lo desconocido a proposito, asi
+            //   que aqui se puede dar un error de verdad en vez de conceder otro.
+            src.sendFeedback(() -> Text.literal(
+                "§cNo existe el traje §f" + traje + "§c."), false);
+            return 0;
+        }
+        if (t.gratis()) {
+            src.sendFeedback(() -> Text.literal(
+                "§7El traje §f" + t.id() + " §7es gratis para todo el mundo: "
+                + "no hay nada que dar ni que quitar."), false);
+            return 0;
+        }
+        var server = src.getServer();
+        LunaEternal.submit(() -> {
+            try {
+                var conectado = server.getPlayerManager().getPlayer(jugador);
+                Long id = LunaEternal.players().resolveByName(jugador);
+                if (id == null) {
+                    server.execute(() -> src.sendFeedback(() -> Text.literal(
+                        "§cNo conozco a §f" + jugador + "§c."), false));
+                    return;
+                }
+                // ⚠ Desconectado no hay uuid ni falta: la cache se rellena al
+                //   entrar (`cargarPropiedad`), asi que lo unico que importa es
+                //   que la fila quede escrita.
+                java.util.UUID uuid = conectado != null ? conectado.getUuid() : null;
+                boolean cambio = dar ? svc.conceder(id, uuid, t)
+                                     : svc.retirar(id, uuid, t);
+                server.execute(() -> {
+                    src.sendFeedback(() -> Text.literal(
+                        "§a" + jugador + "§7: " + (dar ? "tiene" : "ya no tiene")
+                        + " el traje §f" + t.id()
+                        + (cambio ? "" : " §8(ya estaba así)")), true);
+                    if (conectado != null && !conectado.isRemoved()) {
+                        if (!dar) {
+                            svc.revisar(conectado, id);
+                            net.pokereport.luna.net.Red.repartirTraje(conectado);
+                        }
+                        net.pokereport.luna.net.Red.enviarTrajes(conectado);
+                    }
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo cambiar el traje de {}", jugador, e);
+            }
+        });
+        return 1;
+    }
+
+    /** Qué trajes tiene alguien. Para comprobar una compra sin abrir la base. */
+    private static int verTrajes(ServerCommandSource src, String jugador) {
+        var server = src.getServer();
+        LunaEternal.submit(() -> {
+            try {
+                var conectado = server.getPlayerManager().getPlayer(jugador);
+                if (conectado == null) {
+                    server.execute(() -> src.sendFeedback(() -> Text.literal(
+                        "§7§f" + jugador + " §7no está conectado: los trajes se "
+                        + "leen al entrar, así que no puedo listárselos."), false));
+                    return;
+                }
+                var suyos = new java.util.ArrayList<String>();
+                for (var t : net.pokereport.luna.traje.Traje.todos()) {
+                    if (net.pokereport.luna.traje.TrajeService.tiene(
+                            conectado.getUuid(), t)) {
+                        suyos.add(t.id() + (t.gratis() ? " §8(gratis)§7" : ""));
+                    }
+                }
+                String puesto = net.pokereport.luna.traje.TrajeService
+                        .enCache(conectado.getUuid());
+                server.execute(() -> src.sendFeedback(() -> Text.literal(
+                    "§7" + jugador + " puede ponerse: §f"
+                    + (suyos.isEmpty() ? "nada" : String.join("§7, §f", suyos))
+                    + "§7. Lleva puesto: §f"
+                    + (puesto == null ? "ninguno" : puesto)), false));
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudieron listar los trajes de {}", jugador, e);
             }
         });
         return 1;

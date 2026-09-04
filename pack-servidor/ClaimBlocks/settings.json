@@ -1,0 +1,37 @@
+{
+  "template1": {
+    "radius_x": 7,
+    "radius_z": 7,
+    "head_info": "Base64 de minecraft-heads.com. PENDIENTE: hoy los cinco comparten textura, asi que solo se distinguen por el nombre",
+    "head": "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDk4NDhkZGU4ZTUzMGRjNzA1ZmI2NzdkYWQ4MTQ5MmNjMjIyYmY5NmZkNjMyYjg1MTRhZWZiODA5MzFmZTBkIn19fQ==",
+    "display_name": "&8&lProteccion &a&l15x15"
+  },
+  "template2": {
+    "radius_x": 25,
+    "radius_z": 25,
+    "head_info": "Base64 de minecraft-heads.com. PENDIENTE: hoy los cinco comparten textura, asi que solo se distinguen por el nombre",
+    "head": "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDk4NDhkZGU4ZTUzMGRjNzA1ZmI2NzdkYWQ4MTQ5MmNjMjIyYmY5NmZkNjMyYjg1MTRhZWZiODA5MzFmZTBkIn19fQ==",
+    "display_name": "&8&lProteccion &b&l51x51"
+  },
+  "template3": {
+    "radius_x": 50,
+    "radius_z": 50,
+    "head_info": "Base64 de minecraft-heads.com. PENDIENTE: hoy los cinco comparten textura, asi que solo se distinguen por el nombre",
+    "head": "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDk4NDhkZGU4ZTUzMGRjNzA1ZmI2NzdkYWQ4MTQ5MmNjMjIyYmY5NmZkNjMyYjg1MTRhZWZiODA5MzFmZTBkIn19fQ==",
+    "display_name": "&8&lProteccion &d&l101x101"
+  },
+  "template4": {
+    "radius_x": 80,
+    "radius_z": 80,
+    "head_info": "Base64 de minecraft-heads.com. PENDIENTE: hoy los cinco comparten textura, asi que solo se distinguen por el nombre",
+    "head": "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDk4NDhkZGU4ZTUzMGRjNzA1ZmI2NzdkYWQ4MTQ5MmNjMjIyYmY5NmZkNjMyYjg1MTRhZWZiODA5MzFmZTBkIn19fQ==",
+    "display_name": "&8&lProteccion &6&l161x161"
+  },
+  "template5": {
+    "radius_x": 125,
+    "radius_z": 125,
+    "head_info": "Base64 de minecraft-heads.com. PENDIENTE: hoy los cinco comparten textura, asi que solo se distinguen por el nombre",
+    "head": "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDk4NDhkZGU4ZTUzMGRjNzA1ZmI2NzdkYWQ4MTQ5MmNjMjIyYmY5NmZkNjMyYjg1MTRhZWZiODA5MzFmZTBkIn19fQ==",
+    "display_name": "&8&lProteccion &c&l251x251"
+  }
+}

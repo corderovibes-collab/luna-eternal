@@ -180,13 +180,80 @@ def _traje(id_, nombre, partes):
     return t, avisos
 
 
+# ⚠⚠ LA GEMA DEL MEDIO NO SE APOYABA EN NADA. Las tres gemas de la corona van
+#    montadas sobre una pieza de oro que asoma por debajo --la repisa-- y la del
+#    centro se quedaba casi sin ella. Medido sobre el .bbmodel:
+#
+#      gema izquierda   y 32,5206  respaldo desde 31,6656  -> repisa 0,855
+#      gema CENTRAL     y 31,7706  respaldo desde 31,6156  -> repisa 0,155
+#      gema derecha     y 32,5206  respaldo desde 31,6656  -> repisa 0,855
+#
+#    O sea que la central se comia cinco sextos de su repisa y quedaba colgando
+#    del borde de la corona. Es lo que el usuario describio como «en la parte de
+#    las gemas, la del medio le falta algo abajito».
+#
+# ⚠⚠ SE SUBE LA GEMA, NO SE BAJA EL RESPALDO. Bajar la placa central la sacaria
+#    por debajo del aro de la corona --ya sobresale 0,05-- y eso es exactamente
+#    lo contrario de lo que se quiere. La gema sube hasta que su repisa mide lo
+#    mismo que las de al lado.
+#
+# ⚠ La diferencia se CALCULA de las gemas laterales, no se escribe: si el autor
+#   cambia la altura del aro, esto sigue cuadrando. Y si algun dia no encuentra
+#   las tres gemas, lo DICE en vez de callarse.
+GEMA_Z = -5.775          # el plano donde van montadas las tres
+GEMA_STUD_Z = -5.985     # el taco que va delante de cada una
+
+
+def _repisa_gema_central(t):
+    """Iguala la repisa de oro de la gema central con la de las laterales."""
+    cs = [c for c in t.huesos.get("armorHead", []) if not c.rot]
+
+    def repisa(gema):
+        """Lo que asoma del respaldo por debajo de esa gema."""
+        detras = [c for c in cs
+                  if c is not gema and c.origen[2] > gema.origen[2] + 0.05
+                  and c.origen[0] <= gema.origen[0] + 0.4
+                  and c.origen[0] + c.tam[0] >= gema.origen[0] + gema.tam[0] - 0.4]
+        if not detras:
+            return None
+        return gema.origen[1] - min(c.origen[1] for c in detras)
+
+    gemas = [c for c in cs if abs(c.origen[2] - GEMA_Z) < 0.01]
+    centro = [c for c in gemas if abs(c.origen[0] + c.tam[0] / 2.0) < 0.01]
+    lados = [c for c in gemas if abs(c.origen[0] + c.tam[0] / 2.0) > 1.0]
+    if len(centro) != 1 or not lados:
+        return ["no reconozco las gemas de la corona: si el .bbmodel cambio, "
+                "comprueba la repisa de la del medio a mano"]
+
+    centro = centro[0]
+    objetivo = repisa(lados[0])
+    actual = repisa(centro)
+    if objetivo is None or actual is None:
+        return ["las gemas de la corona no tienen respaldo detras: no toco nada"]
+    sube = round(objetivo - actual, 5)
+    if abs(sube) < 0.01:
+        return ["la repisa de la gema central ya cuadra: sobra `_repisa_gema_central`"]
+
+    # ⚠ El taco de delante sube CON ella: es su relieve, y dejarlo atras partiria
+    #   la gema en dos piezas a distinta altura.
+    taco = [c for c in cs
+            if abs(c.origen[2] - GEMA_STUD_Z) < 0.01
+            and abs(c.origen[0] + c.tam[0] / 2.0) < 0.01]
+    for c in [centro] + taco:
+        c.origen = (c.origen[0], round(c.origen[1] + sube, 5), c.origen[2])
+    return ["corona: la gema del medio sube %.3f para que su repisa mida %.3f, "
+            "como las de los lados (venia con %.3f)" % (sube, objetivo, actual)]
+
+
 # ----------------------------------------------------------------- CAMPEON
 
 def campeon():
     """La corona y su armadura. Un solo fichero, cuerpo entero."""
     doc = leer(CORONA)
-    return _traje("campeon", "Traje CAMPEON · Corona",
-                  [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
+    t, avisos = _traje("campeon", "Traje CAMPEON · Corona",
+                       [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
+    avisos += _repisa_gema_central(t)
+    return t, avisos
 
 
 # ⚠⚠ EL CASCO DE MEWTWO SE QUEDABA ALTO Y ENSEÑABA LA CABEZA POR DEBAJO. No es

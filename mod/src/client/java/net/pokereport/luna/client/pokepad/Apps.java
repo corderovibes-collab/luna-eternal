@@ -71,6 +71,7 @@ public final class Apps {
             case "gyms" -> abrirGimnasios();
             case "kits" -> abrirKits();
             case "tesoros" -> abrirTesoros();
+            case "cartas" -> abrirCartas();
             default -> false;
         };
     }
@@ -128,6 +129,20 @@ public final class Apps {
     }
 
     /** Tesoros: los cofres. D-020, y docs/economy/treasures.md. */
+    /**
+     * CARTAS: las tres zonas de sobres.
+     *
+     * <p>⚠ NO se comprueba aqui si Cobblemon Cards esta instalado. Lo mira la
+     * propia pantalla contra su registro y lo DICE: un icono que no abre nada
+     * se lee como una averia, y uno que abre y explica que falta algo es
+     * informacion.
+     */
+    private static boolean abrirCartas() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new CartasScreen(cliente.currentScreen));
+        return true;
+    }
+
     private static boolean abrirTesoros() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
         cliente.setScreen(new TesorosScreen(cliente.currentScreen));

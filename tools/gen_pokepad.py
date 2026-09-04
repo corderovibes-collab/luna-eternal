@@ -159,10 +159,14 @@ TEXTO_SOLAPE = TEXTO_ALTO // 2
 # ⚠ CURAR ES EL DECIMOSEXTO, y por eso cae en la PAGINA 2 de la rejilla.
 #   No hay que quitar ninguna celda: la rejilla ya pagina y reordena (OrdenPad),
 #   asi que las quince de siempre se quedan donde estaban.
+# ⚠⚠ CARTAS ENTRA EN EL HUECO DE LA WIKI Y LA WIKI SE VA AL FINAL
+#    (2026-09-02, decision del usuario). `wiki` lleva bloqueada desde que
+#    existe el Pad, asi que estaba gastando uno de los quince huecos que se
+#    ven al abrir para no llevar a ningun sitio.
 ORDEN = ["pokedex", "cosmeticos", "trabajos", "misiones", "warps",
-         "clan", "gts", "tienda", "tesoros", "wiki",
+         "clan", "gts", "tienda", "tesoros", "cartas",
          "cazas", "kits", "mochila", "gyms", "explorar",
-         "curar"]
+         "curar", "wiki"]
 
 # El grosor del borde de la celda y el tamano de la esquina mordida, tambien
 # x4. A 1 px sobre una celda de 124 ninguno de los dos se ve.
@@ -175,9 +179,9 @@ NOMBRES = {
     "pokedex": "Pokedex",   "cosmeticos": "Cosmeticos", "trabajos": "Trabajos",
     "misiones": "Misiones", "warps": "Viajes",          "clan": "Clan",
     "gts": "GTS",           "tienda": "Tienda",         "tesoros": "Tesoros",
-    "wiki": "Wiki",         "cazas": "Cazas",           "kits": "Kits",
+    "cartas": "Cartas",     "cazas": "Cazas",           "kits": "Kits",
     "mochila": "Mochila",   "gyms": "Gimnasios",        "explorar": "Explorar",
-    "curar": "Curar",
+    "curar": "Curar",       "wiki": "Wiki",
 }
 
 # El tamano al que se DIBUJAN los botones, que no es el que llega.
@@ -1164,15 +1168,27 @@ def main() -> None:
     # El candado de la segunda pagina. Si el arte no ha llegado, se dibuja uno
     # provisional en vez de abortar: asi la pagina se puede montar y desplegar
     # hoy, y el dia que llegue el PNG lo sustituye sin tocar una linea de codigo.
-    # Se busca por varios nombres: el arte llega a veces a `icons/` y con el
-    # nombre que le puso el disenador. Fallar por eso seria pedantesco.
-    # De las que haya, LA MAS RECIENTE. El arte llega a veces a `icons/` y con
-    # el nombre que le puso el disenador, y la version anterior se queda al
-    # lado: elegir por orden de lista significaria seguir usando la vieja.
-    candidatas = [c for c in (ARTE / "lunacoin.png",
-                              *sorted((ARTE / "icons").glob("icon_lunacoin*.png")))
-                  if c.exists()]
-    moneda = max(candidatas, key=lambda c: c.stat().st_mtime, default=ARTE / "lunacoin.png")
+    # ⚠⚠⚠ ESTO ELEGIA "LA MAS RECIENTE" Y CAMBIABA LA MONEDA SIN AVISAR.
+    #
+    # Hay tres ficheros de LunaCoin en `arte/` --uno azul y dos dorados-- y el
+    # bueno es `icons/icon_lunacoinoro.png`: el dorado es de las LunaCoins desde
+    # D-033/D-034, justo para que no se confunda con la Plata.
+    #
+    # Elegir por fecha funcionaba mientras las fechas fueran distintas, y en un
+    # CLON LIMPIO O UN WORKTREE NO LO SON: git le pone a todo la hora del
+    # checkout, asi que las tres empatan y `max` devuelve LA PRIMERA de la
+    # lista -- que era la azul. Reproducido el 2026-09-02 instalando un icono
+    # que no tenia nada que ver: `lunacoin.png` salio cambiada en el diff, 1.383
+    # de 1.600 pixeles distintos, y NADIE HABRIA MIRADO por que el commit iba
+    # de otra cosa.
+    #
+    # Hoy el orden es EXPLICITO --el primero que exista gana-- y ademas se
+    # imprime cual se ha usado: una eleccion que no se ve es una eleccion que
+    # nadie revisa.
+    preferencia = (ARTE / "icons" / "icon_lunacoinoro.png",
+                   ARTE / "lunacoin_oro.png",
+                   ARTE / "lunacoin.png")
+    moneda = next((c for c in preferencia if c.exists()), preferencia[0])
     if moneda.exists():
         guardar(a_tamano(preparar(moneda), MONEDA), SALIDA / "lunacoin.png")
         print(f"  moneda    {moneda.name} a {MONEDA}x{MONEDA}")
@@ -1445,11 +1461,24 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
 
     :param pagina: 0 las aplicaciones, 1 la de «Proximamente»
     """
-    if pagina:
-        # La segunda pagina es la misma rejilla con el mismo candado quince
-        # veces. Se monta con los mismos numeros a proposito: si se dibujara
-        # aparte, dejaria de comprobar que las dos encajan igual.
-        iconos = [SALIDA / f"{CANDADO}.png"] * 15
+    # ⚠⚠⚠ LA MAQUETA NO PAGINABA, Y EL JUEGO SI. Dibujaba `iconos` ENTERA, o
+    #    sea que con diecisiete pintaba una CUARTA FILA que en el juego no
+    #    existe: `Curar` y `Wiki` salian fuera del marco, encima del chasis.
+    #
+    #    Cuadraba por casualidad mientras hubo quince o menos --exactamente
+    #    5x3--, que es la misma trampa que ya se pago con la rejilla del Pad,
+    #    con los 54 cosmeticos inalcanzables y con las dos rejillas de La Liga.
+    #    Aqui es peor de lo que parece: LA MAQUETA EXISTE PARA APROBAR EL DISENO
+    #    ANTES DE DESPLEGAR, asi que una que ensena una pantalla que nadie ve es
+    #    inutil justo para lo unico que sirve.
+    #
+    #    Ahora se trocea igual que `PokePadScreen`: quince ranuras por pagina, y
+    #    la ranura que se sale de la lista lleva CANDADO. Y la pagina 2 deja de
+    #    ser «quince candados» --eso dejo de ser verdad el dia que `curar` cayo
+    #    en ella-- y ensena lo que de verdad hay.
+    candado = SALIDA / f"{CANDADO}.png"
+    iconos = [iconos[n] if n < len(iconos) else candado
+              for n in range(pagina * 15, pagina * 15 + 15)]
     # Copia explicita: `chasis` se sigue usando abajo para restaurar las
     # esquinas mordidas, asi que no puede ser el mismo objeto que se pinta.
     chasis = chasis.convert("RGBA")
@@ -1492,7 +1521,11 @@ def maqueta(chasis, iconos, rx, ry, celda, lado, hueco_y,
         # El nombre debajo. En el juego lo pinta la fuente de Minecraft; aqui
         # basta con una cualquiera del sistema para juzgar el ENCAJE, que es lo
         # unico que la maqueta tiene que responder.
-        nombre = "Proximamente" if pagina else NOMBRES.get(
+        # ⚠ «Proximamente» es de la RANURA VACIA, no de la pagina. Estaba atado
+        #   a `pagina` y por eso la 2 rotulaba asi a `Curar` --que funciona-- en
+        #   cuanto cayo en ella. La ranura sin aplicacion se reconoce porque su
+        #   icono ES el candado.
+        nombre = "Proximamente" if p == candado else NOMBRES.get(
             p.stem.replace("icon_", ""), "")
         if nombre:
             try:

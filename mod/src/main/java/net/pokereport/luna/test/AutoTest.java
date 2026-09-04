@@ -2564,6 +2564,203 @@ public final class AutoTest {
         check("y es el ENTRENADOR",
                 net.pokereport.luna.traje.Traje.ENTRENADOR.gratis());
 
+        // ⚠⚠⚠ Y AHORA SE COMPRUEBA QUE EL ARTE EXISTE DE VERDAD, no solo que
+        //    alguien puso `listo = true`. `listo` es una promesa escrita a mano
+        //    en un enum: nada obligaba a que los ficheros estuvieran, y sin
+        //    ellos el traje se equipa, se sincroniza, NO DA NINGUN ERROR y el
+        //    jugador no ve nada -- los 62 cosmeticos que no existian, otra vez.
+        //
+        //    ⚠⚠ SE PUEDE COMPROBAR DESDE EL SERVIDOR PORQUE ES **UN SOLO JAR**:
+        //       `src/client/resources/` acaba dentro del mismo fichero que esta
+        //       clase, asi que `getResource` los ve aunque el dibujado sea de
+        //       cliente. Sin ese detalle esto habria parecido imposible de
+        //       comprobar aqui, que es justo por lo que no se comprobaba.
+        //
+        //    ⚠ Una PIEZA puede faltar a proposito (un traje sin botas), pero
+        //      entonces faltan las dos cosas. Un geo sin su textura --o al
+        //      reves-- es media pieza, y eso siempre es un fallo.
+        boolean conArte = true;
+        for (var t : todos) {
+            if (!t.listo()) {
+                continue;
+            }
+            int piezas = 0;
+            for (String pieza : new String[] {"head", "body", "legs", "boots"}) {
+                boolean geo = existe("/assets/lunaeternal/trajes/" + t.id() + "/"
+                        + t.id() + "_" + pieza + ".geo.json");
+                boolean png = existe("/assets/lunaeternal/textures/armor/" + t.id()
+                        + "/" + t.id() + "_" + pieza + ".png");
+                if (geo != png) {
+                    conArte = false;
+                    LunaEternal.LOG.error("El traje {} tiene la pieza {} a medias"
+                            + " (geo {}, textura {})", t.id(), pieza, geo, png);
+                } else if (geo) {
+                    piezas++;
+                }
+            }
+            if (piezas == 0) {
+                conArte = false;
+                LunaEternal.LOG.error("El traje {} se declara listo y NO tiene "
+                        + "ni una pieza de arte en el jar", t.id());
+            }
+        }
+        check("todo traje declarado listo tiene su arte dentro del jar", conArte);
+
+        // ⚠⚠⚠ UNA APLICACION DEL POKEPAD SIN SU PNG SALE EN MAGENTA, Y NO DA
+        //    NINGUN ERROR. La celda dibuja SU PROPIO ICONO aunque este
+        //    bloqueada --el candado es solo para los huecos SIN aplicacion--,
+        //    asi que dar de alta una aplicacion antes de que llegue su arte
+        //    deja un cuadro magenta en la PANTALLA PRINCIPAL del Pad.
+        //
+        //    Ya paso el 2026-08-23 por el otro lado: un generador borro tres
+        //    PNG que no eran suyos y seis pantallas salieron en magenta. Se
+        //    compilo, se desplego, y solo se vio ABRIENDOLAS.
+        //
+        //    ⚠⚠ Y se puede comprobar desde el servidor porque es UN SOLO JAR:
+        //       `src/client/resources/` acaba dentro del mismo fichero, asi que
+        //       `getResourceAsStream` los ve aunque el dibujado sea de cliente.
+        //       Es el mismo detalle que hace posible la comprobacion de arriba.
+        boolean iconos = true;
+        for (var ficha : net.pokereport.luna.pokepad.CatalogoPad.TODAS) {
+            if (!existe(net.pokereport.luna.pokepad.CatalogoPad.rutaIcono(ficha.id()))) {
+                iconos = false;
+                LunaEternal.LOG.error("La aplicacion {} del PokePad no tiene su "
+                        + "icono en el jar: saldria en MAGENTA", ficha.id());
+            }
+        }
+        check("toda aplicacion del PokePad tiene su icono dentro del jar", iconos);
+
+        // ⚠⚠ Y NINGUNA REPETIDA. `OrdenPad` guarda el orden del jugador POR
+        //    IDENTIFICADOR y lo relee con un LinkedHashSet: dos fichas con el
+        //    mismo id dejarian de ser dos celdas al recargar --se perderia una
+        //    sin avisar-- y `App.de` devolveria siempre la primera.
+        var idsPad = new java.util.HashSet<String>();
+        boolean padUnicos = true;
+        for (var ficha : net.pokereport.luna.pokepad.CatalogoPad.TODAS) {
+            if (!idsPad.add(ficha.id())) {
+                padUnicos = false;
+                LunaEternal.LOG.error("La aplicacion {} del PokePad esta dos "
+                        + "veces en la lista", ficha.id());
+            }
+        }
+        check("ninguna aplicacion del PokePad esta repetida", padUnicos);
+
+        // ---- CARTAS: las tres zonas de sobres -----------------------------
+        //
+        // ⚠⚠ EL ARTE, IGUAL QUE LOS ICONOS. Cada zona dibuja su sobre; sin el
+        //    PNG sale un cuadro magenta EN MEDIO de la tarjeta, y no da ningun
+        //    error. Se puede comprobar desde aqui porque los recursos del
+        //    cliente viajan en el mismo jar.
+        boolean arteSobres = true;
+        for (var s : net.pokereport.luna.cards.CartasService.Sobre.values()) {
+            if (!existe(s.rutaArte())) {
+                arteSobres = false;
+                LunaEternal.LOG.error("El sobre {} no tiene su arte en el jar ({})",
+                        s, s.rutaArte());
+            }
+        }
+        check("cada sobre de cartas tiene su arte dentro del jar", arteSobres);
+
+        // ⚠⚠⚠ EL DIARIO TIENE QUE SER GRATIS, Y ES LA REGLA DEL SISTEMA.
+        //    La zona diaria existe para que alguien que no paga abra una carta
+        //    al dia. Ponerle precio la convierte en una segunda zona de Plata
+        //    -- y no daria ningun error: daria un servidor donde lo gratuito
+        //    dejo de serlo y nadie se entera hasta que un jugador se queja.
+        var diario = net.pokereport.luna.cards.CartasService.Sobre.DIARIO;
+        check("el sobre diario es gratis",
+                diario.moneda == null && diario.precio == 0);
+
+        // ⚠⚠ Y LOS DE PAGO TIENEN QUE COSTAR ALGO. Un precio a cero por un
+        //    descuido convierte la zona de LunaCoins en sobres INFINITOS
+        //    gratis, que es justo lo contrario de lo que sostiene el sistema.
+        boolean cobran = true;
+        for (var s : net.pokereport.luna.cards.CartasService.Sobre.values()) {
+            if (s.moneda != null && s.precio <= 0) {
+                cobran = false;
+                LunaEternal.LOG.error("El sobre {} tiene moneda {} y precio {}",
+                        s, s.moneda, s.precio);
+            }
+            if (s.moneda == null && s.precio != 0) {
+                cobran = false;
+                LunaEternal.LOG.error("El sobre {} no tiene moneda pero cuesta {}",
+                        s, s.precio);
+            }
+        }
+        check("todo sobre de pago cuesta algo, y el gratis no", cobran);
+
+        // ⚠⚠⚠ EXACTAMENTE UNO SIN RELOJ, y esto vigila el diseño entero.
+        //    Si el de LunaCoins ganara reloj, las tres zonas serian la misma
+        //    cosa a tres precios y la pantalla dejaria de tener sentido. Si
+        //    otro lo PERDIERA, el diario pasaria a ser sobres infinitos gratis.
+        //    Las dos averias son mudas: la pantalla se dibuja igual de bien.
+        long sinReloj = java.util.Arrays.stream(
+                        net.pokereport.luna.cards.CartasService.Sobre.values())
+                .filter(s -> !s.llevaReloj()).count();
+        check("solo el sobre de LunaCoins no tiene reloj",
+                sinReloj == 1
+                        && !net.pokereport.luna.cards.CartasService.Sobre.LUNA.llevaReloj());
+
+        // ⚠ El identificador del sobre viaja en el paquete y se guarda en
+        //   `card_pack_claim.kind`, que es VARCHAR(16). Un nombre mas largo se
+        //   TRUNCA al insertar --con un aviso que nadie mira-- y entonces el
+        //   reloj se guarda con otra clave y no caduca nunca. Es la leccion de
+        //   la columna de 64 caracteres del cofre shiny.
+        boolean caben = true;
+        for (var s : net.pokereport.luna.cards.CartasService.Sobre.values()) {
+            if (s.name().length() > 16) {
+                caben = false;
+                LunaEternal.LOG.error("El sobre {} tiene {} caracteres y la columna"
+                        + " admite 16", s, s.name().length());
+            }
+        }
+        check("el nombre de cada sobre cabe en su columna", caben);
+
+        // ---- HABILIDAD DE APARICION: la tabla de multiplicadores ----------
+        //
+        // ⚠⚠ EL MULTIPLICADOR TIENE QUE SUBIR CON LA RAREZA, no solo tener un
+        //    numero para cada una. Si una rareza mas alta diera MENOS que una
+        //    mas baja, comprar el sobre dorado --que es donde salen las
+        //    rarezas altas-- seria peor que abrir el gratis. Se rompe
+        //    reordenando el mapa, y nada mas lo comprobaria.
+        String[] ordenRarezas = {"common", "uncommon", "rare", "epic", "legendary", "mythic"};
+        boolean crecienteHabilidad = true;
+        float anteriorHabilidad = 0f;
+        for (String r : ordenRarezas) {
+            float techo = net.pokereport.luna.cards.HabilidadService.multiplicador(r, 10);
+            if (techo <= anteriorHabilidad) {
+                crecienteHabilidad = false;
+                LunaEternal.LOG.error("El techo de {} ({}) no supera al de la rareza anterior ({})",
+                        r, techo, anteriorHabilidad);
+            }
+            anteriorHabilidad = techo;
+        }
+        check("el techo de la habilidad crece con la rareza de la carta", crecienteHabilidad);
+
+        // ⚠ Y LA NOTA TIENE QUE MOVER ALGO, sin nota (0) por debajo de nota
+        //   10, para las dos rarezas mas altas -- que son las que de verdad
+        //   se calificarian. Si no, la estacion de calificacion volveria a
+        //   ser un numero bonito sin efecto, que es justo lo que se corrigio
+        //   al retirar la restauradora.
+        boolean notaImporta = net.pokereport.luna.cards.HabilidadService.multiplicador("mythic", 0)
+                < net.pokereport.luna.cards.HabilidadService.multiplicador("mythic", 10)
+                && net.pokereport.luna.cards.HabilidadService.multiplicador("legendary", 0)
+                < net.pokereport.luna.cards.HabilidadService.multiplicador("legendary", 10);
+        check("calificar una carta sube su multiplicador de aparicion", notaImporta);
+
+        // ⚠⚠⚠ NINGUN MULTIPLICADOR POR DEBAJO DE 1.0. Uno menor que 1
+        //    BAJARIA la probabilidad de esa especie, y la habilidad esta
+        //    pensada para ayudar, nunca para perjudicar sin que el jugador lo
+        //    sepa -- ni siquiera por un error de calculo.
+        boolean sinBajar = true;
+        for (String r : ordenRarezas) {
+            for (int nota = 0; nota <= 10; nota++) {
+                if (net.pokereport.luna.cards.HabilidadService.multiplicador(r, nota) < 1.0f) {
+                    sinBajar = false;
+                }
+            }
+        }
+        check("ningun multiplicador de aparicion baja de x1", sinBajar);
+
         // ⚠⚠ NADIE TIENE NADA POR DEFECTO. Un jugador que no ha comprado nada
         //    solo puede ponerse el gratis. Se rompe el dia que alguien haga que
         //    `tiene` caiga a true ante un uuid desconocido -- y entonces todo el
@@ -3332,6 +3529,21 @@ public final class AutoTest {
     /** Cada operacion economica necesita la suya (R4). */
     private static String clave() {
         return "autotest_clan_" + UUID.randomUUID();
+    }
+
+    /**
+     * ¿Existe ese recurso dentro del jar?
+     *
+     * <p>⚠ Se cierra el flujo: {@code getResourceAsStream} sobre un jar deja el
+     * fichero abierto, y en un autotest que recorre treinta rutas eso son
+     * treinta descriptores colgando.
+     */
+    private boolean existe(String ruta) {
+        try (var in = AutoTest.class.getResourceAsStream(ruta)) {
+            return in != null;
+        } catch (java.io.IOException e) {
+            return false;
+        }
     }
 
     private void check(String name, boolean ok) {

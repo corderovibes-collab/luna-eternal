@@ -36,6 +36,11 @@ RAIZ = Path(__file__).resolve().parent.parent
 PROYECTOS = {
     "mod":  ("mod",  "lunaeternal"),
     "neon": ("neon", "lunaneon"),
+    # ⚠ NO ES NUESTRO, pero se despliega igual que si lo fuera: es una version
+    #   PARCHEADA (CC0) que construye `cards/parchear.py`, asi que no se puede
+    #   bajar de Modrinth ni en el servidor ni en el cliente. El porque, en la
+    #   cabecera de ese script.
+    "cards": ("cards", "cobblemon-cards"),
 }
 
 

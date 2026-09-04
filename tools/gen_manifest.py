@@ -319,57 +319,34 @@ VERSION_PACK = "0.2.0"
 # separarlo en dos mods obligaria a duplicar los tipos que viajan entre
 # cliente y servidor, y eso se desincroniza a la primera. Credenciales NO
 # lleva: se leen de `config/` en el servidor y nunca entran en el jar.
-# ---------------------------------------------------------------------------
-# JARS PARCHEADOS POR NOSOTROS
-# ---------------------------------------------------------------------------
 #
-# ⚠⚠⚠ ESTOS NO SALEN DE NINGUN SITIO AUTOMATICO, Y POR ESO HAY QUE DECLARARLOS
-#    AQUI. `cobblemon-cards-1.0.5-luna1.jar` es una compilacion NUESTRA --el
-#    sufijo `-luna1` lo dice--: no esta en Modrinth, no viene en los overrides
-#    del pack de arriba, y no se compila en este repositorio. Estaba en el
-#    manifiesto publicado y esta en el servidor, y NADA en estas herramientas lo
-#    conocia, asi que la primera regeneracion lo dejo fuera SIN DECIR NADA.
+# ⚠⚠⚠ `cobblemon-cards` NO ES NUESTRO, PERO VIAJA COMO SI LO FUERA, y el motivo
+# importa: es una version PARCHEADA (CC0, `cards/parchear.py`). El jar de
+# Modrinth NO SIRVE -- su release publicado no tiene `enableCardStats`, que es
+# el interruptor que impide que una carta de pago de daño, armadura y x100 de
+# apariciones. Comprobado con `javap` sobre el jar del CDN: nueve campos de
+# configuracion frente a cuarenta y cuatro.
 #
-#    ⚠⚠⚠ Y NO FALLA AL GENERAR: FALLA EN LA PUERTA DEL SERVIDOR. El servidor
-#       sigue teniendolo y manda sus 89 entradas de registro; el cliente que no
-#       lo tiene NO ENTRA:
+# Al parchearlo dejamos de poder servirlo desde el CDN de Modrinth --seria otro
+# fichero con el mismo nombre-- asi que va a NUESTRA release, con su huella,
+# igual que los dos mods propios.
 #
-#         «Se han recibido 89 entradas de registro desconocidas para este
-#          cliente ... cobblemon-cards»
+# ⚠⚠⚠ Y AQUI ESTUVO EL FALLO DEL 2026-09-03, QUE DEJO EL SERVIDOR INACCESIBLE.
+#    Esta entrada no existia, asi que una republicacion rutinaria --solo cambiaba
+#    nuestro jar-- lo dejo fuera SIN DECIR NADA. El servidor si lo tiene y manda
+#    sus 89 entradas de registro; el cliente que no lo tiene NO ENTRA:
 #
-#       Paso el 2026-09-03 al republicar el manifiesto por los trajes, y dejo el
-#       servidor inaccesible hasta devolver el puntero atras. Es la regla que ya
-#       estaba escrita para `trinkets` --un mod que registra algo que se
-#       sincroniza tiene que estar en los DOS lados-- mordiendo por el otro
-#       extremo: no por añadirlo al servidor, sino por QUITARLO del cliente.
+#      «Se han recibido 89 entradas de registro desconocidas para este
+#       cliente ... cobblemon-cards»
 #
-# ⚠ Se declaran por URL Y HASH, igual que todo lo demas (D-037): el jar ya esta
-#   subido a la release del pack, asi que regenerar NO exige tenerlo en local.
-#   Si algun dia hay que cambiarlo, se sube el nuevo y se actualizan estas tres
-#   lineas.
-# ⚠⚠ Y SU CONFIGURACION VA CON EL. `cobblemon-cards.json` no viene en los
-#    overrides del pack de arriba --es nuestro-- asi que se inyecta en el zip de
-#    `config` desde aqui. Sin esto el mod llega sin ajustes y el pack le pone los
-#    suyos por defecto: `maxNationalDex` volveria a 1025 en un servidor que se
-#    anuncia Kanto+Johto (D-017).
-#    ⚠ Vive en el REPO y no en `build/`, que es git-ignorado: ahi estaba, y por
-#      eso se perdio en la primera regeneracion.
-EXTRA_CONFIG = RAIZ / "pack-propio"
-
-
-PARCHEADOS = [
-    {
-        "path": "mods/cobblemon-cards-1.0.5-luna1.jar",
-        "sha1": "5beff3063c5940cabebd287f78a7b143e2a79a97",
-        "size": 23519511,
-        "url": f"{BASE_ACTIVOS}/cobblemon-cards-1.0.5-luna1-5beff3063c.jar",
-    },
-]
-
-
+#    Es la regla de `trinkets` --un mod que registra algo que se sincroniza
+#    tiene que estar en los DOS lados-- mordiendo por el otro extremo: no por
+#    añadirlo al servidor, sino por QUITARLO del cliente. Lo que impide que
+#    vuelva a pasar es `comprobar_bajas()`, mas abajo.
 PROPIOS = [
     {"carpeta": "neon", "prefijo": "lunaneon"},
     {"carpeta": "mod", "prefijo": "lunaeternal"},
+    {"carpeta": "cards", "prefijo": "cobblemon-cards"},
 ]
 
 
@@ -532,11 +509,6 @@ def construir() -> dict:
         })
         print(f"  {entrada['prefijo']:<15} {publicado(jar, sha1):<26} nuestro")
 
-    # 4-bis. Los jars parcheados por nosotros, que ya estan publicados.
-    for entrada in PARCHEADOS:
-        ficheros.append(dict(entrada))
-        print(f"  parcheado       {Path(entrada['path']).name:<40} fijado")
-
     # 5. Los OVERRIDES del pack base: su configuracion y sus resource packs.
     #
     # ⚠⚠ VIAJAN COMO UN ZIP POR CARPETA, Y NO SUELTOS. Sueltos eran 176
@@ -565,20 +537,6 @@ def construir() -> dict:
         if "/" not in rel:          # servers.dat y demas sueltos de la raiz
             continue                 # los generamos nosotros; ver el paso 6
         carpetas.setdefault(raiz, []).append((rel, datos))
-
-    # Lo nuestro, encima de lo suyo. Va DESPUES de los overrides del pack base
-    # para que gane si algun dia coinciden en un nombre.
-    for f in sorted(EXTRA_CONFIG.rglob("*")) if EXTRA_CONFIG.exists() else []:
-        if not f.is_file():
-            continue
-        rel = f.relative_to(EXTRA_CONFIG).as_posix()
-        datos = f.read_bytes()
-        destino = dir_cfg / rel
-        destino.parent.mkdir(parents=True, exist_ok=True)
-        destino.write_bytes(datos)
-        raiz = rel.split("/")[0]
-        carpetas.setdefault(raiz, []).append((rel, datos))
-        print(f"  nuestro         {rel:<40} config")
 
     # `mods/` NUNCA se sirve como carpeta extraible, aunque venga en los
     # overrides. Una entrada `archive` de nombre `mods` se borraria ENTERA el
@@ -654,6 +612,35 @@ def construir() -> dict:
             "espejo": f"{BASE_RAW}/{nombre}",
             "once": True,
         })
+
+    # 6-bis. REGLAS DEL SERVIDOR, y estas SI se pisan.
+    #
+    # ⚠⚠⚠ AL CONTRARIO QUE LAS DE ARRIBA, NO VAN `once`. Lo de arriba es
+    #    configuracion DEL JUGADOR --sus servidores, su shader-- y pisarla seria
+    #    borrarle lo que eligio. Esto son REGLAS DEL SERVIDOR: si un cliente se
+    #    quedara con su copia vieja, su carta anunciaria un bono que el servidor
+    #    no aplica. Un numero que miente es peor que no ensenarlo.
+    #
+    # ⚠ El fichero vive en `config/` del repositorio y no aqui dentro, para que
+    #   sea EL MISMO que se sube al servidor. Dos copias del mismo ajuste es
+    #   como acaban diciendo cosas distintas.
+    for ruta in ("config/cobblemon-cards.json",):
+        origen = RAIZ / ruta
+        if not origen.exists():
+            raise SystemExit(f"Falta {ruta}: es una regla del servidor, no un "
+                             f"adorno. Ver config/README.md")
+        datos = origen.read_bytes()
+        sha = hashlib.sha1(datos).hexdigest()
+        nombre = origen.name
+        tallo, punto, ext = nombre.partition(".")
+        (SALIDA / f"{tallo}-{sha[:10]}{punto}{ext}").write_bytes(datos)
+        ficheros.append({
+            "path": ruta,
+            "sha1": sha,
+            "size": len(datos),
+            "url": f"{BASE_ACTIVOS}/{tallo}-{sha[:10]}{punto}{ext}",
+        })
+    print("  reglas          config/cobblemon-cards.json (se pisa siempre)")
 
     # Se comprueban los DOS perfiles por separado. El de jugador no es un
     # subconjunto inofensivo: es el que corre casi todo el mundo, y un fallo

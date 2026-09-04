@@ -1947,6 +1947,83 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** «Dame el estado de los sobres», al abrir la pantalla de CARTAS. */
+    public record PedirCartas() implements CustomPayload {
+        public static final Id<PedirCartas> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cartas"));
+        public static final PacketCodec<RegistryByteBuf, PedirCartas> CODEC =
+                PacketCodec.unit(new PedirCartas());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Las tres zonas de CARTAS: los dos relojes, los dos precios y los saldos.
+     *
+     * <p>⚠⚠ LOS SEGUNDOS VIAJAN YA RESTADOS, como en {@link EstadoCura} y al
+     * contrario que en Cazas. La diferencia no es capricho: el ciclo de Cazas
+     * es <b>del servidor y compartido</b> —acaba a la misma hora real para
+     * todos— y esto es <b>un reloj por jugador</b>. Mandando el instante en que
+     * toca, un cliente con la hora adelantada encendería el botón antes de
+     * tiempo; el servidor lo rechazaría igual, pero el jugador vería un botón
+     * encendido que no hace nada, que es peor que uno apagado.
+     *
+     * <p>⚠⚠ Y LOS PRECIOS VIAJAN <b>PARA DIBUJARLOS</b>, no para cobrar. Al
+     * comprar sube el <i>identificador</i> del sobre y el servidor mira SU
+     * tabla (P6) — igual que la tienda. Mandarlos aquí es lo contrario de un
+     * riesgo: evita que la pantalla los tenga escritos a mano y acabe
+     * anunciando un precio que ya no es el que se cobra.
+     *
+     * <p>⚠ NO viaja «¿está instalado el mod?». El cliente lo sabe solo: los
+     * registros se sincronizan, así que si el servidor tiene el sobre, el
+     * cliente lo tiene. Un séptimo campo además no cabría — {@code
+     * PacketCodec.tuple} admite seis, que es el límite que ya destapó un campo
+     * de sobra en {@code EstadoGimnasio}.
+     */
+    public record EstadoCartas(long segDiario, long segPlata,
+                               long precioPlata, long precioLuna,
+                               long plata, long lunacoins) implements CustomPayload {
+        public static final Id<EstadoCartas> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_cartas"));
+        public static final PacketCodec<RegistryByteBuf, EstadoCartas> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_LONG, EstadoCartas::segDiario,
+                        PacketCodecs.VAR_LONG, EstadoCartas::segPlata,
+                        PacketCodecs.VAR_LONG, EstadoCartas::precioPlata,
+                        PacketCodecs.VAR_LONG, EstadoCartas::precioLuna,
+                        PacketCodecs.VAR_LONG, EstadoCartas::plata,
+                        PacketCodecs.VAR_LONG, EstadoCartas::lunacoins,
+                        EstadoCartas::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Dame un sobre de este tipo».
+     *
+     * <p>⚠ Viaja el <b>nombre del tipo</b> y nada más: ni el precio, ni si el
+     * reloj está listo. Las dos cosas las decide el servidor mirando su enum y
+     * su tabla (P6). Un paquete que trajera el precio sería un cliente
+     * modificado comprando el sobre dorado por uno.
+     */
+    public record AbrirSobre(String sobre) implements CustomPayload {
+        public static final Id<AbrirSobre> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_sobre"));
+        public static final PacketCodec<RegistryByteBuf, AbrirSobre> CODEC =
+                PacketCodec.tuple(CADENA, AbrirSobre::sobre, AbrirSobre::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** «Dame mis misiones», al abrir la pantalla. */
     public record PedirMisiones() implements CustomPayload {
         public static final Id<PedirMisiones> ID =
@@ -2269,6 +2346,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirCura.ID, PedirCura.CODEC);
         PayloadTypeRegistry.playC2S().register(Curar.ID, Curar.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoCura.ID, EstadoCura.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirCartas.ID, PedirCartas.CODEC);
+        PayloadTypeRegistry.playC2S().register(AbrirSobre.ID, AbrirSobre.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoCartas.ID, EstadoCartas.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirMisiones.ID, PedirMisiones.CODEC);
         PayloadTypeRegistry.playC2S().register(ReclamarMision.ID, ReclamarMision.CODEC);
         PayloadTypeRegistry.playS2C().register(Misiones.ID, Misiones.CODEC);
@@ -2488,6 +2568,32 @@ public class Red implements ModInitializer {
             //   el equipo herido hasta que reabra. Es la leccion del 23-ago,
             //   que salio cuatro veces con cuatro caras distintas.
             enviarCura(jugador);
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirCartas.ID, (carga, ctx) ->
+                enviarCartas(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AbrirSobre.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var sobre = net.pokereport.luna.cards.CartasService.Sobre.de(carga.sobre());
+            if (sobre == null) {
+                // ⚠ Un tipo que no existe NO es un caso raro: es un cliente
+                //   modificado. Se ignora en silencio y no se contesta -- pero
+                //   se anota, porque si empieza a pasar hay que enterarse.
+                LunaEternal.LOG.warn("{} pidio un sobre que no existe: {}",
+                        jugador.getName().getString(), carga.sobre());
+                return;
+            }
+            net.pokereport.luna.cards.CartasService.abrir(jugador, sobre, r -> {
+                jugador.sendMessage(net.minecraft.text.Text.literal(r.mensaje()), false);
+                // ⚠⚠ SE REENVIA EL ESTADO SIEMPRE, salga bien o mal. El
+                //    servidor acaba de cambiar dos cosas que la pantalla dibuja
+                //    --el reloj y el saldo--, y sin reenviarlas el jugador
+                //    seguiria viendo el boton encendido y su dinero de antes
+                //    hasta reabrir. Es la leccion del 23-ago, y la misma que ya
+                //    aplica `Curar` aqui al lado.
+                enviarCartas(jugador);
+            });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirClan.ID, (carga, ctx) ->
@@ -3073,6 +3179,11 @@ public class Red implements ModInitializer {
             try {
                 long id = LunaEternal.players()
                         .resolve(jugador.getUuid(), jugador.getName().getString());
+                // ⚠⚠⚠ EL VENDEDOR SE MIRA ANTES DE COMPRAR. Despues de la compra
+                //    la fila ya no esta, y sin su identificador no hay a quien
+                //    refrescarle el saldo. Es lo mismo que ya hacia el mercado de
+                //    objetos; aqui faltaba.
+                Long vendedor = LunaEternal.gts().duenoDe(carga.listado());
                 var r = LunaEternal.gts().buy(id, carga.listado());
                 servidor.execute(() -> jugador.sendMessage(
                         net.minecraft.text.Text.literal(r.message()), true));
@@ -3083,7 +3194,22 @@ public class Red implements ModInitializer {
                 }
                 enviarSaldo(jugador);
                 enviarGts(jugador, PedirGts.vacio());
-                refrescarGtsATodos(servidor);
+                // ⚠⚠ AQUI YA NO SE REFRESCA A TODO EL MUNDO. Ver el javadoc de
+                //    `refrescarGtsATodos`: costaba un recorrido del PC de CADA
+                //    jugador conectado, en el hilo del servidor, POR VENTA.
+                //    Quien tenga la lista abierta la vera un momento vieja y al
+                //    pulsar le dira que ya no existe -- que es exactamente lo que
+                //    lleva haciendo la mitad de objetos desde el principio.
+                // ⚠⚠⚠ Y AL VENDEDOR SE LE MANDA EL SALDO, NO SOLO LA LISTA.
+                //    `refrescarGtsATodos` le quitaba la oferta de la pantalla y
+                //    le dejaba el DINERO VIEJO delante: veia desaparecer su
+                //    Pokemon sin ver llegar el pago, que es la peor forma
+                //    posible de enterarse de una venta. El mercado de objetos ya
+                //    lo hacia bien (`refrescarMercadoA`); esta mitad se quedo sin
+                //    hacer, y no daba ningun error.
+                if (r.ok() && vendedor != null && !vendedor.equals(id)) {
+                    refrescarGtsA(servidor, vendedor);
+                }
             } catch (Exception e) {
                 LunaEternal.LOG.warn("No se pudo comprar el listado {}: {}",
                         carga.listado(), e.toString());
@@ -3132,6 +3258,25 @@ public class Red implements ModInitializer {
                 enviarGts(otro, PedirGts.vacio());
             }
         });
+    }
+
+    /** Refresca el GTS y el saldo de un jugador concreto, si está conectado. */
+    private static void refrescarGtsA(net.minecraft.server.MinecraftServer servidor,
+                                      long playerId) {
+        for (var otro : servidor.getPlayerManager().getPlayerList()) {
+            try {
+                long suyo = LunaEternal.players()
+                        .resolve(otro.getUuid(), otro.getName().getString());
+                if (suyo == playerId) {
+                    enviarGts(otro, PedirGts.vacio());
+                    enviarSaldo(otro);
+                    return;
+                }
+            } catch (Exception e) {
+                LunaEternal.LOG.debug("No se pudo refrescar el GTS de {}: {}",
+                        otro.getName().getString(), e.toString());
+            }
+        }
     }
 
     /** Manda el GTS: lo que hay, lo tuyo publicado y lo tuyo publicable. */
@@ -4052,6 +4197,63 @@ public class Red implements ModInitializer {
                 List.copyOf(equipo),
                 net.pokereport.luna.heal.HealService.restante(jugador),
                 net.pokereport.luna.heal.HealService.necesitaCura(jugador)));
+    }
+
+    /**
+     * Manda el estado de las tres zonas de CARTAS.
+     *
+     * <p>⚠ Lee la base, asi que va al hilo de E/S y vuelve al del servidor para
+     * mandar. Consultar desde el hilo del servidor esta prohibido (R1).
+     *
+     * <p>⚠⚠ Y SI LA LECTURA FALLA SE MANDA EL PAQUETE IGUAL, con los dos relojes
+     * a cero y los saldos a cero. Sin paquete, la pantalla se queda en
+     * «cargando» para siempre y el jugador no sabe si es lenta o esta rota --
+     * mismo motivo por el que `enviarCura` manda el equipo vacio.
+     */
+    private static void enviarCartas(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var servidor = jugador.getServer();
+        if (servidor == null) {
+            return;
+        }
+        var perfil = jugador.getGameProfile();
+        LunaEternal.submit(() -> {
+            long diario = 0;
+            long plataSeg = 0;
+            long saldoPlata = 0;
+            long saldoLuna = 0;
+            try {
+                long id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                var e = net.pokereport.luna.cards.CartasService.estado(id);
+                long ahora = System.currentTimeMillis();
+                diario = restante(e, net.pokereport.luna.cards.CartasService.Sobre.DIARIO, ahora);
+                plataSeg = restante(e, net.pokereport.luna.cards.CartasService.Sobre.PLATA, ahora);
+                saldoPlata = e.plata();
+                saldoLuna = e.lunacoins();
+            } catch (Exception ex) {
+                LunaEternal.LOG.error("No se pudo leer el estado de las cartas", ex);
+            }
+            final long d = diario;
+            final long p = plataSeg;
+            final long sp = saldoPlata;
+            final long sl = saldoLuna;
+            servidor.execute(() -> {
+                if (jugador.isRemoved()) {
+                    return;
+                }
+                ServerPlayNetworking.send(jugador, new EstadoCartas(d, p,
+                        net.pokereport.luna.cards.CartasService.Sobre.PLATA.precio,
+                        net.pokereport.luna.cards.CartasService.Sobre.LUNA.precio,
+                        sp, sl));
+            });
+        });
+    }
+
+    /** Segundos que faltan para ese sobre, ya restados. 0 = ya se puede. */
+    private static long restante(net.pokereport.luna.cards.CartasService.Estado e,
+                                 net.pokereport.luna.cards.CartasService.Sobre s,
+                                 long ahora) {
+        Long cuando = e.disponibleEn().get(s);
+        return cuando == null ? 0 : Math.max(0, (cuando - ahora) / 1000);
     }
 
     /**

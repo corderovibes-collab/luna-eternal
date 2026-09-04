@@ -81,10 +81,24 @@ public final class OrdenPad {
      * Convierte una lista de identificadores en las quince aplicaciones.
      *
      * <p>Tolerante a propósito, y en las dos direcciones: <b>fuera lo que no
-     * existe</b> (una aplicación que se quitó del Pad) y <b>al final lo que
+     * existe</b> (una aplicación que se quitó del Pad) y <b>dentro lo que
      * falta</b> (una que se añadió después de guardar el fichero). Sin esto,
      * añadir la aplicación dieciséis dejaría un hueco negro en la pantalla de
      * todo el que ya hubiera tocado el orden.
+     *
+     * <h2>⚠⚠ UNA APLICACIÓN NUEVA ENTRA EN SU SITIO DE FÁBRICA, NO AL FINAL</h2>
+     *
+     * Antes se añadían al final, y eso tiene un fallo que no se ve hasta que
+     * alguien decide dónde va algo: el 2026-09-02 se puso <b>CARTAS en la
+     * primera página</b> y la <b>WIKI en la segunda</b>, y con el pegado al
+     * final <b>quien hubiera tocado su orden alguna vez se habría encontrado
+     * justo lo contrario</b> — cartas en la página 2 y la wiki donde estaba.
+     * Sin ningún error, y solo para una parte de la gente, que es como esto se
+     * descubre tarde.
+     *
+     * <p>Y no pisa nada que el jugador haya elegido: de una aplicación que
+     * acaba de existir <b>no tenía ninguna opinión guardada</b>. Lo que él
+     * movió sigue movido; lo nuevo aparece donde lo pusimos nosotros.
      */
     private static App[] completar(String[] ids) {
         List<App> salida = new ArrayList<>(App.TODAS.length);
@@ -96,9 +110,14 @@ public final class OrdenPad {
                 salida.add(app);
             }
         }
-        for (App app : App.TODAS) {
+        // Se recorre en orden de fábrica para que, si faltan varias, cada una
+        // caiga por delante de la siguiente y no se adelanten entre ellas.
+        for (int fabrica = 0; fabrica < App.TODAS.length; fabrica++) {
+            App app = App.TODAS[fabrica];
             if (!salida.contains(app)) {
-                salida.add(app);
+                // ⚠ Acotado: la lista guardada puede ser más corta que la de
+                //   fábrica —le faltan varias— y ahí `fabrica` se sale.
+                salida.add(Math.min(fabrica, salida.size()), app);
             }
         }
         return salida.toArray(new App[0]);

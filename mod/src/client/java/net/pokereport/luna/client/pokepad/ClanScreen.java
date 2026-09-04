@@ -76,6 +76,38 @@ public class ClanScreen extends Screen {
     private Red.EstadoClan estado;
     private List<String> pestanas = List.of();
     private int pestana = 0;
+
+    /**
+     * Página de la lista de la pestaña actual.
+     *
+     * <h2>⚠⚠⚠ SIN ESTO SE VEÍAN 6 MIEMBROS DE 30</h2>
+     *
+     * Las cinco listas de esta pantalla dibujaban {@code i < filasCaben()} y se
+     * paraban ahí, <b>sin flechas y sin arrastre</b>. Con el aforo en 30, eso
+     * dejaba <b>24 miembros invisibles</b> — y el líder no podía echarlos ni
+     * ascenderlos, porque su fila no existía. Lo mismo con el tesoro y el
+     * registro, que traen hasta 200 apuntes, y con la lista de clanes, hasta 100.
+     *
+     * <p>Y no daba ningún error: la pantalla se dibujaba perfecta. Es la quinta
+     * vez que este proyecto tropieza con lo mismo —la rejilla del PokePad, los
+     * cosméticos, las categorías de la tienda, las paradas de viajes— y siempre
+     * por el mismo motivo: <b>una lista que cabía por casualidad el día que se
+     * escribió</b>.
+     */
+    private int pagina = 0;
+
+    // ---- las flechas de pagina, en la banda naranja de abajo ---------------
+    //
+    // ⚠ Las mismas medidas que en Trabajos y Cosmeticos, y el mismo chasis: se
+    //   midieron recorriendo el PNG (banda y=698..745) y volver a hacerlo seria
+    //   repetir el trabajo para llegar al mismo sitio.
+    private static final int PAG_W = 50, PAG_H = 40;
+    private static final int PAG_Y = 698 + (745 - 698 - PAG_H) / 2;
+    private static final int PAG_SEP = 215;
+    private static final Identifier PAG_ATRAS =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/boton_atras.png");
+    private static final Identifier PAG_ADELANTE =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/boton_adelante.png");
     private String aviso = "";
 
     /**
@@ -199,6 +231,7 @@ public class ClanScreen extends Screen {
         pestanas = List.copyOf(p);
         if (pestana >= pestanas.size()) {
             pestana = 0;
+            pagina = 0;
         }
     }
 
@@ -229,6 +262,7 @@ public class ClanScreen extends Screen {
             case "clanes" -> dibujarClanes(ctx, rx, ry);
             default -> { }
         }
+        dibujarPaginas(ctx, rx, ry);
 
         if (!aviso.isEmpty()) {
             texto(ctx, Text.literal(aviso), PANT_X + PANT_W / 2, PANT_Y + PANT_H - 22,
@@ -380,11 +414,79 @@ public class ClanScreen extends Screen {
         return (PANT_Y + PANT_H - MARGEN - 60 - primeraFilaY()) / (FILA_ALTO + AIRE);
     }
 
+    /** Cómo se llama la pestaña abierta, o cadena vacía. */
+    private String pestanaActual() {
+        return pestanas.isEmpty() ? "" : pestanas.get(pestana);
+    }
+
+    /**
+     * Cuántas filas caben en la pestaña abierta.
+     *
+     * <p>⚠ No es la misma para todas: las de fila gorda (miembros, invitaciones,
+     * clanes) usan {@code filasCaben()}; el tesoro y el registro son renglones
+     * de 22 y 24 px. Con un único número, una de las dos listas se cortaría o se
+     * saldría del marco.
+     */
+    private int capacidadPagina() {
+        return switch (pestanaActual()) {
+            case "tesoro" -> Math.max(1,
+                    (PANT_Y + PANT_H - MARGEN - (primeraFilaY() + 150)) / 22);
+            case "registro" -> Math.max(1,
+                    (PANT_Y + PANT_H - MARGEN - primeraFilaY()) / 24);
+            default -> Math.max(1, filasCaben());
+        };
+    }
+
+    /** Cuántos elementos tiene la lista de la pestaña abierta. */
+    private int totalPagina() {
+        if (estado == null) {
+            return 0;
+        }
+        return switch (pestanaActual()) {
+            case "miembros" -> estado.miembros().size();
+            case "tesoro" -> estado.movimientos().size();
+            case "registro" -> estado.registro().size();
+            case "invitaciones" -> estado.invitaciones().size();
+            case "clanes" -> estado.otros().size();
+            default -> 0;
+        };
+    }
+
+    /**
+     * Cuántas páginas hacen falta. <b>Se calcula, no se escribe.</b>
+     *
+     * <p>⚠ Un número a mano aquí es exactamente lo que dejó 54 cosméticos de 62
+     * fuera de alcance: cuadraba el día que se escribió.
+     */
+    private int paginas() {
+        int cap = capacidadPagina();
+        return Math.max(1, (totalPagina() + cap - 1) / cap);
+    }
+
+    /**
+     * El primer elemento de la página actual.
+     *
+     * <p>⚠⚠ ACOTA LA PÁGINA ADEMÁS DE DEVOLVER EL ÍNDICE, y hace falta: la lista
+     * encoge sola —alguien sale del clan, caduca una invitación— y quedarse en
+     * una página que ya no existe deja la pestaña <b>en blanco</b>, que se lee
+     * como «se ha roto» y no como «ya no hay nada aquí».
+     */
+    private int desde() {
+        if (pagina >= paginas()) {
+            pagina = paginas() - 1;
+        }
+        if (pagina < 0) {
+            pagina = 0;
+        }
+        return pagina * capacidadPagina();
+    }
+
     private void dibujarMiembros(DrawContext ctx, int rx, int ry) {
         var lista = estado.miembros();
         int y = primeraFilaY();
-        for (int i = 0; i < lista.size() && i < filasCaben(); i++) {
-            var m = lista.get(i);
+        int desde = desde();
+        for (int n = 0; n < capacidadPagina() && desde + n < lista.size(); n++) {
+            var m = lista.get(desde + n);
             int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
             boolean encima = dentro(rx, ry, px(ax), py(y), pl(aw), pl(FILA_ALTO));
             ctx.fill(px(ax), py(y), px(ax + aw), py(y + FILA_ALTO),
@@ -493,7 +595,9 @@ public class ClanScreen extends Screen {
             return;
         }
         int caben = (PANT_Y + PANT_H - MARGEN - hy) / 22;
-        for (int i = 0; i < movs.size() && i < caben; i++) {
+        int desde = desde();
+        for (int n = 0; n < caben && desde + n < movs.size(); n++) {
+            int i = desde + n;
             var m = movs.get(i);
             int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
             if (i % 2 == 0) {
@@ -531,7 +635,9 @@ public class ClanScreen extends Screen {
         int y = primeraFilaY();
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
         int caben = (PANT_Y + PANT_H - MARGEN - y) / 24;
-        for (int i = 0; i < lineas.size() && i < caben; i++) {
+        int desde = desde();
+        for (int n = 0; n < caben && desde + n < lineas.size(); n++) {
+            int i = desde + n;
             var l = lineas.get(i);
             if (i % 2 == 0) {
                 ctx.fill(px(ax), py(y - 2), px(ax + aw), py(y + 20), 0x22FFFFFF);
@@ -593,8 +699,9 @@ public class ClanScreen extends Screen {
             return;
         }
         int y = primeraFilaY();
-        for (int i = 0; i < lista.size() && i < filasCaben(); i++) {
-            var inv = lista.get(i);
+        int desde = desde();
+        for (int n = 0; n < capacidadPagina() && desde + n < lista.size(); n++) {
+            var inv = lista.get(desde + n);
             int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
             ctx.fill(px(ax), py(y), px(ax + aw), py(y + FILA_ALTO), FILA_FONDO);
             marco(ctx, px(ax), py(y), pl(aw), pl(FILA_ALTO), FILA_BORDE, Math.max(1, pl(2)));
@@ -619,8 +726,9 @@ public class ClanScreen extends Screen {
             return;
         }
         int y = primeraFilaY();
-        for (int i = 0; i < lista.size() && i < filasCaben(); i++) {
-            var c = lista.get(i);
+        int desde = desde();
+        for (int n = 0; n < capacidadPagina() && desde + n < lista.size(); n++) {
+            var c = lista.get(desde + n);
             int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
             ctx.fill(px(ax), py(y), px(ax + aw), py(y + FILA_ALTO), FILA_FONDO);
             marco(ctx, px(ax), py(y), pl(aw), pl(FILA_ALTO), FILA_BORDE, Math.max(1, pl(2)));
@@ -637,6 +745,51 @@ public class ClanScreen extends Screen {
         //   botón que no hace nada.
         texto(ctx, Text.translatable("pokepad.lunaeternal.clan.solo_invitacion"),
                 PANT_X + PANT_W / 2, PANT_Y + PANT_H - 46, 16, TEXTO_SUAVE, true, false);
+    }
+
+    /**
+     * Las flechas de página, en la banda naranja de abajo.
+     *
+     * <p>⚠ Se dibujan <b>apagadas en los extremos, no escondidas</b>: una flecha
+     * que desaparece mueve la que queda y deja al jugador sin saber si ha llegado
+     * al final o si algo ha dejado de funcionar. Es la misma decisión que en
+     * Trabajos y en Cosméticos.
+     */
+    private void dibujarPaginas(DrawContext ctx, int rx, int ry) {
+        int total = paginas();
+        if (total <= 1) {
+            return;
+        }
+        int cx = PANT_X + PANT_W / 2;
+        dibujarFlechaPag(ctx, rx, ry, PAG_ATRAS, cx - PAG_SEP - PAG_W / 2, pagina > 0);
+        dibujarFlechaPag(ctx, rx, ry, PAG_ADELANTE, cx + PAG_SEP - PAG_W / 2,
+                pagina < total - 1);
+        texto(ctx, Text.literal((pagina + 1) + " / " + total),
+                cx, PAG_Y + PAG_H / 2 - 8, 18, TEXTO_SUAVE, true, false);
+    }
+
+    private void dibujarFlechaPag(DrawContext ctx, int rx, int ry, Identifier arte,
+                                  int x, boolean viva) {
+        boolean encima = viva && dentro(rx, ry, px(x), py(PAG_Y), pl(PAG_W), pl(PAG_H));
+        // ⚠ El apagado se hace con transparencia y no dibujando otra textura:
+        //   una flecha gris aparte seria arte nuevo que mantener.
+        ctx.setShaderColor(1f, 1f, 1f, viva ? (encima ? 1f : 0.85f) : 0.35f);
+        dibujarTextura(ctx, arte, px(x), py(PAG_Y), pl(PAG_W), pl(PAG_H), 120, 96);
+        ctx.setShaderColor(1f, 1f, 1f, 1f);
+    }
+
+    /**
+     * ⚠ NO da la vuelta al llegar al final: saltar de la última a la primera hace
+     * que el jugador no sepa cuántas hay.
+     */
+    private boolean cambiarPagina(int paso) {
+        int destino = pagina + paso;
+        if (destino < 0 || destino >= paginas()) {
+            return true;
+        }
+        pagina = destino;
+        sonar();
+        return true;
     }
 
     // ---- interacción -------------------------------------------------------
@@ -671,11 +824,28 @@ public class ClanScreen extends Screen {
             return true;
         }
 
+        // Las flechas van ANTES que las pestañas: comparten banda con nada, pero
+        // el orden deja claro que la paginación manda sobre lo que haya debajo.
+        if (paginas() > 1) {
+            int pcx = PANT_X + PANT_W / 2;
+            if (dentro(rx, ry, px(pcx - PAG_SEP - PAG_W / 2), py(PAG_Y),
+                    pl(PAG_W), pl(PAG_H))) {
+                return cambiarPagina(-1);
+            }
+            if (dentro(rx, ry, px(pcx + PAG_SEP - PAG_W / 2), py(PAG_Y),
+                    pl(PAG_W), pl(PAG_H))) {
+                return cambiarPagina(+1);
+            }
+        }
+
         int pw = pestanas.isEmpty() ? 0 : (PANT_W - 2 * MARGEN) / pestanas.size();
         for (int i = 0; i < pestanas.size(); i++) {
             if (dentro(rx, ry, px(PANT_X + MARGEN + i * pw), py(PANT_Y + MARGEN),
                     pl(pw - 6), pl(PESTANA_ALTO))) {
                 pestana = i;
+                // ⚠ Cambiar de pestaña vuelve a la página 1. Sin esto, pasar de
+                //   una lista larga a una corta deja la pantalla EN BLANCO.
+                pagina = 0;
                 sonar();
                 return true;
             }
@@ -711,8 +881,12 @@ public class ClanScreen extends Screen {
         var lista = estado.miembros();
         int y = primeraFilaY();
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
-        for (int i = 0; i < lista.size() && i < filasCaben(); i++) {
-            var m = lista.get(i);
+        // ⚠⚠⚠ EL MISMO DESPLAZAMIENTO QUE EL DIBUJADO. Sin el, pulsar en la
+        //    primera fila de la pagina 2 actua sobre el PRIMERO de la lista --
+        //    y no da ningun error.
+        int desde = desde();
+        for (int n = 0; n < capacidadPagina() && desde + n < lista.size(); n++) {
+            var m = lista.get(desde + n);
             if (mando() && !"LIDER".equals(m.rol())) {
                 if (soyLider() && dentro(rx, ry, px(ax + aw - 250), py(y + 8),
                         pl(110), pl(30))) {
@@ -793,8 +967,12 @@ public class ClanScreen extends Screen {
         var lista = estado.invitaciones();
         int y = primeraFilaY();
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
-        for (int i = 0; i < lista.size() && i < filasCaben(); i++) {
-            var inv = lista.get(i);
+        // ⚠⚠⚠ EL MISMO DESPLAZAMIENTO QUE EL DIBUJADO. Sin el, pulsar en la
+        //    primera fila de la pagina 2 actua sobre el PRIMERO de la lista --
+        //    y no da ningun error.
+        int desde = desde();
+        for (int n = 0; n < capacidadPagina() && desde + n < lista.size(); n++) {
+            var inv = lista.get(desde + n);
             if (dentro(rx, ry, px(ax + aw - 250), py(y + 8), pl(118), pl(30))) {
                 mandar("aceptar", "", "", inv.clanId(), 0);
                 return true;

@@ -370,6 +370,148 @@ mercado y el clan deja de ser un estandarte de guerra.
 
 ---
 
+### 5.4 · CARTAS — el icono, y solo el icono (2026-09-02)
+
+El mod [CobblemonCards](../analysis/cobblemon-cards.md) trae **2.920 texturas de
+carta**, una por especie y su shiny, y sus propias pantallas de apertura de
+sobre. Lo único que dibujamos nosotros es **el icono de la rejilla**.
+
+> ⚠️ **NI CHASIS NI PIEZAS DE DENTRO, y las dos cosas por decisión del usuario.**
+> Las sub-pantallas comparten `pokepad_cosmeticos.png` desde el 2026-08-22:
+> pedir un fondo propio daría otro estilo y una pantalla que no se parece a las
+> demás — que es lo que pasó al intentar rehacer el chasis base (§3.1-bis).
+>
+> Y **tampoco hace falta un reverso de carta ni un estado vacío**. Se habían
+> propuesto los dos, y sobran en cuanto se sabe qué hay dentro: la pantalla no
+> es una rejilla de colección con huecos que rellenar, son **tres zonas para
+> abrir sobres** (gratis cada 24 h · por Plata cada 24 h · por LunaCoins sin
+> límite). No hay casilla vacía que dibujar, y no hace falta tener archivador
+> para entrar.
+
+#### `cartas.png` — 100 × 100
+
+Plantilla de §5.2, con este objeto:
+
+```
+a small fan of three collectible trading cards held together and spread
+slightly apart like a hand of cards, seen from the front at a gentle
+three-quarter angle and filling the frame, thick rounded card stock with a
+bold gold border and rounded corners, the front card showing a framed
+portrait of a round friendly orange fire creature over a warm gradient panel
+with a rainbow holographic sheen slanting across it, the two cards behind it
+showing only their gold-edged backs with a red and white creature-catching
+ball emblem centered on each, two small sparkles at the top right corner
+```
+
+`Same style, outline weight, lighting and ground shadow as the previous icon.`
+
+> **Por qué un abanico de tres y no una carta sola.** Una carta suelta es un
+> rectángulo, y a 100 × 100 un rectángulo compite con la mochila, con el
+> portapapeles de misiones y con el libro de la wiki. El abanico tiene silueta
+> propia — es la misma lección por la que `gyms` pasó de una medalla suelta al
+> estuche abierto.
+>
+> Y **el icono nombra un sitio, no una acción**: es *la colección*, no *abrir un
+> sobre*. Por eso no se pide un sobre rasgándose, aunque abrir sobres sea
+> justo lo que se hace dentro.
+
+---
+
+### 5.5 · Los tres sobres de CARTAS — 512 × 512 (2026-09-02)
+
+La pantalla tiene **tres zonas** y las tres hacen lo mismo: abrir un sobre.
+Tres paneles idénticos serían un muro de texto, así que **cada zona lleva su
+sobre dibujado**. Es la misma decisión que el color de cada parada en Viajes:
+a la tercera visita vas a la tuya sin leer.
+
+> ⚠️ **El panel NO se genera: lo dibuja el código.** El marco, el título, el
+> precio y la cuenta atrás salen de `CartasScreen`, igual que las celdas de la
+> rejilla (§4). Lo que se pide aquí es **el objeto**, sobre negro plano, como
+> los diecisiete iconos — y por el mismo camino: `quitar_fondo` lo hace
+> transparente y `a_tamano` lo baja al hueco.
+
+#### ⚠⚠ El color del sobre es el de la moneda que lo compra
+
+No es decoración, es la regla que hace que las tres se distingan sin leerlas:
+
+| Fichero | Zona | Color | Por qué ese |
+|---|---|---|---|
+| `sobre_diario` | gratis, 1 cada 24 h | **azul luna** | no lo compra ninguna moneda, así que no puede llevar el color de ninguna |
+| `sobre_plata` | Plata, 1 cada 24 h | **blanco y plata** | la Plata es blanca desde D-034 |
+| `sobre_luna` | LunaCoins, sin límite | **oro** | la LunaCoin es dorada desde D-033 |
+
+> Y por eso el diario **no** es gris ni dorado: si se pareciera a una de las dos
+> de pago, la zona gratuita parecería la versión pobre de esa. Azul lo saca de
+> la comparación.
+
+#### `sobre_diario.png`
+
+```
+A polished modern game illustration of a sealed collectible card booster
+pack standing upright and seen straight on, filling almost the entire square,
+a tall rectangular foil wrapper in deep midnight blue with a soft vertical
+gradient and a lighter blue band across its middle, a crisp serrated tear
+strip along the top edge, a large red and white creature-catching ball
+emblem centered on the wrapper with a slim silver crescent moon behind its
+upper left, and two small pale blue sparkles floating beside the pack. Clean
+and colorful, smooth soft shading, rounded friendly shapes and a bold dark
+outline around the silhouette. Semi-realistic stylized look, like a high
+quality mobile game icon. Bright, cheerful, family friendly, inviting. Lit
+from the top left, resting on a soft dark blue ellipse used as a ground
+shadow. Plain solid black background. No text, no letters, no numbers, no
+labels, no watermark, no border, no user interface, no document.
+```
+
+#### `sobre_plata.png`
+
+```
+Same style, outline weight, lighting and ground shadow as the previous
+image. A sealed collectible card booster pack standing upright and seen
+straight on, filling almost the entire square, a tall rectangular foil
+wrapper in bright polished silver and clean white with a soft brushed
+metallic sheen running down it and a white band across its middle, a crisp
+serrated tear strip along the top edge, a large red and white
+creature-catching ball emblem centered on the wrapper inside a thin silver
+ring, and two small white sparkles floating beside the pack. Plain solid
+black background. No text, no letters, no numbers, no labels, no watermark,
+no border, no user interface, no document.
+```
+
+#### `sobre_luna.png`
+
+```
+Same style, outline weight, lighting and ground shadow as the previous
+image. A sealed premium collectible card booster pack standing upright and
+seen straight on, filling almost the entire square, a tall rectangular foil
+wrapper in rich warm gold with a deep violet band across its middle and a
+faint rainbow holographic shimmer across the gold, an ornate gold serrated
+tear strip along the top edge, a large red and white creature-catching ball
+emblem centered on the wrapper inside a thick ornate gold ring, and the
+corner of a bright golden ticket peeking out from behind the top of the
+pack. Three small warm gold sparkles floating around it. Plain solid black
+background. No text, no letters, no numbers, no labels, no watermark, no
+border, no user interface, no document.
+```
+
+> ⚠️ **El billete dorado asomando es lo único que distingue la tercera de un
+> sobre caro**, y es lo que hay que ver: esa zona es la única con opción a
+> **boleto divino**. Va *asomando por detrás* y no delante, para que no tape la
+> Poké Ball — a este tamaño, cada cosa que se añade le quita sitio a la
+> principal.
+
+> ⚠️ **Cuadradas y a 512 × 512.** El generador las baja al hueco con Lanczos
+> sobre alfa premultiplicado, así que pueden llegar a 1024 sin problema — lo que
+> no puede es llegar **apaisada**, que es lo que le pasó a `warps` (1024 × 559)
+> por no poner la proporción en 1:1 antes de generar.
+
+> ⚠️ **Un sobre es un rectángulo alto y los tres son el mismo objeto.** Aquí no
+> vale la regla de «que tenga silueta propia» que hizo del icono un abanico:
+> estas tres van **una al lado de otra**, así que lo que tiene que distinguirlas
+> no es la forma sino el color. Que sean iguales de silueta es lo correcto —
+> dice «son la misma cosa, a tres precios».
+
+---
+
 ## 5-bis · La moneda LunaCoin
 
 Va al lado de su saldo, y **se dibuja a 40 × 40**. Ese número no es una

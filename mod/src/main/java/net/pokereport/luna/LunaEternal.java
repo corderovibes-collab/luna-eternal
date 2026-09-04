@@ -105,6 +105,42 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             LOG.warn("rctmod no esta instalado: los gimnasios quedan apagados");
         }
 
+        // ⚠⚠⚠ MISMA GUARDA QUE ARRIBA, Y POR EL MISMO MOTIVO: `HabilidadService`
+        //    toca clases de Cobblemon (SpawningInfluence, PokemonSpecies), que
+        //    SI estan siempre -- pero la activacion depende de que exista la
+        //    carta de `cobblemon-cards`, y se comprueba por registro, no por
+        //    `isModLoaded`, igual que en toda la pantalla CARTAS.
+        if (net.pokereport.luna.cards.CartasService.hayCartas()) {
+            // Sneak + clic derecho con una carta en la mano: la activa. Sin
+            // sneak, se deja pasar (ActionResult.PASS) para que su propio
+            // examinador de cartas siga funcionando igual que siempre.
+            net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register(
+                    (jugador, mundo, mano) -> {
+                        if (mundo.isClient() || mano != net.minecraft.util.Hand.MAIN_HAND
+                                || !jugador.isSneaking()
+                                || !(jugador instanceof net.minecraft.server.network.ServerPlayerEntity sp)) {
+                            return net.minecraft.util.TypedActionResult.pass(
+                                    jugador.getStackInHand(mano));
+                        }
+                        var carta = jugador.getStackInHand(mano);
+                        // ⚠ Comprobacion SINCRONA y barata antes de encolar
+                        //   nada: sin esto, cada sneak+clic derecho de
+                        //   CUALQUIER objeto en todo el servidor mandaria una
+                        //   tarea al hilo de E/S.
+                        if (!net.minecraft.util.Identifier.of("cobblemon-cards", "card")
+                                .equals(net.minecraft.registry.Registries.ITEM.getId(carta.getItem()))) {
+                            return net.minecraft.util.TypedActionResult.pass(carta);
+                        }
+                        var copia = carta.copy();
+                        submit(() -> {
+                            var r = net.pokereport.luna.cards.HabilidadService.activar(sp, copia);
+                            sp.getServer().execute(() ->
+                                    sp.sendMessage(net.minecraft.text.Text.literal(r.mensaje()), false));
+                        });
+                        return net.minecraft.util.TypedActionResult.success(carta);
+                    });
+        }
+
         ServerLifecycleEvents.SERVER_STARTING.register(server -> boot());
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> shutdown());
 
@@ -123,6 +159,11 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             //   hasta SERVER_STARTED no esta cargado del todo.
             if (hayEntrenadores()) {
                 net.pokereport.luna.gym.Combate.escuchar();
+            }
+            // ⚠ Igual que arriba con Combate: se engancha a un registro de
+            //   Cobblemon (PlayerSpawnerFactory), y hasta aqui no esta cargado.
+            if (net.pokereport.luna.cards.CartasService.hayCartas()) {
+                net.pokereport.luna.cards.HabilidadService.registrarInfluencia();
             }
 
             // ⚠ Las ordenes vencidas se cierran AL ARRANCAR y se devuelve lo

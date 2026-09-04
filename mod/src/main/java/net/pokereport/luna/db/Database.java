@@ -62,8 +62,12 @@ public final class Database implements AutoCloseable {
         "V025__rango_entrenador.sql",
         "V026__tesoros.sql",
         "V027__claves_de_especie.sql",
-        // ⚠ 28 y 29 son de las CARTAS y salen de otra rama: no estan en esta
-        //   lista pero SI en la base. Ver el aviso de `migrate()`.
+        // ⚠⚠ LA 28 Y LA 29 SON DE LAS CARTAS Y VENIAN DE OTRA RAMA. Estuvieron
+        //    en la base sin estar en esta lista, y por eso los trajes --que
+        //    tambien habian elegido la 28-- se saltaron sin una linea en el log.
+        //    Ver el aviso de `migrate()`: hoy eso ya no puede pasar callado.
+        "V028__cartas.sql",
+        "V029__habilidad_cartas.sql",
         "V030__trajes_comprados.sql"
     };
 

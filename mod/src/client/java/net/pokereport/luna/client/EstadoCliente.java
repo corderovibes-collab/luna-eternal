@@ -25,6 +25,7 @@ public final class EstadoCliente {
     private static Red.EstadoClan clan;
     private static Red.Tienda tienda;
     private static Red.EstadoCura cura;
+    private static Red.EstadoCartas cartas;
     private static Red.EstadoMercado mercado;
     private static Red.EstadoGts gts;
     private static Red.EstadoCazas cazas;
@@ -147,6 +148,22 @@ public final class EstadoCliente {
         return cura;
     }
 
+    public static void guardar(Red.EstadoCartas nueva) {
+        cartas = nueva;
+    }
+
+    /**
+     * Los dos relojes, los dos precios y los saldos de CARTAS. {@code null}
+     * hasta que el servidor contesta.
+     *
+     * <p>⚠ Los segundos que trae son los que habia AL MANDARLO. La pantalla les
+     * resta el tiempo que lleva en pantalla; no se vuelven a pedir cada
+     * segundo.
+     */
+    public static Red.EstadoCartas cartas() {
+        return cartas;
+    }
+
     public static void guardar(Red.EstadoMercado nuevo) {
         mercado = nuevo;
     }
@@ -236,6 +253,7 @@ public final class EstadoCliente {
         clan = null;
         tienda = null;
         cura = null;
+        cartas = null;
         mercado = null;
         gts = null;
         saldo = null;

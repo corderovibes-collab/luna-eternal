@@ -794,6 +794,153 @@ Clanes        EL PRIMER SISTEMA SOCIAL (2026-08-23, V013)
               ⚠ SIN VERIFICAR EN EL JUEGO todavia: hacen falta DOS cuentas
               desplegado y V013 aplicada (2026-08-23) . Done (9,2 s)
 
+Cartas        TRES ZONAS DE SOBRES (2026-09-02, V028) . SIN DESPLEGAR
+              analisis completo en docs/analysis/cobblemon-cards.md
+              icono `cartas` en la PAGINA 1 . la wiki baja a la 2
+                DIARIO gratis 24h . PLATA 24h . LUNA sin limite
+              el mod es CobblemonCards (CC0) y sus CINCO dependencias YA
+              ESTABAN en el pack: no hubo que instalar nada mas
+              ⚠⚠⚠ Y NO ES EL JAR PUBLICADO: ES UN FORK NUESTRO, Y NO ERA EL
+                 PLAN. Se bajo el 1.0.4 del CDN y se abrio con javap:
+                   1.0.4 publicado   config con  9 campos
+                   HEAD 2026-08-15   config con 44 campos
+                 entre los 35 que faltan esta `enableCardStats`, o sea EL
+                 INTERRUPTOR QUE APAGA LO UNICO INADMISIBLE. Y su
+                 BinderSpawnModifier de 1.0.4 es el que TRANSFORMA ENTIDADES YA
+                 GENERADAS, que su propio CHANGELOG describe como «rompia el
+                 equilibrio» y por lo que lo reescribieron
+                 la eleccion no era «probado contra sin publicar»: era «sin
+                 interruptor y con el mecanismo malo» contra «con interruptor y
+                 con el bueno»
+                 ⚠⚠ LA CONTRAPARTIDA ES REAL: corre codigo SIN PUBLICAR. Si
+                    algo va raro con las cartas, el primer sospechoso es esto
+              cards/parchear.py clona, parchea y compila
+              ⚠⚠ FIJADO A UN COMMIT (c02aafb5) Y NO A UNA RAMA: el repositorio
+                 NO TIENE NI UNA ETIQUETA --`git tag -l` sale vacio-- asi que
+                 «la version» no se puede pedir por nombre. Con `main` a secas,
+                 dos compilaciones de dias distintos darian jars distintos y
+                 nadie se enteraria hasta que fallara
+              los 4 parches, verificados EN EL JAR y no en el fuente:
+                maxNationalDex 251 . comandos a nivel 4 (iconst_4 en el
+                bytecode) . LOGGER.debug . es_es.json 387/387 claves
+              ⚠ el tope de generacion va como CONFIG y no a fuego: abrir Gen 3
+                sera cambiar un numero, no recompilar
+              ⚠⚠ y cubre LA LISTA DE EMERGENCIA, que traia rayquaza (384) y
+                 greninja (658) y se usa cuando el registro de especies aun no
+                 esta listo -- o sea EN EL ARRANQUE, cuando nadie mira
+              ⚠⚠ MidnightLib se salvo por el JAR ANIDADO: el nuestro es 1.7.5 y
+                 pide 1.9.2, pero el suyo viaja dentro y Fabric coge el mas alto
+              ⚠⚠ Y TRINKETS NO HACE FALTA aunque el README lo exija: en sus 129
+                 clases no aparece ni una vez. Solo usa `accessories`, que ya
+                 esta. Importa porque Trinkets es el que dejo a todos fuera con
+                 `exported_slots` el 17-ago
+              ⚠⚠⚠ LAS CARTAS DABAN PODER, Y LA TERCERA ZONA LO HACE INADMISIBLE.
+                 Un archivador aplica las stats de sus cartas: daño, armadura,
+                 vida, y 18 multiplicadores de aparicion con tope x100. Con
+                 sobres SIN LIMITE por LunaCoins, eso es comprar poder con
+                 dinero real sin techo -- T4, la linea roja de D-007 y D-014
+                 `enableCardStats = false` en config/cobblemon-cards.json
+              ⚠⚠⚠ Y REPARTIRIA CARTAS DE POKEMON QUE AQUI NO EXISTEN.
+                 `BoosterLootTable` usa `PokemonSpecies.getImplemented()` --las
+                 1.025-- y nuestro datapack solo apaga POOLS DE APARICION, no
+                 marca especies. Un servidor Kanto+Johto dando cartas de
+                 Miraidon, sin un solo error. PIDE PARCHE, y CC0 lo permite
+              ⚠⚠ `/givecard` y `/customboosterset` son hasPermission(2), o sea
+                 NUESTROS CONSTRUCTORES (D-028). En cuanto una carta valga
+                 dinero, eso es una imprenta
+              ⚠⚠ metia sobres en TODAS las tablas de cofre --su filtro es
+                 `path.contains("chest")`-- y eso choca con Tesoros (D-020)
+              LO NUESTRO YA ESTA: pantalla, servicio, V028, protocolo y config
+              ⚠⚠ DOS RELOJES Y NO UNO, y es lo que impide que cobrar el gratis
+                 gaste tambien el de pago. Van en (player_id, kind), asi que lo
+                 dice LA CLAVE PRIMARIA y no un `if`
+              ⚠⚠ mirar el reloj, cobrar y marcarlo van EN LA MISMA TRANSACCION
+                 con FOR UPDATE. Separados, dos clics rapidos leen los dos
+                 «disponible» antes de que ninguno escriba: dos sobres con un
+                 reloj, y el de pago cobrado dos veces
+              ⚠ NO se compila contra su jar: el sobre sale del REGISTRO
+                (`cobblemon-cards:booster_pack`), asi que nuestro mod funciona
+                con el mod y sin el. Sin el, la pantalla LO DICE
+              ⚠ los segundos viajan YA RESTADOS (como EstadoCura) y no el
+                instante (como Cazas): el ciclo de Cazas es del servidor y
+                compartido, y esto es un reloj POR JUGADOR -- con el instante,
+                un cliente adelantado encenderia el boton antes de tiempo
+              ⚠ el color de cada sobre es EL DE LA MONEDA QUE LO COMPRA (Plata
+                blanca D-034, LunaCoin dorada D-033). El diario va azul porque
+                no lo compra ninguna
+              ⚠ PRECIOS PROVISIONALES, como los de la tienda: 900 de Plata y 50
+                LunaCoins, en un solo sitio (el enum `Sobre`)
+              +5 comprobaciones, y la que importa: EXACTAMENTE UNO SIN RELOJ.
+              Si el de LunaCoins ganara reloj, las tres zonas serian la misma
+              cosa a tres precios; si otro lo perdiera, el diario seria sobres
+              INFINITOS GRATIS. Las dos averias son mudas
+              DESPLEGADO Y EN VIVO (2026-09-02)
+                163 mods . Done (26,7 s) . V028 aplicada . AUTOTEST 511/511
+                config leida: maxNationalDex 251, estadisticas OFF, cofres OFF
+                manifiesto d85f24859e publicado y sirviendose
+              ⚠⚠⚠ Y EL PRIMER REINICIO TIRO EL SERVIDOR. Su fabric.mod.json
+                 pedia `fabricloader >=0.18.6` y NUESTRO SERVIDOR CORRE 0.18.4
+                 (los clientes van en 0.19.5; el desfasado es el servidor):
+                   Incompatible mods found!
+                   requires 0.18.6 or later ... but only 0.18.4 is present
+                 Es la familia de letmedespawn/almanac: SOLO SE VE AL REINICIAR
+                 ⚠⚠ Y ESE NUMERO NO ERA UN REQUISITO, era un artefacto del
+                    build: sale de `loader_version` de SU gradle.properties. Se
+                    comprobo antes de bajarlo --en sus 129 clases el UNICO uso
+                    de la API del loader es `isModLoaded()`, que existe desde
+                    0.4-- asi que el fork lo baja a >=0.18.4 y no se toca el
+                    arranque de un servidor vivo
+                 ⚠ se restauro el servicio PRIMERO (quitar el jar y arrancar) y
+                   se arreglo despues. 3 minutos caido, con 0 jugadores
+              ⚠⚠ EL ORDEN FUE: servidor primero (un jar subido no hace nada
+                 hasta arrancar), manifiesto despues. Asi la ventana en que los
+                 dos lados no coinciden es la minima -- y va en la direccion
+                 SEGURA, porque el servidor tiene que ser SUBCONJUNTO del
+                 cliente, no al reves
+              ⚠ Y AL APAGAR, LA JVM SE COLGO: el log decia «All dimensions are
+                saved» y «luna-db Shutdown completed», o sea que Minecraft
+                termino bien y el proceso no salio. Se sale con kill + start,
+                que ya estaba escrito aqui
+              ⚠ EL LOADER DEL SERVIDOR (0.18.4) VA SEIS VERSIONES POR DETRAS
+                del cliente (0.19.5). Hoy no molesta, pero es la clase de cosa
+                que muerde con el siguiente mod que pida uno nuevo. Subirlo NO
+                es cambiar la variable del panel: `server.jar` son 635 B y el
+                loader vive en `libraries/`
+              ⚠ volver atras son 250 bytes:
+                python tools/gen_manifest.py --volver-a 263f619293
+              ⚠⚠ EL ORDEN FUE: servidor primero (un jar subido no hace nada
+                 hasta arrancar), manifiesto despues. Asi la ventana en que los
+                 dos lados no coinciden es la minima -- y va en la direccion
+                 SEGURA, porque el servidor tiene que ser SUBCONJUNTO del
+                 cliente, no al reves
+              ⚠ volver atras son 250 bytes:
+                python tools/gen_manifest.py --volver-a d5cc954ea7
+              HABILIDAD DE APARICION (2026-09-03, V029) . SIN DESPLEGAR
+                sneak + clic derecho con la carta en la mano . activa
+                5 min de ventana . 1 hora de espera . una activa por jugador
+                techo por RAREZA DE CARTA (no del Pokemon): x1,3 comun ..
+                x2,7 mitica, la nota (calificacion) afina entre suelo y techo
+              ⚠⚠⚠ EL TECHO SALE DE PESOS REALES DE COBBLEMON, no de un numero
+                 inventado. Se extrajo spawn_pool_world del jar 1.7.3 de este
+                 servidor: comun 4,5-9 . poco comun 0,3-84 . rara 1,5-7,5. Con
+                 esa vara, x1,3-x2,7 es un movimiento real sin salirse del
+                 rango que el propio juego ya maneja entre sus entradas
+              ⚠⚠⚠ Y LOS ONCE LEGENDARIOS DE TESOROS NO TIENEN NI UNA ENTRADA
+                 DE SPAWN, comprobado en el jar. No aparecen salvajes en el
+                 Cobblemon base -- solo existen via el cofre de D-020. La
+                 habilidad NO necesita prohibirlos por lista: multiplica un
+                 peso que ya existe, y cero por cualquier cosa sigue siendo
+                 cero. Se protege sola, sin una lista que mantener
+              ⚠⚠ LA ESTACION DE CALIFICACION VUELVE A TENER MOTIVO: con la
+                 restauradora retirada, calificar se habia quedado en "pon un
+                 numero bonito". Ahora la nota afina el multiplicador de
+                 verdad, dentro del techo de la rareza
+              ⚠⚠ SIN COMPILAR CONTRA SU JAR: especie y rareza se leen del
+                 custom_data de vainilla que parchear.py espeja EN CADA CARTA
+                 al crearse (10 sitios, un patron y un ayudante, no diez una()
+                 a mano). Resolver la especie SI usa Cobblemon, que este mod
+                 ya usa desde hace meses
+
 Rangos        ENTRENADOR . ELITE . CAMPEON . MAESTRO . LEYENDA (V020, V025)
               y encima ADMIN . DEV . MODERADOR, que son de equipo
               /luna rango                   los que hay y cuanta gente
@@ -1221,7 +1368,103 @@ Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
               PONER NI SIENDO LEYENDA. Sin eso se equipa, se sincroniza, no da
               ningun error y el jugador NO VE NADA -- el fallo de los 62
               cosmeticos que no existian, otra vez
+              ⚠⚠⚠ Y ESA COMPROBACION SE FIABA DE UN BOOLEANO (2026-09-01).
+                 `listo` es una promesa escrita a mano en un enum: comprobaba
+                 que un traje SIN arte no se pudiera poner, y NADA comprobaba
+                 que uno CON `listo = true` tuviera los ficheros. Hoy el
+                 autotest los BUSCA
+                 ⚠⚠ Y SE PUEDE DESDE EL SERVIDOR PORQUE ES UN SOLO JAR:
+                    `src/client/resources/` acaba dentro del mismo fichero, asi
+                    que `getResource` los ve aunque el dibujado sea de cliente.
+                    Sin ese detalle parecia imposible de comprobar ahi -- que es
+                    por lo que no se comprobaba
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
+
+Blockbench    DE UN .bbmodel DEL USUARIO AL JUEGO (2026-09-01)
+              tools/trajes/importar.py . importados.py . comprobar_java.py
+              python tools/gen_trajes.py --ver <traje>     solo mirar
+              python tools/gen_trajes.py --generar         lo escribe en el mod
+              python tools/gen_trajes.py --verificar       cruza con Java
+              ⚠⚠ ESTE BLOQUE VIENE DE LA RAMA DE CARTAS Y SE ESCRIBIO CONTRA EL
+                 IMPORTADOR VIEJO. Las lecciones siguen siendo ciertas --son de
+                 como funciona Minecraft, no de como estaba escrito el nuestro--
+                 pero `caras.py`, `arceus.py` y `--al-mod` YA NO EXISTEN: se
+                 rehizo el importador entero el 2026-09-03. Los nombres de
+                 arriba son los de hoy
+              ⚠⚠⚠ HAY DOS SISTEMAS DE UV Y NO SE HABLAN. Un modelo `java_block`
+                 --el del casco-- guarda UN RECTANGULO POR CARA, donde el autor
+                 quiera. `ModelPartBuilder.cuboid()`, que es con lo que se
+                 dibuja una armadura, SOLO sabe el reparto en cruz de la skin.
+                 No se convierten las COORDENADAS: se convierten los PIXELES --
+                 se recorta cada cara y se pega en su hueco (`caras.py`)
+                 ⚠⚠ LAS DOS TABLAS DE ORIENTACION SE LEYERON DEL JAR, no se
+                    dedujeron: `CubeFace` + `ModelElementTexture` para el origen
+                    y `ModelPart$Cuboid` para el destino. Y NO COINCIDEN: las
+                    cuatro caras laterales van ESPEJADAS entre un sistema y el
+                    otro, y la de arriba volteada. Eso no se ve venir mirando el
+                    modelo: se ve en el juego, con el dibujo del lado cambiado,
+                    y se lee como «el arte esta mal hecho»
+                 ⚠ y un rectangulo con las esquinas al reves (u0>u1) NO esta mal
+                   escrito: es un espejo. Normalizarlo sin voltear la imagen
+                   pierde justo esa instruccion
+              ⚠⚠⚠ MINECRAFT NO GIRA CUBOS, GIRA HUESOS. 13 de los 19 cubos del
+                 casco van girados, y `cuboid()` hace cajas rectas y ya. Cada
+                 cubo girado sale a un HUESO PROPIO con su pivote y su rotacion
+                 -- que es lo que hace Blockbench al exportar y lo que hay
+                 dentro del `eevee_head.geo.json` de Diosesmon
+                 ⚠⚠ EL PIVOTE DE UN HIJO ES RELATIVO AL DEL PADRE. En el
+                    .geo.json todos son absolutos; en Java cada
+                    `ModelTransform` se aplica dentro del sistema del padre
+                 ⚠⚠ Y LA ROTACION NO ES COPIAR LOS TRES NUMEROS: el paso de un
+                    espacio al otro invierte la Y, y eso CAMBIA EL SIGNO del
+                    cabeceo y del alabeo, no el de la guiñada
+              ⚠⚠⚠ Y LA Z NO SE NIEGA. `Trajes.java` hacia `z = -oz - sz` y era
+                 FALSO: los dos espacios tienen el frente en -Z. Lo dice el
+                 morro del cerdo de vanilla (`cuboid(-2, 0, -9, ...)`) y lo dice
+                 el reparto de la textura -- la cara que se lleva el rectangulo
+                 (u+d, v+d) en `ModelPart$Cuboid` es la de NORTH, y en la skin
+                 de vanilla ese rectangulo es LA CARA DEL JUGADOR
+                 el traje salia del reves: la visera en la nuca y el aro delante
+                 ⚠⚠ NADIE LO VIO POR EL PEOR MOTIVO POSIBLE: EL MODELO DEL
+                    JUGADOR ES SIMETRICO EN Z. La formula cuadra con la cabeza
+                    (-4..4 -> -4..4), con el torso y con los cuatro miembros.
+                    Solo se rompe con lo que SOBRESALE, y no habia ni una pieza:
+                    los cinco trajes estaban a `listo = false`
+              ⚠⚠ EL HUESO DE UN CUBO SIN NOMBRE LO DICE SU GRUPO DE BLOCKBENCH,
+                 no su posicion. Los seis adornos de la armadura se llaman todos
+                 `cube` y por posicion irian al hueso equivocado: las dos
+                 hombreras caen encima de los BRAZOS y el autor las metio en el
+                 grupo del TORSO. En el brazo se moverian al andar
+                 ⚠ y sin esto no iban al hueso equivocado: SE PERDIAN, con un
+                   «no cae en ningun hueso conocido». Son seis piezas de verdad
+              ⚠⚠ `box_uv` ES UNA BANDERA POR CUBO, NO DEL FICHERO, y `armadura
+                 arceus.bbmodel` los MEZCLA: el cuerpo con UV de caja y los seis
+                 adornos con UV por cara. Lo que no cabe en caja se rehornea
+              ⚠⚠ LA DENSIDAD DE TEXEL: `texture_width` es la UNICA palanca para
+                 cambiar la escala de la textura, porque Minecraft saca el hueco
+                 de cada cara del TAMAÑO DEL CUBO. El casco declara 128 con un
+                 PNG de 512 = cuatro pixeles por unidad, que es a lo que dibujo
+                 el autor. A densidad 1 sus caras de 1 de alto --con 8 pixeles
+                 de dibujo dentro-- salian LISAS: la forma bien y el detalle
+                 borrado, que parece que el arte era asi
+                 ⚠ no es una por cubo sino POR FICHERO, asi que mezclar
+                   densidades dentro de una pieza es una de las dos leyendose
+                   mal. Se comprueba
+              ⚠⚠ LA COLOCACION DEL CASCO SE MIDE, NO SE ELIGE. Viene en espacio
+                 de bloque (0..16) y la cabeza vive en -4..4 / 24..32 / -4..4.
+                 El autor dejo el hueco: sus paredes laterales distan OCHO en X
+                 y OCHO en Z, que es la cabeza exacta. De ahi salen escala 1:1 y
+                 los tres desplazamientos
+                 ⚠ y lleva inflate 0,4: con el hueco exacto la pared interior
+                   cae ENCIMA de la piel y las dos se pelean por el pixel
+              ⚠ un generador que reparte la textura tiene que saber HASTA DONDE
+                hay algo escrito. La rueda tenia un 128 a mano y funcionaba de
+                casualidad; hoy pregunta (`t.libre_y`)
+              ⚠ LO QUE SIGUE FUERA: la rueda es una MALLA (13 vertices, 12
+                triangulos) y una malla no es una caja. Se pone como PLANCHA con
+                su dibujo -- que ademas conserva el arte del autor
+              ⚠ y el visor tenia la cara de ARRIBA volteada. Casi no se ve --hay
+                que mirar al jugador desde el techo-- asi que se habria quedado
 
 EL ARTE       tools/gen_trajes.py . tools/trajes/ . docs/ui/prompts-trajes.md
               ⚠⚠⚠ EL VISOR ES LA PIEZA QUE IMPORTA, NO UN EXTRA. Sin el, un traje

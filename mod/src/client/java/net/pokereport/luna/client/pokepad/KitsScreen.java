@@ -425,7 +425,11 @@ public class KitsScreen extends Screen {
             return;
         }
         var sel = ficha(elegido);
-        boolean probando = sel != null && sel.listo();
+        // ⚠⚠ UN KIT TAMBIEN SE PREVISUALIZA, aunque no este `listo`. `listo`
+        //    significa «se puede EQUIPAR», y un kit no se equipa: se reclama. Su
+        //    modelo existe justo para esto -- para que veas QUE te vas a llevar
+        //    ANTES de gastar el reclamo de 24 h.
+        boolean probando = sel != null && (sel.listo() || esKit(sel));
         if (probando) {
             Trajes.previsualizar(sel.id());
         }

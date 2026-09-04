@@ -193,15 +193,24 @@ def _importado(cual):
     return hacer
 
 
+def _vainilla():
+    """La malla del kit ENTRENADOR: arte SOLO para el visor. Ver vainilla.py."""
+    from trajes import vainilla
+    t, avisos = vainilla.entrenador()
+    for a in avisos:
+        print("      . %s" % a)
+    return t
+
+
 TRAJES = {
-    "entrenador": entrenador,
+    "entrenador": _vainilla,
     "campeon": _importado("campeon"),
     "leyenda": _importado("leyenda"),
 }
 
 # Los que se escriben en el mod. El ENTRENADOR es un banco de pruebas: su arte
 # se genera por formula y el usuario decidio que el bueno se dibuja a mano.
-AL_MOD = ("campeon", "leyenda")
+AL_MOD = ("entrenador", "campeon", "leyenda")
 
 
 # ---------------------------------------------------------------- comprobar
@@ -333,6 +342,14 @@ ENUM = (RAIZ / "mod" / "src" / "main" / "java" / "net" / "pokereport" / "luna"
         / "traje" / "Traje.java")
 
 
+# ⚠⚠ LOS KITS TIENEN ARTE Y NO ESTAN `listo`, Y ESO ES CORRECTO. El ENTRENADOR
+#    entrega objetos de verdad: su modelo existe solo para que el visor del
+#    PokePad enseñe QUE te vas a llevar. No se puede equipar, asi que `listo` es
+#    false -- y sin esta excepcion la comprobacion lo llamaria «bytes que nadie
+#    puede ponerse».
+KITS = ("entrenador",)
+
+
 def enum_trajes():
     """Los (id, listo) que declara `Traje.java`, leidos del fuente."""
     import re
@@ -389,7 +406,7 @@ def comprobar_enum():
             fallos.append("%s tiene %d modelos y solo %d texturas: la pieza que "
                           "falte se dibujaria en morado" % (id_, len(piezas),
                                                             len(texturas)))
-        elif not listo and piezas:
+        elif not listo and piezas and id_ not in KITS:
             fallos.append("%s NO esta `listo` y su arte esta en el mod: son "
                           "bytes que nadie puede ponerse" % id_)
     return fallos
@@ -500,8 +517,13 @@ def main():
             salida = 1
         else:
             for id_, listo in enum_trajes():
-                print("    %-11s %s" % (id_, "listo, con arte" if listo
-                                        else "sin arte todavia"))
+                if id_ in KITS:
+                    estado = "kit: arte solo para el visor"
+                elif listo:
+                    estado = "listo, con arte"
+                else:
+                    estado = "sin arte todavia"
+                print("    %-11s %s" % (id_, estado))
 
     return salida
 

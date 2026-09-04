@@ -1103,6 +1103,18 @@ Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
                    >0 segundos. Asi el cliente no necesita una lista de cuales son
                    kits -- que es la lista paralela que ya mordio aqui
                  ⚠ y son DOS PAQUETES, no uno que signifique dos cosas segun el id
+                 ⚠⚠⚠ LA ESPERA DECIA 27h 59min PARA UN COOLDOWN DE 24h, y son DOS
+                    RELOJES: la fecha se guarda con CURRENT_TIMESTAMP (MariaDB, en
+                    UTC) y se comparaba con LocalDateTime.now() (la JVM, cuatro
+                    horas por detras). Hoy la resta la hace la BASE
+                    (TIMESTAMPDIFF), asi que los dos extremos salen del mismo
+                    reloj y la zona horaria deja de importar
+                    ⚠⚠ y llevaba ahi desde PHASE 3: como nadie habia reclamado un
+                       kit nunca, el fallo no tenia forma de verse
+                 ⚠ EL KIT SE PREVISUALIZA EN EL VISOR 3D aunque no este `listo`:
+                   `listo` significa «se puede EQUIPAR» y un kit no se equipa, se
+                   reclama. Su modelo existe para enseñar QUE te llevas ANTES de
+                   gastar el reclamo, y apunta a la textura de vainilla
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
               ---- lo de antes, que sigue siendo cierto ------------------
               5 trajes . ENTRENADOR hecho . los otros 4 «en preparacion»

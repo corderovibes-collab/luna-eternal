@@ -48,25 +48,48 @@ public final class KitService {
         this.db = db;
     }
 
+    /**
+     * ⚠⚠⚠ EL TIEMPO SE MIDE EN LA BASE, NO EN JAVA, Y ESO NO ES UN DETALLE.
+     *
+     * <p>La fecha se guarda con {@code CURRENT_TIMESTAMP(3)} —el reloj de
+     * MariaDB— y aquí se comparaba con {@code LocalDateTime.now()}, que es el
+     * reloj de la JVM. <b>Son dos relojes distintos y no están en la misma zona
+     * horaria</b>: medido en producción, MariaDB va en UTC y el servidor de
+     * juego cuatro horas por detrás. Resultado: una espera de 24 h se anunciaba
+     * como <b>27 h 59 min</b>.
+     *
+     * <p>⚠⚠ Y no daba ningún error, ni se veía en el log, ni se podía notar
+     * hasta que alguien reclamó un kit por primera vez — el catálogo llevaba
+     * desde PHASE 3 sin puerta, así que este fallo llevaba ahí desde entonces.
+     *
+     * <p>Preguntando a la base <b>cuántos segundos han pasado</b>, los dos
+     * extremos de la resta salen del mismo reloj y la zona horaria deja de
+     * importar.
+     */
     public Status status(long playerId, KitCatalog.Kit kit) throws SQLException {
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement(
-                 "SELECT last_claimed, times_claimed FROM kit_claim "
-               + "WHERE player_id = ? AND kit_id = ?")) {
+                 "SELECT times_claimed, "
+               + "TIMESTAMPDIFF(SECOND, last_claimed, CURRENT_TIMESTAMP(3)) "
+               + "FROM kit_claim WHERE player_id = ? AND kit_id = ?")) {
             ps.setLong(1, playerId);
             ps.setString(2, kit.id());
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) return Status.ready();
 
-                LocalDateTime last = rs.getTimestamp(1).toLocalDateTime();
-                int times = rs.getInt(2);
+                int times = rs.getInt(1);
+                long transcurrido = rs.getLong(2);
 
                 if (kit.once()) {
                     return new Status(false, null, times, "Ya lo reclamaste");
                 }
-                LocalDateTime next = last.plusHours(kit.cooldownHours());
-                if (LocalDateTime.now().isBefore(next)) {
-                    return new Status(false, next, times, null);
+                long faltan = kit.cooldownHours() * 3600L - transcurrido;
+                if (faltan > 0) {
+                    // ⚠ `nextAvailable` se construye sumando los segundos que
+                    //   faltan a AHORA, no a la fecha guardada: asi quien lo lea
+                    //   con el reloj de la JVM saca el mismo numero.
+                    return new Status(false, LocalDateTime.now().plusSeconds(faltan),
+                                      times, null);
                 }
                 return new Status(true, null, times, null);
             }
@@ -88,23 +111,29 @@ public final class KitService {
                 int times = 0;
                 boolean existe = false;
 
+                // ⚠⚠ Los segundos transcurridos los cuenta LA BASE. Ver el
+                //    javadoc de `status`: aqui se comparaba con el reloj de la
+                //    JVM, que va en otra zona horaria, y la espera salia cuatro
+                //    horas mas larga de lo que es.
+                long transcurrido = 0;
                 try (PreparedStatement ps = c.prepareStatement(
-                        "SELECT last_claimed, times_claimed FROM kit_claim "
-                      + "WHERE player_id = ? AND kit_id = ? FOR UPDATE")) {
+                        "SELECT times_claimed, "
+                      + "TIMESTAMPDIFF(SECOND, last_claimed, CURRENT_TIMESTAMP(3)) "
+                      + "FROM kit_claim WHERE player_id = ? AND kit_id = ? FOR UPDATE")) {
                     ps.setLong(1, playerId);
                     ps.setString(2, kit.id());
                     try (ResultSet rs = ps.executeQuery()) {
                         if (rs.next()) {
                             existe = true;
-                            last = rs.getTimestamp(1).toLocalDateTime();
-                            times = rs.getInt(2);
+                            times = rs.getInt(1);
+                            transcurrido = rs.getLong(2);
                         }
                     }
                 }
 
                 if (existe) {
                     if (kit.once()) { c.rollback(); return false; }
-                    if (LocalDateTime.now().isBefore(last.plusHours(kit.cooldownHours()))) {
+                    if (transcurrido < kit.cooldownHours() * 3600L) {
                         c.rollback();
                         return false;
                     }

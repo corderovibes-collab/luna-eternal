@@ -48,6 +48,7 @@ ARTE = Path(__file__).resolve().parents[2] / "arte" / "trajes"
 CORONA = ARTE / "campeon-corona.bbmodel"
 CASCO = ARTE / "leyenda-arceus-casco.bbmodel"
 CUERPO = ARTE / "leyenda-arceus-cuerpo.bbmodel"
+MEWTWO = ARTE / "maestro-mewtwo.bbmodel"
 
 
 # ------------------------------------------------------------- el reparto
@@ -86,9 +87,18 @@ def _reparto_cuerpo(cabeza=()):
         #   una segunda cabeza gris encima de la del jugador.
         if raiz.upper().startswith("EL JUGADOR"):
             return None
-        if raiz in cabeza:
+        # ⚠⚠⚠ LA CABEZA SE BUSCA EN TODO EL CAMINO, NO SOLO EN LA RAIZ. En el
+        #    .bbmodel de Mewtwo el grupo `armorHead` cuelga DENTRO de `right_arm`
+        #    --un arrastre en el arbol de Blockbench, que no cambia nada de lo
+        #    que se ve alli-- y mirando solo la raiz, los 21 cubos del casco se
+        #    habrian ido AL BRAZO: el casco puesto en el hombro y girando con el.
+        #    ⚠ Y no habria dado ningun error: son cubos validos en un hueso
+        #      valido. Se habria descubierto mirandolo.
+        if any(g in cabeza for g in e.grupos):
             return "armorHead"
-        familia = FAMILIA.get(raiz)
+        # ⚠ Igual con la familia: el grupo que manda es el PRIMERO del camino
+        #   que este repartido, no el de arriba del todo.
+        familia = next((FAMILIA[g] for g in e.grupos if g in FAMILIA), None)
         if familia is None:
             raise ValueError(
                 "el grupo %r de %r no esta repartido. Un grupo sin hueso se "
@@ -164,6 +174,19 @@ def campeon():
     doc = leer(CORONA)
     return _traje("campeon", "Traje CAMPEON · Corona",
                   [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
+
+
+# ----------------------------------------------------------------- MAESTRO
+
+def maestro():
+    """El casco de Mewtwo y su armadura. Un solo fichero, cuerpo entero."""
+    doc = leer(MEWTWO)
+    # ⚠ El grupo del casco se llama `armorHead` y cuelga DENTRO de `right_arm`.
+    #   Ver el aviso de `_reparto_cuerpo`: se busca en todo el camino.
+    t, avisos = _traje("maestro", "Traje MAESTRO · Mewtwo",
+                       [(doc, _reparto_cuerpo(cabeza=("armorHead",)), None)])
+    avisos += _hombreras_al_reves(t)
+    return t, avisos
 
 
 # ----------------------------------------------------------------- LEYENDA

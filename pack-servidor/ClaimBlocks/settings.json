@@ -2,36 +2,36 @@
   "template1": {
     "radius_x": 7,
     "radius_z": 7,
-    "head_info": "Base64 de minecraft-heads.com. PENDIENTE: hoy los cinco comparten textura, asi que solo se distinguen por el nombre",
-    "head": "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDk4NDhkZGU4ZTUzMGRjNzA1ZmI2NzdkYWQ4MTQ5MmNjMjIyYmY5NmZkNjMyYjg1MTRhZWZiODA5MzFmZTBkIn19fQ==",
+    "head_info": "Base64 de una gema green, verificada contra textures.minecraft.net antes de escribirla",
+    "head": "eyJ0ZXh0dXJlcyI6IHsiU0tJTiI6IHsidXJsIjogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzQwNjNiYTViMTZiNzAzMGEyMGNlNmYwZWE5NmRjZDI0YjA2NDgzNmY1NzA0NTZjZGJmYzllODYxYTc1ODVhNSJ9fX0=",
     "display_name": "&8&lProteccion &a&l15x15"
   },
   "template2": {
     "radius_x": 25,
     "radius_z": 25,
-    "head_info": "Base64 de minecraft-heads.com. PENDIENTE: hoy los cinco comparten textura, asi que solo se distinguen por el nombre",
-    "head": "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDk4NDhkZGU4ZTUzMGRjNzA1ZmI2NzdkYWQ4MTQ5MmNjMjIyYmY5NmZkNjMyYjg1MTRhZWZiODA5MzFmZTBkIn19fQ==",
+    "head_info": "Base64 de una gema cyan, verificada contra textures.minecraft.net antes de escribirla",
+    "head": "eyJ0ZXh0dXJlcyI6IHsiU0tJTiI6IHsidXJsIjogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTRlNzE2NzFkYjVmNjlkMmM0NmEwZDcyNzY2YjI0OWMxMjM2ZDcyNjc4MmMwMGEwZTIyNjY4ZGY1NzcyZDRiOSJ9fX0=",
     "display_name": "&8&lProteccion &b&l51x51"
   },
   "template3": {
     "radius_x": 50,
     "radius_z": 50,
-    "head_info": "Base64 de minecraft-heads.com. PENDIENTE: hoy los cinco comparten textura, asi que solo se distinguen por el nombre",
-    "head": "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDk4NDhkZGU4ZTUzMGRjNzA1ZmI2NzdkYWQ4MTQ5MmNjMjIyYmY5NmZkNjMyYjg1MTRhZWZiODA5MzFmZTBkIn19fQ==",
+    "head_info": "Base64 de una gema magenta, verificada contra textures.minecraft.net antes de escribirla",
+    "head": "eyJ0ZXh0dXJlcyI6IHsiU0tJTiI6IHsidXJsIjogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTZiMTBkMDkzMzBlMGY3MDA4MTVlNGQwNmU2NmI1ZDc2Nzc2NThiOWNhZDA4NTU1YmE3ZDg3YzEzYjI4OGQwZCJ9fX0=",
     "display_name": "&8&lProteccion &d&l101x101"
   },
   "template4": {
     "radius_x": 80,
     "radius_z": 80,
-    "head_info": "Base64 de minecraft-heads.com. PENDIENTE: hoy los cinco comparten textura, asi que solo se distinguen por el nombre",
-    "head": "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDk4NDhkZGU4ZTUzMGRjNzA1ZmI2NzdkYWQ4MTQ5MmNjMjIyYmY5NmZkNjMyYjg1MTRhZWZiODA5MzFmZTBkIn19fQ==",
+    "head_info": "Base64 de una gema orange, verificada contra textures.minecraft.net antes de escribirla",
+    "head": "eyJ0ZXh0dXJlcyI6IHsiU0tJTiI6IHsidXJsIjogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWFjZTZiYjNhYTRjY2FjMDMxMTY4MjAyZjZkNDUzMjU5N2JjYWM2MzUxMDU5YWJkOWQxMGIyODYxMDQ5M2FlYiJ9fX0=",
     "display_name": "&8&lProteccion &6&l161x161"
   },
   "template5": {
     "radius_x": 125,
     "radius_z": 125,
-    "head_info": "Base64 de minecraft-heads.com. PENDIENTE: hoy los cinco comparten textura, asi que solo se distinguen por el nombre",
-    "head": "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDk4NDhkZGU4ZTUzMGRjNzA1ZmI2NzdkYWQ4MTQ5MmNjMjIyYmY5NmZkNjMyYjg1MTRhZWZiODA5MzFmZTBkIn19fQ==",
+    "head_info": "Base64 de una gema red, verificada contra textures.minecraft.net antes de escribirla",
+    "head": "eyJ0ZXh0dXJlcyI6IHsiU0tJTiI6IHsidXJsIjogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzIwZWYwNmRkNjA0OTk3NjZhYzhjZTE1ZDJiZWE0MWQyODEzZmU1NTcxODg2NGI1MmRjNDFjYmFhZTFlYTkxMyJ9fX0=",
     "display_name": "&8&lProteccion &c&l251x251"
   }
 }

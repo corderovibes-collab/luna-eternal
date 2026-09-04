@@ -63,16 +63,27 @@ LAS CUATRO CONVERSIONES QUE HAY QUE ACERTAR, Y NINGUNA DA ERROR SI SE FALLA
            llevarse en la cabeza: su cara +X acaba siendo la -X del jugador, o
            sea el mismo orden.
 
-4 · LA TEXTURA.  Se REHORNEA. Un .bbmodel puede dar a cada cara un trozo
-    cualquiera del PNG (la corona lo hace en sus 44 cubos), y `ModelPart` solo
-    sabe leer cajas. Asi que para cada cubo se recorta lo que su autor puso en
-    cada cara y se pega en el reparto de arriba.
+4 · LA TEXTURA.  Se REHORNEA, y por DOS caminos que no son intercambiables:
 
-    ⚠⚠ REHORNEAR ES LO QUE HACE QUE LOS DOS MODELOS ENTREN POR LA MISMA PUERTA:
-       la corona (UV por cara) y el cuerpo (UV de caja) dejan de ser dos casos.
-       Y de paso desaparece el `mirror`: un cubo espejado trae sus caras ya
-       intercambiadas y volteadas en el fichero, asi que copiarlas donde dicen
-       reproduce el espejo sin tener que llevar la bandera a ninguna parte.
+      cubo de CAJA      se copia el rectangulo ENTERO, sin mirar ni una cara
+      UV POR CARA       se recorta cara a cara y se pega en el reparto de arriba
+
+    ⚠⚠⚠ Y CONFUNDIRLOS FUE UN FALLO REAL. La primera version horneaba TODO cara
+       a cara, que parece equivalente y no lo es: un cubo con `mirror_uv` guarda
+       `east` y `west` INTERCAMBIADOS de casilla --que es justo lo que hace
+       `mirrored()` en Minecraft-- y copiarlos por su nombre DESHACE ese
+       intercambio. El cubo sale reflejado.
+
+       Medido en el brazo de los dos trajes: la cara exterior tenia 4 pixeles
+       pintados de 48 y la interior 24, o sea la armadura pintada POR DENTRO y
+       el brazo desnudo a la vista. En las piernas y las botas los dos lados
+       estan igual de pintados (20/48 y 36/48), y por eso el mismo fallo no se
+       veia ahi -- se descubrio en el juego, no aqui.
+
+    ⚠⚠ COPIAR LA CAJA ENTERA ES NO TENER QUE ACERTAR EL CONVENIO: lo que el
+       autor dibujo se traslada, y el espejo, los volteos y los huecos a
+       proposito viajan dentro. El reparto por nombre queda solo para lo que no
+       tiene caja -- la corona y el casco, que pintan cada cara donde quieren.
 
     ⚠ Minecraft calcula el ancho de cada casilla con el TAMAÑO DEL CUBO, no con
       los pixeles que le demos: un texel por unidad, siempre. Por eso el
@@ -307,6 +318,60 @@ def color_medio(img, rect):
     return tuple(sum(p[i] for p in px) // len(px) for i in range(3))
 
 
+def caja_uv(f, to, caras):
+    """
+    El origen (u, v) del reparto de caja de un cubo, o None si no lo usa.
+
+    ⚠⚠⚠ ESTO ES LO QUE HACE FALTA PARA NO DESHACER EL ESPEJO DEL AUTOR, y me
+       costo una vuelta en el juego. Hornear cara a cara POR SU NOMBRE parece
+       equivalente y no lo es: en un cubo con `mirror_uv`, el fichero guarda
+       `east` y `west` INTERCAMBIADOS de casilla, que es justo lo que hace
+       `mirrored()` en Minecraft. Copiando por nombre, ese intercambio se
+       DESHACE y el cubo sale reflejado.
+
+       Medido en el brazo de los dos trajes: la cara exterior tenia 4 pixeles
+       pintados de 48 y la interior 24. O sea que la armadura salia pintada POR
+       DENTRO y el jugador veia el brazo desnudo por fuera. En las piernas y las
+       botas los dos lados estan igual de pintados (20/48 y 36/48), y por eso el
+       mismo fallo no se veia ahi.
+
+    ⚠⚠ CUANDO ES DE CAJA SE COPIA EL RECTANGULO ENTERO, tal cual, sin
+       interpretar ni una cara. Es la unica forma de no tener que acertar el
+       convenio: lo que el autor dibujo se traslada, y el espejo, los volteos y
+       los huecos a proposito viajan dentro.
+
+    ⚠ Los cubos de UV POR CARA --la corona, el casco-- no tienen caja, y esos si
+      hay que repartirlos por nombre. Son los dos caminos, y no hay un tercero.
+    """
+    w, h, d = (to[0] - f[0], to[1] - f[1], to[2] - f[2])
+    norte = caras.get("north")
+    if not norte:
+        return None
+    # Todas las caras tienen que salir de la MISMA imagen: una caja se copia de
+    # un sitio, no de seis.
+    idx = norte[0]
+    if any(v[0] != idx for v in caras.values()):
+        return None
+    u = norte[1][0][0] - d
+    v = norte[1][0][1] - d
+
+    # Las seis casillas del reparto de Bedrock, sin decidir cual es cual: lo que
+    # importa es que las caras del fichero ocupen EXACTAMENTE estas seis.
+    esperadas = {
+        (u, v + d, u + d, v + d + h),
+        (u + d, v + d, u + d + w, v + d + h),
+        (u + d + w, v + d, u + 2 * d + w, v + d + h),
+        (u + 2 * d + w, v + d, u + 2 * d + 2 * w, v + d + h),
+        (u + d, v, u + d + w, v + d),
+        (u + d + w, v, u + d + 2 * w, v + d),
+    }
+    esperadas = {tuple(round(x, 3) for x in r) for r in esperadas}
+    reales = {tuple(round(x, 3) for x in v2[1][0]) for v2 in caras.values()}
+    if not reales <= esperadas:
+        return None
+    return (idx, u, v)
+
+
 def cubos_de(doc, reparto, espacio=None, base_fuentes=0):
     """
     Convierte los elementos de un documento en Cubos, ya colocados en su hueso.
@@ -350,6 +415,9 @@ def cubos_de(doc, reparto, espacio=None, base_fuentes=0):
                  material="metal",
                  inflate=round(e.inflate * escala, 5))
         c.caras_src = {n: (base_fuentes + idx, r) for n, (idx, r) in e.caras.items()}
+        caja = caja_uv(e.f, e.to, e.caras)
+        if caja is not None:
+            c.caja_src = (base_fuentes + caja[0], caja[1], caja[2])
         if any(abs(v) > 1e-6 for v in e.rot):
             c.rot = tuple(round(v, 5) for v in _giro_de(e.rot, espejo_x))
             c.pivote = tuple(round(v, 5) for v in convertir(e.pivote))

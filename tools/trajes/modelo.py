@@ -132,6 +132,9 @@ class Cubo:
     # De donde sale su pintura, si viene de un .bbmodel:
     #   nombre de cara -> (indice de textura, (rect, voltea_u, voltea_v))
     caras_src: dict = None
+    # Si el cubo usa el reparto de caja, de donde se copia entero:
+    # (indice de textura, u, v). Ver `importar.caja_uv`.
+    caja_src: tuple = None
 
     def huella(self):
         """Lo que ocupa en la textura: (2*fondo + 2*ancho) x (fondo + alto)."""
@@ -420,6 +423,19 @@ def escribir(traje, destino, lado=None):
 
 def _pegar(lienzo, fuentes, cubo):
     """Recorta lo que el autor puso en cada cara y lo pega en su casilla."""
+    # ⚠⚠⚠ UNA CAJA SE COPIA ENTERA, SIN MIRAR NI UNA CARA. Ver `importar.caja_uv`:
+    #    interpretando cara a cara se DESHACE el `mirror_uv` del autor y el cubo
+    #    sale reflejado -- la armadura del brazo pintada por dentro y la piel a
+    #    la vista por fuera.
+    if cubo.caja_src:
+        idx, u, v = cubo.caja_src
+        w, h, d = cubo.tam
+        ancho = int(math.ceil(2 * d + 2 * w))
+        alto = int(math.ceil(d + h))
+        trozo = fuentes[idx].crop((int(round(u)), int(round(v)),
+                                   int(round(u)) + ancho, int(round(v)) + alto))
+        lienzo.paste(trozo, (int(cubo.uv[0]), int(cubo.uv[1])))
+        return
     donde = casillas(cubo)
     for cara, (idx, (rect, voltea_u, voltea_v)) in (cubo.caras_src or {}).items():
         if cara not in donde:

@@ -123,10 +123,8 @@ def _traje(id_, nombre, partes):
 def campeon():
     """La corona y su armadura. Un solo fichero, cuerpo entero."""
     doc = leer(CORONA)
-    t, avisos = _traje("campeon", "Traje CAMPEON · Corona",
-                       [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
-    avisos += _brazos_media_vuelta(t)
-    return t, avisos
+    return _traje("campeon", "Traje CAMPEON · Corona",
+                  [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
 
 
 # ----------------------------------------------------------------- LEYENDA
@@ -242,44 +240,21 @@ HOMBRERA_GIRO_MINIMO = 45.0
 MEDIA_VUELTA = 180.0
 
 
-# ⚠⚠⚠ Y LOS BRAZOS SALEN VOLTEADOS, EN LOS DOS TRAJES. Es un fallo DISTINTO del
-#    de las hombreras y se ve en el juego, no en la lamina: el cubo del brazo
-#    ensena hacia fuera la cara que va hacia dentro. El usuario lo pidio con
-#    estas palabras: «el left_arm y right_arm en ambas skins salen volteadas,
-#    toca darle un giro de 180 grados de manera horizontal a esas 2».
+# ⚠⚠⚠ AQUI HUBO UNA CORRECCION QUE SOBRABA, Y LA HISTORIA IMPORTA. Los brazos
+#    salian volteados en los dos trajes --la armadura pintada por dentro y la
+#    piel a la vista por fuera-- y se «arreglo» dandoles media vuelta. Funciono
+#    de lado, y rompio otra cosa: la cara de ARRIBA del brazo tiene su ultima
+#    columna transparente a proposito --es el borde que va pegado al torso-- y
+#    media vuelta la saco al hombro, o sea un HUECO donde antes no habia nada.
 #
-#    ⚠⚠ MEDIA VUELTA NO CAMBIA LA SILUETA, SOLO QUE CARA MIRA A DONDE. El cubo
-#       del brazo es una caja de 4x12x4 centrada en el brazo, asi que girarla
-#       sobre su propio centro la deja exactamente donde estaba. Por eso esto no
-#       se ve en el visor a menos que mires la TEXTURA, y por eso llego despues.
+#    La causa real no era el modelo: era el horneado. Un cubo con `mirror_uv`
+#    guarda `east` y `west` intercambiados, y hornear por nombre deshacia ese
+#    intercambio. Hoy una caja se copia ENTERA (`importar.caja_uv`), asi que el
+#    espejo del autor viaja dentro y no hay nada que corregir aqui.
 #
-#    ⚠ De donde sale, probablemente: en una skin de 64x32 el brazo izquierdo no
-#      tiene dibujo propio, es el derecho reflejado. Los dos ficheros marcan
-#      `mirror_uv` en el miembro que esta en X NEGATIVA --que es el brazo
-#      DERECHO del modelo-- o sea al reves que vanilla, que refleja el de X
-#      positiva. Con el reflejo en el lado que no es, los dos brazos acaban
-#      ensenando su cara interior por fuera.
-BRAZOS = ("armorRightArm", "armorLeftArm")
-
-
-def _brazos_media_vuelta(t):
-    """Da media vuelta a los cubos del brazo (no a las hombreras)."""
-    avisos = []
-    for hueso in BRAZOS:
-        for c in t.huesos.get(hueso, []):
-            # Las hombreras ya llevan su giro y se arreglan aparte; aqui solo
-            # las cajas rectas, que son los brazos.
-            if c.rot:
-                continue
-            # ⚠ El pivote es SU PROPIO CENTRO. Sin el, media vuelta lo mandaria
-            #   al otro lado del cuerpo en vez de girarlo donde esta.
-            c.pivote = tuple(round(c.origen[i] + c.tam[i] / 2.0, 5) for i in range(3))
-            c.rot = (0.0, MEDIA_VUELTA, 0.0)
-            avisos.append("brazo de %s: media vuelta sobre su centro %s"
-                          % (hueso, c.pivote))
-    if not avisos:
-        avisos.append("no he encontrado ningun cubo de brazo que girar")
-    return avisos
+#    ⚠⚠ LA LECCION: una correccion que arregla el sintoma sin explicar la causa
+#       tapa el fallo por un lado y lo abre por otro. El brazo se veia bien de
+#       frente y aparecio un hueco en el hombro.
 
 
 def _hombreras_al_reves(t):
@@ -324,7 +299,6 @@ def leyenda():
         [(casco, solo_cabeza, espacio),
          (cuerpo, _reparto_cuerpo(), None)])
 
-    avisos += _brazos_media_vuelta(t)
     avisos += _hombreras_al_reves(t)
 
     rueda, mas = _rueda(cuerpo)

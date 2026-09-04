@@ -115,7 +115,8 @@
                 17,
                 0
               ],
-              "inflate": 0.5
+              "inflate": 0.5,
+              "mirror": true
             }
           ]
         },

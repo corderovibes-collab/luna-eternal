@@ -56,6 +56,14 @@ public enum Traje {
     // ⚠ El identificador cambio con el rango (NOVATO -> ENTRENADOR). Salio
     //   gratis porque construye la ruta del arte --textures/armor/<id>/-- y
     //   ese arte todavia no existia.
+    // ⚠⚠⚠ EL ENTRENADOR NO ES UN TRAJE COSMETICO, ES UN KIT DE OBJETOS
+    //    (decision del usuario, 2026-09-03): son las cuatro piezas de COTA DE
+    //    MALLA de vainilla, que el jugador se quita, guarda y pierde al morir.
+    //    Por eso `listo` es false --no hay nada que dibujar encima-- y por eso
+    //    existe `esKit()`: la pantalla ensena RECLAMAR en vez de PONER.
+    //    ⚠ Se eligio la malla porque en vainilla NO SE CRAFTEA: solo se
+    //      consigue por comando o comerciando, asi que darla no compite con
+    //      ninguna receta.
     ENTRENADOR("entrenador", Tablist.Rank.ENTRENADOR, false),
     ELITE("elite", Tablist.Rank.ELITE, false),
     // ⚠ CAMPEON y LEYENDA vienen de los .bbmodel del usuario, que estan en el
@@ -133,6 +141,22 @@ public enum Traje {
      * es justo la que un día falta.
      */
     public boolean gratis() {
+        return this == ENTRENADOR;
+    }
+
+    /**
+     * ¿Es un kit de objetos en vez de un traje que se dibuja?
+     *
+     * <p>⚠⚠ El ENTRENADOR entrega <b>cota de malla de verdad</b>: se quita, se
+     * guarda, se comercia y se pierde al morir. Los otros cuatro son capas que
+     * se dibujan encima y no existen como objeto.
+     *
+     * <p>⚠ Y por eso este es el único que <b>protege</b>. Es gratis para todo el
+     * mundo, así que no cruza la línea de D-007/D-014 —lo que esa línea prohíbe
+     * es <b>vender</b> poder—, pero conviene tenerlo presente: es armadura
+     * gratis para todos, y eso toca el equilibrio de combate.
+     */
+    public boolean esKit() {
         return this == ENTRENADOR;
     }
 }

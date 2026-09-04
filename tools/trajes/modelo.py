@@ -136,6 +136,13 @@ class Cubo:
     # (indice de textura, u, v). Ver `importar.caja_uv`.
     caja_src: tuple = None
 
+    # ⚠⚠ EL ESPEJO VUELVE, Y ESTA VEZ HACE FALTA DE VERDAD. Con los .bbmodel no
+    #    se usa --una caja se copia entera y el espejo viaja dentro-- pero el
+    #    traje de cota de malla apunta a la TEXTURA DE VAINILLA, y ahi el brazo
+    #    y la pierna izquierdos no tienen dibujo propio: son el derecho
+    #    reflejado. Sin esto salen con las costuras al lado contrario.
+    espejo: bool = False
+
     def huella(self):
         """Lo que ocupa en la textura: (2*fondo + 2*ancho) x (fondo + alto)."""
         return huella(self)
@@ -158,6 +165,17 @@ class Traje:
     lado: int = 128
     # Lo que salio del horneado, por pieza. Lo rellena `escribir`.
     lados: dict = field(default_factory=dict)
+
+    # ⚠⚠⚠ PIEZAS QUE NO TIENEN TEXTURA NUESTRA: pieza -> (ruta, ancho, alto).
+    #    El ENTRENADOR apunta a `minecraft:.../chainmail_layer_1.png`, que ya
+    #    esta en el cliente de todo el mundo. Cero bytes en nuestro jar y nada
+    #    de Mojang redistribuido -- la misma decision que las 16 medallas.
+    #    ⚠ Y sus UV NO SE REPARTEN: son las de vainilla. Tocarlas dibujaria el
+    #      casco en la bota.
+    texturas: dict = field(default_factory=dict)
+
+    # ¿Lleva el brillo del encantamiento?
+    brillo: bool = False
 
     def poner(self, hueso, *cubos):
         self.huesos.setdefault(hueso, []).extend(cubos)
@@ -335,10 +353,12 @@ def _cubo_json(c):
             "uv": [round(v, 4) for v in c.uv]}
     if c.inflate:
         cubo["inflate"] = round(c.inflate, 4)
+    if c.espejo:
+        cubo["mirror"] = True
     return cubo
 
 
-def geo(traje, pieza, lado=128):
+def geo(traje, pieza, lado=128, alto=None, textura=None, brillo=False):
     """
     El .geo.json de una pieza.
 
@@ -373,12 +393,22 @@ def geo(traje, pieza, lado=128):
                 "rotation": [round(v, 4) for v in c.rot],
                 "cubes": [_cubo_json(c)],
             })
+    descripcion = {
+        "identifier": "geometry.unknown",
+        "texture_width": lado,
+        "texture_height": alto or lado,
+    }
+    if textura:
+        # ⚠ Una pieza puede pintarse con una textura que no es nuestra. Va en el
+        #   fichero y no en el codigo del cliente: asi el traje se describe
+        #   entero en un sitio.
+        descripcion["texture"] = textura
+    if brillo:
+        descripcion["glint"] = True
     return {
         "format_version": "1.12.0",
         "minecraft:geometry": [{
-            "description": {
-                "identifier": "geometry.unknown",
-                "texture_width": lado, "texture_height": lado,
+            "description": descripcion | {
                 "visible_bounds_width": 4, "visible_bounds_height": 5,
                 "visible_bounds_offset": [0, 1.25, 0],
             },
@@ -399,6 +429,19 @@ def escribir(traje, destino, lado=None):
         if not huesos:
             continue
         cubos = [c for lista in huesos.values() for c in lista]
+        externa = traje.texturas.get(pieza)
+        if externa:
+            # ⚠⚠ NI SE EMPAQUETA NI SE PINTA: las UV son las de vainilla y el PNG
+            #    ya esta en el cliente. Repartirlas seria reinventar el reparto
+            #    de una textura que no es nuestra.
+            ruta, ancho, alto_tex = externa
+            traje.lados[pieza] = ancho
+            (geo_dir / ("%s_%s.geo.json" % (traje.id, pieza))).write_text(
+                json.dumps(geo(traje, pieza, ancho, alto_tex, ruta, traje.brillo),
+                           indent=2),
+                encoding="utf-8")
+            hechos.append((pieza, len(cubos), ancho, False))
+            continue
         if traje.fuentes:
             # ⚠ CADA PIEZA SE HORNEA SOLA, y su lienzo es el mas pequeño en que
             #   quepa. Meter las cuatro en el mismo PNG obligaria a repartir las

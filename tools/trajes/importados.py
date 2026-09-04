@@ -101,6 +101,44 @@ def _reparto_cuerpo(cabeza=()):
     return reparto
 
 
+# Los pares de miembros que en una skin COMPARTEN dibujo.
+PARES = (("armorRightArm", "armorLeftArm"),
+         ("armorRightLeg", "armorLeftLeg"),
+         ("armorRightBoot", "armorLeftBoot"))
+
+
+def _espejar_pares(t):
+    """
+    Marca el espejo en el miembro de X POSITIVA cuando los dos comparten caja.
+
+    ⚠⚠⚠ ESTO ES LA REGLA DE VAINILLA, NO UNA CORRECCION AL AUTOR. En una skin de
+       64x32 los dos brazos leen EL MISMO recuadro de textura, y Minecraft dibuja
+       el de +X con `mirrored()`. La casilla 1 del reparto cae siempre en la cara
+       de X MINIMA: en el brazo de x negativa esa es la cara de FUERA, y en el de
+       x positiva es la de DENTRO. Sin el espejo, un brazo sale bien y el otro
+       con el dibujo cambiado de lado.
+
+    ⚠⚠ Y ASI SALIO: «la manga derecha quedo bien y la izquierda volteada». Un
+       brazo correcto y el otro no es la firma de este fallo -- si fuera el
+       convenio de caras, estarian mal los dos.
+
+    ⚠ Se mira si COMPARTEN CAJA, no si el fichero trae `mirror_uv`. Dos motivos:
+      el .bbmodel marca el espejo en el miembro de X NEGATIVA --al reves que
+      vainilla-- y ademas, si algun dia cada brazo tiene su propio dibujo, no hay
+      nada que espejar y esto no hace nada.
+    """
+    avisos = []
+    for der, izq in PARES:
+        a = [c for c in t.huesos.get(der, []) if c.caja_src]
+        b = [c for c in t.huesos.get(izq, []) if c.caja_src]
+        if len(a) != 1 or len(b) != 1 or a[0].caja_src != b[0].caja_src:
+            continue
+        b[0].espejo = True
+        avisos.append("%s comparte dibujo con %s: se espeja (la regla de vainilla)"
+                      % (izq, der))
+    return avisos
+
+
 def _traje(id_, nombre, partes):
     """
     Monta un Traje a partir de (documento, reparto, espacio) y encadena las
@@ -115,6 +153,7 @@ def _traje(id_, nombre, partes):
             t.poner(hueso, *cubos)
         avisos += ["%s: %s" % (doc.ruta.name, a) for a in aviso]
         t.fuentes += [img for _, img in doc.texturas]
+    avisos += _espejar_pares(t)
     return t, avisos
 
 
@@ -281,6 +320,41 @@ def _hombreras_al_reves(t):
     return avisos
 
 
+# ⚠⚠⚠ EL CASCO DEJABA VER LA CORONILLA, y es geometria del fichero, no del
+#    horneado. Medido barriendo la tapa de la cabeza (y=32, x -4..4, z -4..4) a
+#    medio bloque: 96 de 256 puntos al aire, TODOS en la franja de delante
+#    (z -4 .. -0,75). Es el trozo de pelo que se ve desde arriba.
+#
+#    La causa: el casco son dos platos, y el de DELANTE se queda una unidad por
+#    debajo del de DETRAS --31,8 contra 32,8-- asi que entre el borde del plato
+#    y la cabeza (32) queda una rendija abierta.
+#
+#    ⚠⚠ SE IGUALAN LOS DOS PLATOS en vez de inventar un cubo tapa. Es geometria
+#       del propio autor: el plato de delante crece hasta donde ya llega el de
+#       detras, que es donde tenia que llegar. Un cubo nuevo seria arte mio
+#       metido en su modelo.
+#
+#    ⚠ No se busca por nombre --los 19 cubos del casco se llaman «cube»-- sino
+#      por su medida y su sitio. Si el .bbmodel cambia y ya no aparece, se DICE:
+#      callarlo dejaria el agujero de vuelta sin que nadie se enterara.
+CASCO_PLATO = ((-5.0, 29.80543, -4.75), (10.0, 2.0, 4.0))
+CASCO_ALTO_BUENO = 3.0
+
+
+def _tapar_coronilla(t):
+    """Iguala el plato frontal del casco con el trasero."""
+    for c in t.huesos.get("armorHead", []):
+        if c.rot:
+            continue
+        if (all(abs(c.origen[i] - CASCO_PLATO[0][i]) < 0.01 for i in range(3))
+                and all(abs(c.tam[i] - CASCO_PLATO[1][i]) < 0.01 for i in range(3))):
+            c.tam = (c.tam[0], CASCO_ALTO_BUENO, c.tam[2])
+            return ["casco: el plato de delante sube de %.1f a %.1f para tapar la "
+                    "coronilla" % (CASCO_PLATO[1][1], CASCO_ALTO_BUENO)]
+    return ["no encuentro el plato frontal del casco: si el .bbmodel cambio, "
+            "comprueba que la coronilla siga tapada"]
+
+
 def leyenda():
     """El casco de Arceus, su armadura y la rueda."""
     casco = leer(CASCO)
@@ -300,6 +374,7 @@ def leyenda():
          (cuerpo, _reparto_cuerpo(), None)])
 
     avisos += _hombreras_al_reves(t)
+    avisos += _tapar_coronilla(t)
 
     rueda, mas = _rueda(cuerpo)
     avisos += mas

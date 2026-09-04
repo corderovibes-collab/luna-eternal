@@ -125,7 +125,7 @@ public final class Trajes {
             "leftLeg", new float[] {1.9f, 12, 0});
 
     private record Pieza(String hueso, String ancla, ModelPart parte,
-                         Identifier textura) {}
+                         Identifier textura, boolean brillo) {}
 
     private record Modelo(List<Pieza> piezas) {}
 
@@ -168,14 +168,30 @@ public final class Trajes {
             if (recurso.isEmpty()) {
                 continue;   // esa pieza no existe en este traje: es legítimo
             }
-            var textura = Identifier.of(LunaEternal.MOD_ID,
-                    "textures/armor/" + id + "/" + id + "_" + pieza + ".png");
             try (var lector = new InputStreamReader(recurso.get().getInputStream())) {
                 var raiz = JsonParser.parseReader(lector).getAsJsonObject();
                 var geo = raiz.getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject();
-                int lado = geo.getAsJsonObject("description")
-                        .get("texture_width").getAsInt();
-                piezas.addAll(desdeGeo(geo.getAsJsonArray("bones"), lado, textura));
+                var desc = geo.getAsJsonObject("description");
+                int ancho = desc.get("texture_width").getAsInt();
+                // ⚠⚠ ALTO PROPIO, NO EL ANCHO OTRA VEZ. Aqui se usaba el ancho
+                //    para las dos medidas, que vale mientras la textura sea
+                //    cuadrada -- y las de armadura de vainilla son 64x32. Con
+                //    64x64 la cota de malla saldria a media altura y estirada.
+                int alto = desc.has("texture_height")
+                        ? desc.get("texture_height").getAsInt() : ancho;
+                // ⚠⚠⚠ UNA PIEZA PUEDE PINTARSE CON UNA TEXTURA QUE NO ES NUESTRA.
+                //    El ENTRENADOR es la cota de malla de vainilla: su PNG ya
+                //    esta en el cliente de todo el mundo, asi que se APUNTA en
+                //    vez de copiarlo. Cero bytes en el jar y nada de Mojang
+                //    redistribuido -- la misma decision que las 16 medallas.
+                var textura = desc.has("texture")
+                        ? Identifier.of(desc.get("texture").getAsString())
+                        : Identifier.of(LunaEternal.MOD_ID,
+                            "textures/armor/" + id + "/" + id + "_" + pieza + ".png");
+                boolean brillo = desc.has("glint")
+                        && desc.get("glint").getAsBoolean();
+                piezas.addAll(desdeGeo(geo.getAsJsonArray("bones"), ancho, alto,
+                        textura, brillo));
             } catch (Exception e) {
                 LunaEternal.LOG.error("No se pudo leer el traje {} ({})", id, pieza, e);
             }
@@ -225,7 +241,8 @@ public final class Trajes {
      * invierte el sentido de dos de los tres ejes:
      * {@code pitch = -rx}, {@code yaw = +ry}, {@code roll = -rz}.
      */
-    private static List<Pieza> desdeGeo(JsonArray huesos, int lado, Identifier textura) {
+    private static List<Pieza> desdeGeo(JsonArray huesos, int ancho, int alto,
+                                        Identifier textura, boolean brillo) {
         var porNombre = new LinkedHashMap<String, JsonObject>();
         var hijosDe = new LinkedHashMap<String, List<JsonObject>>();
         for (var elem : huesos) {
@@ -264,9 +281,9 @@ public final class Trajes {
                     ModelTransform.pivot(pv[0], pv[1], pv[2]));
             colgar(nodo, hijosDe, par[0], pv);
 
-            var parte = TexturedModelData.of(datos, lado, lado)
+            var parte = TexturedModelData.of(datos, ancho, alto)
                     .createModel().getChild(par[0]);
-            salida.add(new Pieza(par[0], ancla, parte, textura));
+            salida.add(new Pieza(par[0], ancla, parte, textura, brillo));
         }
         return salida;
     }
@@ -303,6 +320,20 @@ public final class Trajes {
             float[] uv = dos(cubo.getAsJsonArray("uv"));
             float inflate = cubo.has("inflate")
                     ? cubo.get("inflate").getAsFloat() : 0f;
+            // ⚠⚠ EL ESPEJO. En una textura de armadura de vainilla el brazo y la
+            //    pierna izquierdos NO tienen dibujo propio: son el derecho
+            //    reflejado, y comparten UV con una instruccion de reflejo
+            //    dentro. Sin esto se dibujan igual pero con las costuras al lado
+            //    contrario -- se lee como «algo no cuadra» sin poder decir el
+            //    que. (Los trajes importados no lo usan: alli la caja se copia
+            //    entera y el espejo viaja dentro del PNG.)
+            //    ⚠ `mirrored` es de ida y vuelta: se apaga despues de cada cubo
+            //      o se lo lleva TODO lo que venga detras en el mismo hueso.
+            boolean espejo = cubo.has("mirror")
+                    && cubo.get("mirror").getAsBoolean();
+            if (espejo) {
+                constructor.mirrored();
+            }
             // ⚠⚠ AQUÍ ESTÁ LA CONVERSIÓN, y es la línea que más duele si se
             //    equivoca. Ver el javadoc de `desdeGeo`: solo la Y se voltea, y
             //    la Z se copia tal cual.
@@ -311,6 +342,9 @@ public final class Trajes {
                     (24f - o[1] - s[1]) - referencia[1],
                     o[2] - referencia[2],
                     s[0], s[1], s[2], new Dilation(inflate));
+            if (espejo) {
+                constructor.mirrored(false);
+            }
         }
     }
 
@@ -404,7 +438,15 @@ public final class Trajes {
                 // ⚠ `getEntityCutoutNoCull` y no `getEntitySolid`: la textura
                 //   tiene zonas transparentes (lo que no ocupa ningún cubo), y
                 //   con la capa sólida saldrían como cuadros negros.
-                var vertices = vc.getBuffer(RenderLayer.getEntityCutoutNoCull(p.textura()));
+                var capa = RenderLayer.getEntityCutoutNoCull(p.textura());
+                // ⚠ «Encantada al 1» es el BRILLO y solo el brillo: un traje no
+                //   es un objeto y no protege (D-007, D-014). Se vende
+                //   identidad, no poder.
+                var vertices = p.brillo()
+                        ? net.minecraft.client.render.VertexConsumers.union(
+                            vc.getBuffer(RenderLayer.getArmorEntityGlint()),
+                            vc.getBuffer(capa))
+                        : vc.getBuffer(capa);
                 p.parte().render(m, vertices, luz, OverlayTexture.DEFAULT_UV);
             }
         }

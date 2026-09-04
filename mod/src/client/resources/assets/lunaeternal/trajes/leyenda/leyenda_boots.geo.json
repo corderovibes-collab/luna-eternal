@@ -83,7 +83,8 @@
                 17,
                 0
               ],
-              "inflate": 0.75
+              "inflate": 0.75,
+              "mirror": true
             }
           ]
         }

@@ -292,6 +292,8 @@ def verificar(t):
         cubos = [c for l in t.de_pieza(pieza).values() for c in l]
         if not cubos:
             continue
+        if t.texturas.get(pieza):
+            continue          # su textura es de vainilla: no hay nada que repartir
         try:
             if t.fuentes:
                 _, lado = modelo.hornear(cubos, t.fuentes)
@@ -365,11 +367,21 @@ def comprobar_enum():
                           "el cliente nunca buscaria ese arte" % cual)
 
     for id_, listo in declarados.items():
-        piezas = [f for f in ("head", "body", "legs", "boots")
-                  if (DESTINO / "trajes" / id_ / ("%s_%s.geo.json" % (id_, f))).exists()]
-        texturas = [f for f in piezas
-                    if (DESTINO / "textures" / "armor" / id_
-                        / ("%s_%s.png" % (id_, f))).exists()]
+        import json as _json
+        piezas, texturas = [], []
+        for f in ("head", "body", "legs", "boots"):
+            geo = DESTINO / "trajes" / id_ / ("%s_%s.geo.json" % (id_, f))
+            if not geo.exists():
+                continue
+            piezas.append(f)
+            # ⚠ Una pieza puede pintarse con una textura que NO es nuestra --el
+            #   ENTRENADOR usa la cota de malla de vainilla-- y entonces no hay
+            #   PNG que buscar. Se mira el fichero, no se supone.
+            desc = (_json.loads(geo.read_text(encoding="utf-8"))
+                    ["minecraft:geometry"][0]["description"])
+            if desc.get("texture") or (DESTINO / "textures" / "armor" / id_
+                                       / ("%s_%s.png" % (id_, f))).exists():
+                texturas.append(f)
         if listo and not piezas:
             fallos.append("%s esta `listo` en Traje.java y NO TIENE ARTE en el "
                           "mod: se equiparia y no se veria nada" % id_)
@@ -434,6 +446,12 @@ def main():
             for pieza in modelo.PIEZAS:
                 cubos = [c for l in t.de_pieza(pieza).values() for c in l]
                 if not cubos:
+                    continue
+                if t.texturas.get(pieza):
+                    # ⚠ Su textura es de vainilla y no la tenemos aqui. Se dibuja
+                    #   con el color plano en vez de repartir sus UV: repartirlas
+                    #   PISARIA las de Mojang, y el .geo.json ya escrito dejaria
+                    #   de cuadrar con lo que se ve en la lamina.
                     continue
                 if t.fuentes:
                     texturas[pieza], _ = modelo.hornear(cubos, t.fuentes)

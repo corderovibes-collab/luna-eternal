@@ -417,6 +417,47 @@ ball emblem centered on each, two small sparkles at the top right corner
 
 ---
 
+### 5.4-bis · PROTECCIONES — el icono, y solo el icono (2026-09-04)
+
+El mod [ClaimBlocks](../../pack-servidor/README.md) trae sus propios módulos y su
+propio menú. Lo único que dibujamos nosotros es **el icono de la rejilla**.
+
+> ⚠️ **NI CHASIS NI PIEZAS DE DENTRO.** Decisión del usuario, la misma que con
+> CARTAS: la pantalla usa **`pokepad_cosmeticos.png`**, el chasis que comparten
+> las sub-pantallas desde el 2026-08-22. Un fondo propio daría otro estilo y una
+> pantalla que no se parece a las demás.
+
+#### `protecciones.png` — 100 × 100
+
+Plantilla de §5.2, con este objeto:
+
+```
+a small square patch of grassy land with neat soil edges seen at a gentle
+three-quarter angle and filling the frame, a short stone post planted in the
+middle of it holding up a red and white creature-catching ball as a marker,
+and a translucent pale cyan energy dome arching over the whole patch like a
+glass bell, its rim meeting the soil and glowing softly where it touches,
+with two small sparkles on the upper left curve of the dome
+```
+
+`Same style, outline weight, lighting and ground shadow as the previous icon.`
+
+> **Por qué una parcela con cúpula y no un escudo.** Un escudo dice *defensa*,
+> que es lo que hace un mod de PvP; esto protege **un trozo de suelo**. Y a
+> 100 × 100 un escudo es una silueta corriente que compite con media rejilla,
+> mientras que **una cúpula sobre una base cuadrada no se parece a ninguno de
+> los otros dieciséis** — es la misma lección por la que `gyms` pasó de una
+> medalla suelta al estuche abierto y `cartas` de una carta a un abanico.
+>
+> **Y la ball del poste no es un adorno**: es literalmente lo que el jugador
+> coloca. Los cinco escalones son Poké Ball · Great Ball · Ultra Ball · Luxury
+> Ball · Master Ball, así que el icono enseña la pieza real del sistema.
+>
+> ⚠ **El icono nombra un sitio, no una acción**: es *mi terreno protegido*, no
+> *reclamar terreno*. Por eso no se pide una mano colocando nada.
+
+---
+
 ### 5.5 · Los tres sobres de CARTAS — 512 × 512 (2026-09-02)
 
 La pantalla tiene **tres zonas** y las tres hacen lo mismo: abrir un sobre.

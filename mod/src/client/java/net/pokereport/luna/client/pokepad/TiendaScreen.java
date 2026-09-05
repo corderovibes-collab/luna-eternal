@@ -232,10 +232,10 @@ public class TiendaScreen extends Screen {
         }
         var salida = new java.util.ArrayList<Red.EntradaTienda>();
         for (var e : c.entradas()) {
-            String nombre = pila(e.item()).getName().getString()
+            String nombre = e.pila().getName().getString()
                     .toLowerCase(java.util.Locale.ROOT);
             if (nombre.contains(q)
-                    || e.item().toLowerCase(java.util.Locale.ROOT).contains(q)
+                    || e.clave().toLowerCase(java.util.Locale.ROOT).contains(q)
                     || limpio(e.etiqueta()).toLowerCase(java.util.Locale.ROOT).contains(q)) {
                 salida.add(e);
             }
@@ -267,18 +267,41 @@ public class TiendaScreen extends Screen {
      * sincronizado. Mandarlo desde el servidor obligaría a reenviar el catálogo
      * entero cada vez que alguien recoge algo del suelo.
      */
-    private int tengo(String id) {
+    /**
+     * Cuántos tiene el jugador de ese artículo.
+     *
+     * <p>⚠⚠ SE CUENTA POR OBJETO Y NO POR PILA EXACTA, y para casi todo da
+     * igual: una Poké Ball es una Poké Ball. Donde <b>sí</b> importa es en los
+     * módulos de protección, que son los cinco un {@code player_head}: contando
+     * por objeto, tener una Poké Ball de 15×15 dice «tienes 1» también en la
+     * fila de la Master Ball.
+     *
+     * <p>Por eso, cuando la entrada trae componentes —o sea, cuando NO es un
+     * objeto pelado— se compara la pila entera.
+     */
+    private int tengo(Red.EntradaTienda e) {
         if (client == null || client.player == null) {
             return 0;
         }
-        var item = Registries.ITEM.get(Identifier.tryParse(id));
+        var muestra = e.pila();
+        boolean exacto = !muestra.getComponents().isEmpty();
         int n = 0;
         for (var pila : client.player.getInventory().main) {
-            if (pila.isOf(item)) {
+            boolean casa = exacto
+                    ? ItemStack.areItemsAndComponentsEqual(pila, unaDe(muestra))
+                    : pila.isOf(muestra.getItem());
+            if (casa) {
                 n += pila.getCount();
             }
         }
         return n;
+    }
+
+    /** La misma pila con una sola unidad: comparar componentes ignora el número. */
+    private static ItemStack unaDe(ItemStack pila) {
+        ItemStack copia = pila.copy();
+        copia.setCount(1);
+        return copia;
     }
 
     private long saldoDe(String moneda) {
@@ -366,7 +389,7 @@ public class TiendaScreen extends Screen {
             return;
         }
         var lineas = new java.util.ArrayList<Text>();
-        lineas.add(pila(e.item()).getName().copy()
+        lineas.add(e.pila().getName().copy()
                 .formatted(net.minecraft.util.Formatting.WHITE));
         if (!e.etiqueta().isEmpty()) {
             // La etiqueta trae sus propios codigos de color del catalogo.
@@ -383,7 +406,7 @@ public class TiendaScreen extends Screen {
                     String.format("%,d", e.venta()), nombreMoneda(e.moneda()))
                     .formatted(net.minecraft.util.Formatting.DARK_GRAY));
         }
-        int mios = tengo(e.item());
+        int mios = tengo(e);
         if (mios > 0) {
             lineas.add(Text.translatable("pokepad.lunaeternal.tienda.tienes", mios)
                     .formatted(net.minecraft.util.Formatting.DARK_GRAY));
@@ -600,7 +623,7 @@ public class TiendaScreen extends Screen {
             int y = filaY(n);
 
             if (objetos) {
-                objeto(ctx, pila(e.item()), ax + 14, y + FILA_ALTO / 2 - 16, 32);
+                objeto(ctx, e.pila(), ax + 14, y + FILA_ALTO / 2 - 16, 32);
                 continue;
             }
 
@@ -623,7 +646,7 @@ public class TiendaScreen extends Screen {
             //    mentir el dia que un boton se mueva.
             int huecoNombre = (aw - 300) - 58 - 12;
             String nombre = e.etiqueta().isEmpty()
-                    ? pila(e.item()).getName().getString()
+                    ? e.pila().getName().getString()
                     : limpio(e.etiqueta());
             texto(ctx, Text.literal(recortar(nombre, huecoNombre, 21)),
                     ax + 58, y + 10, 21, TEXTO_OSCURO, false, true);
@@ -635,7 +658,7 @@ public class TiendaScreen extends Screen {
                             + nombreMoneda(e.moneda())),
                     ax + 58, y + 36, 16, puede ? TEXTO_SUAVE : ROJO, false, false);
 
-            int mios = tengo(e.item());
+            int mios = tengo(e);
             if (mios > 0) {
                 texto(ctx, Text.translatable("pokepad.lunaeternal.tienda.tienes", mios),
                         ax + 300, y + 36, 15, TEXTO_SUAVE, false, false);
@@ -861,7 +884,7 @@ public class TiendaScreen extends Screen {
                             + " " + nombreMoneda(e.moneda()) + ".", false);
                     return true;
                 }
-                mandar(c.id(), e.item(), true);
+                mandar(c.id(), e.clave(), true);
                 return true;
             }
             if (dentro(rx, ry, px(ax + aw - 150), py(y + 13), pl(138), pl(36))) {
@@ -869,11 +892,11 @@ public class TiendaScreen extends Screen {
                     poner("Esto no se puede vender.", false);
                     return true;
                 }
-                if (tengo(e.item()) < CANTIDADES[cantidad]) {
+                if (tengo(e) < CANTIDADES[cantidad]) {
                     poner("No tienes " + CANTIDADES[cantidad] + ".", false);
                     return true;
                 }
-                mandar(c.id(), e.item(), false);
+                mandar(c.id(), e.clave(), false);
                 return true;
             }
         }

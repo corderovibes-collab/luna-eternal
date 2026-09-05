@@ -31,8 +31,36 @@ import java.util.List;
  */
 public final class ShopCatalog {
 
-    /** Un objeto a la venta. */
-    public record Entry(Item item, String label, long buy, long sell, Currency currency) {
+    /**
+     * Un objeto a la venta.
+     *
+     * @param entrega quién fabrica lo que se entrega. Vacío = el objeto tal
+     *                cual. Ver {@link #clave()} y {@code ShopService}
+     */
+    public record Entry(Item item, String label, long buy, long sell,
+                        Currency currency, String entrega) {
+
+        /**
+         * CÓMO SE NOMBRA UNA ENTRADA EN EL PROTOCOLO.
+         *
+         * <h2>⚠⚠⚠ NO BASTA CON EL IDENTIFICADOR DEL OBJETO</h2>
+         *
+         * El servidor buscaba la entrada por {@code Registries.ITEM.getId(item)}
+         * dentro de la categoría, y eso valía mientras <b>ningún objeto se
+         * repitiera</b>. Las cinco protecciones son las cinco un
+         * {@code minecraft:player_head} —lo que las distingue es su etiqueta
+         * {@code protectionstones:stone_type}, no el objeto— así que con la
+         * búsqueda vieja <b>siempre habría ganado la primera</b>: pagas la
+         * Master Ball y te llevas la Poké Ball, sin un solo error.
+         *
+         * <p>⚠⚠ Y NO ES UN ÍNDICE, a propósito. Un índice ata al cliente al
+         * orden exacto del JSON, y cambiar el catálogo con la tienda abierta le
+         * haría comprar el artículo de al lado. Esto es un nombre estable.
+         */
+        public String clave() {
+            String id = Registries.ITEM.getId(item).toString();
+            return entrega == null || entrega.isEmpty() ? id : id + "#" + entrega;
+        }
 
         /** Nombre a mostrar: la etiqueta del catálogo o el del objeto. */
         public String displayName() {
@@ -101,7 +129,9 @@ public final class ShopCatalog {
             for (var element : root.getAsJsonArray("categories")) {
                 JsonObject cat = element.getAsJsonObject();
 
-                Currency currency = cat.has("currency")
+                // La moneda de la CATEGORIA es el valor por defecto de sus
+                // articulos, no una regla: ver abajo.
+                Currency porDefecto = cat.has("currency")
                     ? Currency.valueOf(cat.get("currency").getAsString())
                     : Currency.POKEDOLLAR;
 
@@ -113,12 +143,22 @@ public final class ShopCatalog {
                     Item item = resolve(id);
                     if (item == null) { skipped++; continue; }
 
+                    // ⚠⚠ LA MONEDA PUEDE SER DE LA ENTRADA, no solo de la
+                    //    categoria. Hace falta para PROTECCIONES: las cuatro
+                    //    primeras se pagan en Plata y solo la ultima en
+                    //    LunaCoins (decision del usuario, 2026-09-04). Meterlas
+                    //    en dos categorias por eso habria partido en dos una
+                    //    lista que el jugador lee como UNA escalera.
+                    Currency moneda = o.has("currency")
+                        ? Currency.valueOf(o.get("currency").getAsString())
+                        : porDefecto;
                     entries.add(new Entry(
                         item,
                         o.has("label") ? o.get("label").getAsString() : null,
                         o.get("buy").getAsLong(),
                         o.get("sell").getAsLong(),
-                        currency));
+                        moneda,
+                        o.has("give") ? o.get("give").getAsString() : ""));
                 }
 
                 // Una categoría cuyos objetos no existen todavía no se muestra:
@@ -159,7 +199,7 @@ public final class ShopCatalog {
 
         for (Category c : categories) {
             for (Entry e : c.entries()) {
-                String name = c.id() + "/" + Registries.ITEM.getId(e.item());
+                String name = c.id() + "/" + e.clave();
 
                 if (e.buy() <= 0) {
                     problems.add(name + ": precio de compra no positivo (" + e.buy() + ")");
@@ -176,6 +216,21 @@ public final class ShopCatalog {
                 if (!e.currency().tradeable && e.sell() > 0) {
                     problems.add(name + ": una moneda no comerciable no puede "
                                + "recomprarse (crearía un mercado gris)");
+                }
+            }
+        }
+
+        // ⚠⚠⚠ DOS ENTRADAS CON LA MISMA CLAVE SON UNA SOLA PARA EL SERVIDOR.
+        //    La busqueda se para en la primera que casa, asi que la segunda
+        //    seria INCOMPRABLE: se dibuja, se pulsa, y te cobra y te entrega la
+        //    otra. Sin un solo error. Es justo lo que habria pasado con las
+        //    cinco protecciones antes de que existiera `clave()`.
+        for (Category c : categories) {
+            java.util.Set<String> vistas = new java.util.HashSet<>();
+            for (Entry e : c.entries()) {
+                if (!vistas.add(e.clave())) {
+                    problems.add(c.id() + ": dos articulos con la clave "
+                               + e.clave() + " -- el segundo seria incomprable");
                 }
             }
         }

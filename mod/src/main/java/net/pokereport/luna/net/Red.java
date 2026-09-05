@@ -1458,15 +1458,39 @@ public class Red implements ModInitializer {
      * inventario, que ya esta sincronizado. Mandarlo obligaria a reenviar el
      * catalogo entero cada vez que el jugador recoge algo del suelo.
      */
-    public record EntradaTienda(String item, String etiqueta, long compra,
-                                long venta, String moneda) {
+    /**
+     * @param pila  lo que se entrega, YA MONTADO. Ver abajo
+     * @param clave como se nombra esta entrada al comprar. NO es el id del
+     *              objeto: ver {@code ShopCatalog.Entry#clave()}
+     */
+    public record EntradaTienda(net.minecraft.item.ItemStack pila, String etiqueta,
+                                long compra, long venta, String moneda, String clave) {
+        /**
+         * ⚠⚠⚠ VIAJA LA PILA ENTERA Y NO EL IDENTIFICADOR, y hace falta.
+         *
+         * <p>Un módulo de protección es un {@code player_head} <b>con su
+         * textura dentro</b>: mandando solo {@code minecraft:player_head}, las
+         * cinco protecciones se dibujarían como <b>cinco cabezas de Steve
+         * iguales</b>, y el jugador no podría distinguir la Poké Ball de la
+         * Master Ball más que leyendo el nombre.
+         *
+         * <p>⚠⚠ Y NO ES UNA PUERTA DE ATRÁS: esto es lo que el servidor
+         * <b>enseña</b>, no lo que entrega. Al comprar viaja la {@code clave} y
+         * el servidor vuelve a fabricar la pila de SU catálogo (P6). Un cliente
+         * modificado que cambie esto solo se engaña a sí mismo el dibujo.
+         *
+         * <p>⚠ Medido: 620 artículos son ~38 KB, el 3,8 % del tope de un
+         * paquete. Una pila sin componentes son cuatro bytes.
+         */
         public static final PacketCodec<RegistryByteBuf, EntradaTienda> CODEC =
                 PacketCodec.tuple(
-                        CADENA, EntradaTienda::item,
+                        net.minecraft.item.ItemStack.OPTIONAL_PACKET_CODEC,
+                        EntradaTienda::pila,
                         CADENA, EntradaTienda::etiqueta,
                         PacketCodecs.VAR_LONG, EntradaTienda::compra,
                         PacketCodecs.VAR_LONG, EntradaTienda::venta,
                         CADENA, EntradaTienda::moneda,
+                        CADENA, EntradaTienda::clave,
                         EntradaTienda::new);
     }
 
@@ -2520,9 +2544,12 @@ public class Red implements ModInitializer {
             //   aqui. Es la diferencia entre una tienda y un formulario de
             //   deseos (P6).
             net.pokereport.luna.shop.ShopCatalog.Entry entrada = null;
+            // ⚠⚠⚠ SE BUSCA POR `clave()`, NO POR EL ID DEL OBJETO. Las cinco
+            //    protecciones son las cinco un `minecraft:player_head`: con la
+            //    busqueda vieja SIEMPRE HABRIA GANADO LA PRIMERA -- pagas la
+            //    Master Ball y te llevas la Poke Ball, sin un solo error.
             for (var e : categoria.entries()) {
-                if (net.minecraft.registry.Registries.ITEM.getId(e.item())
-                        .toString().equals(carga.item())) {
+                if (e.clave().equals(carga.item())) {
                     entrada = e;
                     break;
                 }
@@ -4146,10 +4173,20 @@ public class Red implements ModInitializer {
         for (var c : catalogo.categories()) {
             List<EntradaTienda> entradas = new ArrayList<>();
             for (var e : c.entries()) {
+                // ⚠ La pila que se ENSEÑA se monta igual que la que se
+                //   entrega: si el proveedor no esta, sale el objeto pelado y
+                //   la compra dira que no se puede. Nunca se enseña una cosa y
+                //   se entrega otra.
+                var pila = e.entrega() != null && !e.entrega().isEmpty()
+                        ? net.pokereport.luna.shop.Modulos.fabricar(e.entrega(), 1)
+                        : null;
+                if (pila == null) {
+                    pila = new net.minecraft.item.ItemStack(e.item());
+                }
                 entradas.add(new EntradaTienda(
-                        net.minecraft.registry.Registries.ITEM.getId(e.item()).toString(),
+                        pila,
                         e.label() == null ? "" : e.label(),
-                        e.buy(), e.sell(), e.currency().name()));
+                        e.buy(), e.sell(), e.currency().name(), e.clave()));
             }
             salida.add(new CategoriaTienda(c.id(), c.name(),
                     net.minecraft.registry.Registries.ITEM.getId(c.icon()).toString(),

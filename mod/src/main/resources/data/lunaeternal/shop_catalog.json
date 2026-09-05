@@ -2448,6 +2448,50 @@
       ]
     },
     {
+      "id": "protecciones",
+      "name": "§bProtecciones",
+      "icon": "minecraft:beacon",
+      "description": "Nadie toca tu terreno. Colócala y ya está protegido.",
+      "entries": [
+        {
+          "item": "minecraft:player_head",
+          "buy": 5000,
+          "sell": 0,
+          "label": "§fPoké Ball §8· protege 15×15",
+          "give": "claimblocks:template1"
+        },
+        {
+          "item": "minecraft:player_head",
+          "buy": 20000,
+          "sell": 0,
+          "label": "§9Great Ball §8· protege 51×51",
+          "give": "claimblocks:template2"
+        },
+        {
+          "item": "minecraft:player_head",
+          "buy": 60000,
+          "sell": 0,
+          "label": "§eUltra Ball §8· protege 101×101",
+          "give": "claimblocks:template3"
+        },
+        {
+          "item": "minecraft:player_head",
+          "buy": 150000,
+          "sell": 0,
+          "label": "§6Luxury Ball §8· protege 161×161",
+          "give": "claimblocks:template4"
+        },
+        {
+          "item": "minecraft:player_head",
+          "buy": 500,
+          "sell": 0,
+          "currency": "REPORTCOIN",
+          "label": "§5Master Ball §8· protege 251×251",
+          "give": "claimblocks:template5"
+        }
+      ]
+    },
+    {
       "id": "peluches",
       "name": "§5Peluches",
       "icon": "pokeblocks:pokedoll_eevee",

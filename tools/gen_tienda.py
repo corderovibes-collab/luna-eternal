@@ -106,6 +106,32 @@ RECOMPRA = 0.10          # el banco paga el 10 % . tambien provisional
 #    esa regla prohibe.
 ESCALONES_LUNA = {
     "peluche": 40,
+    # ⚠⚠ LA ULTIMA PROTECCION, Y SOLO ESA (decision del usuario, 2026-09-04):
+    #    «solo la ultima proteccion va a valer lunacoins y de resto lo otro va
+    #    a valer plata». 251x251 son 63.001 bloques: es el techo del sistema.
+    "p251": 500,
+}
+
+# ⚠⚠⚠ LAS PROTECCIONES TIENEN SU PROPIA ESCALA, Y NO ES UN CAPRICHO. El escalon
+#    mas caro de la tienda son 3.000 (Revivir), y una parcela no es un objeto de
+#    combate: es EL MAYOR SUMIDERO DEL JUEGO (P3). Con precios de objeto, todo
+#    el mundo tendria las cinco la primera semana y el dinero dejaria de valer.
+#
+# ⚠⚠ LA CURVA SUBE MAS QUE EL AREA, a proposito. De 15x15 a 51x51 el area se
+#    multiplica por 11,6 y el precio por 4; de 101 a 161 el area por 2,5 y el
+#    precio por 2,5. Si el precio subiera IGUAL que el area, la grande seria
+#    siempre el mejor trato por bloque y las pequeñas no las compraria nadie.
+#    Aqui el bloque protegido sale mas barato cuanto mas grande la parcela, que
+#    es lo que hace que valga la pena ahorrar, PERO la entrada cuesta.
+#
+# ⚠ PROVISIONALES como todo lo demas, y con una referencia para calibrarlos:
+#   las cazas dan ~10.000 de Plata al dia si se completan las seis, asi que la
+#   primera proteccion es medio dia y la de 161x161 son dos semanas.
+PROTECCIONES = {
+    "p15":     5_000,
+    "p51":    20_000,
+    "p101":   60_000,
+    "p161":  150_000,
 }
 
 # ------------------------------------------------------------- LOS JARS
@@ -243,6 +269,42 @@ CATEGORIAS = [
         # ⚠ TODO CobbleFurnies (MIT). Son 367 objetos: sin el buscador de la
         #   pantalla esto serian 74 paginas de flecha.
         "patron": ("cobblefurnies", r".*", "barato"),
+    },
+    {
+        "id": "protecciones",
+        "nombre": "§bProtecciones",
+        "icono": "minecraft:beacon",
+        "descripcion": "Nadie toca tu terreno. Colócala y ya está protegido.",
+        # ⚠⚠⚠ LAS CINCO SON UN `minecraft:player_head`, y lo que las distingue
+        #    es la etiqueta `protectionstones:stone_type` que lleva dentro. Por
+        #    eso cada una trae `give`: la tienda NO fabrica el modulo, se lo
+        #    pide a ClaimBlocks (`CBItemManager.getStone`), que es quien sabe
+        #    como es. Dar la cabeza pelada no daria ningun error -- el jugador
+        #    la colocaria y no pasaria nada.
+        #    ⚠⚠ Y por eso `give` es ademas LA CLAVE de la entrada: con la
+        #       busqueda por id del objeto, las cinco serian la misma y siempre
+        #       ganaria la primera.
+        #
+        # ⚠⚠ NO SE RECOMPRAN. Un modulo colocado es una parcela: devolverlo al
+        #    banco seria vender un terreno que sigue protegido. Se recupera
+        #    borrando la proteccion desde su menu, que devuelve el modulo.
+        "recompra": False,
+        "articulos": [
+            ("minecraft:player_head", "p15", "§fPoké Ball §8· protege 15×15",
+             "claimblocks:template1"),
+            ("minecraft:player_head", "p51", "§9Great Ball §8· protege 51×51",
+             "claimblocks:template2"),
+            ("minecraft:player_head", "p101", "§eUltra Ball §8· protege 101×101",
+             "claimblocks:template3"),
+            ("minecraft:player_head", "p161", "§6Luxury Ball §8· protege 161×161",
+             "claimblocks:template4"),
+            # ⚠ LA UNICA EN LUNACOINS, dicho por el usuario. Va en la entrada y
+            #   no en la categoria: partir la escalera en dos categorias por la
+            #   moneda romperia lo unico que la hace legible, que es verlas
+            #   juntas y en orden.
+            ("minecraft:player_head", "p251", "§5Master Ball §8· protege 251×251",
+             "claimblocks:template5"),
+        ],
     },
     {
         "id": "peluches",
@@ -413,38 +475,59 @@ def generar(objetos: dict) -> dict:
             faltan.append(f"{cat['id']} (icono) -> {cat['icono']}")
 
         moneda = cat.get("moneda", "POKEDOLLAR")
-        # ⚠⚠ UNA MONEDA NO COMERCIABLE NO PUEDE TENER RECOMPRA. Los LunaCoins no
-        #    se convierten en nada (D-014): si el banco recomprara un peluche,
-        #    existiria un tipo de cambio LunaCoin -> Plata por la puerta de
-        #    atras. `ShopCatalog` ya lo rechaza; aqui ni se escribe.
-        comerciable = moneda == "POKEDOLLAR"
-
-        pedidos = list(cat.get("articulos", []))
+        # Los articulos vienen como (id, escalon, etiqueta) y, si hace falta un
+        # proveedor, como (id, escalon, etiqueta, quien_lo_fabrica).
+        pedidos = [tuple(a) + ("",) * (4 - len(a)) for a in cat.get("articulos", [])]
         if "patron" in cat:
             ns, rx, escalon = cat["patron"]
             pat = re.compile(rx)
             hallados = sorted(k for k in objetos.get(ns, {}) if pat.match(k))
             if not hallados:
                 faltan.append(f"{cat['id']} (patron {rx!r} en {ns}) -> 0 objetos")
-            pedidos += [(f"{ns}:{k}", escalon, None) for k in hallados]
+            pedidos += [(f"{ns}:{k}", escalon, None, "") for k in hallados]
 
         entradas = []
-        for id_completo, escalon, etiqueta in pedidos:
+        for id_completo, escalon, etiqueta, entrega in pedidos:
             if not existe(id_completo):
                 faltan.append(f"{cat['id']} -> {id_completo}")
                 continue
-            # ⚠ El mismo objeto en dos categorias tendria DOS precios, y el
-            #   servidor busca por (categoria, objeto): el jugador veria un
-            #   precio distinto segun por donde entrara.
-            if id_completo in vistos:
-                repetidos.append(id_completo)
-            vistos.add(id_completo)
 
-            compra = (ESCALONES_LUNA if escalon in ESCALONES_LUNA else ESCALONES)[escalon]
+            # ⚠⚠ LA CLAVE ES (objeto, quien lo fabrica), NO SOLO EL OBJETO. Las
+            #    cinco protecciones son las cinco un `minecraft:player_head`: con
+            #    la clave vieja se habrian visto como cuatro repetidos y, peor,
+            #    el servidor habria entregado siempre la primera.
+            clave = id_completo + ("#" + entrega if entrega else "")
+            # ⚠ El mismo articulo en dos categorias tendria DOS precios, y el
+            #   servidor busca por (categoria, clave): el jugador veria un
+            #   precio distinto segun por donde entrara.
+            if clave in vistos:
+                repetidos.append(clave)
+            vistos.add(clave)
+
+            # ⚠ El escalon dice ademas EN QUE SE PAGA: los de `ESCALONES_LUNA`
+            #   son LunaCoins. Asi no puede haber un precio de LunaCoins con la
+            #   moneda de Plata al lado, que es la clase de descuadre que nadie
+            #   mira hasta que alguien compra algo por 40 de Plata.
+            if escalon in ESCALONES_LUNA:
+                compra, mon = ESCALONES_LUNA[escalon], "REPORTCOIN"
+            elif escalon in PROTECCIONES:
+                compra, mon = PROTECCIONES[escalon], "POKEDOLLAR"
+            else:
+                compra, mon = ESCALONES[escalon], "POKEDOLLAR"
+
+            # ⚠⚠ UNA MONEDA NO COMERCIABLE NO PUEDE TENER RECOMPRA (D-014), y
+            #    hay cosas que tampoco deben tenerla aunque se paguen en Plata:
+            #    devolver un modulo al banco seria vender un terreno que sigue
+            #    protegido.
+            vendible = mon == "POKEDOLLAR" and cat.get("recompra", True)
             entrada = {"item": id_completo, "buy": compra,
-                       "sell": max(1, int(compra * RECOMPRA)) if comerciable else 0}
+                       "sell": max(1, int(compra * RECOMPRA)) if vendible else 0}
+            if mon != moneda:
+                entrada["currency"] = mon
             if etiqueta:
                 entrada["label"] = etiqueta
+            if entrega:
+                entrada["give"] = entrega
             entradas.append(entrada)
 
         c = {
@@ -505,10 +588,20 @@ def main() -> None:
     for c in catalogo["categories"]:
         n = len(c["entries"])
         total += n
-        precios = [e["buy"] for e in c["entries"]] or [0]
-        moneda = "LunaCoins" if c.get("currency") == "REPORTCOIN" else "Plata"
-        print(f"    {c['id']:12} {n:4} articulos   "
-              f"{min(precios):,} a {max(precios):,} de {moneda}")
+        # ⚠ El resumen se agrupa POR MONEDA. Con la moneda de la categoria
+        #   decia «500 a 150.000 de Plata» en PROTECCIONES, y ese 500 son
+        #   LunaCoins: un resumen que mezcla dos monedas en un rango no dice
+        #   nada, y de hecho engaña.
+        porMoneda = {}
+        for e in c["entries"]:
+            m = e.get("currency", c.get("currency", "POKEDOLLAR"))
+            porMoneda.setdefault(m, []).append(e["buy"])
+        trozos = []
+        for m, ps in sorted(porMoneda.items()):
+            nombre = "LunaCoins" if m == "REPORTCOIN" else "Plata"
+            trozos.append(f"{min(ps):,} a {max(ps):,} de {nombre}"
+                          if min(ps) != max(ps) else f"{min(ps):,} de {nombre}")
+        print(f"    {c['id']:12} {n:4} articulos   " + "  ·  ".join(trozos))
     print(f"\n  {len(catalogo['categories'])} categorias, {total} articulos")
     print(f"  -> {SALIDA}")
     print("\n  OJO - PRECIOS PROVISIONALES: se retocan en ESCALONES, arriba del todo.")

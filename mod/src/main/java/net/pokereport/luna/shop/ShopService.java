@@ -45,7 +45,26 @@ public final class ShopService {
         if (server == null) return;
 
         long total = entry.buy() * amount;
-        ItemStack stack = new ItemStack(entry.item(), amount);
+
+        // ⚠⚠⚠ LO QUE SE ENTREGA NO SIEMPRE ES EL OBJETO A SECAS. Un modulo de
+        //    proteccion es un `player_head` con la etiqueta de ClaimBlocks
+        //    dentro: darlo pelado NO daria ningun error -- el jugador lo
+        //    colocaria y no pasaria nada. Se lo pedimos a su mod.
+        //    ⚠⚠ Y SI NO SE PUEDE FABRICAR, NO SE COBRA. Se comprueba ANTES de
+        //       tocar el dinero, igual que el hueco del inventario: entregar
+        //       algo que no funciona es peor que no entregar nada, porque el
+        //       jugador ya ha pagado.
+        ItemStack stack;
+        if (entry.entrega() != null && !entry.entrega().isEmpty()) {
+            stack = Modulos.fabricar(entry.entrega(), amount);
+            if (stack == null) {
+                then.accept(new Result(false, "§cEso no se puede entregar ahora "
+                        + "mismo. Avisa a un administrador."));
+                return;
+            }
+        } else {
+            stack = new ItemStack(entry.item(), amount);
+        }
 
         // 1. ¿Cabe? Se comprueba antes de tocar el dinero.
         if (!hasRoom(player, stack)) {

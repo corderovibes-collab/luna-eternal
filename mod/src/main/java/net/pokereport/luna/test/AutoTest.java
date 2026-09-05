@@ -1022,13 +1022,26 @@ public final class AutoTest {
         // ⚠ NINGUN ARTICULO EN DOS CATEGORIAS. El servidor busca por
         //   (categoria, objeto), asi que dos precios para el mismo objeto se
         //   veria como "el precio cambia segun por donde entres".
+        // ⚠⚠⚠ SE COMPARA POR `clave()`, NO POR EL ID DEL OBJETO (2026-09-04).
+        //    Esto miraba el identificador, y valia mientras ningun objeto se
+        //    repitiera. Las cinco PROTECCIONES son las cinco un
+        //    `minecraft:player_head` --lo que las distingue es la etiqueta que
+        //    llevan dentro, no el objeto-- asi que este invariante FALLO al
+        //    desplegarlas. No estaba roto: decia que la identidad de un
+        //    articulo habia cambiado, que es para lo que sirve.
+        //
+        // ⚠⚠ LO QUE PROTEGE SIGUE SIENDO LO MISMO: que un articulo no tenga DOS
+        //    PRECIOS segun por que categoria entres. El servidor busca por
+        //    (categoria, clave), asi que dos entradas con la misma clave en
+        //    categorias distintas son dos precios para lo mismo.
         java.util.Set<String> articulos = new java.util.HashSet<>();
         boolean sinRepetidos = true;
         for (var c : catalog.categories()) {
             for (var e : c.entries()) {
-                if (!articulos.add(
-                        net.minecraft.registry.Registries.ITEM.getId(e.item()).toString())) {
+                if (!articulos.add(e.clave())) {
                     sinRepetidos = false;
+                    LunaEternal.LOG.error("El articulo {} esta en dos categorias",
+                            e.clave());
                 }
             }
         }
@@ -1099,6 +1112,35 @@ public final class AutoTest {
         //    desapareceria UNA CATEGORIA ENTERA sin un solo error.
         check("ningun articulo del catalogo se ha caido (" + catalog.omitidos()
                 + " omitidos)", catalog.omitidos() == 0);
+
+        // ⚠⚠⚠ LO QUE SE VENDE TIENE QUE PODER ENTREGARSE. Un modulo de
+        //    proteccion no es «un objeto con un id»: es un `player_head` con la
+        //    etiqueta de ClaimBlocks dentro, y lo fabrica SU mod. Si el mod no
+        //    estuviera --o cambiara el nombre de un `template`-- la tienda
+        //    seguiria enseñando las cinco protecciones, el jugador pulsaria
+        //    COMPRAR y no pasaria nada util.
+        //    ⚠⚠ El servidor NO cobra en ese caso (ShopService lo comprueba
+        //       antes de tocar el dinero), asi que no se pierde dinero -- pero
+        //       una tienda que enseña cosas que no se pueden comprar es una
+        //       tienda rota, y esto lo dice al arrancar en vez de dejarlo para
+        //       que lo descubra un jugador.
+        boolean entregables = true;
+        int conProveedor = 0;
+        for (var c : catalog.categories()) {
+            for (var e : c.entries()) {
+                if (e.entrega() == null || e.entrega().isEmpty()) {
+                    continue;
+                }
+                conProveedor++;
+                if (net.pokereport.luna.shop.Modulos.fabricar(e.entrega(), 1) == null) {
+                    entregables = false;
+                    LunaEternal.LOG.error("La tienda vende «{}» y NO se puede "
+                            + "entregar: nadie fabrica {}", e.clave(), e.entrega());
+                }
+            }
+        }
+        check("todo lo que necesita un proveedor se puede entregar ("
+                + conProveedor + " articulos)", entregables);
 
         check("cabe al menos un articulo por pagina", porPagina >= 1);
         boolean alcanzables = true;

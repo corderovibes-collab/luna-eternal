@@ -9,6 +9,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.sound.SoundEvents;
@@ -67,16 +68,18 @@ public class SantuarioScreen extends Screen {
             Identifier.of("lunaeternal", "textures/gui/pokepad/santuario.png");
 
     private static final Identifier ARTE_COMPRA =
-            Identifier.of("lunaeternal", "textures/gui/pokepad/santuario_compra.png");
+            Identifier.of("lunaeternal", "textures/gui/santuario/compra_espacio.png");
     private static final Identifier ARTE_NICHOS =
-            Identifier.of("lunaeternal", "textures/gui/pokepad/santuario_nichos.png");
+            Identifier.of("lunaeternal", "textures/gui/santuario/nichos_jugadores.png");
     private static final Identifier ARTE_ALQUILER =
-            Identifier.of("lunaeternal", "textures/gui/pokepad/santuario_alquiler.png");
+            Identifier.of("lunaeternal", "textures/gui/santuario/alquiler_temporal.png");
     private static final Identifier ARTE_PERMANENTE =
-            Identifier.of("lunaeternal", "textures/gui/pokepad/santuario_permanente.png");
+            Identifier.of("lunaeternal", "textures/gui/santuario/compra_permanente.png");
 
     private static final Identifier ICONO_PLATA =
             Identifier.of("lunaeternal", "textures/gui/pokepad/plata.png");
+    private static final Identifier MAS =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/boton_mas_luna.png");
     private static final Identifier ICONO_LUNA =
             Identifier.of("lunaeternal", "textures/gui/pokepad/lunacoin_oro.png");
 
@@ -162,7 +165,7 @@ public class SantuarioScreen extends Screen {
     }
 
     private void recalcular() {
-        var m = Escalado.aplicar(client, width, height, CHASIS, ATRAS, CERRAR, ICONO);
+        var m = Escalado.aplicar(client, width, height, CHASIS, ATRAS, CERRAR, ICONO, MAS);
         k = m.k();
         ancho = m.ancho();
         alto = m.alto();
@@ -276,13 +279,6 @@ public class SantuarioScreen extends Screen {
             return;
         }
 
-        // Stat Badge Container (estilo Tesoros / Explorar)
-        int cardW = PANEL_W - 50;
-        int cardH = 74;
-        int bx = cx - cardW / 2;
-        ctx.fill(px(bx), py(y), px(bx + cardW), py(y + cardH), CARD_SUBFONDO);
-        marco(ctx, px(bx), py(y), pl(cardW), pl(cardH), CARD_BORDE, Math.max(1, pl(2)));
-
         int ocupados = 0;
         for (var n : e.nichos()) {
             if (!n.estado().dueno().isEmpty()) ocupados++;
@@ -293,16 +289,21 @@ public class SantuarioScreen extends Screen {
         texto(ctx, Text.literal(ocupados + " / " + e.nichos().size()),
                 cx, y + 32, 32, ORO, true, CONTORNO_OSCURO);
 
-        // Si es staff, botón de acceso rápido a moderación en panel lateral
-        if (e.modera() && vista != Vista.MODERACION) {
-            int my = y + cardH + 16;
-            int pendN = 0;
-            var pend = EstadoCliente.pendientes();
-            if (pend != null) pendN = pend.fotos().size();
-            String rotulo = Text.translatable("pokepad.lunaeternal.santuario.moderar").getString();
-            if (pendN > 0) rotulo += " (" + pendN + ")";
-            boton(ctx, rx, ry, bx, my, cardW, 42, Text.literal(rotulo), true, AMATISTA_TP);
+        // Widget de LunaCoins al fondo
+        int acy = PANEL_Y + PANEL_H - 40;
+        int m = pl(40);
+        dibujarTextura(ctx, ICONO_LUNA, px(PANEL_X + 24), py(acy) - m / 2, m, m, 100, 100);
+        
+        long lunacoins = 0;
+        var saldo = EstadoCliente.saldo();
+        if (saldo != null) {
+            lunacoins = saldo.reportcoins();
         }
+        texto(ctx, Text.literal(String.format("%,d", lunacoins)),
+                PANEL_X + 24 + 40 + 14, acy - 17, 34, ORO, false, CONTORNO_OSCURO);
+        
+        int mw = pl(58);
+        dibujarTextura(ctx, MAS, px(PANEL_X + PANEL_W - 22) - mw, py(acy) - mw / 2, mw, mw, 58, 58);
     }
 
     // ---- MENU PRINCIPAL (2 tarjetas estilizadas tipo Explorar) -------------
@@ -314,92 +315,75 @@ public class SantuarioScreen extends Screen {
             return;
         }
 
-        int ax = PANT_X + MARGEN;
-        int aw = PANT_W - 2 * MARGEN;
-        int y = PANT_Y + MARGEN;
-        int cardH = e.modera() ? 180 : 210;
-        int aire = 16;
-
-        // Tarjeta 1: COMPRA TU ESPACIO
-        tarjetaDestacada(ctx, rx, ry, ax, y, aw, cardH, ARTE_COMPRA, AZUL_ZAFIRO,
+        int ty = PANT_Y + MARGEN;
+        int cardW = 384;
+        int cardH = 256;
+        
+        int tx1 = PANT_X + 11;
+        tarjetaDestacada(ctx, rx, ry, tx1, ty, cardW, cardH, ARTE_COMPRA, AZUL_ZAFIRO,
                 Text.translatable("pokepad.lunaeternal.santuario.menu_compra"),
-                Text.translatable("pokepad.lunaeternal.santuario.menu_compra_desc"),
-                "MEMORIALES ETERNOS", Text.translatable("pokepad.lunaeternal.santuario.elegir_nicho"));
-        y += cardH + aire;
+                Text.translatable("pokepad.lunaeternal.santuario.menu_compra_desc"));
 
-        // Tarjeta 2: NICHOS DE JUGADORES
-        tarjetaDestacada(ctx, rx, ry, ax, y, aw, cardH, ARTE_NICHOS, VERDE_ESMERALDA,
+        int tx2 = PANT_X + 11 + cardW + 11;
+        tarjetaDestacada(ctx, rx, ry, tx2, ty, cardW, cardH, ARTE_NICHOS, VERDE_ESMERALDA,
                 Text.translatable("pokepad.lunaeternal.santuario.menu_nichos"),
-                Text.translatable("pokepad.lunaeternal.santuario.menu_nichos_desc"),
-                "COMUNIDAD · MONUMENTOS", Text.literal("EXPLORAR NICHOS"));
-        y += cardH + aire;
-
-        // Si es staff: Tarjeta 3 estilizada para moderación
+                Text.translatable("pokepad.lunaeternal.santuario.menu_nichos_desc"));
+        
         if (e.modera()) {
+            int my = ty + cardH + 16;
+            int mw = PANT_W - 22;
             int pendN = 0;
             var pend = EstadoCliente.pendientes();
             if (pend != null) pendN = pend.fotos().size();
-            boolean encMod = dentro(rx, ry, px(ax), py(y), pl(aw), pl(58));
-            ctx.fill(px(ax), py(y), px(ax + aw), py(y + 58), encMod ? CARD_FONDO_HOVER : CARD_FONDO);
-            marco(ctx, px(ax), py(y), pl(aw), pl(58), encMod ? CARD_BORDE_ENCIMA : AMATISTA_TP, Math.max(1, pl(2)));
-            texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.moderar"),
-                    ax + 24, y + 16, 22, TEXTO_BLANCO, false, CONTORNO_OSCURO);
-            String descPend = pendN > 0
-                    ? Text.translatable("pokepad.lunaeternal.santuario.pendientes_n", pendN).getString()
-                    : Text.translatable("pokepad.lunaeternal.santuario.pendientes_vacio").getString();
-            texto(ctx, Text.literal(descPend), ax + aw - 24, y + 18, 16, pendN > 0 ? ORO : TEXTO_MUTED, false, 0);
+            String rotulo = "🔧 " + Text.translatable("pokepad.lunaeternal.santuario.moderar").getString();
+            if (pendN > 0) rotulo += " (" + pendN + ")";
+            boton(ctx, rx, ry, PANT_X + 11, my, mw, 44, Text.literal(rotulo), true, AMATISTA_TP);
         }
     }
 
-    /**
-     * Dibuja una tarjeta con la misma técnica de {@link ExplorarScreen}:
-     * Si la ilustración existe, la dibuja a sangre con velo de gradiente arriba y abajo.
-     * Si no existe, dibuja un contenedor oscuro con tema y acento vibrante.
-     */
     private void tarjetaDestacada(DrawContext ctx, int rx, int ry,
                                   int ax, int ay, int aw, int ah,
                                   Identifier arteId, int colorAcento,
-                                  Text titulo, Text desc, String badgePill, Text botonTexto) {
+                                  Text titulo, Text desc) {
         boolean enc = dentro(rx, ry, px(ax), py(ay), pl(aw), pl(ah));
 
         if (hayArte(arteId)) {
-            dibujarTextura(ctx, arteId, px(ax), py(ay), pl(aw), pl(ah), 1024, 680);
-            velo(ctx, ax, ay, aw, 64, true);
-            velo(ctx, ax, ay + ah - 68, aw, 68, false);
-            if (enc) {
-                ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), 0x22FFFFFF);
-            }
+            arte(ctx, arteId, px(ax), py(ay), pl(aw), pl(ah), aw, ah);
+            velo(ctx, ax, ay, aw, 74, true);
+            velo(ctx, ax, ay + ah - 78, aw, 78, false);
         } else {
-            // Fondo oscuro con diseño temático
-            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), enc ? CARD_FONDO_HOVER : CARD_FONDO);
-            ctx.fill(px(ax), py(ay), px(ax + 8), py(ay + ah), colorAcento);
-            // Barra de acento superior tenue
-            ctx.fill(px(ax + 8), py(ay), px(ax + aw), py(ay + 4), colorAcento & 0x66FFFFFF);
+            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), colorAcento);
         }
-
+        
         marco(ctx, px(ax), py(ay), pl(aw), pl(ah),
-                enc ? CARD_BORDE_ENCIMA : CARD_BORDE, Math.max(2, pl(enc ? 3 : 2)));
+                enc ? CARD_BORDE_ENCIMA : (enc ? 0xFF8FA0C8 : 0xFF20283C), Math.max(2, pl(enc ? 4 : 2)));
 
-        // Pill badge decorativa arriba
-        if (badgePill != null && !badgePill.isEmpty()) {
-            pill(ctx, badgePill, ax + 24, ay + 14, colorAcento);
+        if (enc) {
+            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), 0x22FFFFFF);
         }
 
-        // Título principal con contorno oscuro
-        texto(ctx, titulo, ax + 24, ay + 38, 28, TEXTO_BLANCO, false, CONTORNO_OSCURO);
+        texto(ctx, titulo, ax + aw / 2, ay + 20, 26, TEXTO_BLANCO, true, CONTORNO_OSCURO);
 
-        // Subtítulo descriptivo
-        for (String linea : partir(desc.getString(), aw - 240, 16)) {
-            texto(ctx, Text.literal(linea), ax + 24, ay + 72, 16, TEXTO_CLARO, false, CONTORNO_OSCURO);
-            break;
+        int y = ay + ah - 62;
+        for (String linea : partir(desc.getString(), aw - 40, 15)) {
+            texto(ctx, Text.literal(linea), ax + aw / 2, y, 15, 0xFFDCE6F8, true, CONTORNO_OSCURO);
+            y += 20;
         }
+    }
 
-        // Botón a la derecha integrado en la tarjeta
-        int btnW = 180;
-        int btnH = 44;
-        int btnX = ax + aw - btnW - 24;
-        int btnY = ay + ah / 2 - btnH / 2;
-        boton(ctx, rx, ry, btnX, btnY, btnW, btnH, botonTexto, true, colorAcento);
+    private void arte(DrawContext ctx, Identifier tex, int x, int y, int w, int h,
+                      int destW, int destH) {
+        int regW = 512, regH = 512;
+        if (destW > destH) {
+            regH = Math.max(1, 512 * destH / destW);
+        } else {
+            regW = Math.max(1, 512 * destW / destH);
+        }
+        int u = (512 - regW) / 2, v = (512 - regH) / 2;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        ctx.drawTexture(tex, x, y, w, h, u, v, regW, regH, 512, 512);
+        RenderSystem.disableBlend();
     }
 
     // ---- COMPRA TU ESPACIO (2 tarjetas estilizadas) ------------------------
@@ -411,78 +395,62 @@ public class SantuarioScreen extends Screen {
             return;
         }
 
-        int ax = PANT_X + MARGEN;
-        int aw = PANT_W - 2 * MARGEN;
-        int y = PANT_Y + MARGEN;
-        int cardH = 205;
-        int aire = 18;
-
-        // Tarjeta ALQUILER 24 HORAS
-        tarjetaCompraOpcion(ctx, rx, ry, ax, y, aw, cardH, ARTE_ALQUILER, AZUL_ZAFIRO,
+        int ty = PANT_Y + MARGEN;
+        int cardW = 384;
+        int cardH = 256;
+        
+        int tx1 = PANT_X + 11;
+        tarjetaCompraOpcion(ctx, rx, ry, tx1, ty, cardW, cardH, ARTE_ALQUILER, AZUL_ZAFIRO,
                 Text.translatable("pokepad.lunaeternal.santuario.alquiler_titulo"),
                 Text.translatable("pokepad.lunaeternal.santuario.alquiler_desc"),
-                "⏱ 24 HORAS", ICONO_PLATA,
-                String.format("%,d", e.precioPlata()) + " Plata", PLATA_COLOR,
-                Text.translatable("pokepad.lunaeternal.santuario.elegir_nicho"));
-        y += cardH + aire;
+                ICONO_PLATA, String.format("%,d", e.precioPlata()) + " Plata", PLATA_COLOR);
 
-        // Tarjeta COMPRA PERMANENTE
-        tarjetaCompraOpcion(ctx, rx, ry, ax, y, aw, cardH, ARTE_PERMANENTE, ORO_OSCURO,
+        int tx2 = PANT_X + 11 + cardW + 11;
+        tarjetaCompraOpcion(ctx, rx, ry, tx2, ty, cardW, cardH, ARTE_PERMANENTE, ORO_OSCURO,
                 Text.translatable("pokepad.lunaeternal.santuario.permanente_titulo"),
                 Text.translatable("pokepad.lunaeternal.santuario.permanente_desc"),
-                "⭐ PERMANENTE", ICONO_LUNA,
-                String.format("%,d", e.precioLuna()) + " LunaCoins", ORO,
-                Text.translatable("pokepad.lunaeternal.santuario.elegir_nicho"));
+                ICONO_LUNA, String.format("%,d", e.precioLuna()) + " LunaCoins", ORO);
     }
 
     private void tarjetaCompraOpcion(DrawContext ctx, int rx, int ry,
                                      int ax, int ay, int aw, int ah,
                                      Identifier arteId, int colorAcento,
-                                     Text titulo, Text desc, String badgePill,
-                                     Identifier iconoMoneda, String precioTexto, int colorPrecio,
-                                     Text botonTexto) {
+                                     Text titulo, Text desc,
+                                     Identifier iconoMoneda, String precioTexto, int colorPrecio) {
         boolean enc = dentro(rx, ry, px(ax), py(ay), pl(aw), pl(ah));
 
         if (hayArte(arteId)) {
-            dibujarTextura(ctx, arteId, px(ax), py(ay), pl(aw), pl(ah), 1024, 680);
-            velo(ctx, ax, ay, aw, 64, true);
-            velo(ctx, ax, ay + ah - 68, aw, 68, false);
-            if (enc) ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), 0x22FFFFFF);
+            arte(ctx, arteId, px(ax), py(ay), pl(aw), pl(ah), aw, ah);
+            velo(ctx, ax, ay, aw, 74, true);
+            velo(ctx, ax, ay + ah - 78, aw, 78, false);
         } else {
-            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), enc ? CARD_FONDO_HOVER : CARD_FONDO);
-            ctx.fill(px(ax), py(ay), px(ax + 8), py(ay + ah), colorAcento);
-            ctx.fill(px(ax + 8), py(ay), px(ax + aw), py(ay + 4), colorAcento & 0x66FFFFFF);
+            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), colorAcento);
+        }
+        
+        marco(ctx, px(ax), py(ay), pl(aw), pl(ah),
+                enc ? CARD_BORDE_ENCIMA : (enc ? 0xFF8FA0C8 : 0xFF20283C), Math.max(2, pl(enc ? 4 : 2)));
+
+        if (enc) {
+            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), 0x22FFFFFF);
         }
 
-        marco(ctx, px(ax), py(ay), pl(aw), pl(ah),
-                enc ? CARD_BORDE_ENCIMA : CARD_BORDE, Math.max(2, pl(enc ? 3 : 2)));
+        texto(ctx, titulo, ax + aw / 2, ay + 20, 26, TEXTO_BLANCO, true, CONTORNO_OSCURO);
 
-        // Pill superior
-        pill(ctx, badgePill, ax + 24, ay + 16, colorAcento);
-
-        // Título principal
-        texto(ctx, titulo, ax + 24, ay + 42, 28, TEXTO_BLANCO, false, CONTORNO_OSCURO);
-
-        // Descripción
-        for (String linea : partir(desc.getString(), aw - 300, 16)) {
-            texto(ctx, Text.literal(linea), ax + 24, ay + 78, 16, TEXTO_CLARO, false, CONTORNO_OSCURO);
+        int y = ay + 50;
+        for (String linea : partir(desc.getString(), aw - 40, 15)) {
+            texto(ctx, Text.literal(linea), ax + aw / 2, y, 15, 0xFFDCE6F8, true, CONTORNO_OSCURO);
+            y += 20;
             break;
         }
-
-        // Badge con icono de moneda y precio a la derecha
-        int badgeW = 240, badgeH = 46;
-        int badgeX = ax + aw - badgeW - 24;
-        int badgeY = ay + 32;
+        
+        int badgeW = 200, badgeH = 46;
+        int badgeX = ax + (aw - badgeW) / 2;
+        int badgeY = ay + ah - badgeH - 24;
         ctx.fill(px(badgeX), py(badgeY), px(badgeX + badgeW), py(badgeY + badgeH), 0xDD0C1320);
         marco(ctx, px(badgeX), py(badgeY), pl(badgeW), pl(badgeH), colorAcento, Math.max(1, pl(2)));
 
         dibujarTextura(ctx, iconoMoneda, px(badgeX + 12), py(badgeY + 8), pl(30), pl(30), 48, 48);
         texto(ctx, Text.literal(precioTexto), badgeX + 50, badgeY + 12, 22, colorPrecio, false, CONTORNO_OSCURO);
-
-        // Botón de acción debajo del badge
-        int btnW = 240, btnH = 44;
-        int btnY = ay + ah - btnH - 24;
-        boton(ctx, rx, ry, badgeX, btnY, btnW, btnH, botonTexto, true, colorAcento);
     }
 
     // ---- COMPRA_LISTA (elegir nicho libre) ----------------------------------
@@ -839,6 +807,22 @@ public class SantuarioScreen extends Screen {
         if (boton != 0) return super.mouseClicked(mx, my, boton);
         int rx = (int) mx, ry = (int) my;
 
+        int acy = PANEL_Y + PANEL_H - 40;
+        int mw = pl(58);
+        if (dentro(rx, ry, px(PANEL_X + PANEL_W - 22) - mw, py(acy) - mw / 2, mw, mw)) {
+            sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
+            if (client != null) {
+                client.setScreen(new ConfirmLinkScreen(
+                        confirmado -> {
+                            if (confirmado && client != null) {
+                                net.minecraft.util.Util.getOperatingSystem().open("https://tienda.lunaeternal.net");
+                            }
+                            if (client != null) client.setScreen(this);
+                        }, "https://tienda.lunaeternal.net", true));
+            }
+            return true;
+        }
+
         // ATRAS
         int cy = py(PANEL_Y + NAV_ALTO / 2);
         if (dentro(rx, ry, px(PANEL_X + 18), cy - pl(24), pl(60), pl(48))) {
@@ -860,20 +844,7 @@ public class SantuarioScreen extends Screen {
             return true;
         }
 
-        // Acceso rápido a moderar en panel lateral si es staff
-        var e = EstadoCliente.santuario();
-        if (e != null && e.modera() && vista != Vista.MODERACION) {
-            int cx = PANEL_X + PANEL_W / 2;
-            int cardW = PANEL_W - 50;
-            int bx = cx - cardW / 2;
-            int myY = py(PANEL_Y + NAV_ALTO + 202) + pl(34 + 74 + 16);
-            if (dentro(rx, ry, px(bx), myY, pl(cardW), pl(42))) {
-                sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
-                irA(Vista.MODERACION);
-                ClientPlayNetworking.send(new Red.PedirPendientes());
-                return true;
-            }
-        }
+
 
         return switch (vista) {
             case MENU -> clicMenu(rx, ry);
@@ -888,56 +859,53 @@ public class SantuarioScreen extends Screen {
     private boolean clicMenu(int rx, int ry) {
         var e = EstadoCliente.santuario();
         if (e == null) return false;
-        int ax = PANT_X + MARGEN;
-        int aw = PANT_W - 2 * MARGEN;
-        int y = PANT_Y + MARGEN;
-        int cardH = e.modera() ? 180 : 210;
-        int aire = 16;
+        
+        int ty = PANT_Y + MARGEN;
+        int cardW = 384;
+        int cardH = 256;
+        int tx1 = PANT_X + 11;
+        int tx2 = PANT_X + 11 + cardW + 11;
 
-        // Tarjeta COMPRA
-        if (dentro(rx, ry, px(ax), py(y), pl(aw), pl(cardH))) {
+        if (dentro(rx, ry, px(tx1), py(ty), pl(cardW), pl(cardH))) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
             irA(Vista.COMPRA);
             return true;
         }
-        y += cardH + aire;
 
-        // Tarjeta NICHOS
-        if (dentro(rx, ry, px(ax), py(y), pl(aw), pl(cardH))) {
+        if (dentro(rx, ry, px(tx2), py(ty), pl(cardW), pl(cardH))) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
             irA(Vista.NICHOS);
             return true;
         }
-        y += cardH + aire;
 
-        // Tarjeta MODERAR (solo staff)
-        if (e.modera() && dentro(rx, ry, px(ax), py(y), pl(aw), pl(58))) {
-            sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
-            irA(Vista.MODERACION);
-            ClientPlayNetworking.send(new Red.PedirPendientes());
-            return true;
+        if (e.modera()) {
+            int my = ty + cardH + 16;
+            int mw = PANT_W - 22;
+            if (dentro(rx, ry, px(PANT_X + 11), py(my), pl(mw), pl(44))) {
+                sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
+                irA(Vista.MODERACION);
+                ClientPlayNetworking.send(new Red.PedirPendientes());
+                return true;
+            }
         }
         return false;
     }
 
     private boolean clicCompra(int rx, int ry) {
-        int ax = PANT_X + MARGEN;
-        int aw = PANT_W - 2 * MARGEN;
-        int y = PANT_Y + MARGEN;
-        int cardH = 205;
-        int aire = 18;
+        int ty = PANT_Y + MARGEN;
+        int cardW = 384;
+        int cardH = 256;
+        int tx1 = PANT_X + 11;
+        int tx2 = PANT_X + 11 + cardW + 11;
 
-        // Tarjeta Alquiler
-        if (dentro(rx, ry, px(ax), py(y), pl(aw), pl(cardH))) {
+        if (dentro(rx, ry, px(tx1), py(ty), pl(cardW), pl(cardH))) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
             compraPermanente = false;
             irA(Vista.COMPRA_LISTA);
             return true;
         }
-        y += cardH + aire;
 
-        // Tarjeta Permanente
-        if (dentro(rx, ry, px(ax), py(y), pl(aw), pl(cardH))) {
+        if (dentro(rx, ry, px(tx2), py(ty), pl(cardW), pl(cardH))) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.2f);
             compraPermanente = true;
             irA(Vista.COMPRA_LISTA);

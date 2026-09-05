@@ -241,9 +241,9 @@ public class MemorialScreen extends Screen {
 
     private void dibujarNav(DrawContext ctx, int rx, int ry) {
         int cy = PANEL_Y + NAV_ALTO / 2;
-        dibujarTextura(ctx, ATRAS, px(PANEL_X + 18), cy - pl(24), pl(60), pl(48), 80, 64);
-        if (dentro(rx, ry, px(PANEL_X + 18), cy - pl(24), pl(60), pl(48))) {
-            marco(ctx, px(PANEL_X + 18) - 2, cy - pl(24) - 2, pl(60) + 4, pl(48) + 4,
+        dibujarTextura(ctx, ATRAS, px(PANEL_X + 18), py(cy) - pl(24), pl(60), pl(48), 80, 64);
+        if (dentro(rx, ry, px(PANEL_X + 18), py(cy) - pl(24), pl(60), pl(48))) {
+            marco(ctx, px(PANEL_X + 18) - 2, py(cy) - pl(24) - 2, pl(60) + 4, pl(48) + 4,
                     BORDE_ENCIMA, 2);
         }
         texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.volver"),

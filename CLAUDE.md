@@ -2298,6 +2298,33 @@ Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md
                    only data packs can". Se registraba y se quedaba
                    apagado — y no se veia porque yo IGNORABA el
                    booleano que devuelve registerBuiltinResourcePack
+Desplegar     EL PROCEDIMIENTO ENTERO: docs/technical/despliegue.md
+              LEERLO ANTES DE DESPLEGAR NADA. Resumen:
+                cd mod && ./build.sh
+                python tools/gen_manifest.py --publicar      <- clientes
+                python tools/desplegar.py mod --reiniciar    <- servidor
+                python tools/rcon.py "luna autotest"
+              ⚠⚠⚠ AÑADIR: manifiesto PRIMERO. QUITAR: servidor primero.
+                 Son la misma regla mirada desde cada lado -- el servidor tiene
+                 que tener LO MISMO O MENOS que el cliente, siempre. Al reves
+                 la conexion se cae EN LA PUERTA con un error que no nombra al
+                 mod que falta
+              ⚠⚠⚠ LA CONFIG DE UN MOD AJENO: PARAR, SUBIR, ARRANCAR. Muchos la
+                 cargan al arrancar y LA REESCRIBEN AL APAGARSE: subirla en
+                 caliente y reiniciar hace que la parada vuelque su copia vieja
+                 encima. No da ningun error -- gana el que escribe el ultimo.
+                 Mordio DOS veces con ClaimBlocks (claims.json y texts.json)
+              ⚠⚠⚠ DOS RAMAS, UN SERVIDOR: si dos compilan el mismo jar, la
+                 segunda que despliegue BORRA A LA PRIMERA. Tres veces en una
+                 semana. D:/pokereportversionmejorada                                                      8998b04 [master]
+D:/pokereportversionmejorada/.claude/worktrees/armadura-casco-arceus-c8e71c       38ebc71 [claude/armadura-casco-arceus-c8e71c]
+D:/pokereportversionmejorada/.claude/worktrees/armaduras-blockbench-server-023b12 acdd71c [claude/armaduras-blockbench-server-023b12] y On branch claude/armaduras-blockbench-server-023b12
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	docs/technical/despliegue.md
+
+nothing added to commit but untracked files present (use "git add" to track) antes de desplegar
+
 Publicar      YA NO QUEDA NI UN FICHERO SIRVIENDOSE DESDE raw (D-036)
               eran 5, y el manifiesto era uno de ellos: LA PRIMERA
               peticion del arranque, en el peor sitio posible

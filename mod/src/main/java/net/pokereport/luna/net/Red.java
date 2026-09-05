@@ -2002,9 +2002,14 @@ public class Red implements ModInitializer {
      * diez parcelas para mirar una.
      */
     public record DetalleParcela(String nombre, List<MiembroParcela> miembros,
-                                 List<PermisoParcela> permisos) implements CustomPayload {
+                                 List<PermisoParcela> permisos, String titulo,
+                                 String subtitulo, boolean visible)
+            implements CustomPayload {
         public static final Id<DetalleParcela> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "detalle_parcela"));
+        // ⚠ SEIS CAMPOS, que es el tope de `PacketCodec.tuple`. El siguiente
+        //   no cabe: habría que agrupar dos en un record propio, como se hizo
+        //   con `EstadoGimnasio` cuando le sobró el séptimo.
         public static final PacketCodec<RegistryByteBuf, DetalleParcela> CODEC =
                 PacketCodec.tuple(
                         CADENA, DetalleParcela::nombre,
@@ -2012,6 +2017,9 @@ public class Red implements ModInitializer {
                         DetalleParcela::miembros,
                         PermisoParcela.CODEC.collect(PacketCodecs.toList()),
                         DetalleParcela::permisos,
+                        CADENA, DetalleParcela::titulo,
+                        CADENA, DetalleParcela::subtitulo,
+                        PacketCodecs.BOOL, DetalleParcela::visible,
                         DetalleParcela::new);
 
         @Override
@@ -2048,6 +2056,39 @@ public class Red implements ModInitializer {
                         CADENA, CambiarPermiso::bandera,
                         PacketCodecs.BOOL, CambiarPermiso::valor,
                         CambiarPermiso::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** @param poner true para volver a poner el módulo, false para esconderlo */
+    public record VerModulo(String parcela, boolean poner) implements CustomPayload {
+        public static final Id<VerModulo> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "ver_modulo"));
+        public static final PacketCodec<RegistryByteBuf, VerModulo> CODEC =
+                PacketCodec.tuple(
+                        CADENA, VerModulo::parcela,
+                        PacketCodecs.BOOL, VerModulo::poner,
+                        VerModulo::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record MensajeParcela(String parcela, String titulo, String subtitulo)
+            implements CustomPayload {
+        public static final Id<MensajeParcela> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "mensaje_parcela"));
+        public static final PacketCodec<RegistryByteBuf, MensajeParcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, MensajeParcela::parcela,
+                        CADENA, MensajeParcela::titulo,
+                        CADENA, MensajeParcela::subtitulo,
+                        MensajeParcela::new);
 
         @Override
         public Id<? extends CustomPayload> getId() {
@@ -2508,6 +2549,8 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(DetalleParcela.ID, DetalleParcela.CODEC);
         PayloadTypeRegistry.playC2S().register(TocarMiembro.ID, TocarMiembro.CODEC);
         PayloadTypeRegistry.playC2S().register(CambiarPermiso.ID, CambiarPermiso.CODEC);
+        PayloadTypeRegistry.playC2S().register(VerModulo.ID, VerModulo.CODEC);
+        PayloadTypeRegistry.playC2S().register(MensajeParcela.ID, MensajeParcela.CODEC);
         PayloadTypeRegistry.playC2S().register(RenombrarParcela.ID, RenombrarParcela.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirProtecciones.ID, PedirProtecciones.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoProtecciones.ID, EstadoProtecciones.CODEC);
@@ -2768,6 +2811,28 @@ public class Red implements ModInitializer {
                     carga.jugador()), false);
             enviarParcela(jugador, carga.parcela());
             enviarProtecciones(jugador);
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(VerModulo.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String motivo = net.pokereport.luna.proteccion.Protecciones.visible(
+                    jugador, carga.parcela(), carga.poner());
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    motivo == null
+                            ? (carga.poner() ? "pokepad.lunaeternal.protecciones.puesto"
+                                             : "pokepad.lunaeternal.protecciones.escondido")
+                            : "pokepad.lunaeternal.protecciones.error." + motivo), false);
+            enviarParcela(jugador, carga.parcela());
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(MensajeParcela.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String motivo = net.pokereport.luna.proteccion.Protecciones.mensaje(
+                    jugador, carga.parcela(), carga.titulo(), carga.subtitulo());
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    motivo == null ? "pokepad.lunaeternal.protecciones.mensaje_puesto"
+                                   : "pokepad.lunaeternal.protecciones.error." + motivo), false);
+            enviarParcela(jugador, carga.parcela());
         });
 
         ServerPlayNetworking.registerGlobalReceiver(RenombrarParcela.ID, (carga, ctx) -> {
@@ -4461,7 +4526,8 @@ public class Red implements ModInitializer {
             ps.add(new PermisoParcela(x.clave(), x.valor(), x.porDefecto()));
         }
         ServerPlayNetworking.send(jugador,
-                new DetalleParcela(d.nombre(), List.copyOf(ms), List.copyOf(ps)));
+                new DetalleParcela(d.nombre(), List.copyOf(ms), List.copyOf(ps),
+                        d.titulo(), d.subtitulo(), d.visible()));
     }
 
     private static Tienda componerTienda() {

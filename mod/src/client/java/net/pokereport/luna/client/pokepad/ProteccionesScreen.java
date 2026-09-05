@@ -104,6 +104,19 @@ public class ProteccionesScreen extends Screen {
 
     private net.minecraft.client.gui.widget.TextFieldWidget campoNombre;
     private net.minecraft.client.gui.widget.TextFieldWidget campoMiembro;
+    private net.minecraft.client.gui.widget.TextFieldWidget campoTitulo;
+    private net.minecraft.client.gui.widget.TextFieldWidget campoSubtitulo;
+
+    /**
+     * De qué parcela se han rellenado ya los campos con lo que dice el
+     * servidor.
+     *
+     * <p>⚠⚠ HACE FALTA PORQUE EL DETALLE LLEGA TARDE. Rellenarlos en cada
+     * fotograma borraría lo que el jugador está tecleando; rellenarlos solo
+     * al abrir los dejaría vacíos, porque al abrir todavía no ha contestado
+     * el servidor. Se rellenan <b>la primera vez que llega su detalle</b>.
+     */
+    private String rellenado = "";
 
     public ProteccionesScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.protecciones"));
@@ -118,10 +131,16 @@ public class ProteccionesScreen extends Screen {
         //   parece que la pantalla se ha reiniciado sola.
         String n = campoNombre == null ? "" : campoNombre.getText();
         String m = campoMiembro == null ? "" : campoMiembro.getText();
+        String t = campoTitulo == null ? "" : campoTitulo.getText();
+        String sb = campoSubtitulo == null ? "" : campoSubtitulo.getText();
         campoNombre = campo(24, n);
         campoMiembro = campo(16, m);
+        campoTitulo = campo(32, t);
+        campoSubtitulo = campo(32, sb);
         addSelectableChild(campoNombre);
         addSelectableChild(campoMiembro);
+        addSelectableChild(campoTitulo);
+        addSelectableChild(campoSubtitulo);
         ClientPlayNetworking.send(new Red.PedirProtecciones());
     }
 
@@ -258,6 +277,7 @@ public class ProteccionesScreen extends Screen {
 
     private void volverALista() {
         abierta = "";
+        rellenado = "";
         confirmando = "";
         EstadoCliente.olvidarParcela();
         setFocused(null);
@@ -303,6 +323,21 @@ public class ProteccionesScreen extends Screen {
                     PANT_X + PANT_W / 2, PANT_Y + PANT_H / 2, 20, TEXTO_SUAVE, true, false);
             return;
         }
+
+        // ⚠ La primera vez que llega el detalle de esta parcela se rellenan los
+        //   campos. Después NO: se borraría lo que el jugador esté tecleando.
+        if (!abierta.equals(rellenado)) {
+            rellenado = abierta;
+            campoTitulo.setText(d.titulo());
+            campoSubtitulo.setText(d.subtitulo());
+        }
+
+        // --- esconder o volver a poner el módulo
+        boton(ctx, rx, ry, ax + aw - 190, PANT_Y + MARGEN + 4, 174, 30,
+                Text.translatable(d.visible()
+                        ? "pokepad.lunaeternal.protecciones.esconder"
+                        : "pokepad.lunaeternal.protecciones.ensenar"),
+                true, d.visible() ? 0xFF6E5A9E : 0xFF2E7A9E);
 
         // --- renombrar
         texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.nombre"),
@@ -375,6 +410,26 @@ public class ProteccionesScreen extends Screen {
         texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.no_miembros"),
                 PANT_X + MARGEN + 396, PANT_Y + 150 + 6 * PERM_ALTO + 6, 12,
                 TEXTO_SUAVE, false, false);
+
+        // --- el mensaje que sale al entrar
+        int mx2 = PANT_X + MARGEN + 396;
+        texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.mensaje"),
+                mx2, PANT_Y + 356, 18, TEXTO_OSCURO, false, true);
+        // ⚠ Se dice de qué depende: el mensaje no sale si «Avisar al entrar»
+        //   está en NO, y un campo que se rellena y no hace nada parece roto.
+        texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.mensaje_pista"),
+                mx2, PANT_Y + 378, 12, TEXTO_SUAVE, false, false);
+        colocar(campoTitulo, mx2, PANT_Y + 398, 250, 26);
+        campoTitulo.render(ctx, rx, ry, 0);
+        colocar(campoSubtitulo, mx2, PANT_Y + 430, 250, 26);
+        campoSubtitulo.render(ctx, rx, ry, 0);
+        if (campoSubtitulo.getText().isEmpty()) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.subtitulo"),
+                    mx2 + 8, PANT_Y + 437, 12, 0xFF8892AC, false, false);
+        }
+        boton(ctx, rx, ry, mx2 + 262, PANT_Y + 414, 110, 28,
+                Text.translatable("pokepad.lunaeternal.protecciones.guardar"),
+                true, 0xFF2E9E56);
     }
 
     private void boton(DrawContext ctx, int rx, int ry, int ax, int ay, int aw, int ah,
@@ -650,6 +705,7 @@ public class ProteccionesScreen extends Screen {
                 //   el clic lo capturaría siempre la fila que hay debajo.
                 if (dentro(rx, ry, px(ax), py(y), pl(aw), pl(FILA_ALTO))) {
                     abierta = p.nombre();
+                    rellenado = "";
                     confirmando = "";
                     EstadoCliente.olvidarParcela();
                     campoNombre.setText(p.nombre());
@@ -692,6 +748,29 @@ public class ProteccionesScreen extends Screen {
         }
         if (campoMiembro.mouseClicked(mx, my, boton)) {
             setFocused(campoMiembro);
+            return true;
+        }
+        if (campoTitulo.mouseClicked(mx, my, boton)) {
+            setFocused(campoTitulo);
+            return true;
+        }
+        if (campoSubtitulo.mouseClicked(mx, my, boton)) {
+            setFocused(campoSubtitulo);
+            return true;
+        }
+
+        int aw2 = PANT_W - 2 * MARGEN;
+        if (dentro(rx, ry, px(ax + aw2 - 190), py(PANT_Y + MARGEN + 4), pl(174), pl(30))) {
+            sonar(SoundEvents.UI_BUTTON_CLICK.value(), d.visible() ? 0.8f : 1.2f);
+            ClientPlayNetworking.send(new Red.VerModulo(abierta, !d.visible()));
+            return true;
+        }
+
+        int mx2 = PANT_X + MARGEN + 396;
+        if (dentro(rx, ry, px(mx2 + 262), py(PANT_Y + 414), pl(110), pl(28))) {
+            sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.1f);
+            ClientPlayNetworking.send(new Red.MensajeParcela(abierta,
+                    campoTitulo.getText().trim(), campoSubtitulo.getText().trim()));
             return true;
         }
 
@@ -763,6 +842,12 @@ public class ProteccionesScreen extends Screen {
         if (getFocused() == campoMiembro && campoMiembro.keyPressed(tecla, escaneo, mods)) {
             return true;
         }
+        if (getFocused() == campoTitulo && campoTitulo.keyPressed(tecla, escaneo, mods)) {
+            return true;
+        }
+        if (getFocused() == campoSubtitulo && campoSubtitulo.keyPressed(tecla, escaneo, mods)) {
+            return true;
+        }
         return super.keyPressed(tecla, escaneo, mods);
     }
 
@@ -773,6 +858,12 @@ public class ProteccionesScreen extends Screen {
         }
         if (getFocused() == campoMiembro) {
             return campoMiembro.charTyped(c, mods);
+        }
+        if (getFocused() == campoTitulo) {
+            return campoTitulo.charTyped(c, mods);
+        }
+        if (getFocused() == campoSubtitulo) {
+            return campoSubtitulo.charTyped(c, mods);
         }
         return super.charTyped(c, mods);
     }

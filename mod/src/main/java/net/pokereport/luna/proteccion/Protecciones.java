@@ -247,7 +247,8 @@ public final class Protecciones {
     /** @param valor lo que vale ahora; {@code porDefecto} es lo que vale si nadie la toca */
     public record Permiso(String clave, boolean valor, boolean porDefecto) {}
 
-    public record Detalle(String nombre, List<Miembro> miembros, List<Permiso> permisos) {}
+    public record Detalle(String nombre, List<Miembro> miembros, List<Permiso> permisos,
+                          String titulo, String subtitulo, boolean visible) {}
 
     /**
      * La región de ese nombre <b>si es suya</b>, o {@code null}.
@@ -331,7 +332,14 @@ public final class Protecciones {
             return null;
         }
         miembros.sort((a, b) -> a.nombre().compareToIgnoreCase(b.nombre()));
-        return new Detalle(nombre, List.copyOf(miembros), List.copyOf(permisos));
+        try {
+            return new Detalle(nombre, List.copyOf(miembros), List.copyOf(permisos),
+                    texto(rTitulo.invoke(region)), texto(rSubtitulo.invoke(region)),
+                    hayModulo(jugador, region));
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            LunaEternal.LOG.error("Detalle de {} a medias: {}", nombre, e.toString());
+            return null;
+        }
     }
 
     /** Cambia un permiso. Devuelve la clave del motivo, o {@code null} si fue bien. */
@@ -442,6 +450,108 @@ public final class Protecciones {
             mapa.put(limpio, copia);
         } catch (ReflectiveOperationException | RuntimeException e) {
             LunaEternal.LOG.error("No he podido renombrar {}: {}", nombre, e.toString());
+            return "error";
+        }
+        guardar();
+        return null;
+    }
+
+    private static String texto(Object o) {
+        return o == null ? "" : String.valueOf(o);
+    }
+
+    /** ¿Está puesto el módulo en el mundo, o se ha escondido? */
+    private static boolean hayModulo(ServerPlayerEntity jugador, Object region)
+            throws ReflectiveOperationException {
+        BlockPos centro = (BlockPos) rCentro.invoke(region);
+        return jugador.getServerWorld().getBlockState(centro).getBlock()
+                instanceof net.minecraft.block.AbstractSkullBlock;
+    }
+
+    /**
+     * Esconde o vuelve a poner el módulo. La protección sigue igual.
+     *
+     * <h2>⚠⚠⚠ VOLVER A PONERLO ES ALGO QUE EL MOD NO SABE HACER</h2>
+     *
+     * Su propio texto lo dice: <i>«If you hide the module, it will be
+     * physically removed. You will NOT be able to see it again»</i>. Aquí sí,
+     * porque la parcela guarda el centro y el tipo: con eso se reconstruye la
+     * cabeza y se le devuelve su perfil ({@code SkullBlockEntity.setOwner}).
+     *
+     * <p>⚠⚠ Y NO SE COLOCA A CIEGAS. Si esa coordenada ya tiene algo que no es
+     * aire, poner el módulo <b>se llevaría por delante</b> lo que el jugador
+     * haya construido encima mientras estaba escondido. Se avisa y no se toca.
+     */
+    public static String visible(ServerPlayerEntity jugador, String nombre, boolean poner) {
+        Object region = mia(jugador, nombre);
+        if (region == null) {
+            return "no_es_tuya";
+        }
+        try {
+            BlockPos centro = (BlockPos) rCentro.invoke(region);
+            var mundo = jugador.getServerWorld();
+            boolean hay = hayModulo(jugador, region);
+            if (poner == hay) {
+                return poner ? "ya_visible" : "ya_escondido";
+            }
+            if (!poner) {
+                mundo.removeBlock(centro, false);
+                return null;
+            }
+            if (!mundo.getBlockState(centro).isReplaceable()) {
+                return "ocupado";
+            }
+            ItemStack modulo = Modulos.fabricar(
+                    Modulos.PROVEEDOR + String.valueOf(rTipo.invoke(region)), 1);
+            if (modulo == null) {
+                return "error";
+            }
+            mundo.setBlockState(centro,
+                    net.minecraft.block.Blocks.PLAYER_HEAD.getDefaultState());
+            var be = mundo.getBlockEntity(centro);
+            var perfil = modulo.get(net.minecraft.component.DataComponentTypes.PROFILE);
+            if (be instanceof net.minecraft.block.entity.SkullBlockEntity craneo
+                    && perfil != null) {
+                // ⚠ Sin esto la cabeza sale de Steve: la textura vive en el
+                //   componente de perfil del objeto, no en el bloque.
+                craneo.setOwner(perfil);
+            }
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            LunaEternal.LOG.error("No he podido cambiar la visibilidad de {}: {}",
+                    nombre, e.toString());
+            return "error";
+        }
+        return null;
+    }
+
+    /**
+     * El mensaje que sale al entrar en la parcela.
+     *
+     * <p>⚠⚠ SE ACOTA AQUÍ, que es donde llega del cliente. Y se prohíbe el
+     * «§» por lo mismo que en los clanes: un código de color dentro pintaría
+     * el resto de la línea de quien lo lea. El propio mod deja escribirlo.
+     */
+    public static String mensaje(ServerPlayerEntity jugador, String nombre,
+                                 String titulo, String subtitulo) {
+        Object region = mia(jugador, nombre);
+        if (region == null) {
+            return "no_es_tuya";
+        }
+        String t = titulo == null ? "" : titulo.trim();
+        String sub = subtitulo == null ? "" : subtitulo.trim();
+        if (t.length() > 32 || sub.length() > 32
+                || t.indexOf('§') >= 0 || sub.indexOf('§') >= 0) {
+            return "mensaje_invalido";
+        }
+        try {
+            regiones().put(nombre, rCopiar.invoke(region,
+                    rNombre.invoke(region), rOwner.invoke(region), rCentro.invoke(region),
+                    rTipo.invoke(region), rPos1.invoke(region), rPos2.invoke(region),
+                    rBanderas.invoke(region), rMiembros.invoke(region),
+                    t, sub, rMundo.invoke(region)));
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            LunaEternal.LOG.error("No he podido cambiar el mensaje de {}: {}",
+                    nombre, e.toString());
             return "error";
         }
         guardar();

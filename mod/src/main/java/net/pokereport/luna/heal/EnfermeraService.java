@@ -55,7 +55,7 @@ public final class EnfermeraService {
     private static final Map<UUID, Tarea> TAREAS = new ConcurrentHashMap<>();
     private static final Map<UUID, UUID> SESION_JUGADOR = new ConcurrentHashMap<>();
 
-    public static boolean colocarEnfermera(ServerPlayerEntity p) {
+        public static boolean colocarEnfermera(ServerPlayerEntity p) {
         var mundo = p.getServerWorld();
         Vec3d donde = p.getPos();
         float yaw = p.getYaw();
@@ -69,25 +69,34 @@ public final class EnfermeraService {
                 e -> e.getCommandTags().contains(MARCA));
         for (var e : previas) e.discard();
 
-        p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource().withSilent(), 
-            "spawnnpc cobblemon:nurse_joy " + donde.x + " " + donde.y + " " + donde.z);
-            
-        // Esperamos 1 tick para que el comando haga efecto y luego la etiquetamos
-        p.getServer().execute(() -> {
-            var nurses = mundo.getEntitiesByClass(MobEntity.class, 
-                    new net.minecraft.util.math.Box(donde.x - 2, donde.y - 2, donde.z - 2, 
-                                                    donde.x + 2, donde.y + 2, donde.z + 2), 
-                    e -> !e.getCommandTags().contains(MARCA) && 
-                         net.minecraft.registry.Registries.ENTITY_TYPE.getId(e.getType()).toString().contains("npc"));
-            
-            for (var e : nurses) {
-                e.addCommandTag(MARCA);
-                e.setInvulnerable(true);
-                e.refreshPositionAndAngles(donde.x, donde.y, donde.z, yaw, 0f);
-                e.setHeadYaw(yaw);
-                e.setBodyYaw(yaw);
-            }
-        });
+        var tipo = net.minecraft.registry.Registries.ENTITY_TYPE.get(net.minecraft.util.Identifier.of("cobblemon", "npc"));
+        if (tipo == null) {
+            p.sendMessage(net.minecraft.text.Text.literal("§cError: No se encontró la entidad cobblemon:npc en el registro."), false);
+            return false;
+        }
+
+        var entidad = (MobEntity) tipo.create(mundo);
+        if (entidad == null) {
+             p.sendMessage(net.minecraft.text.Text.literal("§cError: No se pudo crear el NPC."), false);
+             return false;
+        }
+
+        // It might be possible to set the NPC variant via NBT, but by default it might be a generic NPC.
+        // We will try to give it the nurse_joy preset.
+        net.minecraft.nbt.NbtCompound nbt = new net.minecraft.nbt.NbtCompound();
+        entidad.writeNbt(nbt);
+        nbt.putString("npcType", "cobblemon:nurse_joy");
+        nbt.putString("preset", "cobblemon:nurse_joy");
+        entidad.readNbt(nbt);
+
+        entidad.refreshPositionAndAngles(donde.x, donde.y, donde.z, yaw, 0f);
+        entidad.setHeadYaw(yaw);
+        entidad.setBodyYaw(yaw);
+        entidad.addCommandTag(MARCA);
+        entidad.setInvulnerable(true);
+        entidad.setPersistent();
+        
+        mundo.spawnEntity(entidad);
         
         return true;
     }

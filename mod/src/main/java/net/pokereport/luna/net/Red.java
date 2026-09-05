@@ -1959,6 +1959,117 @@ public class Red implements ModInitializer {
         }
     }
 
+    public record PedirParcela(String nombre) implements CustomPayload {
+        public static final Id<PedirParcela> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_parcela"));
+        public static final PacketCodec<RegistryByteBuf, PedirParcela> CODEC =
+                PacketCodec.tuple(CADENA, PedirParcela::nombre, PedirParcela::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record MiembroParcela(String uuid, String nombre) {
+        public static final PacketCodec<RegistryByteBuf, MiembroParcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, MiembroParcela::uuid,
+                        CADENA, MiembroParcela::nombre,
+                        MiembroParcela::new);
+    }
+
+    /**
+     * @param porDefecto lo que vale si nadie la toca. ⚠ Viaja para poder
+     *                   enseñar «(por defecto)» al lado: sin eso, un permiso
+     *                   apagado no se distingue de uno que nunca se tocó
+     */
+    public record PermisoParcela(String clave, boolean valor, boolean porDefecto) {
+        public static final PacketCodec<RegistryByteBuf, PermisoParcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, PermisoParcela::clave,
+                        PacketCodecs.BOOL, PermisoParcela::valor,
+                        PacketCodecs.BOOL, PermisoParcela::porDefecto,
+                        PermisoParcela::new);
+    }
+
+    /**
+     * El detalle de UNA parcela, y solo cuando se abre.
+     *
+     * <p>⚠⚠ NO VIAJA CON LA LISTA, a propósito: miembros y permisos son once
+     * booleanos y unos cuantos nombres <b>por parcela</b>, y la lista se manda
+     * cada vez que algo cambia. Mandarlo todo siempre sería pagar el detalle de
+     * diez parcelas para mirar una.
+     */
+    public record DetalleParcela(String nombre, List<MiembroParcela> miembros,
+                                 List<PermisoParcela> permisos) implements CustomPayload {
+        public static final Id<DetalleParcela> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "detalle_parcela"));
+        public static final PacketCodec<RegistryByteBuf, DetalleParcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, DetalleParcela::nombre,
+                        MiembroParcela.CODEC.collect(PacketCodecs.toList()),
+                        DetalleParcela::miembros,
+                        PermisoParcela.CODEC.collect(PacketCodecs.toList()),
+                        DetalleParcela::permisos,
+                        DetalleParcela::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** @param anadir true para dar permiso, false para quitarlo */
+    public record TocarMiembro(String parcela, String jugador, boolean anadir)
+            implements CustomPayload {
+        public static final Id<TocarMiembro> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "tocar_miembro"));
+        public static final PacketCodec<RegistryByteBuf, TocarMiembro> CODEC =
+                PacketCodec.tuple(
+                        CADENA, TocarMiembro::parcela,
+                        CADENA, TocarMiembro::jugador,
+                        PacketCodecs.BOOL, TocarMiembro::anadir,
+                        TocarMiembro::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record CambiarPermiso(String parcela, String bandera, boolean valor)
+            implements CustomPayload {
+        public static final Id<CambiarPermiso> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "cambiar_permiso"));
+        public static final PacketCodec<RegistryByteBuf, CambiarPermiso> CODEC =
+                PacketCodec.tuple(
+                        CADENA, CambiarPermiso::parcela,
+                        CADENA, CambiarPermiso::bandera,
+                        PacketCodecs.BOOL, CambiarPermiso::valor,
+                        CambiarPermiso::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record RenombrarParcela(String parcela, String nuevo) implements CustomPayload {
+        public static final Id<RenombrarParcela> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "renombrar_parcela"));
+        public static final PacketCodec<RegistryByteBuf, RenombrarParcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, RenombrarParcela::parcela,
+                        CADENA, RenombrarParcela::nuevo,
+                        RenombrarParcela::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record PedirCura() implements CustomPayload {
         public static final Id<PedirCura> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cura"));
@@ -2393,6 +2504,11 @@ public class Red implements ModInitializer {
         //     bloques de desfase que ya estan documentados.
         net.pokereport.luna.backpack.Registro.registrar();
 
+        PayloadTypeRegistry.playC2S().register(PedirParcela.ID, PedirParcela.CODEC);
+        PayloadTypeRegistry.playS2C().register(DetalleParcela.ID, DetalleParcela.CODEC);
+        PayloadTypeRegistry.playC2S().register(TocarMiembro.ID, TocarMiembro.CODEC);
+        PayloadTypeRegistry.playC2S().register(CambiarPermiso.ID, CambiarPermiso.CODEC);
+        PayloadTypeRegistry.playC2S().register(RenombrarParcela.ID, RenombrarParcela.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirProtecciones.ID, PedirProtecciones.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoProtecciones.ID, EstadoProtecciones.CODEC);
         PayloadTypeRegistry.playC2S().register(BorrarProteccion.ID, BorrarProteccion.CODEC);
@@ -2615,6 +2731,58 @@ public class Red implements ModInitializer {
         //   cambia.
         ServerPlayNetworking.registerGlobalReceiver(PedirProtecciones.ID,
                 (carga, ctx) -> enviarProtecciones(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirParcela.ID,
+                (carga, ctx) -> enviarParcela(ctx.player(), carga.nombre()));
+
+        ServerPlayNetworking.registerGlobalReceiver(CambiarPermiso.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String motivo = net.pokereport.luna.proteccion.Protecciones.permiso(
+                    jugador, carga.parcela(), carga.bandera(), carga.valor());
+            if (motivo != null) {
+                jugador.sendMessage(net.minecraft.text.Text.translatable(
+                        "pokepad.lunaeternal.protecciones.error." + motivo), false);
+            }
+            // ⚠ Se reenvia el detalle SIEMPRE, salga bien o mal: asi la
+            //   pantalla vuelve sola a la verdad en vez de quedarse con el
+            //   interruptor que el jugador movio y el servidor rechazo.
+            enviarParcela(jugador, carga.parcela());
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(TocarMiembro.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var quien = net.pokereport.luna.proteccion.Protecciones.uuidDe(
+                    jugador, carga.jugador());
+            String motivo;
+            if (quien == null) {
+                motivo = "no_conozco";
+            } else {
+                motivo = net.pokereport.luna.proteccion.Protecciones.miembro(
+                        jugador, carga.parcela(), quien, carga.anadir());
+            }
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    motivo == null
+                            ? (carga.anadir() ? "pokepad.lunaeternal.protecciones.miembro_puesto"
+                                              : "pokepad.lunaeternal.protecciones.miembro_quitado")
+                            : "pokepad.lunaeternal.protecciones.error." + motivo,
+                    carga.jugador()), false);
+            enviarParcela(jugador, carga.parcela());
+            enviarProtecciones(jugador);
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(RenombrarParcela.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String motivo = net.pokereport.luna.proteccion.Protecciones.renombrar(
+                    jugador, carga.parcela(), carga.nuevo());
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    motivo == null ? "pokepad.lunaeternal.protecciones.renombrada"
+                                   : "pokepad.lunaeternal.protecciones.error." + motivo), false);
+            // ⚠⚠ Si se renombro, EL DETALLE VA CON EL NOMBRE NUEVO: pidiendolo
+            //    con el viejo no lo encontraria y la pantalla se quedaria en
+            //    blanco justo despues de una operacion que fue bien.
+            enviarParcela(jugador, motivo == null ? carga.nuevo().trim() : carga.parcela());
+            enviarProtecciones(jugador);
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(BorrarProteccion.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -4275,6 +4443,25 @@ public class Red implements ModInitializer {
         }
         ServerPlayNetworking.send(jugador, new EstadoProtecciones(List.copyOf(lista),
                 net.pokereport.luna.proteccion.Protecciones.hay()));
+    }
+
+    /** Manda el detalle de UNA parcela. Si no es suya, no manda nada. */
+    public static void enviarParcela(net.minecraft.server.network.ServerPlayerEntity jugador,
+                                     String nombre) {
+        var d = net.pokereport.luna.proteccion.Protecciones.detalle(jugador, nombre);
+        if (d == null) {
+            return;
+        }
+        var ms = new ArrayList<MiembroParcela>();
+        for (var m : d.miembros()) {
+            ms.add(new MiembroParcela(m.uuid(), m.nombre()));
+        }
+        var ps = new ArrayList<PermisoParcela>();
+        for (var x : d.permisos()) {
+            ps.add(new PermisoParcela(x.clave(), x.valor(), x.porDefecto()));
+        }
+        ServerPlayNetworking.send(jugador,
+                new DetalleParcela(d.nombre(), List.copyOf(ms), List.copyOf(ps)));
     }
 
     private static Tienda componerTienda() {

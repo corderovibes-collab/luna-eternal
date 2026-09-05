@@ -89,6 +89,22 @@ public class ProteccionesScreen extends Screen {
      */
     private String confirmando = "";
 
+    /**
+     * Qué parcela está abierta, o cadena vacía si se está viendo la lista.
+     *
+     * <h2>⚠⚠ DOS VISTAS EN UNA PANTALLA Y NO DOS PANTALLAS</h2>
+     *
+     * Una pantalla aparte obligaría a duplicar el chasis, la navegación y el
+     * escalado —que ya estuvo copiado en once sitios con seis variantes
+     * distintas— para enseñar la misma parcela desde otro ángulo. Y el «atrás»
+     * cobra sentido solo: desde el detalle vuelve a la lista, desde la lista
+     * vuelve al Pad.
+     */
+    private String abierta = "";
+
+    private net.minecraft.client.gui.widget.TextFieldWidget campoNombre;
+    private net.minecraft.client.gui.widget.TextFieldWidget campoMiembro;
+
     public ProteccionesScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.protecciones"));
         this.anterior = anterior;
@@ -97,7 +113,39 @@ public class ProteccionesScreen extends Screen {
     @Override
     protected void init() {
         recalcular();
+        // ⚠ Se conserva lo escrito al recalcular (cambio de tamaño de ventana):
+        //   `init` se vuelve a llamar, y perder el nombre a medio teclear
+        //   parece que la pantalla se ha reiniciado sola.
+        String n = campoNombre == null ? "" : campoNombre.getText();
+        String m = campoMiembro == null ? "" : campoMiembro.getText();
+        campoNombre = campo(24, n);
+        campoMiembro = campo(16, m);
+        addSelectableChild(campoNombre);
+        addSelectableChild(campoMiembro);
         ClientPlayNetworking.send(new Red.PedirProtecciones());
+    }
+
+    private net.minecraft.client.gui.widget.TextFieldWidget campo(int max, String texto) {
+        var c = new net.minecraft.client.gui.widget.TextFieldWidget(
+                textRenderer, 0, 0, 10, 10, Text.literal(""));
+        c.setMaxLength(max);
+        c.setText(texto);
+        return c;
+    }
+
+    /**
+     * Coloca un campo en coordenadas de arte.
+     *
+     * <p>⚠ Se recolocan EN CADA FOTOGRAMA y no solo en {@code init}: la
+     * pantalla se reescala sola con la ventana ({@code recalcular}), y un campo
+     * que se quedara donde estaba antes se dibujaría fuera de su marco.
+     */
+    private void colocar(net.minecraft.client.gui.widget.TextFieldWidget c,
+                         int ax, int ay, int aw, int ah) {
+        c.setX(px(ax));
+        c.setY(py(ay));
+        c.setWidth(pl(aw));
+        c.setHeight(Math.max(12, pl(ah)));
     }
 
     /** ⚠ Delegado en {@link Escalado}: era copia literal en once pantallas. */
@@ -161,6 +209,18 @@ public class ProteccionesScreen extends Screen {
             pagina = Math.max(0, paginas() - 1);
         }
 
+        // ⚠ Si la parcela abierta desaparece --la has borrado, o te la han
+        //   renombrado-- se vuelve a la lista en vez de quedarse en blanco.
+        if (!abierta.isEmpty() && detalle() == null && EstadoCliente.protecciones() != null) {
+            boolean sigue = false;
+            for (var x : parcelas()) {
+                sigue |= x.nombre().equals(abierta);
+            }
+            if (!sigue) {
+                volverALista();
+            }
+        }
+
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
         dibujarNavegacion(ctx, rx, ry);
         dibujarPanel(ctx);
@@ -168,10 +228,163 @@ public class ProteccionesScreen extends Screen {
         // ⚠⚠ DOS PASADAS: todo el 2D primero, `ctx.draw()`, y solo entonces los
         //    modelos. Mezclarlos pinta el 2D ENCIMA de los objetos, porque van
         //    por lotes distintos. Regla 3 de dibujado.md.
-        dibujarFilas(ctx, rx, ry, false);
-        dibujarPie(ctx, rx, ry);
-        ctx.draw();
-        dibujarFilas(ctx, rx, ry, true);
+        if (abierta.isEmpty()) {
+            dibujarFilas(ctx, rx, ry, false);
+            dibujarPie(ctx, rx, ry);
+            ctx.draw();
+            dibujarFilas(ctx, rx, ry, true);
+        } else {
+            dibujarDetalle(ctx, rx, ry, false);
+            ctx.draw();
+            dibujarDetalle(ctx, rx, ry, true);
+        }
+    }
+
+    // ---- el detalle --------------------------------------------------------
+
+    private Red.DetalleParcela detalle() {
+        var d = EstadoCliente.parcela();
+        return d != null && d.nombre().equals(abierta) ? d : null;
+    }
+
+    private Red.Parcela laAbierta() {
+        for (var x : parcelas()) {
+            if (x.nombre().equals(abierta)) {
+                return x;
+            }
+        }
+        return null;
+    }
+
+    private void volverALista() {
+        abierta = "";
+        confirmando = "";
+        EstadoCliente.olvidarParcela();
+        setFocused(null);
+    }
+
+    /** Las once banderas, en dos columnas. */
+    private static final int PERM_ALTO = 30;
+
+    private int permisoY(int i) {
+        return PANT_Y + 150 + (i % 6) * PERM_ALTO;
+    }
+
+    private int permisoX(int i) {
+        return PANT_X + MARGEN + 396 + (i / 6) * 190;
+    }
+
+    private void dibujarDetalle(DrawContext ctx, int rx, int ry, boolean objetos) {
+        var p = laAbierta();
+        var d = detalle();
+        if (objetos) {
+            if (p != null) {
+                objeto(ctx, p.pila(), PANT_X + MARGEN + 8, PANT_Y + MARGEN + 6, 44);
+            }
+            return;
+        }
+        int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
+
+        // --- cabecera
+        texto(ctx, Text.literal(abierta), ax + 66, PANT_Y + MARGEN + 4, 24,
+                TEXTO_OSCURO, false, true);
+        if (p != null) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.tamano",
+                            p.lado() + "×" + p.lado(),
+                            String.format("%,d", (long) p.lado() * p.lado())),
+                    ax + 66, PANT_Y + MARGEN + 32, 15, TEXTO_SUAVE, false, false);
+            texto(ctx, Text.literal(p.centro().getX() + ", " + p.centro().getY()
+                            + ", " + p.centro().getZ()),
+                    ax + 66, PANT_Y + MARGEN + 50, 14, TEXTO_SUAVE, false, false);
+        }
+
+        if (d == null) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.cargando"),
+                    PANT_X + PANT_W / 2, PANT_Y + PANT_H / 2, 20, TEXTO_SUAVE, true, false);
+            return;
+        }
+
+        // --- renombrar
+        texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.nombre"),
+                ax, PANT_Y + 82, 15, TEXTO_SUAVE, false, false);
+        colocar(campoNombre, ax, PANT_Y + 100, 250, 26);
+        campoNombre.render(ctx, rx, ry, 0);
+        boton(ctx, rx, ry, ax + 262, PANT_Y + 100, 110, 28,
+                Text.translatable("pokepad.lunaeternal.protecciones.guardar"),
+                !campoNombre.getText().trim().isEmpty(), 0xFF2E9E56);
+
+        // --- miembros
+        texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.miembros_tit"),
+                ax, PANT_Y + 150, 18, TEXTO_OSCURO, false, true);
+        int my = PANT_Y + 178;
+        if (d.miembros().isEmpty()) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.sin_miembros"),
+                    ax, my + 4, 14, TEXTO_SUAVE, false, false);
+        }
+        for (int i = 0; i < d.miembros().size() && i < 6; i++) {
+            var m = d.miembros().get(i);
+            int y = my + i * 28;
+            ctx.fill(px(ax), py(y), px(ax + 372), py(y + 24), FILA_FONDO);
+            texto(ctx, Text.literal(m.nombre()), ax + 8, y + 5, 15, TEXTO_OSCURO, false, false);
+            boolean encima = dentro(rx, ry, px(ax + 340), py(y + 2), pl(28), pl(20));
+            texto(ctx, Text.literal("✕"), ax + 354, y + 5, 15,
+                    encima ? BORDE_ENCIMA : ROJO, true, false);
+        }
+        if (d.miembros().size() > 6) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.y_mas",
+                            d.miembros().size() - 6),
+                    ax, my + 6 * 28 + 4, 13, TEXTO_SUAVE, false, false);
+        }
+
+        // --- añadir a alguien
+        int ay2 = PANT_Y + PANT_H - MARGEN - 34;
+        colocar(campoMiembro, ax, ay2, 250, 26);
+        campoMiembro.render(ctx, rx, ry, 0);
+        if (campoMiembro.getText().isEmpty()) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.quien"),
+                    ax + 8, ay2 + 7, 13, 0xFF8892AC, false, false);
+        }
+        boton(ctx, rx, ry, ax + 262, ay2, 110, 28,
+                Text.translatable("pokepad.lunaeternal.protecciones.anadir"),
+                !campoMiembro.getText().trim().isEmpty(), 0xFF2E9E56);
+
+        // --- permisos
+        texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.permisos"),
+                PANT_X + MARGEN + 396, PANT_Y + 120, 18, TEXTO_OSCURO, false, true);
+        for (int i = 0; i < d.permisos().size(); i++) {
+            var q = d.permisos().get(i);
+            int x = permisoX(i), y = permisoY(i);
+            boolean encima = dentro(rx, ry, px(x), py(y), pl(180), pl(26));
+            if (encima) {
+                ctx.fill(px(x), py(y), px(x + 180), py(y + 26), FILA_ENCIMA);
+            }
+            texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.flag."
+                            + q.clave()),
+                    x + 4, y + 5, 14, TEXTO_OSCURO, false, false);
+            // ⚠ El interruptor dice SI/NO y no un icono: «permitido» y
+            //   «prohibido» con un simbolo se confunden, y aqui equivocarse es
+            //   dejar la casa abierta.
+            int bx = x + 132;
+            ctx.fill(px(bx), py(y + 2), px(bx + 44), py(y + 22),
+                    q.valor() ? 0xFF2E9E56 : 0xFF9E3A32);
+            texto(ctx, Text.translatable(q.valor()
+                            ? "pokepad.lunaeternal.protecciones.si"
+                            : "pokepad.lunaeternal.protecciones.no"),
+                    bx + 22, y + 5, 14, 0xFFFFFFFF, true, false);
+        }
+        texto(ctx, Text.translatable("pokepad.lunaeternal.protecciones.no_miembros"),
+                PANT_X + MARGEN + 396, PANT_Y + 150 + 6 * PERM_ALTO + 6, 12,
+                TEXTO_SUAVE, false, false);
+    }
+
+    private void boton(DrawContext ctx, int rx, int ry, int ax, int ay, int aw, int ah,
+                       Text etiqueta, boolean activo, int color) {
+        boolean encima = activo && dentro(rx, ry, px(ax), py(ay), pl(aw), pl(ah));
+        ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah),
+                !activo ? 0xFF6E7899 : (encima ? 0xFF4FD07A : color));
+        marco(ctx, px(ax), py(ay), pl(aw), pl(ah), 0xFF20283C, Math.max(1, pl(2)));
+        texto(ctx, etiqueta, ax + aw / 2, ay + ah / 2 - 8, 17,
+                activo ? 0xFFFFFFFF : 0xFFD8DEEA, true, false);
     }
 
     private void dibujarNavegacion(DrawContext ctx, int rx, int ry) {
@@ -381,6 +594,13 @@ public class ProteccionesScreen extends Screen {
         int cy = py(PANEL_Y + NAV_ALTO / 2);
         if (dentro(rx, ry, px(PANEL_X + 18), cy - pl(24), pl(60), pl(48))) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
+            // ⚠ Desde el detalle vuelve a LA LISTA, no al Pad: es lo que espera
+            //   cualquiera que haya entrado a mirar una parcela, y ahorra tener
+            //   dos botones de volver que hacen cosas distintas.
+            if (!abierta.isEmpty()) {
+                volverALista();
+                return true;
+            }
             if (client != null) {
                 client.setScreen(anterior);
             }
@@ -390,6 +610,10 @@ public class ProteccionesScreen extends Screen {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
             close();
             return true;
+        }
+
+        if (!abierta.isEmpty()) {
+            return clicDetalle(rx, ry, mx, my, boton) || super.mouseClicked(mx, my, boton);
         }
 
         if (paginas() > 1) {
@@ -421,6 +645,20 @@ public class ProteccionesScreen extends Screen {
             int y = filaY(n);
             int bx = ax + aw - 190;
             if (!dentro(rx, ry, px(bx), py(y + 18), pl(174), pl(38))) {
+                // ⚠ Pulsar la fila (fuera del botón) ABRE la parcela. El botón
+                //   se comprueba PRIMERO: si no, quitar sería imposible porque
+                //   el clic lo capturaría siempre la fila que hay debajo.
+                if (dentro(rx, ry, px(ax), py(y), pl(aw), pl(FILA_ALTO))) {
+                    abierta = p.nombre();
+                    confirmando = "";
+                    EstadoCliente.olvidarParcela();
+                    campoNombre.setText(p.nombre());
+                    campoMiembro.setText("");
+                    setFocused(null);
+                    sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
+                    ClientPlayNetworking.send(new Red.PedirParcela(p.nombre()));
+                    return true;
+                }
                 continue;
             }
             if (!p.nombre().equals(confirmando)) {
@@ -439,6 +677,104 @@ public class ProteccionesScreen extends Screen {
             return true;
         }
         return super.mouseClicked(mx, my, boton);
+    }
+
+    private boolean clicDetalle(int rx, int ry, double mx, double my, int boton) {
+        var d = detalle();
+        if (d == null) {
+            return false;
+        }
+        int ax = PANT_X + MARGEN;
+
+        if (campoNombre.mouseClicked(mx, my, boton)) {
+            setFocused(campoNombre);
+            return true;
+        }
+        if (campoMiembro.mouseClicked(mx, my, boton)) {
+            setFocused(campoMiembro);
+            return true;
+        }
+
+        // Renombrar
+        if (!campoNombre.getText().trim().isEmpty()
+                && dentro(rx, ry, px(ax + 262), py(PANT_Y + 100), pl(110), pl(28))) {
+            sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.1f);
+            ClientPlayNetworking.send(
+                    new Red.RenombrarParcela(abierta, campoNombre.getText().trim()));
+            // ⚠⚠ SE APUNTA EL NOMBRE NUEVO YA. El servidor contesta con el
+            //    detalle del nombre nuevo, y si aqui siguiera el viejo,
+            //    `detalle()` lo descartaria por no coincidir y la pantalla se
+            //    quedaria «cargando» para siempre despues de una operacion que
+            //    fue bien.
+            abierta = campoNombre.getText().trim();
+            return true;
+        }
+
+        // Quitar a un miembro
+        int my2 = PANT_Y + 178;
+        for (int i = 0; i < d.miembros().size() && i < 6; i++) {
+            int y = my2 + i * 28;
+            if (dentro(rx, ry, px(ax + 340), py(y + 2), pl(28), pl(20))) {
+                sonar(SoundEvents.UI_BUTTON_CLICK.value(), 0.9f);
+                ClientPlayNetworking.send(new Red.TocarMiembro(
+                        abierta, d.miembros().get(i).nombre(), false));
+                return true;
+            }
+        }
+
+        // Añadir a alguien
+        int ay2 = PANT_Y + PANT_H - MARGEN - 34;
+        if (!campoMiembro.getText().trim().isEmpty()
+                && dentro(rx, ry, px(ax + 262), py(ay2), pl(110), pl(28))) {
+            sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.1f);
+            ClientPlayNetworking.send(new Red.TocarMiembro(
+                    abierta, campoMiembro.getText().trim(), true));
+            campoMiembro.setText("");
+            return true;
+        }
+
+        // Permisos
+        for (int i = 0; i < d.permisos().size(); i++) {
+            if (dentro(rx, ry, px(permisoX(i)), py(permisoY(i)), pl(180), pl(26))) {
+                var q = d.permisos().get(i);
+                sonar(SoundEvents.UI_BUTTON_CLICK.value(), q.valor() ? 0.8f : 1.2f);
+                // ⚠ No se pinta el cambio aqui: se manda y se espera. El
+                //   servidor reenvia el detalle acepte o rechace, asi que la
+                //   pantalla vuelve sola a la verdad.
+                ClientPlayNetworking.send(
+                        new Red.CambiarPermiso(abierta, q.clave(), !q.valor()));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean keyPressed(int tecla, int escaneo, int mods) {
+        // ⚠ ESCAPE CON UN CAMPO ENFOCADO SUELTA EL FOCO en vez de cerrar la
+        //   pantalla: cerrarlo todo por querer salir de un campo molesta.
+        if (tecla == 256 && getFocused() != null) {
+            setFocused(null);
+            return true;
+        }
+        if (getFocused() == campoNombre && campoNombre.keyPressed(tecla, escaneo, mods)) {
+            return true;
+        }
+        if (getFocused() == campoMiembro && campoMiembro.keyPressed(tecla, escaneo, mods)) {
+            return true;
+        }
+        return super.keyPressed(tecla, escaneo, mods);
+    }
+
+    @Override
+    public boolean charTyped(char c, int mods) {
+        if (getFocused() == campoNombre) {
+            return campoNombre.charTyped(c, mods);
+        }
+        if (getFocused() == campoMiembro) {
+            return campoMiembro.charTyped(c, mods);
+        }
+        return super.charTyped(c, mods);
     }
 
     private void sonar(net.minecraft.sound.SoundEvent sonido, float tono) {

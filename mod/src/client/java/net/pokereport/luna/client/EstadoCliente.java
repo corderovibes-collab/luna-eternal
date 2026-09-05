@@ -26,6 +26,7 @@ public final class EstadoCliente {
     private static Red.Tienda tienda;
     private static Red.EstadoCura cura;
     private static Red.EstadoProtecciones protecciones;
+    private static Red.DetalleParcela parcela;
     private static Red.EstadoCartas cartas;
     private static Red.EstadoMercado mercado;
     private static Red.EstadoGts gts;
@@ -141,6 +142,21 @@ public final class EstadoCliente {
 
     public static void guardar(Red.EstadoProtecciones nuevas) {
         protecciones = nuevas;
+    }
+
+    public static void guardar(Red.DetalleParcela nueva) {
+        parcela = nueva;
+    }
+
+    /** El detalle de la parcela abierta. {@code null} si no hay ninguna. */
+    public static Red.DetalleParcela parcela() {
+        return parcela;
+    }
+
+    /** Se olvida al volver a la lista: si no, la siguiente que abras enseñaría
+     *  un instante los miembros de la anterior. */
+    public static void olvidarParcela() {
+        parcela = null;
     }
 
     /** Las parcelas del jugador. {@code null} hasta que el servidor conteste. */
@@ -264,6 +280,7 @@ public final class EstadoCliente {
         tienda = null;
         cura = null;
         protecciones = null;
+        parcela = null;
         cartas = null;
         mercado = null;
         gts = null;

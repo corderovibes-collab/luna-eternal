@@ -524,7 +524,9 @@ public class SantuarioScreen extends Screen {
             centrado(ctx, "pokepad.lunaeternal.cargando", 24, TEXTO_SUAVE, 0);
             return;
         }
-        var lista = e.nichos();
+        var lista = e.nichos().stream()
+                .filter(n -> !n.estado().dueno().isEmpty())
+                .toList();
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
 
         texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.menu_nichos"),
@@ -956,14 +958,17 @@ public class SantuarioScreen extends Screen {
     private boolean clicNichos(int rx, int ry) {
         if (clicPaginacion(rx, ry)) return true;
         var e = EstadoCliente.santuario();
-        if (e == null || e.nichos().isEmpty()) return false;
+        var lista = e.nichos().stream()
+                .filter(n -> !n.estado().dueno().isEmpty())
+                .toList();
+        if (lista.isEmpty()) return false;
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
         int bx = ax + aw - 16;
         int desde = pagina * filasCaben();
         for (int n = 0; n < filasCaben(); n++) {
             int i = desde + n;
-            if (i >= e.nichos().size()) break;
-            var nicho = e.nichos().get(i);
+            if (i >= lista.size()) break;
+            var nicho = lista.get(i);
             var estado = nicho.estado();
             int y = filaY(n);
 
@@ -1241,7 +1246,8 @@ public class SantuarioScreen extends Screen {
         int total = switch (vista) {
             case COMPRA_LISTA -> (int) e.nichos().stream()
                     .filter(n -> n.estado().dueno().isEmpty()).count();
-            case NICHOS -> e.nichos().size();
+            case NICHOS -> (int) e.nichos().stream()
+                    .filter(n -> !n.estado().dueno().isEmpty()).count();
             default -> 0;
         };
         return Math.max(1, (total + filasCaben() - 1) / filasCaben());

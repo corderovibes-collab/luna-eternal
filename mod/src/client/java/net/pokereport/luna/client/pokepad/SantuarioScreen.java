@@ -423,14 +423,42 @@ public class SantuarioScreen extends Screen {
                                      Text titulo, Text desc,
                                      Identifier iconoMoneda, String precioTexto, int colorPrecio) {
         boolean enc = dentro(rx, ry, px(ax), py(ay), pl(aw), pl(ah));
+        int imgH = 145;
 
         if (hayArte(arteId)) {
-            arte(ctx, arteId, px(ax), py(ay), pl(aw), pl(ah), aw, ah);
-            velo(ctx, ax, ay, aw, 74, true);
-            velo(ctx, ax, ay + ah - 78, aw, 78, false);
+            arte(ctx, arteId, px(ax), py(ay), pl(aw), pl(imgH), aw, imgH);
         } else {
-            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), colorAcento);
+            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + imgH), colorAcento);
         }
+        
+        ctx.fill(px(ax), py(ay + imgH), px(ax + aw), py(ay + ah), enc ? CARD_FONDO_HOVER : CARD_FONDO);
+        ctx.fill(px(ax), py(ay + imgH), px(ax + aw), py(ay + imgH + 2), colorAcento);
+        
+        marco(ctx, px(ax), py(ay), pl(aw), pl(ah),
+                enc ? CARD_BORDE_ENCIMA : (enc ? 0xFF8FA0C8 : 0xFF20283C), Math.max(2, pl(enc ? 4 : 2)));
+
+        if (enc) {
+            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + imgH), 0x11FFFFFF);
+        }
+
+        texto(ctx, titulo, ax + 16, ay + imgH + 14, 24, TEXTO_BLANCO, false, 0);
+
+        int y = ay + imgH + 40;
+        for (String linea : partir(desc.getString(), aw - 160, 14)) {
+            texto(ctx, Text.literal(linea), ax + 16, y, 14, TEXTO_SUAVE, false, 0);
+            y += 18;
+            break;
+        }
+        
+        int badgeW = 135, badgeH = 34;
+        int badgeX = ax + aw - badgeW - 12;
+        int badgeY = ay + imgH + (ah - imgH - badgeH) / 2;
+        ctx.fill(px(badgeX), py(badgeY), px(badgeX + badgeW), py(badgeY + badgeH), 0xDD0C1320);
+        marco(ctx, px(badgeX), py(badgeY), pl(badgeW), pl(badgeH), colorAcento, Math.max(1, pl(2)));
+
+        dibujarTextura(ctx, iconoMoneda, px(badgeX + 8), py(badgeY + 5), pl(24), pl(24), 48, 48);
+        texto(ctx, Text.literal(precioTexto), badgeX + 36, badgeY + 8, 16, colorPrecio, false, 0);
+    }
         
         marco(ctx, px(ax), py(ay), pl(aw), pl(ah),
                 enc ? CARD_BORDE_ENCIMA : (enc ? 0xFF8FA0C8 : 0xFF20283C), Math.max(2, pl(enc ? 4 : 2)));

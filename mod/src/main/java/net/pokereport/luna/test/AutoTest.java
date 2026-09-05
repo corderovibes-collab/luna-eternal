@@ -2751,6 +2751,34 @@ public final class AutoTest {
         }
         check("toda aplicacion del PokePad tiene su icono dentro del jar", iconos);
 
+        // ⚠⚠⚠ Y SU MCMETA TIENE QUE SER JSON DE VERDAD, no solo existir. Paso
+        //    el 2026-09-04: un script escribio los .mcmeta con «\n» literales
+        //    (backslash + n) en vez de saltos de linea. El servidor no los lee
+        //    nunca, asi que el autotest estaba en verde, desplego, y el CLIENTE
+        //    crasheo al abrir el PokePad -- GeckoLib parsea el mcmeta de TODAS
+        //    las texturas al registrarlas y un JSON malformado revienta el
+        //    registro de la textura. El fallo no daba error en ningun sitio...
+        //    hasta el primer jugador que abrio la rejilla.
+        boolean mcmetas = true;
+        for (var ficha : net.pokereport.luna.pokepad.CatalogoPad.TODAS) {
+            String ruta = net.pokereport.luna.pokepad.CatalogoPad.rutaIcono(ficha.id())
+                    + ".mcmeta";
+            try (var in = AutoTest.class.getResourceAsStream(ruta)) {
+                if (in == null) {
+                    mcmetas = false;
+                    LunaEternal.LOG.error("El icono {} no tiene su .mcmeta", ficha.id());
+                } else {
+                    com.google.gson.JsonParser.parseReader(
+                            new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+                }
+            } catch (Exception e) {
+                mcmetas = false;
+                LunaEternal.LOG.error("El .mcmeta de {} no es JSON valido: {}",
+                        ficha.id(), e.toString());
+            }
+        }
+        check("el .mcmeta de cada icono del PokePad es JSON valido", mcmetas);
+
         // ⚠⚠ Y NINGUNA REPETIDA. `OrdenPad` guarda el orden del jugador POR
         //    IDENTIFICADOR y lo relee con un LinkedHashSet: dos fichas con el
         //    mismo id dejarian de ser dos celdas al recargar --se perderia una

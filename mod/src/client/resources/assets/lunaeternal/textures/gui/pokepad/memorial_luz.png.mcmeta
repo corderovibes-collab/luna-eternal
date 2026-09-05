@@ -1,1 +1,6 @@
-{\n  "texture": {\n    "blur": false,\n    "clamp": true\n  }\n}\n
+{
+  "texture": {
+    "blur": false,
+    "clamp": true
+  }
+}

@@ -459,32 +459,6 @@ public class SantuarioScreen extends Screen {
         dibujarTextura(ctx, iconoMoneda, px(badgeX + 8), py(badgeY + 5), pl(24), pl(24), 48, 48);
         texto(ctx, Text.literal(precioTexto), badgeX + 36, badgeY + 8, 16, colorPrecio, false, 0);
     }
-        
-        marco(ctx, px(ax), py(ay), pl(aw), pl(ah),
-                enc ? CARD_BORDE_ENCIMA : (enc ? 0xFF8FA0C8 : 0xFF20283C), Math.max(2, pl(enc ? 4 : 2)));
-
-        if (enc) {
-            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), 0x22FFFFFF);
-        }
-
-        texto(ctx, titulo, ax + aw / 2, ay + 20, 26, TEXTO_BLANCO, true, CONTORNO_OSCURO);
-
-        int y = ay + 50;
-        for (String linea : partir(desc.getString(), aw - 40, 15)) {
-            texto(ctx, Text.literal(linea), ax + aw / 2, y, 15, 0xFFDCE6F8, true, CONTORNO_OSCURO);
-            y += 20;
-            break;
-        }
-        
-        int badgeW = 200, badgeH = 46;
-        int badgeX = ax + (aw - badgeW) / 2;
-        int badgeY = ay + ah - badgeH - 24;
-        ctx.fill(px(badgeX), py(badgeY), px(badgeX + badgeW), py(badgeY + badgeH), 0xDD0C1320);
-        marco(ctx, px(badgeX), py(badgeY), pl(badgeW), pl(badgeH), colorAcento, Math.max(1, pl(2)));
-
-        dibujarTextura(ctx, iconoMoneda, px(badgeX + 12), py(badgeY + 8), pl(30), pl(30), 48, 48);
-        texto(ctx, Text.literal(precioTexto), badgeX + 50, badgeY + 12, 22, colorPrecio, false, CONTORNO_OSCURO);
-    }
 
     // ---- COMPRA_LISTA (elegir nicho libre) ----------------------------------
 

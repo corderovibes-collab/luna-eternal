@@ -167,7 +167,7 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 579 EN VIVO (2026-09-04)
+Autotest      /luna autotest -> 589 EN VIVO (2026-09-05)
               +11 con las cartas: sus sobres, la habilidad de
               aparicion, EL ARTE DE CADA TRAJE Y EL ICONO DE CADA
               APLICACION DEL POKEPAD. Los dos ultimos se pueden
@@ -1022,26 +1022,41 @@ Cartas        TRES ZONAS DE SOBRES (2026-09-02, V028) . DESPLEGADO 2026-09-04
                  a mano). Resolver la especie SI usa Cobblemon, que este mod
                  ya usa desde hace meses
 
-Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031) . DESPLEGADO
-              autotest 579 EN VIVO . falta verificar en el juego y
-              construir los nichos (config vacia hasta entonces)
+Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031)
+              DESPLEGADO Y VERIFICANDOSE EN VIVO (2026-09-05)
+              autotest 589 EN VIVO
+              ⚠ FALTA (en el juego, de la mano del usuario): construir los
+                 nichos de verdad y dar sus coordenadas en la config;
+                 colocar la Chansey (/luna santuario npc); y probar el
+                 recorrido entero con DOS cuentas: subir foto -> moderarla
+                 desde el PokePad (vista MODERAR FOTOS) -> holograma ->
+                 memorial -> honores (10 al dia, ventana de 24 h)
               detalle completo en docs/world/santuario.md
               un nicho 3x3 en Monumentos . foto, titulo e historia
               alquilar 24 h por 5.000 de Plata (provisional)
               comprar para siempre por LunaCoins (300, provisional)
               1 nicho por jugador, desde CAMPEON mas . NPC Chansey
               honores: 10 por jugador y por nicho cada 24 h, acumulando
-              clic derecho en el proyector -> el memorial
+              clic derecho en el proyector o en el holograma (mano vacia)
+                 -> el memorial. El clic del holograma lo calcula el CLIENTE
+                 repitiendo la geometria del quad dibujado (no hay entidad
+                 que reciba clics); con algo en la mano, el clic es del
+                 objeto y no se roba
               ⚠⚠⚠ LA FOTO ES DEL SERVIDOR, EL CLIENTE SOLO LA DIBUJA (P6).
-                 Se sube desde el PokePad (dialogo AWT, troceada 16 KB),
-                 el servidor la DECODIFICA, REESCALA a 512 y RECODIFICA
-                 (se va el EXIF, GPS incluido), la guarda como <sha1>.png
-                 y la deja PENDIENTE. Un staff la aprueba
-                 (/luna santuario aprobar|rechazar|pendientes, nivel 3)
-                 y solo entonces se puede colocar. El cliente la pide por
-                 sha1 y la pinta como holograma flotando sobre el
-                 proyector: NO registra bloque, objeto ni entidad nuevos
-                 -- el quad se dibuja a mano (WorldRenderEvents)
+                 Se sube desde el PokePad (dialogo tinyfd de LWJGL, troceada
+                 16 KB y reensamblada POR TAMAÑO en `Subidas` -- comparar
+                 por indice nunca completaba), el servidor la DECODIFICA,
+                 REESCALA a 512 y RECODIFICA (se va el EXIF, GPS incluido),
+                 la guarda como <sha1>.png y la deja PENDIENTE. Un staff la
+                 aprueba: vista «MODERAR FOTOS» en el PokePad (solo nivel 3,
+                 con miniatura, dueño y APROBAR/RECHAZAR, y la lista se
+                 reenvia tras cada decision) o /luna santuario
+                 aprobar|rechazar|pendientes. Solo APROBADA se coloca. El
+                 cliente la pide por sha1 y la pinta como holograma flotando
+                 sobre el proyector, DERECHA Y OPACA (la v del quad iba al
+                 reves y salia boca abajo; hoy sin velo de alfa, la foto tal
+                 cual): NO registra bloque, objeto ni entidad nuevos -- el
+                 quad se dibuja a mano (WorldRenderEvents)
               ⚠⚠ LOS PRECIOS VAN EN EL PAQUETE DE ESTADO, como en la
                  tienda: los dice el servidor (sus constantes), el cliente
                  solo los dibuja. En dos sitios acabarian mintiendo uno

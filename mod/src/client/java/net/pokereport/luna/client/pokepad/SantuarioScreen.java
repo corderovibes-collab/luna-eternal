@@ -299,11 +299,16 @@ public class SantuarioScreen extends Screen {
         if (saldo != null) {
             lunacoins = saldo.reportcoins();
         }
-        texto(ctx, Text.literal(String.format("%,d", lunacoins)),
-                PANEL_X + 24 + 40 + 14, acy - 17, 34, ORO, false, CONTORNO_OSCURO);
+        String saldoTexto = String.format("%,d", lunacoins);
         
         int mw = pl(58);
-        dibujarTextura(ctx, MAS, px(PANEL_X + PANEL_W - 22) - mw, py(acy) - mw / 2, mw, mw, 58, 58);
+        int botonX = PANEL_X + PANEL_W - 22 - 58;
+        dibujarTextura(ctx, MAS, px(botonX), py(acy) - mw / 2, mw, mw, 58, 58);
+        
+        // Texto alineado a la derecha, justo antes del botón +, con tamaño 26 para que quepa bien
+        int textoAncho = anchoArte(saldoTexto, 28);
+        texto(ctx, Text.literal(saldoTexto),
+                botonX - 12 - textoAncho, acy - 14, 28, ORO, false, CONTORNO_OSCURO);
     }
 
     // ---- MENU PRINCIPAL (2 tarjetas estilizadas tipo Explorar) -------------

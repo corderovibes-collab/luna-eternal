@@ -167,7 +167,7 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 523 EN VIVO (2026-09-04)
+Autotest      /luna autotest -> 579 EN VIVO (2026-09-04)
               +11 con las cartas: sus sobres, la habilidad de
               aparicion, EL ARTE DE CADA TRAJE Y EL ICONO DE CADA
               APLICACION DEL POKEPAD. Los dos ultimos se pueden
@@ -995,7 +995,8 @@ Cartas        TRES ZONAS DE SOBRES (2026-09-02, V028) . DESPLEGADO 2026-09-04
                  cliente, no al reves
               ⚠ volver atras son 250 bytes:
                 python tools/gen_manifest.py --volver-a d5cc954ea7
-              HABILIDAD DE APARICION (2026-09-03, V029) . SIN DESPLEGAR
+              HABILIDAD DE APARICION (2026-09-03, V029) . DESPLEGADA
+              con el santuario (2026-09-04)
                 sneak + clic derecho con la carta en la mano . activa
                 5 min de ventana . 1 hora de espera . una activa por jugador
                 techo por RAREZA DE CARTA (no del Pokemon): x1,3 comun ..
@@ -1021,7 +1022,9 @@ Cartas        TRES ZONAS DE SOBRES (2026-09-02, V028) . DESPLEGADO 2026-09-04
                  a mano). Resolver la especie SI usa Cobblemon, que este mod
                  ya usa desde hace meses
 
-Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031) . SIN DESPLEGAR
+Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031) . DESPLEGADO
+              autotest 579 EN VIVO . falta verificar en el juego y
+              construir los nichos (config vacia hasta entonces)
               detalle completo en docs/world/santuario.md
               un nicho 3x3 en Monumentos . foto, titulo e historia
               alquilar 24 h por 5.000 de Plata (provisional)

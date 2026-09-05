@@ -37,6 +37,22 @@ Las protecciones de terreno. `settings.json` define los escalones y
 > `world/claimblocks/player_data.json` (el índice por jugador). Vaciar uno solo
 > deja el estado a medias.
 
+### Los textos del chat
+
+El prefijo es **`[ PokeReport ]`** y los mensajes están en español, en
+`texts.json`.
+
+> ⚠⚠⚠ **SUBIRLO CON EL SERVIDOR ARRIBA NO SIRVE DE NADA, y no da ningún error.**
+> El mod carga los textos al arrancar, los guarda en memoria y **los vuelve a
+> escribir al apagarse**. Subirlos y reiniciar hace justo esto: la parada vuelca
+> su copia vieja encima de lo subido, y el arranque lee lo que él mismo acaba de
+> escribir. Los textos volvían al inglés reinicio tras reinicio sin una sola
+> línea en el log — ganaba el que escribía el último.
+>
+> **Parar, subir, arrancar.** Es la misma trampa que `claims.json`. Y una vez
+> hecho **se sostiene solo**: a partir de ahí su copia en memoria ya es la
+> nuestra, así que los reinicios normales la conservan.
+
 ### Los cinco escalones
 
 > ⚠⚠⚠ **El número que se configura es el RADIO, no el lado.** Un cuadrado

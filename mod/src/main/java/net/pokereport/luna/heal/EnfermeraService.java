@@ -53,6 +53,39 @@ public final class EnfermeraService {
 
     private static final Map<UUID, Tarea> TAREAS = new ConcurrentHashMap<>();
     private static final Map<UUID, UUID> SESION_JUGADOR = new ConcurrentHashMap<>();
+    public static boolean colocarEnfermera(ServerPlayerEntity p) {
+        var mundo = p.getServerWorld();
+        Vec3d donde = ORIGEN;
+        
+        var previas = mundo.getEntitiesByClass(MobEntity.class, 
+                new net.minecraft.util.math.Box(donde.x - 3, donde.y - 3, donde.z - 3, 
+                                                donde.x + 3, donde.y + 3, donde.z + 3), 
+                e -> e.getCommandTags().contains(MARCA));
+        for (var e : previas) e.discard();
+
+        p.getServer().getCommandManager().executeWithPrefix(p.getServer().getCommandSource().withSilent(), 
+            "spawnnpc cobblemon:nurse_joy " + donde.x + " " + donde.y + " " + donde.z);
+            
+        // Esperamos 1 tick para que el comando haga efecto y luego la etiquetamos
+        p.getServer().execute(() -> {
+            var nurses = mundo.getEntitiesByClass(MobEntity.class, 
+                    new net.minecraft.util.math.Box(donde.x - 2, donde.y - 2, donde.z - 2, 
+                                                    donde.x + 2, donde.y + 2, donde.z + 2), 
+                    e -> !e.getCommandTags().contains(MARCA) && 
+                         net.minecraft.registry.Registries.ENTITY_TYPE.getId(e.getType()).toString().contains("npc"));
+            
+            for (var e : nurses) {
+                e.addCommandTag(MARCA);
+                e.setInvulnerable(true);
+                e.refreshPositionAndAngles(donde.x, donde.y, donde.z, -90f, 0f);
+                e.setHeadYaw(-90f);
+                e.setBodyYaw(-90f);
+            }
+        });
+        
+        return true;
+    }
+
 
     private EnfermeraService() {}
 

@@ -283,6 +283,7 @@ public class LunaCliente implements ClientModInitializer {
 
         // El holograma de las fotos en el mundo.
         HologramaSantuario.registrar();
+        net.pokereport.luna.client.heal.HologramaEnfermera.registrar();
 
         ClientPlayNetworking.registerGlobalReceiver(Red.DetalleParcela.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));

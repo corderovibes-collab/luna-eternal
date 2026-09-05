@@ -1386,23 +1386,13 @@ public final class LunaCommand {
     private static int npcEnfermera(ServerCommandSource src) {
         ServerPlayerEntity p = src.getPlayer();
         if (p == null) {
-            src.sendError(Text.literal("Solo desde el juego."));
+            src.sendError(net.minecraft.text.Text.literal("Solo desde el juego."));
             return 0;
         }
         
-        var entidades = p.getServerWorld().getEntitiesByClass(net.minecraft.entity.mob.MobEntity.class, 
-                p.getBoundingBox().expand(5), e -> true);
-        
-        for (var e : entidades) {
-            String name = net.minecraft.registry.Registries.ENTITY_TYPE.getId(e.getType()).toString();
-            if (name.contains("npc") || name.contains("nurse")) {
-                e.addCommandTag("luna_enfermera");
-                p.sendMessage(Text.literal("aEnfermera Joy etiquetada. Tocarla abrira el Centro Pokemon."), false);
-                return 1;
-            }
-        }
-        p.sendMessage(Text.literal("cNo se encontro ningun NPC cerca. Spawnea la Nurse Joy de Cobblemon y luego usa este comando al lado de ella."), false);
-        return 0;
+        net.pokereport.luna.heal.EnfermeraService.colocarEnfermera(p);
+        p.sendMessage(net.minecraft.text.Text.literal("§aEnfermera Joy colocada en el centro Pokémon. ¡Quedó invulnerable y estática!"), false);
+        return 1;
     }
 
 /** Aprueba o rechaza una foto pendiente del santuario. */

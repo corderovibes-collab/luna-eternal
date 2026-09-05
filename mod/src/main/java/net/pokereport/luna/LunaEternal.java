@@ -329,6 +329,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // ⚠ Y su cuenta atras, que ademas SUELTA lo que tuviera reservado:
             //   irse a mitad de la cuenta del gimnasio dejaba la ranura pillada.
             net.pokereport.luna.world.Espera.olvidar(player.getUuid());
+            // ⚠ La subida de foto a medias se descarta: sin esto, un jugador que
+            //   empieza a subir y se va dejaria sus trozos en memoria para
+            //   siempre (P6 -- la memoria del servidor no la llena nadie).
+            net.pokereport.luna.net.Red.olvidarSubidas(player.getUuid());
             Tablist.onLeave(server, player);
         });
 

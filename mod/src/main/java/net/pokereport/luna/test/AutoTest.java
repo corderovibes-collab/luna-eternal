@@ -99,6 +99,7 @@ public final class AutoTest {
             testTesoros(a);
             testEspera();
             testSantuario(a, b);
+            testFotos(a, b);
             testNichoConfig();
 
         } catch (Exception e) {
@@ -3380,6 +3381,99 @@ public final class AutoTest {
         } catch (IllegalStateException esperada) {
             return true;
         }
+    }
+
+    /**
+     * LAS FOTOS DEL SANTUARIO: lo que entra por la puerta del cliente.
+     *
+     * <p>⚠⚠ Todo aqui es P6: la foto es CONTENIDO del cliente, y la regla es
+     * «se decodifica, se reescala y se recodifica, o no entra». Una imagen
+     * rota no puede acabar como fichero en el servidor, una foto ajena no
+     * puede colgarse en el nicho de otro, y una foto sin aprobar no puede
+     * colgarse en ninguno.
+     */
+    private void testFotos(long a, long b) throws Exception {
+        var svc = new net.pokereport.luna.santuario.SantuarioService(db);
+        var N1 = "__autotest_n1"; // de b (permanente, al final de testSantuario)
+        var N2 = "__autotest_n2"; // de a (alquilado)
+
+        check("santuario: una foto que no es imagen se rechaza",
+                !svc.subirFoto(a, new byte[] {1, 2, 3, 4}).ok());
+        check("santuario: una subida vacia se rechaza",
+                !svc.subirFoto(a, new byte[0]).ok());
+        check("santuario: una subida gigante se rechaza",
+                !svc.subirFoto(a, new byte[
+                        net.pokereport.luna.santuario.SantuarioService.FOTO_MAX_BYTES + 1]).ok());
+
+        var f1 = svc.subirFoto(a, pngDePrueba(0xFF2030FF));
+        check("santuario: una imagen valida entra y da su sha1",
+                f1.ok() && f1.sha1().matches("[0-9a-f]{40}"));
+        check("santuario: la foto queda escrita en el disco del servidor",
+                java.nio.file.Files.exists(net.pokereport.luna.santuario.SantuarioService
+                        .carpetaFotos().resolve(f1.sha1() + ".png")));
+        var f2 = svc.subirFoto(a, pngDePrueba(0xFF30FF20));
+        var f3 = svc.subirFoto(a, pngDePrueba(0xFFFF2030));
+        check("santuario: tres pendientes llenan el cupo",
+                f2.ok() && f3.ok());
+        check("santuario: la cuarta pendiente se rechaza",
+                !svc.subirFoto(a, pngDePrueba(0xFFAAAAAA)).ok());
+
+        // --- poner: solo lo mio, solo lo aprobado
+        check("santuario: una foto pendiente no se puede colocar",
+                "foto_no_aprobada".equals(svc.ponerFoto(N2, a, f1.fotoId())));
+        check("santuario: la foto ajena no se puede colocar",
+                "foto_no_tuya".equals(svc.ponerFoto(N1, b, f1.fotoId())));
+        check("santuario: aprobar una pendiente va bien",
+                svc.aprobar(f1.fotoId()) == null);
+        check("santuario: aprobar lo ya aprobado ya no es posible",
+                "no_pendiente".equals(svc.aprobar(f1.fotoId())));
+        check("santuario: la foto aprobada y mia si se coloca",
+                svc.ponerFoto(N2, a, f1.fotoId()) == null);
+        check("santuario: quitar la foto va bien",
+                svc.quitarFoto(N2, a) == null);
+        check("santuario: una foto rechazada no se puede colocar",
+                svc.rechazar(f2.fotoId()) == null
+                        && "foto_no_aprobada".equals(svc.ponerFoto(N2, a, f2.fotoId())));
+        check("santuario: una foto que no existe no se puede colocar",
+                "foto_no_existe".equals(svc.ponerFoto(N2, a, 999_999L)));
+
+        // ⚠⚠ EL INVARIANTE DE LA BASE: un nicho no puede tener colgada una foto
+        //    que no este APROBADA. Si esto fallara, el holograma pintaria una
+        //    foto que el moderador nunca vio -- sin dar ningun error.
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT COUNT(*) FROM santuario s "
+                             + "JOIN santuario_foto f ON f.foto_id = s.foto_id "
+                             + "WHERE f.estado <> 'APROBADA'")) {
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                check("santuario: ningun nicho tiene una foto sin aprobar",
+                        rs.getLong(1) == 0);
+            }
+        }
+
+        // --- limpieza: los PNG de prueba no se quedan en el disco (las filas
+        //     de la base las borra cleanup(), que va por el uuid del jugador)
+        for (String sha : new String[] {f1.sha1(), f2.sha1(), f3.sha1()}) {
+            if (sha != null && !sha.isEmpty()) {
+                java.nio.file.Files.deleteIfExists(
+                        net.pokereport.luna.santuario.SantuarioService
+                                .carpetaFotos().resolve(sha + ".png"));
+            }
+        }
+    }
+
+    /** Un PNG de 8x8 valido, para que la subida tenga algo de verdad. */
+    private static byte[] pngDePrueba(int argb) throws Exception {
+        var imagen = new java.awt.image.BufferedImage(8, 8,
+                java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        var g = imagen.createGraphics();
+        g.setColor(new java.awt.Color(argb, true));
+        g.fillRect(0, 0, 8, 8);
+        g.dispose();
+        var salida = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(imagen, "png", salida);
+        return salida.toByteArray();
     }
 
     // ------------------------------------------------------------ auxiliares

@@ -366,6 +366,36 @@ public class Red implements ModInitializer {
                 }
             };
 
+    /** Cuantos bytes por trozo de foto. 16 KB caben en un payload con holgura. */
+    private static final int TROZO_FOTO = 16 * 1024;
+
+    /** La subida de foto a medio llegar, por jugador. */
+    private record SubidaEnCurso(String idem, int total,
+                                 java.io.ByteArrayOutputStream datos) {}
+
+    /**
+     * Las subidas de foto EN VUELO, una por jugador.
+     *
+     * <p>⚠⚠ EN MEMORIA Y ACOTADA: el total de una subida no puede pasar de
+     * {@code FOTO_MAX_BYTES} (se comprueba al llegar cada trozo) y solo hay una
+     * en curso por jugador -- empezar otra descarta la anterior. Sin las dos
+     * cotas, un cliente modificado llenaria la memoria del servidor mandando
+     * trozos sin parar (P6).
+     */
+    private static final java.util.Map<java.util.UUID, SubidaEnCurso> SUBIDAS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** El indice del trozo que toca. Con esto, trozos duplicados o desordenados
+     *  no se ensamblan: el rompecabezas tiene un orden. */
+    private static int siguiente(SubidaEnCurso s) {
+        return s.datos().size() / TROZO_FOTO;
+    }
+
+    /** Se olvida la subida a medias cuando el jugador se va. */
+    public static void olvidarSubidas(java.util.UUID jugador) {
+        SUBIDAS.remove(jugador);
+    }
+
     /**
      * Escribe una cadena que <b>puede ser nula</b>.
      *
@@ -2297,6 +2327,190 @@ public class Red implements ModInitializer {
         }
     }
 
+    /**
+     * Un trozo de foto, en una direccion u otra.
+     *
+     * <p>⚠⚠ LA FOTO VIAJA TROCEADA porque un custom payload tiene un tope
+     * medido (~1 MB, la tienda gasta 38 KB) y una foto re-encodificada puede
+     * acercarse. 16 KB por trozo caben con holgura y ademas el codec se acota
+     * con {@code byteArray(16*1024)}: un trozo mas grande NI SE DECODIFICA
+     * (P6 -- el tamano de lo que llega tambien se acota).
+     */
+    public record FotoTramo(String sha1, int total, int indice, byte[] trozo)
+            implements CustomPayload {
+        public static final Id<FotoTramo> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "foto_tramo"));
+        public static final PacketCodec<RegistryByteBuf, FotoTramo> CODEC =
+                PacketCodec.tuple(
+                        CADENA, FotoTramo::sha1,
+                        PacketCodecs.VAR_INT, FotoTramo::total,
+                        PacketCodecs.VAR_INT, FotoTramo::indice,
+                        PacketCodecs.byteArray(16 * 1024), FotoTramo::trozo,
+                        FotoTramo::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Mandame la foto con ese sha1».
+     *
+     * <p>⚠ El sha1 es el NOMBRE del fichero en el servidor, y se valida como
+     * hash antes de usarlo: un cliente modificado no puede leer otro fichero
+     * del disco poniendo una ruta en el campo (P6).
+     */
+    public record PedirFoto(String sha1) implements CustomPayload {
+        public static final Id<PedirFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_foto"));
+        public static final PacketCodec<RegistryByteBuf, PedirFoto> CODEC =
+                PacketCodec.tuple(CADENA, PedirFoto::sha1, PedirFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Un trozo de foto que el cliente sube. Mismo formato que {@code FotoTramo}. */
+    public record SubirFoto(String idem, int total, int indice, byte[] trozo)
+            implements CustomPayload {
+        public static final Id<SubirFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "subir_foto"));
+        public static final PacketCodec<RegistryByteBuf, SubirFoto> CODEC =
+                PacketCodec.tuple(
+                        CADENA, SubirFoto::idem,
+                        PacketCodecs.VAR_INT, SubirFoto::total,
+                        PacketCodecs.VAR_INT, SubirFoto::indice,
+                        PacketCodecs.byteArray(16 * 1024), SubirFoto::trozo,
+                        SubirFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * La respuesta a una subida. {@code idem} es el de la subida: sin el, el
+     * cliente no sabria a cual de sus subidas contesta esto.
+     */
+    public record ResultadoFoto(String idem, boolean ok, String motivo,
+                                long fotoId, String sha1)
+            implements CustomPayload {
+        public static final Id<ResultadoFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "resultado_foto"));
+        public static final PacketCodec<RegistryByteBuf, ResultadoFoto> CODEC =
+                PacketCodec.tuple(
+                        CADENA, ResultadoFoto::idem,
+                        PacketCodecs.BOOL, ResultadoFoto::ok,
+                        CADENA, ResultadoFoto::motivo,
+                        PacketCodecs.VAR_LONG, ResultadoFoto::fotoId,
+                        CADENA, ResultadoFoto::sha1,
+                        ResultadoFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Dame mis fotos»: el dueño las ve en su nicho para elegir cual poner. */
+    public record PedirFotos() implements CustomPayload {
+        public static final Id<PedirFotos> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_fotos"));
+        public static final PacketCodec<RegistryByteBuf, PedirFotos> CODEC =
+                PacketCodec.unit(new PedirFotos());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Una foto propia, tal y como se dibuja en la lista. */
+    public record FotoEnvio(long fotoId, String estado, String sha1) {
+        public static final PacketCodec<RegistryByteBuf, FotoEnvio> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_LONG, FotoEnvio::fotoId,
+                        CADENA, FotoEnvio::estado,
+                        CADENA, FotoEnvio::sha1,
+                        FotoEnvio::new);
+    }
+
+    /** Las fotos del jugador. */
+    public record EstadoFotos(List<FotoEnvio> fotos) implements CustomPayload {
+        public static final Id<EstadoFotos> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_fotos"));
+        public static final PacketCodec<RegistryByteBuf, EstadoFotos> CODEC =
+                PacketCodec.tuple(
+                        FotoEnvio.CODEC.collect(PacketCodecs.toList()),
+                        EstadoFotos::fotos,
+                        EstadoFotos::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Pon esta foto mia en mi nicho». El servidor comprueba todo (P6). */
+    public record PonerFoto(String nicho, long fotoId) implements CustomPayload {
+        public static final Id<PonerFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "poner_foto"));
+        public static final PacketCodec<RegistryByteBuf, PonerFoto> CODEC =
+                PacketCodec.tuple(
+                        CADENA, PonerFoto::nicho,
+                        PacketCodecs.VAR_LONG, PonerFoto::fotoId,
+                        PonerFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Quita la foto de mi nicho». */
+    public record QuitarFoto(String nicho) implements CustomPayload {
+        public static final Id<QuitarFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "quitar_foto"));
+        public static final PacketCodec<RegistryByteBuf, QuitarFoto> CODEC =
+                PacketCodec.tuple(CADENA, QuitarFoto::nicho, QuitarFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * El servidor contesta a un honor, y NO solo con el estado entero: este
+     * paquete lleva el total nuevo y lo que le queda al jugador, que es lo que
+     * la pantalla del memorial dibuja. El cliente suena la campanilla SOLO si
+     * esto dice {@code ok} -- si sonara al pulsar, sonaria tambien cuando el
+     * servidor rechaza el honor por el tope diario, y eso miente.
+     */
+    public record RespuestaHonor(String nicho, boolean ok, String motivo,
+                                 long total, int restantes)
+            implements CustomPayload {
+        public static final Id<RespuestaHonor> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "respuesta_honor"));
+        public static final PacketCodec<RegistryByteBuf, RespuestaHonor> CODEC =
+                PacketCodec.tuple(
+                        CADENA, RespuestaHonor::nicho,
+                        PacketCodecs.BOOL, RespuestaHonor::ok,
+                        CADENA, RespuestaHonor::motivo,
+                        PacketCodecs.VAR_LONG, RespuestaHonor::total,
+                        PacketCodecs.VAR_INT, RespuestaHonor::restantes,
+                        RespuestaHonor::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record PedirCura() implements CustomPayload {
         public static final Id<PedirCura> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cura"));
@@ -2747,6 +2961,15 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(ComprarNicho.ID, ComprarNicho.CODEC);
         PayloadTypeRegistry.playC2S().register(HonrarNicho.ID, HonrarNicho.CODEC);
         PayloadTypeRegistry.playC2S().register(TextosNicho.ID, TextosNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirFoto.ID, PedirFoto.CODEC);
+        PayloadTypeRegistry.playS2C().register(FotoTramo.ID, FotoTramo.CODEC);
+        PayloadTypeRegistry.playC2S().register(SubirFoto.ID, SubirFoto.CODEC);
+        PayloadTypeRegistry.playS2C().register(ResultadoFoto.ID, ResultadoFoto.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirFotos.ID, PedirFotos.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoFotos.ID, EstadoFotos.CODEC);
+        PayloadTypeRegistry.playC2S().register(PonerFoto.ID, PonerFoto.CODEC);
+        PayloadTypeRegistry.playC2S().register(QuitarFoto.ID, QuitarFoto.CODEC);
+        PayloadTypeRegistry.playS2C().register(RespuestaHonor.ID, RespuestaHonor.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Ficha.ID, Ficha.CODEC);
@@ -3156,6 +3379,14 @@ public class Red implements ModInitializer {
                     if (jugador.isRemoved()) {
                         return;
                     }
+                    // ⚠ La respuesta viaja APARTE del estado: lleva el total y
+                    //   lo que le queda a ESTE jugador, que es lo que la
+                    //   pantalla del memorial dibuja -- y el cliente suena la
+                    //   campanilla solo si `ok`, para no celebrar un rechazo.
+                    ServerPlayNetworking.send(jugador, new RespuestaHonor(
+                            carga.nicho(), r.ok(),
+                            r.motivo() == null ? "" : r.motivo(),
+                            r.honores(), r.restantes()));
                     if (r.ok()) {
                         jugador.sendMessage(net.minecraft.text.Text.translatable(
                                 "pokepad.lunaeternal.santuario.honrado"), false);
@@ -3187,6 +3418,186 @@ public class Red implements ModInitializer {
                             carga.nicho(), id, carga.titulo(), carga.descripcion());
                 } catch (Exception e) {
                     LunaEternal.LOG.error("Fallo escribiendo el memorial", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (motivo != null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + motivo), false);
+                    }
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
+        // -------- las fotos: subir (troceada), entregar (troceada), gestionar
+
+        ServerPlayNetworking.registerGlobalReceiver(SubirFoto.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            var enCurso = SUBIDAS.compute(jugador.getUuid(),
+                    (u, anterior) -> anterior == null || !anterior.idem().equals(carga.idem())
+                            ? new SubidaEnCurso(carga.idem(), carga.total(),
+                                    new java.io.ByteArrayOutputStream(
+                                            Math.min(carga.total(), 3 * 1024 * 1024)))
+                            : anterior);
+            // ⚠ Un trozo fuera de su sitio o una subida mas grande de lo
+            //   permitido se descarta entera: montar un rompecabezas a medias
+            //   solo produce una foto corrupta que el servidor rechazaria
+            //   despues de gastar memoria en ella (P6).
+            if (carga.indice() != siguiente(enCurso)
+                    || carga.total() > net.pokereport.luna.santuario.SantuarioService.FOTO_MAX_BYTES) {
+                SUBIDAS.remove(jugador.getUuid());
+                server.execute(() -> {
+                    if (!jugador.isRemoved()) {
+                        ServerPlayNetworking.send(jugador, new ResultadoFoto(
+                                carga.idem(), false, "subida_rota", 0, ""));
+                    }
+                });
+                return;
+            }
+            try {
+                enCurso.datos().write(carga.trozo());
+            } catch (java.io.IOException e) {
+                SUBIDAS.remove(jugador.getUuid());
+                return;
+            }
+            boolean completa = carga.indice() == carga.total() - 1;
+            if (!completa) {
+                return;
+            }
+            SUBIDAS.remove(jugador.getUuid());
+            byte[] bytes = enCurso.datos().toByteArray();
+            LunaEternal.submit(() -> {
+                final net.pokereport.luna.santuario.SantuarioService.ResultadoFoto r;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    r = LunaEternal.santuario().subirFoto(id, bytes);
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo subiendo una foto", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    ServerPlayNetworking.send(jugador, new ResultadoFoto(
+                            enCurso.idem(), r.ok(), r.motivo(), r.fotoId(), r.sha1()));
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirFoto.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            String sha1 = carga.sha1();
+            // ⚠ El sha1 es el NOMBRE del fichero: si no parece un hash, ni se
+            //   mira el disco (P6 -- nadie lee rutas del cliente).
+            if (sha1 == null || !sha1.matches("[0-9a-f]{40}")) {
+                return;
+            }
+            LunaEternal.submit(() -> {
+                final byte[] bytes;
+                try {
+                    var fichero = net.pokereport.luna.santuario.SantuarioService
+                            .carpetaFotos().resolve(sha1 + ".png");
+                    if (!java.nio.file.Files.exists(fichero)) {
+                        bytes = null;
+                    } else {
+                        bytes = java.nio.file.Files.readAllBytes(fichero);
+                    }
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("No se pudo leer la foto {}", sha1, e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved() || bytes == null) {
+                        return;
+                    }
+                    for (int i = 0; i * TROZO_FOTO < bytes.length; i++) {
+                        int desde = i * TROZO_FOTO;
+                        int hasta = Math.min(bytes.length, desde + TROZO_FOTO);
+                        ServerPlayNetworking.send(jugador, new FotoTramo(sha1,
+                                bytes.length, i,
+                                java.util.Arrays.copyOfRange(bytes, desde, hasta)));
+                    }
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirFotos.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final java.util.List<net.pokereport.luna.santuario.SantuarioService.Foto> fotos;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    fotos = LunaEternal.santuario().misFotos(id);
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("No se pudieron leer las fotos", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    var lista = new ArrayList<FotoEnvio>();
+                    for (var f : fotos) {
+                        lista.add(new FotoEnvio(f.id(), f.estado(), f.sha1()));
+                    }
+                    ServerPlayNetworking.send(jugador,
+                            new EstadoFotos(List.copyOf(lista)));
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PonerFoto.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final String motivo;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    motivo = LunaEternal.santuario().ponerFoto(
+                            carga.nicho(), id, carga.fotoId());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo poniendo una foto", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (motivo != null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + motivo), false);
+                    }
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(QuitarFoto.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final String motivo;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    motivo = LunaEternal.santuario().quitarFoto(carga.nicho(), id);
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo quitando una foto", e);
                     return;
                 }
                 server.execute(() -> {

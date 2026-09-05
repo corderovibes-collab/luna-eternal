@@ -601,6 +601,27 @@ public final class LunaCommand {
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> reiniciarInicial(ctx.getSource())))
 
+            // ⚠ LA MODERACION DE FOTOS DEL SANTUARIO va a nivel 3: es de staff,
+            //   no de administrador del servidor. Aprobar una foto es lo mismo
+            //   que moderar un mensaje de chat -- y el chat lo moderan los de
+            //   nivel 3.
+            .then(literal("santuario")
+                .requires(s -> s.hasPermissionLevel(3))
+                .then(literal("aprobar")
+                    .then(argument("foto", com.mojang.brigadier.arguments.LongArgumentType
+                            .longArg(1))
+                        .executes(ctx -> fotoSantuario(ctx.getSource(),
+                                com.mojang.brigadier.arguments.LongArgumentType
+                                        .getLong(ctx, "foto"), true))))
+                .then(literal("rechazar")
+                    .then(argument("foto", com.mojang.brigadier.arguments.LongArgumentType
+                            .longArg(1))
+                        .executes(ctx -> fotoSantuario(ctx.getSource(),
+                                com.mojang.brigadier.arguments.LongArgumentType
+                                        .getLong(ctx, "foto"), false))))
+                .then(literal("pendientes")
+                    .executes(ctx -> pendientesSantuario(ctx.getSource()))))
+
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> autotest(ctx.getSource())))
@@ -1328,6 +1349,64 @@ public final class LunaCommand {
 
     private static void reply(ServerPlayerEntity p, String msg) {
         p.getServer().execute(() -> p.sendMessage(Text.literal(msg), false));
+    }
+
+    /** Aprueba o rechaza una foto pendiente del santuario. */
+    private static int fotoSantuario(ServerCommandSource src, long fotoId, boolean aprobar) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            String motivo = aprobar
+                    ? LunaEternal.santuario().aprobar(fotoId)
+                    : LunaEternal.santuario().rechazar(fotoId);
+            if (motivo == null) {
+                reply(p, aprobar
+                        ? "§aFoto " + fotoId + " aprobada. Su dueno ya puede colocarla."
+                        : "§aFoto " + fotoId + " rechazada.");
+            } else if ("no_pendiente".equals(motivo)) {
+                reply(p, "§cEsa foto ya no esta pendiente.");
+            } else {
+                reply(p, "§cNo se pudo: " + motivo);
+            }
+        });
+        return 1;
+    }
+
+    /** Las fotos pendientes de moderar. */
+    private static int pendientesSantuario(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            try (var c = LunaEternal.database().connection();
+                 var ps = c.prepareStatement(
+                         "SELECT f.foto_id, p.mc_uuid, f.subida_ms FROM santuario_foto f "
+                                 + "JOIN player p ON p.player_id = f.owner_id "
+                                 + "WHERE f.estado = 'PENDIENTE' ORDER BY f.foto_id")) {
+                var lineas = new java.util.ArrayList<String>();
+                try (var rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        lineas.add("§f#" + rs.getLong("foto_id") + " §7de §f"
+                                + rs.getString("mc_uuid").substring(0, 8));
+                    }
+                }
+                if (lineas.isEmpty()) {
+                    reply(p, "§7No hay fotos pendientes de moderar.");
+                } else {
+                    reply(p, "§7Fotos pendientes (" + lineas.size() + "): "
+                            + String.join(" §8·§7 ", lineas)
+                            + " §8-- /luna santuario aprobar <id>");
+                }
+            } catch (Exception e) {
+                reply(p, "§cNo se pudieron leer las pendientes: " + e.getMessage());
+            }
+        });
+        return 1;
     }
 
     /**

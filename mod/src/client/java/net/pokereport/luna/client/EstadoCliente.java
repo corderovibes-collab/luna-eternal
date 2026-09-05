@@ -46,6 +46,9 @@ public final class EstadoCliente {
     private static Red.EstadoGimnasio gimnasio;
     private static Red.EstadoTrajes trajes;
     private static Red.EstadoSantuario santuario;
+    private static Red.ResultadoFoto fotoSubida;
+    private static Red.EstadoFotos misFotos;
+    private static Red.RespuestaHonor honor;
 
     private EstadoCliente() {}
 
@@ -286,6 +289,38 @@ public final class EstadoCliente {
         return santuario;
     }
 
+    public static void guardar(Red.ResultadoFoto nuevo) {
+        fotoSubida = nuevo;
+    }
+
+    /** La respuesta a la ultima subida de foto, o {@code null}. */
+    public static Red.ResultadoFoto fotoSubida() {
+        return fotoSubida;
+    }
+
+    public static void guardar(Red.EstadoFotos nuevo) {
+        misFotos = nuevo;
+    }
+
+    /** Mis fotos. {@code null} hasta que contesta el servidor. */
+    public static Red.EstadoFotos misFotos() {
+        return misFotos;
+    }
+
+    public static void guardar(Red.RespuestaHonor nuevo) {
+        honor = nuevo;
+    }
+
+    /**
+     * La respuesta al ultimo honor. {@code null} si aun no ha habido ninguno.
+     *
+     * <p>⚠ NO SE BORRA AL LEERLO, como el resultado del cofre: la pantalla la
+     * lee cuando puede, y un redibujado no puede comersela.
+     */
+    public static Red.RespuestaHonor honor() {
+        return honor;
+    }
+
     /** Al salir del mundo se olvida: el saldo es de esa partida, no del cliente. */
     public static void olvidar() {
         tesoros = null;
@@ -304,6 +339,9 @@ public final class EstadoCliente {
         saldo = null;
         ficha = null;
         santuario = null;
+        fotoSubida = null;
+        misFotos = null;
+        honor = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo
         // entre partidas enseñaria en el servidor B lo que se compro en el A.
         cosmeticos = null;

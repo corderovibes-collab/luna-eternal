@@ -765,8 +765,355 @@ public final class SantuarioService {
         }
     }
 
-    // --------------------------------------------------------------- textos
+    // ---------------------------------------------------------------- fotos
 
+    /** Lo mas que puede pesar una foto tal y como la manda el cliente. */
+    public static final int FOTO_MAX_BYTES = 2_500_000;
+
+    /** El lado maximo de la foto ya guardada. Lo que pase de ahi se reescala. */
+    public static final int FOTO_LADO_MAX = 512;
+
+    /** Cuantas fotos PENDIENTES puede tener un jugador a la vez. */
+    public static final int PENDIENTES_MAX = 3;
+
+    /** Donde viven los PNG en el servidor. El nombre es el sha1 del contenido. */
+    public static java.nio.file.Path carpetaFotos() {
+        return net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
+                .resolve("lunaeternal/fotos");
+    }
+
+    /** Una foto del jugador, para enseñarla en la pantalla. */
+    public record Foto(long id, String estado, String sha1) {}
+
+    /** Las fotos del jugador, la mas nueva primero. Corre en el hilo de E/S. */
+    public List<Foto> misFotos(long playerId) throws SQLException {
+        var salida = new ArrayList<Foto>();
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT foto_id, estado, sha1 FROM santuario_foto "
+                             + "WHERE owner_id = ? ORDER BY foto_id DESC")) {
+            ps.setLong(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    salida.add(new Foto(rs.getLong("foto_id"),
+                            rs.getString("estado"), rs.getString("sha1")));
+                }
+            }
+        }
+        return salida;
+    }
+
+    /** La respuesta a una subida. */
+    public record ResultadoFoto(boolean ok, String motivo, long fotoId, String sha1) {
+        static ResultadoFoto si(long fotoId, String sha1) {
+            return new ResultadoFoto(true, null, fotoId, sha1);
+        }
+
+        static ResultadoFoto no(String motivo) {
+            return new ResultadoFoto(false, motivo, 0, "");
+        }
+    }
+
+    /**
+     * Guarda la foto que manda el cliente y la deja PENDIENTE de aprobacion.
+     *
+     * <h2>⚠⚠ SE REENCODA SIEMPRE, y eso no es por estetica</h2>
+     *
+     * La foto llega del cliente, o sea que es contenido no confiable (P6):
+     * <ul>
+     *   <li>se <b>decodifica</b> con ImageIO — si no es una imagen de verdad, se
+     *       rechaza en vez de guardar basura que luego el cliente no puede
+     *       pintar;</li>
+     *   <li>se <b>reescala</b> a {@link #FOTO_LADO_MAX} — una foto de 50
+     *       megapixeles tumbaria al servidor decodificandola y a los clientes
+     *       recibiendola;</li>
+     *   <li>se <b>recodifica</b> a PNG — se va cualquier EXIF (localizacion GPS
+     *       incluida) y cualquier payload escondido detras de la imagen. Lo que
+     *       queda es exactamente lo que se ve.</li>
+     * </ul>
+     *
+     * <p>⚠ El fichero se llama como el sha1 del contenido y no se reescribe si
+     * ya existe: dos jugadores subiendo la misma foto comparten fichero, y un
+     * nombre que es un hash no puede atravesar directorios.
+     *
+     * <p>⚠ PENDIENTE, y no se puede colocar hasta que un staff la apruebe: una
+     * foto es contenido publico en medio del monumento, y el moderador es el
+     * staff, no la base de datos.
+     */
+    public ResultadoFoto subirFoto(long playerId, byte[] bytes) {
+        if (bytes == null || bytes.length == 0 || bytes.length > FOTO_MAX_BYTES) {
+            return ResultadoFoto.no("foto_grande");
+        }
+        final java.awt.image.BufferedImage imagen;
+        try {
+            imagen = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(bytes));
+        } catch (java.io.IOException e) {
+            return ResultadoFoto.no("foto_ilegible");
+        }
+        if (imagen == null) {
+            return ResultadoFoto.no("foto_ilegible");
+        }
+        java.awt.image.BufferedImage lista = imagen;
+        if (imagen.getWidth() > FOTO_LADO_MAX || imagen.getHeight() > FOTO_LADO_MAX) {
+            double k = Math.min((double) FOTO_LADO_MAX / imagen.getWidth(),
+                    (double) FOTO_LADO_MAX / imagen.getHeight());
+            int ancho = Math.max(1, (int) Math.round(imagen.getWidth() * k));
+            int alto = Math.max(1, (int) Math.round(imagen.getHeight() * k));
+            lista = new java.awt.image.BufferedImage(ancho, alto,
+                    java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            var g = lista.createGraphics();
+            try {
+                g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                        java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g.drawImage(imagen, 0, 0, ancho, alto, null);
+            } finally {
+                g.dispose();
+            }
+        }
+        final byte[] png;
+        try (var salida = new java.io.ByteArrayOutputStream()) {
+            if (!javax.imageio.ImageIO.write(lista, "png", salida)) {
+                return ResultadoFoto.no("foto_ilegible");
+            }
+            png = salida.toByteArray();
+        } catch (java.io.IOException e) {
+            return ResultadoFoto.no("foto_ilegible");
+        }
+        String sha1;
+        try {
+            var digest = java.security.MessageDigest.getInstance("SHA-1");
+            StringBuilder hex = new StringBuilder();
+            for (byte b : digest.digest(png)) {
+                hex.append(String.format("%02x", b));
+            }
+            sha1 = hex.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            return ResultadoFoto.no("error");
+        }
+        try {
+            var carpeta = carpetaFotos();
+            java.nio.file.Files.createDirectories(carpeta);
+            var destino = carpeta.resolve(sha1 + ".png");
+            if (!java.nio.file.Files.exists(destino)) {
+                java.nio.file.Files.write(destino, png);
+            }
+        } catch (java.io.IOException e) {
+            LunaEternal.LOG.error("No se pudo guardar la foto {}", sha1, e);
+            return ResultadoFoto.no("error");
+        }
+        try (Connection c = db.connection()) {
+            int pendientes = 0;
+            try (PreparedStatement ps = c.prepareStatement(
+                    "SELECT COUNT(*) FROM santuario_foto "
+                            + "WHERE owner_id = ? AND estado = 'PENDIENTE'")) {
+                ps.setLong(1, playerId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    pendientes = rs.next() ? rs.getInt(1) : 0;
+                }
+            }
+            if (pendientes >= PENDIENTES_MAX) {
+                return ResultadoFoto.no("pendientes_llenas");
+            }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "INSERT INTO santuario_foto (owner_id, sha1, estado, subida_ms) "
+                            + "VALUES (?,?,'PENDIENTE',?)",
+                    java.sql.Statement.RETURN_GENERATED_KEYS)) {
+                ps.setLong(1, playerId);
+                ps.setString(2, sha1);
+                ps.setLong(3, System.currentTimeMillis());
+                ps.executeUpdate();
+                try (ResultSet claves = ps.getGeneratedKeys()) {
+                    if (claves.next()) {
+                        return ResultadoFoto.si(claves.getLong(1), sha1);
+                    }
+                }
+            }
+            return ResultadoFoto.no("error");
+        } catch (SQLException e) {
+            LunaEternal.LOG.error("No se pudo registrar la foto de {}", playerId, e);
+            return ResultadoFoto.no("error");
+        }
+    }
+
+    /** Aprueba una foto pendiente. {@code null} si fue bien, o la clave del motivo. */
+    public String aprobar(long fotoId) {
+        return cambiarEstadoFoto(fotoId, "APROBADA");
+    }
+
+    /** Rechaza una foto pendiente. {@code null} si fue bien, o la clave del motivo. */
+    public String rechazar(long fotoId) {
+        return cambiarEstadoFoto(fotoId, "RECHAZADA");
+    }
+
+    private String cambiarEstadoFoto(long fotoId, String estado) {
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "UPDATE santuario_foto SET estado = ? "
+                             + "WHERE foto_id = ? AND estado = 'PENDIENTE'")) {
+            ps.setString(1, estado);
+            ps.setLong(2, fotoId);
+            return ps.executeUpdate() == 1 ? null : "no_pendiente";
+        } catch (SQLException e) {
+            LunaEternal.LOG.error("No se pudo cambiar el estado de la foto {}", fotoId, e);
+            return "error";
+        }
+    }
+
+    /**
+     * Coloca una foto en el nicho. Solo el dueno, y solo una foto SUYA y
+     * APROBADA.
+     *
+     * <p>⚠⚠ SE COMPRUEBA EN LA BASE, que es donde vive la verdad: el cliente
+     * manda un {@code fotoId} y nada mas (P6). Un id que no exista, que no sea
+     * suyo o que siga pendiente se rechaza aqui, no en la pantalla.
+     */
+    public String ponerFoto(String nichoId, long playerId, long fotoId) {
+        if (!nichoValido(nichoId)) {
+            return "nicho_invalido";
+        }
+        Connection c;
+        try {
+            c = db.connection();
+        } catch (SQLException e) {
+            return "error";
+        }
+        boolean auto;
+        try {
+            auto = c.getAutoCommit();
+        } catch (SQLException e) {
+            return "error";
+        }
+        try {
+            c.setAutoCommit(false);
+            long ahora = System.currentTimeMillis();
+            boolean mio;
+            try (PreparedStatement ps = c.prepareStatement(
+                    "SELECT owner_id, permanente, expira_ms FROM santuario "
+                            + "WHERE nicho_id = ? FOR UPDATE")) {
+                ps.setString(1, nichoId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        c.rollback();
+                        return "no_existe";
+                    }
+                    long owner = rs.getLong("owner_id");
+                    if (rs.wasNull()) {
+                        c.rollback();
+                        return "no_es_tuyo";
+                    }
+                    boolean permanente = rs.getBoolean("permanente");
+                    long expira = rs.getLong("expira_ms");
+                    mio = owner == playerId && (permanente || expira > ahora);
+                }
+            }
+            if (!mio) {
+                c.rollback();
+                return "no_es_tuyo";
+            }
+            String estado = null;
+            long dueno = 0;
+            try (PreparedStatement ps = c.prepareStatement(
+                    "SELECT owner_id, estado FROM santuario_foto WHERE foto_id = ?")) {
+                ps.setLong(1, fotoId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        dueno = rs.getLong("owner_id");
+                        estado = rs.getString("estado");
+                    }
+                }
+            }
+            if (estado == null) {
+                c.rollback();
+                return "foto_no_existe";
+            }
+            if (dueno != playerId) {
+                c.rollback();
+                return "foto_no_tuya";
+            }
+            if (!"APROBADA".equals(estado)) {
+                c.rollback();
+                return "foto_no_aprobada";
+            }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "UPDATE santuario SET foto_id = ?, tocado_ms = ? "
+                            + "WHERE nicho_id = ?")) {
+                ps.setLong(1, fotoId);
+                ps.setLong(2, ahora);
+                ps.setString(3, nichoId);
+                ps.executeUpdate();
+            }
+            c.commit();
+            return null;
+        } catch (SQLException e) {
+            rollbackQuieto(c);
+            return "error";
+        } finally {
+            cerrar(c, auto);
+        }
+    }
+
+    /** Quita la foto del nicho. El memorial sigue con su titulo y sus honores. */
+    public String quitarFoto(String nichoId, long playerId) {
+        if (!nichoValido(nichoId)) {
+            return "nicho_invalido";
+        }
+        Connection c;
+        try {
+            c = db.connection();
+        } catch (SQLException e) {
+            return "error";
+        }
+        boolean auto;
+        try {
+            auto = c.getAutoCommit();
+        } catch (SQLException e) {
+            return "error";
+        }
+        try {
+            c.setAutoCommit(false);
+            long ahora = System.currentTimeMillis();
+            boolean mio;
+            try (PreparedStatement ps = c.prepareStatement(
+                    "SELECT owner_id, permanente, expira_ms FROM santuario "
+                            + "WHERE nicho_id = ? FOR UPDATE")) {
+                ps.setString(1, nichoId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        c.rollback();
+                        return "no_existe";
+                    }
+                    long owner = rs.getLong("owner_id");
+                    if (rs.wasNull()) {
+                        c.rollback();
+                        return "no_es_tuyo";
+                    }
+                    boolean permanente = rs.getBoolean("permanente");
+                    long expira = rs.getLong("expira_ms");
+                    mio = owner == playerId && (permanente || expira > ahora);
+                }
+            }
+            if (!mio) {
+                c.rollback();
+                return "no_es_tuyo";
+            }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "UPDATE santuario SET foto_id = NULL, tocado_ms = ? "
+                            + "WHERE nicho_id = ?")) {
+                ps.setLong(1, ahora);
+                ps.setString(2, nichoId);
+                ps.executeUpdate();
+            }
+            c.commit();
+            return null;
+        } catch (SQLException e) {
+            rollbackQuieto(c);
+            return "error";
+        } finally {
+            cerrar(c, auto);
+        }
+    }
+
+    // --------------------------------------------------------------- textos
     /**
      * Cambia el titulo y la descripcion del memorial. Solo el dueno.
      *

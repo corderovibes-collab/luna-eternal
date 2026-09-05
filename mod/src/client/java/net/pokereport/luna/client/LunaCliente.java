@@ -192,6 +192,25 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoSantuario.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
+        // -------- las fotos del santuario: trozos, respuestas y mis fotos
+
+        ClientPlayNetworking.registerGlobalReceiver(Red.FotoTramo.ID,
+                (carga, ctx) -> TexturasFoto.alLlegarTramo(carga));
+
+        ClientPlayNetworking.registerGlobalReceiver(Red.ResultadoFoto.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoFotos.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
+        // La respuesta a un honor: la pantalla del memorial la espera para
+        //   sonar la campanilla SOLO si el servidor dice que cuenta.
+        ClientPlayNetworking.registerGlobalReceiver(Red.RespuestaHonor.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
+        // El holograma de las fotos en el mundo.
+        HologramaSantuario.registrar();
+
         ClientPlayNetworking.registerGlobalReceiver(Red.DetalleParcela.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
@@ -274,6 +293,8 @@ public class LunaCliente implements ClientModInitializer {
             // Sin esto, entrar en otro mundo arrastra los cosmeticos del anterior.
             Auras.olvidarTodo();
             Sombreros.olvidarTodo();
+            // Y sin esto, las fotos del mundo A se pintarian en el mundo B.
+            TexturasFoto.olvidar();
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(cliente -> {

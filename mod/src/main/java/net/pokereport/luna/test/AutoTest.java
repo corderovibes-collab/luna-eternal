@@ -3325,16 +3325,25 @@ public final class AutoTest {
         }
 
         // --- administracion: eliminar e info
+        var N_ADMIN = "__autotest_admin";
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "INSERT IGNORE INTO santuario (nicho_id) VALUES (?)")) {
+            ps.setString(1, N_ADMIN);
+            ps.executeUpdate();
+        }
+        check("santuario: alquilar N_ADMIN para probar admin",
+                svc.alquilar(N_ADMIN, a, CAMPEON, key()).ok());
         check("santuario: info de nicho existente no es nulo",
-                svc.info(N1) != null);
+                svc.info(N_ADMIN) != null);
         check("santuario: info de nicho inexistente es nulo",
                 svc.info("__no_existe_nicho") == null);
         check("santuario: eliminar nicho libera el estado",
-                svc.eliminar(N1) == null);
+                svc.eliminar(N_ADMIN) == null);
         check("santuario: eliminar nicho inexistente da error",
                 "no_existe".equals(svc.eliminar("__no_existe_nicho")));
         check("santuario: nicho eliminado queda libre para alquilar",
-                svc.alquilar(N1, a, ENTRENADOR, key()).ok());
+                svc.alquilar(N_ADMIN, a, CAMPEON, key()).ok());
         check("santuario: NPC tiene etiqueta correcta",
                 "luna_santuario".equals(net.pokereport.luna.santuario.SantuarioNpc.MARCA));
     }

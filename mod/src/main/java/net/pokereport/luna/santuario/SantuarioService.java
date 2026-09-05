@@ -644,7 +644,7 @@ public final class SantuarioService {
     public String info(String nichoId) {
         try (var c = db.connection();
              var ps = c.prepareStatement(
-                     "SELECT s.*, p.mc_name FROM santuario s "
+                     "SELECT s.*, p.username FROM santuario s "
                      + "LEFT JOIN player p ON p.player_id = s.owner_id "
                      + "WHERE s.nicho_id = ?")) {
             ps.setString(1, nichoId);
@@ -654,7 +654,7 @@ public final class SantuarioService {
                 }
                 var sb = new StringBuilder();
                 sb.append("§7Nicho: §f").append(nichoId).append("\n");
-                String dueno = rs.getString("mc_name");
+                String dueno = rs.getString("username");
                 if (dueno != null) {
                     sb.append("§7Dueño: §f").append(dueno).append("\n");
                     sb.append("§7Tipo: §f").append(rs.getBoolean("permanente")
@@ -683,7 +683,7 @@ public final class SantuarioService {
             }
         } catch (Exception e) {
             LunaEternal.LOG.error("Santuario: error al consultar nicho '{}'", nichoId, e);
-            return "§cError: " + e.getMessage();
+            return null;
         }
     }
 

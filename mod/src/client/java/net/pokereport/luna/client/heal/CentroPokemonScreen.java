@@ -90,8 +90,10 @@ public class CentroPokemonScreen extends Screen {
             // Un pequeño resplandor dorado detrás de ella
             ctx.fillGradient(ex - 60, ey - 220, ex + 60, ey, 0x00FFB900, 0x44FFB900);
             
+            // El visor mira fijo hacia el frente (al centro de sí misma) para que pose
+            // recta en la foto, mirando ligeramente hacia abajo a las letras.
             InventoryScreen.drawEntity(ctx, ex - 60, ey - 200, ex + 60, ey,
-                    80, 0.0f, (float)(ex - rx), (float)(ey - 100 - ry), enfermera);
+                    70, 0.0f, (float)ex, (float)(ey - 50), enfermera);
         }
 
         // --- CAJA DE DIÁLOGO ---

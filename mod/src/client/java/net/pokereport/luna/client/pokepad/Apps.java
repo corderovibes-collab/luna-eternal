@@ -73,8 +73,16 @@ public final class Apps {
             case "tesoros" -> abrirTesoros();
             case "cartas" -> abrirCartas();
             case "protecciones" -> abrirProtecciones();
+            case "santuario" -> abrirSantuario();
             default -> false;
         };
+    }
+
+    /** El santuario de Monumentos: nichos, memoriales y honores. */
+    private static boolean abrirSantuario() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new SantuarioScreen(cliente.currentScreen));
+        return true;
     }
 
     /**

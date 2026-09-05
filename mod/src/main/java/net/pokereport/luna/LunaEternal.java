@@ -95,6 +95,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         //   (geometria y reclamaciones) los lee el manejador cuando llega el
         //   clic, no al registrarse.
         net.pokereport.luna.santuario.SantuarioProteccion.registrar();
+        // ⚠ La Chansey de la entrada: su clic abre la app, como el de las
+        //   paradas abre Viajes. Se registra UNA vez, junto a lo demas.
+        net.pokereport.luna.santuario.SantuarioNpc.registrarClic();
         // ⚠⚠⚠ TODO LO DE GIMNASIOS VA DETRAS DE ESTA GUARDA, Y NO ES PARANOIA.
         //    El paquete `gym` toca clases de rctmod --TrainerMob, RCTMod-- que
         //    son `modCompileOnly`: existen al compilar y puede que no al

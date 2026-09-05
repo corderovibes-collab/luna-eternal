@@ -209,6 +209,7 @@ NOMBRES = {
     "cartas": "Cartas",     "cazas": "Cazas",           "kits": "Kits",
     "mochila": "Mochila",   "gyms": "Gimnasios",        "explorar": "Explorar",
     "curar": "Curar",       "wiki": "Wiki",
+    "protecciones": "Protecciones", "santuario": "Santuario",
 }
 
 # El tamano al que se DIBUJAN los botones, que no es el que llega.

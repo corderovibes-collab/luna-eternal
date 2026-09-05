@@ -101,6 +101,13 @@ public final class CatalogoPad {
             //    bloqueada en vez de desaparecer, que es la regla de esta lista
             //    -- enseñar lo que va a haber es informacion; esconderlo, no.
             new Ficha("protecciones", true),
+            // ⚠⚠ EL SANTUARIO VA TRAS LAS PROTECCIONES, en la pagina 2: las dos
+            //    son «mi terreno». Y es el mismo motivo que el resto de la
+            //    pagina 2 -- la pagina 1 son quince y estan llenas, y bajar
+            //    una de ellas es decision del usuario, no mia.
+            //    El clic en la Chansey del monumento abre ESTA app: el icono
+            //    de la rejilla es la puerta de siempre, no la unica.
+            new Ficha("santuario",   true),
             new Ficha("curar",      true),
             // ⚠ La WIKI baja aquí desde el hueco 10. Sigue bloqueada, y ese es
             //   justo el motivo: lo que todavía no lleva a ningún sitio no ocupa

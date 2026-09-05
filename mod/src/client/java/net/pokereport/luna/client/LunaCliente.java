@@ -29,6 +29,37 @@ public class LunaCliente implements ClientModInitializer {
     private static KeyBinding abrirMochila;
 
     /**
+     * El memorial que el servidor dijo que abrieramos, pendiente de que el
+     * estado llegue con su nicho. Vacio = nada pendiente.
+     */
+    private static String memorialPendiente = "";
+
+    /**
+     * Abre el memorial pendiente si el estado ya trae su nicho.
+     *
+     * <p>⚠ Se llama desde los receptores del estado y del clic en el proyector.
+     * Se guarda que currentScreen sea null: si el clic llego con otra pantalla
+     * delante, abrir encima la cerraria de golpe -- lo mismo que Viajes.
+     */
+    private static void abrirMemorialSiToca(net.minecraft.client.MinecraftClient cliente) {
+        if (memorialPendiente.isEmpty() || cliente.currentScreen != null) {
+            return;
+        }
+        var estado = EstadoCliente.santuario();
+        if (estado == null) {
+            return;
+        }
+        for (var n : estado.nichos()) {
+            if (n.id().equals(memorialPendiente)) {
+                memorialPendiente = "";
+                cliente.setScreen(new net.pokereport.luna.client.pokepad
+                        .MemorialScreen(null, n));
+                return;
+            }
+        }
+    }
+
+    /**
      * Abre la eleccion de inicial cuando el jugador puede verla.
      *
      * <p>⚠ Se comprueba {@code currentScreen == null} y no «esta en el mundo»:
@@ -190,7 +221,38 @@ public class LunaCliente implements ClientModInitializer {
         //   lo reenvia. Aqui solo se guarda; la pantalla, si esta abierta, lo
         //   relee al refrescarse.
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoSantuario.ID,
-                (carga, ctx) -> EstadoCliente.guardar(carga));
+                (carga, ctx) -> {
+                    EstadoCliente.guardar(carga);
+                    // ⚠ El clic en el proyector abre el memorial, pero la
+                    //   pantalla necesita el nicho del estado -- que llega
+                    //   JUSTO DESPUES de pedirlo. Aqui se cierra el circulo:
+                    //   pedido hecho, estado llegado, pantalla abierta.
+                    abrirMemorialSiToca(ctx.client());
+                });
+
+        // ⚠⚠ ESTE ABRE LA APP: es lo que convierte el clic en la Chansey del
+        //    monumento en la pantalla del santuario (el mismo patron que el
+        //    Miraidon con Viajes). Y se abre SOLO si no hay otra pantalla
+        //    delante, para no cerrar de golpe lo que el jugador este mirando.
+        ClientPlayNetworking.registerGlobalReceiver(Red.AbrirSantuario.ID,
+                (carga, ctx) -> {
+                    var cliente = ctx.client();
+                    if (cliente.currentScreen == null) {
+                        cliente.setScreen(new net.pokereport.luna.client.pokepad
+                                .SantuarioScreen(null));
+                    }
+                });
+
+        // ⚠⚠ EL CLIC EN EL PROYECTOR: el servidor dice que memorial abrir. El
+        //    estado quiza no ha llegado nunca -- se pide, y el receptor de
+        //    arriba abre cuando este listo (la leccion del inicial: una
+        //    pantalla no se abre a ciegas, se abre con los datos delante).
+        ClientPlayNetworking.registerGlobalReceiver(Red.AbrirMemorial.ID,
+                (carga, ctx) -> {
+                    memorialPendiente = carga.nicho();
+                    ClientPlayNetworking.send(new Red.PedirSantuario());
+                    abrirMemorialSiToca(ctx.client());
+                });
 
         // -------- las fotos del santuario: trozos, respuestas y mis fotos
 
@@ -290,6 +352,7 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((manejador, cliente) -> {
             EstadoCliente.olvidar();
             VozPokedex.callar();
+            memorialPendiente = "";
             // Sin esto, entrar en otro mundo arrastra los cosmeticos del anterior.
             Auras.olvidarTodo();
             Sombreros.olvidarTodo();

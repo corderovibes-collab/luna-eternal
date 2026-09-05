@@ -151,6 +151,13 @@ public final class SantuarioProteccion {
             //   sea quien sea quien lo toque. Sin este corte, el mod de cartas
             //   abriria su menu de inventario encima del nuestro.
             if (pos.equals(nicho.proyector())) {
+                // ⚠ Solo si el nicho esta reclamado: el memorial de un nicho
+                //   libre no existe, y la pantalla lo diria con un «cargando»
+                //   eterno. La cache es la que sabe, y no toca la base.
+                Claim c = CLAIMS.get(nicho.id());
+                if (c != null && !c.libre(System.currentTimeMillis())) {
+                    net.pokereport.luna.net.Red.enviarAbrirMemorial(sp, nicho.id());
+                }
                 return ActionResult.SUCCESS;
             }
             if (mano != Hand.MAIN_HAND) {

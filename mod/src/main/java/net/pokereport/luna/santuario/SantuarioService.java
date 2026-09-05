@@ -124,8 +124,7 @@ public final class SantuarioService {
     }
 
     /** Todas las filas, en orden de identificador. Corre en el hilo de E/S. */
-    public List<Nicho> nichos() throws SQLException {
-        var salida = new ArrayList<Nicho>();
+    public List<Nicho> nichos() throws SQLException {        var salida = new ArrayList<Nicho>();
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement("""
                      SELECT s.nicho_id, s.owner_id, p.mc_uuid, s.permanente,
@@ -163,6 +162,36 @@ public final class SantuarioService {
     }
 
     // ------------------------------------------------------------- reclamar
+
+    /**
+     * Cuantos honores le quedan hoy a este jugador en cada nicho.
+     *
+     * <p>⚠ Lo pide el paquete de estado, no la pantalla de honrar: el boton de
+     * honrar tiene que nacer apagado si el jugador ya gasto su presupuesto, y
+     * para saberlo hace falta ESTE numero. Que lo calcule el cliente seria
+     * confiar en el cliente (P6); que no viaje seria un boton encendido que el
+     * servidor rechaza -- que es peor que uno apagado.
+     */
+    public java.util.Map<String, Integer> restantes(long playerId)
+            throws SQLException {
+        var salida = new java.util.HashMap<String, Integer>();
+        long ahora = System.currentTimeMillis();
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT nicho_id, ventana_ms, usados FROM santuario_honor "
+                             + "WHERE player_id = ?")) {
+            ps.setLong(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    boolean viva = ahora - rs.getLong("ventana_ms") < VENTANA_HONOR_MS;
+                    salida.put(rs.getString("nicho_id"),
+                            viva ? Math.max(0, HONORES_DIA - rs.getInt("usados"))
+                                 : HONORES_DIA);
+                }
+            }
+        }
+        return salida;
+    }
 
     /** La respuesta a cualquier operacion. {@code motivo} es la clave de idioma. */
     public record Resultado(boolean ok, String motivo, long honores, int restantes) {

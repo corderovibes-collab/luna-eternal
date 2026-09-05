@@ -620,7 +620,12 @@ public final class LunaCommand {
                                 com.mojang.brigadier.arguments.LongArgumentType
                                         .getLong(ctx, "foto"), false))))
                 .then(literal("pendientes")
-                    .executes(ctx -> pendientesSantuario(ctx.getSource()))))
+                    .executes(ctx -> pendientesSantuario(ctx.getSource())))
+                // ⚠ Colocar la Chansey es nivel 4: es decoracion del mundo,
+                //   como /luna decorar -- un moderador no construye.
+                .then(literal("npc")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .executes(ctx -> npcSantuario(ctx.getSource()))))
 
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
@@ -1349,6 +1354,24 @@ public final class LunaCommand {
 
     private static void reply(ServerPlayerEntity p, String msg) {
         p.getServer().execute(() -> p.sendMessage(Text.literal(msg), false));
+    }
+
+    /** Coloca la Chansey del santuario donde esta quien lo ejecuta. */
+    private static int npcSantuario(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        // ⚠ Es decoracion del MUNDO (crear la entidad es trabajo de tick), y el
+        //   comando ya corre en el hilo del servidor: nada de executor aqui.
+        if (!net.pokereport.luna.santuario.SantuarioNpc.colocar(p)) {
+            src.sendError(Text.literal("Solo se puede colocar en la ciudadela."));
+            return 0;
+        }
+        src.sendFeedback(() -> Text.literal(
+                "§aChansey del santuario colocada. Tocarla abre la app."), false);
+        return 1;
     }
 
     /** Aprueba o rechaza una foto pendiente del santuario. */

@@ -2156,6 +2156,43 @@ public class Red implements ModInitializer {
         }
     }
 
+    /**
+     * «Abre el santuario»: lo manda el servidor cuando alguien toca a la
+     * Chansey de la entrada.
+     *
+     * <p>⚠ NO LLEVA NADA: es una orden de abrir, no un estado. El estado viaja
+     * por {@code PedirSantuario} como siempre -- que la pantalla se abra no
+     * tiene por que ir atado a como esten los nichos.
+     */
+    public record AbrirSantuario() implements CustomPayload {
+        public static final Id<AbrirSantuario> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_santuario"));
+        public static final PacketCodec<RegistryByteBuf, AbrirSantuario> CODEC =
+                PacketCodec.unit(new AbrirSantuario());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Abre el memorial de este nicho»: lo manda el servidor cuando alguien
+     * toca el proyector de un nicho ocupado. El cliente abre la pantalla con
+     * el nicho que le digan -- el identificador decide cual, no el clic.
+     */
+    public record AbrirMemorial(String nicho) implements CustomPayload {
+        public static final Id<AbrirMemorial> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_memorial"));
+        public static final PacketCodec<RegistryByteBuf, AbrirMemorial> CODEC =
+                PacketCodec.tuple(CADENA, AbrirMemorial::nicho, AbrirMemorial::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /** Donde flota el holograma: el proyector del nicho. */
     public record PosNicho(int x, int y, int z) {
         public static final PacketCodec<RegistryByteBuf, PosNicho> CODEC =
@@ -2183,30 +2220,41 @@ public class Red implements ModInitializer {
      *                   nombre con el dueno seria confiar en el cliente (P6) y
      *                   ademas fallaria con dos jugadores del mismo nombre en
      *                   servidores offline
+     * @param restantes  cuantos honores le quedan HOY a este jugador en este
+     *                   nicho, ya calculados por el servidor: es lo que apaga
+     *                   el boton de honrar sin que el cliente haga cuentas
      */
     public record EstadoNicho(String dueno, boolean permanente, long segundos,
-                              boolean mio) {
+                              boolean mio, int restantes) {
         public static final PacketCodec<RegistryByteBuf, EstadoNicho> CODEC =
                 PacketCodec.tuple(
                         CADENA, EstadoNicho::dueno,
                         PacketCodecs.BOOL, EstadoNicho::permanente,
                         PacketCodecs.VAR_LONG, EstadoNicho::segundos,
                         PacketCodecs.BOOL, EstadoNicho::mio,
+                        PacketCodecs.VAR_INT, EstadoNicho::restantes,
                         EstadoNicho::new);
     }
 
     /**
      * El memorial, para dibujar en la lista y en el mundo.
      *
+     * <p>⚠ La DESCRIPCION viaja aqui y no en un paquete aparte: la lee tanto el
+     * dueno al editar como cualquiera que abre el memorial, y pedirla aparte
+     * seria un segundo paquete, un segundo receptor y un segundo «todavia no ha
+     * llegado» que dibujar. Son como mucho 320 letras por nicho reclamado.
+     *
      * @param foto sha1 de la foto aprobada, "" si no hay: es lo que el cliente
      *             pide por {@code PedirFoto} para pintar el holograma
      */
-    public record MemorialNicho(String titulo, long honores, String foto) {
+    public record MemorialNicho(String titulo, long honores, String foto,
+                                String descripcion) {
         public static final PacketCodec<RegistryByteBuf, MemorialNicho> CODEC =
                 PacketCodec.tuple(
                         CADENA, MemorialNicho::titulo,
                         PacketCodecs.VAR_LONG, MemorialNicho::honores,
                         CADENA, MemorialNicho::foto,
+                        CADENA, MemorialNicho::descripcion,
                         MemorialNicho::new);
     }
 
@@ -2237,8 +2285,15 @@ public class Red implements ModInitializer {
      *                  «todos los nichos estan libres» y «el santuario aun no
      *                  esta construido» se dibujan igual y significan cosas
      *                  opuestas (la leccion de {@code hayMod} en protecciones)
+     * @param precioPlata, precioLuna lo que cuesta alquilar y comprar. ⚠ VAN EN
+     *                  EL PAQUETE como en la tienda: el precio lo dice el
+     *                  SERVIDOR (sus constantes), el cliente solo lo dibuja --
+     *                  si estuviera escrito tambien en el cliente, habria dos
+     *                  sitios que pueden dejar de estar de acuerdo y un boton
+     *                  que enseña un precio que no es el que cobra
      */
-    public record EstadoSantuario(List<NichoSantuario> nichos, boolean hayNichos)
+    public record EstadoSantuario(List<NichoSantuario> nichos, boolean hayNichos,
+                                  long precioPlata, long precioLuna)
             implements CustomPayload {
         public static final Id<EstadoSantuario> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_santuario"));
@@ -2247,6 +2302,8 @@ public class Red implements ModInitializer {
                         NichoSantuario.CODEC.collect(PacketCodecs.toList()),
                         EstadoSantuario::nichos,
                         PacketCodecs.BOOL, EstadoSantuario::hayNichos,
+                        PacketCodecs.VAR_LONG, EstadoSantuario::precioPlata,
+                        PacketCodecs.VAR_LONG, EstadoSantuario::precioLuna,
                         EstadoSantuario::new);
 
         @Override
@@ -2957,6 +3014,8 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(BorrarProteccion.ID, BorrarProteccion.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirSantuario.ID, PedirSantuario.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoSantuario.ID, EstadoSantuario.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirSantuario.ID, AbrirSantuario.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirMemorial.ID, AbrirMemorial.CODEC);
         PayloadTypeRegistry.playC2S().register(AlquilarNicho.ID, AlquilarNicho.CODEC);
         PayloadTypeRegistry.playC2S().register(ComprarNicho.ID, ComprarNicho.CODEC);
         PayloadTypeRegistry.playC2S().register(HonrarNicho.ID, HonrarNicho.CODEC);
@@ -5248,6 +5307,18 @@ public class Red implements ModInitializer {
      * arrancar y se valida entonces. Por eso se puede componer aqui mismo, en el
      * hilo del servidor, sin pasar por el executor.
      */
+    /** El clic en la Chansey del monumento: abre la app. */
+    public static void enviarAbrirSantuario(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        ServerPlayNetworking.send(jugador, new AbrirSantuario());
+    }
+
+    /** El clic en el proyector de un nicho ocupado: abre su memorial. */
+    public static void enviarAbrirMemorial(
+            net.minecraft.server.network.ServerPlayerEntity jugador, String nicho) {
+        ServerPlayNetworking.send(jugador, new AbrirMemorial(nicho));
+    }
+
     /**
      * Manda el estado del santuario: la lista de nichos en el orden de la
      * config, con su reclamacion y su memorial.
@@ -5267,10 +5338,12 @@ public class Red implements ModInitializer {
         var perfil = jugador.getGameProfile();
         LunaEternal.submit(() -> {
             final java.util.List<net.pokereport.luna.santuario.SantuarioService.Nicho> filas;
+            final java.util.Map<String, Integer> restantes;
             final long miId;
             try {
                 filas = LunaEternal.santuario().nichos();
                 miId = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                restantes = LunaEternal.santuario().restantes(miId);
             } catch (Exception e) {
                 LunaEternal.LOG.error("No se pudo leer el estado del santuario", e);
                 return;
@@ -5296,6 +5369,7 @@ public class Red implements ModInitializer {
                     String titulo = "";
                     long honores = 0;
                     String foto = "";
+                    String descripcion = "";
                     if (fila != null && fila.ownerId() != null && !fila.libre(ahora)) {
                         dueno = nombreDe(jugador, fila.ownerUuid());
                         permanente = fila.permanente();
@@ -5306,15 +5380,20 @@ public class Red implements ModInitializer {
                         titulo = fila.titulo();
                         honores = fila.honores();
                         foto = fila.fotoSha1() == null ? "" : fila.fotoSha1();
+                        descripcion = fila.descripcion();
                     }
+                    int quedan = restantes.getOrDefault(n.id(),
+                            net.pokereport.luna.santuario.SantuarioService.HONORES_DIA);
                     lista.add(new NichoSantuario(n.id(), n.nombre(),
                             new PosNicho(n.proyector().getX(), n.proyector().getY(),
                                     n.proyector().getZ()),
-                            new EstadoNicho(dueno, permanente, segundos, mio),
-                            new MemorialNicho(titulo, honores, foto)));
+                            new EstadoNicho(dueno, permanente, segundos, mio, quedan),
+                            new MemorialNicho(titulo, honores, foto, descripcion)));
                 }
                 ServerPlayNetworking.send(jugador, new EstadoSantuario(
-                        List.copyOf(lista), catalogo.hay()));
+                        List.copyOf(lista), catalogo.hay(),
+                        net.pokereport.luna.santuario.SantuarioService.PRECIO_ALQUILER,
+                        net.pokereport.luna.santuario.SantuarioService.PRECIO_PERMANENTE));
             });
         });
     }

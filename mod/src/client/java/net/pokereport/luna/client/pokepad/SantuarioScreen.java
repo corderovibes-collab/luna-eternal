@@ -377,22 +377,6 @@ public class SantuarioScreen extends Screen {
             y += 20;
         }
     }
-        
-        marco(ctx, px(ax), py(ay), pl(aw), pl(ah),
-                enc ? CARD_BORDE_ENCIMA : (enc ? 0xFF8FA0C8 : 0xFF20283C), Math.max(2, pl(enc ? 4 : 2)));
-
-        if (enc) {
-            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), 0x22FFFFFF);
-        }
-
-        texto(ctx, titulo, ax + aw / 2, ay + 20, 26, TEXTO_BLANCO, true, CONTORNO_OSCURO);
-
-        int y = ay + ah - 62;
-        for (String linea : partir(desc.getString(), aw - 40, 15)) {
-            texto(ctx, Text.literal(linea), ax + aw / 2, y, 15, 0xFFDCE6F8, true, CONTORNO_OSCURO);
-            y += 20;
-        }
-    }
 
     private void arte(DrawContext ctx, Identifier tex, int x, int y, int w, int h,
                       int destW, int destH) {

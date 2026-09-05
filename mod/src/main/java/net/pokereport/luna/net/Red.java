@@ -2111,6 +2111,192 @@ public class Red implements ModInitializer {
         }
     }
 
+    // ------------------------------------------------------------ SANTUARIO
+
+    /** «Dame los nichos», al abrir la app o al tocar el NPC. */
+    public record PedirSantuario() implements CustomPayload {
+        public static final Id<PedirSantuario> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_santuario"));
+        public static final PacketCodec<RegistryByteBuf, PedirSantuario> CODEC =
+                PacketCodec.unit(new PedirSantuario());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Donde flota el holograma: el proyector del nicho. */
+    public record PosNicho(int x, int y, int z) {
+        public static final PacketCodec<RegistryByteBuf, PosNicho> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_INT, PosNicho::x,
+                        PacketCodecs.VAR_INT, PosNicho::y,
+                        PacketCodecs.VAR_INT, PosNicho::z,
+                        PosNicho::new);
+    }
+
+    /**
+     * La reclamacion, para dibujar.
+     *
+     * @param dueno      nombre del dueno, "" = libre. ⚠ Va el NOMBRE resuelto
+     *                   por el servidor (userCache), no el uuid: el cliente no
+     *                   tiene con que resolverlo, y un uuid a medio recortar no
+     *                   se lee
+     * @param permanente si es suyo para siempre
+     * @param segundos   cuanto queda de alquiler, YA RESTADO (como EstadoCura):
+     *                   el reloj es del servidor y el cliente solo lo cuenta
+     *                   hacia atras. 0 = libre o permanente
+     * @param mio        si el nicho es del jugador que recibe el paquete: es lo
+     *                   que enciende los botones de editar, y LO DECIDE EL
+     *                   SERVIDOR -- que el cliente lo dedujera comparando su
+     *                   nombre con el dueno seria confiar en el cliente (P6) y
+     *                   ademas fallaria con dos jugadores del mismo nombre en
+     *                   servidores offline
+     */
+    public record EstadoNicho(String dueno, boolean permanente, long segundos,
+                              boolean mio) {
+        public static final PacketCodec<RegistryByteBuf, EstadoNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, EstadoNicho::dueno,
+                        PacketCodecs.BOOL, EstadoNicho::permanente,
+                        PacketCodecs.VAR_LONG, EstadoNicho::segundos,
+                        PacketCodecs.BOOL, EstadoNicho::mio,
+                        EstadoNicho::new);
+    }
+
+    /**
+     * El memorial, para dibujar en la lista y en el mundo.
+     *
+     * @param foto sha1 de la foto aprobada, "" si no hay: es lo que el cliente
+     *             pide por {@code PedirFoto} para pintar el holograma
+     */
+    public record MemorialNicho(String titulo, long honores, String foto) {
+        public static final PacketCodec<RegistryByteBuf, MemorialNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, MemorialNicho::titulo,
+                        PacketCodecs.VAR_LONG, MemorialNicho::honores,
+                        CADENA, MemorialNicho::foto,
+                        MemorialNicho::new);
+    }
+
+    /**
+     * Un nicho entero.
+     *
+     * <p>⚠⚠ CINCO CAMPOS AGRUPADOS, no once sueltos: {@code PacketCodec.tuple}
+     * no admite mas de seis, y la alternativa --un codec a mano-- es codigo que
+     * solo se lee cuando se rompe. Es la misma solucion que {@code EstadoGimnasio}.
+     */
+    public record NichoSantuario(String id, String nombre, PosNicho pos,
+                                 EstadoNicho estado, MemorialNicho memorial) {
+        public static final PacketCodec<RegistryByteBuf, NichoSantuario> CODEC =
+                PacketCodec.tuple(
+                        CADENA, NichoSantuario::id,
+                        CADENA, NichoSantuario::nombre,
+                        PosNicho.CODEC, NichoSantuario::pos,
+                        EstadoNicho.CODEC, NichoSantuario::estado,
+                        MemorialNicho.CODEC, NichoSantuario::memorial,
+                        NichoSantuario::new);
+    }
+
+    /**
+     * El estado del santuario entero.
+     *
+     * @param hayNichos {@code false} si la config aun no declara ninguno. ⚠ NO
+     *                  ES LO MISMO QUE UNA LISTA VACIA, y por eso viaja aparte:
+     *                  «todos los nichos estan libres» y «el santuario aun no
+     *                  esta construido» se dibujan igual y significan cosas
+     *                  opuestas (la leccion de {@code hayMod} en protecciones)
+     */
+    public record EstadoSantuario(List<NichoSantuario> nichos, boolean hayNichos)
+            implements CustomPayload {
+        public static final Id<EstadoSantuario> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_santuario"));
+        public static final PacketCodec<RegistryByteBuf, EstadoSantuario> CODEC =
+                PacketCodec.tuple(
+                        NichoSantuario.CODEC.collect(PacketCodecs.toList()),
+                        EstadoSantuario::nichos,
+                        PacketCodecs.BOOL, EstadoSantuario::hayNichos,
+                        EstadoSantuario::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Alquilame este nicho».
+     *
+     * <p>⚠ Viaja el IDENTIFICADOR y no las coordenadas, igual que en Viajes:
+     * si el cliente mandara un punto, cualquiera alquilaria lo que quisiera
+     * (P6). El precio NO viaja: lo mira el servidor en sus constantes.
+     */
+    public record AlquilarNicho(String nicho, String idem) implements CustomPayload {
+        public static final Id<AlquilarNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "alquilar_nicho"));
+        public static final PacketCodec<RegistryByteBuf, AlquilarNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, AlquilarNicho::nicho,
+                        CADENA, AlquilarNicho::idem,
+                        AlquilarNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Compralo para siempre». */
+    public record ComprarNicho(String nicho, String idem) implements CustomPayload {
+        public static final Id<ComprarNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "comprar_nicho"));
+        public static final PacketCodec<RegistryByteBuf, ComprarNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, ComprarNicho::nicho,
+                        CADENA, ComprarNicho::idem,
+                        ComprarNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Un honor para este memorial». */
+    public record HonrarNicho(String nicho, String idem) implements CustomPayload {
+        public static final Id<HonrarNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "honrar_nicho"));
+        public static final PacketCodec<RegistryByteBuf, HonrarNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, HonrarNicho::nicho,
+                        CADENA, HonrarNicho::idem,
+                        HonrarNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Asi se llama mi memorial y esto dice». */
+    public record TextosNicho(String nicho, String titulo, String descripcion)
+            implements CustomPayload {
+        public static final Id<TextosNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "textos_nicho"));
+        public static final PacketCodec<RegistryByteBuf, TextosNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, TextosNicho::nicho,
+                        CADENA, TextosNicho::titulo,
+                        CADENA, TextosNicho::descripcion,
+                        TextosNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record PedirCura() implements CustomPayload {
         public static final Id<PedirCura> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cura"));
@@ -2555,6 +2741,12 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirProtecciones.ID, PedirProtecciones.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoProtecciones.ID, EstadoProtecciones.CODEC);
         PayloadTypeRegistry.playC2S().register(BorrarProteccion.ID, BorrarProteccion.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirSantuario.ID, PedirSantuario.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoSantuario.ID, EstadoSantuario.CODEC);
+        PayloadTypeRegistry.playC2S().register(AlquilarNicho.ID, AlquilarNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(ComprarNicho.ID, ComprarNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(HonrarNicho.ID, HonrarNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(TextosNicho.ID, TextosNicho.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Ficha.ID, Ficha.CODEC);
@@ -2861,6 +3053,153 @@ public class Red implements ModInitializer {
             // ⚠⚠ Y SE REENVIA LA LISTA SIN QUE LA PIDA NADIE: acaba de cambiar
             //   algo que la pantalla dibuja. Es la leccion del 23-ago.
             enviarProtecciones(jugador);
+        });
+
+        // -------------------------------------------------------- SANTUARIO
+        //
+        // ⚠ TODO PASA POR EL EXECUTOR DE E/S: el estado vive en la base, y aqui
+        //   abajo estamos en el hilo del servidor. El servicio se llama fuera y
+        //   la respuesta vuelve con `server.execute`.
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirSantuario.ID,
+                (carga, ctx) -> enviarSantuario(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AlquilarNicho.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            // ⚠ El escalon se lee AQUI, en el hilo del servidor: la cache de
+            //   rangos es de ahi, y el servicio corre en el hilo de E/S.
+            int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
+            LunaEternal.submit(() -> {
+                final net.pokereport.luna.santuario.SantuarioService.Resultado r;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    r = LunaEternal.santuario().alquilar(carga.nicho(), id, escalon, carga.idem());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo alquilando un nicho", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (r.ok()) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.alquilado"), false);
+                        enviarSaldo(jugador);
+                        // ⚠ La reclamacion vive tambien en la cache de
+                        //   proteccion, y el mundo no espera al barrido de cada
+                        //   minuto: se refresca ya, o el nicho estaria unos
+                        //   segundos sin proteger.
+                        LunaEternal.submit(
+                                net.pokereport.luna.santuario.SantuarioProteccion::recargar);
+                    } else {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + r.motivo()), false);
+                    }
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(ComprarNicho.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
+            LunaEternal.submit(() -> {
+                final net.pokereport.luna.santuario.SantuarioService.Resultado r;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    r = LunaEternal.santuario().comprar(carga.nicho(), id, escalon, carga.idem());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo comprando un nicho", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (r.ok()) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.comprado"), false);
+                        enviarSaldo(jugador);
+                        LunaEternal.submit(
+                                net.pokereport.luna.santuario.SantuarioProteccion::recargar);
+                    } else {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + r.motivo()), false);
+                    }
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(HonrarNicho.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final net.pokereport.luna.santuario.SantuarioService.Resultado r;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    r = LunaEternal.santuario().honrar(carga.nicho(), id, carga.idem());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo honrando un nicho", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (r.ok()) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.honrado"), false);
+                    } else if (!"tope_diario".equals(r.motivo())) {
+                        // ⚠ El tope diario no avisa por chat: la pantalla lo
+                        //   enseña con el boton apagado y el numero al lado.
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + r.motivo()), false);
+                    }
+                    // ⚠⚠ SE REENVIA EL ESTADO SIN QUE LO PIDA NADIE: el total de
+                    //    honores acaba de cambiar, y quien lo este mirando ve el
+                    //    numero viejo hasta reabrir. Es la leccion de los clanes
+                    //    -- el estado no es de quien lo mira.
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(TextosNicho.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final String motivo;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    motivo = LunaEternal.santuario().textos(
+                            carga.nicho(), id, carga.titulo(), carga.descripcion());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo escribiendo el memorial", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (motivo != null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + motivo), false);
+                    }
+                    enviarSantuario(jugador);
+                });
+            });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(AccionTienda.ID, (carga, ctx) -> {
@@ -4498,6 +4837,100 @@ public class Red implements ModInitializer {
      * arrancar y se valida entonces. Por eso se puede componer aqui mismo, en el
      * hilo del servidor, sin pasar por el executor.
      */
+    /**
+     * Manda el estado del santuario: la lista de nichos en el orden de la
+     * config, con su reclamacion y su memorial.
+     *
+     * <p>⚠ Las filas se leen en el hilo de E/S y el paquete se compone en el
+     * hilo del servidor: los nombres salen de la userCache, que es de ahi. La
+     * geometria sale del catalogo, no de la base -- un nicho sin fila se
+     * ensena libre, que es justo lo que es antes del primer {@code
+     * garantizarNichos}.
+     */
+    public static void enviarSantuario(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+        var server = jugador.getServer();
+        if (server == null) {
+            return;
+        }
+        var perfil = jugador.getGameProfile();
+        LunaEternal.submit(() -> {
+            final java.util.List<net.pokereport.luna.santuario.SantuarioService.Nicho> filas;
+            final long miId;
+            try {
+                filas = LunaEternal.santuario().nichos();
+                miId = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo leer el estado del santuario", e);
+                return;
+            }
+            server.execute(() -> {
+                if (jugador.isRemoved()) {
+                    return;
+                }
+                var lista = new ArrayList<NichoSantuario>();
+                long ahora = System.currentTimeMillis();
+                for (var n : catalogo.todos()) {
+                    net.pokereport.luna.santuario.SantuarioService.Nicho fila = null;
+                    for (var f : filas) {
+                        if (f.id().equals(n.id())) {
+                            fila = f;
+                            break;
+                        }
+                    }
+                    String dueno = "";
+                    boolean permanente = false;
+                    long segundos = 0;
+                    boolean mio = false;
+                    String titulo = "";
+                    long honores = 0;
+                    String foto = "";
+                    if (fila != null && fila.ownerId() != null && !fila.libre(ahora)) {
+                        dueno = nombreDe(jugador, fila.ownerUuid());
+                        permanente = fila.permanente();
+                        if (!permanente) {
+                            segundos = Math.max(0, (fila.expiraMs() - ahora) / 1000);
+                        }
+                        mio = fila.ownerId() == miId;
+                        titulo = fila.titulo();
+                        honores = fila.honores();
+                        foto = fila.fotoSha1() == null ? "" : fila.fotoSha1();
+                    }
+                    lista.add(new NichoSantuario(n.id(), n.nombre(),
+                            new PosNicho(n.proyector().getX(), n.proyector().getY(),
+                                    n.proyector().getZ()),
+                            new EstadoNicho(dueno, permanente, segundos, mio),
+                            new MemorialNicho(titulo, honores, foto)));
+                }
+                ServerPlayNetworking.send(jugador, new EstadoSantuario(
+                        List.copyOf(lista), catalogo.hay()));
+            });
+        });
+    }
+
+    /** El nombre de un uuid, o el uuid recortado si no se sabe de quien es. */
+    private static String nombreDe(
+            net.minecraft.server.network.ServerPlayerEntity jugador, String uuid) {
+        if (uuid == null) {
+            return "";
+        }
+        try {
+            var server = jugador.getServer();
+            var cache = server == null ? null : server.getUserCache();
+            if (cache != null) {
+                var perfil = cache.getByUuid(java.util.UUID.fromString(uuid));
+                if (perfil.isPresent()) {
+                    return perfil.get().getName();
+                }
+            }
+        } catch (IllegalArgumentException ignorado) {
+            // uuid roto: se enseña vacio, que es lo que hay.
+        }
+        // ⚠ Se enseña el uuid recortado y no «desconocido»: con «desconocido»
+        //   no se pueden distinguir dos, y eso es justo lo que hace falta.
+        return uuid.substring(0, Math.min(8, uuid.length()));
+    }
+
     /** Manda al jugador sus parcelas. */
     public static void enviarProtecciones(net.minecraft.server.network.ServerPlayerEntity jugador) {
         var lista = new ArrayList<Parcela>();

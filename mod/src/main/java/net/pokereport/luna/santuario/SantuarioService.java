@@ -103,8 +103,10 @@ public final class SantuarioService {
     // -------------------------------------------------------------- el estado
 
     /** Una fila de {@code santuario}, tal cual la lee la base. */
-    public record Nicho(String id, Long ownerId, boolean permanente, long expiraMs,
-                        Long fotoId, String titulo, String descripcion, long honores) {
+    public record Nicho(String id, Long ownerId, String ownerUuid,
+                        boolean permanente, long expiraMs, Long fotoId,
+                        String fotoSha1, String titulo, String descripcion,
+                        long honores) {
 
         /**
          * ¿Esta libre AHORA?
@@ -126,9 +128,13 @@ public final class SantuarioService {
         var salida = new ArrayList<Nicho>();
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement("""
-                     SELECT nicho_id, owner_id, permanente, expira_ms,
-                            foto_id, titulo, descripcion, honores
-                     FROM santuario ORDER BY nicho_id
+                     SELECT s.nicho_id, s.owner_id, p.mc_uuid, s.permanente,
+                            s.expira_ms, s.foto_id, f.sha1, s.titulo,
+                            s.descripcion, s.honores
+                     FROM santuario s
+                     LEFT JOIN player p ON p.player_id = s.owner_id
+                     LEFT JOIN santuario_foto f ON f.foto_id = s.foto_id
+                     ORDER BY s.nicho_id
                      """)) {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -144,13 +150,15 @@ public final class SantuarioService {
         if (rs.wasNull()) {
             owner = null;
         }
+        String ownerUuid = rs.getString("mc_uuid");
         Long foto = rs.getLong("foto_id");
         if (rs.wasNull()) {
             foto = null;
         }
-        return new Nicho(rs.getString("nicho_id"), owner,
+        String fotoSha1 = rs.getString("sha1");
+        return new Nicho(rs.getString("nicho_id"), owner, ownerUuid,
                 rs.getBoolean("permanente"), rs.getLong("expira_ms"),
-                foto, rs.getString("titulo"), rs.getString("descripcion"),
+                foto, fotoSha1, rs.getString("titulo"), rs.getString("descripcion"),
                 rs.getLong("honores"));
     }
 

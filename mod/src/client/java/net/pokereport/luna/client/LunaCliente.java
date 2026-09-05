@@ -185,6 +185,13 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoProtecciones.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
+        // ⚠ El estado del santuario puede llegar SIN que nadie lo pida: un
+        //   honor ajeno cambia el total que tu pantalla dibuja, y el servidor
+        //   lo reenvia. Aqui solo se guarda; la pantalla, si esta abierta, lo
+        //   relee al refrescarse.
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoSantuario.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
         ClientPlayNetworking.registerGlobalReceiver(Red.DetalleParcela.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 

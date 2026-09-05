@@ -99,6 +99,7 @@ public final class AutoTest {
             testTesoros(a);
             testEspera();
             testSantuario(a, b);
+            testNichoConfig();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -3291,6 +3292,93 @@ public final class AutoTest {
                         expira2 >= expira1 + paso - 60_000
                                 && expira2 <= expira1 + paso + 60_000);
             }
+        }
+    }
+
+    /**
+     * LA CONFIG DE NICHOS: las reglas que no pueden fallar en silencio.
+     *
+     * <p>⚠⚠ Las tres son fallos que NO DAN NINGUN ERROR al cargar:
+     * <ul>
+     *   <li>dos nichos con el mismo id comparten fila en la base, asi que
+     *       alquilar uno cobraria dos sitios y el memorial saldria en el de al
+     *       lado;</li>
+     *   <li>dos nichos solapados protegen el bloque compartido con dos dueños
+     *       que se contradicen;</li>
+     *   <li>un proyector fuera de su caja deja un 3x3 protegido que no es el
+     *       construido, y un memorial que se abre desde un bloque que no es el
+     *       que se ve.</li>
+     * </ul>
+     *
+     * <p>⚠ Y la cuarta: cada nicho de la config TIENE su fila en la base
+     * (la crea {@code garantizarNichos} al arrancar). Sin la fila, el nicho
+     * se dibuja y se puede tocar, pero alquilarlo contesta «no existe» -- un
+     * hueco que solo se descubre al primer jugador que llega con la Plata.
+     */
+    private void testNichoConfig() throws Exception {
+        var n1 = new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                "a", "A", new net.minecraft.util.math.BlockPos(0, 0, 0),
+                new net.minecraft.util.math.BlockPos(3, 3, 3),
+                new net.minecraft.util.math.BlockPos(1, 1, 1));
+        boolean idRepetido = falla(() -> net.pokereport.luna.santuario.NichoCatalogo
+                .validar(java.util.List.of(n1, new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                        "a", "B", new net.minecraft.util.math.BlockPos(10, 0, 0),
+                        new net.minecraft.util.math.BlockPos(13, 3, 3),
+                        new net.minecraft.util.math.BlockPos(11, 1, 1)))));
+        check("santuario: la config rechaza dos nichos con el mismo id",
+                idRepetido);
+        boolean solapados = falla(() -> net.pokereport.luna.santuario.NichoCatalogo
+                .validar(java.util.List.of(n1, new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                        "b", "B", new net.minecraft.util.math.BlockPos(2, 0, 2),
+                        new net.minecraft.util.math.BlockPos(5, 3, 5),
+                        new net.minecraft.util.math.BlockPos(3, 1, 3)))));
+        check("santuario: la config rechaza nichos solapados", solapados);
+        boolean proyectorFuera = falla(() -> net.pokereport.luna.santuario.NichoCatalogo
+                .validar(java.util.List.of(new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                        "c", "C", new net.minecraft.util.math.BlockPos(0, 0, 0),
+                        new net.minecraft.util.math.BlockPos(3, 3, 3),
+                        new net.minecraft.util.math.BlockPos(9, 9, 9)))));
+        check("santuario: la config rechaza un proyector fuera de su caja",
+                proyectorFuera);
+        boolean idRaro = falla(() -> net.pokereport.luna.santuario.NichoCatalogo
+                .validar(java.util.List.of(new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                        "MAL ID", "C", new net.minecraft.util.math.BlockPos(0, 0, 0),
+                        new net.minecraft.util.math.BlockPos(3, 3, 3),
+                        new net.minecraft.util.math.BlockPos(1, 1, 1)))));
+        check("santuario: la config rechaza un id que no es limpio", idRaro);
+
+        // ⚠ La geometria del servidor real: si declara nichos, cada uno tiene
+        //   que tener su fila -- si no, el nicho existe en el mundo y no en la
+        //   base, y alquilarlo falla para todos sin que nadie se entere.
+        var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+        if (catalogo.hay()) {
+            java.util.Set<String> filas = new java.util.HashSet<>();
+            try (Connection c = db.connection();
+                 PreparedStatement ps = c.prepareStatement(
+                         "SELECT nicho_id FROM santuario")) {
+                try (var rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        filas.add(rs.getString(1));
+                    }
+                }
+            }
+            boolean todas = true;
+            for (var n : catalogo.todos()) {
+                if (!filas.contains(n.id())) {
+                    todas = false;
+                }
+            }
+            check("santuario: cada nicho de la config tiene su fila", todas);
+        }
+    }
+
+    /** ¿Lanza {@code t}? El catalogo debe reventar con lo que no puede ser. */
+    private static boolean falla(Runnable t) {
+        try {
+            t.run();
+            return false;
+        } catch (IllegalStateException esperada) {
+            return true;
         }
     }
 

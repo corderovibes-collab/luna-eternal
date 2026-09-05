@@ -45,6 +45,7 @@ public final class EstadoCliente {
     private static Red.EstadoViajes viajes;
     private static Red.EstadoGimnasio gimnasio;
     private static Red.EstadoTrajes trajes;
+    private static Red.EstadoSantuario santuario;
 
     private EstadoCliente() {}
 
@@ -269,6 +270,22 @@ public final class EstadoCliente {
         return cosmeticos;
     }
 
+    public static void guardar(Red.EstadoSantuario nuevo) {
+        santuario = nuevo;
+    }
+
+    /**
+     * Los nichos del santuario. {@code null} hasta que contesta el servidor.
+     *
+     * <p>⚠ Que sea {@code null} y que {@code hayNichos()} sea {@code false} son
+     * cosas DISTINTAS: lo primero es «todavía no lo sé», lo segundo es «el
+     * santuario aun no esta construido». Confundirlas dejaria la pantalla en
+     * blanco durante el medio segundo que tarda la respuesta.
+     */
+    public static Red.EstadoSantuario santuario() {
+        return santuario;
+    }
+
     /** Al salir del mundo se olvida: el saldo es de esa partida, no del cliente. */
     public static void olvidar() {
         tesoros = null;
@@ -286,6 +303,7 @@ public final class EstadoCliente {
         gts = null;
         saldo = null;
         ficha = null;
+        santuario = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo
         // entre partidas enseñaria en el servidor B lo que se compro en el A.
         cosmeticos = null;

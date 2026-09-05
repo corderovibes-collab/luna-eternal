@@ -74,6 +74,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.world.Regreso regresos;
     private static net.pokereport.luna.gym.MedallaService medallas;
     private static net.pokereport.luna.cosmetics.CosmeticsService cosmetics;
+    private static net.pokereport.luna.santuario.SantuarioService santuario;
     private static ExecutorService io;
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
     private static String builderKey = "";
@@ -89,6 +90,11 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.world.Decorativos.protegerlos();
         net.pokereport.luna.world.Decorativos.fueraDeLaPokedex();
         net.pokereport.luna.world.Decorativos.abrirViajesAlTocar();
+        // ⚠ Se registra AQUI y no en SERVER_STARTED por lo mismo que los tres
+        //   de arriba: los eventos se suscriben una sola vez, y los nichos
+        //   (geometria y reclamaciones) los lee el manejador cuando llega el
+        //   clic, no al registrarse.
+        net.pokereport.luna.santuario.SantuarioProteccion.registrar();
         // ⚠⚠⚠ TODO LO DE GIMNASIOS VA DETRAS DE ESTA GUARDA, Y NO ES PARANOIA.
         //    El paquete `gym` toca clases de rctmod --TrainerMob, RCTMod-- que
         //    son `modCompileOnly`: existen al compilar y puede que no al
@@ -179,6 +185,28 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                     }
                 } catch (Exception e) {
                     LOG.error("No se pudieron caducar las ordenes del mercado", e);
+                }
+            });
+
+            // ⚠⚠ EL SANTUARIO SE ABRE AL ARRANCAR, y son TRES cosas: crear la
+            //    fila de cada nicho de la config, liberar los alquileres que
+            //    vencieron con el servidor apagado, y cargar la cache de
+            //    proteccion. Sin la segunda, un nicho alquilado ayer seguiria
+            //    "ocupado" aunque su hora ya paso -- el barrido periodico lo
+            //    arreglaria al minuto, pero una pantalla que miente un minuto
+            //    tambien miente.
+            var nichos = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+            submit(() -> {
+                try {
+                    santuario.garantizarNichos(
+                            nichos.todos().stream().map(n -> n.id()).toList());
+                    int n = santuario.caducar();
+                    if (n > 0) {
+                        LOG.info("Santuario: {} alquileres vencidos liberados", n);
+                    }
+                    net.pokereport.luna.santuario.SantuarioProteccion.recargar();
+                } catch (Exception e) {
+                    LOG.error("No se pudo abrir el santuario", e);
                 }
             });
         });
@@ -350,6 +378,25 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // recalcularlo aquí evita tener que engancharlo a cada evento.
             Tablist.updateHeaderFooter(server);
 
+            // ⚠ EL SANTUARIO SE BARRE CADA MINUTO: liberar alquileres vencidos
+            //   y refrescar la cache de proteccion. Un nicho cuyo alquiler
+            //   caduco es libre para comprar YA, no cuando el barrido pase (la
+            //   compra lo comprueba), pero el mundo --quien puede romper ahi--
+            //   se entera por esta via.
+            if (server.getTicks() % 1_200 == 0) {
+                submit(() -> {
+                    try {
+                        int n = santuario.caducar();
+                        if (n > 0) {
+                            LOG.info("Santuario: {} alquileres vencidos liberados", n);
+                        }
+                        net.pokereport.luna.santuario.SantuarioProteccion.recargar();
+                    } catch (Exception e) {
+                        LOG.error("No se pudo barrer el santuario", e);
+                    }
+                });
+            }
+
             // Informe economico al log cada hora. Sin historial no se puede
             // ver una tendencia, y una tendencia es lo unico que permite
             // corregir antes de que el problema sea visible.
@@ -398,6 +445,13 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             crates = new net.pokereport.luna.crate.CrateService(database);
             net.pokereport.luna.crate.Actividad.arrancar(database);
             cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
+            santuario = new net.pokereport.luna.santuario.SantuarioService(database);
+            // ⚠ La config de nichos se lee al arrancar y REVIENTA el arranque
+            //   si esta mal escrita: una coordenada mal puesta protege una zona
+            //   que no es la construida, y eso no da error -- da un hueco que
+            //   alguien descubre rompiendo el memorial de otro.
+            net.pokereport.luna.santuario.SantuarioProteccion.catalogo(
+                    net.pokereport.luna.santuario.NichoCatalogo.load());
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);
@@ -479,6 +533,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         return regresos;
     }
     public static net.pokereport.luna.cosmetics.CosmeticsService cosmetics() { return cosmetics; }
+    public static net.pokereport.luna.santuario.SantuarioService santuario() { return santuario; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }
     public static net.pokereport.luna.kit.KitCatalog kits() { return kits; }

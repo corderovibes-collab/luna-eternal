@@ -98,6 +98,7 @@ public final class AutoTest {
             testGimnasios();
             testTesoros(a);
             testEspera();
+            testSantuario(a, b);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -3060,6 +3061,239 @@ public final class AutoTest {
         }
     }
 
+    /**
+     * SANTUARIO: reclamar, honrar y caducar.
+     *
+     * <p>⚠⚠ El dinero del alquiler y de la compra son dos monedas distintas
+     * (Plata y LunaCoins), y el tope de nichos depende del rango: son las tres
+     * reglas del usuario, y las tres son <b>lo que NO se puede hacer</b> -- una
+     * regla de permiso no falla ruidosamente, falla dejando que alguien pague
+     * con la moneda equivocada o reclame un segundo nicho sin rango (P6).
+     *
+     * <p>⚠⚠ Y LA SUMA HONORES == CLICS. Mientras un nicho esta reclamado, cada
+     * clic de honor es una fila y el total es una columna: si dejaran de estar
+     * de acuerdo, el contador publico mentiria SIN NINGUN ERROR. Es el unico
+     * invariante de aqui que caza un honor fantasma o un honor comido.
+     */
+    private void testSantuario(long a, long b) throws Exception {
+        var svc = new net.pokereport.luna.santuario.SantuarioService(db);
+        var N1 = "__autotest_n1";
+        var N2 = "__autotest_n2";
+        long precio = net.pokereport.luna.santuario.SantuarioService.PRECIO_ALQUILER;
+        long permanente = net.pokereport.luna.santuario.SantuarioService.PRECIO_PERMANENTE;
+        int tope = net.pokereport.luna.santuario.SantuarioService.HONORES_DIA;
+        var CAMPEON = net.pokereport.luna.ui.Tablist.Rank.CAMPEON.escalon;
+        var ENTRENADOR = net.pokereport.luna.ui.Tablist.Rank.ENTRENADOR.escalon;
+
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "INSERT IGNORE INTO santuario (nicho_id) VALUES (?), (?)")) {
+            ps.setString(1, N1);
+            ps.setString(2, N2);
+            ps.executeUpdate();
+        }
+
+        economy.credit(a, Currency.POKEDOLLAR, 100_000, "autotest", key());
+        economy.credit(b, Currency.POKEDOLLAR, 100_000, "autotest", key());
+        economy.credit(b, Currency.REPORTCOIN, 2_000, "autotest", key());
+
+        // --- reclamar, y lo que NO se puede
+        check("santuario: un nicho que no existe se rechaza",
+                !svc.alquilar("__no_existe", a, ENTRENADOR, key()).ok());
+        check("santuario: un id de nicho raro se rechaza",
+                !svc.alquilar("MAL ID!", a, ENTRENADOR, key()).ok());
+
+        long antes = economy.balance(a, Currency.POKEDOLLAR);
+        check("santuario: alquilar un nicho libre va bien",
+                svc.alquilar(N1, a, ENTRENADOR, key()).ok());
+        check("santuario: el alquiler cobra exactamente su precio",
+                economy.balance(a, Currency.POKEDOLLAR) == antes - precio);
+        check("santuario: el segundo no puede reclamar lo ajeno",
+                !svc.alquilar(N1, b, ENTRENADOR, key()).ok());
+        check("santuario: sin rango, un segundo nicho se rechaza",
+                !svc.alquilar(N2, a, ENTRENADOR, key()).ok());
+        check("santuario: con CAMPEON, el segundo nicho entra",
+                svc.alquilar(N2, a, CAMPEON, key()).ok());
+
+        // ⚠⚠ El vencimiento tiene que caer a 24 h con margen de reloj, no
+        //    «algun dia». Un expira mal escrito convierte el alquiler en
+        //    permanente o en instantaneo, y eso no daria ningun error.
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT expira_ms, permanente FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                long expira = rs.getLong("expira_ms");
+                long esperado = System.currentTimeMillis()
+                        + net.pokereport.luna.santuario.SantuarioService.ALQUILER_MS;
+                check("santuario: el alquiler expira a 24 h (con margen de reloj)",
+                        Math.abs(expira - esperado) < 5 * 60_000
+                                && !rs.getBoolean("permanente"));
+            }
+        }
+
+        // --- los textos del memorial: solo el dueno, y sin trucos
+        check("santuario: el ajeno no escribe el memorial",
+                "no_es_tuyo".equals(svc.textos(N1, b, "Titulo", "Texto")));
+        check("santuario: un titulo con codigo de color se rechaza",
+                "titulo_invalido".equals(svc.textos(N1, a, "\u00a7cHola", "Texto")));
+        check("santuario: un titulo vacio se rechaza",
+                "titulo_invalido".equals(svc.textos(N1, a, "   ", "Texto")));
+        check("santuario: un titulo de 33 letras se rechaza",
+                "titulo_invalido".equals(svc.textos(N1, a, "x".repeat(33), "Texto")));
+        check("santuario: una descripcion de 321 letras se rechaza",
+                "descripcion_invalida".equals(svc.textos(N1, a, "Titulo", "x".repeat(321))));
+        check("santuario: el dueno escribe su memorial",
+                svc.textos(N1, a, "En memoria de Luna", "Siempre contigo") == null);
+
+        // --- honrar: el dueño no, el tope si, y la idempotencia si
+        check("santuario: uno no se honra a si mismo",
+                !svc.honrar(N1, a, key()).ok());
+        check("santuario: no se honra un nicho que no existe",
+                !svc.honrar("__no_existe", b, key()).ok());
+
+        var primero = svc.honrar(N1, b, key());
+        check("santuario: honrar un memorial va bien",
+                primero.ok() && primero.honores() == 1
+                        && primero.restantes() == tope - 1);
+
+        // ⚠ El MISMO idem reenviado no suma: es el paquete que se repite
+        //   porque la respuesta se perdio (P6, y la leccion de crate_open).
+        String idemDuplicado = "santuario_test_" + UUID.randomUUID();
+        var uno = svc.honrar(N1, b, idemDuplicado);
+        var dos = svc.honrar(N1, b, idemDuplicado);
+        check("santuario: un clic reenviado devuelve el estado y no suma",
+                uno.ok() && dos.ok() && dos.honores() == uno.honores()
+                        && dos.honores() == 2);
+
+        for (int i = 0; i < tope - 2; i++) {
+            svc.honrar(N1, b, key());
+        }
+        var harto = svc.honrar(N1, b, key());
+        check("santuario: el tope diario de honores corta",
+                !harto.ok() && "tope_diario".equals(harto.motivo()));
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT honores FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                // ⚠ Solo el jugador b ha podido honrar (el dueño se rechaza y
+                //   el duplicado no suma), asi que el total no puede pasar del
+                //   presupuesto diario de una sola persona.
+                check("santuario: el total no pasa del presupuesto gastado",
+                        rs.getLong(1) == tope);
+            }
+        }
+
+        // ⚠⚠ EL TOTAL ES LA SUMA DE LOS CLICS, ni mas ni menos. Mientras el
+        //    nicho esta reclamado cada honor es una fila: si la columna y la
+        //    tabla dejaran de estar de acuerdo, el contador publico mentiria.
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT (SELECT honores FROM santuario WHERE nicho_id = ?) "
+                             + "- (SELECT COUNT(*) FROM santuario_honor_click "
+                             + "WHERE nicho_id = ?)")) {
+            ps.setString(1, N1);
+            ps.setString(2, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                check("santuario: honores == clics mientras esta reclamado",
+                        rs.getLong(1) == 0);
+            }
+        }
+
+        // --- caducar: se libera de verdad, y el memorial muere con el
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "UPDATE santuario SET expira_ms = 1 WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            ps.executeUpdate();
+        }
+        check("santuario: el barrido libera el alquiler vencido",
+                svc.caducar() >= 1);
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT owner_id, honores, titulo FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                check("santuario: el nicho liberado queda sin dueno y sin memorial",
+                        rs.getLong("owner_id") == 0 && rs.wasNull()
+                                && rs.getLong("honores") == 0
+                                && rs.getString("titulo").isEmpty());
+            }
+        }
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT COUNT(*) FROM santuario_honor_click WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                check("santuario: los honores del memorial mueren con el",
+                        rs.getLong(1) == 0);
+            }
+        }
+        check("santuario: un nicho liberado no se puede honrar",
+                !svc.honrar(N1, b, key()).ok());
+
+        // --- la compra permanente: LunaCoins, no Plata
+        long lunaAntes = economy.balance(b, Currency.REPORTCOIN);
+        check("santuario: comprar un nicho libre va bien",
+                svc.comprar(N1, b, ENTRENADOR, key()).ok());
+        check("santuario: la compra cobra LunaCoins, no Plata",
+                economy.balance(b, Currency.REPORTCOIN) == lunaAntes - permanente);
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT permanente, expira_ms FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                check("santuario: lo permanente no expira nunca",
+                        rs.getBoolean("permanente") && rs.getLong("expira_ms") == 0
+                                && rs.wasNull());
+            }
+        }
+        check("santuario: lo comprado no se puede volver a comprar",
+                !svc.comprar(N1, b, ENTRENADOR, key()).ok());
+        check("santuario: lo comprado no se puede alquilar",
+                !svc.alquilar(N1, b, ENTRENADOR, key()).ok());
+        check("santuario: el dueno no pierde su nicho por otro intento ajeno",
+                !svc.comprar(N1, a, ENTRENADOR, key()).ok());
+        check("santuario: sin rango, un segundo nicho permanente se rechaza",
+                !svc.comprar(N2, b, ENTRENADOR, key()).ok());
+        check("santuario: honrar un memorial permanente va bien",
+                svc.honrar(N1, a, key()).ok());
+
+        // --- la renovacion: suma 24 h al final, no al clic
+        long expira1;
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT expira_ms FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N2);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                expira1 = rs.getLong("expira_ms");
+            }
+        }
+        check("santuario: renovar el alquiler propio va bien",
+                svc.alquilar(N2, a, CAMPEON, key()).ok());
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT expira_ms FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N2);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                long expira2 = rs.getLong("expira_ms");
+                long paso = net.pokereport.luna.santuario.SantuarioService.ALQUILER_MS;
+                check("santuario: la renovacion suma 24 h al final, no al clic",
+                        expira2 >= expira1 + paso - 60_000
+                                && expira2 <= expira1 + paso + 60_000);
+            }
+        }
+    }
+
     // ------------------------------------------------------------ auxiliares
 
     private static String key() {
@@ -3123,6 +3357,16 @@ public final class AutoTest {
                         + "ON p.player_id = g.seller_id WHERE p.mc_uuid = ?",
                     "DELETE pp FROM player_path pp JOIN player p "
                         + "ON p.player_id = pp.player_id WHERE p.mc_uuid = ?",
+                    "DELETE sfc FROM santuario_foto sfc JOIN player p "
+                        + "ON p.player_id = sfc.owner_id WHERE p.mc_uuid = ?",
+                    "DELETE shc FROM santuario_honor_click shc JOIN player p "
+                        + "ON p.player_id = shc.player_id WHERE p.mc_uuid = ?",
+                    "DELETE sh FROM santuario_honor sh JOIN player p "
+                        + "ON p.player_id = sh.player_id WHERE p.mc_uuid = ?",
+                    "DELETE FROM santuario WHERE nicho_id IN "
+                        + "('__autotest_n1','__autotest_n2')",
+                    "DELETE s FROM santuario s JOIN player p "
+                        + "ON p.player_id = s.owner_id WHERE p.mc_uuid = ?",
                     "DELETE le FROM ledger_entry le JOIN player p "
                         + "ON p.player_id = le.player_id WHERE p.mc_uuid = ?",
                     "DELETE pe FROM player_economy pe JOIN player p "

@@ -68,7 +68,8 @@ public final class Database implements AutoCloseable {
         //    Ver el aviso de `migrate()`: hoy eso ya no puede pasar callado.
         "V028__cartas.sql",
         "V029__habilidad_cartas.sql",
-        "V030__trajes_comprados.sql"
+        "V030__trajes_comprados.sql",
+        "V031__santuario.sql"
     };
 
     private final HikariDataSource ds;

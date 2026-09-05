@@ -2269,9 +2269,13 @@ public class Red implements ModInitializer {
      *                  si estuviera escrito tambien en el cliente, habria dos
      *                  sitios que pueden dejar de estar de acuerdo y un boton
      *                  que enseña un precio que no es el que cobra
+     * @param modera    si el jugador puede moderar fotos (nivel 3+). Lo decide
+     *                  el SERVIDOR: es lo que enseña la seccion de moderacion,
+     *                  y que el cliente la dedujera de su OP local seria
+     *                  confiar en el cliente (P6)
      */
     public record EstadoSantuario(List<NichoSantuario> nichos, boolean hayNichos,
-                                  long precioPlata, long precioLuna)
+                                  long precioPlata, long precioLuna, boolean modera)
             implements CustomPayload {
         public static final Id<EstadoSantuario> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_santuario"));
@@ -2282,6 +2286,7 @@ public class Red implements ModInitializer {
                         PacketCodecs.BOOL, EstadoSantuario::hayNichos,
                         PacketCodecs.VAR_LONG, EstadoSantuario::precioPlata,
                         PacketCodecs.VAR_LONG, EstadoSantuario::precioLuna,
+                        PacketCodecs.BOOL, EstadoSantuario::modera,
                         EstadoSantuario::new);
 
         @Override
@@ -2539,6 +2544,69 @@ public class Red implements ModInitializer {
                         PacketCodecs.VAR_LONG, RespuestaHonor::total,
                         PacketCodecs.VAR_INT, RespuestaHonor::restantes,
                         RespuestaHonor::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    // --------------------------------------------- LA MODERACION DE FOTOS
+    //
+    // ⚠⚠ La aprueba un staff VIENDO la foto, no a ciegas: estos paquetes son
+    //    la seccion de moderacion de la app. El sha1 de una foto PENDIENTE
+    //    viaja SOLO hacia quien tiene permiso -- el servidor comprueba el
+    //    nivel 3 antes de contestar, y el cliente nunca conoce el sha1 de una
+    //    pendiente por otra via.
+
+    /** «Dame las fotos pendientes»: solo contesta si quien pide es staff. */
+    public record PedirPendientes() implements CustomPayload {
+        public static final Id<PedirPendientes> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_pendientes"));
+        public static final PacketCodec<RegistryByteBuf, PedirPendientes> CODEC =
+                PacketCodec.unit(new PedirPendientes());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Una foto pendiente, con el nombre del dueno ya resuelto. */
+    public record FotoPendiente(long fotoId, String sha1, String dueno) {
+        public static final PacketCodec<RegistryByteBuf, FotoPendiente> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_LONG, FotoPendiente::fotoId,
+                        CADENA, FotoPendiente::sha1,
+                        CADENA, FotoPendiente::dueno,
+                        FotoPendiente::new);
+    }
+
+    /** Las pendientes de moderar, para el staff. */
+    public record EstadoPendientes(List<FotoPendiente> fotos) implements CustomPayload {
+        public static final Id<EstadoPendientes> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_pendientes"));
+        public static final PacketCodec<RegistryByteBuf, EstadoPendientes> CODEC =
+                PacketCodec.tuple(
+                        FotoPendiente.CODEC.collect(PacketCodecs.toList()),
+                        EstadoPendientes::fotos,
+                        EstadoPendientes::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Aprueba o rechaza esta foto». El servidor comprueba el nivel (P6). */
+    public record ModerarFoto(long fotoId, boolean aprobar) implements CustomPayload {
+        public static final Id<ModerarFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "moderar_foto"));
+        public static final PacketCodec<RegistryByteBuf, ModerarFoto> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_LONG, ModerarFoto::fotoId,
+                        PacketCodecs.BOOL, ModerarFoto::aprobar,
+                        ModerarFoto::new);
 
         @Override
         public Id<? extends CustomPayload> getId() {
@@ -3007,6 +3075,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PonerFoto.ID, PonerFoto.CODEC);
         PayloadTypeRegistry.playC2S().register(QuitarFoto.ID, QuitarFoto.CODEC);
         PayloadTypeRegistry.playS2C().register(RespuestaHonor.ID, RespuestaHonor.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirPendientes.ID, PedirPendientes.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoPendientes.ID, EstadoPendientes.CODEC);
+        PayloadTypeRegistry.playC2S().register(ModerarFoto.ID, ModerarFoto.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Ficha.ID, Ficha.CODEC);
@@ -3545,6 +3616,40 @@ public class Red implements ModInitializer {
                                 bytes.length, i,
                                 java.util.Arrays.copyOfRange(bytes, desde, hasta)));
                     }
+                });
+            });
+        });
+
+        // -------- la moderacion: ver la foto ANTES de aprobarla
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirPendientes.ID, (carga, ctx) ->
+                enviarPendientes(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(ModerarFoto.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            LunaEternal.submit(() -> {
+                final String motivo;
+                try {
+                    motivo = carga.aprobar()
+                            ? LunaEternal.santuario().aprobar(carga.fotoId())
+                            : LunaEternal.santuario().rechazar(carga.fotoId());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo moderando una foto", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (motivo != null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + motivo), false);
+                    }
+                    // ⚠ Se reenvia la lista de pendientes SIEMPRE: la foto
+                    //   acaba de salir de ella (o el intento fallo, y hay que
+                    //   volver a la verdad).
+                    enviarPendientes(jugador);
                 });
             });
         });
@@ -5273,6 +5378,49 @@ public class Red implements ModInitializer {
         ServerPlayNetworking.send(jugador, new AbrirSantuario());
     }
 
+    /**
+     * Las fotos pendientes de moderar, SOLO si quien pide es staff.
+     *
+     * <p>⚠⚠ EL NIVEL SE COMPRUEBA AQUI, en el servidor: que la pantalla
+     * esconda la seccion a los demas es dibujo, no una regla (P6). Un cliente
+     * modificado puede mandar el paquete igualmente, y se lleva una lista
+     * vacia -- nunca el sha1 de una foto sin moderar.
+     */
+    public static void enviarPendientes(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        if (!jugador.hasPermissionLevel(3)) {
+            ServerPlayNetworking.send(jugador, new EstadoPendientes(List.of()));
+            return;
+        }
+        var server = jugador.getServer();
+        if (server == null) {
+            return;
+        }
+        LunaEternal.submit(() -> {
+            final java.util.List<java.util.AbstractMap.SimpleEntry<
+                    net.pokereport.luna.santuario.SantuarioService.Foto, String>> pendientes;
+            try {
+                pendientes = LunaEternal.santuario().pendientes();
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudieron leer las fotos pendientes", e);
+                return;
+            }
+            server.execute(() -> {
+                if (jugador.isRemoved()) {
+                    return;
+                }
+                var lista = new ArrayList<FotoPendiente>();
+                for (var e : pendientes) {
+                    lista.add(new FotoPendiente(e.getKey().id(),
+                            e.getKey().sha1(),
+                            nombreDe(jugador, e.getValue())));
+                }
+                ServerPlayNetworking.send(jugador,
+                        new EstadoPendientes(List.copyOf(lista)));
+            });
+        });
+    }
+
     /** El clic en el proyector de un nicho ocupado: abre su memorial. */
     public static void enviarAbrirMemorial(
             net.minecraft.server.network.ServerPlayerEntity jugador, String nicho) {
@@ -5353,7 +5501,8 @@ public class Red implements ModInitializer {
                 ServerPlayNetworking.send(jugador, new EstadoSantuario(
                         List.copyOf(lista), catalogo.hay(),
                         net.pokereport.luna.santuario.SantuarioService.PRECIO_ALQUILER,
-                        net.pokereport.luna.santuario.SantuarioService.PRECIO_PERMANENTE));
+                        net.pokereport.luna.santuario.SantuarioService.PRECIO_PERMANENTE,
+                        jugador.hasPermissionLevel(3)));
             });
         });
     }

@@ -814,6 +814,35 @@ public final class SantuarioService {
     /** Una foto del jugador, para enseñarla en la pantalla. */
     public record Foto(long id, String estado, String sha1) {}
 
+    /**
+     * Las fotos PENDIENTES de moderar, con el uuid del dueno.
+     *
+     * <p>⚠ Solo debe llamarse para alguien con permiso de moderar (nivel 3+):
+     * aqui viaja el sha1, que es justo lo que permite pedir la imagen, y una
+     * foto PENDIENTE no es publica todavia -- es contenido sin moderar. La
+     * comprobacion de permiso la hace quien llama (el manejador del paquete);
+     * aqui solo se lee.
+     */
+    public java.util.List<java.util.AbstractMap.SimpleEntry<Foto, String>> pendientes()
+            throws SQLException {
+        var salida = new java.util.ArrayList<java.util.AbstractMap.SimpleEntry<Foto, String>>();
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT f.foto_id, f.sha1, p.mc_uuid FROM santuario_foto f "
+                             + "JOIN player p ON p.player_id = f.owner_id "
+                             + "WHERE f.estado = 'PENDIENTE' ORDER BY f.foto_id")) {
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    salida.add(new java.util.AbstractMap.SimpleEntry<>(
+                            new Foto(rs.getLong("foto_id"), "PENDIENTE",
+                                    rs.getString("sha1")),
+                            rs.getString("mc_uuid")));
+                }
+            }
+        }
+        return salida;
+    }
+
     /** Las fotos del jugador, la mas nueva primero. Corre en el hilo de E/S. */
     public List<Foto> misFotos(long playerId) throws SQLException {
         var salida = new ArrayList<Foto>();

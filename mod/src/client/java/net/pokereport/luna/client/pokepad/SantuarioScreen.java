@@ -73,6 +73,8 @@ public class SantuarioScreen extends Screen {
 
     /** El nicho abierto en la vista «mi nicho», o "" si se ve la lista. */
     private String abierta = "";
+    /** True si se ve la vista de moderacion (solo staff). */
+    private boolean moderando = false;
     private TextFieldWidget campoTitulo;
     private TextFieldWidget campoHistoria;
     /** De que nicho se rellenaron ya los campos, para no pisar lo tecleado. */
@@ -94,6 +96,9 @@ public class SantuarioScreen extends Screen {
         addSelectableChild(campoHistoria);
         ClientPlayNetworking.send(new Red.PedirSantuario());
         ClientPlayNetworking.send(new Red.PedirFotos());
+        // ⚠ Se pide SIEMPRE: el servidor devuelve lista vacia a quien no es
+        //   staff, asi que no hay que decidir aqui quien puede moderar.
+        ClientPlayNetworking.send(new Red.PedirPendientes());
     }
 
     private static String textoDe(TextFieldWidget c) {
@@ -152,15 +157,18 @@ public class SantuarioScreen extends Screen {
         if (subida != null && !subida.idem().equals(vistoSubida)) {
             vistoSubida = subida.idem();
             ClientPlayNetworking.send(new Red.PedirFotos());
+            ClientPlayNetworking.send(new Red.PedirPendientes());
         }
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
         dibujarNav(ctx, rx, ry);
-        dibujarPanel(ctx);
-        if (abierta.isEmpty()) {
+        dibujarPanel(ctx, rx, ry);
+        if (!abierta.isEmpty()) {
+            dibujarMio(ctx, rx, ry);
+        } else if (moderando) {
+            dibujarModeracion(ctx, rx, ry);
+        } else {
             dibujarFilas(ctx, rx, ry);
             dibujarPie(ctx, rx, ry);
-        } else {
-            dibujarMio(ctx, rx, ry);
         }
     }
 
@@ -172,7 +180,7 @@ public class SantuarioScreen extends Screen {
             marco(ctx, px(PANEL_X + 18) - 2, cy - pl(24) - 2, pl(60) + 4, pl(48) + 4,
                     BORDE_ENCIMA, 2);
         }
-        texto(ctx, Text.translatable(abierta.isEmpty()
+        texto(ctx, Text.translatable(abierta.isEmpty() && !moderando
                         ? "pokepad.lunaeternal.inicio"
                         : "pokepad.lunaeternal.protecciones.volver"),
                 PANEL_X + 92, cy - 14, 28, 0xFFFFFFFF, false, false);
@@ -184,7 +192,7 @@ public class SantuarioScreen extends Screen {
         }
     }
 
-    private void dibujarPanel(DrawContext ctx) {
+    private void dibujarPanel(DrawContext ctx, int rx, int ry) {
         int cx = PANEL_X + PANEL_W / 2;
         dibujarTextura(ctx, ICONO, px(cx - 62), py(PANEL_Y + NAV_ALTO + 18),
                 pl(124), pl(124), 100, 100);
@@ -216,6 +224,29 @@ public class SantuarioScreen extends Screen {
                 cx, y, 18, TEXTO_SUAVE, true, false);
         texto(ctx, Text.literal(ocupados + " / " + e.nichos().size()),
                 cx, y + 26, 40, 0xFFFFFFFF, true, false);
+
+        // ⚠ La vista de moderacion solo existe para el staff: la bandera la
+        //   manda el servidor (nivel 3) y aqui solo se dibuja el boton.
+        if (e.modera()) {
+            boton(ctx, rx, ry, PANEL_X + 40, y + 74, PANEL_W - 80, 46,
+                    Text.translatable(moderando
+                            ? "pokepad.lunaeternal.santuario.ver_lista"
+                            : "pokepad.lunaeternal.santuario.moderar"),
+                    true, moderando ? 0xFF5A668C : 0xFF7A4FB8);
+        }
+    }
+
+    /** La y (en arte) del contador «NICHOS RECLAMADOS», calculada igual que
+     *  en {@link #dibujarPanel} para que el clic del boton de moderar caiga
+     *  exactamente donde se dibuja. */
+    private int yOcupados() {
+        int y = PANEL_Y + NAV_ALTO + 202;
+        for (String linea : partir(
+                Text.translatable("pokepad.lunaeternal.santuario.explica").getString(),
+                PANEL_W - 56, 17)) {
+            y += 21;
+        }
+        return y + 56;
     }
 
     private int filaY(int n) {
@@ -453,6 +484,82 @@ public class SantuarioScreen extends Screen {
         RenderSystem.disableBlend();
     }
 
+    // ---- moderacion (solo staff) -------------------------------------------
+
+    /** ⚠ La vista la pide la bandera `modera` del servidor; aqui solo se
+     *  dibujan las fotos pendientes con sus dos botones. El clic manda
+     *  {@link Red.ModerarFoto} y el servidor responde con la lista fresca. */
+    private void dibujarModeracion(DrawContext ctx, int rx, int ry) {
+        int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
+        texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.moderacion"),
+                ax + 8, PANT_Y + MARGEN - 4, 26, TEXTO_OSCURO, false, false);
+        var pend = EstadoCliente.pendientes();
+        if (pend == null) {
+            centrado(ctx, "pokepad.lunaeternal.cargando", 24, TEXTO_SUAVE, 0);
+            return;
+        }
+        if (pend.fotos().isEmpty()) {
+            centrado(ctx, "pokepad.lunaeternal.santuario.pendientes_vacio", 22,
+                    TEXTO_SUAVE, 0);
+            return;
+        }
+        int y = PANT_Y + MARGEN + 36;
+        for (var f : pend.fotos()) {
+            if (y + 70 > PANT_Y + PANT_H - 20) {
+                break;
+            }
+            ctx.fill(px(ax), py(y), px(ax + aw), py(y + 70), FILA_FONDO);
+            marco(ctx, px(ax), py(y), pl(aw), pl(70), FILA_BORDE, Math.max(1, pl(2)));
+
+            // Miniatura: se pide la textura si aun no ha llegado.
+            var foto = net.pokereport.luna.client.TexturasFoto.lista(f.sha1());
+            if (foto == null) {
+                net.pokereport.luna.client.TexturasFoto.pedir(f.sha1());
+                ctx.fill(px(ax + 10), py(y + 6), px(ax + 94), py(y + 64), FILA_BORDE);
+                texto(ctx, Text.translatable("pokepad.lunaeternal.cargando"),
+                        ax + 52, y + 28, 13, TEXTO_SUAVE, true, false);
+            } else {
+                dibujarFoto(ctx, new TexturasFotoActual(foto, f.sha1()),
+                        ax + 10, y + 6, 84, 58);
+            }
+            texto(ctx, Text.literal("#" + f.fotoId() + " · " + f.dueno()),
+                    ax + 112, y + 14, 20, TEXTO_OSCURO, false, false);
+            boton(ctx, rx, ry, ax + aw - 330, y + 16, 158, 40,
+                    Text.translatable("pokepad.lunaeternal.santuario.aprobar"),
+                    true, VERDE);
+            boton(ctx, rx, ry, ax + aw - 164, y + 16, 158, 40,
+                    Text.translatable("pokepad.lunaeternal.santuario.rechazar"),
+                    true, 0xFFB04A5A);
+            y += 80;
+        }
+    }
+
+    private boolean clicModeracion(int rx, int ry) {
+        var pend = EstadoCliente.pendientes();
+        if (pend == null) {
+            return false;
+        }
+        int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
+        int y = PANT_Y + MARGEN + 36;
+        for (var f : pend.fotos()) {
+            if (y + 70 > PANT_Y + PANT_H - 20) {
+                break;
+            }
+            if (dentro(rx, ry, px(ax + aw - 330), py(y + 16), pl(158), pl(40))) {
+                sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.1f);
+                ClientPlayNetworking.send(new Red.ModerarFoto(f.fotoId(), true));
+                return true;
+            }
+            if (dentro(rx, ry, px(ax + aw - 164), py(y + 16), pl(158), pl(40))) {
+                sonar(SoundEvents.UI_BUTTON_CLICK.value(), 0.9f);
+                ClientPlayNetworking.send(new Red.ModerarFoto(f.fotoId(), false));
+                return true;
+            }
+            y += 80;
+        }
+        return false;
+    }
+
     // ---- interaccion -------------------------------------------------------
 
     @Override
@@ -464,7 +571,9 @@ public class SantuarioScreen extends Screen {
         int cy = py(PANEL_Y + NAV_ALTO / 2);
         if (dentro(rx, ry, px(PANEL_X + 18), cy - pl(24), pl(60), pl(48))) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
-            if (!abierta.isEmpty()) {
+            if (moderando) {
+                moderando = false;
+            } else if (!abierta.isEmpty()) {
                 abierta = "";
                 rellenado = "";
                 setFocused(null);
@@ -478,8 +587,25 @@ public class SantuarioScreen extends Screen {
             close();
             return true;
         }
+        var e = EstadoCliente.santuario();
+        if (e != null && e.modera()
+                && dentro(rx, ry, px(PANEL_X + 40), py(yOcupados() + 74),
+                        pl(PANEL_W - 80), pl(46))) {
+            sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
+            moderando = !moderando;
+            abierta = "";
+            rellenado = "";
+            setFocused(null);
+            if (moderando) {
+                ClientPlayNetworking.send(new Red.PedirPendientes());
+            }
+            return true;
+        }
         if (!abierta.isEmpty()) {
             return clicMio(rx, ry, mx, my, boton) || super.mouseClicked(mx, my, boton);
+        }
+        if (moderando) {
+            return clicModeracion(rx, ry);
         }
         return clicLista(rx, ry) || super.mouseClicked(mx, my, boton);
     }

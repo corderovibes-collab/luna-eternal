@@ -265,6 +265,9 @@ public class LunaCliente implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoFotos.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoPendientes.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
         // La respuesta a un honor: la pantalla del memorial la espera para
         //   sonar la campanilla SOLO si el servidor dice que cuenta.
         ClientPlayNetworking.registerGlobalReceiver(Red.RespuestaHonor.ID,

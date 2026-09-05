@@ -42,6 +42,9 @@ public final class SantuarioNpc {
             if (!entidad.getCommandTags().contains(MARCA)) {
                 return ActionResult.PASS;
             }
+            if (jugador.isCreative() && jugador.isSneaking()) {
+                return ActionResult.PASS;
+            }
             if (mano != Hand.MAIN_HAND) {
                 return ActionResult.SUCCESS;
             }

@@ -110,6 +110,10 @@ public final class EnfermeraService {
             if (!entidad.getCommandTags().contains(MARCA) || !(entidad instanceof MobEntity)) {
                 return ActionResult.PASS;
             }
+            // Permitir a los administradores editar el NPC si se agachan (para usar la varita)
+            if (jugador.isCreative() && jugador.isSneaking()) {
+                return ActionResult.PASS;
+            }
             if (mano != Hand.MAIN_HAND) {
                 return ActionResult.SUCCESS;
             }

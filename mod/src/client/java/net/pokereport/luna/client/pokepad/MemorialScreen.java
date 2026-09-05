@@ -42,6 +42,8 @@ public class MemorialScreen extends Screen {
             Identifier.of("lunaeternal", "textures/gui/pokepad/boton_cerrar.png");
     private static final Identifier ICONO =
             Identifier.of("lunaeternal", "textures/gui/pokepad/santuario.png");
+    private static final Identifier LUZ =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/memorial_luz.png");
 
     private static final int NAT_ANCHO = 1380, NAT_ALTO = 828;
     private static final int PANEL_X = 63, PANEL_Y = 70, PANEL_W = 315, PANEL_H = 692;
@@ -190,6 +192,11 @@ public class MemorialScreen extends Screen {
 
         // ---- abajo: los honores y el boton
         int by = fy + fh + 26;
+        // ⚠ La luz del memorial (memorial_luz.png, 512x512) detras del
+        //   contador: es el unico adorno del arte, y va con su alfa -- regla 1
+        //   de dibujado.md a mano, como siempre.
+        dibujarTextura(ctx, LUZ, px(PANT_X + PANT_W / 2 - 150), py(by - 46),
+                pl(300), pl(220), 512, 512);
         texto(ctx, Text.literal("\u2661"), PANT_X + PANT_W / 2 - 90, by + 2, 40, ORO, true, false);
         texto(ctx, Text.literal(String.valueOf(memorial.honores())),
                 PANT_X + PANT_W / 2 - 30, by - 6, 52, TEXTO_OSCURO, true, false);

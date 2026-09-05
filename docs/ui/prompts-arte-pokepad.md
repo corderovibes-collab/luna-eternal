@@ -458,6 +458,43 @@ with two small sparkles on the upper left curve of the dome
 
 ---
 
+### 5.4-ter · SANTUARIO — el icono y la luz del memorial (2026-09-04)
+
+Igual que PROTECCIONES: la pantalla usa el chasis compartido y lo único que se
+pide es el icono, más una pieza decorativa para el contador de honores.
+
+#### `santuario.png` — 100 × 100
+
+Plantilla de §5.2, con este objeto (un nicho-memorial, no una acción):
+
+```
+a small shrine memorial seen at a gentle three-quarter angle and filling the
+frame: a flat square stone pedestal with a soft cyan glowing orb of light
+floating just above its center, gentle wisps of pale blue light rising from
+the orb, a tiny red and white creature-catching ball resting at the base as
+an offering, and one small lit candle on each side with warm soft flames.
+Same style, outline weight, lighting and ground shadow as the previous icon.
+Plain solid black background. No text, no letters, no numbers, no watermark.
+```
+
+> ⚠ **El icono nombra un sitio, no una acción**: es *el lugar del homenaje*, no
+> *honrar*. La silueta (orbe sobre pedestal) no se parece a ninguna de las
+> otras dieciocho.
+
+#### `memorial_luz.png` — 512 × 512 (la pieza del contador de honores)
+
+```
+Same style as the previous image. A single gentle glowing orb of soft
+cyan-blue light floating over a low round stone bowl filled with small
+glowing motes, delicate wisps of light curling upward, a thin silvery
+crescent moon behind the orb's upper left, and a few tiny pale sparkles.
+Serene, calm, reverent. Plain solid black background. No text, no watermark.
+```
+
+> ⚠ Cuadrada y a 512: va detrás del contador ♡ en `MemorialScreen`, con su alfa.
+> El generador la conserva (no es de la rejilla): se procesa y se commitea a
+> mano, como los sobres de CARTAS.
+
 ### 5.5 · Los tres sobres de CARTAS — 512 × 512 (2026-09-02)
 
 La pantalla tiene **tres zonas** y las tres hacen lo mismo: abrir un sobre.

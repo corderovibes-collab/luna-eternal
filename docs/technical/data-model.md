@@ -256,8 +256,28 @@ purchase                            compras con dinero real, auditoría aparte
 
 ---
 
-## 4. Rendimiento
+### Santuario (V031) — la reclamación, no la geometría
 
+Las coordenadas viven en `config/lunaeternal/santuario.json`; aquí solo quién,
+hasta cuándo y qué memorial. Detalle en [santuario.md](../world/santuario.md).
+
+```sql
+santuario               nicho_id PK · owner_id (FK, NULL = libre) · permanente
+                        expira_ms (epoch) · foto_id · titulo · descripcion
+                        honores (total acumulado) · tocado_ms
+santuario_foto          foto_id PK · owner_id · sha1 · estado (PENDIENTE,
+                        APROBADA, RECHAZADA — VARCHAR, la lección de V012)
+santuario_honor         (nicho_id, player_id) PK · ventana_ms · usados
+santuario_honor_click   idem PK (idempotencia del honor) · nicho_id · player_id
+```
+
+⚠ El tope de 10 honores va con su ventana **en la misma fila** (si fueran dos
+tablas, una se resetearía y la otra no, sin ningún error). ⚠ `honores` NO se
+recalcula sumando `santuario_honor`: esa tabla se vacía al liberar el nicho, y
+el autotest comprueba `honores == COUNT(santuario_honor_click)` mientras está
+reclamado.
+
+## 4. Rendimiento
 El brief §30 lo exige. Reglas concretas:
 
 | Regla | Motivo |

@@ -631,6 +631,11 @@ public final class LunaCommand {
                     .requires(s -> s.hasPermissionLevel(4))
                     .executes(ctx -> npcSantuario(ctx.getSource()))))
 
+            .then(literal("enfermera")
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(literal("npc")
+                    .executes(ctx -> npcEnfermera(ctx.getSource()))))
+
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> autotest(ctx.getSource())))
@@ -1378,7 +1383,29 @@ public final class LunaCommand {
         return 1;
     }
 
-    /** Aprueba o rechaza una foto pendiente del santuario. */
+    private static int npcEnfermera(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        
+        var entidades = p.getServerWorld().getEntitiesByClass(net.minecraft.entity.mob.MobEntity.class, 
+                p.getBoundingBox().expand(5), e -> true);
+        
+        for (var e : entidades) {
+            String name = net.minecraft.registry.Registries.ENTITY_TYPE.getId(e.getType()).toString();
+            if (name.contains("npc") || name.contains("nurse")) {
+                e.addCommandTag("luna_enfermera");
+                p.sendMessage(Text.literal("aEnfermera Joy etiquetada. Tocarla abrira el Centro Pokemon."), false);
+                return 1;
+            }
+        }
+        p.sendMessage(Text.literal("cNo se encontro ningun NPC cerca. Spawnea la Nurse Joy de Cobblemon y luego usa este comando al lado de ella."), false);
+        return 0;
+    }
+
+/** Aprueba o rechaza una foto pendiente del santuario. */
     private static int fotoSantuario(ServerCommandSource src, long fotoId, boolean aprobar) {
         ServerPlayerEntity p = src.getPlayer();
         if (p == null) {

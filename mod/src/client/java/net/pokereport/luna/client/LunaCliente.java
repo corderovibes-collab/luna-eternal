@@ -243,6 +243,14 @@ public class LunaCliente implements ClientModInitializer {
                     }
                 });
 
+        ClientPlayNetworking.registerGlobalReceiver(Red.AbrirCentroPokemon.ID,
+                (carga, ctx) -> {
+                    var cliente = ctx.client();
+                    if (cliente.currentScreen == null) {
+                        cliente.setScreen(new net.pokereport.luna.client.heal.CentroPokemonScreen(null));
+                    }
+                });
+
         // ⚠⚠ EL CLIC EN EL PROYECTOR: el servidor dice que memorial abrir. El
         //    estado quiza no ha llegado nunca -- se pide, y el receptor de
         //    arriba abre cuando este listo (la leccion del inicial: una

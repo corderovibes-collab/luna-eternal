@@ -2154,6 +2154,30 @@ public class Red implements ModInitializer {
         }
     }
 
+    public record AbrirCentroPokemon() implements CustomPayload {
+        public static final Id<AbrirCentroPokemon> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_centro"));
+        public static final PacketCodec<RegistryByteBuf, AbrirCentroPokemon> CODEC =
+                PacketCodec.unit(new AbrirCentroPokemon());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record ConfirmarCuraCentro() implements CustomPayload {
+        public static final Id<ConfirmarCuraCentro> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "curar_centro"));
+        public static final PacketCodec<RegistryByteBuf, ConfirmarCuraCentro> CODEC =
+                PacketCodec.unit(new ConfirmarCuraCentro());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /**
      * «Abre el memorial de este nicho»: lo manda el servidor cuando alguien
      * toca el proyector de un nicho ocupado. El cliente abre la pantalla con
@@ -3075,6 +3099,8 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirSantuario.ID, PedirSantuario.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoSantuario.ID, EstadoSantuario.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirSantuario.ID, AbrirSantuario.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirCentroPokemon.ID, AbrirCentroPokemon.CODEC);
+        PayloadTypeRegistry.playC2S().register(ConfirmarCuraCentro.ID, ConfirmarCuraCentro.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirMemorial.ID, AbrirMemorial.CODEC);
         PayloadTypeRegistry.playC2S().register(AlquilarNicho.ID, AlquilarNicho.CODEC);
         PayloadTypeRegistry.playC2S().register(ComprarNicho.ID, ComprarNicho.CODEC);
@@ -3409,6 +3435,12 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSantuario.ID,
                 (carga, ctx) -> enviarSantuario(ctx.player()));
+                
+        ServerPlayNetworking.registerGlobalReceiver(ConfirmarCuraCentro.ID, (carga, ctx) -> {
+            ctx.player().getServer().execute(() -> {
+                net.pokereport.luna.heal.EnfermeraService.confirmar(ctx.player());
+            });
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(AlquilarNicho.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -5413,6 +5445,11 @@ public class Red implements ModInitializer {
     public static void enviarAbrirSantuario(
             net.minecraft.server.network.ServerPlayerEntity jugador) {
         ServerPlayNetworking.send(jugador, new AbrirSantuario());
+    }
+
+    public static void enviarAbrirCentroPokemon(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        ServerPlayNetworking.send(jugador, new AbrirCentroPokemon());
     }
 
     /**

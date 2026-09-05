@@ -351,14 +351,32 @@ public class SantuarioScreen extends Screen {
                                   Identifier arteId, int colorAcento,
                                   Text titulo, Text desc) {
         boolean enc = dentro(rx, ry, px(ax), py(ay), pl(aw), pl(ah));
+        int imgH = 150;
 
         if (hayArte(arteId)) {
-            arte(ctx, arteId, px(ax), py(ay), pl(aw), pl(ah), aw, ah);
-            velo(ctx, ax, ay, aw, 74, true);
-            velo(ctx, ax, ay + ah - 78, aw, 78, false);
+            arte(ctx, arteId, px(ax), py(ay), pl(aw), pl(imgH), aw, imgH);
         } else {
-            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + ah), colorAcento);
+            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + imgH), colorAcento);
         }
+        
+        ctx.fill(px(ax), py(ay + imgH), px(ax + aw), py(ay + ah), enc ? CARD_FONDO_HOVER : CARD_FONDO);
+        ctx.fill(px(ax), py(ay + imgH), px(ax + aw), py(ay + imgH + 2), colorAcento);
+        
+        marco(ctx, px(ax), py(ay), pl(aw), pl(ah),
+                enc ? CARD_BORDE_ENCIMA : (enc ? 0xFF8FA0C8 : 0xFF20283C), Math.max(2, pl(enc ? 4 : 2)));
+
+        if (enc) {
+            ctx.fill(px(ax), py(ay), px(ax + aw), py(ay + imgH), 0x11FFFFFF);
+        }
+
+        texto(ctx, titulo, ax + aw / 2, ay + imgH + 20, 26, TEXTO_BLANCO, true, 0);
+
+        int y = ay + imgH + 54;
+        for (String linea : partir(desc.getString(), aw - 40, 15)) {
+            texto(ctx, Text.literal(linea), ax + aw / 2, y, 15, TEXTO_SUAVE, true, 0);
+            y += 20;
+        }
+    }
         
         marco(ctx, px(ax), py(ay), pl(aw), pl(ah),
                 enc ? CARD_BORDE_ENCIMA : (enc ? 0xFF8FA0C8 : 0xFF20283C), Math.max(2, pl(enc ? 4 : 2)));
@@ -450,7 +468,7 @@ public class SantuarioScreen extends Screen {
             break;
         }
         
-        int badgeW = 135, badgeH = 34;
+        int badgeW = 160, badgeH = 34;
         int badgeX = ax + aw - badgeW - 12;
         int badgeY = ay + imgH + (ah - imgH - badgeH) / 2;
         ctx.fill(px(badgeX), py(badgeY), px(badgeX + badgeW), py(badgeY + badgeH), 0xDD0C1320);

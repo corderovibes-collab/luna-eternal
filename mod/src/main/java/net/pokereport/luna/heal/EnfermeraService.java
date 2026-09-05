@@ -30,7 +30,8 @@ public final class EnfermeraService {
     };
 
     // La posición original de la enfermera (a donde debe volver)
-    private static final Vec3d ORIGEN = new Vec3d(86.300, 68, 94.5);
+    private static Vec3d ORIGEN = new Vec3d(86.300, 68, 94.5);
+    private static float YAW_ORIGINAL = -90f;
 
     // Estado de cada enfermera
     private enum Estado {
@@ -53,17 +54,22 @@ public final class EnfermeraService {
 
     private static final Map<UUID, Tarea> TAREAS = new ConcurrentHashMap<>();
     private static final Map<UUID, UUID> SESION_JUGADOR = new ConcurrentHashMap<>();
+
     public static boolean colocarEnfermera(ServerPlayerEntity p) {
         var mundo = p.getServerWorld();
-        Vec3d donde = ORIGEN;
+        Vec3d donde = p.getPos();
+        float yaw = p.getYaw();
+        
+        ORIGEN = donde;
+        YAW_ORIGINAL = yaw;
         
         var previas = mundo.getEntitiesByClass(MobEntity.class, 
-                new net.minecraft.util.math.Box(donde.x - 3, donde.y - 3, donde.z - 3, 
-                                                donde.x + 3, donde.y + 3, donde.z + 3), 
+                new net.minecraft.util.math.Box(donde.x - 10, donde.y - 10, donde.z - 10, 
+                                                donde.x + 10, donde.y + 10, donde.z + 10), 
                 e -> e.getCommandTags().contains(MARCA));
         for (var e : previas) e.discard();
 
-        p.getServer().getCommandManager().executeWithPrefix(p.getServer().getCommandSource().withSilent(), 
+        p.getServer().getCommandManager().executeWithPrefix(p.getCommandSource().withSilent(), 
             "spawnnpc cobblemon:nurse_joy " + donde.x + " " + donde.y + " " + donde.z);
             
         // Esperamos 1 tick para que el comando haga efecto y luego la etiquetamos
@@ -77,9 +83,9 @@ public final class EnfermeraService {
             for (var e : nurses) {
                 e.addCommandTag(MARCA);
                 e.setInvulnerable(true);
-                e.refreshPositionAndAngles(donde.x, donde.y, donde.z, -90f, 0f);
-                e.setHeadYaw(-90f);
-                e.setBodyYaw(-90f);
+                e.refreshPositionAndAngles(donde.x, donde.y, donde.z, yaw, 0f);
+                e.setHeadYaw(yaw);
+                e.setBodyYaw(yaw);
             }
         });
         
@@ -172,7 +178,8 @@ public final class EnfermeraService {
                                 SESION_JUGADOR.remove(jugador.getUuid());
                             }
                             enfermera.getNavigation().stop();
-                            enfermera.lookAt(net.minecraft.command.argument.EntityAnchorArgumentType.EntityAnchor.EYES, ORIGEN.add(-1, 0, 0));
+                            net.minecraft.util.math.Vec3d dir = net.minecraft.util.math.Vec3d.fromPolar(0, YAW_ORIGINAL);
+                            enfermera.lookAt(net.minecraft.command.argument.EntityAnchorArgumentType.EntityAnchor.EYES, ORIGEN.add(dir));
                             it.remove();
                         }
                     }

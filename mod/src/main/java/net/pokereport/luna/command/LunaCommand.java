@@ -621,6 +621,10 @@ public final class LunaCommand {
                                         .getLong(ctx, "foto"), false))))
                 .then(literal("pendientes")
                     .executes(ctx -> pendientesSantuario(ctx.getSource())))
+                .then(literal("eliminar").requires(s -> s.hasPermissionLevel(4)).then(argument("nicho", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(ctx -> eliminarNicho(ctx.getSource(), com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "nicho")))))
+                .then(literal("info").requires(s -> s.hasPermissionLevel(4)).then(argument("nicho", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(ctx -> infoNicho(ctx.getSource(), com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "nicho")))))
+                .then(literal("recargar").requires(s -> s.hasPermissionLevel(4)).executes(ctx -> recargarSantuario(ctx.getSource())))
+                .then(literal("listar").requires(s -> s.hasPermissionLevel(4)).executes(ctx -> listarNichos(ctx.getSource())))
                 // ⚠ Colocar la Chansey es nivel 4: es decoracion del mundo,
                 //   como /luna decorar -- un moderador no construye.
                 .then(literal("npc")
@@ -1356,7 +1360,7 @@ public final class LunaCommand {
         p.getServer().execute(() -> p.sendMessage(Text.literal(msg), false));
     }
 
-    /** Coloca la Chansey del santuario donde esta quien lo ejecuta. */
+    /** Coloca la Mew del santuario donde esta quien lo ejecuta. */
     private static int npcSantuario(ServerCommandSource src) {
         ServerPlayerEntity p = src.getPlayer();
         if (p == null) {
@@ -1370,7 +1374,7 @@ public final class LunaCommand {
             return 0;
         }
         src.sendFeedback(() -> Text.literal(
-                "§aChansey del santuario colocada. Tocarla abre la app."), false);
+                "§aMew del santuario colocado. Tocarla abre la app."), false);
         return 1;
     }
 
@@ -1427,6 +1431,103 @@ public final class LunaCommand {
                 }
             } catch (Exception e) {
                 reply(p, "§cNo se pudieron leer las pendientes: " + e.getMessage());
+            }
+        });
+        return 1;
+    }
+
+    /** Elimina la reclamacion de un nicho (lo deja libre). */
+    private static int eliminarNicho(ServerCommandSource src, String nichoId) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            String motivo = LunaEternal.santuario().eliminar(nichoId);
+            if (motivo == null) {
+                net.pokereport.luna.santuario.SantuarioProteccion.recargar();
+                reply(p, "§aNicho '" + nichoId + "' liberado.");
+            } else {
+                reply(p, "§cNo se pudo eliminar: " + motivo);
+            }
+        });
+        return 1;
+    }
+
+    /** Muestra la informacion de un nicho. */
+    private static int infoNicho(ServerCommandSource src, String nichoId) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            var info = LunaEternal.santuario().info(nichoId);
+            if (info == null) {
+                reply(p, "§cNicho '" + nichoId + "' no existe.");
+            } else {
+                reply(p, info);
+            }
+        });
+        return 1;
+    }
+
+    /** Recarga la config de nichos sin reiniciar. */
+    private static int recargarSantuario(ServerCommandSource src) {
+        // ⚠ La config es un fichero local pequeno, se lee en el hilo del servidor.
+        try {
+            int n = net.pokereport.luna.santuario.SantuarioProteccion.catalogo().recargar();
+            LunaEternal.santuario().garantizarNichos(
+                    net.pokereport.luna.santuario.SantuarioProteccion.catalogo().todos().stream()
+                            .map(net.pokereport.luna.santuario.NichoCatalogo.Nicho::id)
+                            .toList());
+            net.pokereport.luna.santuario.SantuarioProteccion.recargar();
+            src.sendFeedback(() -> Text.literal(
+                    "§aSantuario recargado: " + n + " nichos."), false);
+            return 1;
+        } catch (Exception e) {
+            src.sendError(Text.literal("§cError al recargar: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    /** Lista todos los nichos y su estado. */
+    private static int listarNichos(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+            if (!catalogo.hay()) {
+                reply(p, "§7No hay nichos configurados.");
+                return;
+            }
+            try {
+                var nichos = LunaEternal.santuario().nichos();
+                var sb = new StringBuilder("§7Nichos (" + catalogo.todos().size() + "):\n");
+                for (var cn : catalogo.todos()) {
+                    net.pokereport.luna.santuario.SantuarioService.Nicho sn = null;
+                    for (var n : nichos) {
+                        if (n.id().equals(cn.id())) {
+                            sn = n;
+                            break;
+                        }
+                    }
+                    sb.append("§f ").append(cn.id());
+                    if (sn != null && sn.ownerId() != null && !sn.libre(System.currentTimeMillis())) {
+                        sb.append(" §a[ocupado]");
+                        if (sn.permanente()) sb.append(" §6permanente");
+                    } else {
+                        sb.append(" §7[libre]");
+                    }
+                    sb.append("\n");
+                }
+                reply(p, sb.toString().trim());
+            } catch (Exception e) {
+                reply(p, "§cError al leer los nichos: " + e.getMessage());
             }
         });
         return 1;

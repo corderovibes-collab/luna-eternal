@@ -35,7 +35,8 @@ import net.pokereport.luna.net.Red;
  * una forma mas de echar a alguien). El quad sale del {@code Tessellator} en
  * {@code AFTER_ENTITIES}, orientado hacia la camara con las rotaciones de la
  * propia camara. La textura {@code POSITION_TEXTURE} no recibe luz: por eso el
- * holograma brilla igual de noche, que es justo lo que un memorial necesita.
+ * holograma brilla igual de noche, y con su tinte azulado y semitransparente,
+ * da el aspecto de holograma que un memorial necesita.
  *
  * <h2>⚠ EL CLIC DERECHO SOBRE EL HOLOGRAMA, SIN ENTIDAD DEBAJO</h2>
  *
@@ -200,14 +201,15 @@ public final class HologramaSantuario {
         BufferBuilder buffer = tess.begin(VertexFormat.DrawMode.QUADS,
                 VertexFormats.POSITION_TEXTURE);
         var entrada = matrices.peek();
-        // ⚠ LA FOTO TAL CUAL: alfa completa, sin velo de holograma. El blend
-        //   se queda para respetar el alfa que traiga el propio PNG -- un PNG
-        //   transparente se ve con su transparencia, uno opaco se ve opaco.
+        // ⚠ TONO HOLOGRAFICO: ligeramente azulado y semitransparente para que
+        //   no parezca una pantalla LED. El 0.92 de alfa deja ver el mundo
+        //   detras, y el tinte frio (0.82, 0.84, 0.90) da el aspecto de
+        //   holograma sin perder legibilidad.
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableCull();
         RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.setShaderColor(0.82f, 0.84f, 0.90f, 0.92f);
         RenderSystem.setShaderTexture(0, foto.textura());
 
         // ⚠⚠ LA V IBA AL REVES, y la foto salia boca abajo. El quad usa el

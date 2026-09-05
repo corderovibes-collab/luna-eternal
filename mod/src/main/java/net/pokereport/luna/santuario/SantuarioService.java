@@ -585,6 +585,108 @@ public final class SantuarioService {
         }
     }
 
+    /**
+     * Libera un nicho por completo: borra dueno, memorial, honores y clics.
+     *
+     * @return {@code null} si salio bien, o un motivo de error
+     */
+    public String eliminar(String nichoId) {
+        try (var c = db.connection()) {
+            c.setAutoCommit(false);
+            try {
+                // ⚠ Comprobar que el nicho existe en la base.
+                try (var ps = c.prepareStatement(
+                        "SELECT nicho_id FROM santuario WHERE nicho_id = ? FOR UPDATE")) {
+                    ps.setString(1, nichoId);
+                    try (var rs = ps.executeQuery()) {
+                        if (!rs.next()) {
+                            return "no_existe";
+                        }
+                    }
+                }
+                // ⚠ El orden importa: FK de clics -> honores -> nicho.
+                try (var ps = c.prepareStatement(
+                        "DELETE FROM santuario_honor_click WHERE nicho_id = ?")) {
+                    ps.setString(1, nichoId);
+                    ps.executeUpdate();
+                }
+                try (var ps = c.prepareStatement(
+                        "DELETE FROM santuario_honor WHERE nicho_id = ?")) {
+                    ps.setString(1, nichoId);
+                    ps.executeUpdate();
+                }
+                try (var ps = c.prepareStatement(
+                        "UPDATE santuario SET owner_id = NULL, permanente = 0, "
+                        + "expira_ms = 0, foto_id = NULL, titulo = '', "
+                        + "descripcion = '', honores = 0 "
+                        + "WHERE nicho_id = ?")) {
+                    ps.setString(1, nichoId);
+                    ps.executeUpdate();
+                }
+                c.commit();
+                LunaEternal.LOG.info("Santuario: nicho '{}' eliminado por admin", nichoId);
+                return null;
+            } catch (Exception e) {
+                c.rollback();
+                throw e;
+            }
+        } catch (Exception e) {
+            LunaEternal.LOG.error("Santuario: error al eliminar nicho '{}'", nichoId, e);
+            return e.getMessage();
+        }
+    }
+
+    /**
+     * Informacion legible de un nicho, para el comando /luna santuario info.
+     *
+     * @return el texto con la info, o {@code null} si no existe
+     */
+    public String info(String nichoId) {
+        try (var c = db.connection();
+             var ps = c.prepareStatement(
+                     "SELECT s.*, p.mc_name FROM santuario s "
+                     + "LEFT JOIN player p ON p.player_id = s.owner_id "
+                     + "WHERE s.nicho_id = ?")) {
+            ps.setString(1, nichoId);
+            try (var rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return null;
+                }
+                var sb = new StringBuilder();
+                sb.append("§7Nicho: §f").append(nichoId).append("\n");
+                String dueno = rs.getString("mc_name");
+                if (dueno != null) {
+                    sb.append("§7Dueño: §f").append(dueno).append("\n");
+                    sb.append("§7Tipo: §f").append(rs.getBoolean("permanente")
+                            ? "permanente" : "alquiler").append("\n");
+                    long expira = rs.getLong("expira_ms");
+                    if (!rs.getBoolean("permanente") && expira > 0) {
+                        long resta = (expira - System.currentTimeMillis()) / 1000;
+                        sb.append("§7Expira en: §f").append(resta > 0
+                                ? (resta / 3600) + "h " + ((resta % 3600) / 60) + "min"
+                                : "EXPIRADO").append("\n");
+                    }
+                    sb.append("§7Honores: §f").append(rs.getLong("honores")).append("\n");
+                    String titulo = rs.getString("titulo");
+                    if (titulo != null && !titulo.isEmpty()) {
+                        sb.append("§7Título: §f").append(titulo).append("\n");
+                    }
+                    Long fotoId = rs.getObject("foto_id") != null
+                            ? rs.getLong("foto_id") : null;
+                    if (fotoId != null) {
+                        sb.append("§7Foto: §f#").append(fotoId).append("\n");
+                    }
+                } else {
+                    sb.append("§7Estado: §flibre\n");
+                }
+                return sb.toString().trim();
+            }
+        } catch (Exception e) {
+            LunaEternal.LOG.error("Santuario: error al consultar nicho '{}'", nichoId, e);
+            return "§cError: " + e.getMessage();
+        }
+    }
+
     // --------------------------------------------------------------- honrar
 
     /**

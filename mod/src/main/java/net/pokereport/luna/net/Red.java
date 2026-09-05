@@ -2614,6 +2614,20 @@ public class Red implements ModInitializer {
         }
     }
 
+    public record TpNicho(String nicho) implements CustomPayload {
+        public static final Id<TpNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "tp_nicho"));
+        public static final PacketCodec<RegistryByteBuf, TpNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, TpNicho::nicho,
+                        TpNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record PedirCura() implements CustomPayload {
         public static final Id<PedirCura> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cura"));
@@ -3078,6 +3092,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirPendientes.ID, PedirPendientes.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoPendientes.ID, EstadoPendientes.CODEC);
         PayloadTypeRegistry.playC2S().register(ModerarFoto.ID, ModerarFoto.CODEC);
+        PayloadTypeRegistry.playC2S().register(TpNicho.ID, TpNicho.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Ficha.ID, Ficha.CODEC);
@@ -3653,6 +3668,28 @@ public class Red implements ModInitializer {
                 });
             });
         });
+
+        ServerPlayNetworking.registerGlobalReceiver(TpNicho.ID,
+                (carga, ctx) -> {
+                    var jugador = ctx.player();
+                    var servidor = jugador.getServer();
+                    String nichoId = carga.nicho();
+                    servidor.execute(() -> {
+                        var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+                        var nicho = catalogo.de(nichoId);
+                        if (nicho == null) return;
+                        // ⚠ Solo funciona en CIUDADELA
+                        if (!net.pokereport.luna.world.LunaDimensions.CIUDADELA
+                                .equals(jugador.getServerWorld().getRegistryKey())) {
+                            return;
+                        }
+                        // Teleportar 2 bloques delante del proyector (eje Z+)
+                        var p = nicho.proyector();
+                        jugador.teleport(jugador.getServerWorld(),
+                                p.getX() + 0.5, p.getY(), p.getZ() + 2.5,
+                                java.util.Set.of(), 0f, 0f);
+                    });
+                });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirFotos.ID, (carga, ctx) -> {
             var jugador = ctx.player();

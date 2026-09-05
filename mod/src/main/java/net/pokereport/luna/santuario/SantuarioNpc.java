@@ -9,17 +9,17 @@ import net.pokereport.luna.world.Decorativos;
 import net.pokereport.luna.world.LunaDimensions;
 
 /**
- * LA CHANSEY DE LA ENTRADA DEL MONUMENTO: el recibidor del santuario.
+ * LA MEW DE LA ENTRADA DEL MONUMENTO: el recibidor del santuario.
  *
  * <h2>⚠⚠ ES UN DECORATIVO CON UNA TERCERA ETIQUETA, no un sistema nuevo</h2>
  *
- * La Chansey es un Pokémon decorativo exactamente igual que el Kabutops del
+ * La Mew es un Pokémon decorativo exactamente igual que el Kabutops del
  * laboratorio --quieta, sin nivel, sin captura-- y lo único que la distingue
  * es la etiqueta {@link #MARCA}: el clic derecho en ella abre la app Santuario,
  * igual que la etiqueta de parada abre Viajes. Toda la maquinaria pesada (las
  * diez protecciones del decorativo) ya existe y no se toca.
  *
- * <p>⚠ Decisión del usuario: la Chansey es el recibidor, no un vendedor. El
+ * <p>⚠ Decisión del usuario: la Mew es el recibidor, no un vendedor. El
  * dinero nunca pasa por ella -- cobra el servidor en su transacción, como
  * siempre (P6).
  */
@@ -31,7 +31,7 @@ public final class SantuarioNpc {
     private SantuarioNpc() {}
 
     /**
-     * Clic derecho en la Chansey: abre la app.
+     * Clic derecho en la Mew: abre la app.
      *
      * <p>⚠ Como en Viajes: {@code SUCCESS} corta el camino de Cobblemon (su
      * menú de interacción no debe abrirse) y se corta en los dos lados porque el
@@ -53,11 +53,11 @@ public final class SantuarioNpc {
     }
 
     /**
-     * Coloca la Chansey donde esta el jugador.
+     * Coloca la Mew donde esta el jugador.
      *
      * <p>⚠ Se quita la que hubiera cerca ANTES de poner la nueva: el comando se
      * puede repetir y un decorativo no se puede ni capturar ni matar, asi que
-     * una Chansey de mas se quedaria ahi para siempre.
+     * una Mew de mas se quedaria ahi para siempre.
      *
      * @return {@code true} si quedo colocada
      */
@@ -68,13 +68,13 @@ public final class SantuarioNpc {
         }
         var pos = jugador.getPos();
         Decorativos.quitar(mundo, pos, 3);
-        var e = Decorativos.colocar(mundo, "chansey", Decorativos.Postura.QUIETO,
+        var e = Decorativos.colocar(mundo, "mew", Decorativos.Postura.FLOTANDO,
                 pos, jugador.getYaw());
         if (e == null) {
             return false;
         }
         e.addCommandTag(MARCA);
-        LunaEternal.LOG.info("Santuario: Chansey colocada en {} por {}",
+        LunaEternal.LOG.info("Santuario: Mew colocada en {} por {}",
                 e.getBlockPos(), jugador.getGameProfile().getName());
         return true;
     }

@@ -51,7 +51,7 @@ public final class NichoCatalogo {
         }
     }
 
-    private final List<Nicho> nichos;
+    private volatile List<Nicho> nichos;
 
     /** De paquete: fuera de aqui los catalogos nacen de {@link #load()}. */
     NichoCatalogo(List<Nicho> nichos) {
@@ -114,6 +114,37 @@ public final class NichoCatalogo {
         validar(leidos);
         LunaEternal.LOG.info("Santuario: {} nichos en la config", leidos.size());
         return new NichoCatalogo(leidos);
+    }
+
+    /**
+     * Recarga la config en caliente: lee, valida y sustituye la lista.
+     *
+     * <p>⚠ Se llama desde el hilo del servidor (el fichero es local y pequeño,
+     * no va por red ni por BD). Si la validación falla, se deja la lista
+     * anterior intacta y se lanza la excepción.
+     *
+     * @return el número de nichos tras recargar
+     */
+    public int recargar() {
+        Path file = ruta();
+        if (!Files.exists(file)) {
+            this.nichos = List.of();
+            LunaEternal.LOG.info("Santuario: config eliminada, catálogo vacío");
+            return 0;
+        }
+        List<Nicho> leidos;
+        try {
+            String texto = Files.readString(file, StandardCharsets.UTF_8);
+            leidos = parsear(texto);
+        } catch (IOException | IllegalStateException e) {
+            throw new IllegalStateException(
+                    "Santuario: no se puede recargar (" + file + "): "
+                    + e.getMessage(), e);
+        }
+        validar(leidos);
+        this.nichos = List.copyOf(leidos);
+        LunaEternal.LOG.info("Santuario: recargados {} nichos", leidos.size());
+        return leidos.size();
     }
 
     /** Del JSON a la lista, sin validar todavia. */

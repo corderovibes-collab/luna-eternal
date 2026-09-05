@@ -3323,6 +3323,20 @@ public final class AutoTest {
                                 && expira2 <= expira1 + paso + 60_000);
             }
         }
+
+        // --- administracion: eliminar e info
+        check("santuario: info de nicho existente no es nulo",
+                svc.info(N1) != null);
+        check("santuario: info de nicho inexistente es nulo",
+                svc.info("__no_existe_nicho") == null);
+        check("santuario: eliminar nicho libera el estado",
+                svc.eliminar(N1) == null);
+        check("santuario: eliminar nicho inexistente da error",
+                "no_existe".equals(svc.eliminar("__no_existe_nicho")));
+        check("santuario: nicho eliminado queda libre para alquilar",
+                svc.alquilar(N1, a, ENTRENADOR, key()).ok());
+        check("santuario: NPC tiene etiqueta correcta",
+                "luna_santuario".equals(net.pokereport.luna.santuario.SantuarioNpc.MARCA));
     }
 
     /**

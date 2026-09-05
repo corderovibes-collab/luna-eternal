@@ -198,26 +198,70 @@ public final class HologramaSantuario {
         float n = alto / 2f;
 
         var tess = Tessellator.getInstance();
-        BufferBuilder buffer = tess.begin(VertexFormat.DrawMode.QUADS,
-                VertexFormats.POSITION_TEXTURE);
         var entrada = matrices.peek();
-        // ⚠ TONO HOLOGRAFICO: ligeramente azulado y semitransparente para que
-        //   no parezca una pantalla LED. El 0.92 de alfa deja ver el mundo
-        //   detras, y el tinte frio (0.82, 0.84, 0.90) da el aspecto de
-        //   holograma sin perder legibilidad.
+
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableCull();
+
+        // ⚠ AURA BLANCA: marco luminoso suave alrededor de la foto.
+        float g1 = 0.035f; // grosor del halo
+        BufferBuilder auraBuffer = tess.begin(VertexFormat.DrawMode.QUADS,
+                VertexFormats.POSITION_COLOR);
+        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
+        // Top aura
+        auraBuffer.vertex(entrada, -m - g1, n + g1, -0.002f).color(1f, 1f, 1f, 0.45f);
+        auraBuffer.vertex(entrada, m + g1, n + g1, -0.002f).color(1f, 1f, 1f, 0.45f);
+        auraBuffer.vertex(entrada, m, n, -0.002f).color(1f, 1f, 1f, 0.85f);
+        auraBuffer.vertex(entrada, -m, n, -0.002f).color(1f, 1f, 1f, 0.85f);
+        // Bottom aura
+        auraBuffer.vertex(entrada, -m, -n, -0.002f).color(1f, 1f, 1f, 0.85f);
+        auraBuffer.vertex(entrada, m, -n, -0.002f).color(1f, 1f, 1f, 0.85f);
+        auraBuffer.vertex(entrada, m + g1, -n - g1, -0.002f).color(1f, 1f, 1f, 0.45f);
+        auraBuffer.vertex(entrada, -m - g1, -n - g1, -0.002f).color(1f, 1f, 1f, 0.45f);
+        // Left aura
+        auraBuffer.vertex(entrada, -m - g1, n + g1, -0.002f).color(1f, 1f, 1f, 0.45f);
+        auraBuffer.vertex(entrada, -m, n, -0.002f).color(1f, 1f, 1f, 0.85f);
+        auraBuffer.vertex(entrada, -m, -n, -0.002f).color(1f, 1f, 1f, 0.85f);
+        auraBuffer.vertex(entrada, -m - g1, -n - g1, -0.002f).color(1f, 1f, 1f, 0.45f);
+        // Right aura
+        auraBuffer.vertex(entrada, m, n, -0.002f).color(1f, 1f, 1f, 0.85f);
+        auraBuffer.vertex(entrada, m + g1, n + g1, -0.002f).color(1f, 1f, 1f, 0.45f);
+        auraBuffer.vertex(entrada, m + g1, -n - g1, -0.002f).color(1f, 1f, 1f, 0.45f);
+        auraBuffer.vertex(entrada, m, -n, -0.002f).color(1f, 1f, 1f, 0.85f);
+
+        // ⚠ BRILLITOS ESTELARES ✨: pequeños destellos tipo estrella que titilan
+        //   alrededor del marco del memorial.
+        float[][] estrellas = {
+            {-m - 0.02f, n + 0.02f, 0.0f, 0.045f},
+            {m + 0.03f, n + 0.01f, 1.3f, 0.040f},
+            {-m - 0.03f, -n - 0.01f, 2.7f, 0.042f},
+            {m + 0.02f, -n - 0.03f, 4.1f, 0.048f},
+            {m * 0.25f, n + 0.04f, 1.9f, 0.038f},
+            {-m * 0.35f, -n - 0.04f, 3.4f, 0.035f}
+        };
+        for (float[] e : estrellas) {
+            float ex = e[0], ey = e[1], fDesfase = e[2], baseR = e[3];
+            float ciclo = (MathHelper.sin(tiempo * 2.8f + fDesfase) + 1f) * 0.5f;
+            if (ciclo > 0.15f) {
+                float alfaEstrella = Math.min(1f, ciclo * 1.3f);
+                float rEstrella = baseR * (0.6f + 0.5f * ciclo);
+                // Diamante brillante (rombo centrado en ex, ey)
+                auraBuffer.vertex(entrada, ex, ey + rEstrella, 0.001f).color(1f, 1f, 1f, alfaEstrella);
+                auraBuffer.vertex(entrada, ex + rEstrella * 0.5f, ey, 0.001f).color(1f, 1f, 1f, alfaEstrella);
+                auraBuffer.vertex(entrada, ex, ey - rEstrella, 0.001f).color(1f, 1f, 1f, alfaEstrella);
+                auraBuffer.vertex(entrada, ex - rEstrella * 0.5f, ey, 0.001f).color(1f, 1f, 1f, alfaEstrella);
+            }
+        }
+        BufferRenderer.drawWithGlobalProgram(auraBuffer.end());
+
+        // ⚠ LA FOTO TAL CUAL: 100% opaca, nítida, sin saturación ni niebla.
+        BufferBuilder buffer = tess.begin(VertexFormat.DrawMode.QUADS,
+                VertexFormats.POSITION_TEXTURE);
         RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderColor(0.82f, 0.84f, 0.90f, 0.92f);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.setShaderTexture(0, foto.textura());
 
-        // ⚠⚠ LA V IBA AL REVES, y la foto salia boca abajo. El quad usa el
-        //    mismo marco que los carteles de nombre (giro por -yaw y pitch) y
-        //    en el la v pequeña es el borde SUPERIOR de la imagen -- los
-        //    glifos de vainilla pintan arriba con su v de arriba. Aqui la base
-        //    del quad llevaba v=0. La u ya estaba bien: -X del quad cae a la
-        //    izquierda de quien mira y lleva el borde izquierdo de la imagen.
         buffer.vertex(entrada, -m, n, 0f).texture(0f, 0f);
         buffer.vertex(entrada, m, n, 0f).texture(1f, 0f);
         buffer.vertex(entrada, m, -n, 0f).texture(1f, 1f);

@@ -100,6 +100,7 @@ public final class AutoTest {
             testEspera();
             testSantuario(a, b);
             testFotos(a, b);
+            testSubidas();
             testNichoConfig();
 
         } catch (Exception e) {
@@ -3504,8 +3505,80 @@ public final class AutoTest {
         return salida.toByteArray();
     }
 
-    // ------------------------------------------------------------ auxiliares
+    /**
+     * EL REENSAMBLADO DE LA SUBIDA DE FOTOS: la pieza que ya fallo muda.
+     *
+     * <p>⚠⚠ Paso el 2026-09-04: el manejador comparaba <b>el indice del trozo
+     * contra el tamano total en bytes</b>, asi que la subida nunca se
+     * completaba y «no salia nadie de pendientes» sin un solo error en el log.
+     * Esto prueba la clase {@code Subidas} trozo a trozo: la regla de verdad
+     * es {@code bytesRecibidos == total}, y aqui se clava.
+     */
+    private void testSubidas() {
+        var svc = net.pokereport.luna.santuario.Subidas.class;
+        var uuid = UUID.randomUUID();
+        int total = net.pokereport.luna.santuario.Subidas.TROZO * 2 + 123;
+        byte[] original = new byte[total];
+        for (int i = 0; i < total; i++) {
+            original[i] = (byte) (i * 31);
+        }
+        final byte[][] ensamblado = {null};
+        java.util.function.Consumer<byte[]> guarda = b -> ensamblado[0] = b;
 
+        var r1 = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem1", total, 0,
+                java.util.Arrays.copyOfRange(original, 0, net.pokereport.luna.santuario.Subidas.TROZO),
+                guarda);
+        check("subida: el primer trozo no completa", r1
+                == net.pokereport.luna.santuario.Subidas.Resultado.SEGUIR);
+        var r2 = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem1", total, 1,
+                java.util.Arrays.copyOfRange(original, net.pokereport.luna.santuario.Subidas.TROZO,
+                        2 * net.pokereport.luna.santuario.Subidas.TROZO),
+                guarda);
+        check("subida: el trozo del medio no completa", r2
+                == net.pokereport.luna.santuario.Subidas.Resultado.SEGUIR);
+        var r3 = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem1", total, 2,
+                java.util.Arrays.copyOfRange(original, 2 * net.pokereport.luna.santuario.Subidas.TROZO,
+                        total),
+                guarda);
+        check("subida: el ultimo trozo completa POR TAMAÑO, no por indice", r3
+                == net.pokereport.luna.santuario.Subidas.Resultado.COMPLETA);
+        check("subida: los bytes ensamblados son exactamente los enviados",
+                ensamblado[0] != null
+                        && java.util.Arrays.equals(ensamblado[0], original));
+
+        // --- lo que NO se puede: desorden, exceso y totales imposibles
+        net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem2", total, 0,
+                java.util.Arrays.copyOfRange(original, 0, net.pokereport.luna.santuario.Subidas.TROZO),
+                guarda);
+        var desorden = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem2", total, 2,
+                java.util.Arrays.copyOfRange(original, 2 * net.pokereport.luna.santuario.Subidas.TROZO,
+                        total),
+                guarda);
+        check("subida: un trozo fuera de orden descarta la subida entera", desorden
+                == net.pokereport.luna.santuario.Subidas.Resultado.ROTA);
+        var gigante = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem3",
+                net.pokereport.luna.santuario.SantuarioService.FOTO_MAX_BYTES + 1, 0,
+                new byte[1], guarda);
+        check("subida: un total mayor que el tope se descarta entero", gigante
+                == net.pokereport.luna.santuario.Subidas.Resultado.ROTA);
+        var trozoVacio = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem4",
+                total, 0, new byte[0], guarda);
+        check("subida: un trozo vacio se descarta", trozoVacio
+                == net.pokereport.luna.santuario.Subidas.Resultado.ROTA);
+
+        // --- un idem nuevo empieza una subida nueva (el indice vuelve a 0)
+        net.pokereport.luna.santuario.Subidas.recibir(uuid, "idemA", total, 0,
+                java.util.Arrays.copyOfRange(original, 0, net.pokereport.luna.santuario.Subidas.TROZO),
+                guarda);
+        var reinicio = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idemB", total, 0,
+                java.util.Arrays.copyOfRange(original, 0, net.pokereport.luna.santuario.Subidas.TROZO),
+                guarda);
+        check("subida: un idem nuevo reinicia el rompecabezas", reinicio
+                == net.pokereport.luna.santuario.Subidas.Resultado.SEGUIR);
+        net.pokereport.luna.santuario.Subidas.olvidar(uuid);
+    }
+
+    // ------------------------------------------------------------ auxiliares
     private static String key() {
         return UUID.randomUUID().toString();
     }

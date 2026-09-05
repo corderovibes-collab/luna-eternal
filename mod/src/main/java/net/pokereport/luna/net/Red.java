@@ -367,33 +367,11 @@ public class Red implements ModInitializer {
             };
 
     /** Cuantos bytes por trozo de foto. 16 KB caben en un payload con holgura. */
-    private static final int TROZO_FOTO = 16 * 1024;
-
-    /** La subida de foto a medio llegar, por jugador. */
-    private record SubidaEnCurso(String idem, int total,
-                                 java.io.ByteArrayOutputStream datos) {}
-
-    /**
-     * Las subidas de foto EN VUELO, una por jugador.
-     *
-     * <p>⚠⚠ EN MEMORIA Y ACOTADA: el total de una subida no puede pasar de
-     * {@code FOTO_MAX_BYTES} (se comprueba al llegar cada trozo) y solo hay una
-     * en curso por jugador -- empezar otra descarta la anterior. Sin las dos
-     * cotas, un cliente modificado llenaria la memoria del servidor mandando
-     * trozos sin parar (P6).
-     */
-    private static final java.util.Map<java.util.UUID, SubidaEnCurso> SUBIDAS =
-            new java.util.concurrent.ConcurrentHashMap<>();
-
-    /** El indice del trozo que toca. Con esto, trozos duplicados o desordenados
-     *  no se ensamblan: el rompecabezas tiene un orden. */
-    private static int siguiente(SubidaEnCurso s) {
-        return s.datos().size() / TROZO_FOTO;
-    }
+    private static final int TROZO_FOTO = net.pokereport.luna.santuario.Subidas.TROZO;
 
     /** Se olvida la subida a medias cuando el jugador se va. */
     public static void olvidarSubidas(java.util.UUID jugador) {
-        SUBIDAS.remove(jugador);
+        net.pokereport.luna.santuario.Subidas.olvidar(jugador);
     }
 
     /**
@@ -3498,57 +3476,39 @@ public class Red implements ModInitializer {
             var jugador = ctx.player();
             var server = jugador.getServer();
             var perfil = jugador.getGameProfile();
-            var enCurso = SUBIDAS.compute(jugador.getUuid(),
-                    (u, anterior) -> anterior == null || !anterior.idem().equals(carga.idem())
-                            ? new SubidaEnCurso(carga.idem(), carga.total(),
-                                    new java.io.ByteArrayOutputStream(
-                                            Math.min(carga.total(), 3 * 1024 * 1024)))
-                            : anterior);
-            // ⚠ Un trozo fuera de su sitio o una subida mas grande de lo
-            //   permitido se descarta entera: montar un rompecabezas a medias
-            //   solo produce una foto corrupta que el servidor rechazaria
-            //   despues de gastar memoria en ella (P6).
-            if (carga.indice() != siguiente(enCurso)
-                    || carga.total() > net.pokereport.luna.santuario.SantuarioService.FOTO_MAX_BYTES) {
-                SUBIDAS.remove(jugador.getUuid());
+            // ⚠⚠ TODO EL REENSAMBLADO VIVE EN `Subidas`, no aqui: aqui paso un
+            //    fallo mudo --comparar el indice del trozo contra el tamano en
+            //    bytes-- que dejaba la subida a medias para siempre sin un solo
+            //    error. Ahora esa logica tiene invariantes en el autotest.
+            var resultado = net.pokereport.luna.santuario.Subidas.recibir(
+                    jugador.getUuid(), carga.idem(), carga.total(), carga.indice(),
+                    carga.trozo(), bytes -> LunaEternal.submit(() -> {
+                        final net.pokereport.luna.santuario.SantuarioService.ResultadoFoto r;
+                        final long id;
+                        try {
+                            id = LunaEternal.players().resolve(
+                                    perfil.getId(), perfil.getName());
+                            r = LunaEternal.santuario().subirFoto(id, bytes);
+                        } catch (Exception e) {
+                            LunaEternal.LOG.error("Fallo subiendo una foto", e);
+                            return;
+                        }
+                        server.execute(() -> {
+                            if (jugador.isRemoved()) {
+                                return;
+                            }
+                            ServerPlayNetworking.send(jugador, new ResultadoFoto(
+                                    carga.idem(), r.ok(), r.motivo(), r.fotoId(), r.sha1()));
+                        });
+                    }));
+            if (resultado == net.pokereport.luna.santuario.Subidas.Resultado.ROTA) {
                 server.execute(() -> {
                     if (!jugador.isRemoved()) {
                         ServerPlayNetworking.send(jugador, new ResultadoFoto(
                                 carga.idem(), false, "subida_rota", 0, ""));
                     }
                 });
-                return;
             }
-            try {
-                enCurso.datos().write(carga.trozo());
-            } catch (java.io.IOException e) {
-                SUBIDAS.remove(jugador.getUuid());
-                return;
-            }
-            boolean completa = carga.indice() == carga.total() - 1;
-            if (!completa) {
-                return;
-            }
-            SUBIDAS.remove(jugador.getUuid());
-            byte[] bytes = enCurso.datos().toByteArray();
-            LunaEternal.submit(() -> {
-                final net.pokereport.luna.santuario.SantuarioService.ResultadoFoto r;
-                final long id;
-                try {
-                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
-                    r = LunaEternal.santuario().subirFoto(id, bytes);
-                } catch (Exception e) {
-                    LunaEternal.LOG.error("Fallo subiendo una foto", e);
-                    return;
-                }
-                server.execute(() -> {
-                    if (jugador.isRemoved()) {
-                        return;
-                    }
-                    ServerPlayNetworking.send(jugador, new ResultadoFoto(
-                            enCurso.idem(), r.ok(), r.motivo(), r.fotoId(), r.sha1()));
-                });
-            });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirFoto.ID, (carga, ctx) -> {

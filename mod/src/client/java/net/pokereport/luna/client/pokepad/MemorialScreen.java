@@ -42,8 +42,6 @@ public class MemorialScreen extends Screen {
             Identifier.of("lunaeternal", "textures/gui/pokepad/boton_cerrar.png");
     private static final Identifier ICONO =
             Identifier.of("lunaeternal", "textures/gui/pokepad/santuario.png");
-    private static final Identifier LUZ =
-            Identifier.of("lunaeternal", "textures/gui/pokepad/memorial_luz.png");
 
     private static final int NAT_ANCHO = 1380, NAT_ALTO = 828;
     private static final int PANEL_X = 63, PANEL_Y = 70, PANEL_W = 315, PANEL_H = 692;
@@ -142,10 +140,12 @@ public class MemorialScreen extends Screen {
         var memorial = nicho.memorial();
         int ax = PANT_X + MARGEN;
 
-        // ---- izquierda: la foto, grande, sin deformar
-        int fw = 330, fh = 300;
+        // ---- izquierda: la foto, grande, sin deformar, con marco doble
+        int fw = 340, fh = 310;
         int fx = ax + 10, fy = PANT_Y + MARGEN + 10;
         ctx.fill(px(fx), py(fy), px(fx + fw), py(fy + fh), FILA_FONDO);
+        marco(ctx, px(fx) - pl(3), py(fy) - pl(3), pl(fw) + pl(6), pl(fh) + pl(6),
+                0xFF20283C, pl(3));
         marco(ctx, px(fx), py(fy), pl(fw), pl(fh), FILA_BORDE, Math.max(1, pl(2)));
         if (memorial.foto().isEmpty()) {
             texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.sin_foto"),
@@ -170,48 +170,60 @@ public class MemorialScreen extends Screen {
             }
         }
 
-        // ---- derecha: titulo, dueno, historia
+        // ---- derecha: dueno arriba en oro, el titulo debajo en grande
+        //      (hasta dos lineas), y la historia ocupa el resto del hueco.
         int tx = fx + fw + 26;
         int tw = PANT_W - MARGEN - (fw + 26 + 10) - MARGEN;
-        int ty = PANT_Y + MARGEN + 10;
-        texto(ctx, Text.literal(memorial.titulo().isEmpty()
-                        ? Text.translatable("pokepad.lunaeternal.santuario.sin_titulo").getString()
-                        : memorial.titulo()),
-                tx, ty, 26, TEXTO_OSCURO, false, false);
+        int ty = PANT_Y + MARGEN + 16;
         texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.memorial_de", dueno),
-                tx, ty + 34, 17, TEXTO_SUAVE, false, false);
+                tx, ty, 16, ORO, false, false);
 
-        int hy = ty + 64;
-        for (String linea : partir(memorial.descripcion(), tw, 16)) {
-            if (hy > fy + fh - 18) {
+        int tyTitulo = ty + 26;
+        int tituloLineas = 0;
+        for (String linea : partir(memorial.titulo().isEmpty()
+                        ? Text.translatable("pokepad.lunaeternal.santuario.sin_titulo")
+                                .getString()
+                        : memorial.titulo(),
+                tw, 26)) {
+            if (tituloLineas >= 2) {
                 break;
             }
-            texto(ctx, Text.literal(linea), tx, hy, 16, TEXTO_OSCURO, false, false);
-            hy += 19;
+            texto(ctx, Text.literal(linea), tx, tyTitulo + tituloLineas * 31, 26,
+                    TEXTO_OSCURO, false, false);
+            tituloLineas++;
         }
 
-        // ---- abajo: los honores y el boton
-        int by = fy + fh + 26;
-        // ⚠ La luz del memorial (memorial_luz.png, 512x512) detras del
-        //   contador: es el unico adorno del arte, y va con su alfa -- regla 1
-        //   de dibujado.md a mano, como siempre.
-        dibujarTextura(ctx, LUZ, px(PANT_X + PANT_W / 2 - 150), py(by - 46),
-                pl(300), pl(220), 512, 512);
-        texto(ctx, Text.literal("\u2661"), PANT_X + PANT_W / 2 - 90, by + 2, 40, ORO, true, false);
+        int hy = tyTitulo + 2 * 31 + 8;
+        boolean historiaVacia = memorial.descripcion() == null
+                || memorial.descripcion().isBlank();
+        for (String linea : partir(memorial.descripcion(), tw, 17)) {
+            if (hy > fy + fh - 16) {
+                break;
+            }
+            texto(ctx, Text.literal(linea), tx, hy, 17,
+                    historiaVacia ? TEXTO_SUAVE : TEXTO_OSCURO, false, false);
+            hy += 21;
+        }
+
+        // ---- abajo: los honores a la izquierda, el boton a la derecha
+        int by = fy + fh + 34;
+        separador(ctx, by - 16);
+        int hcx = PANT_X + PANT_W / 2 - 130;
+        texto(ctx, Text.literal("\u2661"), hcx, by - 4, 46, ORO, false, false);
         texto(ctx, Text.literal(String.valueOf(memorial.honores())),
-                PANT_X + PANT_W / 2 - 30, by - 6, 52, TEXTO_OSCURO, true, false);
+                hcx + 50, by - 10, 56, TEXTO_OSCURO, false, false);
         texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.honores_total"),
-                PANT_X + PANT_W / 2 - 90, by + 58, 16, TEXTO_SUAVE, true, false);
+                hcx, by + 54, 16, TEXTO_SUAVE, false, false);
 
         int quedan = nicho.estado().restantes();
         boolean puedo = !nicho.estado().mio() && quedan > 0;
-        boton(ctx, rx, ry, PANT_X + PANT_W - 220, by, 190, 54,
+        boton(ctx, rx, ry, PANT_X + PANT_W - 230, by - 6, 200, 56,
                 Text.translatable(nicho.estado().mio()
                         ? "pokepad.lunaeternal.santuario.es_tuyo"
                         : "pokepad.lunaeternal.santuario.honrar"),
                 puedo, ORO);
         texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.honrar_queda", quedan),
-                PANT_X + PANT_W - 220, by + 60, 15, TEXTO_SUAVE, true, false);
+                PANT_X + PANT_W - 230, by + 56, 15, TEXTO_SUAVE, true, false);
     }
 
     private Red.NichoSantuario elNicho() {
@@ -267,9 +279,10 @@ public class MemorialScreen extends Screen {
         if (nicho == null) {
             return false;
         }
-        int by = PANT_Y + MARGEN + 10 + 300 + 26;
+        int by = PANT_Y + MARGEN + 10 + 310 + 34;
         boolean puedo = !nicho.estado().mio() && nicho.estado().restantes() > 0;
-        if (puedo && dentro(rx, ry, px(PANT_X + PANT_W - 220), py(by), pl(190), pl(54))) {
+        if (puedo && dentro(rx, ry, px(PANT_X + PANT_W - 230), py(by - 6),
+                pl(200), pl(56))) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.1f);
             // ⚠ El clic manda; la campanilla llegara con RespuestaHonor si el
             //   servidor cuenta el honor. Aqui solo suena el boton.
@@ -307,6 +320,12 @@ public class MemorialScreen extends Screen {
         if (client != null && client.player != null) {
             client.player.playSound(sonido, 0.7f, tono);
         }
+    }
+
+    /** La linea fina que separa la foto del contador de honores. */
+    private void separador(DrawContext ctx, int artY) {
+        ctx.fill(px(PANT_X + MARGEN), py(artY), px(PANT_X + PANT_W - MARGEN),
+                py(artY) + Math.max(1, pl(2)), 0xFF9AA6C4);
     }
 
     // ---- utilidades (mismas piezas que las demas pantallas) ----------------

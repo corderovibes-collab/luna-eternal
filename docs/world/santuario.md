@@ -29,10 +29,10 @@ mundo** (las coordenadas de la config se rellenan cuando lo estén).
 | Servicio | `SantuarioService` — alquilar, comprar, caducar, honrar, textos, fotos |
 | Protección | `SantuarioProteccion` — nadie rompe ni coloca en un nicho ajeno |
 | Config | `config/lunaeternal/santuario.json` — geometría de los nichos (aún vacía) |
-| Pantallas | `SantuarioScreen` (lista + mi nicho) · `MemorialScreen` (foto, historia, honores) |
-| Holograma | `HologramaSantuario` — la foto flota sobre el proyector |
+| Pantallas | `SantuarioScreen` (lista + mi nicho + moderación) · `MemorialScreen` (foto, historia, honores) |
+| Holograma | `HologramaSantuario` — la foto flota sobre el proyector, opaca y derecha; clic derecho (mano vacía) abre el memorial |
 | NPC | Chansey decorativa, `/luna santuario npc` (nivel 4) |
-| Moderación | `/luna santuario aprobar|rechazar <id>` · `/luna santuario pendientes` (nivel 3) |
+| Moderación | vista «MODERAR FOTOS» en el PokePad (nivel 3) · `/luna santuario aprobar|rechazar <id>` · `/luna santuario pendientes` |
 | Autotest | +56 comprobaciones de santuario (economía, honores, fotos, config) |
 
 ---
@@ -50,7 +50,7 @@ Chansey en la entrada                icono «Santuario» (página 2)
                                        TUYO     → VER MEMORIAL · MI NICHO
                                      MI NICHO:
                                        título + historia + foto (subir/poner/quitar)
-clic derecho en el proyector
+clic derecho en el proyector o en el holograma (mano vacía)
    de un nicho ocupado ─────────→    MemorialScreen: foto grande, historia,
                                      ♡ total y HONRAR (10 por día)
 ```
@@ -105,9 +105,13 @@ La foto llega del PokePad, el servidor la **decodifica, reescala a 512 y
 recodifica a PNG** (se va cualquier EXIF —localización GPS incluida— y
 cualquier payload escondido), la guarda en `config/lunaeternal/fotos/<sha1>.png`
 y la deja **PENDIENTE**. Un staff la aprueba y solo entonces se puede colocar.
-El cliente la pide por sha1, la cachea en disco y la pinta como holograma. **No
-registra ni un bloque, objeto ni entidad nuevos**: el quad se dibuja a mano
-sobre la posición del proyector que manda el servidor.
+El cliente la pide por sha1, la cachea en disco y la pinta como holograma: **la
+foto tal cual, opaca y derecha** — sin velo translúcido ni volteada, que fue
+como salió en la primera versión (la `v` del quad iba al revés). **No registra
+ni un bloque, objeto ni entidad nuevos**: el quad se dibuja a mano sobre la
+posición del proyector que manda el servidor, y el clic derecho sobre él se
+calcula en el cliente repitiendo esa misma geometría — abre el memorial con la
+foto y la descripción. Con algo en la mano, el clic es del objeto y no roba.
 
 ### 3.5 · ⚠⚠ El proyector holo es nuestro, no del mod de cartas
 

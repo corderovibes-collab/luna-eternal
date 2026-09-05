@@ -1,6 +1,7 @@
 package net.pokereport.luna.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.BufferBuilder;
@@ -10,8 +11,11 @@ import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Vec3d;
+import net.pokereport.luna.client.pokepad.MemorialScreen;
 import net.pokereport.luna.net.Red;
 
 /**
@@ -32,10 +36,23 @@ import net.pokereport.luna.net.Red;
  * {@code AFTER_ENTITIES}, orientado hacia la camara con las rotaciones de la
  * propia camara. La textura {@code POSITION_TEXTURE} no recibe luz: por eso el
  * holograma brilla igual de noche, que es justo lo que un memorial necesita.
+ *
+ * <h2>⚠ EL CLIC DERECHO SOBRE EL HOLOGRAMA, SIN ENTIDAD DEBAJO</h2>
+ *
+ * Como no hay entidad, el clic se calcula aqui: cada tick se mira si el jugador
+ * pulso usar con la mano vacia y si su rayo cruza el mismo quad que se dibuja
+ * (misma posicion, mismo tamaño, mismos ejes). Si cruza, se abre el memorial
+ * con la foto y la descripcion. Con algo en la mano el clic es del objeto
+ * (una Pokeball, un bloque) y no se roba.
  */
 public final class HologramaSantuario {
 
     private HologramaSantuario() {}
+
+    /** True si el boton de usar estaba pulsado en el tick anterior: el flanco
+     *  se detecta con {@code isPressed} para no depender de quien consuma
+     *  antes la pulsacion de vainilla. */
+    private static boolean usoAntes = false;
 
     /** Se registra una vez, con los demas eventos de cliente. */
     public static void registrar() {
@@ -79,6 +96,77 @@ public final class HologramaSantuario {
                 dibujar(context.matrixStack(), camara, pos, foto, tiempo);
             }
         });
+        ClientTickEvents.END_CLIENT_TICK.register(HologramaSantuario::clicSiToca);
+    }
+
+    /**
+     * El clic derecho con la mano vacia sobre un holograma abre su memorial.
+     *
+     * <p>⚠ Sin entidad, el clic no lo puede cortar nadie: aqui se repite la
+     * geometria del dibujado --mismo centro, mismo tamaño, mismos ejes de
+     * camara-- y si el rayo del jugador cruza el quad, se abre la pantalla
+     * con la foto y la descripcion. Y si el crosshair apunta a un bloque mas
+     * cerca, el holograma queda detras y no cuenta.
+     */
+    private static void clicSiToca(MinecraftClient cliente) {
+        boolean ahora = cliente.options.useKey.isPressed();
+        if (!ahora || usoAntes) {
+            usoAntes = ahora;
+            return;
+        }
+        usoAntes = true;
+        if (cliente.currentScreen != null || cliente.player == null || cliente.world == null) {
+            return;
+        }
+        // ⚠ Con algo en la mano, el clic derecho es del objeto (una Pokeball,
+        //   un bloque, comida): abrir el memorial encima seria robarselo.
+        if (!cliente.player.getMainHandStack().isEmpty()) {
+            return;
+        }
+        var estado = EstadoCliente.santuario();
+        if (estado == null) {
+            return;
+        }
+        var camara = cliente.gameRenderer.getCamera();
+        Vec3d origen = camara.getPos();
+        Vec3d direccion = Vec3d.fromPolar(cliente.player.getPitch(),
+                cliente.player.getYaw());
+        double tope = 8.0;
+        if (cliente.crosshairTarget instanceof BlockHitResult bloque) {
+            tope = Math.min(tope, bloque.getPos().subtract(origen).length());
+        }
+        for (var nicho : estado.nichos()) {
+            if (nicho.estado().dueno().isEmpty() || nicho.memorial().foto().isEmpty()) {
+                continue;
+            }
+            var foto = TexturasFoto.lista(nicho.memorial().foto());
+            if (foto == null) {
+                // Sin textura no hay holograma dibujado al que apuntar.
+                continue;
+            }
+            var p = nicho.pos();
+            Vec3d centro = new Vec3d(p.x() + 0.5, p.y() + 1.55, p.z() + 0.5);
+            Vec3d hacia = centro.subtract(origen);
+            double t = hacia.dotProduct(direccion);
+            if (t < 0.4 || t > tope) {
+                continue;
+            }
+            // El quad mira a la camara: sus ejes son la derecha y el arriba
+            // de la vista, no los del mundo.
+            Vec3d derecha = direccion.crossProduct(new Vec3d(0, 1, 0));
+            if (derecha.lengthSquared() < 1.0E-6) {
+                derecha = new Vec3d(1, 0, 0);
+            }
+            derecha = derecha.normalize();
+            Vec3d arriba = derecha.crossProduct(direccion);
+            Vec3d tocado = origen.add(direccion.multiply(t)).subtract(centro);
+            float ancho = 1.6f * foto.ancho() / Math.max(1, foto.alto());
+            if (Math.abs(tocado.dotProduct(derecha)) <= ancho / 2
+                    && Math.abs(tocado.dotProduct(arriba)) <= 0.8) {
+                cliente.setScreen(new MemorialScreen(null, nicho));
+                return;
+            }
+        }
     }
 
     /** Un quad flotando, mirando a la camara, con un vaiven lento. */
@@ -112,20 +200,26 @@ public final class HologramaSantuario {
         BufferBuilder buffer = tess.begin(VertexFormat.DrawMode.QUADS,
                 VertexFormats.POSITION_TEXTURE);
         var entrada = matrices.peek();
-        // ⚠ El alfa vive aqui y no en la textura: la foto es una fotografia y
-        //   su alfa no se toca -- que parezca un holograma es asunto de este
-        //   dibujado, no del PNG.
+        // ⚠ LA FOTO TAL CUAL: alfa completa, sin velo de holograma. El blend
+        //   se queda para respetar el alfa que traiga el propio PNG -- un PNG
+        //   transparente se ve con su transparencia, uno opaco se ve opaco.
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableCull();
         RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        RenderSystem.setShaderColor(1f, 1f, 1f, 0.94f);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.setShaderTexture(0, foto.textura());
 
-        buffer.vertex(entrada, -m, n, 0f).texture(0f, 1f);
-        buffer.vertex(entrada, m, n, 0f).texture(1f, 1f);
-        buffer.vertex(entrada, m, -n, 0f).texture(1f, 0f);
-        buffer.vertex(entrada, -m, -n, 0f).texture(0f, 0f);
+        // ⚠⚠ LA V IBA AL REVES, y la foto salia boca abajo. El quad usa el
+        //    mismo marco que los carteles de nombre (giro por -yaw y pitch) y
+        //    en el la v pequeña es el borde SUPERIOR de la imagen -- los
+        //    glifos de vainilla pintan arriba con su v de arriba. Aqui la base
+        //    del quad llevaba v=0. La u ya estaba bien: -X del quad cae a la
+        //    izquierda de quien mira y lleva el borde izquierdo de la imagen.
+        buffer.vertex(entrada, -m, n, 0f).texture(0f, 0f);
+        buffer.vertex(entrada, m, n, 0f).texture(1f, 0f);
+        buffer.vertex(entrada, m, -n, 0f).texture(1f, 1f);
+        buffer.vertex(entrada, -m, -n, 0f).texture(0f, 1f);
         BufferRenderer.drawWithGlobalProgram(buffer.end());
 
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);

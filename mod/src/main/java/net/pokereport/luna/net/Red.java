@@ -1882,6 +1882,83 @@ public class Red implements ModInitializer {
     }
 
     /** «Dame el estado de mi equipo», al abrir la pantalla de curar. */
+    // ---------------------------------------------------------- PROTECCIONES
+
+    public record PedirProtecciones() implements CustomPayload {
+        public static final Id<PedirProtecciones> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_protecciones"));
+        public static final PacketCodec<RegistryByteBuf, PedirProtecciones> CODEC =
+                PacketCodec.unit(new PedirProtecciones());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Una parcela, tal y como se dibuja.
+     *
+     * @param pila el módulo con su ball dentro. ⚠⚠ VIAJA LA PILA Y NO EL TIPO
+     *             por lo mismo que en la tienda: sin ella, las cinco se
+     *             dibujarían como cinco cabezas de Steve iguales y no se
+     *             sabría de un vistazo cuál es cuál
+     * @param lado lo que mide, calculado de sus dos esquinas
+     */
+    public record Parcela(String nombre, net.minecraft.item.ItemStack pila,
+                          net.minecraft.util.math.BlockPos centro, String mundo,
+                          int lado, int miembros) {
+        public static final PacketCodec<RegistryByteBuf, Parcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, Parcela::nombre,
+                        net.minecraft.item.ItemStack.OPTIONAL_PACKET_CODEC, Parcela::pila,
+                        net.minecraft.util.math.BlockPos.PACKET_CODEC, Parcela::centro,
+                        CADENA, Parcela::mundo,
+                        PacketCodecs.VAR_INT, Parcela::lado,
+                        PacketCodecs.VAR_INT, Parcela::miembros,
+                        Parcela::new);
+    }
+
+    /**
+     * @param hayMod {@code false} si ClaimBlocks no está. ⚠⚠ NO ES LO MISMO QUE
+     *               una lista vacía, y por eso viaja aparte: «no tienes ninguna
+     *               parcela» y «el sistema no está puesto» se dibujan igual y
+     *               significan cosas opuestas
+     */
+    public record EstadoProtecciones(List<Parcela> parcelas, boolean hayMod)
+            implements CustomPayload {
+        public static final Id<EstadoProtecciones> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_protecciones"));
+        public static final PacketCodec<RegistryByteBuf, EstadoProtecciones> CODEC =
+                PacketCodec.tuple(
+                        Parcela.CODEC.collect(PacketCodecs.toList()),
+                        EstadoProtecciones::parcelas,
+                        PacketCodecs.BOOL, EstadoProtecciones::hayMod,
+                        EstadoProtecciones::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * ⚠⚠ VIAJA EL NOMBRE DE LA PARCELA, Y EL SERVIDOR COMPRUEBA QUE ES TUYA.
+     * Que la pantalla solo enseñe las tuyas es dibujo, no una regla (P6).
+     */
+    public record BorrarProteccion(String nombre) implements CustomPayload {
+        public static final Id<BorrarProteccion> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "borrar_proteccion"));
+        public static final PacketCodec<RegistryByteBuf, BorrarProteccion> CODEC =
+                PacketCodec.tuple(CADENA, BorrarProteccion::nombre,
+                        BorrarProteccion::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record PedirCura() implements CustomPayload {
         public static final Id<PedirCura> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cura"));
@@ -2316,6 +2393,9 @@ public class Red implements ModInitializer {
         //     bloques de desfase que ya estan documentados.
         net.pokereport.luna.backpack.Registro.registrar();
 
+        PayloadTypeRegistry.playC2S().register(PedirProtecciones.ID, PedirProtecciones.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoProtecciones.ID, EstadoProtecciones.CODEC);
+        PayloadTypeRegistry.playC2S().register(BorrarProteccion.ID, BorrarProteccion.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Ficha.ID, Ficha.CODEC);
@@ -2528,6 +2608,27 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(PedirTienda.ID, (carga, ctx) ->
                 ServerPlayNetworking.send(ctx.player(), componerTienda()));
+
+        // ⚠ ESTO NO VA POR EL EXECUTOR DE E/S, al contrario que casi todo:
+        //   las parcelas viven EN MEMORIA del otro mod, no en la base. Leerlas
+        //   desde otro hilo seria leerlas mientras el hilo del servidor las
+        //   cambia.
+        ServerPlayNetworking.registerGlobalReceiver(PedirProtecciones.ID,
+                (carga, ctx) -> enviarProtecciones(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(BorrarProteccion.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String motivo = net.pokereport.luna.proteccion.Protecciones.borrar(
+                    jugador, carga.nombre());
+            // ⚠ VIAJA LA CLAVE DEL MOTIVO, no la frase: un servidor no tiene
+            //   idioma. El cliente la traduce.
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    motivo == null ? "pokepad.lunaeternal.protecciones.borrada"
+                                   : "pokepad.lunaeternal.protecciones.error." + motivo), false);
+            // ⚠⚠ Y SE REENVIA LA LISTA SIN QUE LA PIDA NADIE: acaba de cambiar
+            //   algo que la pantalla dibuja. Es la leccion del 23-ago.
+            enviarProtecciones(jugador);
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(AccionTienda.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -4164,6 +4265,18 @@ public class Red implements ModInitializer {
      * arrancar y se valida entonces. Por eso se puede componer aqui mismo, en el
      * hilo del servidor, sin pasar por el executor.
      */
+    /** Manda al jugador sus parcelas. */
+    public static void enviarProtecciones(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var lista = new ArrayList<Parcela>();
+        for (var p : net.pokereport.luna.proteccion.Protecciones.de(jugador.getUuid())) {
+            lista.add(new Parcela(p.nombre(),
+                    net.pokereport.luna.proteccion.Protecciones.pilaDe(p.tipo()),
+                    p.centro(), p.mundo(), p.lado(), p.miembros()));
+        }
+        ServerPlayNetworking.send(jugador, new EstadoProtecciones(List.copyOf(lista),
+                net.pokereport.luna.proteccion.Protecciones.hay()));
+    }
+
     private static Tienda componerTienda() {
         var catalogo = LunaEternal.shop();
         List<CategoriaTienda> salida = new ArrayList<>();

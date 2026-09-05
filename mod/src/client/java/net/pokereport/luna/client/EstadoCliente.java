@@ -25,6 +25,7 @@ public final class EstadoCliente {
     private static Red.EstadoClan clan;
     private static Red.Tienda tienda;
     private static Red.EstadoCura cura;
+    private static Red.EstadoProtecciones protecciones;
     private static Red.EstadoCartas cartas;
     private static Red.EstadoMercado mercado;
     private static Red.EstadoGts gts;
@@ -136,6 +137,15 @@ public final class EstadoCliente {
 
     public static void guardar(Red.EstadoCura nueva) {
         cura = nueva;
+    }
+
+    public static void guardar(Red.EstadoProtecciones nuevas) {
+        protecciones = nuevas;
+    }
+
+    /** Las parcelas del jugador. {@code null} hasta que el servidor conteste. */
+    public static Red.EstadoProtecciones protecciones() {
+        return protecciones;
     }
 
     /**
@@ -253,6 +263,7 @@ public final class EstadoCliente {
         clan = null;
         tienda = null;
         cura = null;
+        protecciones = null;
         cartas = null;
         mercado = null;
         gts = null;

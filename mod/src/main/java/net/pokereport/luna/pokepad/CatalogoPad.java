@@ -100,7 +100,7 @@ public final class CatalogoPad {
             // ⚠⚠ ARRANCA APAGADA: su pantalla todavia no existe. La celda sale
             //    bloqueada en vez de desaparecer, que es la regla de esta lista
             //    -- enseñar lo que va a haber es informacion; esconderlo, no.
-            new Ficha("protecciones", false),
+            new Ficha("protecciones", true),
             new Ficha("curar",      true),
             // ⚠ La WIKI baja aquí desde el hueco 10. Sigue bloqueada, y ese es
             //   justo el motivo: lo que todavía no lleva a ningún sitio no ocupa

@@ -504,6 +504,7 @@
   "pokepad.lunaeternal.santuario.error.foto_no_tuya": "§cThat photo is not yours.",
   "pokepad.lunaeternal.santuario.error.foto_no_aprobada": "§cThat photo is not approved yet.",
   "pokepad.lunaeternal.santuario.error.no_pendiente": "§cThat photo is no longer pending.",
+  "pokepad.lunaeternal.santuario.error.sin_dialogo": "§cThe file dialog could not open on this machine. Tell us.",
   "pokepad.lunaeternal.app.santuario": "Sanctuary",
   "pokepad.lunaeternal.santuario.explica": "A corner of the Monuments to honor someone you love: a niche, a photo, and the honors of others. The rent lasts 24 hours; the purchase, forever.",
   "pokepad.lunaeternal.santuario.ocupados": "CLAIMED NICHES",

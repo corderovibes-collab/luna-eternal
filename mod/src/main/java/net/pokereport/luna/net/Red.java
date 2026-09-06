@@ -2142,6 +2142,16 @@ public class Red implements ModInitializer {
      * por {@code PedirSantuario} como siempre -- que la pantalla se abra no
      * tiene por que ir atado a como esten los nichos.
      */
+    public record EntrarTorreBatalla(int modo) implements CustomPayload {
+        public static final Id<EntrarTorreBatalla> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "entrar_torre"));
+        public static final PacketCodec<RegistryByteBuf, EntrarTorreBatalla> CODEC =
+                PacketCodec.tuple(PacketCodecs.INTEGER, EntrarTorreBatalla::modo, EntrarTorreBatalla::new);
+                
+        @Override
+        public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
     public record AbrirTorreBatalla() implements CustomPayload {
         public static final Id<AbrirTorreBatalla> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_torre_batalla"));
@@ -3110,6 +3120,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(BorrarProteccion.ID, BorrarProteccion.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirSantuario.ID, PedirSantuario.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoSantuario.ID, EstadoSantuario.CODEC);
+        PayloadTypeRegistry.playC2S().register(EntrarTorreBatalla.ID, EntrarTorreBatalla.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirTorreBatalla.ID, AbrirTorreBatalla.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirSantuario.ID, AbrirSantuario.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirCentroPokemon.ID, AbrirCentroPokemon.CODEC);
@@ -3445,6 +3456,12 @@ public class Red implements ModInitializer {
         // ⚠ TODO PASA POR EL EXECUTOR DE E/S: el estado vive en la base, y aqui
         //   abajo estamos en el hilo del servidor. El servicio se llama fuera y
         //   la respuesta vuelve con `server.execute`.
+
+        ServerPlayNetworking.registerGlobalReceiver(EntrarTorreBatalla.ID, (carga, ctx) -> {
+            ctx.player().getServer().execute(() -> {
+                net.pokereport.luna.torrebatalla.TorreBatallaService.iniciarCola(ctx.player(), carga.modo());
+            });
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSantuario.ID,
                 (carga, ctx) -> enviarSantuario(ctx.player()));

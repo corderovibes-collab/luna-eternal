@@ -114,8 +114,8 @@ public class TorreScreen extends Screen {
 
     private void seleccionarModo(int modo) {
         sonar(SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value(), 1.2f);
-        // Aquí enviaremos un paquete al servidor para iniciar la cola
-        System.out.println("Seleccionado modo: " + modo);
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new net.pokereport.luna.net.Red.EntrarTorreBatalla(modo));
+        close();
     }
 
     private void sonar(net.minecraft.sound.SoundEvent sonido, float tono) {

@@ -69,6 +69,7 @@ public final class LunaDimensions {
      * Añadir un gimnasio es una linea en {@code Gimnasio.TODOS}.
      */
     public static final RegistryKey<World> GIMNASIOS = key("gimnasios");
+    public static final RegistryKey<World> TORRE = key("torre");
 
     private LunaDimensions() {}
 

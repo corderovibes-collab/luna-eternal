@@ -109,7 +109,8 @@ public final class CatalogoPad {
             //    de la rejilla es la puerta de siempre, no la unica.
             new Ficha("santuario",   true),
             new Ficha("curar",      true),
-            // ⚠ La WIKI baja aquí desde el hueco 10. Sigue bloqueada, y ese es
+            new Ficha("torre_batalla", true),
+            // 💀 La WIKI baja aquí desde el hueco 10. Sigue bloqueada, y ese es
             //   justo el motivo: lo que todavía no lleva a ningún sitio no ocupa
             //   sitio en la pantalla que se ve al abrir el Pad.
             new Ficha("wiki",       false)

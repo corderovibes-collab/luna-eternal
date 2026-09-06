@@ -2142,6 +2142,18 @@ public class Red implements ModInitializer {
      * por {@code PedirSantuario} como siempre -- que la pantalla se abra no
      * tiene por que ir atado a como esten los nichos.
      */
+    public record AbrirTorreBatalla() implements CustomPayload {
+        public static final Id<AbrirTorreBatalla> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_torre_batalla"));
+        public static final PacketCodec<RegistryByteBuf, AbrirTorreBatalla> CODEC =
+                PacketCodec.unit(new AbrirTorreBatalla());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record AbrirSantuario() implements CustomPayload {
         public static final Id<AbrirSantuario> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_santuario"));
@@ -3098,6 +3110,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(BorrarProteccion.ID, BorrarProteccion.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirSantuario.ID, PedirSantuario.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoSantuario.ID, EstadoSantuario.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirTorreBatalla.ID, AbrirTorreBatalla.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirSantuario.ID, AbrirSantuario.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirCentroPokemon.ID, AbrirCentroPokemon.CODEC);
         PayloadTypeRegistry.playC2S().register(ConfirmarCuraCentro.ID, ConfirmarCuraCentro.CODEC);
@@ -5442,6 +5455,11 @@ public class Red implements ModInitializer {
      * hilo del servidor, sin pasar por el executor.
      */
     /** El clic en la Chansey del monumento: abre la app. */
+    public static void enviarAbrirTorreBatalla(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        ServerPlayNetworking.send(jugador, new AbrirTorreBatalla());
+    }
+
     public static void enviarAbrirSantuario(
             net.minecraft.server.network.ServerPlayerEntity jugador) {
         ServerPlayNetworking.send(jugador, new AbrirSantuario());

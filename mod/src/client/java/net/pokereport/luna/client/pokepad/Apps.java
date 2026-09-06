@@ -63,6 +63,7 @@ public final class Apps {
             case "clan" -> abrirClan();
             case "tienda" -> abrirTienda();
             case "curar" -> abrirCurar();
+            case "torre_batalla" -> abrirTorre();
             case "gts" -> abrirMercado();
             case "cazas" -> abrirCazas();
             case "mochila" -> abrirMochila();
@@ -196,6 +197,12 @@ public final class Apps {
     private static boolean abrirCurar() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
         cliente.setScreen(new CurarScreen(cliente.currentScreen));
+        return true;
+    }
+
+    public static boolean abrirTorre() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new net.pokereport.luna.client.pokepad.TorreScreen(cliente.currentScreen));
         return true;
     }
 

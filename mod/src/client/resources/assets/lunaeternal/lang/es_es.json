@@ -506,6 +506,8 @@
   "pokepad.lunaeternal.santuario.error.no_pendiente": "§cEsa foto ya no esta pendiente.",
   "pokepad.lunaeternal.santuario.error.sin_dialogo": "§cNo se pudo abrir el dialogo de archivos en este equipo. Avísanos.",
   "pokepad.lunaeternal.app.santuario": "Santuario",
+  "pokepad.lunaeternal.app.torre_batalla": "Torre Batalla",
+  "pokepad.lunaeternal.app.torre_batalla.desc": "Combates igualados sin lmites",
   "pokepad.lunaeternal.santuario.explica": "Un rincon de Monumentos para honrar a quien quieres: un nicho, una foto, y los honores de los demas. El alquiler dura 24 horas; la compra, para siempre.",
   "pokepad.lunaeternal.santuario.ocupados": "NICHOS RECLAMADOS",
   "pokepad.lunaeternal.santuario.libre": "LIBRE · reclamalo",

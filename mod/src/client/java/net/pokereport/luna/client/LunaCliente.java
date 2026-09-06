@@ -234,6 +234,9 @@ public class LunaCliente implements ClientModInitializer {
         //    monumento en la pantalla del santuario (el mismo patron que el
         //    Miraidon con Viajes). Y se abre SOLO si no hay otra pantalla
         //    delante, para no cerrar de golpe lo que el jugador este mirando.
+        ClientPlayNetworking.registerGlobalReceiver(Red.AbrirTorreBatalla.ID,
+                (carga, ctx) -> ctx.client().execute(() -> Apps.abrirTorre()));
+        
         ClientPlayNetworking.registerGlobalReceiver(Red.AbrirSantuario.ID,
                 (carga, ctx) -> {
                     var cliente = ctx.client();

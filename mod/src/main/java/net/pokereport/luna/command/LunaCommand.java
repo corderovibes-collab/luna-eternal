@@ -636,6 +636,11 @@ public final class LunaCommand {
                 .then(literal("npc")
                     .executes(ctx -> npcEnfermera(ctx.getSource()))))
 
+            .then(literal("torre_batalla")
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(literal("npc")
+                    .executes(ctx -> npcTorreBatalla(ctx.getSource()))))
+
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> autotest(ctx.getSource())))
@@ -1392,6 +1397,18 @@ public final class LunaCommand {
         
         net.pokereport.luna.heal.EnfermeraService.colocarEnfermera(p);
         p.sendMessage(net.minecraft.text.Text.literal("§aEnfermera Joy colocada en el centro Pokémon. ¡Quedó invulnerable y estática!"), false);
+        return 1;
+    }
+
+    private static int npcTorreBatalla(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(net.minecraft.text.Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        
+        net.pokereport.luna.torrebatalla.TorreNpc.colocarNpc(p);
+        p.sendMessage(net.minecraft.text.Text.literal("¡NPC de la Torre de Batalla colocado. Quedó invulnerable y estático!"), false);
         return 1;
     }
 

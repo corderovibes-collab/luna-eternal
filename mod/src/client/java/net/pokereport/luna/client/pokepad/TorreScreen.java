@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -18,8 +19,8 @@ public class TorreScreen extends Screen {
     private float k = 1f;
     private int x0, y0;
 
-    private static final int PANEL_W = 700;
-    private static final int PANEL_H = 360;
+    private static final int PANEL_W = 1200;
+    private static final int PANEL_H = 700;
 
     public TorreScreen(Screen anterior) {
         super(Text.literal("Torre de Batalla"));
@@ -60,19 +61,24 @@ public class TorreScreen extends Screen {
         ctx.drawBorder(px(0), py(0), pl(PANEL_W), pl(40), 0xFF4A566E);
         
         // Título
-        ctx.drawCenteredTextWithShadow(this.textRenderer, "Torre de Batalla", px(PANEL_W / 2), py(12), 0xFFFFB900);
+        MatrixStack mt = ctx.getMatrices();
+        mt.push();
+        mt.translate(px(PANEL_W / 2), py(12), 0);
+        mt.scale(1.5f, 1.5f, 1.0f);
+        ctx.drawCenteredTextWithShadow(this.textRenderer, "Torre de Batalla", 0, 0, 0xFFFFB900);
+        mt.pop();
 
         // Botones de Modos (Tarjetas)
-        int gap = 20;
+        int gap = 40;
         int cardW = (PANEL_W - (gap * 4)) / 3; // 3 tarjetas con gaps
         int bx = gap;
-        int by = 60;
+        int by = 80;
         
-        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, TEX_1VS1, "Combate 1vs1", "Lucha individual.", 0);
+        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, TEX_1VS1, "Combate 1vs1", "Lucha uno contra uno. Escala la torre enfrentando entrenadores cada vez mas fuertes.", 0);
         bx += cardW + gap;
-        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, TEX_2VS2, "Combate 2vs2", "Lucha doble.", 1);
+        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, TEX_2VS2, "Combate 2vs2", "Lucha doble 2vs2. Estrategia al maximo.", 1);
         bx += cardW + gap;
-        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, TEX_RANDOM, "Aleatorio", "Equipos al azar lvl 100.", 2);
+        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, TEX_RANDOM, "Aleatorio (Random)", "Equipos al azar nivel 100. Pon a prueba tu suerte y adaptabilidad.", 2);
 
         // Botón Cerrar
         dibujarTextura(ctx, CERRAR, px(PANEL_W - 36), py(8), pl(24), pl(24), 24, 24);
@@ -81,7 +87,7 @@ public class TorreScreen extends Screen {
     }
 
     private void dibujarTarjeta(DrawContext ctx, int rx, int ry, int bx, int by, int w, Identifier tex, String titulo, String desc, int modoId) {
-        int h = 260; // alto de tarjeta
+        int h = 550; // alto de tarjeta
         boolean hover = dentro(rx, ry, px(bx), py(by), pl(w), pl(h));
 
         // Fondo tarjeta
@@ -102,11 +108,19 @@ public class TorreScreen extends Screen {
             ctx.drawBorder(px(bx + pad - 1), py(by + pad - 1), pl(imgW + 2), pl(imgH + 2), 0xFF111111);
         }
 
-        int ty = by + pad + imgH + 15;
-        ctx.drawCenteredTextWithShadow(this.textRenderer, titulo, px(bx + w / 2), py(ty), hover ? 0xFFFFFFFF : 0xFFFFB900);
+        int ty = by + pad + imgH + 30;
         
-        int descY = ty + 20;
-        ctx.drawCenteredTextWithShadow(this.textRenderer, desc, px(bx + w / 2), py(descY), 0xFF888888);
+        // Titulo a escala doble (2.0)
+        MatrixStack matrices = ctx.getMatrices();
+        matrices.push();
+        matrices.translate(px(bx + w / 2), py(ty), 0);
+        matrices.scale(2.0f, 2.0f, 1.0f);
+        ctx.drawCenteredTextWithShadow(this.textRenderer, titulo, 0, 0, hover ? 0xFFFFFFFF : 0xFFFFB900);
+        matrices.pop();
+        
+        int descY = ty + 40;
+        // Descripcion envuelta (multilinea)
+        ctx.drawTextWrapped(this.textRenderer, net.minecraft.text.StringVisitable.plain(desc), px(bx + pad + 10), py(descY), pl(w - (pad * 2) - 20), 0xFFAAAAAA);
     }
 
     @Override
@@ -120,16 +134,16 @@ public class TorreScreen extends Screen {
             return true;
         }
 
-        int gap = 20;
+        int gap = 40;
         int cardW = (PANEL_W - (gap * 4)) / 3;
-        int h = 260;
+        int h = 550;
         
         int bx = gap;
-        if (dentro(rx, ry, px(bx), py(60), pl(cardW), pl(h))) { seleccionarModo(0); return true; }
+        if (dentro(rx, ry, px(bx), py(80), pl(cardW), pl(h))) { seleccionarModo(0); return true; }
         bx += cardW + gap;
-        if (dentro(rx, ry, px(bx), py(60), pl(cardW), pl(h))) { seleccionarModo(1); return true; }
+        if (dentro(rx, ry, px(bx), py(80), pl(cardW), pl(h))) { seleccionarModo(1); return true; }
         bx += cardW + gap;
-        if (dentro(rx, ry, px(bx), py(60), pl(cardW), pl(h))) { seleccionarModo(2); return true; }
+        if (dentro(rx, ry, px(bx), py(80), pl(cardW), pl(h))) { seleccionarModo(2); return true; }
 
         return super.mouseClicked(mx, my, boton);
     }

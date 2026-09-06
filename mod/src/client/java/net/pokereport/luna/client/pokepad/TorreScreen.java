@@ -3,8 +3,8 @@ package net.pokereport.luna.client.pokepad;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -16,11 +16,8 @@ public class TorreScreen extends Screen {
     private static final Identifier TEX_RANDOM = Identifier.of("lunaeternal", "textures/gui/pokepad/torre_modo_aleatorio.png");
 
     private final Screen anterior;
-    private float k = 1f;
     private int x0, y0;
-
-    private static final int PANEL_W = 1200;
-    private static final int PANEL_H = 700;
+    private int panelW, panelH;
 
     public TorreScreen(Screen anterior) {
         super(Text.literal("Torre de Batalla"));
@@ -30,97 +27,65 @@ public class TorreScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        this.k = this.height / 1080f; // Escala base
-        this.x0 = (this.width - pl(PANEL_W)) / 2;
-        this.y0 = (this.height - pl(PANEL_H)) / 2;
+        // Dynamic sizing for Minecraft's GUI scale
+        this.panelW = Math.min(this.width - 20, 600); // 600 is wide enough for 3 cards
+        this.panelH = Math.min(this.height - 20, 280);
+        this.x0 = (this.width - this.panelW) / 2;
+        this.y0 = (this.height - this.panelH) / 2;
     }
 
-    private int pl(int pixeles) {
-        return Math.round(pixeles * k);
-    }
-
-    private int px(int x) {
-        return x0 + Math.round(x * k);
-    }
-
-    private int py(int y) {
-        return y0 + Math.round(y * k);
-    }
+    private int px(int x) { return x0 + x; }
+    private int py(int y) { return y0 + y; }
 
     @Override
     public void render(DrawContext ctx, int rx, int ry, float delta) {
-        // Fondo semi-transparente
         ctx.fillGradient(0, 0, width, height, 0x88000000, 0xDD000000);
 
-        // Caja principal
-        ctx.fill(px(0), py(0), px(PANEL_W), py(PANEL_H), 0xFF1E2430);
-        ctx.drawBorder(px(0), py(0), pl(PANEL_W), pl(PANEL_H), 0xFF4A566E);
+        ctx.fill(px(0), py(0), px(panelW), py(panelH), 0xFF1E2430);
+        ctx.drawBorder(px(0), py(0), panelW, panelH, 0xFF4A566E);
 
-        // Cabecera
-        ctx.fill(px(0), py(0), px(PANEL_W), py(40), 0xFF2D3545);
-        ctx.drawBorder(px(0), py(0), pl(PANEL_W), pl(40), 0xFF4A566E);
+        // Header
+        ctx.fill(px(0), py(0), px(panelW), py(30), 0xFF2D3545);
+        ctx.drawBorder(px(0), py(0), panelW, 30, 0xFF4A566E);
         
-        // Título
-        MatrixStack mt = ctx.getMatrices();
-        mt.push();
-        mt.translate(px(PANEL_W / 2), py(12), 0);
-        mt.scale(1.5f, 1.5f, 1.0f);
-        ctx.drawCenteredTextWithShadow(this.textRenderer, "Torre de Batalla", 0, 0, 0xFFFFB900);
-        mt.pop();
+        ctx.drawCenteredTextWithShadow(this.textRenderer, "Torre de Batalla", px(panelW / 2), py(10), 0xFFFFB900);
+        dibujarTextura(ctx, CERRAR, px(panelW - 24), py(3), 24, 24, 24, 24);
 
-        // Botones de Modos (Tarjetas)
-        int gap = 40;
-        int cardW = (PANEL_W - (gap * 4)) / 3; // 3 tarjetas con gaps
+        int gap = 15;
+        int cardW = (panelW - (gap * 4)) / 3;
+        int cardH = panelH - 30 - (gap * 2);
+        
         int bx = gap;
-        int by = 80;
+        int by = 30 + gap;
         
-        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, TEX_1VS1, "Combate 1vs1", "Lucha uno contra uno. Escala la torre enfrentando entrenadores cada vez mas fuertes.", 0);
+        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, cardH, TEX_1VS1, "Combate 1vs1", "Lucha uno contra uno.", 0);
         bx += cardW + gap;
-        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, TEX_2VS2, "Combate 2vs2", "Lucha doble 2vs2. Estrategia al maximo.", 1);
+        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, cardH, TEX_2VS2, "Combate 2vs2", "Lucha doble 2vs2.", 1);
         bx += cardW + gap;
-        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, TEX_RANDOM, "Aleatorio (Random)", "Equipos al azar nivel 100. Pon a prueba tu suerte y adaptabilidad.", 2);
-
-        // Botón Cerrar
-        dibujarTextura(ctx, CERRAR, px(PANEL_W - 36), py(8), pl(24), pl(24), 24, 24);
+        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, cardH, TEX_RANDOM, "Aleatorio", "Equipos al azar nivel 100.", 2);
 
         super.render(ctx, rx, ry, delta);
     }
 
-    private void dibujarTarjeta(DrawContext ctx, int rx, int ry, int bx, int by, int w, Identifier tex, String titulo, String desc, int modoId) {
-        int h = 550; // alto de tarjeta
-        boolean hover = dentro(rx, ry, px(bx), py(by), pl(w), pl(h));
+    private void dibujarTarjeta(DrawContext ctx, int rx, int ry, int bx, int by, int w, int h, Identifier tex, String titulo, String desc, int modoId) {
+        boolean hover = dentro(rx, ry, px(bx), py(by), w, h);
 
-        // Fondo tarjeta
         ctx.fill(px(bx), py(by), px(bx + w), py(by + h), hover ? 0xFF3E4A61 : 0xFF2D3545);
-        ctx.drawBorder(px(bx), py(by), pl(w), pl(h), hover ? 0xFFFFB900 : 0xFF4A566E);
+        ctx.drawBorder(px(bx), py(by), w, h, hover ? 0xFFFFB900 : 0xFF4A566E);
 
-        // Imagen (16:9 aprox, ancho completo - padding)
-        int pad = 10;
+        int pad = 5;
         int imgW = w - (pad * 2);
         int imgH = (int)(imgW * (192.0 / 256.0));
         
-        // Renderizar la textura
-        dibujarTextura(ctx, tex, px(bx + pad), py(by + pad), pl(imgW), pl(imgH), 256, 256);
+        dibujarTextura(ctx, tex, px(bx + pad), py(by + pad), imgW, imgH, 256, 256);
         
-        if (hover) {
-            ctx.drawBorder(px(bx + pad - 1), py(by + pad - 1), pl(imgW + 2), pl(imgH + 2), 0xFFFFB900);
-        } else {
-            ctx.drawBorder(px(bx + pad - 1), py(by + pad - 1), pl(imgW + 2), pl(imgH + 2), 0xFF111111);
-        }
+        ctx.drawBorder(px(bx + pad - 1), py(by + pad - 1), imgW + 2, imgH + 2, hover ? 0xFFFFB900 : 0xFF111111);
 
-        int ty = by + pad + imgH + 30;
+        int ty = by + pad + imgH + 10;
+        ctx.drawCenteredTextWithShadow(this.textRenderer, titulo, px(bx + w / 2), py(ty), hover ? 0xFFFFFFFF : 0xFFFFB900);
         
-        // Titulo a escala doble (2.0)
-        MatrixStack matrices = ctx.getMatrices();
-        matrices.push();
-        matrices.translate(px(bx + w / 2), py(ty), 0);
-        matrices.scale(2.0f, 2.0f, 1.0f);
-        ctx.drawCenteredTextWithShadow(this.textRenderer, titulo, 0, 0, hover ? 0xFFFFFFFF : 0xFFFFB900);
-        matrices.pop();
-        
-        int descY = ty + 40;
-        // Descripcion envuelta (multilinea)
-        ctx.drawTextWrapped(this.textRenderer, net.minecraft.text.StringVisitable.plain(desc), px(bx + pad + 10), py(descY), pl(w - (pad * 2) - 20), 0xFFAAAAAA);
+        int descY = ty + 12;
+        ctx.drawTextWrapped(this.textRenderer, net.minecraft.text.StringVisitable.plain(desc), px(bx + pad + 2), py(descY), w - (pad * 2) - 4, 0xFFAAAAAA);
     }
 
     @Override
@@ -128,22 +93,22 @@ public class TorreScreen extends Screen {
         if (boton != 0) return super.mouseClicked(mx, my, boton);
         int rx = (int) mx, ry = (int) my;
 
-        if (dentro(rx, ry, px(PANEL_W - 36), py(8), pl(24), pl(24))) {
+        if (dentro(rx, ry, px(panelW - 24), py(3), 24, 24)) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
             close();
             return true;
         }
 
-        int gap = 40;
-        int cardW = (PANEL_W - (gap * 4)) / 3;
-        int h = 550;
+        int gap = 15;
+        int cardW = (panelW - (gap * 4)) / 3;
+        int h = panelH - 30 - (gap * 2);
         
         int bx = gap;
-        if (dentro(rx, ry, px(bx), py(80), pl(cardW), pl(h))) { seleccionarModo(0); return true; }
+        if (dentro(rx, ry, px(bx), py(30 + gap), cardW, h)) { seleccionarModo(0); return true; }
         bx += cardW + gap;
-        if (dentro(rx, ry, px(bx), py(80), pl(cardW), pl(h))) { seleccionarModo(1); return true; }
+        if (dentro(rx, ry, px(bx), py(30 + gap), cardW, h)) { seleccionarModo(1); return true; }
         bx += cardW + gap;
-        if (dentro(rx, ry, px(bx), py(80), pl(cardW), pl(h))) { seleccionarModo(2); return true; }
+        if (dentro(rx, ry, px(bx), py(30 + gap), cardW, h)) { seleccionarModo(2); return true; }
 
         return super.mouseClicked(mx, my, boton);
     }

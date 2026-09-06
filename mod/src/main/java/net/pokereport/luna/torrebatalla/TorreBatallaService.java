@@ -139,7 +139,7 @@ public class TorreBatallaService {
         // Avanzar ronda y actualizar record actual
         Partida nueva = partida.avanzar();
         partidasActivas.put(jugador.getUuid(), nueva);
-        TorreRanking.actualizarRonda(jugador.getName().getString(), nueva.ronda() - 1);
+        TorreRanking.actualizarRonda(jugador.getServer(), jugador.getName().getString(), nueva.ronda() - 1);
         
         // Iniciar la siguiente
         prepararRonda(jugador);
@@ -150,7 +150,7 @@ public class TorreBatallaService {
         if (partida == null) return;
         
         jugador.sendMessage(Text.literal("§cHas caído en la Ronda " + partida.ronda() + ". Fin de tu intento."));
-        TorreRanking.actualizarRonda(jugador.getName().getString(), partida.ronda() - 1);
+        TorreRanking.actualizarRonda(jugador.getServer(), jugador.getName().getString(), partida.ronda() - 1);
         salir(jugador);
     }
 

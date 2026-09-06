@@ -51,19 +51,19 @@ public class TorreRanking {
         }
     }
 
-    public static void actualizarRonda(String jugador, int ronda) {
+    public static void actualizarRonda(net.minecraft.server.MinecraftServer server, String jugador, int ronda) {
         int actual = rankings.getOrDefault(jugador, 0);
         if (ronda > actual) {
             rankings.put(jugador, ronda);
             save();
-            actualizarHologramasEnMundos();
+            actualizarHologramasEnMundos(server);
         }
     }
     
-    private static void actualizarHologramasEnMundos() {
-        if (LunaEternal.getServer() == null) return;
+    private static void actualizarHologramasEnMundos(net.minecraft.server.MinecraftServer server) {
+        if (server == null) return;
         MutableText texto = generarTexto();
-        for (ServerWorld world : LunaEternal.getServer().getWorlds()) {
+        for (ServerWorld world : server.getWorlds()) {
             for (net.minecraft.entity.Entity e : world.iterateEntities()) {
                 if (e instanceof DisplayEntity.TextDisplayEntity td && td.getCommandTags().contains(MARCA)) {
                     td.setText(texto);

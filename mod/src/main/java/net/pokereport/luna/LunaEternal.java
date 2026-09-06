@@ -101,6 +101,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.torrebatalla.TorreNpc.registrarClic();
         net.pokereport.luna.torrebatalla.TorreReglas.registrar();
         net.pokereport.luna.torrebatalla.TorreBatallaService.registrarEventos();
+        net.pokereport.luna.torrebatalla.TorreRanking.load();
         net.pokereport.luna.heal.EnfermeraService.registrar();
         // ⚠⚠⚠ TODO LO DE GIMNASIOS VA DETRAS DE ESTA GUARDA, Y NO ES PARANOIA.
         //    El paquete `gym` toca clases de rctmod --TrainerMob, RCTMod-- que

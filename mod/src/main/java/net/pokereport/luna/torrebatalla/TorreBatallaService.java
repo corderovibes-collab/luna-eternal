@@ -136,8 +136,10 @@ public class TorreBatallaService {
         var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
         if (party != null) party.heal();
 
-        // Avanzar ronda
-        partidasActivas.put(jugador.getUuid(), partida.avanzar());
+        // Avanzar ronda y actualizar record actual
+        Partida nueva = partida.avanzar();
+        partidasActivas.put(jugador.getUuid(), nueva);
+        TorreRanking.actualizarRonda(jugador.getName().getString(), nueva.ronda() - 1);
         
         // Iniciar la siguiente
         prepararRonda(jugador);
@@ -148,6 +150,7 @@ public class TorreBatallaService {
         if (partida == null) return;
         
         jugador.sendMessage(Text.literal("§cHas caído en la Ronda " + partida.ronda() + ". Fin de tu intento."));
+        TorreRanking.actualizarRonda(jugador.getName().getString(), partida.ronda() - 1);
         salir(jugador);
     }
 

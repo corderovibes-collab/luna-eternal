@@ -56,6 +56,16 @@ public class TorreNpc {
                 e.setYaw(jugador.getYaw());
                 e.setPitch(0);
                 e.setHeadYaw(jugador.getHeadYaw());
+                
+                // Colocar el holograma justo al lado del NPC (+1 en Z o X dependiendo hacia donde mire, o justo arriba)
+                // Usamos la posicion del NPC pero con offset
+                net.minecraft.util.math.Vec3d pos = e.getPos();
+                // Lo ponemos 1.5 bloques a la derecha basado en el YAW
+                double angulo = Math.toRadians(jugador.getYaw() - 90);
+                double offsetX = Math.cos(angulo) * 1.5;
+                double offsetZ = Math.sin(angulo) * 1.5;
+                TorreRanking.colocarHolograma(jugador.getServerWorld(), pos.add(offsetX, 0, offsetZ));
+
                 break;
             }
         }

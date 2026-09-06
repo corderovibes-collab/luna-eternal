@@ -58,12 +58,14 @@ public class CentroPokemonScreen extends Screen {
     }
 
     private void dibujarBoton(DrawContext ctx, int x, int y, int w, int h, String texto, boolean hover) {
-        ctx.fill(x, y, x + w, y + h, BORDE_CAJA);
-        ctx.fill(x + 1, y + 1, x + w - 1, y + h - 1, hover ? BOTON_HOVER : BOTON_NORMAL);
-        if (hover) {
-            ctx.drawBorder(x - 1, y - 1, w + 2, h + 2, BOTON_BORDE);
-        }
-        ctx.drawCenteredTextWithShadow(this.textRenderer, texto, x + w / 2, y + (h / 2) - 4, COLOR_TEXTO);
+        // Estilo botón clásico Pokémon
+        ctx.fill(x - 2, y - 2, x + w + 2, y + h + 2, 0xFF9E1B1B); // Borde exterior oscuro
+        ctx.fill(x, y, x + w, y + h, hover ? 0xFFFFE5E5 : 0xFFFFFFFF); // Fondo
+        ctx.drawBorder(x + 1, y + 1, w - 2, h - 2, 0xFFE33539); // Borde interior rojo brillante
+        
+        int tx = x + (w - this.textRenderer.getWidth(texto)) / 2;
+        int ty = y + (h - this.textRenderer.fontHeight) / 2;
+        ctx.drawText(this.textRenderer, texto, tx, ty, hover ? 0xFFE33539 : 0xFF222222, false);
     }
 
     @Override
@@ -73,34 +75,37 @@ public class CentroPokemonScreen extends Screen {
         int w = this.width;
         int h = this.height;
 
-        int pW = Math.min(700, (int) (w * 0.8));
-        int pH = 140;
+        int pW = Math.min(600, (int) (w * 0.7)); // Un poco más estrecho para ser más elegante
+        int pH = 120;
         int pX = (w - pW) / 2;
         int pY = h - pH - 30;
 
-        // Fondo oscuro y viñeta
-        ctx.fillGradient(0, 0, w, h, 0xAA000000, 0xFF000000);
+        // Fondo semi-transparente suave
+        ctx.fillGradient(0, 0, w, h, 0x33000000, 0x88000000);
 
         // --- RENDERIZADO 3D DE LA ENFERMERA ---
         LivingEntity enfermera = buscarEnfermera();
         if (enfermera != null) {
             int ex = w / 2;
-            int ey = pY + 20; // Los pies quedan ocultos detrás de la caja
+            int ey = pY + 20;
             
-            // Un pequeño resplandor dorado detrás de ella
-            ctx.fillGradient(ex - 60, ey - 220, ex + 60, ey, 0x00FFB900, 0x44FFB900);
+            // Resplandor rosado/blanco curativo detrás de ella
+            ctx.fillGradient(ex - 70, ey - 220, ex + 70, ey, 0x00FFB900, 0x55FFC0CB);
             
-            // El visor mira fijo hacia el frente (al centro de sí misma) para que pose
-            // recta en la foto, mirando ligeramente hacia abajo a las letras.
+            // El visor mira fijo hacia el frente (al centro de sí misma)
             InventoryScreen.drawEntity(ctx, ex - 60, ey - 200, ex + 60, ey,
                     70, 0.0f, (float)ex, (float)(ey - 50), enfermera);
         }
 
-        // --- CAJA DE DIÁLOGO ---
-        // Borde grueso
-        ctx.fill(pX - 2, pY - 2, pX + pW + 2, pY + pH + 2, BORDE_CAJA);
-        // Fondo
-        ctx.fill(pX, pY, pX + pW, pY + pH, FONDO_CAJA);
+        // --- CAJA DE DIÁLOGO ESTILO POKÉMON ---
+        // Sombra exterior negra
+        ctx.fill(pX - 4, pY - 4, pX + pW + 4, pY + pH + 4, 0x66000000);
+        // Borde exterior rojo oscuro
+        ctx.fill(pX - 2, pY - 2, pX + pW + 2, pY + pH + 2, 0xFF9E1B1B);
+        // Fondo rojo principal
+        ctx.fill(pX, pY, pX + pW, pY + pH, 0xFFE33539);
+        // Fondo blanco donde va el texto
+        ctx.fill(pX + 4, pY + 26, pX + pW - 4, pY + pH - 4, 0xFFF8F8F8);
 
         long ahora = System.currentTimeMillis();
         int chars = (int) ((ahora - tickInicio) / 25);
@@ -117,14 +122,16 @@ public class CentroPokemonScreen extends Screen {
         String t = TEXTO.substring(0, chars);
         
         // Título Enfermera Claudia
-        ctx.fill(pX, pY, pX + pW, pY + 24, BORDE_CAJA); // Barra de título
-        ctx.drawTextWithShadow(this.textRenderer, "Enfermera Claudia", pX + 15, pY + 8, COLOR_TITULO);
+        ctx.drawTextWithShadow(this.textRenderer, "Enfermera Claudia", pX + 15, pY + 8, 0xFFFFCC00);
         
-        // Texto principal
-        ctx.drawTextWrapped(this.textRenderer, net.minecraft.text.StringVisitable.plain(t), 
-                pX + 20, pY + 40, pW - 40, COLOR_TEXTO);
+        // Separador sutil
+        ctx.fill(pX + 4, pY + 26, pX + pW - 4, pY + 28, 0xFF9E1B1B);
 
-        // --- BOTONES (Aparecen al terminar de hablar) ---
+        // Texto principal (sin sombra para que resalte en blanco)
+        ctx.drawTextWrapped(this.textRenderer, net.minecraft.text.StringVisitable.plain(t), 
+                pX + 20, pY + 42, pW - 40, 0xFF222222);
+
+        // --- BOTONES ---
         if (chars >= TEXTO.length()) {
             int btnW = 120;
             int btnH = 26;
@@ -155,8 +162,8 @@ public class CentroPokemonScreen extends Screen {
 
         int w = this.width;
         int h = this.height;
-        int pW = Math.min(700, (int) (w * 0.8));
-        int pH = 140;
+        int pW = Math.min(600, (int) (w * 0.7));
+        int pH = 120;
         int pX = (w - pW) / 2;
         int pY = h - pH - 30;
 

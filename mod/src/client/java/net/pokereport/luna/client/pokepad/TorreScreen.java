@@ -39,8 +39,8 @@ public class TorreScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int rx, int ry, float delta) {
-        ctx.fillGradient(0, 0, width, height, 0x88000000, 0xDD000000);
-
+        this.renderBackground(ctx, rx, ry, delta);
+        
         ctx.fill(px(0), py(0), px(panelW), py(panelH), 0xFF1E2430);
         ctx.drawBorder(px(0), py(0), panelW, panelH, 0xFF4A566E);
 
@@ -130,6 +130,7 @@ public class TorreScreen extends Screen {
     }
 
     private static void dibujarTextura(DrawContext ctx, Identifier tex, int x, int y, int w, int h, int natW, int natH) {
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         ctx.drawTexture(tex, x, y, w, h, 0f, 0f, natW, natH, natW, natH);

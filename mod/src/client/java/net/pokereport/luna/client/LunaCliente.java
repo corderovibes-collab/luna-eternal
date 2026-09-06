@@ -235,7 +235,7 @@ public class LunaCliente implements ClientModInitializer {
         //    Miraidon con Viajes). Y se abre SOLO si no hay otra pantalla
         //    delante, para no cerrar de golpe lo que el jugador este mirando.
         ClientPlayNetworking.registerGlobalReceiver(Red.AbrirTorreBatalla.ID,
-                (carga, ctx) -> ctx.client().execute(() -> Apps.abrirTorre()));
+                (carga, ctx) -> ctx.client().execute(() -> net.pokereport.luna.client.pokepad.Apps.abrirTorre()));
         
         ClientPlayNetworking.registerGlobalReceiver(Red.AbrirSantuario.ID,
                 (carga, ctx) -> {

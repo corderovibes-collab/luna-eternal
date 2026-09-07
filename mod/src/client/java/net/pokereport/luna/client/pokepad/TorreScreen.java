@@ -156,14 +156,15 @@ public class TorreScreen extends Screen {
         y += 26;
 
         String[] reglas = {
-                "• Nivel 100 forzado",
+                "• 6 Pokémon en la barra",
+                "• Aleatorio: equipo vacío",
+                "• Nivel 100 automático",
                 "• Curación tras victoria",
-                "• Escalera infinita",
                 "• Escáner bloqueado"
         };
         for (String r : reglas) {
-            texto(ctx, Text.literal(r), PANEL_X + 45, y, 15, 0xFFD8DEEA, false, false);
-            y += 20;
+            texto(ctx, Text.literal(r), PANEL_X + 40, y, 14, 0xFFD8DEEA, false, false);
+            y += 18;
         }
 
         separador(ctx, y + 10);
@@ -180,11 +181,11 @@ public class TorreScreen extends Screen {
     /** Pantalla Derecha: Las 3 tarjetas de modos (1vs1, 2vs2, Aleatorio). */
     private void dibujarTarjetas(DrawContext ctx, int rx, int ry) {
         String[] titulos = { "COMBATE 1 VS 1", "COMBATE 2 VS 2", "ALEATORIO" };
-        String[] subtitulos = { "Individual", "Dobles", "Draft Sorpresa" };
+        String[] subtitulos = { "Individual (6v6)", "Dobles (6v6)", "Draft (6v6)" };
         String[] descripciones = {
-                "Duelo uno contra uno. 1 Pokémon vs 1 Pokémon en cada ronda.",
-                "Combate doble por parejas. 2 Pokémon vs 2 Pokémon en arena.",
-                "Equipo sorpresa asignado al azar nivel 100. ¡Prueba tu habilidad!"
+                "Combate individual 6 vs 6. Requiere llevar 6 Pokémon en la barra.",
+                "Combate doble 6 vs 6 en arena. Requiere llevar 6 Pokémon en la barra.",
+                "Equipo sorpresa asignado al azar. Requiere equipo vacío (guarda en PC)."
         };
         Identifier[] texturas = { TEX_1VS1, TEX_2VS2, TEX_RANDOM };
 

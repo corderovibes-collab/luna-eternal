@@ -42,7 +42,6 @@ public class TorreBatallaService {
     private static final ConcurrentHashMap<Integer, Boolean> arenasOcupadas = new ConcurrentHashMap<>();
     
     private static final String PREFIJO_NPC = "luna_ladder_";
-    private static final Map<UUID, List<Pokemon>> PARTY_BACKUPS = new ConcurrentHashMap<>();
     private static final Map<UUID, TrainerMob> MOB_ACTUAL = new ConcurrentHashMap<>();
 
     // Inicia la escalera Mortal Kombat
@@ -52,20 +51,41 @@ public class TorreBatallaService {
             salir(jugador);
         }
 
-        // Verificar que el jugador tiene Pokémon vivos si no es modo aleatorio
-        if (modo != 2) {
-            var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
+        var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
+
+        // REGLAS ESTRICTAS DE EQUIPO:
+        if (modo == 0 || modo == 1) { // 1vs1 o 2vs2
+            int total = 0;
             int vivos = 0;
             if (party != null) {
                 for (Pokemon p : party) {
-                    if (p != null && p.getCurrentHealth() > 0) vivos++;
+                    if (p != null) {
+                        total++;
+                        if (p.getCurrentHealth() > 0) vivos++;
+                    }
                 }
             }
-            int minVivos = (modo == 1) ? 2 : 1;
-            if (vivos < minVivos) {
-                jugador.sendMessage(Text.literal("§c¡Necesitas al menos " + minVivos + " Pokémon con vida en tu equipo!"));
+            if (total < 6) {
+                jugador.sendMessage(Text.literal("§c[Torre de Batalla] ¡Debes tener tu equipo completo con 6 Pokémon en la barra!"));
                 return;
             }
+            if (vivos < 6) {
+                jugador.sendMessage(Text.literal("§c[Torre de Batalla] ¡Todos tus 6 Pokémon deben tener vida! Cúralos antes de combatir."));
+                return;
+            }
+        } else if (modo == 2) { // Aleatorio
+            int total = 0;
+            if (party != null) {
+                for (Pokemon p : party) {
+                    if (p != null) total++;
+                }
+            }
+            if (total > 0) {
+                jugador.sendMessage(Text.literal("§c[Torre de Batalla] ¡Tu equipo debe estar completamente vacío para el Modo Aleatorio! Guarda tus Pokémon en la PC y el sistema te asignará 6 Pokémon al azar."));
+                return;
+            }
+            // Asignar el equipo aleatorio de 6 Pokémon de nivel 100 de inmediato
+            asignarEquipoAleatorio(jugador);
         }
 
         // Encontrar una arena libre
@@ -95,6 +115,27 @@ public class TorreBatallaService {
         prepararRonda(jugador);
     }
 
+    private static void asignarEquipoAleatorio(ServerPlayerEntity jugador) {
+        var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
+        if (party == null) return;
+        for (int i = 0; i < 6; i++) party.set(i, null);
+
+        List<String> pool = new ArrayList<>(List.of(
+            "charizard", "blastoise", "venusaur", "gengar", "dragonite",
+            "snorlax", "lucario", "garchomp", "tyranitar", "metagross",
+            "alakazam", "gyarados", "arcanine", "scizor", "salamence",
+            "milotic", "togekiss", "electivire", "gardevoir", "weavile",
+            "mamoswine", "gliscor", "gallade", "machamp"
+        ));
+        Collections.shuffle(pool);
+
+        for (int i = 0; i < 6; i++) {
+            var props = PokemonProperties.Companion.parse(pool.get(i) + " level=100");
+            party.add(props.create());
+        }
+        jugador.sendMessage(Text.literal("§a[Torre de Batalla] ¡Has recibido un equipo sorpresa de 6 Pokémon Nivel 100!"));
+    }
+
     private static void prepararRonda(ServerPlayerEntity jugador) {
         Partida partida = partidasActivas.get(jugador.getUuid());
         if (partida == null) return;
@@ -117,22 +158,24 @@ public class TorreBatallaService {
             MOB_ACTUAL.put(jugador.getUuid(), mob);
         }
 
-        // Generar el equipo rival
-        int count = (partida.modo() == 1) ? 2 : 1; // 2vs2 son 2 pokemons
-
+        // El rival SIEMPRE tiene 6 Pokémon nivel 100
         List<PokemonModel> opponentTeam = new ArrayList<>();
-        List<String> pool = List.of("charizard", "blastoise", "venusaur", "gengar", "machamp", "alakazam", "snorlax", "dragonite", "lucario", "garchomp", "metagross", "tyranitar");
-        for (int i = 0; i < count; i++) {
-            String p = pool.get(new Random().nextInt(pool.size()));
-            opponentTeam.add(buildModel(p));
+        List<String> pool = new ArrayList<>(List.of(
+            "charizard", "blastoise", "venusaur", "gengar", "dragonite",
+            "snorlax", "lucario", "garchomp", "tyranitar", "metagross",
+            "alakazam", "gyarados", "arcanine", "scizor", "salamence",
+            "milotic", "togekiss", "electivire", "gardevoir", "weavile",
+            "mamoswine", "gliscor", "gallade", "machamp"
+        ));
+        Collections.shuffle(pool);
+        for (int i = 0; i < 6; i++) {
+            opponentTeam.add(buildModel(pool.get(i)));
         }
 
-        boolean esAleatorio = (partida.modo() == 2);
-        
         // Esperamos 2 segundos antes de iniciar el combate para que el jugador vea al mob
         net.pokereport.luna.gym.Programador.en(40, () -> {
             if (partidasActivas.containsKey(jugador.getUuid())) {
-                startLadderBattle(jugador, mob, bossName, Math.min(5, partida.ronda() / 2), opponentTeam, esAleatorio);
+                startLadderBattle(jugador, mob, bossName, Math.min(5, partida.ronda() / 2), opponentTeam);
             }
         });
     }
@@ -174,15 +217,23 @@ public class TorreBatallaService {
         Partida partida = partidasActivas.remove(uuid);
         if (partida != null) {
             arenasOcupadas.put(partida.arenaId(), false);
+            // Si el modo era Aleatorio, retirar los 6 Pokémon prestados
+            if (partida.modo() == 2) {
+                var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
+                if (party != null) {
+                    for (int i = 0; i < 6; i++) party.set(i, null);
+                }
+                jugador.sendMessage(Text.literal("§e[Torre de Batalla] El equipo aleatorio prestado ha sido retirado."));
+            }
         }
-        
-        cleanup(jugador);
         
         // Limpiar arena mob
         TrainerMob oldMob = MOB_ACTUAL.remove(jugador.getUuid());
         if (oldMob != null && !oldMob.isRemoved()) {
             oldMob.discard();
         }
+
+        try { ModCommon.RCT.getTrainerRegistry().unregisterById(PREFIJO_NPC + uuid); } catch (Exception ignored) {}
 
         // Devolver a la ciudadela si sigue en la torre
         if (jugador.getWorld().getRegistryKey().equals(LunaDimensions.TORRE)) {
@@ -210,17 +261,13 @@ public class TorreBatallaService {
 
     private static boolean startLadderBattle(
             ServerPlayerEntity player, TrainerMob opponentMob, String opponentName,
-            int aiSkill, List<PokemonModel> opponentTeam, boolean isRandomMode) {
+            int aiSkill, List<PokemonModel> opponentTeam) {
         
         UUID uuid = player.getUuid();
         String npcId = PREFIJO_NPC + uuid;
         var registry = ModCommon.RCT.getTrainerRegistry();
 
         try {
-            if (isRandomMode) {
-                applyRandomDraftTeam(player, 6);
-            }
-
             registry.unregisterById(npcId);
 
             TrainerModel model = new TrainerModel(
@@ -240,10 +287,9 @@ public class TorreBatallaService {
                 return false;
             }
 
-            var base = com.gitlab.srcmc.rctapi.api.battle.BattleFormat.GEN_9_SINGLES.getCobblemonBattleFormat();
-            if (opponentTeam.size() > 1 && partidasActivas.get(uuid).modo() == 1) { // 2vs2 (Doble)
-                base = com.gitlab.srcmc.rctapi.api.battle.BattleFormat.GEN_9_DOUBLES.getCobblemonBattleFormat();
-            }
+            var base = (partidasActivas.get(uuid).modo() == 1)
+                    ? com.gitlab.srcmc.rctapi.api.battle.BattleFormat.GEN_9_DOUBLES.getCobblemonBattleFormat()
+                    : com.gitlab.srcmc.rctapi.api.battle.BattleFormat.GEN_9_SINGLES.getCobblemonBattleFormat();
 
             BattleFormat format100 = new BattleFormat(
                     base.getMod(), base.getBattleType(), new HashSet<>(base.getRuleSet()),
@@ -273,41 +319,6 @@ public class TorreBatallaService {
             salir(player);
             return false;
         }
-    }
-
-    private static void applyRandomDraftTeam(ServerPlayerEntity player, int count) {
-        var party = Cobblemon.INSTANCE.getStorage().getParty(player);
-        UUID uuid = player.getUuid();
-
-        List<Pokemon> backup = new ArrayList<>();
-        for (Pokemon p : party) {
-            if (p != null) backup.add(p);
-        }
-        PARTY_BACKUPS.put(uuid, backup);
-
-        for (int i = 0; i < 6; i++) party.set(i, null);
-
-        List<String> pool = new ArrayList<>(List.of("gengar", "lucario", "dragonite", "garchomp", "tyranitar", "metagross", "scizor", "gardevoir"));
-        Collections.shuffle(pool);
-
-        for (int i = 0; i < Math.min(count, pool.size()); i++) {
-            var props = PokemonProperties.Companion.parse(pool.get(i) + " level=100");
-            party.add(props.create());
-        }
-    }
-
-    private static void cleanup(ServerPlayerEntity player) {
-        if (player == null) return;
-        UUID uuid = player.getUuid();
-
-        List<Pokemon> backup = PARTY_BACKUPS.remove(uuid);
-        if (backup != null) {
-            var party = Cobblemon.INSTANCE.getStorage().getParty(player);
-            for (int i = 0; i < 6; i++) party.set(i, null);
-            for (Pokemon original : backup) party.add(original);
-        }
-
-        try { ModCommon.RCT.getTrainerRegistry().unregisterById(PREFIJO_NPC + uuid); } catch (Exception ignored) {}
     }
 
     public static void registrarEventos() {

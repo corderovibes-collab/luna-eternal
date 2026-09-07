@@ -26,6 +26,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.pokereport.luna.LunaEternal;
 import net.pokereport.luna.world.LunaDimensions;
@@ -40,6 +41,7 @@ public class TorreBatallaService {
 
     private static final ConcurrentHashMap<UUID, Partida> partidasActivas = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Integer, Boolean> arenasOcupadas = new ConcurrentHashMap<>();
+    private static final Set<UUID> enCombate = ConcurrentHashMap.newKeySet();
     
     private static final String PREFIJO_NPC = "luna_ladder_";
     private static final Map<UUID, TrainerMob> MOB_ACTUAL = new ConcurrentHashMap<>();
@@ -106,6 +108,13 @@ public class TorreBatallaService {
 
         construirBase(mundoTorre, cx, cy, cz);
         
+        // Barrer la arena de cualquier TrainerMob previo antes de teletransportar
+        Box arenaBox = new Box(cx - 20, cy - 5, cz - 20, cx + 20, cy + 20, cz + 20);
+        for (TrainerMob m : mundoTorre.getEntitiesByClass(TrainerMob.class, arenaBox, e -> true)) {
+            m.discard();
+        }
+        MOB_ACTUAL.remove(uuid);
+
         // Teletransportar al jugador (centro)
         jugador.teleport(mundoTorre, cx + 0.5, cy + 1, cz + 2.5, 180, 0);
         
@@ -118,7 +127,13 @@ public class TorreBatallaService {
     private static void asignarEquipoAleatorio(ServerPlayerEntity jugador) {
         var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
         if (party == null) return;
-        for (int i = 0; i < 6; i++) party.set(i, null);
+        List<Pokemon> viejos = new ArrayList<>();
+        for (Pokemon p : party) {
+            if (p != null) viejos.add(p);
+        }
+        for (Pokemon p : viejos) {
+            party.remove(p);
+        }
 
         List<String> pool = new ArrayList<>(List.of(
             "charizard", "blastoise", "venusaur", "gengar", "dragonite",
@@ -141,6 +156,8 @@ public class TorreBatallaService {
         if (partida == null) return;
 
         ServerWorld mundoTorre = jugador.getServer().getWorld(LunaDimensions.TORRE);
+        if (mundoTorre == null) return;
+
         int cx = partida.arenaId() * 1000;
         int cy = 100;
         int cz = 0;
@@ -149,6 +166,12 @@ public class TorreBatallaService {
         TrainerMob oldMob = MOB_ACTUAL.remove(jugador.getUuid());
         if (oldMob != null && !oldMob.isRemoved()) {
             oldMob.discard();
+        }
+
+        // Barrer la arena de cualquier TrainerMob residual
+        Box arenaBox = new Box(cx - 20, cy - 5, cz - 20, cx + 20, cy + 20, cz + 20);
+        for (TrainerMob m : mundoTorre.getEntitiesByClass(TrainerMob.class, arenaBox, e -> true)) {
+            m.discard();
         }
 
         // Spawnear al nuevo rival
@@ -181,9 +204,24 @@ public class TorreBatallaService {
     }
 
     private static void victoria(ServerPlayerEntity jugador) {
-        Partida partida = partidasActivas.get(jugador.getUuid());
+        UUID uuid = jugador.getUuid();
+        if (!enCombate.remove(uuid)) {
+            return; // Ya procesado, evitar ejecución duplicada
+        }
+
+        Partida partida = partidasActivas.get(uuid);
         if (partida == null) return;
         
+        // Limpiar INMEDIATAMENTE el mob derrotado de la arena
+        TrainerMob oldMob = MOB_ACTUAL.remove(uuid);
+        if (oldMob != null && !oldMob.isRemoved()) {
+            oldMob.discard();
+        }
+        try {
+            ModCommon.RCT.getTrainerRegistry().unregisterById(PREFIJO_NPC + uuid);
+            RCTMod.getInstance().getTrainerManager().removeBattle(uuid);
+        } catch (Exception ignored) {}
+
         jugador.sendMessage(Text.literal("§a¡Has superado la Ronda " + partida.ronda() + "!"));
         
         // Curar equipo (usando el Party)
@@ -192,19 +230,24 @@ public class TorreBatallaService {
 
         // Avanzar ronda y actualizar record actual
         Partida nueva = partida.avanzar();
-        partidasActivas.put(jugador.getUuid(), nueva);
+        partidasActivas.put(uuid, nueva);
         TorreRanking.actualizarRonda(jugador.getServer(), jugador.getName().getString(), nueva.ronda() - 1);
         
         // Iniciar la siguiente ronda tras 2 segundos
         net.pokereport.luna.gym.Programador.en(40, () -> {
-            if (partidasActivas.containsKey(jugador.getUuid())) {
+            if (partidasActivas.containsKey(uuid)) {
                 prepararRonda(jugador);
             }
         });
     }
 
     private static void derrota(ServerPlayerEntity jugador) {
-        Partida partida = partidasActivas.get(jugador.getUuid());
+        UUID uuid = jugador.getUuid();
+        if (!enCombate.remove(uuid)) {
+            return;
+        }
+
+        Partida partida = partidasActivas.get(uuid);
         if (partida == null) return;
         
         jugador.sendMessage(Text.literal("§cHas caído en la Ronda " + partida.ronda() + ". Fin de tu intento."));
@@ -214,6 +257,7 @@ public class TorreBatallaService {
 
     public static void salir(ServerPlayerEntity jugador) {
         UUID uuid = jugador.getUuid();
+        enCombate.remove(uuid);
         Partida partida = partidasActivas.remove(uuid);
         if (partida != null) {
             arenasOcupadas.put(partida.arenaId(), false);
@@ -221,19 +265,38 @@ public class TorreBatallaService {
             if (partida.modo() == 2) {
                 var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
                 if (party != null) {
-                    for (int i = 0; i < 6; i++) party.set(i, null);
+                    List<Pokemon> viejos = new ArrayList<>();
+                    for (Pokemon p : party) {
+                        if (p != null) viejos.add(p);
+                    }
+                    for (Pokemon p : viejos) {
+                        party.remove(p);
+                    }
                 }
                 jugador.sendMessage(Text.literal("§e[Torre de Batalla] El equipo aleatorio prestado ha sido retirado."));
+            }
+            ServerWorld mundoTorre = jugador.getServer().getWorld(LunaDimensions.TORRE);
+            if (mundoTorre != null) {
+                int cx = partida.arenaId() * 1000;
+                int cy = 100;
+                int cz = 0;
+                Box arenaBox = new Box(cx - 20, cy - 5, cz - 20, cx + 20, cy + 20, cz + 20);
+                for (TrainerMob m : mundoTorre.getEntitiesByClass(TrainerMob.class, arenaBox, e -> true)) {
+                    m.discard();
+                }
             }
         }
         
         // Limpiar arena mob
-        TrainerMob oldMob = MOB_ACTUAL.remove(jugador.getUuid());
+        TrainerMob oldMob = MOB_ACTUAL.remove(uuid);
         if (oldMob != null && !oldMob.isRemoved()) {
             oldMob.discard();
         }
 
-        try { ModCommon.RCT.getTrainerRegistry().unregisterById(PREFIJO_NPC + uuid); } catch (Exception ignored) {}
+        try {
+            ModCommon.RCT.getTrainerRegistry().unregisterById(PREFIJO_NPC + uuid);
+            RCTMod.getInstance().getTrainerManager().removeBattle(uuid);
+        } catch (Exception ignored) {}
 
         // Devolver a la ciudadela si sigue en la torre
         if (jugador.getWorld().getRegistryKey().equals(LunaDimensions.TORRE)) {
@@ -251,7 +314,7 @@ public class TorreBatallaService {
         mob.setCustomName(Text.literal(name));
         mob.setCustomNameVisible(true);
         mob.setAiDisabled(true);
-        mob.setPersistent(true);
+        mob.setPersistent(false);
         mob.setInvulnerable(true);
         mob.setSilent(true);
 
@@ -313,6 +376,7 @@ public class TorreBatallaService {
             LunaEternal.LOG.info("Torre de Batalla: combate iniciado con éxito para {} (ronda {})",
                     player.getName().getString(), partidasActivas.get(uuid).ronda());
             RCTMod.getInstance().getTrainerManager().addBattle(player, opponentMob);
+            enCombate.add(player.getUuid());
             return true;
         } catch (Exception e) {
             LunaEternal.LOG.error("Torre de Batalla: error iniciando combate de escalera", e);
@@ -324,30 +388,28 @@ public class TorreBatallaService {
     public static void registrarEventos() {
         // Escuchar final de combate
         CobblemonEvents.BATTLE_VICTORY.subscribe(Priority.NORMAL, event -> {
-            var server = net.minecraft.server.MinecraftServer.class; // just to make sure we don't use it directly if we don't have it
+            Set<UUID> ganadores = new HashSet<>();
             for (com.cobblemon.mod.common.api.battles.model.actor.BattleActor actor : event.getWinners()) {
                 for (UUID u : actor.getPlayerUUIDs()) {
-                    if (partidasActivas.containsKey(u)) {
-                        // find player
-                        for (ServerPlayerEntity p : event.getBattle().getPlayers()) {
-                            if (p.getUuid().equals(u)) victoria(p);
-                        }
-                    }
+                    ganadores.add(u);
                 }
             }
-            for (com.cobblemon.mod.common.api.battles.model.actor.BattleActor actor : event.getLosers()) {
-                for (UUID u : actor.getPlayerUUIDs()) {
-                    if (partidasActivas.containsKey(u)) {
-                        for (ServerPlayerEntity p : event.getBattle().getPlayers()) {
-                            if (p.getUuid().equals(u)) derrota(p);
-                        }
+            for (ServerPlayerEntity p : event.getBattle().getPlayers()) {
+                UUID u = p.getUuid();
+                if (partidasActivas.containsKey(u)) {
+                    if (ganadores.contains(u)) {
+                        victoria(p);
+                    } else {
+                        derrota(p);
                     }
                 }
             }
         });
         CobblemonEvents.BATTLE_FLED.subscribe(Priority.NORMAL, event -> {
             for (ServerPlayerEntity p : event.getBattle().getPlayers()) {
-                if (partidasActivas.containsKey(p.getUuid())) derrota(p);
+                if (partidasActivas.containsKey(p.getUuid())) {
+                    derrota(p);
+                }
             }
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {

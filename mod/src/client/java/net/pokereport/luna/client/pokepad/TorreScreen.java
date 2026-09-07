@@ -203,8 +203,8 @@ public class TorreScreen extends Screen {
             // Imagen del modo en la parte superior (relación ~4:3)
             int imgPad = 10;
             int imgW = CARD_W - (imgPad * 2); // ~228 px
-            int imgH = 170;
-            dibujarTextura(ctx, texturas[i], px(tx + imgPad), py(ty + imgPad), pl(imgW), pl(imgH), 256, 256);
+            int imgH = 210;
+            dibujarTextura(ctx, texturas[i], px(tx + imgPad), py(ty + imgPad), pl(imgW), pl(imgH), 512, 512);
             marco(ctx, px(tx + imgPad) - 1, py(ty + imgPad) - 1, pl(imgW) + 2, pl(imgH) + 2,
                     encima ? BORDE_ENCIMA : 0xFF141924, 1);
 

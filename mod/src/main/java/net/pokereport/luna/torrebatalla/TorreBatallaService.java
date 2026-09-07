@@ -52,6 +52,22 @@ public class TorreBatallaService {
             salir(jugador);
         }
 
+        // Verificar que el jugador tiene Pokémon vivos si no es modo aleatorio
+        if (modo != 2) {
+            var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
+            int vivos = 0;
+            if (party != null) {
+                for (Pokemon p : party) {
+                    if (p != null && p.getCurrentHealth() > 0) vivos++;
+                }
+            }
+            int minVivos = (modo == 1) ? 2 : 1;
+            if (vivos < minVivos) {
+                jugador.sendMessage(Text.literal("§c¡Necesitas al menos " + minVivos + " Pokémon con vida en tu equipo!"));
+                return;
+            }
+        }
+
         // Encontrar una arena libre
         int arenaId = 0;
         while (arenasOcupadas.containsKey(arenaId) && arenasOcupadas.get(arenaId)) {
@@ -102,18 +118,13 @@ public class TorreBatallaService {
         }
 
         // Generar el equipo rival
-        int count = (partida.modo() == 1) ? 2 : 1; // 2vs2 son 2 pokemons (esto lo refinaremos)
-        if (partida.modo() == 0 || partida.modo() == 2) count = 1; // 1 pokemon por ronda al principio
+        int count = (partida.modo() == 1) ? 2 : 1; // 2vs2 son 2 pokemons
 
-        // TODO: Escalar la dificultad de los pokemon en base a la ronda
         List<PokemonModel> opponentTeam = new ArrayList<>();
-        List<String> pool = List.of("charizard", "blastoise", "venusaur", "gengar", "machamp", "alakazam", "snorlax", "dragonite");
-        String p1 = pool.get(new Random().nextInt(pool.size()));
-        opponentTeam.add(buildModel(p1, Set.of("tackle"), ""));
-        
-        if (partida.modo() == 1) { // 2vs2 (Doble)
-            String p2 = pool.get(new Random().nextInt(pool.size()));
-            opponentTeam.add(buildModel(p2, Set.of("tackle"), ""));
+        List<String> pool = List.of("charizard", "blastoise", "venusaur", "gengar", "machamp", "alakazam", "snorlax", "dragonite", "lucario", "garchomp", "metagross", "tyranitar");
+        for (int i = 0; i < count; i++) {
+            String p = pool.get(new Random().nextInt(pool.size()));
+            opponentTeam.add(buildModel(p));
         }
 
         boolean esAleatorio = (partida.modo() == 2);
@@ -141,8 +152,12 @@ public class TorreBatallaService {
         partidasActivas.put(jugador.getUuid(), nueva);
         TorreRanking.actualizarRonda(jugador.getServer(), jugador.getName().getString(), nueva.ronda() - 1);
         
-        // Iniciar la siguiente
-        prepararRonda(jugador);
+        // Iniciar la siguiente ronda tras 2 segundos
+        net.pokereport.luna.gym.Programador.en(40, () -> {
+            if (partidasActivas.containsKey(jugador.getUuid())) {
+                prepararRonda(jugador);
+            }
+        });
     }
 
     private static void derrota(ServerPlayerEntity jugador) {
@@ -244,14 +259,17 @@ public class TorreBatallaService {
                     List.of(playerTrainer), List.of(npc), () -> format100, rules);
 
             if (battleId == null) {
+                LunaEternal.LOG.error("Torre de Batalla: startBattle devolvió null para {}", player.getName().getString());
                 salir(player);
                 return false;
             }
 
+            LunaEternal.LOG.info("Torre de Batalla: combate iniciado con éxito para {} (ronda {})",
+                    player.getName().getString(), partidasActivas.get(uuid).ronda());
             RCTMod.getInstance().getTrainerManager().addBattle(player, opponentMob);
             return true;
         } catch (Exception e) {
-            LunaEternal.LOG.error("Error starting ladder battle", e);
+            LunaEternal.LOG.error("Torre de Batalla: error iniciando combate de escalera", e);
             salir(player);
             return false;
         }
@@ -326,10 +344,9 @@ public class TorreBatallaService {
         });
     }
 
-    private static PokemonModel buildModel(String species, Set<String> moves, String heldItem) {
-        var ivs = new PokemonModel.StatsModel(31, 31, 31, 31, 31, 31);
-        var evs = new PokemonModel.StatsModel(252, 0, 0, 252, 4, 0);
-        return new PokemonModel(species, null, 100, "jolly", "", new LinkedHashSet<>(moves), ivs, evs, false, heldItem, Set.of());
+    private static PokemonModel buildModel(String species) {
+        Pokemon p = PokemonProperties.Companion.parse(species + " level=100").create();
+        return new PokemonModel(p);
     }
 
     private static void construirBase(ServerWorld mundo, int cx, int cy, int cz) {

@@ -1,95 +1,251 @@
 package net.pokereport.luna.client.pokepad;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.pokereport.luna.net.Red;
 
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * TORRE DE BATALLA: pantalla integrada en el chasis del PokePad.
+ *
+ * Sigue la arquitectura estándar del PokePad (como ExplorarScreen y CurarScreen):
+ * - Chasis pokepad_cosmeticos.png con Escalado.aplicar
+ * - Panel izquierdo: Icono, título, reglas de combate y descripción
+ * - Pantalla derecha: Las 3 tarjetas de combate (1vs1, 2vs2, Aleatorio)
+ */
 public class TorreScreen extends Screen {
 
-    private static final Identifier CERRAR = Identifier.of("lunaeternal", "textures/gui/pokepad/boton_cerrar.png");
-    private static final Identifier TEX_1VS1 = Identifier.of("lunaeternal", "textures/gui/pokepad/torre_modo_1vs1.png");
-    private static final Identifier TEX_2VS2 = Identifier.of("lunaeternal", "textures/gui/pokepad/torre_modo_2vs2.png");
-    private static final Identifier TEX_RANDOM = Identifier.of("lunaeternal", "textures/gui/pokepad/torre_modo_aleatorio.png");
+    private static final Identifier CHASIS =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/pokepad_cosmeticos.png");
+    private static final Identifier ATRAS =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/boton_atras.png");
+    private static final Identifier CERRAR =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/boton_cerrar.png");
+    private static final Identifier ICONO =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/torre_batalla.png");
+
+    private static final Identifier TEX_1VS1 =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/torre_modo_1vs1.png");
+    private static final Identifier TEX_2VS2 =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/torre_modo_2vs2.png");
+    private static final Identifier TEX_RANDOM =
+            Identifier.of("lunaeternal", "textures/gui/pokepad/torre_modo_aleatorio.png");
+
+    // Medidas del arte del chasis (1380x828)
+    private static final int NAT_ANCHO = 1380, NAT_ALTO = 828;
+    private static final int PANEL_X = 63, PANEL_Y = 70, PANEL_W = 315, PANEL_H = 692;
+    private static final int PANT_X = 460, PANT_Y = 204, PANT_W = 801, PANT_H = 494;
+    private static final int NAV_ALTO = 72;
+    private static final int MARGEN = 14;
+
+    // Medidas de las 3 tarjetas en la pantalla derecha
+    private static final int COLS = 3;
+    private static final int GAP = 14;
+    private static final int CARD_W = (PANT_W - (2 * MARGEN) - ((COLS - 1) * GAP)) / COLS; // ~248 px
+    private static final int CARD_H = PANT_H - (2 * MARGEN); // 466 px
+
+    // Colores estándar del PokePad
+    private static final int BORDE_ENCIMA = 0xFFF35C0C; // Naranja acento del chasis
+    private static final int BORDE_BASE = 0xFF7C89B4;
+    private static final int FONDO_TARJETA = 0xFF222B3D;
+    private static final int FONDO_TARJETA_ENCIMA = 0xFF2D3950;
+    private static final int TEXTO_OSCURO = 0xFF16203A;
+    private static final int TEXTO_SUAVE = 0xFF5A668C;
+    private static final int TEXTO_CONTORNO = 0xFFF2F6FF;
+    private static final int SEPARADOR = 0xFF3C4250;
+    private static final int ORO = 0xFFFFD65C;
+    private static final int VERDE_BOTON = 0xFF2E9E56;
+    private static final int VERDE_BOTON_ENCIMA = 0xFF4FD07A;
 
     private final Screen anterior;
-    private int x0, y0;
-    private int panelW, panelH;
+    private float k;
+    private int ancho, alto, x0, y0;
 
     public TorreScreen(Screen anterior) {
-        super(Text.literal("Torre de Batalla"));
+        super(Text.translatable("pokepad.lunaeternal.app.torre_batalla"));
         this.anterior = anterior;
     }
 
     @Override
     protected void init() {
-        super.init();
-        // Dynamic sizing for Minecraft's GUI scale
-        this.panelW = Math.min(this.width - 20, 600); // 600 is wide enough for 3 cards
-        this.panelH = Math.min(this.height - 20, 280);
-        this.x0 = (this.width - this.panelW) / 2;
-        this.y0 = (this.height - this.panelH) / 2;
+        recalcular();
     }
 
-    private int px(int x) { return x0 + x; }
-    private int py(int y) { return y0 + y; }
+    private void recalcular() {
+        var m = Escalado.aplicar(client, width, height, CHASIS, ATRAS, CERRAR);
+        k = m.k();
+        ancho = m.ancho();
+        alto = m.alto();
+        x0 = m.x0();
+        y0 = m.y0();
+    }
 
     @Override
-    public void renderInGameBackground(DrawContext context) {
-        // OVERRIDE: Do not draw the dark gradient! 
-        // By doing nothing here, we keep the blur from renderBackground but avoid the darkening.
+    public boolean shouldPause() {
+        return false;
     }
+
+    private int px(int a) { return x0 + Math.round(a * k); }
+    private int py(int a) { return y0 + Math.round(a * k); }
+    private int pl(int a) { return Math.max(1, Math.round(a * k)); }
 
     @Override
     public void render(DrawContext ctx, int rx, int ry, float delta) {
-        this.renderBackground(ctx, rx, ry, delta);
-        
-        ctx.fill(px(0), py(0), px(panelW), py(panelH), 0xFF1E2430);
-        ctx.drawBorder(px(0), py(0), panelW, panelH, 0xFF4A566E);
+        recalcular();
+        renderBackground(ctx, rx, ry, delta);
 
-        // Header
-        ctx.fill(px(0), py(0), px(panelW), py(30), 0xFF2D3545);
-        ctx.drawBorder(px(0), py(0), panelW, 30, 0xFF4A566E);
-        
-        ctx.drawCenteredTextWithShadow(this.textRenderer, "Torre de Batalla", px(panelW / 2), py(10), 0xFFFFB900);
-        dibujarTextura(ctx, CERRAR, px(panelW - 24), py(3), 24, 24, 24, 24);
-
-        int gap = 15;
-        int cardW = (panelW - (gap * 4)) / 3;
-        int cardH = panelH - 30 - (gap * 2);
-        
-        int bx = gap;
-        int by = 30 + gap;
-        
-        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, cardH, TEX_1VS1, "Combate 1vs1", "Lucha uno contra uno.", 0);
-        bx += cardW + gap;
-        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, cardH, TEX_2VS2, "Combate 2vs2", "Lucha doble 2vs2.", 1);
-        bx += cardW + gap;
-        dibujarTarjeta(ctx, rx, ry, bx, by, cardW, cardH, TEX_RANDOM, "Aleatorio", "Equipos al azar nivel 100.", 2);
+        dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
+        dibujarNavegacion(ctx, rx, ry);
+        dibujarPanel(ctx, rx, ry);
+        dibujarTarjetas(ctx, rx, ry);
     }
 
-    private void dibujarTarjeta(DrawContext ctx, int rx, int ry, int bx, int by, int w, int h, Identifier tex, String titulo, String desc, int modoId) {
-        boolean hover = dentro(rx, ry, px(bx), py(by), w, h);
+    private void dibujarNavegacion(DrawContext ctx, int rx, int ry) {
+        int cy = PANEL_Y + NAV_ALTO / 2;
 
-        ctx.fill(px(bx), py(by), px(bx + w), py(by + h), hover ? 0xFF3E4A61 : 0xFF2D3545);
-        ctx.drawBorder(px(bx), py(by), w, h, hover ? 0xFFFFB900 : 0xFF4A566E);
+        // Botón Atrás
+        dibujarTextura(ctx, ATRAS, px(PANEL_X + 18), py(cy) - pl(24), pl(60), pl(48), 120, 96);
+        if (dentro(rx, ry, px(PANEL_X + 18), py(cy) - pl(24), pl(60), pl(48))) {
+            marco(ctx, px(PANEL_X + 18) - 2, py(cy) - pl(24) - 2, pl(60) + 4, pl(48) + 4,
+                    BORDE_ENCIMA, 2);
+        }
+        texto(ctx, Text.translatable("pokepad.lunaeternal.inicio"),
+                PANEL_X + 92, cy - 14, 28, 0xFFFFFFFF, false, false);
 
-        int pad = 5;
-        int imgW = w - (pad * 2);
-        int imgH = (int)(imgW * (192.0 / 256.0));
-        
-        dibujarTextura(ctx, tex, px(bx + pad), py(by + pad), imgW, imgH, 256, 256);
-        
-        ctx.drawBorder(px(bx + pad - 1), py(by + pad - 1), imgW + 2, imgH + 2, hover ? 0xFFFFB900 : 0xFF111111);
+        // Botón Cerrar
+        int cx = PANEL_X + PANEL_W - 18 - 80;
+        dibujarTextura(ctx, CERRAR, px(cx), py(cy) - pl(32), pl(80), pl(64), 120, 96);
+        if (dentro(rx, ry, px(cx), py(cy) - pl(32), pl(80), pl(64))) {
+            marco(ctx, px(cx) - 2, py(cy) - pl(32) - 2, pl(80) + 4, pl(64) + 4, BORDE_ENCIMA, 2);
+        }
+    }
 
-        int ty = by + pad + imgH + 10;
-        ctx.drawCenteredTextWithShadow(this.textRenderer, titulo, px(bx + w / 2), py(ty), hover ? 0xFFFFFFFF : 0xFFFFB900);
-        
-        int descY = ty + 12;
-        ctx.drawTextWrapped(this.textRenderer, net.minecraft.text.StringVisitable.plain(desc), px(bx + pad + 2), py(descY), w - (pad * 2) - 4, 0xFFAAAAAA);
+    /** Panel Izquierdo: Icono, título y reglas de la Torre. */
+    private void dibujarPanel(DrawContext ctx, int rx, int ry) {
+        int cx = PANEL_X + PANEL_W / 2;
+
+        // Icono de la Torre
+        dibujarTextura(ctx, ICONO, px(cx - 50), py(PANEL_Y + NAV_ALTO + 15),
+                pl(100), pl(100), 100, 100);
+
+        // Título de la app
+        texto(ctx, Text.literal("TORRE BATALLA"),
+                cx, PANEL_Y + NAV_ALTO + 130, 26, ORO, true, false);
+
+        // Descripción general
+        int y = PANEL_Y + NAV_ALTO + 165;
+        String desc = "Escala la torre enfrentando entrenadores implacables en combates consecutivos.";
+        for (String linea : partir(desc, PANEL_W - 50, 15)) {
+            texto(ctx, Text.literal(linea), cx, y, 15, TEXTO_SUAVE, true, false);
+            y += 18;
+        }
+
+        separador(ctx, y + 10);
+        y += 24;
+
+        // Sección de Reglas
+        texto(ctx, Text.literal("REGLAS DE COMBATE"), cx, y, 18, 0xFFFFFFFF, true, false);
+        y += 26;
+
+        String[] reglas = {
+                "• Nivel 100 forzado",
+                "• Curación tras victoria",
+                "• Escalera infinita",
+                "• Escáner bloqueado"
+        };
+        for (String r : reglas) {
+            texto(ctx, Text.literal(r), PANEL_X + 45, y, 15, 0xFFD8DEEA, false, false);
+            y += 20;
+        }
+
+        separador(ctx, y + 10);
+        y += 26;
+
+        // Información de ranking
+        texto(ctx, Text.literal("CLASIFICACIÓN"), cx, y, 17, ORO, true, false);
+        y += 22;
+        texto(ctx, Text.literal("¡Compite por el Top 10!"), cx, y, 14, TEXTO_SUAVE, true, false);
+        y += 18;
+        texto(ctx, Text.literal("Holograma en Ciudadela"), cx, y, 13, 0xFF8FA0C8, true, false);
+    }
+
+    /** Pantalla Derecha: Las 3 tarjetas de modos (1vs1, 2vs2, Aleatorio). */
+    private void dibujarTarjetas(DrawContext ctx, int rx, int ry) {
+        String[] titulos = { "COMBATE 1 VS 1", "COMBATE 2 VS 2", "ALEATORIO" };
+        String[] subtitulos = { "Individual", "Dobles", "Draft Sorpresa" };
+        String[] descripciones = {
+                "Duelo uno contra uno. 1 Pokémon vs 1 Pokémon en cada ronda.",
+                "Combate doble por parejas. 2 Pokémon vs 2 Pokémon en arena.",
+                "Equipo sorpresa asignado al azar nivel 100. ¡Prueba tu habilidad!"
+        };
+        Identifier[] texturas = { TEX_1VS1, TEX_2VS2, TEX_RANDOM };
+
+        int ty = PANT_Y + MARGEN;
+
+        for (int i = 0; i < COLS; i++) {
+            int tx = PANT_X + MARGEN + (i * (CARD_W + GAP));
+            boolean encima = dentro(rx, ry, px(tx), py(ty), pl(CARD_W), pl(CARD_H));
+
+            // Fondo de la tarjeta
+            ctx.fill(px(tx), py(ty), px(tx + CARD_W), py(ty + CARD_H),
+                    encima ? FONDO_TARJETA_ENCIMA : FONDO_TARJETA);
+            marco(ctx, px(tx), py(ty), pl(CARD_W), pl(CARD_H),
+                    encima ? BORDE_ENCIMA : BORDE_BASE, Math.max(1, pl(encima ? 3 : 2)));
+
+            // Imagen del modo en la parte superior (relación ~4:3)
+            int imgPad = 10;
+            int imgW = CARD_W - (imgPad * 2); // ~228 px
+            int imgH = 170;
+            dibujarTextura(ctx, texturas[i], px(tx + imgPad), py(ty + imgPad), pl(imgW), pl(imgH), 256, 256);
+            marco(ctx, px(tx + imgPad) - 1, py(ty + imgPad) - 1, pl(imgW) + 2, pl(imgH) + 2,
+                    encima ? BORDE_ENCIMA : 0xFF141924, 1);
+
+            // Título del modo
+            int contentY = ty + imgPad + imgH + 16;
+            texto(ctx, Text.literal(titulos[i]), tx + CARD_W / 2, contentY, 20,
+                    encima ? 0xFFFFFFFF : ORO, true, false);
+
+            // Subtítulo
+            contentY += 22;
+            texto(ctx, Text.literal(subtitulos[i]), tx + CARD_W / 2, contentY, 14,
+                    0xFF8FA0C8, true, false);
+
+            // Separador interno
+            contentY += 16;
+            ctx.fill(px(tx + 25), py(contentY), px(tx + CARD_W - 25), py(contentY) + Math.max(1, pl(1)),
+                    SEPARADOR);
+            contentY += 12;
+
+            // Descripción multilínea
+            for (String linea : partir(descripciones[i], CARD_W - 36, 14)) {
+                texto(ctx, Text.literal(linea), tx + CARD_W / 2, contentY, 14,
+                        0xFFD0D8E8, true, false);
+                contentY += 17;
+            }
+
+            // Botón de acción al pie de la tarjeta
+            int btnPadX = 18;
+            int btnW = CARD_W - (btnPadX * 2);
+            int btnH = 40;
+            int btnY = ty + CARD_H - btnH - 16;
+
+            boolean btnHover = dentro(rx, ry, px(tx + btnPadX), py(btnY), pl(btnW), pl(btnH));
+            ctx.fill(px(tx + btnPadX), py(btnY), px(tx + btnPadX + btnW), py(btnY + btnH),
+                    btnHover ? VERDE_BOTON_ENCIMA : VERDE_BOTON);
+            marco(ctx, px(tx + btnPadX), py(btnY), pl(btnW), pl(btnH),
+                    btnHover ? 0xFFFFFFFF : 0xFF10331E, Math.max(1, pl(2)));
+
+            texto(ctx, Text.literal("ENTRAR"), tx + CARD_W / 2, btnY + 11, 20,
+                    0xFFFFFFFF, true, false);
+        }
     }
 
     @Override
@@ -97,29 +253,42 @@ public class TorreScreen extends Screen {
         if (boton != 0) return super.mouseClicked(mx, my, boton);
         int rx = (int) mx, ry = (int) my;
 
-        if (dentro(rx, ry, px(panelW - 24), py(3), 24, 24)) {
+        // Botón Atrás
+        int cy = py(PANEL_Y + NAV_ALTO / 2);
+        if (dentro(rx, ry, px(PANEL_X + 18), cy - pl(24), pl(60), pl(48))) {
+            sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
+            if (anterior != null && client != null) {
+                client.setScreen(anterior);
+            } else {
+                close();
+            }
+            return true;
+        }
+
+        // Botón Cerrar
+        int cx = px(PANEL_X + PANEL_W - 18) - pl(80);
+        if (dentro(rx, ry, cx, cy - pl(32), pl(80), pl(64))) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
             close();
             return true;
         }
 
-        int gap = 15;
-        int cardW = (panelW - (gap * 4)) / 3;
-        int h = panelH - 30 - (gap * 2);
-        
-        int bx = gap;
-        if (dentro(rx, ry, px(bx), py(30 + gap), cardW, h)) { seleccionarModo(0); return true; }
-        bx += cardW + gap;
-        if (dentro(rx, ry, px(bx), py(30 + gap), cardW, h)) { seleccionarModo(1); return true; }
-        bx += cardW + gap;
-        if (dentro(rx, ry, px(bx), py(30 + gap), cardW, h)) { seleccionarModo(2); return true; }
+        // Clics en las tarjetas o botones de modos
+        int ty = PANT_Y + MARGEN;
+        for (int i = 0; i < COLS; i++) {
+            int tx = PANT_X + MARGEN + (i * (CARD_W + GAP));
+            if (dentro(rx, ry, px(tx), py(ty), pl(CARD_W), pl(CARD_H))) {
+                seleccionarModo(i);
+                return true;
+            }
+        }
 
         return super.mouseClicked(mx, my, boton);
     }
 
     private void seleccionarModo(int modo) {
         sonar(SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value(), 1.2f);
-        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new net.pokereport.luna.net.Red.EntrarTorreBatalla(modo));
+        ClientPlayNetworking.send(new Red.EntrarTorreBatalla(modo));
         close();
     }
 
@@ -129,11 +298,70 @@ public class TorreScreen extends Screen {
         }
     }
 
-    private boolean dentro(int rx, int ry, int x, int y, int w, int h) {
+    // ---- Utilidades estándar de renderizado del PokePad --------------------
+
+    private List<String> partir(String texto, int anchoArte, int altoArte) {
+        var salida = new ArrayList<String>();
+        var actual = new StringBuilder();
+        for (String palabra : texto.split(" ")) {
+            String prueba = actual.isEmpty() ? palabra : actual + " " + palabra;
+            if (anchoArte(prueba, altoArte) > anchoArte && !actual.isEmpty()) {
+                salida.add(actual.toString());
+                actual = new StringBuilder(palabra);
+            } else {
+                actual = new StringBuilder(prueba);
+            }
+        }
+        if (!actual.isEmpty()) {
+            salida.add(actual.toString());
+        }
+        return salida;
+    }
+
+    private int anchoArte(String linea, int alto) {
+        return Math.round(textRenderer.getWidth(linea) * alto / (float) textRenderer.fontHeight);
+    }
+
+    private void separador(DrawContext ctx, int artY) {
+        ctx.fill(px(PANEL_X + 28), py(artY), px(PANEL_X + PANEL_W - 28),
+                py(artY) + Math.max(1, pl(2)), SEPARADOR);
+    }
+
+    private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,
+                       int color, boolean centrado, boolean contorno) {
+        float escala = alto * k / textRenderer.fontHeight;
+        if (escala <= 0) return;
+
+        MatrixStack m = ctx.getMatrices();
+        m.push();
+        m.translate(x0, y0, 0);
+        m.scale(escala, escala, 1f);
+        int anchoTexto = textRenderer.getWidth(linea);
+        int tx = Math.round(cx * k / escala) - (centrado ? anchoTexto / 2 : 0);
+        int ty = Math.round(arriba * k / escala);
+        if (contorno) {
+            ctx.drawText(textRenderer, linea, tx - 1, ty, TEXTO_CONTORNO, false);
+            ctx.drawText(textRenderer, linea, tx + 1, ty, TEXTO_CONTORNO, false);
+            ctx.drawText(textRenderer, linea, tx, ty - 1, TEXTO_CONTORNO, false);
+            ctx.drawText(textRenderer, linea, tx, ty + 1, TEXTO_CONTORNO, false);
+        }
+        ctx.drawText(textRenderer, linea, tx, ty, color, false);
+        m.pop();
+    }
+
+    private static boolean dentro(int rx, int ry, int x, int y, int w, int h) {
         return rx >= x && rx < x + w && ry >= y && ry < y + h;
     }
 
-    private static void dibujarTextura(DrawContext ctx, Identifier tex, int x, int y, int w, int h, int natW, int natH) {
+    private static void marco(DrawContext ctx, int x, int y, int w, int h, int color, int g) {
+        ctx.fill(x, y, x + w, y + g, color);
+        ctx.fill(x, y + h - g, x + w, y + h, color);
+        ctx.fill(x, y, x + g, y + h, color);
+        ctx.fill(x + w - g, y, x + w, y + h, color);
+    }
+
+    private static void dibujarTextura(DrawContext ctx, Identifier tex,
+                                       int x, int y, int w, int h, int natW, int natH) {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();

@@ -98,11 +98,17 @@ def main() -> None:
         desplegar(nombre)
 
     if args.reiniciar:
-        # Se avisa por el chat antes: quien este construyendo con Axiom pierde
-        # la seleccion, no el trabajo, pero agradece el aviso.
-        ptero.comando("say Reiniciando para cargar los mods. Vuelvo en 30 s.")
+        import time
+        # Se avisa por el chat con tiempo para que nadie pierda trabajo o partidas
+        print("\n  Avisando a los jugadores en el servidor...")
+        ptero.comando("say §c§l[LUNA REINICIO] §eEl servidor se reiniciara en 30 segundos por actualizacion. Por favor guarda tus cosas.")
+        time.sleep(15)
+        ptero.comando("say §c§l[LUNA REINICIO] §eEl servidor se reiniciara en 15 segundos...")
+        time.sleep(10)
+        ptero.comando("say §c§l[LUNA REINICIO] §cReinicio en 5 segundos...")
+        time.sleep(5)
         ptero.potencia("restart")
-        print("\n  Reiniciando. Un mod nuevo NO se carga en caliente.")
+        print("  Reiniciando. Un mod nuevo NO se carga en caliente.")
     else:
         print("\n  Los mods se cargan AL ARRANCAR. Para que surtan efecto:")
         print("      python tools/desplegar.py " + " ".join(args.proyectos)

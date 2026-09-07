@@ -38,6 +38,12 @@ public class TorreScreen extends Screen {
     private int py(int y) { return y0 + y; }
 
     @Override
+    public void renderInGameBackground(DrawContext context) {
+        // OVERRIDE: Do not draw the dark gradient! 
+        // By doing nothing here, we keep the blur from renderBackground but avoid the darkening.
+    }
+
+    @Override
     public void render(DrawContext ctx, int rx, int ry, float delta) {
         this.renderBackground(ctx, rx, ry, delta);
         
@@ -63,8 +69,6 @@ public class TorreScreen extends Screen {
         dibujarTarjeta(ctx, rx, ry, bx, by, cardW, cardH, TEX_2VS2, "Combate 2vs2", "Lucha doble 2vs2.", 1);
         bx += cardW + gap;
         dibujarTarjeta(ctx, rx, ry, bx, by, cardW, cardH, TEX_RANDOM, "Aleatorio", "Equipos al azar nivel 100.", 2);
-
-        super.render(ctx, rx, ry, delta);
     }
 
     private void dibujarTarjeta(DrawContext ctx, int rx, int ry, int bx, int by, int w, int h, Identifier tex, String titulo, String desc, int modoId) {

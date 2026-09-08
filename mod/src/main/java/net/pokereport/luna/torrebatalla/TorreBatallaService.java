@@ -337,7 +337,8 @@ public class TorreBatallaService {
         // Avanzar ronda y actualizar record actual
         Partida nueva = partida.avanzar();
         partidasActivas.put(uuid, nueva);
-        TorreRanking.actualizarRonda(jugador.getServer(), jugador.getName().getString(), nueva.ronda() - 1);
+        String modoKeyVictoria = TorreRanking.modoDe(nueva.modo());
+        TorreRanking.actualizarRonda(jugador.getServer(), modoKeyVictoria, jugador.getName().getString(), nueva.ronda() - 1);
         
         // Iniciar la siguiente ronda tras 2 segundos
         net.pokereport.luna.gym.Programador.en(40, () -> {
@@ -357,7 +358,8 @@ public class TorreBatallaService {
         if (partida == null) return;
         
         jugador.sendMessage(Text.literal("§cHas caído en la Ronda " + partida.ronda() + ". Fin de tu intento."));
-        TorreRanking.actualizarRonda(jugador.getServer(), jugador.getName().getString(), partida.ronda() - 1);
+        String modoKeyDerrota = TorreRanking.modoDe(partida.modo());
+        TorreRanking.actualizarRonda(jugador.getServer(), modoKeyDerrota, jugador.getName().getString(), partida.ronda() - 1);
         salir(jugador);
     }
 

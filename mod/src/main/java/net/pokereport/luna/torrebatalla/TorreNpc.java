@@ -44,12 +44,11 @@ public class TorreNpc {
         Vec3d pos = jugador.getPos();
         float yaw = jugador.getYaw();
 
-        // Limpiar cualquier NPC previo u holograma de la torre en un radio cercano
+        // Limpiar cualquier NPC previo de la torre en un radio cercano
         Box caja = Box.of(pos, 8, 8, 8);
         for (Entity prev : mundo.getEntitiesByClass(Entity.class, caja, e -> e.getCommandTags().contains("luna_torre_batalla"))) {
             prev.discard();
         }
-        TorreRanking.quitar(mundo, pos);
 
         // Crear el NPC recepcionista directamente como TrainerMob
         TrainerMob mob = TrainerMob.getEntityType().create(mundo);
@@ -69,12 +68,6 @@ public class TorreNpc {
             mundo.spawnEntity(mob);
         }
 
-        // Colocar el holograma del TOP 10 2 bloques a la derecha de donde mira el jugador
-        double angulo = Math.toRadians(yaw - 90);
-        double offsetX = Math.cos(angulo) * 2.0;
-        double offsetZ = Math.sin(angulo) * 2.0;
-        TorreRanking.colocarHolograma(mundo, pos.add(offsetX, 0, offsetZ));
-
-        jugador.sendMessage(Text.literal("§a[Torre de Batalla] Recepcionista y Holograma de Ranking colocados con éxito."), false);
+        jugador.sendMessage(Text.literal("§a[Torre de Batalla] Recepcionista de la Torre colocado con éxito."), false);
     }
 }

@@ -639,7 +639,13 @@ public final class LunaCommand {
             .then(literal("torre_batalla")
                 .requires(s -> s.hasPermissionLevel(4))
                 .then(literal("npc")
-                    .executes(ctx -> npcTorreBatalla(ctx.getSource()))))
+                    .executes(ctx -> npcTorreBatalla(ctx.getSource())))
+                .then(literal("holograma")
+                    .then(literal("1vs1").executes(ctx -> hologramaTorre(ctx.getSource(), "1vs1")))
+                    .then(literal("2vs2").executes(ctx -> hologramaTorre(ctx.getSource(), "2vs2")))
+                    .then(literal("aleatorio").executes(ctx -> hologramaTorre(ctx.getSource(), "aleatorio")))
+                    .then(literal("quitar").executes(ctx -> quitarHologramaTorre(ctx.getSource())))
+                    .then(literal("actualizar").executes(ctx -> actualizarHologramasTorre(ctx.getSource())))))
 
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
@@ -1409,6 +1415,34 @@ public final class LunaCommand {
         
         net.pokereport.luna.torrebatalla.TorreNpc.colocarNpc(p);
         p.sendMessage(net.minecraft.text.Text.literal("¡NPC de la Torre de Batalla colocado. Quedó invulnerable y estático!"), false);
+        return 1;
+    }
+
+    private static int hologramaTorre(ServerCommandSource src, String modo) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        net.pokereport.luna.torrebatalla.TorreRanking.colocarHolograma(p.getServerWorld(), p.getPos(), modo);
+        p.sendMessage(Text.literal("§aHolograma de ranking para §e" + modo + " §acolocado exitosamente."), false);
+        return 1;
+    }
+
+    private static int quitarHologramaTorre(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        int quitados = net.pokereport.luna.torrebatalla.TorreRanking.quitarCercano(p.getServerWorld(), p.getPos());
+        p.sendMessage(Text.literal("§eSe han retirado §f" + quitados + " §eholograma(s) de la torre cercanos."), false);
+        return 1;
+    }
+
+    private static int actualizarHologramasTorre(ServerCommandSource src) {
+        net.pokereport.luna.torrebatalla.TorreRanking.actualizarHologramasEnMundos(src.getServer());
+        src.sendFeedback(() -> Text.literal("§aTodos los hologramas de ranking de la torre han sido actualizados."), false);
         return 1;
     }
 

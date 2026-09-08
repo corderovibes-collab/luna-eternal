@@ -3202,6 +3202,44 @@ Pase          EL PASE DE BATALLA LUNA (2026-09-08, V032+V033, D-046)
                 (suave, rebote, pulso, rampa), halo, brillo, marco vivo, arco,
                 barra, destello y un emisor de chispas ACOTADO a 120 -- un emisor
                 sin tope es una fuga de memoria con forma de efecto bonito
+              ⚠⚠⚠ Y LOS TRES FALLOS QUE LA MAQUETA NO PODIA VER, porque ninguno
+                 es geometria: SALIERON DE LAS CAPTURAS DEL USUARIO
+                 1) LA SOMBRA NATIVA, A ESTA ESCALA, ES UN CONTORNO NEGRO. Esto
+                    CORRIGE la leccion de TorreRecompensasScreen, que decia --con
+                    razon-- que la sombra nativa es mejor que cuatro copias
+                    desplazadas. Lo que aquella nota NO DICE es que eso VALE A
+                    ESCALA 1: Minecraft desplaza la sombra UNA UNIDAD DE FUENTE,
+                    y aqui la matriz esta escalada, asi que en un texto de 19 px
+                    de arte esa unidad son DOS PIXELES Y MEDIO de pantalla --y
+                    cinco en un 4K--. Deja de ser sombra y pasa a ser un contorno
+                    grueso pegado a cada letra: «tiene como un contorno negro y
+                    no se ve bien», con la captura delante
+                    LA REGLA: en una pantalla del PokePad, con la matriz escalada
+                    y sobre rellenos solidos, LA SOMBRA VA APAGADA
+                 2) `DrawContext` NO DIBUJA EN EL ORDEN EN QUE SE LE PIDE. El
+                    panel de ayuda se pintaba al 95 % DESPUES de las tarjetas y
+                    se seguian viendo por encima. No era transparencia: EL TEXTO
+                    VA EN UNA CAPA QUE SE VUELCA LA ULTIMA. Se arregla con
+                    `ctx.draw()` ANTES de tapar -- la misma regla de las 2
+                    pasadas de dibujado.md vista desde el otro lado: alli se
+                    vacia el buffer para meter 3D, aqui para tapar 2D
+                 3) el pie de una tarjeta bloqueada decia «NIVEL 3», que es lo
+                    que YA dice la cinta de arriba. Un boton dice el ESTADO
+              ⚠⚠⚠ Y `/luna pase xp` NO HACIA NADA, POR UNA RAZON CORRECTA: llama
+                 a `Pase.ganar`, que descarta el CREATIVO --un constructor con
+                 Axiom no es un jugador ganando XP-- y QUIEN PRUEBA EL PASE ES UN
+                 OPERADOR, o sea que esta en creativo. La unica forma de probarlo
+                 chocaba con la unica proteccion del sistema, y el comando decia
+                 «hecho»
+                 ⚠⚠ Y AUNQUE EL FILTRO NO HUBIERA ESTADO, habria seguido
+                    pareciendo roto: pedir 50.000 con tope 1.200 concede 1.200.
+                    Hoy el comando dice LO QUE DE VERDAD ENTRO y, si se topo, lo
+                    explica y remite a `nivel`
+                 /luna pase nivel <jugador> <0-100>   salta al nivel exacto: es
+                     LO UNICO que deja ver el final del carril, porque con `xp`
+                     y el tope harian falta 45 dias
+                 /luna pase reiniciar <jugador>       su pase a cero (XP, compra
+                     y reclamos) SIN rotar la temporada, que afecta a todos
               +26 comprobaciones. Las que importan: EL MINIMO DE 45 DIAS, QUE SIN
               PASE NO SE COBRE NADA, QUE LOS CIEN PREMIOS EXISTAN, y que el nivel
               1 y el 100 sigan siendo los que pidio el usuario

@@ -1450,6 +1450,91 @@ Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031)
               ⚠ SUENA CON LA CAMPANILLA DE AMATISTA (vainilla): no hay
                  OGG propio todavia, y Gemini no genera audio. Cuando el
                  usuario traiga sonidos CC0, entran en assets/sounds/
+              LOS NICHOS SE DEFINEN ANDANDO POR ELLOS (2026-09-08, D-049)
+                /luna santuario nicho                lista, con coordenadas
+                /luna santuario nicho aqui [nombre]  captura donde estas
+                /luna santuario nicho proyector <id> la holo, al bloque que MIRAS
+                /luna santuario nicho ver            pinta las cajas con particulas
+                /luna santuario nicho ir|borrar|renombrar <id>
+                /luna santuario npc | npc quitar     la Mew y su cartel
+              ⚠⚠⚠ LA HOLOGRAFICA NO TIENE COORDENADA PROPIA: ES EL PROYECTOR.
+                 `HologramaSantuario` dibuja la foto a `proyector.y + 1,55`, asi
+                 que colocar el proyector ES colocar el holograma. Un cuarto
+                 punto que declarar seria un cuarto punto que puede dejar de
+                 cuadrar con los otros tres, y el sintoma seria una foto
+                 flotando donde no esta su pedestal
+              ⚠⚠⚠ Y LA CONFIG REVIENTA EL ARRANQUE, QUE ES LO QUE HACE PELIGROSO
+                 UN COMANDO QUE LA ESCRIBA. La guarda de arriba es correcta y no
+                 se toca; lo nuevo es que ahora un operador colocando nichos
+                 PODRIA DEJAR EL SERVIDOR SIN ARRANCAR --y no se enteraria hasta
+                 el siguiente reinicio, que es el peor momento posible--. Por eso
+                 `NichoEditor.guardar`: valida ANTES de tocar el disco y no
+                 escribe nada si no pasa, y escribe a un TEMPORAL que MUEVE
+                 encima, para que una caida a mitad no deje un JSON cortado
+                 ⚠ y es el UNICO sitio del proyecto que escribe ese fichero: un
+                   segundo camino de escritura que se saltara la validacion seria
+                   exactamente la averia que esto evita
+              ⚠⚠ LA FORMA NO SE INVENTO, SE MIDIO LA QUE YA HABIA: RADIO 1 (3x3),
+                 ALTO 5 y ALTURA_PROYECTOR 3 salen de leer el `nicho_prueba` que
+                 esta en el servidor. Lo capturado hoy tiene la MISMA forma que
+                 lo construido a mano, asi que el primero nuevo no obliga a
+                 rehacer el que ya hay
+              ⚠⚠ EL ID SE GENERA SOLO Y POR ESO NO PUEDE REPETIRSE. Con
+                 «muchisimos» nichos, teclear uno nuevo cada vez es la friccion
+                 que hace que alguien repita -- y DOS NICHOS CON EL MISMO ID
+                 COMPARTEN UNA SOLA FILA: alquilar uno cobraria dos sitios. Busca
+                 el primer HUECO, no «el ultimo + 1»
+              ⚠⚠ `ver` ES LA MITAD QUE HACE QUE «MUCHISIMOS» SE PUEDA COMPROBAR.
+                 Un comando que captura coordenadas y no las enseña obliga a
+                 fiarse: con cuarenta nichos, el que quedo dos bloques corrido NO
+                 SE VE -- su caja protege un sitio que no es el construido, y eso
+                 no da error, da un hueco
+              ⚠ `borrar` NO TOCA LA BASE: saca el nicho de la config --y con el su
+                proteccion-- pero la fila sigue guardando dueño, expiracion y
+                memorial. Recapturarlo con el mismo id lo devuelve entero
+              ⚠⚠⚠ Y AL AUDITARLO SALIERON TRES FALLOS QUE NADIE HABIA PEDIDO:
+                 1) `recargarSantuario` CONSULTABA MARIADB EN EL HILO DEL
+                    SERVIDOR --dos veces: `garantizarNichos` y
+                    `SantuarioProteccion.recargar`--, que es la regla numero uno
+                    de este proyecto. No daba error porque la consulta es rapida:
+                    LO QUE DA ES UN SERVIDOR PARADO el dia que la base tarde, y
+                    eso se lee como «lag», no como este fallo
+                    ⚠⚠ y de paso NO REENVIABA EL ESTADO: quien tuviera la
+                       pantalla abierta seguia viendo la lista vieja hasta
+                       reabrir. La leccion de los clanes -- el estado no es de
+                       quien lo mira
+                 2) `SantuarioScreen.filasCaben()` ERA UN `return 4` A MANO. Hoy
+                    da cuatro, o sea que estaba bien POR CASUALIDAD: es el fallo
+                    que la maqueta del mercado cazo el 25-ago («salian cinco
+                    filas donde caben cuatro, y la quinta se dibujaba ENCIMA DE
+                    LA PAGINACION»). SEPTIMA vez que este proyecto tropieza con
+                    una rejilla que cabia por casualidad. Hoy se calcula
+                 3) `clicNichos` ERA EL UNICO DE LOS DIEZ ACCESOS AL ESTADO SIN
+                    COMPROBAR EL NULO --su hermano `clicCompraLista` lo tiene dos
+                    metodos mas arriba-- y EL DIBUJADO YA CONTEMPLA ESE CASO
+                    (pinta «cargando»): o sea que la pantalla SI se puede estar
+                    viendo con el estado a nulo, y ahi un clic era un NPE
+              EL CARTEL DE LA MEW (peticion del usuario, 2026-09-08)
+              ⚠⚠ SE EXTRAJO EL DE OAK A `ui/Cartel`, NO SE COPIO. Lo facil era
+                 copiar el metodo; este proyecto ya sabe como acaba eso --
+                 `recalcular()` estaba copiado en ONCE pantallas y cuando se
+                 midio ya habia SEIS VARIANTES, con la buena en una sola. Con el
+                 se comparten las cuatro decisiones que costaron una captura: el
+                 fondo casi opaco (un cartel NO SABE contra que pared lo van a
+                 leer), la raiz `Text.empty()` para que el glifo no herede color,
+                 el icono con su palabra al lado, y `discard()` en vez de `kill`
+              ⚠ FLOTA MAS ALTO QUE EL DE OAK (2,6 contra 2,45) porque la Mew YA
+                FLOTA: con la altura de Oak le saldria a la altura de la cara
+              ⚠ y `npc quitar` hace falta porque las DOS son inmatables: la Mew
+                lleva la marca de los decorativos y a un TextDisplay no le llega
+                el daño de nada. `/kill` diria «Killed 2 entities» y no se iria
+                ninguna
+              +16 comprobaciones. La que importa: QUE LO QUE CAPTURA EL COMANDO
+              PASE LA VALIDACION QUE DECIDE SI EL SERVIDOR ARRANCA -- es cruzar
+              las dos piezas, no mirar cada una por su lado. Y que el JSON que
+              escribe sea el que lee el arranque, ida y vuelta POR EL TEXTO:
+              comparar el objeto consigo mismo pasaria siempre
+              ⚠ FALTA COLOCARLO TODO EN EL JUEGO: la Mew y los nichos
 
 Rangos        ENTRENADOR . ELITE . CAMPEON . MAESTRO . LEYENDA (V020, V025)
               y encima ADMIN . DEV . MODERADOR, que son de equipo
@@ -1638,6 +1723,18 @@ Paradas       EL MOTO TAXI: SIETE PUNTOS EN LA CIUDADELA (2026-08-27)
 Viajes        LAS PARADAS, POR FIN EN SU SITIO (2026-08-27)
               icono `warps` . rejilla 4x2 de fichas de color . panel a la
               izquierda con el destino elegido y para que sirve
+              ⚠⚠ «MONUMENTOS» PASA A LLAMARSE «SANTUARIO» (2026-09-08, peticion
+                 del usuario), y son CUATRO SITIOS: `Paradas.TODAS`, la lista de
+                 `ViajesScreen`, las dos claves de idioma en los DOS ficheros, y
+                 EL PNG -- `ViajesScreen` compone la ruta pegando el
+                 identificador (`textures/gui/viajes/<id>.png`)
+                 ⚠⚠⚠ Y ESO ULTIMO NO LO VIGILABA NADIE: renombrar la parada sin
+                    renombrar su PNG deja LA FICHA EN MAGENTA, sin un solo error
+                    ni al compilar ni al arrancar. Es el fallo de los 62
+                    cosmeticos que no existian y el del traje registrado como
+                    «arceus», ahora en Viajes. Hoy lo comprueba el autotest
+                 ⚠ el id NO esta guardado en ninguna tabla --solo viaja en el
+                   paquete-- asi que el renombrado no necesita migracion
               SE ABRE TAMBIEN CON CLIC DERECHO en cualquier Miraidon de parada
               ⚠⚠ POR QUE NO ERA UN TROZO DE EXPLORAR, que es como empezo:
                  EXPLORAR responde a «que mundo» -- dos opciones, una decision
@@ -4278,6 +4375,7 @@ documentación · migración · rollback.
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
 | D-037 | 2026-08-17 | **La base del pack pasa a ser COBBLEVERSE, quitandole la generacion de estructuras y la musica.** Revoca D-031 | **Orden del usuario, dada despues de que le enseñara las licencias** — `cobbleverse` es All Rights Reserved y `cobbleverse-badges` es CC-BY-NC-ND-4.0, que es la clausula por la que D-006 lo habia descartado. Queda escrito aqui para que quien lo lea dentro de seis meses vea **el dato y la decision**, no solo la decision. **Lo que si se hace bien:** el manifiesto guarda URL y hash y nunca el jar, asi que cada mod se descarga del CDN de Modrinth — no redistribuimos nada suyo, igual que con los shaders (D-030). Se les quita lo que el usuario no queria: **generacion de estructuras** (4 mods) y **421 MB de musica**, que multiplicaba por cinco la descarga de un jugador nuevo (P10). El pack pasa de 185 a **434 MB**. Tres cosas que solo se ven haciendolo: **el slug de Modrinth no es el nombre del jar** y una exclusion mal escrita no surte efecto *sin avisar*; **su configuracion son 155 ficheros** y sueltos eran 155 peticiones a `raw`, o sea el 429 de D-036 otra vez (van en un zip por carpeta con `keepExisting`); y **`continuity:default` cambia 42 bloques de construir** — lo reporto el usuario en vivo con la ciudadela ya empezada, y se apaga |
 | D-038 | 2026-08-17 | **El PokePad enseña datos de sesion —Plata, LunaCoins, Clan, Trabajo, Division y Medallas— en vez de la tarjeta de entrenador** | **Decision del usuario.** La tarjeta enseñaba el nivel de las cinco Vias en estrellas; lo que el queria bajo la cara es lo que se mira a diario. Dos cosas quedan escritas porque no son obvias: **las 16 medallas se referencian por identificador al mod de CobbleVerse y NO se copian sus texturas** — el mod va instalado en el cliente, asi que apuntarlas cuesta cero bytes, no redistribuye nada de un CC-BY-NC-ND y el dibujo lo sigue mandando su autor; y **clan, trabajo y division viajan en el paquete aunque no exista el sistema**, mandando cadena vacia para que el Pad pinte un guion. Un «Sin clan» diria «ya funciona y no tienes ninguno», que no es verdad; y tenerlos ya en el protocolo hace que encenderlos sea rellenar tres lineas en vez de tocar paquete, codec, cache y dibujado |
+| D-049 | 2026-09-08 | **La geometria de los nichos del Santuario se define desde el juego, con la posicion del jugador, y la parada «Monumentos» pasa a llamarse «Santuario»** | **Peticion del usuario, con el motivo dentro**: *«falta colocar el lugar de cada holografica y todo eso asi que es mejor con un comando y la posicion del jugador definir cada punto ya que son muchisimos»*. ⚠⚠⚠ **Lo primero que salio de la auditoria es que la holografica no tiene coordenada propia**: `HologramaSantuario` dibuja la foto a `proyector.y + 1,55`, asi que **colocar el proyector ES colocar el holograma** — un cuarto punto que declarar seria un cuarto punto que puede dejar de cuadrar con los otros tres. ⚠⚠⚠ **Y lo que hace peligroso un comando que escriba esa config es que la config REVIENTA EL ARRANQUE**: la guarda de `NichoCatalogo` es correcta y no se toca, pero con el comando nuevo **un operador colocando nichos podria dejar el servidor sin arrancar y no enterarse hasta el siguiente reinicio** — el peor momento posible, y la familia de fallo que ya mordio con `letmedespawn` y con la V034. Por eso se **valida antes de tocar el disco** (y si no pasa no se escribe nada) y se escribe a un **temporal que se mueve encima**, para que una caida a mitad no deje un JSON cortado. ⚠⚠ **La forma del nicho no se invento: se midio la que ya habia** — RADIO 1, ALTO 5 y ALTURA_PROYECTOR 3 salen de leer el `nicho_prueba` del servidor, asi que lo capturado tiene la misma forma que lo construido a mano. ⚠⚠ **El id lo genera el catalogo** porque con «muchisimos» nichos teclear uno cada vez es la friccion que hace que alguien repita, y **dos nichos con el mismo id comparten una sola fila**: alquilar uno cobraria dos sitios. ⚠⚠ **Y `ver` no es un extra**: un comando que captura coordenadas y no las enseña obliga a fiarse, y el nicho que quedo dos bloques corrido **no se ve** — su caja protege un sitio que no es el construido, y eso no da error. ⚠ El renombrado de la parada **no necesita migracion** (el id solo viaja en el paquete) pero si toca **cuatro sitios**, y el cuarto —el PNG— **no lo vigilaba nadie**: `ViajesScreen` compone la ruta pegando el identificador, asi que renombrar sin renombrar el arte deja la ficha **en magenta** sin un solo error. Hoy lo comprueba el autotest. Detalle en [santuario.md §3.7](docs/world/santuario.md) |
 | D-048 | 2026-09-08 | **El inicial se elige ante el Profesor Oak, y la pantalla deja de abrirse sola** | **Peticion del usuario**: *«colocar al npc Profesor Oak y cuando se le de clic derecho se abra la pestaña para seleccionar a un pokemon inicial»*, con confirmacion antes de entregar. ⚠⚠⚠ **Lo primero que salio de la auditoria es que la mitad ya existia**: `StarterService`, el protocolo y la pantalla en 3D llevan desde el 2026-08-23, y `/luna reiniciarinicial` tambien. Lo que se ha hecho no es la eleccion de inicial: es **ponerle una puerta**. ⚠⚠⚠ **Y no habia ninguna tecla que quitar**, comprobado en el jar de Cobblemon 1.8.0: sus seis keybinds no incluyen ninguna de inicial, `CobblemonStarterHandler.handleJoin` **esta vacio** --Cobblemon 1.8 no ofrece inicial al entrar-- y `/openstarterscreen` pide op 2. **Lo que abria la pantalla era nuestra propia apertura automatica**, y eso es lo que se ha retirado. ⚠⚠⚠ **Oak no se dibujo: ya viene dentro de rctmod** --tres pieles y tres entrenadores completos-- asi que cero arte y cero datapack. ⚠⚠ Pero **trae un Tauros de nivel 99**, y un TrainerMob con `forceBattleOnSight` a ocho bloques seria el jefe final del servidor plantado en la plaza: lo cortan `setAiDisabled(true)` antes del primer tick y el clic derecho atajado con `SUCCESS`. ⚠⚠⚠ **La pantalla ya se puede cerrar, y eso es consecuencia directa de la puerta**: no se podia cerrar porque **no habia forma de volver**, y hoy la hay. Con eso desaparece toda la familia de «me quede encerrado». ⚠⚠ **Lo que la apertura automatica hacia bien hay que seguir haciendolo**: era imposible no verla. Quitarla a secas deja a un jugador nuevo sin Pokemon y sin pista --el bloqueo original-- asi que la sustituyen Oak en la llegada, su cartel y un mensaje al entrar con 60 ticks de retraso. ⚠ **La rejilla pasa a significar algo**: fila = region, columna = tipo. ⚠ Y el fondo pasa a oscuro, con lo que se va el contorno de cuatro copias que este documento ya tenia fichado como «empasta». Detalle en `OakNpc.java` e `InicialScreen.java` |
 | D-047 | 2026-09-08 | **El pase baja a 1.500 LunaCoins, devuelve 100 en el nivel 50 y 100 en el 98, y la XP por mena baja de 4 a 1** | **Las tres son ordenes del usuario**, y la de la mena viene con el diagnostico dentro: *«la experiencia que da lo de la mena, que de a 1, eso es muy roto»*. ⚠⚠⚠ **Tenia razon y el numero que lo demuestra estaba escrito en nuestro propio fichero, mal**: el javadoc de `PaseXp` decia «mena comun 4, ~90 veces/hora, 360 XP/hora» y **las 90 veces/hora eran falsas** — un minero saca del orden de **400 menas a la hora**, porque el carbon y el cobre salen en **vetas de veinte y treinta bloques**, asi que lo de verdad eran **1.600 XP/hora**: el tope diario entero **en cuarenta y cinco minutos**, con el resto de la tabla de fuentes convertido en adorno. ⚠⚠ **Es la MISMA regla que ya justificaba que la piedra valga cero** («son 2.500 bloques a la hora, asi que el pase seria un temporizador»), un escalon mas arriba — **la regla estaba escrita y aun asi fallo, porque la estimacion vivia en un comentario y un comentario no se comprueba**. Hoy las tasas son constantes (`VECES_HORA_MENA`) y el autotest cruza XP x tasa contra el tope. ⚠ **La mena RARA no se toca**: lo roto era el volumen y un diamante no tiene volumen. ⚠ Y **cosecha y pesca tienen la misma forma de problema** con tasas sin volver a medir: quedan **fuera** del invariante a proposito, porque meterlas con una tasa inventada seria la confianza falsa de los gimnasios. ⚠⚠ **De la otra idea del usuario —«5 cada 10 menas»— se descarto el mecanismo, no la intencion**: es media XP por mena, y pagar por tandas obliga a **recordar cuantas lleva rotas entre pago y pago** (columna, migracion y una escritura por bloque picado) para ganar solo dividir por dos otra vez. Si hace falta bajar mas, la palanca sigue siendo el mismo numero. ⚠⚠⚠ **Las 200 LunaCoins que devuelve son la unica recompensa que no se entrega: se INGRESA**, y por eso va **dentro de la transaccion que apunta el cobro** (R3) en vez de despues del commit como los objetos — pagarlas fuera dejaria el nivel marcado como cobrado y el dinero sin ingresar. **No cruza D-014**: no convierte una moneda en otra, se compra con LunaCoins y devuelve LunaCoins, y **la Torre ya hacia lo mismo** (+50 cada 30 rondas). ⚠⚠ **Lo que hay que vigilar no es que devuelva sino CUANTO**: un pase que devuelve lo que cuesta **se paga solo para siempre** y el producto deja de venderse sin que nadie toque una linea de codigo — hoy son **200 sobre 1.500, el 13 %**, y el autotest exige que no llegue ni a la mitad. ⚠ **El precio sigue siendo provisional**, como todos los de este proyecto; lo unico que cambia con el 1.500 es que la exposicion a T4 que D-046 acepto a sabiendas **es diez veces mas barata de adquirir**, no que cambie de categoria. |
 | D-046 | 2026-09-08 | **El Pase de Batalla pasa a tener UNA SOLA VIA, DE PAGO, con 100 niveles de objetos de Cobblemon y DOS Pokemon.** **Revoca D-045** | **Orden del usuario, el mismo dia y despues de usarlo**: *«este pase de batalla si o si es comprando lunacoins, no hay via libre ni nada... debe tener buenos items competitivos para crianza y cositas asi»*, con el nivel 1 dando un Charizard de nivel 15 y el 100 **un Charizard variocolor de nivel 50**. ⚠⚠⚠ **Queda escrito que esto cruza T4, y no para volver a discutirlo**: [monetization.md](docs/economy/monetization.md) §2 pone **shinies** y **objetos competitivos exclusivos** en la lista de «nunca, bajo ninguna circunstancia» y el test de §6 se para en la **primera** pregunta. Se tomo **a sabiendas**, igual que D-020 con los legendarios de los cofres, y **el riesgo que queda vivo no es interno**: son las reglas comerciales de Mojang (`B-008`, `SEC-004`), que prohiben vender ventaja de juego y siguen sin verificar desde el 2026-08-11. ⚠⚠ **Lo unico que se dejo fuera es la MONEDA**: el pase no da ni un PokeDolar, porque un objeto entra en la economia de objetos pero moneda vendida por dinero real **saltea todos los sumideros a la vez** (P3) — y esa es la unica averia de la lista que no se arregla bajando un numero. ⚠⚠⚠ **Lo que impide que se complete rapido sigue siendo el TOPE DIARIO**, recalibrado: 53.700 XP y 1.200 al dia dan **45 dias naturales como minimo** de una temporada de 60 — y con un pase de PAGO la cota de arriba importa igual, porque quien paga tiene que poder terminarlo. ⚠ **Y el paso de la curva baja de 20 a 6 al doblar los niveles**: con 20, el pase entero costaria 129.000 XP, o sea 107 dias, y habria sido imposible sin dar ningun error. ⚠ **La XP guardada como TOTAL (V032) es lo que salvo el cambio**: al cambiar la curva de 50 a 100 niveles todo el mundo se recoloco solo. Lo que si hubo que borrar son los reclamos (V033), porque el nivel 3 ya no da lo que daba. Detalle en [pase-batalla.md](docs/economy/pase-batalla.md) |

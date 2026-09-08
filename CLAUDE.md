@@ -1529,12 +1529,23 @@ Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031)
                 lleva la marca de los decorativos y a un TextDisplay no le llega
                 el daño de nada. `/kill` diria «Killed 2 entities» y no se iria
                 ninguna
-              +16 comprobaciones. La que importa: QUE LO QUE CAPTURA EL COMANDO
+              +13 comprobaciones. La que importa: QUE LO QUE CAPTURA EL COMANDO
               PASE LA VALIDACION QUE DECIDE SI EL SERVIDOR ARRANCA -- es cruzar
               las dos piezas, no mirar cada una por su lado. Y que el JSON que
               escribe sea el que lee el arranque, ida y vuelta POR EL TEXTO:
               comparar el objeto consigo mismo pasaria siempre
-              ⚠ FALTA COLOCARLO TODO EN EL JUEGO: la Mew y los nichos
+              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 18:34), LOS DOS DESTINOS:
+                servidor  Done (33,202 s) . AUTOTEST 658/658
+                          «Santuario: 1 nichos en la config» (el de prueba)
+                clientes  manifiesto 5030fd225e publicado y sirviendose
+              ⚠ FALTA COLOCARLO TODO EN EL JUEGO: la Mew (`/luna santuario npc`)
+                y capturar los nichos construidos (`... nicho aqui`, y despues
+                `... nicho ver` para comprobar las cajas antes de darlas por
+                buenas). La parada del Santuario esta en -63,9 68 142
+              ⚠⚠ Y HAY QUE REABRIR EL LAUNCHER: la pantalla, el cartel y la ficha
+                 de Viajes son CLIENTE. Sin bajarse el jar nuevo se sigue viendo
+                 «Monumentos» -- y eso se comporta como debe, que es lo que
+                 despista
 
 Rangos        ENTRENADOR . ELITE . CAMPEON . MAESTRO . LEYENDA (V020, V025)
               y encima ADMIN . DEV . MODERADOR, que son de equipo

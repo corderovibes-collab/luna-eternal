@@ -259,6 +259,18 @@ con tres avisos propios:
    + rellenar `config/lunaeternal/santuario.json` + `/luna santuario npc`
    para la Chansey.
 
+### ✅ Desplegado y en vivo (2026-09-08, 18:34)
+
+```
+servidor   Done (33,202 s) · AUTOTEST 658/658
+           "Santuario: 1 nichos en la config" (el de prueba)
+clientes   manifiesto 5030fd225e publicado y sirviéndose
+```
+
+⚠⚠ **Hay que reabrir el launcher**: la pantalla, el cartel de la Mew y la ficha
+de Viajes son **de cliente**. Sin bajarse el jar nuevo se sigue viendo
+«Monumentos» — y eso *se comporta como debe*, que es lo que despista.
+
 ## Next Actions
 
 1. **Colocar la Mew**: `/luna santuario npc` de pie donde vaya. Ya lleva

@@ -3,14 +3,64 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-08-27
+**Última actualización:** 2026-09-07
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela) ·
-PHASE 4 — Gimnasios (arrancando)
-**Estado:** PHASE 0 y PHASE 1 completadas. 28 documentos, decisiones D-001 a
-D-040. **El mod está desplegado y funcionando contra MariaDB:** economía de
-tres monedas, ocho vías de progresión, y **ocho pantallas** en el PokePad.
-Autotest **423/423** en vivo. **El recorrido del jugador nuevo está completo.**
+PHASE 4 — Gimnasios y Torre de Batalla
+**Estado:** Torre de Batalla y Santuario construidos y desplegados. Decisiones D-001 a
+D-044. **El mod está desplegado y funcionando contra MariaDB:** economía de
+tres monedas, vías de progresión, Torre de Batalla con recompensas de temporada e
+interfaces completas en el PokePad. Autotest en vivo.
 
+> **2026-09-07 — TORRE DE BATALLA: ARENA, HOLOGRAMAS Y TEMPORADAS CON RECOMPENSAS. Y las lecciones de interfaz que no perdonan.**
+>
+> ⚠⚠⚠ **EL RELLENO DE `marco` SE COMÍA LA PANTALLA.**
+> `ctx.fill(x, y + g, x + w, y + h, color)`: en el borde lateral izquierdo se
+> escribió `x + w` en vez de `x + g`. ¿El resultado? Al pedir un borde dorado de
+> 2 px sobre una tarjeta, la función rellenaba **el rectángulo entero de amarillo
+> chillón**, haciendo que el texto dorado y blanco encima fuera completamente
+> invisible. El error parecía «la pantalla tiene fondo amarillo» cuando era una
+> sola letra en la función básica de dibujo.
+>
+> ⚠⚠ **EL CONTORNO MANUAL EMPIEZA BIEN Y TERMINA EMPASTANDO.**
+> Para destacar los textos sobre fondos oscuros, se intentó dibujar 4 copias
+> desplazadas en blanco (`0xFFF2F6FF`). En textos pequeños (`x2`, `x3`, badges)
+> los cuatro trazos colisionaban entre sí creando una mancha borrosa que parecía
+> un renderizado pixelado o defectuoso. La regla es clara: **usar la sombra nativa
+> de Minecraft** (`shadow = true`), que está optimizada a nivel de glifo y no
+> deforma la tipografía.
+>
+> ⚠⚠ **UNA SOLA FILA PARA TÍTULO, BADGES, OBJETOS Y BOTÓN NO CABE.**
+> Meter el título de la ronda, los premios de divisa, los slots de Cobblemon y el
+> botón «RECLAMAR» en una sola línea horizontal funcionaba con premios de 1 objeto, pero
+> con 3 o 4 objetos o nombres largos se solapaban. La solución arquitectónica:
+> **2 filas internas estrictas por tarjeta**:
+>   - Fila 1: Título de ronda + Badges de divisa (+1.000 Plata / +50 LunaCoins).
+>   - Fila 2: Casilleros rehundidos oscuros (`0xFF0D121B` con borde `0xFF28364D`)
+>     con cantidad nítida, seguidos del botón de acción.
+>
+> ⚠⚠ **LA REGLA DE 2 PASADAS DE `dibujado.md` SIGUE SIENDO INNEGOCIABLE.**
+> Dibujar ítems 3D (`drawItem`) entre llamadas a `fill` corrompe lotes de OpenGL
+> o esconde sombras. En `TorreRecompensasScreen`: primero TODO el fondo 2D, vaciar
+> con `ctx.draw()`, luego pintar los modelos de objetos, y al final los tooltips
+> nativos (`ctx.drawItemTooltip`).
+>
+> **D-044 — TORRE DE BATALLA Y RECOMPENSAS DE TEMPORADA.**
+> 1. **Temporadas**: Cada temporada incrementa un contador global en
+>    `config/luna_torre_recompensas.json`. Las recompensas de R1 a R100 se reclaman
+>    **una única vez por temporada**. Avanzar de temporada (`/luna torre_batalla nueva_temporada`)
+>    resetea los reclamos para que los jugadores vuelvan a competir.
+> 2. **Bonificaciones periódicas**: Cada 5 rondas se entregan **+1,000 de Plata**;
+>    cada 30 rondas se entregan **+50 LunaCoins**.
+> 3. **Modo Infinito (101+)**: Tras la ronda 100, cada victoria consecutiva
+>    garantiza **1 Master Ball fija**.
+> 4. **Hologramas de Ranking**: 3 hologramas independientes (1v1, 2v2, aleatorio)
+>    con fondo azul pizarra sólido (`0xF40A0E18`, ~96% opacidad) para que el texto
+>    sea legible contra cualquier iluminación o shaders. Desacoplados del NPC recepcionista.
+> 5. **Plataforma Mapeada**: Coordenadas exactas fijadas en `TorreArenasManager`
+>    para el jugador (`50.489, 117, 62.56`), NPC (`50.48, 117, 38.51`) y Pokémon
+>    de ambos bandos para combates 1v1 y 2v2.
+> 6. **Anti-Exploit**: Escaneo de Pokédex bloqueado dentro de la dimensión de la torre.
+>
 > **2026-08-27 — RANGOS, MOCHILA, MUNDOS Y ESCALADO. Y tres lecciones que se
 > repiten.**
 >

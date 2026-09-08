@@ -14,16 +14,17 @@ import net.pokereport.luna.client.EstadoCliente;
 import net.pokereport.luna.net.Red;
 import net.pokereport.luna.torrebatalla.TorreRecompensas;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * PANTALLA DE RECOMPENSAS DE TEMPORADA DE LA TORRE DE BATALLA.
  *
- * <p>Integrada en el chasis estándar de cosméticos del PokePad (pokepad_cosmeticos.png):
- * - Panel izquierdo: Récord de temporada, estadísticas de reclamo, botón "Reclamar Todo" y reglas.
- * - Pantalla derecha: Pestañas por rangos de rondas (1-20, 21-40, 41-60, 61-80, 81-100, 101+),
- *   tarjetas individuales de recompensas con iconos de ítems, divisas y botones de reclamo interactivos.
+ * <p>Diseñada con alta fidelidad y estética oficial PokéPad:
+ * - Renderizado en 2 pasadas (regla 3 de dibujado.md): todo el 2D primero, flush, y luego objetos 3D.
+ * - Textos y números nítidos con sombra nativa de Minecraft, sin artefactos de contorno.
+ * - Huecos de objetos (slots) oscuros y enmarcados para que cada premio resalte.
+ * - Tooltips nativos con nombre completo, lore y cantidad al pasar el ratón sobre cualquier premio.
+ * - Botón "RECLAMAR TODO" en el panel izquierdo y botones interactivos por ronda.
  */
 public class TorreRecompensasScreen extends Screen {
 
@@ -43,28 +44,26 @@ public class TorreRecompensasScreen extends Screen {
     private static final int NAV_ALTO = 72;
     private static final int MARGEN = 14;
 
-    // Paleta estándar PokePad
+    // Paleta estándar PokéPad
     private static final int BORDE_ENCIMA = 0xFFF35C0C; // Naranja acento
     private static final int BORDE_BASE = 0xFF7C89B4;
-    private static final int FONDO_TARJETA = 0xFF1D2536;
-    private static final int FONDO_TARJETA_DISPONIBLE = 0xFF24324A;
-    private static final int FONDO_TARJETA_RECLAMADA = 0xFF171E2B;
-    private static final int TEXTO_OSCURO = 0xFF16203A;
     private static final int TEXTO_SUAVE = 0xFF8FA0C8;
-    private static final int TEXTO_CONTORNO = 0xFFF2F6FF;
     private static final int SEPARADOR = 0xFF3C4250;
     private static final int ORO = 0xFFFFD65C;
     private static final int CIAN = 0xFF55FFFF;
     private static final int VERDE_BOTON = 0xFF2E9E56;
     private static final int VERDE_BOTON_ENCIMA = 0xFF4FD07A;
-    private static final int GRIS_INACTIVO = 0xFF2B3344;
+    private static final int VERDE_TEXTO = 0xFF4FD07A;
+    private static final int GRIS_INACTIVO = 0xFF1D2433;
 
     private final Screen anterior;
     private float k;
     private int ancho, alto, x0, y0;
 
     private int pestana = 0; // 0: 1-20, 1: 21-40, 2: 41-60, 3: 61-80, 4: 81-100, 5: 101+
-    private int pagina = 0;  // 0 o 1 dentro de la pestaña
+    private int pagina = 0;  // 0: primera decena (ej. 1-10), 1: segunda decena (ej. 11-20)
+
+    private ItemStack hoveredStack = null;
 
     public TorreRecompensasScreen(Screen anterior) {
         super(Text.literal("Recompensas Torre de Batalla"));
@@ -100,11 +99,41 @@ public class TorreRecompensasScreen extends Screen {
         recalcular();
         renderBackground(ctx, rx, ry, delta);
 
+        hoveredStack = null;
+
+        // 1. Chasis general y botones de navegación
         dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
         dibujarNavegacion(ctx, rx, ry);
+
+        // 2. PASADA 1 (2D): Todo el fondo, tarjetas, textos, botones y huecos
         dibujarPanelIzquierdo(ctx, rx, ry);
-        dibujarPantallaDerecha(ctx, rx, ry);
+        dibujarPestanas(ctx, rx, ry);
+
+        if (pestana == 5) {
+            dibujarSeccionInfinita2D(ctx, rx, ry);
+        } else {
+            dibujarParrillaRondas2D(ctx, rx, ry);
+        }
+
+        // 3. FLUSH OBLIGATORIO: vaciar el buffer 2D antes de pintar modelos 3D
+        ctx.draw();
+
+        // 4. PASADA 2 (3D): Dibujar los objetos dentro de sus huecos
+        if (pestana == 5) {
+            dibujarSeccionInfinitaItems(ctx);
+        } else {
+            dibujarParrillaRondasItems(ctx);
+        }
+
+        // 5. PASADA 3: Tooltip flotante si el cursor está sobre algún objeto
+        if (hoveredStack != null && !hoveredStack.isEmpty()) {
+            ctx.drawItemTooltip(textRenderer, hoveredStack, rx, ry);
+        }
     }
+
+    // =========================================================================
+    // NAVEGACIÓN Y PANEL IZQUIERDO
+    // =========================================================================
 
     private void dibujarNavegacion(DrawContext ctx, int rx, int ry) {
         int cy = PANEL_Y + NAV_ALTO / 2;
@@ -115,7 +144,7 @@ public class TorreRecompensasScreen extends Screen {
             marco(ctx, px(PANEL_X + 18) - 2, py(cy) - pl(24) - 2, pl(60) + 4, pl(48) + 4,
                     BORDE_ENCIMA, 2);
         }
-        texto(ctx, Text.literal("TORRE"), PANEL_X + 92, cy - 14, 28, 0xFFFFFFFF, false, false);
+        texto(ctx, Text.literal("TORRE"), PANEL_X + 92, cy - 14, 28, 0xFFFFFFFF, false, true);
 
         // Botón Cerrar
         int cx = PANEL_X + PANEL_W - 18 - 80;
@@ -137,36 +166,36 @@ public class TorreRecompensasScreen extends Screen {
         int pendientes = contarDisponibles(estado);
 
         // Icono de la Torre
-        dibujarTextura(ctx, ICONO, px(cx - 40), py(PANEL_Y + NAV_ALTO + 10),
-                pl(80), pl(80), 100, 100);
+        dibujarTextura(ctx, ICONO, px(cx - 38), py(PANEL_Y + NAV_ALTO + 6),
+                pl(76), pl(76), 100, 100);
 
         // Título de Recompensas
-        texto(ctx, Text.literal("RECOMPENSAS"), cx, PANEL_Y + NAV_ALTO + 98, 24, ORO, true, false);
-        texto(ctx, Text.literal("TEMPORADA #" + temp), cx, PANEL_Y + NAV_ALTO + 126, 14, CIAN, true, false);
+        texto(ctx, Text.literal("RECOMPENSAS"), cx, PANEL_Y + NAV_ALTO + 88, 22, ORO, true, true);
+        texto(ctx, Text.literal("TEMPORADA #" + temp), cx, PANEL_Y + NAV_ALTO + 114, 14, CIAN, true, true);
 
-        separador(ctx, PANEL_Y + NAV_ALTO + 148);
+        separador(ctx, PANEL_Y + NAV_ALTO + 136);
 
         // Tarjeta Récord de Temporada
-        int cardY = PANEL_Y + NAV_ALTO + 160;
-        int cardW = PANEL_W - 40;
+        int cardY = PANEL_Y + NAV_ALTO + 148;
+        int cardW = PANEL_W - 36;
         int cardH = 76;
-        int cardX = PANEL_X + 20;
+        int cardX = PANEL_X + 18;
 
-        ctx.fill(px(cardX), py(cardY), px(cardX + cardW), py(cardY + cardH), 0xFF182030);
-        marco(ctx, px(cardX), py(cardY), pl(cardW), pl(cardH), 0xFF354460, 1);
+        ctx.fill(px(cardX), py(cardY), px(cardX + cardW), py(cardY + cardH), 0xFF141C2B);
+        marco(ctx, px(cardX), py(cardY), pl(cardW), pl(cardH), 0xFF2C394F, 1);
 
-        texto(ctx, Text.literal("RÉCORD DE TEMPORADA"), cx, cardY + 8, 12, TEXTO_SUAVE, true, false);
+        texto(ctx, Text.literal("RÉCORD DE TEMPORADA"), cx, cardY + 9, 12, TEXTO_SUAVE, true, true);
         String txtRecord = maxRonda > 0 ? "Ronda " + maxRonda + " ★" : "Sin récord";
-        texto(ctx, Text.literal(txtRecord), cx, cardY + 24, 22, maxRonda > 0 ? ORO : 0xFFA0AEC0, true, false);
+        texto(ctx, Text.literal(txtRecord), cx, cardY + 25, 22, maxRonda > 0 ? ORO : 0xFFA0AEC0, true, true);
 
         String breakdown = "1v1: " + r1 + "  ·  2v2: " + r2 + "  ·  Draft: " + ra;
-        texto(ctx, Text.literal(breakdown), cx, cardY + 54, 11, 0xFF8FA0C8, true, false);
+        texto(ctx, Text.literal(breakdown), cx, cardY + 53, 11, 0xFF8FA0C8, true, true);
 
         // Botón "Reclamar Todo"
-        int btnW = PANEL_W - 40;
-        int btnH = 48;
-        int btnX = PANEL_X + 20;
-        int btnY = cardY + cardH + 16;
+        int btnW = PANEL_W - 36;
+        int btnH = 46;
+        int btnX = PANEL_X + 18;
+        int btnY = cardY + cardH + 14;
 
         boolean puedeReclamarTodo = pendientes > 0;
         boolean hoverBtn = dentro(rx, ry, px(btnX), py(btnY), pl(btnW), pl(btnH));
@@ -174,7 +203,7 @@ public class TorreRecompensasScreen extends Screen {
         int colorBtn = puedeReclamarTodo
                 ? (hoverBtn ? VERDE_BOTON_ENCIMA : VERDE_BOTON)
                 : GRIS_INACTIVO;
-        int bordeBtn = puedeReclamarTodo ? (hoverBtn ? 0xFFFFFFFF : 0xFF144D25) : 0xFF3A4456;
+        int bordeBtn = puedeReclamarTodo ? (hoverBtn ? 0xFFFFFFFF : 0xFF144D25) : 0xFF2D384D;
 
         ctx.fill(px(btnX), py(btnY), px(btnX + btnW), py(btnY + btnH), colorBtn);
         marco(ctx, px(btnX), py(btnY), pl(btnW), pl(btnH), bordeBtn, Math.max(1, pl(hoverBtn ? 2 : 1)));
@@ -182,42 +211,37 @@ public class TorreRecompensasScreen extends Screen {
         String txtBoton = puedeReclamarTodo
                 ? "RECLAMAR TODO (" + pendientes + ")"
                 : "TODO RECLAMADO (0)";
-        texto(ctx, Text.literal(txtBoton), cx, btnY + 16, 17,
-                puedeReclamarTodo ? 0xFFFFFFFF : 0xFF7A869E, true, false);
+        texto(ctx, Text.literal(txtBoton), cx, btnY + 15, 16,
+                puedeReclamarTodo ? 0xFFFFFFFF : 0xFF7A869E, true, true);
 
         separador(ctx, btnY + btnH + 16);
 
-        // Resumen de Reglas de la Temporada
-        int regY = btnY + btnH + 30;
-        texto(ctx, Text.literal("REGLAS DE TEMPORADA"), cx, regY, 15, 0xFFFFFFFF, true, false);
-        regY += 22;
+        // Reglas de la Temporada
+        int regY = btnY + btnH + 28;
+        texto(ctx, Text.literal("REGLAS DE TEMPORADA"), cx, regY, 15, 0xFFFFFFFF, true, true);
+        regY += 20;
 
         String[] reglas = {
                 "• 1 reclamo por temporada",
-                "• Desbloqueadas por tu récord",
+                "• Desbloqueo por récord",
                 "• Cada 5 rondas: +1,000 Plata",
                 "• Cada 30 rondas: +50 LunaCoins",
-                "• Ronda 101+: 1 Master Ball fija"
+                "• R101+: 1 Master Ball fija"
         };
         for (String r : reglas) {
-            texto(ctx, Text.literal(r), PANEL_X + 28, regY, 12, 0xFFD2D9E8, false, false);
+            texto(ctx, Text.literal(r), PANEL_X + 26, regY, 12, 0xFFD2D9E8, false, true);
             regY += 17;
         }
     }
 
-    private void dibujarPantallaDerecha(DrawContext ctx, int rx, int ry) {
-        dibujarPestanas(ctx, rx, ry);
-        if (pestana == 5) {
-            dibujarSeccionInfinita(ctx, rx, ry);
-        } else {
-            dibujarParrillaRondas(ctx, rx, ry);
-        }
-    }
+    // =========================================================================
+    // PESTAÑAS
+    // =========================================================================
 
     private void dibujarPestanas(DrawContext ctx, int rx, int ry) {
         String[] titulosPestanas = { "1 - 20", "21 - 40", "41 - 60", "61 - 80", "81 - 100", "101+ ★" };
         int tabY = PANT_Y + 10;
-        int tabH = 34;
+        int tabH = 32;
         int totalW = PANT_W - (2 * MARGEN);
         int gap = 6;
         int tabW = (totalW - ((titulosPestanas.length - 1) * gap)) / titulosPestanas.length;
@@ -227,32 +251,35 @@ public class TorreRecompensasScreen extends Screen {
             boolean activa = (i == pestana);
             boolean hover = dentro(rx, ry, px(tabX), py(tabY), pl(tabW), pl(tabH));
 
-            int fondo = activa ? 0xFF2A364F : (hover ? 0xFF222B3D : 0xFF171F2D);
-            int borde = activa ? BORDE_ENCIMA : (hover ? BORDE_BASE : 0xFF2D3950);
+            int fondo = activa ? 0xFF2A374F : (hover ? 0xFF202A3C : 0xFF141D2B);
+            int borde = activa ? BORDE_ENCIMA : (hover ? BORDE_BASE : 0xFF253145);
 
             ctx.fill(px(tabX), py(tabY), px(tabX + tabW), py(tabY + tabH), fondo);
             marco(ctx, px(tabX), py(tabY), pl(tabW), pl(tabH), borde, Math.max(1, pl(activa ? 2 : 1)));
 
             int colorTexto = activa ? ORO : (hover ? 0xFFFFFFFF : 0xFF8FA0C8);
-            texto(ctx, Text.literal(titulosPestanas[i]), tabX + tabW / 2, tabY + 10, 15,
-                    colorTexto, true, false);
+            texto(ctx, Text.literal(titulosPestanas[i]), tabX + tabW / 2, tabY + 9, 14,
+                    colorTexto, true, true);
         }
     }
 
-    private void dibujarParrillaRondas(DrawContext ctx, int rx, int ry) {
+    // =========================================================================
+    // RONDAS 1 A 100: PASADA 2D (Fondos, Huecos, Textos, Botones)
+    // =========================================================================
+
+    private void dibujarParrillaRondas2D(DrawContext ctx, int rx, int ry) {
         var estado = EstadoCliente.recompensasTorre();
         int maxRonda = estado != null ? estado.maxRonda() : 0;
         List<Integer> reclamadas = estado != null ? estado.reclamadas() : List.of();
 
         int rondaInicio = (pestana * 20) + (pagina * 10) + 1;
         int cols = 2;
-        int rows = 5;
         int gridX = PANT_X + MARGEN;
-        int gridY = PANT_Y + 54;
-        int gapX = 10;
-        int gapY = 8;
-        int cardW = (PANT_W - (2 * MARGEN) - gapX) / cols;
-        int cardH = 68;
+        int gridY = PANT_Y + 52;
+        int gapX = 12;
+        int gapY = 7;
+        int cardW = (PANT_W - (2 * MARGEN) - gapX) / cols; // ~380 px
+        int cardH = 73;
 
         for (int index = 0; index < 10; index++) {
             int r = rondaInicio + index;
@@ -270,147 +297,239 @@ public class TorreRecompensasScreen extends Screen {
             boolean puedeReclamar = esDesbloqueada && !esReclamada;
             boolean cardHover = dentro(rx, ry, px(cx), py(cy), pl(cardW), pl(cardH));
 
-            // Fondo y borde según estado
+            // Fondo y marco según estado
             int fondoCard = puedeReclamar
-                    ? (cardHover ? 0xFF283852 : FONDO_TARJETA_DISPONIBLE)
-                    : (esReclamada ? FONDO_TARJETA_RECLAMADA : FONDO_TARJETA);
+                    ? (cardHover ? 0xFF253450 : 0xFF1C273C)
+                    : (esReclamada ? (cardHover ? 0xFF18202D : 0xFF141924) : 0xFF11151F);
             int bordeCard = puedeReclamar
                     ? (cardHover ? BORDE_ENCIMA : ORO)
-                    : (esReclamada ? 0xFF2B3A4C : 0xFF2A3448);
+                    : (esReclamada ? 0xFF242F42 : 0xFF1E2636);
 
             ctx.fill(px(cx), py(cy), px(cx + cardW), py(cy + cardH), fondoCard);
             marco(ctx, px(cx), py(cy), pl(cardW), pl(cardH), bordeCard, Math.max(1, pl(puedeReclamar ? 2 : 1)));
 
-            // Columna 1: Ronda y Badge
-            texto(ctx, Text.literal("RONDA " + r), cx + 12, cy + 10, 16,
-                    puedeReclamar ? ORO : (esReclamada ? 0xFF9FAEC4 : 0xFF718096), false, false);
+            // Tira vertical de estado en el borde izquierdo (4 px)
+            int colorTira = puedeReclamar ? ORO : (esReclamada ? 0xFF38A169 : 0xFF2D3748);
+            ctx.fill(px(cx), py(cy), px(cx + 4), py(cy + cardH), colorTira);
+
+            // --- ZONA 1: Información de Ronda (Izquierda) ---
+            int colorTitulo = puedeReclamar ? ORO : (esReclamada ? VERDE_TEXTO : 0xFF8A99B0);
+            texto(ctx, Text.literal("RONDA " + r), cx + 14, cy + 9, 16, colorTitulo, false, true);
 
             if (info.tituloHito() != null) {
                 int colorHito = r == 100 ? ORO : (r == 50 || r == 70 || r == 90 ? CIAN : 0xFFFFA07A);
-                texto(ctx, Text.literal(info.tituloHito()), cx + 12, cy + 28, 10, colorHito, false, false);
+                texto(ctx, Text.literal(info.tituloHito()), cx + 14, cy + 28, 11, colorHito, false, true);
             }
 
-            // Bonificaciones de moneda escritas
             if (info.plata() > 0 || info.lunacoins() > 0) {
                 String bonoStr = "";
                 if (info.plata() > 0) bonoStr += "+1k Plata ";
                 if (info.lunacoins() > 0) bonoStr += "+50 LC";
-                texto(ctx, Text.literal(bonoStr), cx + 12, cy + 46, 11, 0xFF68D391, false, false);
+                texto(ctx, Text.literal(bonoStr), cx + 14, cy + 47, 11, 0xFF48BB78, false, true);
+            } else if (r < 4) {
+                texto(ctx, Text.literal("Calentamiento"), cx + 14, cy + 32, 11, 0xFF718096, false, true);
             }
 
-            // Columna 2: Ítems dibujados
-            ctx.draw();
-            int itemStartX = cx + 150;
-            int itemY = cy + 18;
-            for (int itIdx = 0; itIdx < Math.min(4, info.items().size()); itIdx++) {
-                var it = info.items().get(itIdx);
-                ItemStack st = it.crearStack();
-                objeto(ctx, st, itemStartX + (itIdx * 34), itemY, 28);
-                // Si cantidad > 1, dibujar texto de cantidad
-                if (st.getCount() > 1) {
-                    texto(ctx, Text.literal("x" + st.getCount()),
-                            itemStartX + (itIdx * 34) + 18, itemY + 20, 11, 0xFFFFFFFF, false, true);
+            // --- ZONA 2: Huecos de Objetos (Centro) ---
+            int nItems = info.items().size();
+            if (nItems > 0) {
+                int sw = nItems >= 5 ? 28 : 32;
+                int sh = sw;
+                int gapSlot = nItems >= 5 ? 3 : 5;
+                int startX = cx + 122;
+                int startY = cy + (cardH - sh) / 2;
+
+                for (int itIdx = 0; itIdx < Math.min(5, nItems); itIdx++) {
+                    int sx = startX + (itIdx * (sw + gapSlot));
+                    int sy = startY;
+
+                    boolean slotHover = dentro(rx, ry, px(sx), py(sy), pl(sw), pl(sh));
+                    if (slotHover) {
+                        hoveredStack = info.items().get(itIdx).crearStack();
+                    }
+
+                    // Fondo de hueco de objeto (rehundido)
+                    ctx.fill(px(sx), py(sy), px(sx + sw), py(sy + sh), 0xFF0D121B);
+                    marco(ctx, px(sx), py(sy), pl(sw), pl(sh),
+                            slotHover ? 0xFFFFFFFF : 0xFF28364D, 1);
+
+                    // Indicador de cantidad en pastilla oscura si es > 1
+                    var premio = info.items().get(itIdx);
+                    if (premio.cantidad() > 1) {
+                        int pw = 15;
+                        int ph = 10;
+                        int px1 = sx + sw - pw;
+                        int py1 = sy + sh - ph;
+                        ctx.fill(px(px1), py(py1), px(sx + sw - 1), py(sy + sh - 1), 0xDD000000);
+                        texto(ctx, Text.literal(String.valueOf(premio.cantidad())),
+                                px1 + pw / 2, py1 + 1, 9, 0xFFFFFFFF, true, true);
+                    }
                 }
+            } else {
+                texto(ctx, Text.literal("Sin objetos"), cx + 190, cy + 30, 12, 0xFF5A667A, true, true);
             }
 
-            // Columna 3: Estado o Botón de Reclamar
-            int btnW = 90;
+            // --- ZONA 3: Botón de Acción (Derecha) ---
+            int btnW = 88;
             int btnH = 34;
             int btnX = cx + cardW - btnW - 12;
             int btnY = cy + (cardH - btnH) / 2;
 
             if (r < 4) {
-                texto(ctx, Text.literal("Sin premio"), btnX + btnW / 2, cy + cardH / 2 - 6, 13,
-                        0xFF606A7C, true, false);
+                ctx.fill(px(btnX), py(btnY), px(btnX + btnW), py(btnY + btnH), 0xFF121620);
+                marco(ctx, px(btnX), py(btnY), pl(btnW), pl(btnH), 0xFF1E2634, 1);
+                texto(ctx, Text.literal("✔ Superada"), btnX + btnW / 2, btnY + 11, 12,
+                        0xFF718096, true, true);
             } else if (esReclamada) {
-                texto(ctx, Text.literal("✓ Reclamado"), btnX + btnW / 2, cy + cardH / 2 - 6, 13,
-                        0xFF4FD07A, true, false);
+                ctx.fill(px(btnX), py(btnY), px(btnX + btnW), py(btnY + btnH), 0xFF14202D);
+                marco(ctx, px(btnX), py(btnY), pl(btnW), pl(btnH), 0xFF24364D, 1);
+                texto(ctx, Text.literal("✔ RECLAMADO"), btnX + btnW / 2, btnY + 11, 11,
+                        0xFF4FD07A, true, true);
             } else if (puedeReclamar) {
                 boolean btnHover = dentro(rx, ry, px(btnX), py(btnY), pl(btnW), pl(btnH));
                 ctx.fill(px(btnX), py(btnY), px(btnX + btnW), py(btnY + btnH),
                         btnHover ? VERDE_BOTON_ENCIMA : VERDE_BOTON);
                 marco(ctx, px(btnX), py(btnY), pl(btnW), pl(btnH),
-                        btnHover ? 0xFFFFFFFF : 0xFF144D25, 1);
+                        btnHover ? 0xFFFFFFFF : 0xFF144D25, Math.max(1, pl(btnHover ? 2 : 1)));
                 texto(ctx, Text.literal("¡RECLAMAR!"), btnX + btnW / 2, btnY + 10, 13,
-                        0xFFFFFFFF, true, false);
+                        0xFFFFFFFF, true, true);
             } else {
-                texto(ctx, Text.literal("🔒 Bloqueado"), btnX + btnW / 2, cy + cardH / 2 - 6, 13,
-                        0xFF718096, true, false);
+                ctx.fill(px(btnX), py(btnY), px(btnX + btnW), py(btnY + btnH), 0xFF121620);
+                marco(ctx, px(btnX), py(btnY), pl(btnW), pl(btnH), 0xFF1E2634, 1);
+                texto(ctx, Text.literal("🔒 Bloqueado"), btnX + btnW / 2, btnY + 6, 11,
+                        0xFF718096, true, true);
+                texto(ctx, Text.literal("Ronda " + r), btnX + btnW / 2, btnY + 19, 10,
+                        0xFF4A5568, true, true);
             }
         }
 
-        // Paginador al pie de la cuadrícula
-        int pagY = PANT_Y + PANT_H - 42;
-        int btnPagW = 100;
+        // --- Paginador Inferior ---
+        int pagY = PANT_Y + PANT_H - 38;
+        int btnPagW = 110;
         int btnPagH = 26;
 
-        // Botón Página Anterior
+        // Botón Anterior
         boolean puedeAnt = pagina > 0;
         boolean hoverAnt = puedeAnt && dentro(rx, ry, px(PANT_X + MARGEN), py(pagY), pl(btnPagW), pl(btnPagH));
         ctx.fill(px(PANT_X + MARGEN), py(pagY), px(PANT_X + MARGEN + btnPagW), py(pagY + btnPagH),
-                hoverAnt ? 0xFF2A364F : 0xFF1A2230);
+                hoverAnt ? 0xFF24334C : (puedeAnt ? 0xFF182232 : 0xFF121722));
         marco(ctx, px(PANT_X + MARGEN), py(pagY), pl(btnPagW), pl(btnPagH),
-                hoverAnt ? BORDE_ENCIMA : 0xFF354460, 1);
-        texto(ctx, Text.literal("◄ ANTERIOR"), PANT_X + MARGEN + btnPagW / 2, pagY + 7, 13,
-                puedeAnt ? (hoverAnt ? 0xFFFFFFFF : 0xFFC0CADC) : 0xFF505A6E, true, false);
+                hoverAnt ? BORDE_ENCIMA : (puedeAnt ? 0xFF2F3E56 : 0xFF1E2736), 1);
+        texto(ctx, Text.literal("◄ ANTERIOR"), PANT_X + MARGEN + btnPagW / 2, pagY + 7, 12,
+                puedeAnt ? (hoverAnt ? 0xFFFFFFFF : 0xFFC0CADC) : 0xFF4A5568, true, true);
 
-        // Indicador de página
+        // Indicador central de páginas
         int centroX = PANT_X + PANT_W / 2;
-        int rInicio = (pestana * 20) + (pagina * 10) + 1;
-        int rFin = Math.min(100, rInicio + 9);
-        texto(ctx, Text.literal("Rondas " + rInicio + " - " + rFin + " (Pág. " + (pagina + 1) + " de 2)"),
-                centroX, pagY + 7, 14, ORO, true, false);
+        int rFin = Math.min(100, rondaInicio + 9);
+        texto(ctx, Text.literal("Rondas " + rondaInicio + " - " + rFin + " (Página " + (pagina + 1) + " de 2)"),
+                centroX, pagY + 7, 14, ORO, true, true);
 
-        // Botón Página Siguiente
+        // Botón Siguiente
         int nextX = PANT_X + PANT_W - MARGEN - btnPagW;
         boolean puedeSig = pagina < 1;
         boolean hoverSig = puedeSig && dentro(rx, ry, px(nextX), py(pagY), pl(btnPagW), pl(btnPagH));
         ctx.fill(px(nextX), py(pagY), px(nextX + btnPagW), py(pagY + btnPagH),
-                hoverSig ? 0xFF2A364F : 0xFF1A2230);
+                hoverSig ? 0xFF24334C : (puedeSig ? 0xFF182232 : 0xFF121722));
         marco(ctx, px(nextX), py(pagY), pl(btnPagW), pl(btnPagH),
-                hoverSig ? BORDE_ENCIMA : 0xFF354460, 1);
-        texto(ctx, Text.literal("SIGUIENTE ►"), nextX + btnPagW / 2, pagY + 7, 13,
-                puedeSig ? (hoverSig ? 0xFFFFFFFF : 0xFFC0CADC) : 0xFF505A6E, true, false);
+                hoverSig ? BORDE_ENCIMA : (puedeSig ? 0xFF2F3E56 : 0xFF1E2736), 1);
+        texto(ctx, Text.literal("SIGUIENTE ►"), nextX + btnPagW / 2, pagY + 7, 12,
+                puedeSig ? (hoverSig ? 0xFFFFFFFF : 0xFFC0CADC) : 0xFF4A5568, true, true);
     }
 
-    private void dibujarSeccionInfinita(DrawContext ctx, int rx, int ry) {
+    // =========================================================================
+    // RONDAS 1 A 100: PASADA 3D (Objetos dentro de sus slots)
+    // =========================================================================
+
+    private void dibujarParrillaRondasItems(DrawContext ctx) {
+        int rondaInicio = (pestana * 20) + (pagina * 10) + 1;
+        int cols = 2;
+        int gridX = PANT_X + MARGEN;
+        int gridY = PANT_Y + 52;
+        int gapX = 12;
+        int gapY = 7;
+        int cardW = (PANT_W - (2 * MARGEN) - gapX) / cols;
+        int cardH = 73;
+
+        for (int index = 0; index < 10; index++) {
+            int r = rondaInicio + index;
+            if (r > 100) break;
+
+            int col = index % cols;
+            int row = index / cols;
+            int cx = gridX + (col * (cardW + gapX));
+            int cy = gridY + (row * (cardH + gapY));
+
+            TorreRecompensas.InfoRecompensa info = TorreRecompensas.obtenerInfo(r);
+            int nItems = info.items().size();
+            if (nItems <= 0) continue;
+
+            int sw = nItems >= 5 ? 28 : 32;
+            int gapSlot = nItems >= 5 ? 3 : 5;
+            int itemSize = nItems >= 5 ? 20 : 24;
+            int startX = cx + 122;
+            int startY = cy + (cardH - sw) / 2;
+
+            for (int itIdx = 0; itIdx < Math.min(5, nItems); itIdx++) {
+                int sx = startX + (itIdx * (sw + gapSlot));
+                int sy = startY;
+                int ix = sx + (sw - itemSize) / 2;
+                int iy = sy + (sw - itemSize) / 2;
+
+                ItemStack st = info.items().get(itIdx).crearStack();
+                objeto(ctx, st, ix, iy, itemSize);
+            }
+        }
+    }
+
+    // =========================================================================
+    // SECCIÓN INFINITA (RONDA 101+): PASADA 2D Y PASADA 3D
+    // =========================================================================
+
+    private void dibujarSeccionInfinita2D(DrawContext ctx, int rx, int ry) {
         var estado = EstadoCliente.recompensasTorre();
         int maxRonda = estado != null ? estado.maxRonda() : 0;
         List<Integer> reclamadas = estado != null ? estado.reclamadas() : List.of();
 
-        // Tarjeta Hero: Explicación de las Rondas 101+
+        // Tarjeta Hero: Explicación de la Ronda 101+
         int heroX = PANT_X + MARGEN;
-        int heroY = PANT_Y + 54;
+        int heroY = PANT_Y + 52;
         int heroW = PANT_W - (2 * MARGEN);
-        int heroH = 120;
+        int heroH = 114;
 
-        ctx.fill(px(heroX), py(heroY), px(heroX + heroW), py(heroY + heroH), 0xFF1D2638);
+        ctx.fill(px(heroX), py(heroY), px(heroX + heroW), py(heroY + heroH), 0xFF172030);
         marco(ctx, px(heroX), py(heroY), pl(heroW), pl(heroH), ORO, 2);
 
         texto(ctx, Text.literal("🏆 MAESTRÍA INFINITA (RONDA 101 EN ADELANTE)"),
-                heroX + 20, heroY + 14, 18, ORO, false, false);
+                heroX + 18, heroY + 14, 17, ORO, false, true);
         texto(ctx, Text.literal("Por cada ronda consecutiva que conquistes más allá del piso 100, recibirás:"),
-                heroX + 20, heroY + 38, 13, 0xFFE2E8F0, false, false);
+                heroX + 18, heroY + 36, 13, 0xFFE2E8F0, false, true);
 
-        ctx.draw();
-        ItemStack masterBall = new ItemStack(Registries.ITEM.get(Identifier.of("cobblemon", "master_ball")));
-        objeto(ctx, masterBall, heroX + 24, heroY + 60, 44);
+        // Slot para la Master Ball en el Hero
+        int hSlotX = heroX + 22;
+        int hSlotY = heroY + 56;
+        int hSlotS = 44;
+        ctx.fill(px(hSlotX), py(hSlotY), px(hSlotX + hSlotS), py(hSlotY + hSlotS), 0xFF0D121B);
+        marco(ctx, px(hSlotX), py(hSlotY), pl(hSlotS), pl(hSlotS), 0xFF2D3C56, 1);
 
-        texto(ctx, Text.literal("• 1 Master Ball fija por cada victoria"),
-                heroX + 80, heroY + 68, 14, 0xFFFFFFFF, false, false);
+        if (dentro(rx, ry, px(hSlotX), py(hSlotY), pl(hSlotS), pl(hSlotS))) {
+            hoveredStack = new ItemStack(Registries.ITEM.get(Identifier.of("cobblemon", "master_ball")));
+        }
+
+        texto(ctx, Text.literal("• 1 Master Ball fija garantizada por cada victoria"),
+                heroX + 78, heroY + 63, 14, 0xFFFFFFFF, false, true);
         texto(ctx, Text.literal("• +1,000 Plata (cada 5 rondas)  y  +50 LunaCoins (cada 30 rondas)"),
-                heroX + 80, heroY + 88, 13, 0xFF68D391, false, false);
+                heroX + 78, heroY + 83, 13, 0xFF48BB78, false, true);
 
-        // Lista de rondas 101 a 110 (o hasta maxRonda)
+        // Tarjetas individuales 101+
         int listY = heroY + heroH + 16;
-        int cardW = (heroW - 10) / 2;
-        int cardH = 58;
+        int cardW = (heroW - 12) / 2;
+        int cardH = 72;
 
         for (int i = 0; i < 4; i++) {
             int r = 101 + i;
             int col = i % 2;
             int row = i / 2;
-            int cx = heroX + (col * (cardW + 10));
+            int cx = heroX + (col * (cardW + 12));
             int cy = listY + (row * (cardH + 8));
 
             boolean esReclamada = reclamadas.contains(r);
@@ -419,49 +538,100 @@ public class TorreRecompensasScreen extends Screen {
             boolean cardHover = dentro(rx, ry, px(cx), py(cy), pl(cardW), pl(cardH));
 
             int fondoCard = puedeReclamar
-                    ? (cardHover ? 0xFF283852 : FONDO_TARJETA_DISPONIBLE)
-                    : (esReclamada ? FONDO_TARJETA_RECLAMADA : FONDO_TARJETA);
-            int bordeCard = puedeReclamar ? (cardHover ? BORDE_ENCIMA : ORO) : 0xFF2A3448;
+                    ? (cardHover ? 0xFF253450 : 0xFF1C273C)
+                    : (esReclamada ? 0xFF141924 : 0xFF11151F);
+            int bordeCard = puedeReclamar ? (cardHover ? BORDE_ENCIMA : ORO) : 0xFF1E2636;
 
             ctx.fill(px(cx), py(cy), px(cx + cardW), py(cy + cardH), fondoCard);
             marco(ctx, px(cx), py(cy), pl(cardW), pl(cardH), bordeCard, Math.max(1, pl(puedeReclamar ? 2 : 1)));
 
-            texto(ctx, Text.literal("RONDA " + r), cx + 12, cy + 10, 16,
-                    puedeReclamar ? ORO : (esReclamada ? 0xFF9FAEC4 : 0xFF718096), false, false);
+            int colorTira = puedeReclamar ? ORO : (esReclamada ? 0xFF38A169 : 0xFF2D3748);
+            ctx.fill(px(cx), py(cy), px(cx + 4), py(cy + cardH), colorTira);
+
+            texto(ctx, Text.literal("RONDA " + r), cx + 14, cy + 9, 16,
+                    puedeReclamar ? ORO : (esReclamada ? VERDE_TEXTO : 0xFF8A99B0), false, true);
+            texto(ctx, Text.literal("⭐ INFINITO"), cx + 14, cy + 28, 11, CIAN, false, true);
 
             TorreRecompensas.InfoRecompensa info = TorreRecompensas.obtenerInfo(r);
             if (info.plata() > 0 || info.lunacoins() > 0) {
                 String bonoStr = "";
                 if (info.plata() > 0) bonoStr += "+1k Plata ";
                 if (info.lunacoins() > 0) bonoStr += "+50 LC";
-                texto(ctx, Text.literal(bonoStr), cx + 12, cy + 32, 11, 0xFF68D391, false, false);
+                texto(ctx, Text.literal(bonoStr), cx + 14, cy + 47, 11, 0xFF48BB78, false, true);
             }
 
-            ctx.draw();
-            objeto(ctx, masterBall, cx + 140, cy + 12, 34);
+            // Hueco Master Ball
+            int sx = cx + 130;
+            int sy = cy + (cardH - 34) / 2;
+            int ss = 34;
+            ctx.fill(px(sx), py(sy), px(sx + ss), py(sy + ss), 0xFF0D121B);
+            marco(ctx, px(sx), py(sy), pl(ss), pl(ss), 0xFF28364D, 1);
 
-            int btnW = 90;
-            int btnH = 32;
+            if (dentro(rx, ry, px(sx), py(sy), pl(ss), pl(ss))) {
+                hoveredStack = new ItemStack(Registries.ITEM.get(Identifier.of("cobblemon", "master_ball")));
+            }
+
+            // Botón
+            int btnW = 88;
+            int btnH = 34;
             int btnX = cx + cardW - btnW - 12;
             int btnY = cy + (cardH - btnH) / 2;
 
             if (esReclamada) {
-                texto(ctx, Text.literal("✓ Reclamado"), btnX + btnW / 2, cy + cardH / 2 - 6, 13,
-                        0xFF4FD07A, true, false);
+                ctx.fill(px(btnX), py(btnY), px(btnX + btnW), py(btnY + btnH), 0xFF14202D);
+                marco(ctx, px(btnX), py(btnY), pl(btnW), pl(btnH), 0xFF24364D, 1);
+                texto(ctx, Text.literal("✔ RECLAMADO"), btnX + btnW / 2, btnY + 11, 11,
+                        0xFF4FD07A, true, true);
             } else if (puedeReclamar) {
                 boolean btnHover = dentro(rx, ry, px(btnX), py(btnY), pl(btnW), pl(btnH));
                 ctx.fill(px(btnX), py(btnY), px(btnX + btnW), py(btnY + btnH),
                         btnHover ? VERDE_BOTON_ENCIMA : VERDE_BOTON);
                 marco(ctx, px(btnX), py(btnY), pl(btnW), pl(btnH),
                         btnHover ? 0xFFFFFFFF : 0xFF144D25, 1);
-                texto(ctx, Text.literal("¡RECLAMAR!"), btnX + btnW / 2, btnY + 9, 13,
-                        0xFFFFFFFF, true, false);
+                texto(ctx, Text.literal("¡RECLAMAR!"), btnX + btnW / 2, btnY + 10, 13,
+                        0xFFFFFFFF, true, true);
             } else {
-                texto(ctx, Text.literal("🔒 Ronda " + r), btnX + btnW / 2, cy + cardH / 2 - 6, 13,
-                        0xFF718096, true, false);
+                ctx.fill(px(btnX), py(btnY), px(btnX + btnW), py(btnY + btnH), 0xFF121620);
+                marco(ctx, px(btnX), py(btnY), pl(btnW), pl(btnH), 0xFF1E2634, 1);
+                texto(ctx, Text.literal("🔒 Ronda " + r), btnX + btnW / 2, btnY + 11, 11,
+                        0xFF718096, true, true);
             }
         }
     }
+
+    private void dibujarSeccionInfinitaItems(DrawContext ctx) {
+        int heroX = PANT_X + MARGEN;
+        int heroY = PANT_Y + 52;
+        int heroW = PANT_W - (2 * MARGEN);
+        int heroH = 114;
+
+        ItemStack masterBall = new ItemStack(Registries.ITEM.get(Identifier.of("cobblemon", "master_ball")));
+
+        // Objeto en el Hero
+        int hSlotX = heroX + 22;
+        int hSlotY = heroY + 56;
+        objeto(ctx, masterBall, hSlotX + 6, hSlotY + 6, 32);
+
+        // Objetos en las tarjetas
+        int listY = heroY + heroH + 16;
+        int cardW = (heroW - 12) / 2;
+        int cardH = 72;
+
+        for (int i = 0; i < 4; i++) {
+            int col = i % 2;
+            int row = i / 2;
+            int cx = heroX + (col * (cardW + 12));
+            int cy = listY + (row * (cardH + 8));
+
+            int sx = cx + 130;
+            int sy = cy + (cardH - 34) / 2;
+            objeto(ctx, masterBall, sx + 4, sy + 4, 26);
+        }
+    }
+
+    // =========================================================================
+    // INTERACCIÓN
+    // =========================================================================
 
     @Override
     public boolean mouseClicked(double mx, double my, int boton) {
@@ -491,12 +661,12 @@ public class TorreRecompensasScreen extends Screen {
         // Botón "Reclamar Todo"
         var estado = EstadoCliente.recompensasTorre();
         int pendientes = contarDisponibles(estado);
-        int cardY = PANEL_Y + NAV_ALTO + 160;
+        int cardY = PANEL_Y + NAV_ALTO + 148;
         int cardH = 76;
-        int btnW = PANEL_W - 40;
-        int btnH = 48;
-        int btnX = PANEL_X + 20;
-        int btnY = cardY + cardH + 16;
+        int btnW = PANEL_W - 36;
+        int btnH = 46;
+        int btnX = PANEL_X + 18;
+        int btnY = cardY + cardH + 14;
         if (pendientes > 0 && dentro(rx, ry, px(btnX), py(btnY), pl(btnW), pl(btnH))) {
             sonar(SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value(), 1.2f);
             ClientPlayNetworking.send(new Red.ReclamarRecompensaTorre(-1));
@@ -505,7 +675,7 @@ public class TorreRecompensasScreen extends Screen {
 
         // Clics en Pestañas
         int tabY = PANT_Y + 10;
-        int tabH = 34;
+        int tabH = 32;
         int totalW = PANT_W - (2 * MARGEN);
         int gap = 6;
         int tabW = (totalW - (5 * gap)) / 6;
@@ -522,32 +692,49 @@ public class TorreRecompensasScreen extends Screen {
             }
         }
 
-        // Clics en la Parrilla de Rondas (Pestañas 0 a 4)
+        // Clics en Paginador (Pestañas 1 a 5)
         if (pestana < 5) {
-            int rondaInicio = (pestana * 20) + (pagina * 10) + 1;
-            int cols = 2;
-            int gridX = PANT_X + MARGEN;
-            int gridY = PANT_Y + 54;
-            int gapX = 10;
-            int gapY = 8;
-            int cW = (PANT_W - (2 * MARGEN) - gapX) / cols;
-            int cH = 68;
+            int pagY = PANT_Y + PANT_H - 38;
+            int btnPagW = 110;
+            int btnPagH = 26;
 
-            int maxRonda = estado != null ? estado.maxRonda() : 0;
-            List<Integer> reclamadas = estado != null ? estado.reclamadas() : List.of();
+            // Anterior
+            if (pagina > 0 && dentro(rx, ry, px(PANT_X + MARGEN), py(pagY), pl(btnPagW), pl(btnPagH))) {
+                sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
+                pagina = 0;
+                return true;
+            }
 
-            for (int index = 0; index < 10; index++) {
-                int r = rondaInicio + index;
-                if (r > 100) break;
+            // Siguiente
+            int nextX = PANT_X + PANT_W - MARGEN - btnPagW;
+            if (pagina < 1 && dentro(rx, ry, px(nextX), py(pagY), pl(btnPagW), pl(btnPagH))) {
+                sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
+                pagina = 1;
+                return true;
+            }
+        }
 
-                int col = index % cols;
-                int row = index / cols;
-                int cardX = gridX + (col * (cW + gapX));
-                int cardItemY = gridY + (row * (cH + gapY));
+        // Clics en Botones ¡RECLAMAR! de las tarjetas
+        int maxRonda = estado != null ? estado.maxRonda() : 0;
+        List<Integer> reclamadas = estado != null ? estado.reclamadas() : List.of();
 
-                boolean puedeReclamar = (maxRonda >= r && r >= 4 && !reclamadas.contains(r));
+        if (pestana == 5) {
+            int heroW = PANT_W - (2 * MARGEN);
+            int heroH = 114;
+            int listY = PANT_Y + 52 + heroH + 16;
+            int cW = (heroW - 12) / 2;
+            int cH = 72;
+
+            for (int i = 0; i < 4; i++) {
+                int r = 101 + i;
+                int col = i % 2;
+                int row = i / 2;
+                int cardX = PANT_X + MARGEN + (col * (cW + 12));
+                int cardItemY = listY + (row * (cH + 8));
+
+                boolean puedeReclamar = (maxRonda >= r) && !reclamadas.contains(r);
                 if (puedeReclamar) {
-                    int bW = 90;
+                    int bW = 88;
                     int bH = 34;
                     int bX = cardX + cW - bW - 12;
                     int bY = cardItemY + (cH - bH) / 2;
@@ -559,48 +746,29 @@ public class TorreRecompensasScreen extends Screen {
                     }
                 }
             }
-
-            // Paginador
-            int pagY = PANT_Y + PANT_H - 42;
-            int btnPagW = 100;
-            int btnPagH = 26;
-            // Anterior
-            if (pagina > 0 && dentro(rx, ry, px(PANT_X + MARGEN), py(pagY), pl(btnPagW), pl(btnPagH))) {
-                sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
-                pagina--;
-                return true;
-            }
-            // Siguiente
-            int nextX = PANT_X + PANT_W - MARGEN - btnPagW;
-            if (pagina < 1 && dentro(rx, ry, px(nextX), py(pagY), pl(btnPagW), pl(btnPagH))) {
-                sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
-                pagina++;
-                return true;
-            }
         } else {
-            // Clics en Pestaña 5 (101+ Infinito)
-            int heroX = PANT_X + MARGEN;
-            int heroY = PANT_Y + 54;
-            int heroW = PANT_W - (2 * MARGEN);
-            int heroH = 120;
-            int listY = heroY + heroH + 16;
-            int cW = (heroW - 10) / 2;
-            int cH = 58;
+            int rondaInicio = (pestana * 20) + (pagina * 10) + 1;
+            int cols = 2;
+            int gapX = 12;
+            int gapY = 7;
+            int cW = (PANT_W - (2 * MARGEN) - gapX) / cols;
+            int cH = 73;
+            int gridX = PANT_X + MARGEN;
+            int gridY = PANT_Y + 52;
 
-            int maxRonda = estado != null ? estado.maxRonda() : 0;
-            List<Integer> reclamadas = estado != null ? estado.reclamadas() : List.of();
+            for (int index = 0; index < 10; index++) {
+                int r = rondaInicio + index;
+                if (r > 100) break;
 
-            for (int i = 0; i < 4; i++) {
-                int r = 101 + i;
-                int col = i % 2;
-                int row = i / 2;
-                int cardX = heroX + (col * (cW + 10));
-                int cardItemY = listY + (row * (cH + 8));
+                int col = index % cols;
+                int row = index / cols;
+                int cardX = gridX + (col * (cW + gapX));
+                int cardItemY = gridY + (row * (cH + gapY));
 
-                boolean puedeReclamar = (maxRonda >= r && !reclamadas.contains(r));
+                boolean puedeReclamar = (maxRonda >= r && r >= 4) && !reclamadas.contains(r);
                 if (puedeReclamar) {
-                    int bW = 90;
-                    int bH = 32;
+                    int bW = 88;
+                    int bH = 34;
                     int bX = cardX + cW - bW - 12;
                     int bY = cardItemY + (cH - bH) / 2;
 
@@ -643,9 +811,16 @@ public class TorreRecompensasScreen extends Screen {
         return count;
     }
 
-    private void objeto(DrawContext ctx, ItemStack pila, int ax, int ay, int altoArte) {
-        if (pila.isEmpty()) return;
-        float escala = altoArte * k / 16f;
+    // =========================================================================
+    // UTILIDADES DE DIBUJADO DE ALTA FIDELIDAD
+    // =========================================================================
+
+    /**
+     * Dibuja un objeto 3D a píxeles exactos de pantalla usando escalado matricial limpio.
+     */
+    private void objeto(DrawContext ctx, ItemStack pila, int ax, int ay, int ladoArte) {
+        if (pila == null || pila.isEmpty()) return;
+        float escala = pl(ladoArte) / 16f;
         MatrixStack m = ctx.getMatrices();
         m.push();
         m.translate(px(ax), py(ay), 0);
@@ -661,12 +836,15 @@ public class TorreRecompensasScreen extends Screen {
     }
 
     private void separador(DrawContext ctx, int artY) {
-        ctx.fill(px(PANEL_X + 28), py(artY), px(PANEL_X + PANEL_W - 28),
+        ctx.fill(px(PANEL_X + 24), py(artY), px(PANEL_X + PANEL_W - 24),
                 py(artY) + Math.max(1, pl(2)), SEPARADOR);
     }
 
+    /**
+     * Dibuja texto con sombra nativa de Minecraft (sin contorno borroso) para máxima nitidez.
+     */
     private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,
-                       int color, boolean centrado, boolean contorno) {
+                       int color, boolean centrado, boolean sombra) {
         float escala = alto * k / textRenderer.fontHeight;
         if (escala <= 0) return;
 
@@ -677,13 +855,7 @@ public class TorreRecompensasScreen extends Screen {
         int anchoTexto = textRenderer.getWidth(linea);
         int tx = Math.round(cx * k / escala) - (centrado ? anchoTexto / 2 : 0);
         int ty = Math.round(arriba * k / escala);
-        if (contorno) {
-            ctx.drawText(textRenderer, linea, tx - 1, ty, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx + 1, ty, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx, ty - 1, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx, ty + 1, TEXTO_CONTORNO, false);
-        }
-        ctx.drawText(textRenderer, linea, tx, ty, color, false);
+        ctx.drawText(textRenderer, linea, tx, ty, color, sombra);
         m.pop();
     }
 

@@ -393,7 +393,7 @@ public class TorreScreen extends Screen {
             ctx.drawText(textRenderer, linea, tx, ty - 1, TEXTO_CONTORNO, false);
             ctx.drawText(textRenderer, linea, tx, ty + 1, TEXTO_CONTORNO, false);
         }
-        ctx.drawText(textRenderer, linea, tx, ty, color, false);
+        ctx.drawText(textRenderer, linea, tx, ty, color, true);
         m.pop();
     }
 

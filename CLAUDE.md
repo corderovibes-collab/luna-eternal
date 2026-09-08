@@ -3144,11 +3144,22 @@ Pase          EL PASE DE BATALLA LUNA (2026-09-08, V032, D-045)
               +30 comprobaciones. Las dos que importan: EL MINIMO DE 44 DIAS
               --sale de dos numeros en ficheros distintos que nada obliga a
               mirar juntos-- y QUE LA VIA DE PAGO SOLO LLEVE COSMETICOS
-              ⚠ EL ICONO ES PROVISIONAL: lo dibuja tools/gen_icono_pase.py con
-                la misma silueta que pide el prompt (tres escalones dorados y
-                una luna creciente), para que la celda NO SALGA EN MAGENTA
-                mientras llega el arte. Prompt en
-                docs/ui/prompts-arte-pokepad.md §5.4-quater
+              EL ICONO YA ES EL DEFINITIVO (2026-09-08): tres escalones dorados,
+              cinta violeta y luna creciente. Prompt en
+              docs/ui/prompts-arte-pokepad.md §5.4-quater
+                python tools/gen_icono_pase.py --origen <ruta>
+              ⚠⚠ EL PROCESADO SE IMPORTA DE gen_pokepad.py, no se copia:
+                 `preparar` (quitar fondo + SANGRAR EL ALFA), `abrir_hueco`,
+                 `a_tamano` y `guardar` son las mismas que tratan a los otros
+                 veinte iconos. Un segundo pipeline daria «el del pase se ve
+                 distinto» sin ningun error
+                 ⚠ va aparte porque gen_pokepad EMPIEZA BORRANDO los 21 iconos y
+                   hoy aborta: falta icon_torre_batalla.png. Instalar UNO no
+                   puede depender de que esten los veintiuno
+              ⚠ el PROVISIONAL sigue en el script y no es codigo muerto: si
+                falta el arte dibuja la misma silueta en vez de dejar la celda
+                en MAGENTA -- una celda dibuja SU icono aunque este bloqueada,
+                asi que dar de alta una app sin PNG no da ningun error
               ⚠ SIN VERIFICAR EN EL JUEGO todavia, y SIN DESPLEGAR
 Cazas         YA TIENE PANTALLA (2026-08-25, V017)
               2 pestañas (CAZA . CRIANZA) . 3 objetivos en cada una con
@@ -3567,7 +3578,7 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 | | |
 |---|---|
 | **0. Desplegar y verificar el PASE** | **Construido, compilado y con 30 comprobaciones nuevas en `/luna autotest`; sin desplegar y sin mirar.** ⚠ Son **DOS destinos**: `python tools/desplegar.py mod --reiniciar` y `python tools/gen_manifest.py --publicar`. Sin el segundo, el jugador tiene el jar viejo y **el icono no abre nada** — que se comporta como debe, y eso despista. ⚠ Aquí **no hay registro que se sincronice** (ni bloques, ni objetos, ni contenedor): un cliente viejo entra igual y solo pierde la pantalla. Aun así, **avisar antes de reiniciar** |
-| **0-bis. El arte del icono** | Hoy hay un **provisional** dibujado por `tools/gen_icono_pase.py`. Prompt para Gemini en `docs/ui/prompts-arte-pokepad.md` §5.4-quater |
+| ~~**0-bis. El arte del icono**~~ | ✅ **Instalado el 2026-09-08.** Prompt y procedimiento en `docs/ui/prompts-arte-pokepad.md` §5.4-quater |
 
 Y lo que ya estaba (2026-08-27, noche):
 

@@ -39,10 +39,13 @@ mod/src/main/resources/db/migration/V032__pase.sql
 
 ## Current Status
 
-**Construido, compilado y con sus invariantes en `/luna autotest`.**
-**SIN VERIFICAR EN EL JUEGO** y sin desplegar. El icono de la rejilla es
-**provisional** (`tools/gen_icono_pase.py`) hasta que llegue el arte de Gemini
-—el prompt está en [`../ui/prompts-arte-pokepad.md`](../ui/prompts-arte-pokepad.md) §5.4-quater.
+**Construido, compilado, con arte y con sus invariantes en `/luna autotest`.**
+**SIN VERIFICAR EN EL JUEGO** y sin desplegar. El icono de la rejilla ya es el
+definitivo (2026-09-08): se instaló con
+`python tools/gen_icono_pase.py --origen <ruta>`, que pasa el PNG por **el mismo
+pipeline que los otros veinte iconos** (importado de `gen_pokepad.py`, no
+copiado). El prompt que lo generó está en
+[`../ui/prompts-arte-pokepad.md`](../ui/prompts-arte-pokepad.md) §5.4-quater.
 
 ## Last Decision
 
@@ -471,8 +474,7 @@ Tres cosas, y las tres son la misma lección de este proyecto:
 ## Next Actions
 
 1. **Verificarlo en el juego.** Nada de esto se ha visto en pantalla.
-2. **El arte del icono** — prompt en `../ui/prompts-arte-pokepad.md` §5.4-quater.
-   Hoy hay un provisional.
+2. ~~El arte del icono~~ ✅ **instalado el 2026-09-08.**
 3. **Calibrar con datos reales.** Como todo lo económico de este proyecto, los
    importes son provisionales. Aquí hay **cuatro palancas** y ninguna más:
    `PaseNivel.BASE`, `PaseNivel.PASO`, `PaseNivel.TOPE_DIARIO` y la tabla de

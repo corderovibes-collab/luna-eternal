@@ -501,17 +501,30 @@ Igual que PROTECCIONES y SANTUARIO: la pantalla usa el **chasis compartido**
 (`pokepad_cosmeticos.png`) y lo único que hace falta pedir es el icono de la
 rejilla.
 
-> ⚠️ **Hay un provisional instalado.** `python tools/gen_icono_pase.py` dibuja
-> por código la misma idea que pide este prompt —tres escalones dorados y una
-> luna creciente— para que la celda no salga en **magenta** mientras el arte no
-> llega. Es el mismo caso que el candado provisional de `gen_pokepad.py`: una
-> celda dibuja su propio icono aunque esté bloqueada, así que dar de alta una
-> aplicación **sin su PNG no da ningún error** — da un cuadro magenta que solo
-> se ve abriendo el Pad. Pasó el 2026-08-23 con seis pantallas a la vez.
+> ✅ **Arte recibido e instalado el 2026-09-08.** Llegó a 100 × 100 y ya con
+> transparencia:
 >
-> **El provisional dibuja la misma silueta a propósito**: así lo que se ve en la
-> rejilla hoy es lo que se verá mañana, y cambiar el arte no cambia cómo se lee
-> la pantalla.
+> ```bash
+> python tools/gen_icono_pase.py --origen "C:/Users/.../pasebatalla.png"
+> ```
+>
+> ⚠⚠ **El procesado no es suyo: lo importa de `gen_pokepad.py`.** `preparar`
+> (quitar el fondo + **sangrar el alfa**), `abrir_hueco`, `a_tamano` y `guardar`
+> son las mismas funciones que tratan a los otros veinte iconos. Un segundo
+> pipeline daría «el del pase se ve distinto a los demás» sin ningún error y sin
+> nadie que supiera por qué.
+>
+> ⚠ Existe como script aparte porque `gen_pokepad.py` **empieza borrando** los
+> PNG de las veintiuna aplicaciones y los regenera desde `arte/pokepad/icons/`,
+> así que hoy aborta —falta `icon_torre_batalla.png`—. Instalar **un** icono no
+> puede depender de que estén los veintiuno. La regla de los generadores se
+> cumple igual: este solo toca `pase.png` y su `.mcmeta`.
+>
+> ⚠ **Y el provisional sigue en el script, que no es código muerto.** Si algún
+> día falta el arte —un clon limpio, un fichero borrado— dibuja la misma silueta
+> en vez de dejar la celda en **magenta**: una celda del PokePad dibuja su propio
+> icono aunque esté bloqueada, así que dar de alta una aplicación sin su PNG **no
+> da ningún error**. Pasó el 2026-08-23 con seis pantallas a la vez.
 
 #### `pase.png` — 100 × 100
 

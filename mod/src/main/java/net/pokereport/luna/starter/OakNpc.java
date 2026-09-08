@@ -191,6 +191,20 @@ public final class OakNpc {
         mob.setBodyYaw(giro);
         mob.setTrainerId(ENTRENADOR);
 
+        // ⚠⚠⚠ Y SE LE QUITA EL NOMBRE, QUE SI NO SALE DOS VECES.
+        //    `setTrainerId` llama por dentro a `udpateCustomName` --el typo es
+        //    suyo-- y le pone al mob un CUSTOM NAME. Vanilla dibuja la etiqueta
+        //    de un mob con nombre EN CUANTO LE APUNTAS
+        //    (`MobEntityRenderer.hasLabel`: `hasCustomName() && targetedEntity`),
+        //    asi que encima del cartel bueno aparecia un «Professor Oak» blanco
+        //    y pequeño -- y en blanco sobre las paredes blancas del laboratorio
+        //    lo unico que hacia era emborronar el nuestro.
+        //    ⚠ `setCustomNameVisible(false)` NO BASTA: esa via es la de
+        //      `shouldRenderName()`, y la de apuntar pregunta por
+        //      `hasCustomName()`. Hay que dejarlo en null.
+        mob.setCustomName(null);
+        mob.setCustomNameVisible(false);
+
         // ⚠⚠⚠ ESTAS CUATRO VAN ANTES DE `spawnEntity`, Y NO ES INDIFERENTE:
         //    `setAiDisabled` es lo unico que impide que rete solo, y
         //    `ForceIntoBattleGoal` es un GOAL --corre en el primer tick--. Aqui
@@ -242,11 +256,21 @@ public final class OakNpc {
                 .append(Text.literal("Elige tu primer Pokemon\n")
                         .formatted(Formatting.WHITE))
                 .append(Text.literal("Clic derecho")
-                        .formatted(Formatting.GRAY)));
+                        .formatted(Formatting.AQUA)));
         cartel.setBillboardMode(DisplayEntity.BillboardMode.CENTER);
         // Fondo oscuro a media transparencia: el texto claro sobre la piedra
         // clara de la ciudadela desaparece sin el.
-        cartel.setBackground(0x40000000);
+        // ⚠⚠⚠ CASI OPACO, Y ANTES ESTABA AL 25 %. El valor venia del cartel
+        //    de los gimnasios (`0x40000000`, negro al 25 %) y ALLI ESTA BIEN: las
+        //    salas de gimnasio son de piedra gris. EL LABORATORIO DE OAK ES BLANCO
+        //    ENTERO, y sobre blanco un velo del 25 % no oscurece nada: el texto
+        //    blanco desaparecia y el gris de «Clic derecho» todavia mas.
+        //    ⚠⚠ LA REGLA QUE QUEDA: un cartel del mundo NO SABE contra que pared
+        //       lo van a leer, asi que SE TRAE SU PROPIO FONDO. Es la misma
+        //       decision que ya tomaron los hologramas de la Torre --«fondo azul
+        //       pizarra SOLIDO para que el texto sea legible contra cualquier
+        //       iluminacion o shaders»-- y estaba escrita desde el 7 de septiembre.
+        cartel.setBackground(0xE6060B14);
         cartel.setLineWidth(220);
         // Multiplicador de 64, no una distancia: 48 bloques, que es mas que el
         // lado de la plaza.

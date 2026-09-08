@@ -103,6 +103,23 @@ public class InicialScreen extends Screen {
     /** Para las animaciones. Se pone en {@link #init}. */
     private long abiertoEn;
 
+    /**
+     * Cuando el servidor confirmo la entrega.
+     *
+     * <p>&#9888;&#9888; SIRVE PARA NO CERRAR DE GOLPE. El servidor contesta en
+     * decimas, asi que sin esto la celebracion --el aro, los destellos y el
+     * «¡ES TUYO!»-- duraba literalmente un fotograma y la pantalla se evaporaba.
+     * Elegir el primer Pokemon es el unico momento memorable del primer minuto
+     * de partida: merece segundo y medio.
+     */
+    private long confirmadoEn;
+
+    /** Cuanto dura la celebracion antes de cerrar. */
+    private static final long CELEBRACION_MS = 1800;
+
+    /** Separacion entre VOLVER y CONFIRMAR. */
+    private static final int SEP_BOTON = 40;
+
     private final Efectos.Chispas chispas = new Efectos.Chispas();
 
     /**
@@ -195,23 +212,30 @@ public class InicialScreen extends Screen {
 
         // ⚠ PRIMERA PASADA: TODO lo plano. Mezclar 2D y 3D deja el orden al azar
         //   y los modelos titilan. Es la regla de las 2 pasadas de dibujado.md.
+        // ⚠⚠⚠ LA REJILLA NO SE TAPA: SE DEJA DE DIBUJAR. La primera version
+        //    pintaba un velo opaco encima de TODA la pantalla, y la captura del
+        //    usuario lo enseño como lo que era: el PokePad desaparecido, el panel
+        //    flotando en negro y LOS SEIS POKEMON DIBUJADOS POR ENCIMA del velo
+        //    y del texto.
+        //    ⚠⚠ Y no era el orden de mis llamadas. Los modelos de Cobblemon NO
+        //       van en el lote de `DrawContext`: salen por su propio
+        //       `VertexConsumerProvider`, que se vuelca AL FINAL del fotograma.
+        //       TAPAR UN MODELO CON UN `fill` ES IMPOSIBLE por definicion, se
+        //       pida cuando se pida -- la unica forma de que no se vea es NO
+        //       PINTARLO.
+        boolean tapado = confirmando || enviado;
+
         dibujarPanel(ctx, rx, ry);
-        dibujarRejilla(ctx, rx, ry, delta);
+        if (tapado) {
+            dibujarTapa(ctx, rx, ry);
+        } else {
+            dibujarRejilla(ctx, rx, ry, delta);
+        }
 
         ctx.draw();
 
         // SEGUNDA PASADA: solo modelos.
-        dibujarModelos(ctx, delta, rx, ry);
-
-        if (confirmando) {
-            // ⚠⚠⚠ `ctx.draw()` OTRA VEZ, Y NO SOBRA. El texto de las tarjetas
-            //    vive en una capa que se vuelca la ULTIMA: sin vaciar aqui, el
-            //    velo se pinta y las letras de debajo salen ENCIMA de el. No es
-            //    transparencia, es orden de capas -- costo una captura del
-            //    usuario en la pantalla del Pase.
-            ctx.draw();
-            dibujarConfirmacion(ctx, rx, ry);
-        }
+        dibujarModelos(ctx, delta, rx, ry, tapado);
     }
 
     private void leerDelServidor() {
@@ -222,7 +246,16 @@ public class InicialScreen extends Screen {
         // ⚠ SI YA ELIGIO, SE CIERRA SOLA. Es lo que hace que al pulsar no haga
         //   falta adivinar si funciono: se espera a que el servidor lo confirme.
         if (i.yaEligio()) {
-            if (client != null) {
+            // ⚠⚠ NO SE CIERRA EN EL ACTO: se apunta el instante y se deja correr
+            //    la celebracion. El servidor contesta en decimas, y cerrar ahi
+            //    mismo se lleva por delante lo unico que hace que parezca que ha
+            //    pasado algo.
+            if (confirmadoEn == 0) {
+                confirmadoEn = System.currentTimeMillis();
+                celebrar();
+            }
+            if (client != null
+                    && System.currentTimeMillis() - confirmadoEn > CELEBRACION_MS) {
                 client.setScreen(null);
             }
             return;
@@ -349,8 +382,14 @@ public class InicialScreen extends Screen {
         }
     }
 
-    /** Segunda pasada: solo modelos. Ni un rectangulo ni una letra aqui. */
-    private void dibujarModelos(DrawContext ctx, float delta, int rx, int ry) {
+    /**
+     * Segunda pasada: solo modelos. Ni un rectangulo ni una letra aqui.
+     *
+     * @param tapado si la rejilla esta cubierta. Entonces sus seis modelos
+     *               <b>no se dibujan</b>, porque taparlos es imposible
+     */
+    private void dibujarModelos(DrawContext ctx, float delta, int rx, int ry,
+                                boolean tapado) {
         if (elegida != null) {
             // ⚠ La clave lleva el prefijo `panel:` para que NO comparta estado de
             //   animacion con la celda del mismo Pokemon: `drawProfilePokemon`
@@ -358,10 +397,19 @@ public class InicialScreen extends Screen {
             //   pisan la orientacion y titilan. Es la regla 6 de dibujado.md.
             var id = Identifier.tryParse("cobblemon:" + elegida.especie());
             if (id != null) {
+                // ⚠⚠ EL 0,30 DEJABA AL POKEMON SENTADO EN EL SUELO DE LA CAJA.
+                //    `origenY` es la fraccion de la caja donde cae el ORIGEN del
+                //    modelo, y el modelo CRECE HACIA ABAJO desde ahi: con 0,30 y
+                //    una caja de 232 el origen caia a 70, y los ciento y pico de
+                //    Squirtle acababan pegados al borde de abajo. Calibrado
+                //    contra la captura del usuario, no deducido.
                 Mascota3D.dibujarEspecie(ctx, id, "panel:" + elegida.especie(), "",
-                        px(PANEL_X + 26), py(PANEL_Y + 122),
-                        pl(PANEL_W - 52), pl(232), 0.30f, delta, true);
+                        px(PANEL_X + 26), py(PANEL_Y + 116),
+                        pl(PANEL_W - 52), pl(242), 0.12f, delta, true);
             }
+        }
+        if (tapado) {
+            return;
         }
         int[] c = celda();
         long t = System.currentTimeMillis() - abiertoEn;
@@ -383,61 +431,141 @@ public class InicialScreen extends Screen {
         }
     }
 
-    // ---- el velo de confirmacion -------------------------------------------
+    // ---- lo que ocupa el hueco de la rejilla -------------------------------
 
     /**
-     * &#191;SEGURO? &mdash; peticion del usuario.
+     * LA CAJA DE LOS DOS BOTONES, en un solo sitio.
      *
-     * <p>&#9888;&#9888; EL VELO ES OPACO, no translucido. Al 95 % la rejilla se
-     * sigue adivinando debajo y el jugador no sabe si esta mirando la
-     * confirmacion o la eleccion. Y con las letras de las tarjetas volcandose la
-     * ultimas, «casi opaco» acaba siendo «se ve todo».
+     * <p>&#9888;&#9888; La dibuja {@link #dibujarTapa} y la lee
+     * {@link #mouseClicked}. Escrita dos veces, mover el panel deja el boton
+     * <b>pintado en un sitio y respondiendo en otro</b> -- que es exactamente el
+     * fallo de la rejilla del PokePad, y no da ningun error.
+     *
+     * @return {x, y, ancho, alto} del boton IZQUIERDO. El derecho va a
+     *         {@code x + ancho + SEP_BOTON}
      */
-    private void dibujarConfirmacion(DrawContext ctx, int rx, int ry) {
-        ctx.fill(x0, y0, x0 + ancho, y0 + alto, 0xFF080C14);
+    private static int[] botonesTapa() {
+        int bw = 260, bh = 58;
+        int cx = PANT_X + PANT_W / 2;
+        return new int[] { cx - SEP_BOTON / 2 - bw, PANT_Y + PANT_H - 112, bw, bh };
+    }
 
-        int cw = 620, ch = 300;
-        int cxc = NAT_ANCHO / 2 - cw / 2;
-        int cyc = NAT_ALTO / 2 - ch / 2;
+    /**
+     * TAPA LA REJILLA Y PREGUNTA, DENTRO DEL CHASIS.
+     *
+     * <p>&#9888;&#9888;&#9888; LA PRIMERA VERSION TAPABA LA PANTALLA ENTERA, y en
+     * la captura del usuario se veia como una averia: el PokePad desaparecido, un
+     * panel flotando en negro y <b>los seis Pokemon dibujados por encima</b>. Hoy
+     * el velo ocupa <b>solo el hueco de la rejilla</b>, y eso ademas es mejor
+     * diseño que lo de antes: <b>el panel de la izquierda sigue enseñando al
+     * elegido en 3D</b>, asi que ves lo que confirmas mientras lo confirmas -- y
+     * la confirmacion no tiene que repetir el nombre en grande.
+     */
+    private void dibujarTapa(DrawContext ctx, int rx, int ry) {
+        ctx.fill(px(PANT_X), py(PANT_Y), px(PANT_X + PANT_W), py(PANT_Y + PANT_H),
+                FONDO);
+        int tipo = elegida == null ? ORO : colorTipo(elegida.tipo());
+        Efectos.marcoVivo(ctx, px(PANT_X), py(PANT_Y), pl(PANT_W), pl(PANT_H),
+                Math.max(1, pl(3)), BORDE, enviado ? VERDE : tipo,
+                Efectos.rampa(enviado ? 1200 : 3400));
 
-        Efectos.halo(ctx, px(cxc), py(cyc), pl(cw), pl(ch), Math.max(2, pl(8)),
-                ORO, 0.35f);
-        ctx.fill(px(cxc), py(cyc), px(cxc + cw), py(cyc + ch), FONDO);
-        Efectos.marcoVivo(ctx, px(cxc), py(cyc), pl(cw), pl(ch),
-                Math.max(1, pl(3)), BORDE, ORO, Efectos.rampa(3400));
+        int cx = PANT_X + PANT_W / 2;
 
-        int cx = cxc + cw / 2;
+        if (enviado) {
+            dibujarCelebracion(ctx, cx, tipo);
+            return;
+        }
+
         texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.confirmar_titulo"),
-                cx, cyc + 34, 30, ORO, true);
+                cx, PANT_Y + 96, 38, ORO, true);
         if (elegida != null) {
-            texto(ctx, Text.literal(elegida.nombre()), cx, cyc + 84, 40, TEXTO, true);
-            texto(ctx, Text.literal(elegida.tipo()), cx, cyc + 132, 20,
-                    colorTipo(elegida.tipo()), true);
+            texto(ctx, Text.literal(elegida.nombre()), cx, PANT_Y + 160, 50,
+                    TEXTO, true);
+            texto(ctx, Text.literal(elegida.tipo()), cx, PANT_Y + 224, 24, tipo, true);
         }
         texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.confirmar_aviso"),
-                cx, cyc + 166, 17, TEXTO_SUAVE, true);
+                cx, PANT_Y + 280, 19, TEXTO_SUAVE, true);
 
-        int bw = 240, bh = 52, sep = 28;
-        int by = cyc + ch - 78;
-        int ax1 = cx - sep / 2 - bw, ax2 = cx + sep / 2;
+        int[] b = botonesTapa();
+        int ax1 = b[0], by = b[1], bw = b[2], bh = b[3];
+        int ax2 = ax1 + bw + SEP_BOTON;
 
         boolean e1 = dentro(rx, ry, px(ax1), py(by), pl(bw), pl(bh));
         ctx.fill(px(ax1), py(by), px(ax1 + bw), py(by + bh),
                 e1 ? 0xFF2A3550 : 0xFF1B2438);
         marco(ctx, px(ax1), py(by), pl(bw), pl(bh), BORDE, Math.max(1, pl(2)));
         texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.volver"),
-                ax1 + bw / 2, by + 16, 22, TEXTO_SUAVE, true);
+                ax1 + bw / 2, by + 18, 24, TEXTO_SUAVE, true);
 
         boolean e2 = dentro(rx, ry, px(ax2), py(by), pl(bw), pl(bh));
-        Efectos.halo(ctx, px(ax2), py(by), pl(bw), pl(bh), Math.max(2, pl(5)),
-                VERDE, 0.30f + 0.20f * Efectos.pulso(1500));
+        Efectos.halo(ctx, px(ax2), py(by), pl(bw), pl(bh), Math.max(2, pl(6)),
+                VERDE, 0.30f + 0.22f * Efectos.pulso(1500));
         ctx.fill(px(ax2), py(by), px(ax2 + bw), py(by + bh),
                 e2 ? 0xFF6FE08A : 0xFF3FA85C);
         marco(ctx, px(ax2), py(by), pl(bw), pl(bh), 0xFF1E5E33, Math.max(1, pl(2)));
         texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.confirmar"),
-                ax2 + bw / 2, by + 16, 22, 0xFF06210F, true);
+                ax2 + bw / 2, by + 18, 24, 0xFF06210F, true);
+    }
 
+    /**
+     * EL MOMENTO. Dura {@link #CELEBRACION_MS} y despues la pantalla se cierra.
+     *
+     * <p>&#9888;&#9888; Existe porque <b>elegir el primer Pokemon es el unico
+     * momento memorable del primer minuto de partida</b> y se pasaba en un
+     * fotograma. Un segundo y medio no molesta a nadie y es lo unico que hace
+     * que parezca que ha pasado algo.
+     *
+     * <p>&#9888; Todo sale de {@code Efectos} -- aro, destellos y chispas -- y
+     * ni un {@code fill} a mano: es la misma caja de herramientas del Pase, que
+     * es lo que hace que las dos pantallas se parezcan sin copiarse codigo.
+     */
+    private void dibujarCelebracion(DrawContext ctx, int cx, int tipo) {
+        long t = System.currentTimeMillis() - pulsadoEn;
+        float abre = (float) Efectos.suave(Math.min(1.0, t / 520.0));
+
+        int cy = PANT_Y + 200;
+        int r = Math.round(130 * abre);
+
+        // ⚠ `arco` recibe QUE FRACCION del circulo pinta, no una fase: se anima
+        //   haciendo crecer la fraccion, no girandola. Dos radios a dos
+        //   velocidades se leen como energia; uno solo parece un cargador.
+        Efectos.arco(ctx, px(cx), py(cy), pl(r), Math.max(2, pl(6)),
+                abre, Efectos.conAlfa(tipo, 0.9f));
+        Efectos.arco(ctx, px(cx), py(cy), pl(r + 26), Math.max(1, pl(2)),
+                Efectos.rampa(2400), Efectos.conAlfa(ORO, 0.5f));
+
+        for (int i = 0; i < 4; i++) {
+            double a = Math.PI / 2 * i + Efectos.rampa(3200) * Math.PI * 2;
+            int dx = (int) Math.round(Math.cos(a) * (r + 44));
+            int dy = (int) Math.round(Math.sin(a) * (r + 44));
+            Efectos.destello(ctx, px(cx) + pl(dx), py(cy) + pl(dy),
+                    Math.max(3, pl(11)), Efectos.conAlfa(ORO, 0.9f * abre));
+        }
+
+        texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.tuyo"),
+                cx, PANT_Y + 336, 46, ORO, true);
+        if (elegida != null) {
+            texto(ctx, Text.literal(elegida.nombre()), cx, PANT_Y + 396, 30,
+                    TEXTO, true);
+        }
         chispas.dibujar(ctx);
+    }
+
+    /**
+     * El sonido y las chispas del momento de la entrega.
+     *
+     * <p>&#9888; La fanfarria es la de los LOGROS de vainilla. Es la que el
+     * jugador ya asocia con «has conseguido algo», asi que no hay que inventarse
+     * ninguna -- y llega a todo el mundo, tenga o no el resource pack.
+     */
+    private void celebrar() {
+        chispas.soltar(width / 2, height / 2, 90, ORO, 1.6);
+        if (client != null && client.player != null) {
+            client.player.playSoundToPlayer(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
+                    net.minecraft.sound.SoundCategory.MASTER, 0.9f, 1.0f);
+            client.player.playSoundToPlayer(SoundEvents.ENTITY_PLAYER_LEVELUP,
+                    net.minecraft.sound.SoundCategory.MASTER, 0.6f, 1.2f);
+        }
     }
 
     /** {x, y, ancho, alto} de la primera celda. Todas miden lo mismo. */
@@ -484,17 +612,13 @@ public class InicialScreen extends Screen {
         }
         int rx = (int) mx, ry = (int) my;
 
-        // ⚠ El velo se atiende PRIMERO y se traga el clic pase lo que pase: si
+        // ⚠ La tapa se atiende PRIMERO y se traga el clic pase lo que pase: si
         //   los botones de debajo siguieran respondiendo, pulsar «¿seguro?»
         //   encima de una tarjeta cambiaria la eleccion sin que se vea.
         if (confirmando) {
-            int cw = 620, ch = 300;
-            int cxc = NAT_ANCHO / 2 - cw / 2;
-            int cyc = NAT_ALTO / 2 - ch / 2;
-            int bw = 240, bh = 52, sep = 28;
-            int cx = cxc + cw / 2;
-            int by = cyc + ch - 78;
-            int ax1 = cx - sep / 2 - bw, ax2 = cx + sep / 2;
+            int[] b = botonesTapa();
+            int ax1 = b[0], by = b[1], bw = b[2], bh = b[3];
+            int ax2 = ax1 + bw + SEP_BOTON;
 
             if (dentro(rx, ry, px(ax1), py(by), pl(bw), pl(bh))) {
                 confirmando = false;
@@ -503,13 +627,12 @@ public class InicialScreen extends Screen {
                     && elegida != null) {
                 // ⚠ NO SE CIERRA AQUI. Se manda y se espera: el servidor entrega
                 //   y contesta «ya elegiste», y `leerDelServidor` cierra al
-                //   verlo. Cerrar al pulsar dejaria sin Pokemon y sin pantalla a
-                //   quien se encuentre un fallo de entrega.
+                //   verlo -- despues de la celebracion. Cerrar al pulsar dejaria
+                //   sin Pokemon y sin pantalla a quien se encuentre un fallo.
                 enviado = true;
                 confirmando = false;
                 falloEntrega = false;
                 pulsadoEn = System.currentTimeMillis();
-                chispas.soltar(width / 2, height / 2, 40, ORO, 1.0);
                 sonar(true);
                 ClientPlayNetworking.send(new Red.ElegirInicial(elegida.especie()));
             }
@@ -529,11 +652,22 @@ public class InicialScreen extends Screen {
             int ay = c[1] + (i / COLS) * (c[3] + AIRE);
             if (dentro(rx, ry, px(ax), py(ay), pl(c[2]), pl(c[3]))) {
                 elegida = opciones.get(i);
-                sonar(true);
+                // ⚠ El tono sube con la COLUMNA: planta grave, fuego medio, agua
+                //   aguda. No es adorno -- recorrer una fila suena a escala, y eso
+                //   dice sin palabras que las tres columnas son la misma familia.
+                sonarNota(0.85f + 0.15f * (i % COLS));
                 return true;
             }
         }
         return super.mouseClicked(mx, my, boton);
+    }
+
+    /** Una nota de campana, para recorrer la rejilla. */
+    private void sonarNota(float tono) {
+        if (client != null && client.player != null) {
+            client.player.playSoundToPlayer(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(),
+                    net.minecraft.sound.SoundCategory.MASTER, 0.5f, tono);
+        }
     }
 
     private void sonar(boolean lleva) {

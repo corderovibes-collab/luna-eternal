@@ -37,14 +37,38 @@ public final class Pase {
      * @param motivo aparece en el log si algo falla. No viaja al cliente
      */
     public static void ganar(ServerPlayerEntity jugador, long xp, String motivo) {
-        if (jugador == null || xp <= 0 || LunaEternal.pase() == null) {
-            return;
-        }
         // Un constructor en creativo rompiendo bloques con Axiom no es un
         // jugador ganando XP: es la ciudadela en obras. Es el mismo filtro que
         // ya aplica el oficio de MINERO, subido aqui para que valga para TODAS
         // las fuentes de una vez.
-        if (jugador.isCreative() || jugador.isSpectator()) {
+        if (jugador != null && (jugador.isCreative() || jugador.isSpectator())) {
+            return;
+        }
+        ganar(jugador, xp, motivo, null);
+    }
+
+    /**
+     * Lo mismo, pero SIN el filtro del creativo y avisando de lo que entro.
+     *
+     * <h2>&#9888;&#9888;&#9888; EXISTE PORQUE `/luna pase xp` NO HACIA NADA</h2>
+     *
+     * Y no hacia nada por una razon perfectamente correcta: <b>quien prueba el
+     * pase es un operador, y un operador esta en CREATIVO</b>. O sea que el
+     * filtro que protege el pase de un constructor con Axiom bloqueaba tambien
+     * la unica forma de probarlo. El comando decia «hecho» y no pasaba nada.
+     *
+     * <p>&#9888;&#9888; Y ADEMAS MENTIA POR EL OTRO LADO: pedir 50.000 con un
+     * tope de 1.200 concede 1.200, asi que aunque el filtro no hubiera estado,
+     * «no sube» habria seguido pareciendo una averia. Por eso esto <b>devuelve
+     * lo que de verdad entro</b> y el comando lo dice.
+     *
+     * @param aviso si no es {@code null}, se le pasa la concesion ya resuelta,
+     *              <b>en el hilo del servidor</b>
+     */
+    public static void ganar(ServerPlayerEntity jugador, long xp, String motivo,
+                             java.util.function.Consumer<
+                                     net.pokereport.luna.pase.PaseService.Ganancia> aviso) {
+        if (jugador == null || xp <= 0 || LunaEternal.pase() == null) {
             return;
         }
         var uuid = jugador.getUuid();
@@ -55,6 +79,9 @@ public final class Pase {
             try {
                 long id = LunaEternal.players().resolve(uuid, nombre);
                 var g = LunaEternal.pase().ganar(id, xp);
+                if (servidor != null && aviso != null) {
+                    servidor.execute(() -> aviso.accept(g));
+                }
                 if (!g.subio() || servidor == null) {
                     return;
                 }

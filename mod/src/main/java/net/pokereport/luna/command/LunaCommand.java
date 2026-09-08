@@ -657,6 +657,25 @@ public final class LunaCommand {
                                             .getPlayer(ctx, "jugador"),
                                     com.mojang.brigadier.arguments.IntegerArgumentType
                                             .getInteger(ctx, "cantidad"))))))
+                .then(literal("nivel")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .then(argument("jugador",
+                            net.minecraft.command.argument.EntityArgumentType.player())
+                        .then(argument("n",
+                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                        .integer(0, 100))
+                            .executes(ctx -> nivelPase(ctx.getSource(),
+                                    net.minecraft.command.argument.EntityArgumentType
+                                            .getPlayer(ctx, "jugador"),
+                                    com.mojang.brigadier.arguments.IntegerArgumentType
+                                            .getInteger(ctx, "n"))))))
+                .then(literal("reiniciar")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .then(argument("jugador",
+                            net.minecraft.command.argument.EntityArgumentType.player())
+                        .executes(ctx -> reiniciarPase(ctx.getSource(),
+                                net.minecraft.command.argument.EntityArgumentType
+                                        .getPlayer(ctx, "jugador")))))
                 .then(literal("via_luna")
                     .requires(s -> s.hasPermissionLevel(4))
                     .then(argument("jugador",
@@ -1599,11 +1618,74 @@ public final class LunaCommand {
     }
 
     /** Da XP del pase a mano. Para probar sin jugar sesenta dias. */
+    /**
+     * Da XP del pase a mano. Para probar sin jugar cuarenta y cinco d\u00edas.
+     *
+     * <h2>\u26a0\u26a0\u26a0 ESTE COMANDO NO HAC\u00cdA NADA, Y LA CAUSA ERA CORRECTA</h2>
+     *
+     * Llamaba a {@code Pase.ganar}, que <b>descarta a quien est\u00e1 en creativo</b>
+     * \u2014 un constructor con Axiom rompiendo bloques no es un jugador ganando XP.
+     * El filtro est\u00e1 bien puesto, pero <b>quien prueba el pase es un operador, y
+     * un operador est\u00e1 en creativo</b>: la \u00fanica forma de probarlo chocaba con
+     * la \u00fanica protecci\u00f3n del sistema. El comando dec\u00eda \u00abhecho\u00bb y no pasaba nada.
+     *
+     * <p>\u26a0\u26a0 Y aunque el filtro no hubiera estado, <b>habr\u00eda seguido pareciendo
+     * roto</b>: pedir 50.000 con un tope de 1.200 concede 1.200. Por eso ahora
+     * se dice <b>lo que de verdad ha entrado</b> y, si se ha topado, por qu\u00e9 \u2014
+     * y se remite a {@code /luna pase nivel}, que es lo que sirve para llegar
+     * al final del carril.
+     */
     private static int xpPase(ServerCommandSource src, ServerPlayerEntity p, int xp) {
-        net.pokereport.luna.pase.Pase.ganar(p, xp, "comando");
-        src.sendFeedback(() -> Text.literal("\u00a7a+" + xp + " XP de pase a "
-                + p.getName().getString() + " \u00a78(el tope diario se aplica igual)"),
-                false);
+        net.pokereport.luna.pase.Pase.ganar(p, xp, "comando", g -> {
+            String base = String.format("\u00a7a+%,d XP de pase a %s \u00a78(nivel %d)",
+                    g.concedida(), p.getName().getString(), g.nivelDespues());
+            src.sendFeedback(() -> Text.literal(base), false);
+            if (g.topado()) {
+                src.sendFeedback(() -> Text.literal(String.format(
+                        "\u00a7e  se pidieron %,d y el TOPE DIARIO dejo entrar %,d. "
+                        + "\u00a77Para saltar al final: /luna pase nivel <jugador> <n>",
+                        g.pedida(), g.concedida())), false);
+            }
+        });
+        return 1;
+    }
+
+    /** Pone a alguien en un nivel exacto del pase. Nivel 4. */
+    private static int nivelPase(ServerCommandSource src, ServerPlayerEntity p,
+                                 int nivel) {
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players().resolve(
+                        p.getUuid(), p.getName().getString());
+                LunaEternal.pase().fijarNivel(id, nivel);
+                net.pokereport.luna.net.Red.enviarPase(p);
+                src.getServer().execute(() -> src.sendFeedback(
+                        () -> Text.literal("\u00a7a" + p.getName().getString()
+                                + " \u00a77pasa al nivel \u00a7f" + nivel + "\u00a77 del pase"),
+                        false));
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo fijar el nivel del pase", e);
+            }
+        });
+        return 1;
+    }
+
+    /** Devuelve el pase de alguien a cero, sin rotar la temporada. Nivel 4. */
+    private static int reiniciarPase(ServerCommandSource src, ServerPlayerEntity p) {
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players().resolve(
+                        p.getUuid(), p.getName().getString());
+                LunaEternal.pase().reiniciar(id);
+                net.pokereport.luna.net.Red.enviarPase(p);
+                src.getServer().execute(() -> src.sendFeedback(
+                        () -> Text.literal("\u00a7aPase de " + p.getName().getString()
+                                + " \u00a77reiniciado \u00a78(XP, pase y reclamos de esta "
+                                + "temporada)"), false));
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo reiniciar el pase", e);
+            }
+        });
         return 1;
     }
 

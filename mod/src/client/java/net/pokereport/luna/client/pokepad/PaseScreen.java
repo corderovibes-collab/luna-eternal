@@ -109,7 +109,9 @@ public class PaseScreen extends Screen {
     private static final int FONDO_TARJETA_ENCIMA = 0xFF26314A;
     private static final int FONDO_COBRADO = 0xFF141A26;
     private static final int FONDO_HUNDIDO = 0xFF0A0E16;
-    private static final int BORDE_HUNDIDO = 0xFF2B3A52;
+    /** El fondo de una barra vacia. Mas claro que el hundido: si no, no se ve. */
+    private static final int FONDO_BARRA = 0xFF1C2536;
+    private static final int BORDE_HUNDIDO = 0xFF35496A;
     private static final int SEPARADOR = 0xFF3C4250;
     private static final int TEXTO = 0xFFF2F6FF;
     private static final int TEXTO_SUAVE = 0xFF9FB0D4;
@@ -235,6 +237,20 @@ public class PaseScreen extends Screen {
         dibujarCarril(ctx, rx, ry);
         chispas.dibujar(ctx);
         if (ayuda) {
+            // ⚠⚠⚠ `ctx.draw()` ANTES DE LA AYUDA, Y NO ES UN ADORNO.
+            //
+            //    `DrawContext` NO dibuja en el orden en que se le pide: agrupa
+            //    por capas y el TEXTO va en una capa que se vuelca LA ULTIMA.
+            //    Asi que un panel opaco pintado con `fill` despues de las
+            //    tarjetas se dibuja debajo de SU TEXTO: el resultado es la
+            //    captura que mando el usuario -- la ayuda encima de la rejilla y
+            //    los dos textos superpuestos, ilegibles.
+            //
+            //    No era transparencia: el relleno es del 95 % y tapaba de
+            //    verdad. Lo que se colaba era el texto de abajo, que se pinta
+            //    despues. Vaciar el lote aqui obliga a que todo lo anterior
+            //    --texto incluido-- quede ya en pantalla antes de tapar.
+            ctx.draw();
             dibujarAyuda(ctx, rx, ry);
         }
 
@@ -332,7 +348,7 @@ public class PaseScreen extends Screen {
                 pl(ANILLO_R) * 2, pl(ANILLO_R) * 2, pl(9), colorAnillo,
                 0.16f + 0.14f * Efectos.pulso(2400));
         Iconos.disco(ctx, px(cx), py(ANILLO_Y), pl(ANILLO_R), FONDO_HUNDIDO);
-        Iconos.aro(ctx, px(cx), py(ANILLO_Y), pl(ANILLO_R), pl(8), BORDE_HUNDIDO);
+        Iconos.aro(ctx, px(cx), py(ANILLO_Y), pl(ANILLO_R), pl(8), 0xFF35496A);
         Efectos.arco(ctx, px(cx), py(ANILLO_Y), pl(ANILLO_R) - pl(1), pl(8),
                 fraccion * entrada, colorAnillo);
 
@@ -340,7 +356,7 @@ public class PaseScreen extends Screen {
                 TEXTO, true);
         // ⚠ «NIVEL» a secas cabe dentro del aro; el «47 / 100» NO -- ver el
         //   aviso de las constantes. Va debajo, donde hay panel entero.
-        texto(ctx, Text.literal("NIVEL"), cx, ANILLO_Y + 16, 13, TEXTO_SUAVE, true);
+        texto(ctx, Text.literal("NIVEL"), cx, ANILLO_Y + 20, 13, TEXTO_SUAVE, true);
         texto(ctx, Text.literal(nivel + "  /  " + PaseNivel.MAX), cx,
                 ANILLO_Y + ANILLO_R + 10, 16, TEXTO_SUAVE, true);
 
@@ -354,7 +370,7 @@ public class PaseScreen extends Screen {
             texto(ctx, Text.literal("PASE COMPLETADO"), cx, y, 17, VERDE_CLARO, true);
         }
         Efectos.barra(ctx, px(PANEL_X + 26), py(386), pl(PANEL_W - 52), pl(15),
-                fraccion * entrada, FONDO_HUNDIDO, colorAnillo, !completo);
+                fraccion * entrada, FONDO_BARRA, colorAnillo, !completo);
         marco(ctx, px(PANEL_X + 26), py(386), pl(PANEL_W - 52), pl(15),
                 BORDE_HUNDIDO, Math.max(1, pl(1)));
 
@@ -379,7 +395,7 @@ public class PaseScreen extends Screen {
                 sobreAyuda ? 0xFF16203A : TEXTO, true);
 
         Efectos.barra(ctx, px(PANEL_X + 26), py(438), pl(PANEL_W - 52), pl(14),
-                xpHoy / (double) tope, FONDO_HUNDIDO,
+                xpHoy / (double) tope, FONDO_BARRA,
                 topado ? NARANJA : VERDE_CLARO, !topado && xpHoy > 0);
         marco(ctx, px(PANEL_X + 26), py(438), pl(PANEL_W - 52), pl(14),
                 BORDE_HUNDIDO, Math.max(1, pl(1)));
@@ -552,7 +568,7 @@ public class PaseScreen extends Screen {
         texto(ctx, Text.literal(tramo.nombre()), PANT_X + MARGEN + 20,
                 PANT_Y + 12, 24, tramo.color(), false);
         texto(ctx, Text.literal(tramo.lema()), PANT_X + MARGEN + 20,
-                PANT_Y + 40, 14, 0xFF6B7A99, false);
+                PANT_Y + 40, 14, 0xFF41506E, false);
 
         boolean puedeIzq = desde > 1;
         boolean puedeDer = desde < maxDesde();
@@ -560,7 +576,7 @@ public class PaseScreen extends Screen {
         flecha(ctx, rx, ry, PANT_X + PANT_W - MARGEN - 46, PANT_Y + 14, true, puedeDer);
         texto(ctx, Text.literal("NIVELES " + desde + " - "
                         + Math.min(PaseNivel.MAX, desde + COLS - 1)),
-                PANT_X + PANT_W - MARGEN - 116, PANT_Y + 20, 15, 0xFF6B7A99,
+                PANT_X + PANT_W - MARGEN - 116, PANT_Y + 20, 15, 0xFF41506E,
                 false, true);
 
         // ---- las tarjetas, recortadas para que el deslizamiento no se salga
@@ -641,7 +657,7 @@ public class PaseScreen extends Screen {
         }
 
         texto(ctx, Text.literal("Pulsa la barra para saltar de tramo"),
-                PANT_X + PANT_W / 2, MAPA_Y + h + 8, 13, 0xFF6B7A99, true);
+                PANT_X + PANT_W / 2, MAPA_Y + h + 8, 13, 0xFF41506E, true);
     }
 
     /** Una tarjeta de premio. Solo el 2D: el modelo va en la segunda pasada. */
@@ -749,9 +765,12 @@ public class PaseScreen extends Screen {
             colorPie = LUNA;
             rotulo = "REQUIERE PASE";
         } else {
+            // ⚠ Decia «NIVEL 3» y la cinta de arriba YA lo dice: el pie repetia
+            //   el numero en vez de decir el estado, que es lo unico que un
+            //   boton tiene que decir.
             fondoPie = 0xFF171D2A;
             colorPie = GRIS;
-            rotulo = "NIVEL " + lvl;
+            rotulo = "BLOQUEADO";
         }
         ctx.fill(pxd(tx + 12), fpy, pxd(tx + CARD_W - 12), fpy + pl(pieH), fondoPie);
         if (cobrable) {
@@ -851,8 +870,10 @@ public class PaseScreen extends Screen {
 
     /** La ayuda: de que se saca XP, entera y a tamaño legible. */
     private void dibujarAyuda(DrawContext ctx, int rx, int ry) {
+        // Opaco del todo: un velo deja ver el carril por debajo y el ojo
+        // intenta leer las dos cosas a la vez.
         ctx.fill(px(PANT_X), py(PANT_Y), px(PANT_X + PANT_W), py(PANT_Y + PANT_H),
-                0xF20A0E16);
+                0xFF0A0E16);
         marco(ctx, px(PANT_X), py(PANT_Y), pl(PANT_W), pl(PANT_H), LUNA,
                 Math.max(1, pl(2)));
         texto(ctx, Text.literal("DE QUE SE SACA XP DEL PASE"),
@@ -1185,8 +1206,26 @@ public class PaseScreen extends Screen {
         } else if (derecha) {
             tx -= anchoTexto;
         }
+        // ⚠⚠⚠ SIN SOMBRA, Y ESTO CORRIGE LA LECCION DE LA TORRE.
+        //
+        //    `TorreRecompensasScreen` dice --y es cierto-- que la sombra NATIVA
+        //    es mejor que dibujar cuatro copias desplazadas en blanco. Lo que
+        //    aquella nota no dice es que ESO VALE A ESCALA 1.
+        //
+        //    Minecraft dibuja la sombra desplazada UNA UNIDAD DE FUENTE, y aqui
+        //    la matriz esta escalada: un texto de 19 px de arte se dibuja con
+        //    `escala = 19 / 9 = 2,1`, asi que esa unidad se convierte en DOS
+        //    PIXELES Y MEDIO de pantalla... y en un 4K, en cinco. Deja de ser
+        //    una sombra y pasa a ser un CONTORNO NEGRO GRUESO pegado a cada
+        //    letra: es justo lo que reporto el usuario --«tiene como un contorno
+        //    negro y no se ve bien»-- con la captura delante.
+        //
+        //    Y aqui no hace falta ninguna: todo el texto de esta pantalla cae
+        //    sobre un relleno SOLIDO --tarjetas oscuras, panel oscuro, la
+        //    pantalla clara del chasis--, asi que el contraste ya lo da el
+        //    fondo. La sombra solo existe para leer sobre algo que se mueve.
         ctx.drawText(textRenderer, linea, tx,
-                Math.round((arriba + dy) * k / escala), color, true);
+                Math.round((arriba + dy) * k / escala), color, false);
         m.pop();
     }
 

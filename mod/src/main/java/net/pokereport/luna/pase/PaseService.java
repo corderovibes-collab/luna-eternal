@@ -307,6 +307,63 @@ public final class PaseService {
         }
     }
 
+    /**
+     * PONE AL JUGADOR EN ESE NIVEL EXACTO. Solo para probar (nivel 4).
+     *
+     * <h2>&#9888;&#9888; ES LA UNICA FORMA DE PROBAR EL FINAL DEL PASE</h2>
+     *
+     * {@code /luna pase xp} respeta el tope diario &mdash;tiene que hacerlo, o
+     * dejaria de probar el sistema de verdad&mdash; asi que llegar al nivel 100
+     * con el serian <b>cuarenta y cinco dias</b>. Sin esto no hay manera de
+     * mirar el Charizard variocolor antes de que lo vea un jugador.
+     *
+     * <p>&#9888; Escribe la XP ACUMULADA de ese nivel, no un numero de nivel: el
+     * nivel es una funcion pura de la XP ({@code PaseNivel.nivelDe}) y guardar
+     * las dos cosas es justo lo que V032 evita.
+     *
+     * <p>&#9888; NO toca {@code pase_reclamo}: bajar de nivel no descobra nada,
+     * porque lo cobrado ya esta en el inventario.
+     */
+    public void fijarNivel(long playerId, int nivel) throws SQLException {
+        int n = Math.max(0, Math.min(PaseNivel.MAX, nivel));
+        try (Connection c = db.connection()) {
+            Temporada t = temporada(c);
+            asegurarFila(c, playerId, t.numero());
+            try (PreparedStatement ps = c.prepareStatement(
+                    "UPDATE pase_jugador SET xp = ? "
+                  + "WHERE player_id = ? AND temporada = ?")) {
+                ps.setLong(1, PaseNivel.acumulada(n));
+                ps.setLong(2, playerId);
+                ps.setInt(3, t.numero());
+                ps.executeUpdate();
+            }
+        }
+    }
+
+    /**
+     * Devuelve el pase a cero: XP, premium y reclamos de ESTA temporada.
+     *
+     * <p>&#9888; Para volver a probar el recorrido entero sin rotar la
+     * temporada, que ademas afectaria a todo el mundo.
+     */
+    public void reiniciar(long playerId) throws SQLException {
+        try (Connection c = db.connection()) {
+            Temporada t = temporada(c);
+            try (PreparedStatement ps = c.prepareStatement(
+                    "DELETE FROM pase_reclamo WHERE player_id = ? AND temporada = ?")) {
+                ps.setLong(1, playerId);
+                ps.setInt(2, t.numero());
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "DELETE FROM pase_jugador WHERE player_id = ? AND temporada = ?")) {
+                ps.setLong(1, playerId);
+                ps.setInt(2, t.numero());
+                ps.executeUpdate();
+            }
+        }
+    }
+
     // --------------------------------------------------------- via de pago
 
     /** Lo que pudo pasar al comprar la via Luna. */

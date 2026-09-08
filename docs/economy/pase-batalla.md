@@ -459,6 +459,48 @@ Tres cosas, y las tres son la misma lección de este proyecto:
 
 ---
 
+## 6.4 · ⚠⚠⚠ Los tres fallos que solo se vieron EN EL JUEGO
+
+La maqueta mide geometría y salió limpia. Estos tres **no son geometría**, y por
+eso hicieron falta las capturas del usuario:
+
+**1. La sombra nativa, a esta escala, es un contorno negro.**
+`TorreRecompensasScreen` dejó escrito —y es cierto— que la sombra nativa es
+mejor que dibujar cuatro copias desplazadas. **Lo que aquella nota no dice es
+que eso vale a escala 1.** Minecraft desplaza la sombra *una unidad de fuente*, y
+aquí la matriz está escalada: un texto de 19 px de arte se dibuja con
+`escala = 19/9 = 2,1`, así que esa unidad se convierte en **dos píxeles y medio**
+de pantalla, y en un 4K en cinco. Deja de ser sombra y pasa a ser un contorno
+grueso pegado a cada letra. Palabras del usuario: *«tiene como un contorno negro
+y no se ve bien»*.
+
+> **La regla que queda:** en una pantalla del PokePad, donde todo el texto se
+> dibuja con la matriz escalada y sobre rellenos sólidos, **la sombra va
+> apagada**. El contraste lo da el fondo.
+
+**2. `DrawContext` no dibuja en el orden en que se le pide.**
+El panel de ayuda se pintaba con un relleno del 95 % **después** de las tarjetas,
+y aun así se veían las tarjetas por encima. No era transparencia: **el texto va
+en una capa que se vuelca la última**, así que el texto de las tarjetas se
+dibujaba sobre el panel. Se arregla con `ctx.draw()` **antes** de tapar, que
+fuerza el volcado de todo lo anterior.
+
+> Es la misma regla de las 2 pasadas de `dibujado.md` vista desde otro lado: allí
+> se vacía el búfer para meter 3D, aquí para tapar 2D.
+
+**3. `/luna pase xp` no hacía nada, y la causa era correcta.**
+Llama a `Pase.ganar`, que **descarta a quien está en creativo** —un constructor
+con Axiom no es un jugador ganando XP—. Pero **quien prueba el pase es un
+operador, y un operador está en creativo**: la única forma de probarlo chocaba
+con la única protección del sistema, y el comando decía «hecho».
+
+> ⚠⚠ Y **aunque el filtro no hubiera estado, habría seguido pareciendo roto**:
+> pedir 50.000 con un tope de 1.200 concede 1.200. Hoy el comando dice **lo que
+> de verdad ha entrado** y, si se ha topado, lo explica y remite a
+> `/luna pase nivel`.
+
+---
+
 ## 7. Comandos
 
 | | |
@@ -466,7 +508,9 @@ Tres cosas, y las tres son la misma lección de este proyecto:
 | `/luna pase` | (nivel 3) La temporada, la curva, el tope, el mínimo de días y los dos valores de calibración |
 | `/luna pase nueva_temporada [dias]` | (nivel 4) Rota. Avisa por difusión y refresca a todos |
 | `/luna pase xp <jugador> <cantidad>` | (nivel 3) Para probar sin jugar sesenta días. **El tope se aplica igual** |
-| `/luna pase via_luna <jugador>` | (nivel 4) Da la vía Luna **sin cobrar**: reembolsos y premios de evento |
+| `/luna pase nivel <jugador> <0-100>` | (nivel 4) **Lo salta al nivel exacto.** Es lo único que permite ver el final del carril: con `xp` y el tope diario harían falta 45 días |
+| `/luna pase reiniciar <jugador>` | (nivel 4) Devuelve su pase a cero —XP, compra y reclamos— sin rotar la temporada, que afectaría a todo el mundo |
+| `/luna pase via_luna <jugador>` | (nivel 4) Da el pase **sin cobrar**: reembolsos y premios de evento |
 
 > ⚠ `via_luna` no pasa por la economía a propósito. Un regalo no es una compra, y
 > meterlo por `comprarLuna` con importe cero ensuciaría el libro de asientos con

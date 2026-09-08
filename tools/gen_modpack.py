@@ -204,6 +204,15 @@ EXCLUIDOS = {
     "c2me-fabric":
         "Su submodulo c2me-opts-natives-math exige OpenJDK >= 25 y el juego "
         "corre en Java 21, impidiendo el arranque en Fabric Loader 0.19.",
+    "fancymenu":
+        "No se usa ningun layout propio (el menu oficial de Cobblemon no se "
+        "repartia por marca), causaba tres recargas consecutivas de recursos "
+        "al arrancar duplicando el tiempo de carga, y provocaba pantalla negra "
+        "al redimensionar o expandir la ventana por conflicto de capas GUI.",
+    "konkrete":
+        "Libreria base de FancyMenu. Sin FancyMenu ningun mod del pack la necesita.",
+    "melody":
+        "Libreria de audio de FancyMenu. Sin FancyMenu ningun mod del pack la necesita.",
 }
 
 # Los packs que CobbleVerse manda DESACTIVADOS. Se llaman, literalmente,

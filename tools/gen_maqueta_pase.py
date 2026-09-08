@@ -9,20 +9,18 @@ LA MAQUETA DEL PASE DE BATALLA, sobre el chasis real y con las anchuras reales.
    pasada seria encontró CUATRO fallos que no daban ningún error —una fila
    dibujada encima de la paginación, una columna que decía ordenar sin ordenar,
    nombres de objeto metiéndose en la columna de al lado y una cabecera que no
-   cabía con su flecha—. **Ninguno se habría visto revisando el código**: los
-   cuatro son *números que dejaron de cuadrar*.
-
-   El Pase tiene exactamente esa forma de riesgo: un carril de seis columnas,
-   un panel con once bloques apilados y textos de longitud desconocida.
+   cabía con su flecha—. **Ninguno se habría visto revisando el código**.
 
 ⚠⚠⚠ LAS MEDIDAS SE LEEN DE `PaseScreen.java`, NO SE ESCRIBEN AQUÍ.
 
    Copiarlas sería una SEGUNDA lista de constantes que nada obliga a coincidir
-   con la que dibuja el juego —el fallo de las tres listas de medallas y el de
-   los dos órdenes del PokePad—. Y sería el peor caso posible: una maqueta que
+   con la que dibuja el juego, y sería el peor caso posible: una maqueta que
    dice «cabe» midiendo unos números mientras el juego pinta otros.
 
-   Si el fichero cambia de forma, esto ABORTA en vez de medir a medias.
+⚠ Y LOS TEXTOS DE LAS TARJETAS SALEN DEL CATÁLOGO DE VERDAD (`PaseCatalogo.java`),
+  no de ejemplos inventados: lo que hay que comprobar es que quepan LOS NOMBRES
+  QUE VA A HABER. Los nombres traducidos los pone el cliente, así que aquí se
+  mide el identificador formateado, que es igual de largo o más.
 
 Uso:
     python tools/gen_maqueta_pase.py
@@ -37,10 +35,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "tools"))
 
-# El motor de maqueta ya existe: lienzo sobre el chasis real, anchuras de
-# Minecraft y vigilancia de desbordes y solapes. Se reutiliza entero.
 from gen_maqueta_mercado import (  # noqa: E402
-    ALERTA, BLANCO, NARANJA, ORO, OSCURO, SUAVE, VERDE,
+    BLANCO, NARANJA, ORO, SUAVE, VERDE,
     Lienzo, ancho_mc, chasis,
     PANEL_X, PANEL_Y, PANEL_W, PANEL_H,
     PANT_X, PANT_Y, PANT_W, PANT_H, NAV_ALTO, SALIDA,
@@ -48,37 +44,31 @@ from gen_maqueta_mercado import (  # noqa: E402
 
 PANTALLA = (RAIZ / "mod/src/client/java/net/pokereport/luna/client/pokepad"
             / "PaseScreen.java")
+CATALOGO = (RAIZ / "mod/src/main/java/net/pokereport/luna/pase"
+            / "PaseCatalogo.java")
 
 VIOLETA = (185, 140, 255, 255)
-HUNDIDO = (13, 18, 27, 255)
-GRIS = (74, 84, 104, 255)
+HUNDIDO = (10, 14, 22, 255)
+GRIS = (90, 102, 120, 255)
+RAREZA = {
+    "COMUN": (143, 160, 200, 255),
+    "RARA": (79, 168, 255, 255),
+    "EPICA": (185, 140, 255, 255),
+    "LEGENDARIA": (255, 214, 92, 255),
+}
 
 
 def constantes() -> dict:
-    """
-    Las `private static final int` de la pantalla, leídas del fuente.
-
-    ⚠ Solo las literales. `COLS` es una expresión y se recalcula abajo con la
-      MISMA fórmula, que es lo que hay que comprobar.
-    """
+    """Las `private static final int` de la pantalla, leídas del fuente."""
     if not PANTALLA.exists():
         raise SystemExit(f"No encuentro {PANTALLA}")
     texto = PANTALLA.read_text(encoding="utf-8")
-    vals = dict(re.findall(
-        r"private static final int ([A-Z_]+)\s*=\s*(-?\d+);", texto))
-    vals = {k: int(v) for k, v in vals.items()}
-    # Las que son sumas de otras constantes.
-    for nombre, expr in re.findall(
-            r"private static final int ([A-Z_]+)\s*=\s*([A-Z_+\-*/ 0-9]+);", texto):
-        if nombre in vals:
-            continue
-        try:
-            vals[nombre] = int(eval(expr, {"__builtins__": {}}, vals))
-        except Exception:
-            pass
-    faltan = [k for k in ("MARGEN", "GAP", "CARD_W", "CARD_H", "TRACK_Y",
-                          "RAIL_H", "RAIL_Y", "LUNA_Y", "CAJA_LUNA_H",
-                          "BOTON_LUNA_DY", "BOTON_LUNA_H", "BOTON_RECLAMAR_H")
+    vals = {k: int(v) for k, v in re.findall(
+        r"private static final int ([A-Z_]+)\s*=\s*(-?\d+);", texto)}
+    faltan = [k for k in ("MARGEN", "GAP", "CARD_W", "CARD_H", "CARDS_Y",
+                          "MAPA_Y", "ANILLO_Y", "ANILLO_R", "CAJA_PASE_Y",
+                          "CAJA_PASE_H", "BOTON_COMPRAR_DY", "BOTON_COMPRAR_H",
+                          "BOTON_RECLAMAR_Y", "BOTON_RECLAMAR_H", "AYUDA_Y")
               if k not in vals]
     if faltan:
         raise SystemExit(
@@ -87,158 +77,23 @@ def constantes() -> dict:
     return vals
 
 
-def y_caja_luna(C: dict) -> int:
-    """
-    ⚠ Copia deliberada de `PaseScreen.yCajaLuna()`, y es la ÚNICA de este
-      fichero. No se puede leer del Java porque es una cadena de sumas dentro
-      de un método; lo que sí se puede es comprobar que el resultado cabe, que
-      es de lo que trata esta maqueta.
-    """
-    anillo_y = PANEL_Y + NAV_ALTO + 118
-    y = anillo_y + 56 + 16     # radio del anillo + hueco
-    y += 22                    # la línea de XP
-    y += 12                    # separador
-    y += 18 + 20 + 20          # rótulo, barra y pie del tope diario
-    y += 12                    # separador
-    return y
-
-
-def panel(L: Lienzo, C: dict) -> None:
-    cx = PANEL_X + PANEL_W // 2
-    L.texto("panel.titulo", "PASE DE BATALLA", cx, PANEL_Y + NAV_ALTO + 6, 24,
-            ORO, "centro", limite=PANEL_W - 40)
-    L.texto("panel.temporada", "TEMPORADA 12", cx, PANEL_Y + NAV_ALTO + 32, 15,
-            SUAVE, "centro")
-
-    anillo_y = PANEL_Y + NAV_ALTO + 118
-    r = 56
-    L.caja("panel.anillo", cx - r, anillo_y - r, r * 2, r * 2, HUNDIDO, ORO, 7)
-    L.texto("panel.nivel", "50", cx, anillo_y - 22, 42, BLANCO, "centro")
-    L.texto("panel.rotulo", "NIVEL", cx, anillo_y + 20, 13, SUAVE, "centro")
-
-    y = anillo_y + r + 16
-    L.texto("panel.xp", "1.280 / 1.280 XP", cx, y, 15, BLANCO, "centro",
-            limite=PANEL_W - 60)
-    y += 22 + 12
-    L.texto("panel.hoy", "XP DE HOY", PANEL_X + 26, y, 14, SUAVE)
-    L.texto("panel.hoy2", "2.700 / 2.700", PANEL_X + PANEL_W - 26, y, 14,
-            NARANJA, "der")
-    y += 18
-    L.caja("panel.barra", PANEL_X + 26, y, PANEL_W - 52, 12, HUNDIDO, GRIS, 1)
-    y += 20
-    # ⚠ La más larga de las tres, que es la que hay que medir.
-    L.texto("panel.pie", "Descanso acumulado: tope x3", cx, y, 12, VIOLETA,
-            "centro", limite=PANEL_W - 44)
-
-    y = y_caja_luna(C)
-    L.caja("panel.luna", PANEL_X + 22, y, PANEL_W - 44, C["CAJA_LUNA_H"],
-           HUNDIDO, VIOLETA, 2)
-    L.texto("panel.luna.tit", "DESBLOQUEA LA VIA LUNA", cx, y + 7, 13, BLANCO,
-            "centro", limite=PANEL_W - 60)
-    L.caja("panel.luna.btn", PANEL_X + 26, y + C["BOTON_LUNA_DY"],
-           PANEL_W - 52, C["BOTON_LUNA_H"], None, VIOLETA, 2)
-    L.texto("panel.luna.precio", "15.000", cx + 12, y + C["BOTON_LUNA_DY"] + 8,
-            17, ORO, "centro")
-    L.texto("panel.luna.saldo", "Tienes 148.500 LunaCoins", cx, y + 62, 11,
-            SUAVE, "centro", limite=PANEL_W - 60)
-
-    y += C["CAJA_LUNA_H"] + 12
-    L.caja("panel.reclamar", PANEL_X + 22, y, PANEL_W - 44,
-           C["BOTON_RECLAMAR_H"], None, VERDE, 2)
-    L.texto("panel.reclamar.t", "RECLAMAR TODO (28)", PANEL_X + PANEL_W // 2,
-            y + 14, 17, BLANCO, "centro", limite=PANEL_W - 60)
-    y += C["BOTON_RECLAMAR_H"] + 10
-    L.texto("panel.dias", "Temporada terminada - reclama lo tuyo",
-            PANEL_X + PANEL_W // 2, y, 12, NARANJA, "centro",
-            limite=PANEL_W - 44)
-
-    y += 16 + 12
-    L.texto("panel.como", "COMO SUBE EL PASE", PANEL_X + PANEL_W // 2, y, 13,
-            ORO, "centro")
-    y += 18
-    # ⚠ Las MISMAS filas que dibuja la pantalla, y con las cifras más largas
-    #   posibles: si «Especie nueva en la Pokedex» + «+120» no caben en 263 px,
-    #   se pisan y nadie lo ve hasta que abre el Pad.
-    filas = [
-        ("Capturar un Pokemon", "+12"),
-        ("Especie nueva en la Pokedex", "+120"),
-        ("Eclosionar un huevo", "+40"),
-        ("Pescar", "+8"),
-        ("Picar una mena", "+4"),
-        ("Cosechar", "+3"),
-        ("Ganar un combate", "+6"),
-        ("Ronda de la Torre", "+12..120"),
-        ("Completar una mision", "+50"),
-        ("Ganar una medalla", "+300"),
-    ]
-    for i, (izq, der) in enumerate(filas):
-        ancho_der = ancho_mc(der, 11)
-        # El límite del texto de la izquierda es lo que queda hasta el de la
-        # derecha: es «se pisan», no «se sale del panel».
-        L.texto(f"panel.fila{i}.a", izq, PANEL_X + 26, y, 11, BLANCO,
-                limite=PANEL_W - 52 - ancho_der - 8)
-        L.texto(f"panel.fila{i}.b", der, PANEL_X + PANEL_W - 26, y, 11, ORO,
-                "der")
-        y += 12
-
-
-def carril(L: Lienzo, C: dict) -> None:
-    cols = max(1, (PANT_W - 2 * C["MARGEN"] + C["GAP"]) // (C["CARD_W"] + C["GAP"]))
-    print(f"  columnas calculadas: {cols}  "
-          f"(ocupan {cols * C['CARD_W'] + (cols - 1) * C['GAP']} "
-          f"de {PANT_W - 2 * C['MARGEN']} disponibles)")
-
-    # La leyenda: pastilla de color + nombre, las dos en la misma línea. Se
-    # mide el caso PEOR, que es la vía Luna bloqueada (el texto más largo).
-    lx = PANT_X + C["MARGEN"]
-    L.caja("carril.chip1", lx, PANT_Y + 18, 12, 12, ORO, None, vigilar=False)
-    L.texto("carril.via1", "VIA LIBRE", lx + 18, PANT_Y + 18, 15, ORO)
-    lx2 = lx + 24 + ancho_mc("VIA LIBRE", 15)
-    L.caja("carril.chip2", lx2, PANT_Y + 18, 12, 12, VIOLETA, None, vigilar=False)
-    L.texto("carril.via2", "VIA LUNA (bloqueada)", lx2 + 18, PANT_Y + 18, 15,
-            VIOLETA)
-    L.texto("carril.cuenta", "Niveles 45-50  de  50",
-            PANT_X + PANT_W - C["MARGEN"] - 110, PANT_Y + 22, 13, SUAVE, "der")
-    L.caja("carril.izq", PANT_X + PANT_W - C["MARGEN"] - 96, PANT_Y + 14, 40, 30,
-           HUNDIDO, SUAVE, 1)
-    L.caja("carril.der", PANT_X + PANT_W - C["MARGEN"] - 42, PANT_Y + 14, 40, 30,
-           HUNDIDO, SUAVE, 1)
-
-    # ⚠ El nombre más largo que puede salir en una tarjeta. Los de Minecraft
-    #   son largos --«Escaleras de ladrillos de piedra» mide 364 px-- y eso ya
-    #   mordió al escaparate el 25-ago. Aquí se parte en DOS líneas de 106, así
-    #   que lo que hay que comprobar es que una PALABRA suelta quepa.
-    largos = ["Superpocion", "Caramelo Raro", "Restos", "Sombrero Ampharos shiny",
-              "Llave de Gachapon", "2.500 Plata", "Poke Ball"]
-
-    for i in range(cols):
-        x = PANT_X + C["MARGEN"] + i * (C["CARD_W"] + C["GAP"])
-        for fila, ytop in (("libre", C["TRACK_Y"]), ("luna", C["LUNA_Y"])):
-            L.caja(f"tarjeta{i}.{fila}", x, ytop, C["CARD_W"], C["CARD_H"],
-                   None, ORO if fila == "libre" else VIOLETA, 2)
-            hueco = 56
-            L.caja(f"tarjeta{i}.{fila}.hueco", x + (C["CARD_W"] - hueco) // 2,
-                   ytop + 14, hueco, hueco, HUNDIDO, GRIS, 1)
-            # El nombre, partido en dos líneas como en el juego.
-            nombre = largos[i % len(largos)]
-            partes = partir(nombre, C["CARD_W"] - 14, 12, 2)
-            ty = ytop + hueco + 22
-            for j, linea in enumerate(partes):
-                L.texto(f"tarjeta{i}.{fila}.txt{j}", linea,
-                        x + C["CARD_W"] // 2, ty, 12, BLANCO, "centro",
-                        limite=C["CARD_W"] - 14)
-                ty += 14
-            pie_h = 24
-            pie_y = ytop + C["CARD_H"] - pie_h - 8
-            L.caja(f"tarjeta{i}.{fila}.pie", x + 8, pie_y, C["CARD_W"] - 16,
-                   pie_h, None, VERDE, 1)
-            L.texto(f"tarjeta{i}.{fila}.pie.t", "RECLAMAR", x + C["CARD_W"] // 2,
-                    pie_y + 6, 13, BLANCO, "centro", limite=C["CARD_W"] - 24)
-        # El nodo del carril, entre las dos filas.
-        cxn = x + C["CARD_W"] // 2
-        cyn = C["RAIL_Y"] + C["RAIL_H"] // 2
-        L.caja(f"nodo{i}", cxn - 17, cyn - 17, 34, 34, ORO, BLANCO, 3)
-        L.texto(f"nodo{i}.t", "50", cxn, cyn - 7, 15, OSCURO, "centro")
+def premios() -> list:
+    """Los cien premios, leídos de `PaseCatalogo.java`."""
+    txt = CATALOGO.read_text(encoding="utf-8")
+    salida = []
+    for m in re.finditer(
+            r'/\*\s*(\d+)\s*\*/\s*(?:o\("([a-z_0-9]+)",\s*(\d+),\s*Rareza\.([A-Z]+)\)'
+            r'|p\("([a-z_0-9]+)",\s*(\d+),\s*(true|false)\))', txt):
+        nivel = int(m.group(1))
+        if m.group(2):
+            nombre = m.group(2).replace("_", " ").title()
+            salida.append((nivel, nombre, int(m.group(3)), m.group(4), False))
+        else:
+            salida.append((nivel, m.group(5).title(), 1, "LEGENDARIA", True))
+    if len(salida) != 100:
+        raise SystemExit(f"He leido {len(salida)} premios de PaseCatalogo.java "
+                         f"y tiene que haber 100: ha cambiado de forma")
+    return salida
 
 
 def partir(texto, ancho, alto, max_lineas):
@@ -258,15 +113,139 @@ def partir(texto, ancho, alto, max_lineas):
     return salida
 
 
+def panel(L: Lienzo, C: dict) -> None:
+    cx = PANEL_X + PANEL_W // 2
+    L.texto("panel.titulo", "PASE DE BATALLA", cx, PANEL_Y + NAV_ALTO + 8, 26,
+            ORO, "centro", limite=PANEL_W - 40)
+    L.texto("panel.temporada", "TEMPORADA 12  ·  47 dias", cx,
+            PANEL_Y + NAV_ALTO + 40, 15, SUAVE, "centro", limite=PANEL_W - 40)
+
+    r = C["ANILLO_R"]
+    L.caja("anillo.caja", cx - r, C["ANILLO_Y"] - r, r * 2, r * 2, HUNDIDO, ORO, 8)
+    # ⚠⚠ EL LIMITE DE LO QUE VA DENTRO DEL ARO NO ES EL PANEL: ES EL ANCHO DEL
+    #    CIRCULO A ESA ALTURA, y se calcula. Un `r * 1.5` a ojo dijo que «100»
+    #    no cabia cuando si cabe --y al reves, en otra altura habria dicho que
+    #    cabe algo que se sale--. La cuerda de un circulo a distancia d del
+    #    centro mide 2*sqrt(r^2 - d^2), y la d que manda es la del renglon MAS
+    #    LEJOS del centro.
+    import math
+
+    def cuerda(desde_y, alto_txt):
+        d = max(abs(desde_y), abs(desde_y + alto_txt))
+        return int(2 * math.sqrt(max(1, r * r - d * d))) - 6
+
+    L.texto("anillo.nivel", "100", cx, C["ANILLO_Y"] - 24, 46, BLANCO, "centro",
+            limite=cuerda(-24, 46))
+    L.texto("anillo.rotulo", "NIVEL", cx, C["ANILLO_Y"] + 16, 13, SUAVE,
+            "centro", limite=cuerda(16, 13))
+    L.texto("panel.cuenta", "100  /  100", cx, C["ANILLO_Y"] + r + 10, 16, SUAVE,
+            "centro", limite=PANEL_W - 60)
+
+    L.texto("panel.xp", "834 / 834 XP", cx, 364, 17, BLANCO, "centro",
+            limite=PANEL_W - 60)
+    L.caja("panel.barraxp", PANEL_X + 26, 386, PANEL_W - 52, 15, HUNDIDO, GRIS, 1)
+
+    L.texto("panel.hoy", "XP DE HOY", PANEL_X + 26, C["AYUDA_Y"], 15, SUAVE)
+    L.texto("panel.hoy2", "3.600 / 3.600", PANEL_X + PANEL_W - 64, C["AYUDA_Y"],
+            15, NARANJA, "der")
+    L.caja("panel.ayuda", PANEL_X + PANEL_W - 52, C["AYUDA_Y"] - 4, 26, 26,
+           HUNDIDO, VIOLETA, 1)
+    L.caja("panel.barrahoy", PANEL_X + 26, 438, PANEL_W - 52, 14, HUNDIDO, GRIS, 1)
+    # La más larga de las tres frases del pie.
+    L.texto("panel.pie", "Especie nueva en la Pokedex   +120", cx, 460, 13,
+            SUAVE, "centro", limite=PANEL_W - 44)
+
+    y = C["CAJA_PASE_Y"]
+    L.caja("panel.pase", PANEL_X + 22, y, PANEL_W - 44, C["CAJA_PASE_H"],
+           HUNDIDO, VIOLETA, 2)
+    L.texto("panel.pase.tit", "DESBLOQUEA EL PASE", cx, y + 12, 16, BLANCO,
+            "centro", limite=PANEL_W - 60)
+    L.caja("comprar.btn", PANEL_X + 28, y + C["BOTON_COMPRAR_DY"],
+           PANEL_W - 56, C["BOTON_COMPRAR_H"], None, VIOLETA, 2)
+    L.texto("comprar.precio", "15.000", cx + 16, y + C["BOTON_COMPRAR_DY"] + 10,
+            22, ORO, "centro")
+    L.texto("saldo.txt", "Tienes 148.500 LunaCoins", cx, y + 82, 13, SUAVE,
+            "centro", limite=PANEL_W - 60)
+
+    L.caja("panel.reclamar", PANEL_X + 22, C["BOTON_RECLAMAR_Y"], PANEL_W - 44,
+           C["BOTON_RECLAMAR_H"], None, VERDE, 2)
+    L.texto("panel.reclamar.t", "RECLAMAR TODO  (100)", PANEL_X + PANEL_W // 2,
+            C["BOTON_RECLAMAR_Y"] + 18, 20, BLANCO, "centro", limite=PANEL_W - 60)
+
+    L.texto("panel.hint1", "Sube el pase capturando, minando,",
+            PANEL_X + PANEL_W // 2, 672, 13, SUAVE, "centro", limite=PANEL_W - 30)
+    L.texto("panel.hint2", "pescando, criando y en la Torre",
+            PANEL_X + PANEL_W // 2, 690, 13, SUAVE, "centro", limite=PANEL_W - 30)
+
+
+def carril(L: Lienzo, C: dict, datos: list) -> None:
+    cols = max(1, (PANT_W - 2 * C["MARGEN"] + C["GAP"]) // (C["CARD_W"] + C["GAP"]))
+    usado = cols * C["CARD_W"] + (cols - 1) * C["GAP"]
+    fila_x = PANT_X + (PANT_W - usado) // 2
+    print(f"  columnas calculadas: {cols}  "
+          f"(ocupan {usado} de {PANT_W - 2 * C['MARGEN']} disponibles)")
+
+    L.caja("carril.marca", PANT_X + C["MARGEN"], PANT_Y + 14, 8, 40, ORO, None,
+           vigilar=False)
+    L.texto("carril.tramo", "ENTRENAMIENTO", PANT_X + C["MARGEN"] + 20,
+            PANT_Y + 12, 24, ORO)
+    L.texto("carril.lema", "EVs, niveles y PP", PANT_X + C["MARGEN"] + 20,
+            PANT_Y + 40, 14, SUAVE)
+    L.texto("carril.cuenta", "NIVELES 41 - 44",
+            PANT_X + PANT_W - C["MARGEN"] - 116, PANT_Y + 20, 15, SUAVE, "der")
+    L.caja("carril.izq", PANT_X + PANT_W - C["MARGEN"] - 104, PANT_Y + 14, 44, 34,
+           HUNDIDO, SUAVE, 2)
+    L.caja("carril.der", PANT_X + PANT_W - C["MARGEN"] - 46, PANT_Y + 14, 44, 34,
+           HUNDIDO, SUAVE, 2)
+
+    # ⚠ Se dibuja el tramo con los nombres MAS LARGOS de los cien, no los cuatro
+    #   primeros: lo que hay que comprobar es el peor caso.
+    peor = sorted(datos, key=lambda d: -ancho_mc(d[1], 15))[:cols]
+    for i, (nivel, nombre, cant, rareza, es_poke) in enumerate(peor):
+        x = fila_x + i * (C["CARD_W"] + C["GAP"])
+        y = C["CARDS_Y"]
+        color = RAREZA[rareza]
+        L.caja(f"t{i}", x, y, C["CARD_W"], C["CARD_H"], None, color, 2)
+        L.caja(f"t{i}.cinta", x, y, C["CARD_W"], 36, color, None, vigilar=False)
+        L.texto(f"t{i}.nivel", f"NIVEL {nivel}", x + C["CARD_W"] // 2, y + 9, 19,
+                (13, 18, 27, 255), "centro", limite=C["CARD_W"] - 16)
+        L.texto(f"t{i}.rareza", rareza, x + C["CARD_W"] // 2, y + 46, 13, color,
+                "centro", limite=C["CARD_W"] - 16)
+        hueco = 108
+        L.caja(f"t{i}.hueco", x + (C["CARD_W"] - hueco) // 2, y + 66, hueco, hueco,
+               HUNDIDO, color, 1)
+        ty = y + 186
+        for j, linea in enumerate(partir(nombre, C["CARD_W"] - 18, 15, 2)):
+            L.texto(f"t{i}.txt{j}", linea, x + C["CARD_W"] // 2, ty, 15, BLANCO,
+                    "centro", limite=C["CARD_W"] - 18)
+            ty += 19
+        pie = "✦ VARIOCOLOR  ·  Nivel 50" if es_poke and nivel == 100 else (
+            f"x{cant}" if cant > 1 else "ENTRENAMIENTO")
+        L.texto(f"t{i}.cant", pie, x + C["CARD_W"] // 2, y + 228, 17, ORO,
+                "centro", limite=C["CARD_W"] - 18)
+        pie_h, pie_y = 46, y + C["CARD_H"] - 46 - 14
+        L.caja(f"t{i}.pie", x + 12, pie_y, C["CARD_W"] - 24, pie_h, None, VERDE, 2)
+        L.texto(f"t{i}.pie.t", "REQUIERE PASE", x + C["CARD_W"] // 2, pie_y + 15,
+                18, BLANCO, "centro", limite=C["CARD_W"] - 24)
+
+    # El mini-mapa.
+    L.caja("mapa", PANT_X + C["MARGEN"], C["MAPA_Y"], PANT_W - 2 * C["MARGEN"], 22,
+           HUNDIDO, GRIS, 1)
+    L.texto("mapa.pie", "Pulsa la barra para saltar de tramo",
+            PANT_X + PANT_W // 2, C["MAPA_Y"] + 30, 13, SUAVE, "centro")
+
+
 def main() -> None:
     C = constantes()
+    datos = premios()
     print("MAQUETA DEL PASE DE BATALLA")
-    print(f"  medidas leidas de {PANTALLA.relative_to(RAIZ)}")
+    print(f"  medidas de {PANTALLA.relative_to(RAIZ)}")
+    print(f"  premios de {CATALOGO.relative_to(RAIZ)}  ({len(datos)})")
 
     L = Lienzo()
     chasis(L, "PASE")
     panel(L, C)
-    carril(L, C)
+    carril(L, C, datos)
 
     avisos = L.avisos + L.solapes()
     SALIDA.mkdir(parents=True, exist_ok=True)

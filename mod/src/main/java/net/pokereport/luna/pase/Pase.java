@@ -84,6 +84,6 @@ public final class Pase {
     }
 
     private static boolean hayPremio(int nivel) {
-        return PaseCatalogo.libre(nivel) != null || PaseCatalogo.luna(nivel) != null;
+        return PaseCatalogo.de(nivel) != null;
     }
 }

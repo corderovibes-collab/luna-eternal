@@ -7,7 +7,7 @@
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela) ·
 PHASE 4 — Gimnasios y Torre de Batalla · PHASE 10 — Pase de Batalla
 **Estado:** Torre de Batalla y Santuario construidos y desplegados. Decisiones D-001 a
-D-045. **El mod está desplegado y funcionando contra MariaDB:** economía de
+D-046. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, vías de progresión, Torre de Batalla con recompensas de temporada e
 interfaces completas en el PokePad. Autotest en vivo.
 
@@ -3045,7 +3045,7 @@ Interfaz      VEINTICINCO PANTALLAS. Nueve verificadas en el juego.
                 Protecciones 2026-09-04  las parcelas de ClaimBlocks
                 Santuario   2026-09-04   nichos, y el Memorial aparte
                 Torre       2026-09-07   3 modos, y sus Recompensas
-                Pase        2026-09-08   50 niveles . 2 vias . SIN VERIFICAR
+                Pase        2026-09-08   100 niveles . 1 via de pago . SIN VERIFICAR
               11 de los 16 iconos abren algo: pokedex (la de Cobblemon),
               cosmeticos, trabajos, misiones, clan, tienda, curar, mercado,
               cazas, explorar y viajes
@@ -3055,27 +3055,79 @@ Interfaz      VEINTICINCO PANTALLAS. Nueve verificadas en el juego.
                 pulse nada: su oferta desaparecio y su dinero subio. Es la
                 leccion de los clanes aplicada antes de que doliera
               ⚠ CURAR YA ESTA (2026-08-23, tarde). Ver el bloque Curar
-Pase          EL PASE DE BATALLA LUNA (2026-09-08, V032, D-045)
+Pase          EL PASE DE BATALLA LUNA (2026-09-08, V032+V033, D-046)
               detalle completo en docs/economy/pase-batalla.md
-              50 niveles . 60 dias por temporada . dos vias
-              icono `pase` EN LA PAGINA 1 (orden del usuario, 2026-09-08) y
-              la MOCHILA baja a la 2: es la unica de la pagina 1 con TECLA
-              PROPIA (N), asi que se llega a ella sin abrir el Pad -- las otras
-              catorce solo se alcanzan por la rejilla
+              100 NIVELES . 60 dias por temporada . UNA SOLA VIA, DE PAGO
+              icono `pase` en la PAGINA 1 del Pad (la MOCHILA bajo a la 2: es
+              la unica de la pagina 1 con TECLA PROPIA (N))
+              ⚠⚠⚠ D-046 REVOCA D-045 EL MISMO DIA. La version de la mañana tenia
+                 DOS vias --una gratis con Plata y objetos, otra de pago con
+                 cosmeticos-- y 50 niveles. Orden del usuario: «este pase de
+                 batalla si o si es comprando lunacoins, no hay via libre ni
+                 nada... debe tener buenos items competitivos para crianza»
+                 ⚠⚠⚠ Y ESO CRUZA T4, QUE QUEDA ESCRITO: monetization.md §2 pone
+                    SHINIES y OBJETOS COMPETITIVOS EXCLUSIVOS en la lista de
+                    «nunca, bajo ninguna circunstancia», y el test de §6 se para
+                    en la PRIMERA pregunta. Se tomo A SABIENDAS, igual que D-020
+                    con los legendarios de los cofres
+                    EL RIESGO VIVO NO ES INTERNO: son las reglas comerciales de
+                    Mojang (B-008, SEC-004), que prohiben vender ventaja de
+                    juego, y siguen SIN VERIFICAR desde el 2026-08-11
+                 ⚠⚠ LO UNICO QUE SE HA DEJADO FUERA ES LA MONEDA: el pase no da
+                    ni un PokeDolar. Un objeto entra en la economia de objetos;
+                    moneda vendida por dinero real SALTEA TODOS LOS SUMIDEROS A
+                    LA VEZ (P3), y es la unica averia de la lista que no se
+                    arregla bajando un numero
               ⚠⚠⚠ EL NUMERO QUE SOSTIENE EL SISTEMA ENTERO:
-                 curva  300 + 20n  ->  39.500 XP el pase completo
-                 tope   900 XP AL DIA
+                 curva  240 + 6n  ->  53.700 XP el pase completo
+                 tope   1.200 XP AL DIA
                  ─────────────────────────────────────────────
-                 39.500 / 900 = 43,9  ->  44 DIAS COMO MINIMO
+                 53.700 / 1.200 = 44,75  ->  45 DIAS COMO MINIMO
                  y ese minimo NO DEPENDE DE CUANTO JUEGUE NADIE: la XP de D
-                 dias naturales no puede pasar de 900 x D. El descanso
+                 dias naturales no puede pasar de 1.200 x D. El descanso
                  acumulado (3 dias) REPARTE el tope, no lo crea
-                 ⚠⚠ ES LO QUE HACE SEGURA A CUALQUIER FUENTE NUEVA. Sin tope,
-                    añadir una forma de ganar XP obligaria a recalibrar el pase
-                    entero; con tope, la unica pregunta es si es la mas comoda
-                    del dia
-              DE QUE SE SACA XP (y de donde salen las cifras: de cuantas veces
-              por hora ocurre cada cosa, no de a ojo)
+                 ⚠⚠ Y EL OTRO LADO IMPORTA IGUAL CON UN PASE DE PAGO: quien lo
+                    compra tiene que PODER TERMINARLO. 45 de 60, con 15 de
+                    holgura. El autotest comprueba las dos cotas
+                 ⚠ EL PASO BAJA DE 20 A 6 AL DOBLAR LOS NIVELES. Con 20 el
+                   nivel 100 costaria 2.220 y el pase 129.000 XP, o sea 107
+                   dias: casi dos temporadas. Doblar los niveles sin tocar el
+                   paso habria hecho el pase IMPOSIBLE sin dar ningun error
+              LOS CINCO TRAMOS (el orden es el que un jugador necesita):
+                  1- 20  PREPARACION    balls, curacion, bayas, caramelos
+                 21- 40  CRIANZA        Destiny Knot, Everstone, los SEIS
+                                        objetos de poder, Lucky Egg
+                 41- 60  ENTRENAMIENTO  las seis vitaminas, PP Up, Caramelos
+                                        Raros y XL
+                 61- 80  COMBATE        Restos, Vidasfera, las tres Elegidas,
+                                        Eviolita, Casco Dentado, Botas Gruesas
+                 81-100  MAESTRIA       mentas, Capsula y Parche de Habilidad,
+                                        PP Max, Master Ball
+              ⚠ los SEIS objetos de poder van del 26 al 35 repartidos: sirven de
+                uno en uno --cada uno fija una estadistica al heredar-- asi que
+                darlos juntos convertiria diez niveles en uno
+              LOS CINCO POKEMON, y dos los fijo el usuario:
+                  1  Charizard nivel 15            <- ORDEN DEL USUARIO
+                 25  Gengar nivel 25
+                 50  Tyranitar nivel 35
+                 75  Dragonite nivel 45
+                100  CHARIZARD VARIOCOLOR nivel 50 <- ORDEN, el premio mayor
+              ⚠⚠ LOS TRES DE EN MEDIO SON DE KANTO O JOHTO, y no por gusto:
+                 D-017 dice que son las unicas generaciones activas. Un hito de
+                 Gen 5 seria un Pokemon QUE LA POKEDEX DE ESTE SERVIDOR NO
+                 RECONOCE -- pareceria un fallo, no un premio
+              ⚠⚠ SI EL EQUIPO ESTA LLENO EL POKEMON VA AL PC, y se avisa.
+                 `getParty().add()` devuelve false con seis dentro: sin mirarlo,
+                 el jugador cobra el shiny del 100, ve «RECOGIDO» y NO TIENE NADA
+              ⚠ el nivel 1 y el 100 LOS VIGILA EL AUTOTEST: son lo unico de la
+                tabla que no puedo cambiar por mi cuenta
+              ⚠⚠ LOS 95 OBJETOS Y LAS 5 ESPECIES SE VALIDARON CONTRA EL JAR
+                 ANTES de escribirlos (tools/gen_tienda.py, que lee el jar del
+                 manifiesto publicado) y el autotest los revalida contra el
+                 REGISTRO. Uno mal escrito no da error: da un jugador que solto
+                 15.000 LunaCoins, hizo 45 dias de trabajo y no recibe nada
+              DE QUE SE SACA XP (las cifras salen de cuantas veces por hora
+              ocurre cada cosa, no de a ojo)
                 pescar 8 . cosechar 3 . mena 4 . mena rara 12 . PIEDRA 0
                 capturar 12 . ESPECIE NUEVA 120 . eclosionar 40 . combate 6
                 ronda de Torre min(120, 10 + 2·ronda) . mision 50
@@ -3084,125 +3136,71 @@ Pase          EL PASE DE BATALLA LUNA (2026-09-08, V032, D-045)
                  correctas. 2.500 bloques a la hora convertirian el pase en un
                  temporizador y el resto de la tabla daria igual
               ⚠ el ESCANEO no da XP: la da el REGISTRO. Escanear se repite;
-                registrar una especie ocurre una vez y hay 251. Misma decision
-                que la pesca (el recogido) y la cria (el nacimiento)
+                registrar una especie ocurre una vez y hay 251
               ⚠⚠ NO SE ENGANCHA A NINGUN EVENTO NUEVO: cuelga de los embudos que
-                 ya habia, y por lo que dice el javadoc de `anotar` desde los
-                 oficios -- dos suscripciones separadas acaban discrepando sobre
-                 que cuenta como pescar
+                 ya habia (OficiosListener.anotar, CaptureListener.handle,
+                 OficiosService.ganar, Combate, el cobro de misiones y la Torre)
                  ⚠ en la CAPTURA es mas que higiene: saber si la especie era
                    nueva SOLO se puede ahi. Un segundo oyente preguntaria cuando
                    ya esta registrada y siempre diria «no era nueva»
-              ⚠ la MEDALLA va dentro del `if (nueva)` y la MISION dentro del
-                `if (claim)`: fuera, repetir un gimnasio ya ganado serian 300 XP
-                por combate, o sea el tope diario en tres combates
-              LAS DOS VIAS, Y NO LLEVAN LO MISMO:
-                LIBRE  gratis   Plata, objetos y llaves. Se GANA jugando, asi
-                                que es una fuente mas del juego (P3): 15.300 de
-                                Plata por temporada, ~255 al dia. Para comparar,
-                                las Cazas dan ~10.000 al dia
-                LUNA   15.000   SOLO COSMETICOS
-                       LunaCoins
-              ⚠⚠⚠ Y ESO NO ES UNA PREFERENCIA: el test de monetization.md §6 se
-                 para en la segunda pregunta --«¿crea moneda u objetos
-                 comerciables? SI = NO SE VENDE»--. Un Caramelo Raro en la via
-                 libre es un premio por jugar; EL MISMO CARAMELO EN LA VIA DE
-                 PAGO ES COMPRAR PROGRESION, o sea T4 y la linea roja de D-007 y
-                 D-014. CLAUDE.md ya lo decia de la tienda: «si algun dia
-                 vuelven, que no sea por LunaCoins»
-                 el autotest lo comprueba: es la clase de regla que se cae sola
-                 cuando alguien edita una tabla, SIN DAR NINGUN ERROR
-              ⚠⚠ LA VIA LUNA PREMIA SOLO EN LOS PARES, Y ES UNA CUENTA:
-                 50 cosmeticos x 1.200 = 60.000 de valor de tienda por un pase
-                 de 15.000, o sea CUATRO VECES lo que cuesta -- y entonces nadie
-                 vuelve a comprar un sombrero suelto y el pase SE COME LA TIENDA
-                 DE COSMETICOS, que es la que segun monetization.md §2 tiene que
-                 sostener el negocio
-                 con 25 premios devuelve 2,1x. El autotest vigila el multiplo
-                 (entre 1,5x y 3x)
-              ⚠ LOS DOS HITOS FINALES SON AURAS QUE NO ESTAN A LA VENTA
-                (`aura_pase_estelar` y `aura_pase_eclipse`, precio 0, el mismo
-                mecanismo que D-039 usa para los eventos). Un cosmetico que
-                ademas se puede comprar solo AHORRA LunaCoins; uno que no, dice
-                DONDE ESTABAS ESA TEMPORADA -- y sin ellas la via Luna seria un
-                descuento, no una temporada
-                ⚠ no se retiran al acabar: retirarlas convertiria un recuerdo en
-                  un alquiler
-              ⚠⚠⚠ SE GUARDA LA XP TOTAL DE LA TEMPORADA, NO EL NIVEL. Guardar
-                 «nivel 12 y 340 sueltos» esta bien en `player_path` porque las
-                 Vias no cambian de curva; un pase SI, y con el nivel guardado
-                 tocar la curva NO RECALCULARIA A NADIE -- la gente se quedaria
-                 con el nivel viejo y una XP suelta que ya no significa lo mismo,
-                 sin un solo error. Misma decision que la mascara de medallas
+              ⚠⚠⚠ SIN EL PASE NO SE COBRA NADA, y la XP SE GANA IGUAL. El pase
+                 compra el DERECHO A COBRAR, no el derecho a progresar: quien lo
+                 compre a mitad de temporada abre de golpe todo lo que ya tenia
+                 el autotest lo comprueba, porque un fallo en ese `if` regalaria
+                 los cien premios a todo el servidor SIN DAR NINGUN ERROR --
+                 entregar funciona igual de bien
+              ⚠⚠⚠ SE GUARDA LA XP TOTAL DE LA TEMPORADA, NO EL NIVEL, y ESO ES
+                 LO QUE SALVO EL CAMBIO DE 50 A 100 NIVELES: la curva cambio y
+                 todo el mundo se recoloco solo. Con el nivel guardado habria
+                 hecho falta recalcular a mano, o dejar a la gente con un nivel
+                 viejo y una XP suelta que ya no significa lo mismo
                  ⚠⚠ y por eso `pase_reclamo` es POR NIVEL: lo cobrado esta
-                    cobrado. Si alguien bajara de nivel al recalibrar, no se le
-                    puede quitar lo que ya tiene en el inventario
-              ⚠⚠⚠ LA CLAVE PRIMARIA ES (jugador, temporada, nivel, via): cobrar
-                 dos veces FALLA EN LA BASE venga de donde venga la peticion.
-                 Misma decision que `gym_badge` y `clan_member`
-              ⚠⚠ SE APUNTA ANTES DE ENTREGAR. Al reves, un fallo entre los dos
-                 pasos regala el premio otra vez (la decision de StarterService).
-                 La Plata y las llaves van en la MISMA transaccion (R3); los
-                 objetos y los cosmeticos no pueden --un inventario no es una
-                 tabla-- y van despues del commit con `offerOrDrop`
-              LA TEMPORADA NO ROTA SOLA: /luna pase nueva_temporada [dias]
-              ⚠⚠ las Cazas rotan al mirar y esta bien --se pierde un ciclo de
-                 24 h--; aqui rotar BORRA SESENTA DIAS DE PROGRESO y la via Luna
-                 que alguien pago con 15.000 LunaCoins. Eso no lo dispara un reloj
-              ⚠ y pasada la fecha SE SIGUE GANANDO XP: pararla castigaria al
-                jugador por un despiste del operador, que no es suyo
-              LA PANTALLA: anillo de nivel animado, carril de 6 columnas con las
-              dos vias, tope diario a la vista, y la tabla de COMO SUBE EL PASE
+                    cobrado. Y por eso hizo falta V033 -- ver abajo
+              ⚠⚠⚠ V033 BORRA LOS RECLAMOS, y es lo unico que se borra: al pasar
+                 de 50 a 100 niveles el nivel 3 dejo de dar «900 de Plata» y pasa
+                 a dar «10 Pociones», asi que una fila que decia «ya cobre el 3»
+                 significaria YA COBRASTE ALGO QUE NUNCA RECIBISTE -- el premio
+                 de hoy en gris para siempre, sin dar error
+                 SE PUDO BORRAR porque NADIE HABIA COMPRADO EL PASE todavia. Con
+                 el pase vivo la migracion correcta seria OTRA: rotar temporada
+              LA PANTALLA, rehecha entera el mismo dia:
+                una fila de CUATRO tarjetas de 180x336 (antes seis de 120 en dos
+                filas) . texto de 13 a 46 px . anillo animado . mini-mapa de los
+                cien niveles . halos, brillos, marcos vivos y chispas
+              ⚠⚠ «HAY LETRAS Y NUMEROS QUE NO SE VEN CLAROS» (usuario) SE
+                 ARREGLA CON SITIO, NO SUBIENDO LA FUENTE. Con dos vias habia dos
+                 filas apretadas y texto de 11-12 px de arte; al quedar UNA via
+                 se libera media pantalla y todo cabe al doble
               ⚠⚠⚠ NI LA CURVA NI LOS PREMIOS VIAJAN POR LA RED: la pantalla lee
                  `PaseNivel` y `PaseCatalogo` DIRECTAMENTE, porque viven en
-                 `main` y `main` corre en los dos lados (la decision de
-                 CatalogoPad). Mandarlos seria un SEGUNDO sitio donde vive la
+                 `main`. Mandar cien premios seria un SEGUNDO sitio donde vive la
                  misma verdad -- las tres listas de medallas otra vez
-              ⚠ VIAJA EL NIVEL Y LA VIA AL RECLAMAR, nunca el premio (P6): si
-                no, un cliente modificado pide el nivel 50 el primer dia y se
-                lleva la Master Ball
-              ⚠ lo cobrado viaja como DOS MASCARAS DE BITS, una por via. Y aqui
-                el bit ES EL NUMERO DEL NIVEL --intrinseco, no una posicion en
-                una lista--, asi que el fallo de «ganar a Brock enciende la de
-                Misty» no puede darse
+              ⚠ lo cobrado viaja como DOS mascaras de bits: cien niveles NO caben
+                en un long. Con una sola, los niveles 65+ saldrian siempre sin
+                cobrar --el desplazamiento se envuelve-- y el sintoma seria un
+                boton verde que al pulsarlo no hace nada
               ⚠⚠ EL NUMERO DE COLUMNAS SE CALCULA, no se escribe. QUINTA vez que
                  este proyecto tropieza con una rejilla que cabia por casualidad
-                 (los 15 iconos del Pad, los 62 cosmeticos, las 8 paradas de
-                 Viajes, las 23 medallas de la Liga) y ninguna dio nunca un error
-              ⚠ y la Y de la caja de la Via Luna tambien: la usan EL DIBUJADO Y
-                EL CLIC. Escrita dos veces, mover una linea del panel deja el
-                boton pintado en un sitio y respondiendo en otro
-              ⚠ las cifras de «COMO SUBE EL PASE» salen de `PaseXp`, no escritas
-                a mano: si no, al recalibrar la pesca la pantalla seguiria
-                prometiendo lo de antes y el jugador creeria que le pagamos menos
-              +30 comprobaciones. Las dos que importan: EL MINIMO DE 44 DIAS
-              --sale de dos numeros en ficheros distintos que nada obliga a
-              mirar juntos-- y QUE LA VIA DE PAGO SOLO LLEVE COSMETICOS
-              EL ICONO YA ES EL DEFINITIVO (2026-09-08): tres escalones dorados,
-              cinta violeta y luna creciente. Prompt en
-              docs/ui/prompts-arte-pokepad.md §5.4-quater
-                python tools/gen_icono_pase.py --origen <ruta>
-              ⚠⚠ EL PROCESADO SE IMPORTA DE gen_pokepad.py, no se copia:
-                 `preparar` (quitar fondo + SANGRAR EL ALFA), `abrir_hueco`,
-                 `a_tamano` y `guardar` son las mismas que tratan a los otros
-                 veinte iconos. Un segundo pipeline daria «el del pase se ve
-                 distinto» sin ningun error
-                 ⚠ va aparte porque gen_pokepad EMPIEZA BORRANDO los 21 iconos y
-                   hoy aborta: falta icon_torre_batalla.png. Instalar UNO no
-                   puede depender de que esten los veintiuno
-              ⚠ el PROVISIONAL sigue en el script y no es codigo muerto: si
-                falta el arte dibuja la misma silueta en vez de dejar la celda
-                en MAGENTA -- una celda dibuja SU icono aunque este bloqueada,
-                asi que dar de alta una app sin PNG no da ningun error
-              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 02:16), LOS DOS DESTINOS:
-                servidor  V032 aplicada . Done (31,075 s) . 627/627
-                clientes  manifiesto 454be6840c publicado y servido
-                /luna pase contesta los numeros del diseno:
-                  Temporada 1, 60 dias . 50 niveles . 39.500 XP
-                  tope 900/dia . minimo 44 dias
-                  Via Luna 15.000 (vale 31.600 en tienda)
-                  via libre 15.300 de Plata
-              ⚠ SIN VERIFICAR VISUALMENTE: nadie ha abierto la pantalla
+              ⚠⚠ Y LA MAQUETA (tools/gen_maqueta_pase.py) CAZO TRES EN SU PRIMERA
+                 PASADA sobre la pantalla nueva, ninguna con error:
+                   1) el boton de COMPRAR acababa donde empezaba el saldo, y se
+                      lo comia
+                   2) «NIVEL 47 / 100» iba DENTRO del anillo: a 26 px del centro
+                      un circulo de radio 62 mide 112 de ancho y el texto 149
+                   3) y al arreglarlo, el limite que puse a ojo (r*1.5) decia que
+                      «100» no cabia CUANDO SI CABE. Hoy la maqueta calcula la
+                      CUERDA del circulo a esa altura, que es el numero de verdad
+                 ⚠ lee las medidas DE PaseScreen.java y los premios DE
+                   PaseCatalogo.java: copiarlas seria una maqueta que dice «cabe»
+                   midiendo unos numeros mientras el juego pinta otros
+              ⚠ los efectos viven en `client/pokepad/Efectos.java`: curvas
+                (suave, rebote, pulso, rampa), halo, brillo, marco vivo, arco,
+                barra, destello y un emisor de chispas ACOTADO a 120 -- un emisor
+                sin tope es una fuga de memoria con forma de efecto bonito
+              +26 comprobaciones. Las que importan: EL MINIMO DE 45 DIAS, QUE SIN
+              PASE NO SE COBRE NADA, QUE LOS CIEN PREMIOS EXISTAN, y que el nivel
+              1 y el 100 sigan siendo los que pidio el usuario
+              ⚠ SIN VERIFICAR VISUALMENTE la pantalla nueva
 Cazas         YA TIENE PANTALLA (2026-08-25, V017)
               2 pestañas (CAZA . CRIANZA) . 3 objetivos en cada una con
               1, 2 y 3 ESTRELLAS . mismas para todo el servidor
@@ -3941,6 +3939,7 @@ documentación · migración · rollback.
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
 | D-037 | 2026-08-17 | **La base del pack pasa a ser COBBLEVERSE, quitandole la generacion de estructuras y la musica.** Revoca D-031 | **Orden del usuario, dada despues de que le enseñara las licencias** — `cobbleverse` es All Rights Reserved y `cobbleverse-badges` es CC-BY-NC-ND-4.0, que es la clausula por la que D-006 lo habia descartado. Queda escrito aqui para que quien lo lea dentro de seis meses vea **el dato y la decision**, no solo la decision. **Lo que si se hace bien:** el manifiesto guarda URL y hash y nunca el jar, asi que cada mod se descarga del CDN de Modrinth — no redistribuimos nada suyo, igual que con los shaders (D-030). Se les quita lo que el usuario no queria: **generacion de estructuras** (4 mods) y **421 MB de musica**, que multiplicaba por cinco la descarga de un jugador nuevo (P10). El pack pasa de 185 a **434 MB**. Tres cosas que solo se ven haciendolo: **el slug de Modrinth no es el nombre del jar** y una exclusion mal escrita no surte efecto *sin avisar*; **su configuracion son 155 ficheros** y sueltos eran 155 peticiones a `raw`, o sea el 429 de D-036 otra vez (van en un zip por carpeta con `keepExisting`); y **`continuity:default` cambia 42 bloques de construir** — lo reporto el usuario en vivo con la ciudadela ya empezada, y se apaga |
 | D-038 | 2026-08-17 | **El PokePad enseña datos de sesion —Plata, LunaCoins, Clan, Trabajo, Division y Medallas— en vez de la tarjeta de entrenador** | **Decision del usuario.** La tarjeta enseñaba el nivel de las cinco Vias en estrellas; lo que el queria bajo la cara es lo que se mira a diario. Dos cosas quedan escritas porque no son obvias: **las 16 medallas se referencian por identificador al mod de CobbleVerse y NO se copian sus texturas** — el mod va instalado en el cliente, asi que apuntarlas cuesta cero bytes, no redistribuye nada de un CC-BY-NC-ND y el dibujo lo sigue mandando su autor; y **clan, trabajo y division viajan en el paquete aunque no exista el sistema**, mandando cadena vacia para que el Pad pinte un guion. Un «Sin clan» diria «ya funciona y no tienes ninguno», que no es verdad; y tenerlos ya en el protocolo hace que encenderlos sea rellenar tres lineas en vez de tocar paquete, codec, cache y dibujado |
+| D-046 | 2026-09-08 | **El Pase de Batalla pasa a tener UNA SOLA VIA, DE PAGO, con 100 niveles de objetos de Cobblemon y cinco Pokemon.** **Revoca D-045** | **Orden del usuario, el mismo dia y despues de usarlo**: *«este pase de batalla si o si es comprando lunacoins, no hay via libre ni nada... debe tener buenos items competitivos para crianza y cositas asi»*, con el nivel 1 dando un Charizard de nivel 15 y el 100 **un Charizard variocolor de nivel 50**. ⚠⚠⚠ **Queda escrito que esto cruza T4, y no para volver a discutirlo**: [monetization.md](docs/economy/monetization.md) §2 pone **shinies** y **objetos competitivos exclusivos** en la lista de «nunca, bajo ninguna circunstancia» y el test de §6 se para en la **primera** pregunta. Se tomo **a sabiendas**, igual que D-020 con los legendarios de los cofres, y **el riesgo que queda vivo no es interno**: son las reglas comerciales de Mojang (`B-008`, `SEC-004`), que prohiben vender ventaja de juego y siguen sin verificar desde el 2026-08-11. ⚠⚠ **Lo unico que se dejo fuera es la MONEDA**: el pase no da ni un PokeDolar, porque un objeto entra en la economia de objetos pero moneda vendida por dinero real **saltea todos los sumideros a la vez** (P3) — y esa es la unica averia de la lista que no se arregla bajando un numero. ⚠⚠⚠ **Lo que impide que se complete rapido sigue siendo el TOPE DIARIO**, recalibrado: 53.700 XP y 1.200 al dia dan **45 dias naturales como minimo** de una temporada de 60 — y con un pase de PAGO la cota de arriba importa igual, porque quien paga tiene que poder terminarlo. ⚠ **Y el paso de la curva baja de 20 a 6 al doblar los niveles**: con 20, el pase entero costaria 129.000 XP, o sea 107 dias, y habria sido imposible sin dar ningun error. ⚠ **La XP guardada como TOTAL (V032) es lo que salvo el cambio**: al cambiar la curva de 50 a 100 niveles todo el mundo se recoloco solo. Lo que si hubo que borrar son los reclamos (V033), porque el nivel 3 ya no da lo que daba. Detalle en [pase-batalla.md](docs/economy/pase-batalla.md) |
 | D-045 | 2026-09-08 | **El Pase de Batalla tiene DOS vías, y la de pago (15.000 LunaCoins) lleva ÚNICAMENTE cosméticos** | **Petición del usuario** (un pase que se sube jugando, con recompensas, «bien calibrado matemáticamente» y «que no consigan todo rápido»). La estructura de dos vías no es un adorno: es **lo único que deja cumplir las dos mitades de la petición a la vez**. La vía libre reparte Plata, objetos y llaves —se gana jugando, así que es una fuente más del juego y se calibra como tal (P3)—; la vía de pago se compra con moneda premium, y ahí el test de [monetization.md](docs/economy/monetization.md) §6 **se para en la segunda pregunta**: *«¿crea moneda u objetos comerciables? SÍ = NO SE VENDE»*. ⚠⚠ **Un Caramelo Raro en la vía libre es un premio por jugar; el mismo Caramelo en la vía de pago es COMPRAR PROGRESIÓN**, que es T4 y la línea roja de D-007 y D-014 — CLAUDE.md ya lo decía de la tienda: *«si algún día vuelven, que no sea por LunaCoins»*. Y no es solo cumplir una regla: §2 de ese documento dice que la identidad **debe ser el grueso de la facturación** y que es lo único que no rompe nada, así que un pase de cosméticos es exactamente el producto que ese marco pide. ⚠⚠⚠ **Lo que impide que se complete rápido no es la curva sino el TOPE DIARIO**: 39.500 XP y 900 al día dan **44 días naturales como mínimo**, y ese mínimo no depende de cuánto juegue nadie ni de cuántas fuentes de XP se añadan mañana — que es lo que hace segura a cualquier fuente nueva, la Torre incluida. ⚠ **La vía Luna premia solo en los niveles pares por una cuenta, no por tacañería**: 50 cosméticos serían 60.000 de valor de tienda por un pase de 15.000 y nadie volvería a comprar un sombrero suelto; con 25 devuelve 2,1× y la tienda sigue teniendo sentido. ⚠ **Los importes son provisionales**, como todos los de este proyecto, y hay exactamente cuatro palancas: `PaseNivel.BASE`, `PaseNivel.PASO`, `PaseNivel.TOPE_DIARIO` y la tabla de `PaseXp`. Detalle en [pase-batalla.md](docs/economy/pase-batalla.md) |
 | D-042 | 2026-08-25 | **Los objetos del mercado se venden por ESCAPARATE y no por libro de órdenes.** Revoca la mitad de objetos de D-041 | **Decisión del usuario, tomada usándolo**: *«opciones duplicadas, botones duplicados… la idea es publicar una oferta así como en el de los Pokémon: el comprador ve la oferta, se interesa y la compra»*. **D-041 no estaba mal razonada; le faltaba un dato: cuánta gente hay.** Un libro de órdenes es el mecanismo correcto para cosas fungibles —eso sigue siendo cierto— pero **un libro necesita las dos caras pobladas para cruzar**. Con doce personas pones una orden de compra y se queda ahí hasta que alguien pase por casualidad: lo que en Albion es *liquidez*, aquí es *una lista de deseos que nadie lee*. ⚠⚠ **Y los botones duplicados no eran descuido: los pedía el diseño.** La pantalla que un libro necesita tiene **dos entradas para todo** —pestañas LIBRO/MIS ÓRDENES/HISTORIAL para mirar, y campos PRECIO/CANTIDAD con COMPRAR/VENDER para actuar—; un escaparate tiene una: publicas, o compras. **Lo que se gana no es solo la pantalla**: funciona con poca gente, hay una sola forma de hacer cada cosa, se aprende una vez (quien sepa vender un Pokémon sabe vender una pila de piedras) y **la custodia se simplifica** — la doble custodia existía porque una orden de compra retiene *dinero*, y sin órdenes de compra esa mitad desaparece. **Lo que se pierde, y hay que decirlo**: no hay órdenes de compra («compro cobre a 20») ni precio agregado de libro; el índice de precios pasa a medir **ventas cerradas**, que es menos dato y **mejor dato** — un precio solo es información cuando alguien lo ha pagado. ⚠ `MarketService` **no se borra**: sigue escrito, probado y con sus comprobaciones, y vuelve el día que el servidor tenga gente para que un libro cruce. Lo que cambia es **por dónde entra el jugador**. Detalle en [mercado.md §2-bis](docs/trading/mercado.md) |
 | D-043 | 2026-09-04 | **El Santuario de Monumentos: nichos 3x3 con memorial (foto, titulo, historia y honores), alquilables por Plata y comprables por LunaCoins, con la foto moderada por staff** | Orden y reglas del usuario, detalle en [santuario.md](docs/world/santuario.md): alquiler 24 h por 5.000 de Plata, permanente por LunaCoins --T1 identidad, no cruza D-014, y por eso el alquiler no se devuelve al pasarse--, 1 nicho salvo CAMPEON+, 10 honores por jugador/nicho/dia sin recompensa, y la foto se sube desde el PokePad y la aprueba un staff: el cliente nunca inventa una foto (P6). El holograma se dibuja a mano sobre el proyector de cobblemon-cards, sin registrar bloque, objeto ni entidad nuevos |

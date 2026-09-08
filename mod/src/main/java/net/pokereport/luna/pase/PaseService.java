@@ -47,6 +47,12 @@ public final class PaseService {
 
     private final Database db;
 
+    /**
+     * Lo que se escribe en la columna {@code via}, que desde D-046 es siempre lo
+     * mismo: solo hay UNA via y es de pago.
+     */
+    private static final String VIA = "luna";
+
     public PaseService(Database db) {
         this.db = db;
     }
@@ -68,10 +74,10 @@ public final class PaseService {
     /**
      * Todo lo que hay que saber para dibujar el pase.
      *
-     * @param reclamadas claves {@code "<nivel>:<via>"} de lo ya cobrado
+     * @param reclamadas los NIVELES ya cobrados
      */
     public record Estado(Temporada temporada, long xp, int nivel, boolean premium,
-                         int xpHoy, int topeHoy, Set<String> reclamadas) {
+                         int xpHoy, int topeHoy, Set<Integer> reclamadas) {
     }
 
     /** Lo que ha pasado al conceder XP. */
@@ -168,17 +174,17 @@ public final class PaseService {
         }
     }
 
-    private Set<String> reclamadas(Connection c, long playerId, int temporada)
+    private Set<Integer> reclamadas(Connection c, long playerId, int temporada)
             throws SQLException {
-        Set<String> out = new LinkedHashSet<>();
+        Set<Integer> out = new LinkedHashSet<>();
         try (PreparedStatement ps = c.prepareStatement(
-                "SELECT nivel, via FROM pase_reclamo "
+                "SELECT nivel FROM pase_reclamo "
               + "WHERE player_id = ? AND temporada = ?")) {
             ps.setLong(1, playerId);
             ps.setInt(2, temporada);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    out.add(rs.getInt(1) + ":" + rs.getString(2));
+                    out.add(rs.getInt(1));
                 }
             }
         }
@@ -345,7 +351,7 @@ public final class PaseService {
                 }
 
                 net.pokereport.luna.LunaEternal.economy().applyInTransaction(
-                        c, playerId, Currency.REPORTCOIN, -PaseCatalogo.PRECIO_LUNA,
+                        c, playerId, Currency.REPORTCOIN, -PaseCatalogo.PRECIO,
                         "pase_luna", "pase", (long) t.numero(), clave);
 
                 try (PreparedStatement ps = c.prepareStatement(
@@ -392,7 +398,7 @@ public final class PaseService {
     // ------------------------------------------------------------- reclamos
 
     /** Un premio ya apuntado como cobrado y listo para entregar. */
-    public record Cobro(int nivel, String via, Recompensa recompensa) {
+    public record Cobro(int nivel, Recompensa recompensa) {
     }
 
     /**
@@ -405,45 +411,40 @@ public final class PaseService {
      * apuntar) un fallo entre los dos pasos regala el premio otra vez, que es
      * la misma decision que ya tomo {@code StarterService}.
      *
-     * <p>&#9888; La Plata y las llaves se entregan AQUI, dentro de la misma
-     * transaccion (R3). Los objetos y los cosmeticos no pueden: un inventario
-     * no es una tabla. Se entregan despues del commit y con {@code offerOrDrop},
-     * que no puede fallar &mdash; lo que no cabe cae al suelo.
+     * <p>&#9888;&#9888; Y DESDE D-046 NADA SE ENTREGA DENTRO DE LA TRANSACCION,
+     * porque ya no hay premios de moneda: los cien niveles dan <b>objetos o
+     * Pokemon</b>, y ninguno de los dos es una tabla. Se entregan despues del
+     * commit &mdash; los objetos con {@code offerOrDrop}, que no puede fallar, y
+     * los Pokemon por el almacen de Cobblemon.
      *
      * @return {@code null} si no habia nada que cobrar o ya estaba cobrado
      */
-    public Cobro reclamar(long playerId, int nivel, String via) throws SQLException {
-        var uno = reclamarVarios(playerId, List.of(new int[]{nivel}), via);
+    public Cobro reclamar(long playerId, int nivel) throws SQLException {
+        var uno = reclamarVarios(playerId, List.of(nivel));
         return uno.isEmpty() ? null : uno.get(0);
     }
 
     /**
      * Cobra TODO lo que este disponible y no cobrado.
      *
-     * <p>Va en una sola transaccion: cobrar veinte premios en veinte
-     * transacciones deja veinte formas de quedarse a medias.
+     * <p>Va en una sola transaccion: cobrar cuarenta premios en cuarenta
+     * transacciones deja cuarenta formas de quedarse a medias.
      */
     public List<Cobro> reclamarTodo(long playerId) throws SQLException {
         Estado e = estado(playerId);
-        List<int[]> libres = new ArrayList<>();
-        List<int[]> lunas = new ArrayList<>();
+        if (!e.premium()) {
+            return List.of();
+        }
+        List<Integer> niveles = new ArrayList<>();
         for (int n = 1; n <= e.nivel(); n++) {
-            if (PaseCatalogo.libre(n) != null
-                    && !e.reclamadas().contains(n + ":" + PaseCatalogo.LIBRE)) {
-                libres.add(new int[]{n});
-            }
-            if (e.premium() && PaseCatalogo.luna(n) != null
-                    && !e.reclamadas().contains(n + ":" + PaseCatalogo.LUNA)) {
-                lunas.add(new int[]{n});
+            if (PaseCatalogo.de(n) != null && !e.reclamadas().contains(n)) {
+                niveles.add(n);
             }
         }
-        List<Cobro> out = new ArrayList<>();
-        out.addAll(reclamarVarios(playerId, libres, PaseCatalogo.LIBRE));
-        out.addAll(reclamarVarios(playerId, lunas, PaseCatalogo.LUNA));
-        return out;
+        return reclamarVarios(playerId, niveles);
     }
 
-    private List<Cobro> reclamarVarios(long playerId, List<int[]> niveles, String via)
+    private List<Cobro> reclamarVarios(long playerId, List<Integer> niveles)
             throws SQLException {
         List<Cobro> out = new ArrayList<>();
         if (niveles.isEmpty()) {
@@ -467,22 +468,25 @@ public final class PaseService {
                     }
                 }
             }
+            // ⚠⚠ SIN EL PASE NO SE COBRA NADA (D-046). La XP se sigue ganando
+            //    --y el nivel sube-- para que comprarlo a mitad de temporada
+            //    abra de golpe todo lo que ya se tenia; lo que el pase compra
+            //    es el derecho a cobrar, no el derecho a progresar.
+            if (!premium) {
+                return out;
+            }
             int nivelActual = PaseNivel.nivelDe(xp);
 
             c.setAutoCommit(false);
             try {
-                for (int[] par : niveles) {
-                    int nivel = par[0];
+                for (int nivel : niveles) {
                     // P6: el cliente manda el nivel, el servidor decide si le
-                    // toca. Sin esto, un cliente modificado pide el nivel 50 el
-                    // primer dia y se lleva la Master Ball.
+                    // toca. Sin esto, un cliente modificado pide el nivel 100 el
+                    // primer dia y se lleva el Charizard shiny.
                     if (nivel > nivelActual) {
                         continue;
                     }
-                    if (PaseCatalogo.LUNA.equals(via) && !premium) {
-                        continue;
-                    }
-                    Recompensa r = PaseCatalogo.de(nivel, via);
+                    Recompensa r = PaseCatalogo.de(nivel);
                     if (r == null) {
                         continue;
                     }
@@ -493,7 +497,13 @@ public final class PaseService {
                         ps.setLong(1, playerId);
                         ps.setInt(2, t.numero());
                         ps.setInt(3, nivel);
-                        ps.setString(4, via);
+                        // ⚠ La columna `via` se queda con un valor fijo. Sobra
+                        //   desde D-046, y quitarla seria una migracion que
+                        //   reescribe una tabla viva para ahorrar ocho bytes por
+                        //   fila. La clave primaria sigue siendo la que corta el
+                        //   doble cobro; que lleve una columna constante dentro
+                        //   no cambia nada.
+                        ps.setString(4, VIA);
                         filas = ps.executeUpdate();
                     }
                     // INSERT IGNORE devuelve 0 si ya estaba: el premio ya se
@@ -501,18 +511,7 @@ public final class PaseService {
                     if (filas == 0) {
                         continue;
                     }
-                    switch (r.tipo()) {
-                        case PLATA -> net.pokereport.luna.LunaEternal.economy()
-                                .applyInTransaction(c, playerId, Currency.POKEDOLLAR,
-                                        r.cantidad(), "pase_premio", "pase",
-                                        (long) t.numero(),
-                                        "pase:" + playerId + ":" + t.numero()
-                                                + ":" + nivel + ":" + via);
-                        case LLAVE -> net.pokereport.luna.LunaEternal.crates()
-                                .darLlaves(c, playerId, r.id(), r.cantidad());
-                        default -> { }
-                    }
-                    out.add(new Cobro(nivel, via, r));
+                    out.add(new Cobro(nivel, r));
                 }
                 c.commit();
             } catch (Exception e) {

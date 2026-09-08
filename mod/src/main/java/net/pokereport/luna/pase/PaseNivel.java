@@ -16,10 +16,10 @@ package net.pokereport.luna.pase;
  *
  * <pre>
  *   coste(n)     = BASE + PASO * n        XP para pasar del nivel n al n+1
- *   total(50)    = 39.500 XP
- *   tope diario  = 900 XP
+ *   total(100)   = 53.700 XP
+ *   tope diario  = 1.200 XP
  *   ────────────────────────────────────────────────────────────────────
- *   39.500 / 900 = 43,9  ->  MINIMO 44 DIAS NATURALES
+ *   53.700 / 1.200 = 44,75  ->  MINIMO 45 DIAS NATURALES
  * </pre>
  *
  * <p>Y ese minimo <b>no depende de cuanto juegue nadie</b>. Por muchas horas
@@ -29,16 +29,30 @@ package net.pokereport.luna.pase;
  * reparte el tope, no lo crea. La temporada dura 60 dias, asi que quedan 16
  * dias de holgura para quien no juegue a diario.
  *
+ * <p>&#9888;&#9888; Y CON EL PASE DE PAGO ESO IMPORTA MAS, NO MENOS: quien ha
+ * pagado espera poder terminarlo, asi que la temporada tiene que dar de sobra
+ * para los 45 dias. Pero <b>tampoco puede acabarse en una semana</b>, que es lo
+ * que el usuario pidio -- si no, el pase deja de ser una temporada y pasa a ser
+ * una compra que se agota el primer fin de semana.
+ *
  * <p><b>Esto es lo que hace segura a cualquier fuente nueva.</b> Sin el tope,
  * cada vez que se añadiera una forma de ganar XP habria que recalcular el pase
  * entero; con el, la pregunta es solo si esa fuente es la mas comoda del dia.
  *
- * <h2>Por que 50 niveles y una curva creciente</h2>
+ * <h2>Por que 100 niveles y una curva creciente</h2>
  *
- * Lineal creciente ({@code 300 + 20n}) y no exponencial: con una exponencial
+ * Cien porque lo pidio el usuario, y porque con una sola via de pago cada nivel
+ * tiene que llevar algo: cincuenta premios en una temporada de dos meses se
+ * quedan cortos para lo que cuesta el pase.
+ *
+ * <p>Lineal creciente ({@code 240 + 6n}) y no exponencial: con una exponencial
  * los ultimos niveles se vuelven inalcanzables y el pase se abandona a la
  * mitad, que es lo contrario de lo que hace un pase. Aqui el ultimo nivel
- * cuesta 1.280 y el primero 300 — cuatro veces mas, no cien.
+ * cuesta 834 y el primero 240 — tres veces y media, no cien.
+ *
+ * <p>&#9888; Y el PASO baja de 20 a 6 al doblar los niveles: con 20 el nivel
+ * 100 costaria 2.220 y el pase entero 129.000 XP, o sea <b>107 dias</b> — mas
+ * que dos temporadas.
  */
 public final class PaseNivel {
 
@@ -46,13 +60,13 @@ public final class PaseNivel {
     }
 
     /** Niveles del pase. El 0 es «recien empezado» y no da nada. */
-    public static final int MAX = 50;
+    public static final int MAX = 100;
 
     /** Lo que cuesta el primer nivel. */
-    public static final long BASE = 300;
+    public static final long BASE = 240;
 
     /** Cuanto sube el coste por cada nivel. */
-    public static final long PASO = 20;
+    public static final long PASO = 6;
 
     /**
      * Tope de XP del pase que se puede ganar en un dia.
@@ -61,7 +75,7 @@ public final class PaseNivel {
      * XP de oficio, misiones y todo lo demas. Lo unico que se para es la barra
      * del pase, y la pantalla lo dice con todas las letras.
      */
-    public static final int TOPE_DIARIO = 900;
+    public static final int TOPE_DIARIO = 1_200;
 
     /**
      * Cuantos dias de tope se pueden acumular sin jugar.

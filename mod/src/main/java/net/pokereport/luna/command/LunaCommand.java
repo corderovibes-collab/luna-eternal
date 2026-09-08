@@ -1544,11 +1544,14 @@ public final class LunaCommand {
                         net.pokereport.luna.pase.PaseNivel.TOPE_DIARIO,
                         net.pokereport.luna.pase.PaseNivel.diasMinimos());
                 String linea3 = String.format(
-                        "\u00a77Via Luna %,d LunaCoins \u00a78\u00b7 \u00a77vale %,d en tienda "
-                        + "\u00a78\u00b7 \u00a77via libre %,d de Plata",
-                        net.pokereport.luna.pase.PaseCatalogo.PRECIO_LUNA,
-                        net.pokereport.luna.pase.PaseCatalogo.valorTiendaLuna(),
-                        net.pokereport.luna.pase.PaseCatalogo.plataDeLaViaLibre());
+                        "\u00a77Precio %,d LunaCoins \u00a78\u00b7 \u00a77%d Pokemon "
+                        + "\u00a78\u00b7 \u00a77%d legendarias, %d epicas",
+                        net.pokereport.luna.pase.PaseCatalogo.PRECIO,
+                        net.pokereport.luna.pase.PaseCatalogo.cuantosPokemon(),
+                        net.pokereport.luna.pase.PaseCatalogo.cuantosDe(
+                                net.pokereport.luna.pase.Recompensa.Rareza.LEGENDARIA),
+                        net.pokereport.luna.pase.PaseCatalogo.cuantosDe(
+                                net.pokereport.luna.pase.Recompensa.Rareza.EPICA));
                 src.getServer().execute(() -> {
                     src.sendFeedback(() -> Text.literal(linea1), false);
                     src.sendFeedback(() -> Text.literal(linea2), false);

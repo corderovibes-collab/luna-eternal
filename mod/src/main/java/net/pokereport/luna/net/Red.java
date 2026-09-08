@@ -2234,20 +2234,18 @@ public class Red implements ModInitializer {
      * Lo que se puede hacer con el pase: {@code comprar}, {@code reclamar} o
      * {@code reclamar_todo}.
      *
-     * <p>&#9888;&#9888; NO VIAJA NI EL PRECIO NI LA RECOMPENSA: viaja el NIVEL y
-     * la VIA, y el servidor mira su propio catalogo. Es lo mismo que ya hace la
+     * <p>&#9888;&#9888; NO VIAJA NI EL PRECIO NI LA RECOMPENSA: viaja el NIVEL, y
+     * el servidor mira su propio catalogo. Es lo mismo que ya hace la
      * tienda, y por lo mismo &mdash; si el premio viniera del cliente, un
      * cliente modificado pediria la Master Ball del nivel 50 el primer dia.
      */
-    public record AccionPase(String accion, int nivel, String via)
-            implements CustomPayload {
+    public record AccionPase(String accion, int nivel) implements CustomPayload {
         public static final Id<AccionPase> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_pase"));
         public static final PacketCodec<RegistryByteBuf, AccionPase> CODEC =
                 PacketCodec.tuple(
                         CADENA, AccionPase::accion,
                         PacketCodecs.VAR_INT, AccionPase::nivel,
-                        CADENA, AccionPase::via,
                         AccionPase::new);
 
         @Override
@@ -2268,19 +2266,22 @@ public class Red implements ModInitializer {
      * que nada obliga a coincidir. Por lo mismo el catalogo de premios tampoco
      * viaja &mdash; la pantalla lee {@code PaseCatalogo} directamente.
      *
-     * <h2>&#9888; Lo cobrado va como MASCARA DE BITS, una por via</h2>
+     * <h2>&#9888; Lo cobrado va como MASCARA DE BITS, en DOS {@code long}</h2>
      *
-     * Cincuenta niveles caben de sobra en un {@code long}, y de cada uno solo
-     * hay que saber si esta cobrado. Es la misma decision que las medallas
-     * &mdash; y aqui el bit es <b>el numero del nivel</b>, que es intrinseco y no
+     * Cien niveles no caben en uno: {@code cobradoBajo} lleva del 1 al 64 y
+     * {@code cobradoAlto} del 65 al 128. De cada nivel solo hay que saber si
+     * esta cobrado, asi que una lista de cien booleanos ocuparia cien bytes para
+     * decir lo que dicen dieciseis.
+     *
+     * <p>&#9888; Y el bit es <b>el numero del nivel</b>, que es intrinseco y no
      * una posicion en una lista: el fallo de «ganar a Brock enciende la de
-     * Misty» no puede darse porque el nivel 7 es el nivel 7 mire quien lo mire.
+     * Misty» no puede darse porque el nivel 73 es el 73 mire quien lo mire.
      *
      * @param saldoLuna las LunaCoins que tiene, para pintar el boton de comprar
      */
     public record EstadoPase(int temporada, int diasRestantes, long xp,
                              boolean premium, int xpHoy, int topeHoy,
-                             long cobradoLibre, long cobradoLuna, long saldoLuna)
+                             long cobradoBajo, long cobradoAlto, long saldoLuna)
             implements CustomPayload {
         public static final Id<EstadoPase> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_pase"));
@@ -2296,8 +2297,8 @@ public class Red implements ModInitializer {
             buf.writeBoolean(e.premium);
             buf.writeVarInt(e.xpHoy);
             buf.writeVarInt(e.topeHoy);
-            buf.writeLong(e.cobradoLibre);
-            buf.writeLong(e.cobradoLuna);
+            buf.writeLong(e.cobradoBajo);
+            buf.writeLong(e.cobradoAlto);
             buf.writeVarLong(e.saldoLuna);
         }
 
@@ -2308,14 +2309,14 @@ public class Red implements ModInitializer {
                     buf.readVarLong());
         }
 
-        /** Si ese nivel de esa via ya esta cobrado. */
-        public boolean cobrado(int nivel, String via) {
-            if (nivel < 1 || nivel > 63) {
+        /** Si ese nivel ya esta cobrado. */
+        public boolean cobrado(int nivel) {
+            int bit = nivel - 1;
+            if (bit < 0 || bit >= 128) {
                 return false;
             }
-            long mascara = net.pokereport.luna.pase.PaseCatalogo.LUNA.equals(via)
-                    ? cobradoLuna : cobradoLibre;
-            return (mascara & (1L << (nivel - 1))) != 0;
+            long mascara = bit < 64 ? cobradoBajo : cobradoAlto;
+            return (mascara & (1L << (bit % 64))) != 0;
         }
 
         @Override
@@ -4362,8 +4363,7 @@ public class Red implements ModInitializer {
                     switch (carga.accion()) {
                         case "comprar" -> comprarPase(jugador, id);
                         case "reclamar" -> {
-                            var cobro = LunaEternal.pase().reclamar(
-                                    id, carga.nivel(), carga.via());
+                            var cobro = LunaEternal.pase().reclamar(id, carga.nivel());
                             if (cobro != null) {
                                 entregarPase(jugador, id, java.util.List.of(cobro));
                             }
@@ -5467,29 +5467,29 @@ public class Red implements ModInitializer {
             long id = LunaEternal.players().resolve(
                     jugador.getUuid(), jugador.getGameProfile().getName());
             var e = svc.estado(id);
-            long libre = 0;
-            long luna = 0;
-            for (String clave : e.reclamadas()) {
-                int dosPuntos = clave.indexOf(':');
-                if (dosPuntos <= 0) {
+            // ⚠ Cien niveles no caben en un `long`: del 1 al 64 en el bajo y del
+            //   65 al 128 en el alto. Escrito con uno solo, los niveles 65+
+            //   saldrian SIEMPRE sin cobrar --el desplazamiento se envuelve-- y
+            //   el jugador podria cobrarlos dos veces... salvo porque la clave
+            //   primaria lo corta en la base. O sea: el sintoma seria un boton
+            //   verde que al pulsarlo no hace nada.
+            long bajo = 0;
+            long alto = 0;
+            for (int nivel : e.reclamadas()) {
+                int bit = nivel - 1;
+                if (bit < 0 || bit >= 128) {
                     continue;
                 }
-                int nivel = Integer.parseInt(clave.substring(0, dosPuntos));
-                if (nivel < 1 || nivel > 63) {
-                    continue;
-                }
-                long bit = 1L << (nivel - 1);
-                if (net.pokereport.luna.pase.PaseCatalogo.LUNA
-                        .equals(clave.substring(dosPuntos + 1))) {
-                    luna |= bit;
+                if (bit < 64) {
+                    bajo |= 1L << bit;
                 } else {
-                    libre |= bit;
+                    alto |= 1L << (bit - 64);
                 }
             }
             long saldo = LunaEternal.economy().balance(
                     id, net.pokereport.luna.economy.Currency.REPORTCOIN);
-            final long fl = libre;
-            final long fu = luna;
+            final long fl = bajo;
+            final long fu = alto;
             servidor.execute(() -> {
                 if (!jugador.isRemoved()) {
                     ServerPlayNetworking.send(jugador, new EstadoPase(
@@ -5524,15 +5524,17 @@ public class Red implements ModInitializer {
     /**
      * ENTREGA LO YA COBRADO.
      *
-     * <p>&#9888;&#9888; LA PLATA Y LAS LLAVES YA ESTAN DADAS: las aplico
-     * {@code PaseService} dentro de la misma transaccion que apunto el cobro
-     * (R3). Aqui solo quedan las dos cosas que no caben en una transaccion: un
-     * inventario no es una tabla, y un cosmetico vive en otra.
+     * <p>&#9888;&#9888; NADA DE ESTO CABE EN LA TRANSACCION que apunto el cobro:
+     * un inventario no es una tabla y el almacen de Cobblemon tampoco. Por eso
+     * el orden es <b>apuntar primero y entregar despues</b> (R3 no aplica aqui
+     * porque no se mueve dinero), y por eso la entrega no puede fallar:
+     * {@code offerOrDrop} tira al suelo lo que no cabe.
      *
-     * <p>&#9888; Se entrega con {@code Inventarios.meter}, que usa
-     * {@code offerOrDrop}: lo que no cabe cae al suelo y la rama de no-cupo deja
-     * de existir. Con {@code insertStack} el jugador se quedaria con la mitad de
-     * los objetos y el premio ya apuntado como cobrado.
+     * <p>&#9888;&#9888;&#9888; EL POKEMON VA AL EQUIPO, Y SI ESTA LLENO SE PIERDE
+     * &mdash; por eso se avisa. {@code getParty().add()} devuelve {@code false}
+     * con seis dentro: sin mirarlo, el jugador cobraria el Charizard shiny del
+     * nivel 100, veria «RECOGIDO» y no tendria nada. Cuando no cabe se manda al
+     * PC, que es donde Cobblemon guarda lo que no lleva encima.
      */
     private static void entregarPase(
             net.minecraft.server.network.ServerPlayerEntity jugador, long id,
@@ -5541,49 +5543,69 @@ public class Red implements ModInitializer {
             return;
         }
         var servidor = jugador.getServer();
+        if (servidor == null) {
+            return;
+        }
         for (var cobro : cobros) {
             var r = cobro.recompensa();
-            switch (r.tipo()) {
-                case OBJETO -> {
-                    var item = net.pokereport.luna.market.Inventarios.objeto(r.id());
-                    if (item == null) {
-                        // Un identificador que no existe es el fallo de las
-                        // Cazas: el jugador ha hecho el trabajo y no recibe
-                        // nada. Se anota FUERTE porque no lo va a ver nadie.
-                        LunaEternal.LOG.error("El pase promete un objeto que no "
-                                + "existe: {} (nivel {})", r.id(), cobro.nivel());
-                        continue;
+            if (r.tipo() == net.pokereport.luna.pase.Recompensa.Tipo.POKEMON) {
+                servidor.execute(() -> {
+                    if (!jugador.isRemoved()) {
+                        entregarPokemonDelPase(jugador, r);
                     }
-                    if (servidor != null) {
-                        servidor.execute(() -> {
-                            if (!jugador.isRemoved()) {
-                                net.pokereport.luna.market.Inventarios.meter(
-                                        jugador, item, r.cantidad());
-                            }
-                        });
-                    }
-                }
-                case COSMETICO -> {
-                    try {
-                        LunaEternal.cosmetics().conceder(id, r.id(), "evento");
-                    } catch (Exception e) {
-                        LunaEternal.LOG.error("No se pudo conceder el cosmetico {} "
-                                + "del pase", r.id(), e);
-                    }
-                }
-                default -> { }
+                });
+                continue;
             }
-        }
-        if (servidor != null) {
+            var item = net.pokereport.luna.market.Inventarios.objeto(r.id());
+            if (item == null) {
+                // Un identificador que no existe es el fallo de las Cazas: el
+                // jugador ha PAGADO el pase y no recibe nada. Se anota FUERTE.
+                LunaEternal.LOG.error("El pase promete un objeto que no existe: "
+                        + "{} (nivel {})", r.id(), cobro.nivel());
+                continue;
+            }
             servidor.execute(() -> {
                 if (!jugador.isRemoved()) {
-                    net.pokereport.luna.ui.Aviso.logro(jugador, "PASE DE BATALLA",
-                            cobros.size() == 1
-                                    ? "Premio del nivel " + cobros.get(0).nivel()
-                                    : cobros.size() + " premios recogidos",
-                            "minecraft:nether_star");
+                    net.pokereport.luna.market.Inventarios.meter(
+                            jugador, item, r.cantidad());
                 }
             });
+        }
+        servidor.execute(() -> {
+            if (!jugador.isRemoved()) {
+                net.pokereport.luna.ui.Aviso.logro(jugador, "PASE DE BATALLA",
+                        cobros.size() == 1
+                                ? "Premio del nivel " + cobros.get(0).nivel()
+                                : cobros.size() + " premios recogidos",
+                        "minecraft:nether_star");
+            }
+        });
+    }
+
+    /**
+     * Mete el Pokemon en el equipo, y en el PC si el equipo esta lleno.
+     *
+     * <p>&#9888; Las propiedades las compone {@code Recompensa.propiedades()} y
+     * no este metodo: si el formato viviera aqui y alli, un desacuerdo daria un
+     * Charizard de nivel 1 sin shiny <b>sin ningun error</b>.
+     */
+    private static void entregarPokemonDelPase(
+            net.minecraft.server.network.ServerPlayerEntity jugador,
+            net.pokereport.luna.pase.Recompensa r) {
+        try {
+            var props = com.cobblemon.mod.common.api.pokemon.PokemonProperties
+                    .Companion.parse(r.propiedades());
+            var almacen = com.cobblemon.mod.common.Cobblemon.INSTANCE.getStorage();
+            var bicho = props.create();
+            if (!almacen.getParty(jugador).add(bicho)) {
+                almacen.getPC(jugador).add(bicho);
+                jugador.sendMessage(net.minecraft.text.Text.literal(
+                        LunaEternal.PREFIJO + "§eTu equipo estaba lleno: "
+                        + "§ftu premio ha ido al PC."), false);
+            }
+        } catch (Throwable t) {
+            LunaEternal.LOG.error("No se pudo entregar el Pokemon del pase ({})",
+                    r.propiedades(), t);
         }
     }
 

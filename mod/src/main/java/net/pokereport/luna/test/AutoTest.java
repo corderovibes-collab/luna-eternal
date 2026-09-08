@@ -103,6 +103,7 @@ public final class AutoTest {
             testSubidas();
             testNichoConfig();
             testPase(a);
+            testInicial();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -4234,6 +4235,73 @@ public final class AutoTest {
      * 15.000 LunaCoins, hizo el trabajo de cuarenta y cinco dias y no recibe
      * nada. Es el fallo de las Cazas y el de los 62 cosmeticos, con factura.
      */
+    /**
+     * EL INICIAL Y SU PUERTA.
+     *
+     * <p>&#9888;&#9888;&#9888; LA COMPROBACION QUE IMPORTA ES LA DE OAK. Desde el
+     * 2026-09-08 la pantalla <b>ya no se abre sola</b>: la unica forma de elegir
+     * inicial dentro del juego es hacerle clic derecho al Profesor Oak, y Oak es
+     * un entrenador de rctmod. Si ese identificador dejara de existir --porque
+     * el mod lo renombre, o porque alguien lo escriba mal-- <b>no habria ningun
+     * error</b>: habria un muñeco generico, o ninguno, y un jugador nuevo se
+     * quedaria sin forma de empezar a jugar. Es el fallo de los 62 cosmeticos
+     * que no existian, aplicado a la puerta de entrada del servidor.
+     *
+     * <p>&#9888;&#9888; Y LA REJILLA ES DE 3x2, O SEA SEIS HUECOS EXACTOS. Un
+     * septimo inicial seria <b>inalcanzable</b> y no daria ningun error: es la
+     * SEXTA vez que este proyecto tropieza con una rejilla que cabia por
+     * casualidad --los 15 iconos del Pad, los 62 cosmeticos, las 8 paradas, las
+     * 23 medallas de la Liga y las categorias de la tienda--.
+     */
+    private void testInicial() {
+        var todos = net.pokereport.luna.starter.StarterService.todos();
+
+        check("la rejilla del inicial tiene SEIS huecos y hay seis iniciales",
+              todos.size() == 6);
+
+        // ⚠ Las especies se preguntan A COBBLEMON, no a una lista nuestra: una
+        //   lista repetiria el mismo error que intenta cazar.
+        boolean existen = true;
+        for (var i : todos) {
+            if (com.cobblemon.mod.common.api.pokemon.PokemonSpecies.INSTANCE
+                    .getByName(i.especie()) == null) {
+                existen = false;
+                LunaEternal.LOG.error("El inicial '{}' NO EXISTE en Cobblemon",
+                        i.especie());
+            }
+        }
+        check("TODO INICIAL EXISTE EN COBBLEMON", existen);
+
+        // ⚠⚠ Tres y tres. La pantalla pone una region por FILA, asi que un
+        //    reparto de 4+2 dejaria una fila coja y la otra con un hueco vacio
+        //    -- sin dar ningun error, solo feo y confuso.
+        check("tres iniciales de Kanto",
+              net.pokereport.luna.starter.StarterService.KANTO.size() == 3);
+        check("tres iniciales de Johto",
+              net.pokereport.luna.starter.StarterService.JOHTO.size() == 3);
+
+        // ⚠ Sin especies repetidas: `porEspecie` busca por nombre, asi que dos
+        //   iguales harian que elegir una entregara la otra.
+        var vistas = new java.util.HashSet<String>();
+        boolean repetidas = false;
+        for (var i : todos) {
+            if (!vistas.add(i.especie())) {
+                repetidas = true;
+            }
+        }
+        check("ningun inicial esta repetido", !repetidas);
+
+        // ⚠⚠⚠ Y LA PUERTA. Sin esto no se puede empezar a jugar.
+        boolean oak = net.pokereport.luna.starter.OakNpc.idValido();
+        if (!oak) {
+            LunaEternal.LOG.error("EL ENTRENADOR DE OAK ('{}') NO EXISTE: nadie "
+                    + "puede elegir inicial desde el juego. Se entrega a mano "
+                    + "con /luna inicial dar <jugador> <especie>.",
+                    net.pokereport.luna.starter.OakNpc.ENTRENADOR);
+        }
+        check("EL ENTRENADOR DE OAK EXISTE (sin el no hay forma de elegir)", oak);
+    }
+
     private void testPase(long jugador) throws Exception {
         // ---- la curva: funcion pura, sin base --------------------------
         long suma = 0;

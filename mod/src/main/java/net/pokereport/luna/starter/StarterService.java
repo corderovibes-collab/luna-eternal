@@ -56,6 +56,20 @@ public final class StarterService {
     private StarterService() {}
 
     /** Busca un inicial por su especie. {@code null} si no está en el catálogo. */
+    /**
+     * Los seis, en un solo sitio.
+     *
+     * <p>&#9888; Lo usan el comando y el autotest. Recorrer {@code KANTO} y
+     * {@code JOHTO} a mano en cada sitio es la lista paralela que ya mordio con
+     * las medallas: el dia que entre una tercera region, uno de los sitios se
+     * queda corto y no da ningun error.
+     */
+    public static List<Inicial> todos() {
+        List<Inicial> out = new java.util.ArrayList<>(KANTO);
+        out.addAll(JOHTO);
+        return List.copyOf(out);
+    }
+
     public static Inicial porEspecie(String especie) {
         for (Inicial i : KANTO) if (i.especie().equals(especie)) return i;
         for (Inicial i : JOHTO) if (i.especie().equals(especie)) return i;

@@ -117,8 +117,20 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // la arena. Va aqui --y no en SERVER_STARTED-- porque
             // `UseEntityCallback` se registra una vez, como los de arriba.
             net.pokereport.luna.gym.Combate.registrarClic();
+            // ⚠⚠⚠ OAK VA DENTRO DE ESTA GUARDA, Y ESO TIENE UNA CONSECUENCIA:
+            //    es un `TrainerMob` de rctmod --su piel y su ficha vienen en ese
+            //    mod-- asi que sin rctmod no hay Oak, y sin Oak NO HAY FORMA DE
+            //    ELEGIR INICIAL desde el juego. Antes la pantalla se abria sola
+            //    y no dependia de nadie.
+            //    ⚠⚠ La salida no es dejarlo fuera de la guarda --se caeria al
+            //       arrancar con un NoClassDefFoundError que no nombra a
+            //       rctmod-- sino `/luna inicial abrir <jugador>`, que no toca
+            //       rctmod y sirve para desatascar a alguien.
+            net.pokereport.luna.starter.OakNpc.registrarClic();
         } else {
-            LOG.warn("rctmod no esta instalado: los gimnasios quedan apagados");
+            LOG.warn("rctmod no esta instalado: los gimnasios quedan apagados, "
+                    + "y con ellos el Profesor Oak. El inicial solo se puede "
+                    + "entregar con /luna inicial");
         }
 
         // ⚠⚠⚠ MISMA GUARDA QUE ARRIBA, Y POR EL MISMO MOTIVO: `HabilidadService`
@@ -240,6 +252,43 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                             }
                         }));
             }
+            // ⚠⚠⚠ EL AVISO DE QUE HAY QUE IR A VER A OAK, Y ES LA MITAD DE
+            //    QUITAR LA APERTURA AUTOMATICA. Antes la pantalla del inicial
+            //    se abria sola al entrar --imposible no verla--. Hoy hay que ir
+            //    al laboratorio, asi que si nadie lo dice, un jugador nuevo se
+            //    queda dentro del servidor sin Pokemon y sin ninguna pista.
+            //    Eso es exactamente el bloqueo que este sistema vino a resolver.
+            //    ⚠⚠ Va con RETRASO (60 ticks): al entrar, el chat se lo come el
+            //       mensaje de conexion, las reglas y lo que escriban los demas.
+            //       Tres segundos despues se lee.
+            submit(() -> {
+                try {
+                    var perfilO = player.getGameProfile();
+                    long id = players.resolve(perfilO.getId(), perfilO.getName());
+                    if (net.pokereport.luna.starter.StarterService.yaEligio(id)) {
+                        return;
+                    }
+                    // ⚠ `Programador` y no un hilo: corre en el TICK del
+                    //   servidor, que es donde se puede tocar a un jugador. Y
+                    //   una tarea suya que falle no cancela a la siguiente --eso
+                    //   lo vigila el autotest desde los gimnasios--.
+                    net.pokereport.luna.gym.Programador.en(60, () -> {
+                        if (player.isRemoved()) {
+                            return;
+                        }
+                        player.sendMessage(net.minecraft.text.Text.literal(
+                                "§6§lPROF. OAK §8» §fTodavia no tienes tu primer "
+                                + "Pokemon."), false);
+                        player.sendMessage(net.minecraft.text.Text.literal(
+                                "§7Ven a verme al §eLaboratorio§7 de la ciudadela "
+                                + "y elige. §8(clic derecho)"), false);
+                    });
+                } catch (Exception e) {
+                    LOG.warn("No se pudo avisar del inicial a {}: {}",
+                            player.getGameProfile().getName(), e.toString());
+                }
+            });
+
             // ⚠ El tiempo de juego de hoy: se lee al entrar y se lleva en
             //   memoria. La pantalla de Tesoros ensena cuanto falta para la
             //   llave diaria, y eso se pregunta EN EL HILO DEL SERVIDOR.

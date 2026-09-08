@@ -15,30 +15,43 @@ import net.pokereport.luna.client.EstadoCliente;
 import net.pokereport.luna.net.Red;
 
 /**
- * ELEGIR EL PRIMER COMPAÑERO.
+ * ELEGIR EL PRIMER COMPAÑERO, DELANTE DEL PROFESOR OAK.
  *
- * <h2>Por qué esta pantalla desbloquea el proyecto</h2>
+ * <h2>&#9888;&#9888;&#9888; LA PANTALLA YA NO SE ABRE SOLA, Y ESO CAMBIA SU
+ * DISEÑO ENTERO</h2>
  *
- * {@code feature-gap-analysis.md} lo describió hace meses y seguía abierto: <b>un
- * jugador nuevo no tenía ningún Pokémon</b>, y sin Pokémon nada de lo construido
- * servía — ni capturar, ni la Pokédex, ni la tienda, ni el GTS, ni los
- * cosméticos. La lógica ({@code StarterService}) estaba escrita y probada desde
- * el principio; lo que faltaba era <b>quién la llamara</b>.
+ * Hasta el 2026-09-08 esta pantalla <b>aparecia al entrar al servidor</b> y no se
+ * podia cerrar. Las dos cosas eran correctas entonces y estaban razonadas: <i>«un
+ * icono mas en el PokePad no habria servido, quien acaba de entrar no sabe que el
+ * PokePad existe»</i>, y <i>«cerrarla deja al jugador donde estaba el problema,
+ * dentro del servidor y sin nada que hacer»</i>.
  *
- * <h2>⚠ Se abre SOLA, y esa es la mitad del arreglo</h2>
+ * <p>Hoy la abre {@code OakNpc} con un clic derecho, y eso <b>deshace las dos</b>:
  *
- * Un icono más en el PokePad no habría servido: quien acaba de entrar no sabe que
- * el PokePad existe. La pantalla aparece al entrar si el servidor dice que aún no
- * has elegido, y <b>el servidor es quien lo dice</b>: la verdad está en
- * {@code kit_claim}, no en «¿tengo algún Pokémon?» —que daría falso positivo con
- * quien guarde su equipo en el PC—.
+ * <ul>
+ *   <li>Ya no hace falta que se abra sola, porque <b>hay algo que mirar</b>: un
+ *       señor con bata, un cartel encima y un mensaje al entrar.</li>
+ *   <li>&#9888;&#9888; Y <b>YA SE PUEDE CERRAR</b>. Aquella pantalla no se podia
+ *       cerrar porque <b>no habia forma de volver</b>; hoy la hay --Oak sigue
+ *       ahi-- asi que atrapar al jugador ha dejado de proteger a nadie. Con eso
+ *       se va de golpe toda la familia de fallos de «me quede encerrado».</li>
+ * </ul>
  *
- * <h2>⚠ NO se puede cerrar sin elegir</h2>
+ * <h2>&#9888;&#9888; LA REJILLA SIGNIFICA ALGO: FILA = REGION, COLUMNA = TIPO</h2>
  *
- * Es la única pantalla del proyecto con {@code shouldCloseOnEsc()} en falso, y
- * está justificado: cerrarla deja al jugador exactamente donde estaba el problema
- * —dentro del servidor y sin nada que hacer— y sin ninguna pista de cómo volver.
- * Elegir cuesta un clic; quedarse fuera cuesta la partida.
+ * Seis tarjetas puestas en fila serian seis tarjetas. Puestas asi, la pantalla
+ * <b>ya ha explicado el juego</b> antes de que nadie lea una palabra: arriba
+ * Kanto, abajo Johto, y las tres columnas son siempre Planta, Fuego y Agua. Es
+ * la misma razon por la que cada parada de Viajes tiene su color.
+ *
+ * <h2>&#9888;&#9888; Y ELEGIR PIDE CONFIRMACION</h2>
+ *
+ * Peticion del usuario, y ademas es la unica decision permanente que toma un
+ * jugador en su primer minuto de partida. El velo de confirmacion se dibuja
+ * DESPUES de {@code ctx.draw()} y es OPACO: las dos cosas hacen falta, y la
+ * primera no es evidente --{@code DrawContext} amontona el texto en una capa que
+ * se vuelca la ultima, asi que un relleno pedido despues acaba DEBAJO de las
+ * letras de las tarjetas--. Es la leccion del panel de ayuda del Pase.
  */
 public class InicialScreen extends Screen {
 
@@ -50,39 +63,59 @@ public class InicialScreen extends Screen {
     private static final int PANT_X = 460, PANT_Y = 204, PANT_W = 801, PANT_H = 494;
 
     private static final int COLS = 3, FILAS = 2;
-    private static final int MARGEN = 16, AIRE = 14;
+    private static final int MARGEN = 14, AIRE = 12;
 
-    private static final int CELDA_FONDO = 0xFFBFCBE8;
-    private static final int CELDA_BORDE = 0xFF7C89B4;
-    private static final int CELDA_ENCIMA = 0xFFFFF0DC;
-    private static final int BORDE_ENCIMA = 0xFFF35C0C;
-    private static final int TEXTO_OSCURO = 0xFF16203A;
-    private static final int TEXTO_SUAVE = 0xFF5A668C;
-    private static final int TEXTO_CONTORNO = 0xFFF2F6FF;
-    private static final int SEPARADOR = 0xFF3C4250;
+    // ---- la paleta ---------------------------------------------------------
+    //
+    // ⚠⚠ ES OSCURA, Y ES UN CAMBIO DELIBERADO. La version anterior pintaba
+    //    celdas CLARAS sobre el chasis claro y le ponia al texto un contorno de
+    //    cuatro copias desplazadas para que se leyera. Eso es justo lo que
+    //    CLAUDE.md tiene escrito que EMPASTA en textos pequeños. Sobre un fondo
+    //    oscuro el contorno sobra: el contraste lo da el fondo.
+
+    private static final int FONDO = 0xFF0E1526;
+    private static final int CARTA = 0xFF17223C;
+    private static final int CARTA_ENCIMA = 0xFF1F2E52;
+    private static final int BORDE = 0xFF35496A;
+    private static final int TEXTO = 0xFFE8EEFA;
+    private static final int TEXTO_SUAVE = 0xFF8FA0C8;
+    private static final int ORO = 0xFFFFD65C;
+    private static final int VERDE = 0xFF57C56A;
+
+    /** Los tres tipos de un inicial, y nada mas. Ver {@link #colorTipo}. */
+    private static final int T_PLANTA = 0xFF57C56A;
+    private static final int T_FUEGO = 0xFFF2703A;
+    private static final int T_AGUA = 0xFF4FA8FF;
 
     private float k;
     private int ancho, alto, x0, y0;
     private List<Red.OpcionInicial> opciones = List.of();
     private Red.OpcionInicial elegida;
-    /** Se pone al pulsar: impide mandar dos veces por doble clic. */
+
+    /** Se pone al pulsar ELEGIR: el velo de «¿seguro?». */
+    private boolean confirmando;
+    /** Se pone al confirmar: impide mandar dos veces por doble clic. */
     private boolean enviado;
-    /** Cuándo se pulsó, para no esperar eternamente. Ver `render`. */
+    /** Cuando se pulso, para no esperar eternamente. */
     private long pulsadoEn;
     private boolean falloEntrega;
+
+    /** Para las animaciones. Se pone en {@link #init}. */
+    private long abiertoEn;
+
+    private final Efectos.Chispas chispas = new Efectos.Chispas();
 
     /**
      * Lo que se espera a una respuesta antes de rendirse.
      *
-     * <p>⚠⚠ ESTO EXISTE PORQUE LA PANTALLA DEJO A UN JUGADOR ATRAPADO. El
-     * servidor no contestaba —{@code conceder} es asíncrono y se le preguntaba
-     * antes de tiempo— y aquí se quedaba «ENTREGANDO…» para siempre, sin poder
-     * cerrarse.
+     * <p>&#9888;&#9888; ESTO EXISTE PORQUE LA PANTALLA DEJO A UN JUGADOR
+     * ATRAPADO: {@code conceder} es asincrono, se le preguntaba antes de tiempo y
+     * aqui se quedaba «ENTREGANDO…» para siempre.
      *
-     * <p>La causa está arreglada, y aun así esto se queda: <b>una pantalla que no
-     * se puede cerrar tiene que tener siempre una salida.</b> El fallo de hoy era
-     * mío, pero el siguiente puede ser un corte de red, y el resultado para quien
-     * está dentro es el mismo — se queda mirando una palabra.
+     * <p>La causa esta arreglada y aun asi esto se queda, aunque hoy la pantalla
+     * ya se pueda cerrar: <b>un boton que no responde y no dice por que sigue
+     * siendo un callejon</b>. El fallo de entonces era mio, el siguiente puede ser
+     * un corte de red, y desde dentro se ven igual.
      */
     private static final long ESPERA_MAX_MS = 6000;
 
@@ -93,14 +126,13 @@ public class InicialScreen extends Screen {
     @Override
     protected void init() {
         recalcular();
+        abiertoEn = System.currentTimeMillis();
         ClientPlayNetworking.send(new Red.PedirInicial());
     }
 
     /**
-     * ⚠ Delegado en {@link Escalado} (2026-08-26). Esto era una copia
-     *   literal en ONCE pantallas, y para entonces ya había seis
-     *   variantes distintas: cada una había envejecido por su lado sin
-     *   dar ningún error.
+     * &#9888; Delegado en {@link Escalado}: esto era una copia literal en once
+     * pantallas y ya habia envejecido en seis variantes distintas.
      */
     private void recalcular() {
         var m = Escalado.aplicar(client, width, height, CHASIS);
@@ -117,15 +149,17 @@ public class InicialScreen extends Screen {
     }
 
     /**
-     * Ver el comentario de la clase: sin inicial no hay partida.
+     * SE PUEDE CERRAR, y eso es nuevo.
      *
-     * <p>⚠ Pero SÍ se puede cerrar si la entrega ha fallado. Encerrar a alguien
-     * con un botón que no responde no le acerca a tener un inicial: solo le quita
-     * también la opción de salir y volver a entrar.
+     * <p>&#9888;&#9888;&#9888; Antes devolvia {@code false} salvo si la entrega
+     * fallaba, y estaba bien: sin inicial no habia partida <b>y no habia forma de
+     * volver a la pantalla</b>. Desde que la puerta es Oak, cerrarla no te deja
+     * sin nada -- te deja delante de un señor al que puedes volver a hacer clic.
+     * Encerrar a alguien cuando ya existe una salida no protege: molesta.
      */
     @Override
     public boolean shouldCloseOnEsc() {
-        return falloEntrega;
+        return !enviado;
     }
 
     private int px(int a) {
@@ -148,25 +182,36 @@ public class InicialScreen extends Screen {
         renderBackground(ctx, rx, ry, delta);
         leerDelServidor();
 
-        dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
-
-        // ⚠ PRIMERA PASADA: todo lo plano. Ver dibujado.md — mezclar 2D y 3D deja
-        //   el orden al azar y los modelos titilan.
-        // ⚠ Si se pulsó y no llega respuesta, se suelta el botón y se dice. El
-        //   servidor tiene que contestar en todos los caminos --entregado, ya
-        //   elegido o fallo-- así que pasar de aquí significa que algo se perdió.
+        // ⚠ Si se pulso y no llega respuesta, se suelta el boton y se dice. El
+        //   servidor contesta en los tres caminos --entregado, ya elegido o
+        //   fallo-- asi que pasar de aqui significa que algo se perdio.
         if (enviado && !falloEntrega
                 && System.currentTimeMillis() - pulsadoEn > ESPERA_MAX_MS) {
             enviado = false;
             falloEntrega = true;
         }
 
+        dibujarTextura(ctx, CHASIS, x0, y0, ancho, alto, NAT_ANCHO, NAT_ALTO);
+
+        // ⚠ PRIMERA PASADA: TODO lo plano. Mezclar 2D y 3D deja el orden al azar
+        //   y los modelos titilan. Es la regla de las 2 pasadas de dibujado.md.
         dibujarPanel(ctx, rx, ry);
-        dibujarRejilla(ctx, rx, ry);
+        dibujarRejilla(ctx, rx, ry, delta);
 
         ctx.draw();
 
+        // SEGUNDA PASADA: solo modelos.
         dibujarModelos(ctx, delta, rx, ry);
+
+        if (confirmando) {
+            // ⚠⚠⚠ `ctx.draw()` OTRA VEZ, Y NO SOBRA. El texto de las tarjetas
+            //    vive en una capa que se vuelca la ULTIMA: sin vaciar aqui, el
+            //    velo se pinta y las letras de debajo salen ENCIMA de el. No es
+            //    transparencia, es orden de capas -- costo una captura del
+            //    usuario en la pantalla del Pase.
+            ctx.draw();
+            dibujarConfirmacion(ctx, rx, ry);
+        }
     }
 
     private void leerDelServidor() {
@@ -175,7 +220,7 @@ public class InicialScreen extends Screen {
             return;
         }
         // ⚠ SI YA ELIGIO, SE CIERRA SOLA. Es lo que hace que al pulsar no haga
-        //   falta adivinar si funcionó: se espera a que el servidor lo confirme.
+        //   falta adivinar si funciono: se espera a que el servidor lo confirme.
         if (i.yaEligio()) {
             if (client != null) {
                 client.setScreen(null);
@@ -190,99 +235,209 @@ public class InicialScreen extends Screen {
         }
     }
 
+    // ---- el panel de la izquierda ------------------------------------------
+
     private void dibujarPanel(DrawContext ctx, int rx, int ry) {
+        ctx.fill(px(PANEL_X), py(PANEL_Y),
+                px(PANEL_X + PANEL_W), py(PANEL_Y + PANEL_H), FONDO);
+        marco(ctx, px(PANEL_X), py(PANEL_Y), pl(PANEL_W), pl(PANEL_H),
+                BORDE, Math.max(1, pl(2)));
+
         int cx = PANEL_X + PANEL_W / 2;
+
+        texto(ctx, Text.literal("PROFESOR OAK"), cx, PANEL_Y + 22, 20, ORO, true);
         texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.titulo"),
-                cx, PANEL_Y + 30, 26, 0xFFFFFFFF, true, false);
+                cx, PANEL_Y + 48, 27, TEXTO, true);
+
+        // La frase de Oak, o el aviso si algo fallo.
         texto(ctx, Text.translatable(falloEntrega
                         ? "pokepad.lunaeternal.inicial.fallo"
                         : "pokepad.lunaeternal.inicial.aviso"),
-                cx, PANEL_Y + 62, 17,
-                falloEntrega ? 0xFFE06060 : TEXTO_SUAVE, true, false);
+                cx, PANEL_Y + 84, 16,
+                falloEntrega ? 0xFFE06060 : TEXTO_SUAVE, true);
 
         if (elegida == null) {
             return;
         }
-        // El hueco del modelo está entre el título y la ficha. El modelo se pinta
-        // en la segunda pasada; aquí solo se reserva.
-        int y = PANEL_Y + 420;
-        separador(ctx, y - 16);
-        texto(ctx, Text.literal(elegida.nombre()), cx, y, 34, 0xFFFFD65C, true, false);
-        texto(ctx, Text.literal(elegida.tipo()), cx, y + 40, 20, 0xFF9FD0F0, true, false);
-        texto(ctx, Text.literal(elegida.region()), cx, y + 66, 18, TEXTO_SUAVE, true, false);
 
-        y += 96;
-        separador(ctx, y - 10);
-        for (String linea : partir(elegida.consejo(), PANEL_W - 44, 18)) {
-            texto(ctx, Text.literal(linea), cx, y, 18, 0xFFC9D2E6, true, false);
-            y += 22;
+        // El hueco del modelo grande: entre el titulo y la ficha. Se reserva
+        // aqui y se pinta en la segunda pasada.
+        int hueco = PANEL_Y + 112;
+        ctx.fill(px(PANEL_X + 18), py(hueco),
+                px(PANEL_X + PANEL_W - 18), py(hueco + 250), 0xFF0A1020);
+        int tipo = colorTipo(elegida.tipo());
+        Efectos.marcoVivo(ctx, px(PANEL_X + 18), py(hueco),
+                pl(PANEL_W - 36), pl(250), Math.max(1, pl(2)),
+                BORDE, tipo, Efectos.rampa(4200));
+
+        int y = PANEL_Y + 386;
+        texto(ctx, Text.literal(elegida.nombre()), cx, y, 34, ORO, true);
+        texto(ctx, Text.literal(elegida.tipo()), cx, y + 42, 20, tipo, true);
+        texto(ctx, Text.literal(elegida.region()), cx, y + 68, 17, TEXTO_SUAVE, true);
+
+        y += 100;
+        separador(ctx, y - 12);
+        for (String linea : partir(elegida.consejo(), PANEL_W - 44, 17)) {
+            texto(ctx, Text.literal(linea), cx, y, 17, 0xFFC9D2E6, true);
+            y += 21;
         }
 
         dibujarBoton(ctx, rx, ry);
     }
 
     private void dibujarBoton(DrawContext ctx, int rx, int ry) {
-        int bx = PANEL_X + 40, by = PANEL_Y + PANEL_H - 76, bw = PANEL_W - 80, bh = 46;
+        int bx = PANEL_X + 34, by = PANEL_Y + PANEL_H - 78, bw = PANEL_W - 68, bh = 50;
         boolean encima = !enviado && dentro(rx, ry, px(bx), py(by), pl(bw), pl(bh));
+
+        if (!enviado) {
+            // Un latido lento: es la accion de la pantalla y tiene que llamar.
+            Efectos.halo(ctx, px(bx), py(by), pl(bw), pl(bh),
+                    Math.max(2, pl(6)), ORO, 0.25f + 0.25f * Efectos.pulso(2000));
+        }
         ctx.fill(px(bx), py(by), px(bx + bw), py(by + bh),
-                enviado ? 0xFF6E7899 : (encima ? 0xFFFFD65C : 0xFFE8A317));
+                enviado ? 0xFF3A4358 : (encima ? 0xFFFFE08A : 0xFFE8A317));
         marco(ctx, px(bx), py(by), pl(bw), pl(bh), 0xFF8A5C00, Math.max(1, pl(2)));
         texto(ctx, Text.translatable(enviado
                         ? "pokepad.lunaeternal.inicial.enviando"
                         : "pokepad.lunaeternal.inicial.elegir"),
-                PANEL_X + PANEL_W / 2, by + 13, 24,
-                enviado ? 0xFFD8DEEA : 0xFF2A1C00, true, false);
+                PANEL_X + PANEL_W / 2, by + 15, 24,
+                enviado ? 0xFFAAB4C8 : 0xFF2A1C00, true);
     }
 
-    private void dibujarRejilla(DrawContext ctx, int rx, int ry) {
+    // ---- la rejilla --------------------------------------------------------
+
+    private void dibujarRejilla(DrawContext ctx, int rx, int ry, float delta) {
         int[] c = celda();
+        // La entrada: las tarjetas caen una detras de otra. `rebote` da el
+        // pequeño rebase del final, que es lo que lo hace parecer vivo.
+        long t = System.currentTimeMillis() - abiertoEn;
+
         for (int i = 0; i < opciones.size() && i < COLS * FILAS; i++) {
+            double avance = Math.min(1.0, Math.max(0.0, (t - i * 70) / 420.0));
+            int caida = (int) Math.round((1 - Efectos.rebote(avance)) * 40);
+
             int ax = c[0] + (i % COLS) * (c[2] + AIRE);
-            int ay = c[1] + (i / COLS) * (c[3] + AIRE);
+            int ay = c[1] + (i / COLS) * (c[3] + AIRE) - caida;
             var op = opciones.get(i);
             boolean encima = dentro(rx, ry, px(ax), py(ay), pl(c[2]), pl(c[3]));
             boolean puesta = elegida != null && elegida.especie().equals(op.especie());
+            int tipo = colorTipo(op.tipo());
 
+            if (puesta) {
+                Efectos.halo(ctx, px(ax), py(ay), pl(c[2]), pl(c[3]),
+                        Math.max(2, pl(7)), tipo, 0.55f);
+            }
             ctx.fill(px(ax), py(ay), px(ax + c[2]), py(ay + c[3]),
-                    encima ? CELDA_ENCIMA : CELDA_FONDO);
-            marco(ctx, px(ax), py(ay), pl(c[2]), pl(c[3]),
-                    encima || puesta ? BORDE_ENCIMA : CELDA_BORDE,
-                    Math.max(1, pl(encima || puesta ? 4 : 2)));
+                    encima || puesta ? CARTA_ENCIMA : CARTA);
 
-            texto(ctx, Text.literal(op.nombre()), ax + c[2] / 2, ay + c[3] - 46, 22,
-                    TEXTO_OSCURO, true, true);
-            texto(ctx, Text.literal(op.tipo()), ax + c[2] / 2, ay + c[3] - 22, 16,
-                    TEXTO_SUAVE, true, true);
+            if (puesta) {
+                Efectos.marcoVivo(ctx, px(ax), py(ay), pl(c[2]), pl(c[3]),
+                        Math.max(1, pl(3)), BORDE, tipo, Efectos.rampa(2600));
+            } else {
+                marco(ctx, px(ax), py(ay), pl(c[2]), pl(c[3]),
+                        encima ? tipo : BORDE, Math.max(1, pl(encima ? 3 : 2)));
+            }
+
+            // La cinta del tipo, arriba: es lo que hace que la columna se lea
+            // como una columna sin tener que leer los nombres.
+            ctx.fill(px(ax), py(ay), px(ax + c[2]), py(ay) + pl(5), tipo);
+
+            texto(ctx, Text.literal(op.nombre()), ax + c[2] / 2, ay + c[3] - 50, 22,
+                    puesta ? ORO : TEXTO, true);
+            texto(ctx, Text.literal(op.tipo()), ax + c[2] / 2, ay + c[3] - 26, 16,
+                    tipo, true);
         }
     }
 
-    /** Segunda pasada: solo modelos. Ni un rectángulo ni una letra aquí. */
+    /** Segunda pasada: solo modelos. Ni un rectangulo ni una letra aqui. */
     private void dibujarModelos(DrawContext ctx, float delta, int rx, int ry) {
         if (elegida != null) {
-            // El grande del panel. Su clave lleva el prefijo `panel:` para que NO
-            // comparta estado de animación con la celda del mismo Pokémon: si lo
-            // compartieran, se pisarían la orientación y titilarían.
+            // ⚠ La clave lleva el prefijo `panel:` para que NO comparta estado de
+            //   animacion con la celda del mismo Pokemon: `drawProfilePokemon`
+            //   MUTA el cuaternion, asi que dos sitios con la misma clave se
+            //   pisan la orientacion y titilan. Es la regla 6 de dibujado.md.
             var id = Identifier.tryParse("cobblemon:" + elegida.especie());
             if (id != null) {
                 Mascota3D.dibujarEspecie(ctx, id, "panel:" + elegida.especie(), "",
-                        px(PANEL_X + 20), py(PANEL_Y + 96),
-                        pl(PANEL_W - 40), pl(300), 0.30f, delta, true);
+                        px(PANEL_X + 26), py(PANEL_Y + 122),
+                        pl(PANEL_W - 52), pl(232), 0.30f, delta, true);
             }
         }
         int[] c = celda();
+        long t = System.currentTimeMillis() - abiertoEn;
         for (int i = 0; i < opciones.size() && i < COLS * FILAS; i++) {
+            double avance = Math.min(1.0, Math.max(0.0, (t - i * 70) / 420.0));
+            int caida = (int) Math.round((1 - Efectos.rebote(avance)) * 40);
             int ax = c[0] + (i % COLS) * (c[2] + AIRE);
-            int ay = c[1] + (i / COLS) * (c[3] + AIRE);
+            int ay = c[1] + (i / COLS) * (c[3] + AIRE) - caida;
             var op = opciones.get(i);
             var id = Identifier.tryParse("cobblemon:" + op.especie());
             if (id == null) {
                 continue;
             }
             boolean encima = dentro(rx, ry, px(ax), py(ay), pl(c[2]), pl(c[3]));
+            boolean puesta = elegida != null && elegida.especie().equals(op.especie());
             Mascota3D.dibujarEspecie(ctx, id, "celda:" + op.especie(), "",
-                    px(ax + 8), py(ay + 8), pl(c[2] - 16), pl(c[3] - 60),
-                    0.06f, delta, encima);
+                    px(ax + 8), py(ay + 10), pl(c[2] - 16), pl(c[3] - 68),
+                    0.06f, delta, encima || puesta);
         }
+    }
+
+    // ---- el velo de confirmacion -------------------------------------------
+
+    /**
+     * &#191;SEGURO? &mdash; peticion del usuario.
+     *
+     * <p>&#9888;&#9888; EL VELO ES OPACO, no translucido. Al 95 % la rejilla se
+     * sigue adivinando debajo y el jugador no sabe si esta mirando la
+     * confirmacion o la eleccion. Y con las letras de las tarjetas volcandose la
+     * ultimas, «casi opaco» acaba siendo «se ve todo».
+     */
+    private void dibujarConfirmacion(DrawContext ctx, int rx, int ry) {
+        ctx.fill(x0, y0, x0 + ancho, y0 + alto, 0xFF080C14);
+
+        int cw = 620, ch = 300;
+        int cxc = NAT_ANCHO / 2 - cw / 2;
+        int cyc = NAT_ALTO / 2 - ch / 2;
+
+        Efectos.halo(ctx, px(cxc), py(cyc), pl(cw), pl(ch), Math.max(2, pl(8)),
+                ORO, 0.35f);
+        ctx.fill(px(cxc), py(cyc), px(cxc + cw), py(cyc + ch), FONDO);
+        Efectos.marcoVivo(ctx, px(cxc), py(cyc), pl(cw), pl(ch),
+                Math.max(1, pl(3)), BORDE, ORO, Efectos.rampa(3400));
+
+        int cx = cxc + cw / 2;
+        texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.confirmar_titulo"),
+                cx, cyc + 34, 30, ORO, true);
+        if (elegida != null) {
+            texto(ctx, Text.literal(elegida.nombre()), cx, cyc + 84, 40, TEXTO, true);
+            texto(ctx, Text.literal(elegida.tipo()), cx, cyc + 132, 20,
+                    colorTipo(elegida.tipo()), true);
+        }
+        texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.confirmar_aviso"),
+                cx, cyc + 166, 17, TEXTO_SUAVE, true);
+
+        int bw = 240, bh = 52, sep = 28;
+        int by = cyc + ch - 78;
+        int ax1 = cx - sep / 2 - bw, ax2 = cx + sep / 2;
+
+        boolean e1 = dentro(rx, ry, px(ax1), py(by), pl(bw), pl(bh));
+        ctx.fill(px(ax1), py(by), px(ax1 + bw), py(by + bh),
+                e1 ? 0xFF2A3550 : 0xFF1B2438);
+        marco(ctx, px(ax1), py(by), pl(bw), pl(bh), BORDE, Math.max(1, pl(2)));
+        texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.volver"),
+                ax1 + bw / 2, by + 16, 22, TEXTO_SUAVE, true);
+
+        boolean e2 = dentro(rx, ry, px(ax2), py(by), pl(bw), pl(bh));
+        Efectos.halo(ctx, px(ax2), py(by), pl(bw), pl(bh), Math.max(2, pl(5)),
+                VERDE, 0.30f + 0.20f * Efectos.pulso(1500));
+        ctx.fill(px(ax2), py(by), px(ax2 + bw), py(by + bh),
+                e2 ? 0xFF6FE08A : 0xFF3FA85C);
+        marco(ctx, px(ax2), py(by), pl(bw), pl(bh), 0xFF1E5E33, Math.max(1, pl(2)));
+        texto(ctx, Text.translatable("pokepad.lunaeternal.inicial.confirmar"),
+                ax2 + bw / 2, by + 16, 22, 0xFF06210F, true);
+
+        chispas.dibujar(ctx);
     }
 
     /** {x, y, ancho, alto} de la primera celda. Todas miden lo mismo. */
@@ -294,7 +449,33 @@ public class InicialScreen extends Screen {
         return new int[] { PANT_X + MARGEN, PANT_Y + MARGEN, cw, ch };
     }
 
-    // ---- interacción -------------------------------------------------------
+    /**
+     * EL COLOR DE UN TIPO.
+     *
+     * <p>&#9888; Se mira el texto que manda el servidor y no una tabla de
+     * especies: los seis iniciales son siempre Planta, Fuego y Agua, y una tabla
+     * por especie seria una lista paralela que hay que mantener. Lo que no
+     * reconozca se pinta con el borde de siempre, que es un color valido y no un
+     * hueco.
+     */
+    private static int colorTipo(String tipo) {
+        if (tipo == null) {
+            return BORDE;
+        }
+        String t = tipo.toLowerCase(java.util.Locale.ROOT);
+        if (t.contains("planta") || t.contains("grass")) {
+            return T_PLANTA;
+        }
+        if (t.contains("fuego") || t.contains("fire")) {
+            return T_FUEGO;
+        }
+        if (t.contains("agua") || t.contains("water")) {
+            return T_AGUA;
+        }
+        return BORDE;
+    }
+
+    // ---- interaccion -------------------------------------------------------
 
     @Override
     public boolean mouseClicked(double mx, double my, int boton) {
@@ -303,17 +484,42 @@ public class InicialScreen extends Screen {
         }
         int rx = (int) mx, ry = (int) my;
 
-        int bx = PANEL_X + 40, by = PANEL_Y + PANEL_H - 76, bw = PANEL_W - 80, bh = 46;
+        // ⚠ El velo se atiende PRIMERO y se traga el clic pase lo que pase: si
+        //   los botones de debajo siguieran respondiendo, pulsar «¿seguro?»
+        //   encima de una tarjeta cambiaria la eleccion sin que se vea.
+        if (confirmando) {
+            int cw = 620, ch = 300;
+            int cxc = NAT_ANCHO / 2 - cw / 2;
+            int cyc = NAT_ALTO / 2 - ch / 2;
+            int bw = 240, bh = 52, sep = 28;
+            int cx = cxc + cw / 2;
+            int by = cyc + ch - 78;
+            int ax1 = cx - sep / 2 - bw, ax2 = cx + sep / 2;
+
+            if (dentro(rx, ry, px(ax1), py(by), pl(bw), pl(bh))) {
+                confirmando = false;
+                sonar(false);
+            } else if (dentro(rx, ry, px(ax2), py(by), pl(bw), pl(bh))
+                    && elegida != null) {
+                // ⚠ NO SE CIERRA AQUI. Se manda y se espera: el servidor entrega
+                //   y contesta «ya elegiste», y `leerDelServidor` cierra al
+                //   verlo. Cerrar al pulsar dejaria sin Pokemon y sin pantalla a
+                //   quien se encuentre un fallo de entrega.
+                enviado = true;
+                confirmando = false;
+                falloEntrega = false;
+                pulsadoEn = System.currentTimeMillis();
+                chispas.soltar(width / 2, height / 2, 40, ORO, 1.0);
+                sonar(true);
+                ClientPlayNetworking.send(new Red.ElegirInicial(elegida.especie()));
+            }
+            return true;
+        }
+
+        int bx = PANEL_X + 34, by = PANEL_Y + PANEL_H - 78, bw = PANEL_W - 68, bh = 50;
         if (elegida != null && dentro(rx, ry, px(bx), py(by), pl(bw), pl(bh))) {
-            // ⚠ NO SE CIERRA AQUI. Se manda y se espera: el servidor entrega y
-            //   contesta que ya elegiste, y `leerDelServidor` cierra al verlo.
-            //   Cerrar al pulsar dejaria sin Pokemon y sin pantalla a quien se
-            //   encuentre un fallo de entrega.
-            enviado = true;
-            falloEntrega = false;
-            pulsadoEn = System.currentTimeMillis();
+            confirmando = true;
             sonar(true);
-            ClientPlayNetworking.send(new Red.ElegirInicial(elegida.especie()));
             return true;
         }
 
@@ -332,9 +538,13 @@ public class InicialScreen extends Screen {
 
     private void sonar(boolean lleva) {
         if (client != null && client.player != null) {
-            client.player.playSound(lleva
+            // ⚠ `playSoundToPlayer` y no `playSound`: en un jugador, el primer
+            //   parametro de `playSound` es `except` -- o sea que el unico que NO
+            //   lo oiria seria el que pulsa.
+            client.player.playSoundToPlayer(lleva
                     ? SoundEvents.UI_BUTTON_CLICK.value()
-                    : SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.6f, 1.0f);
+                    : SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
+                    net.minecraft.sound.SoundCategory.MASTER, 0.6f, 1.0f);
         }
     }
 
@@ -361,11 +571,23 @@ public class InicialScreen extends Screen {
 
     private void separador(DrawContext ctx, int artY) {
         ctx.fill(px(PANEL_X + 28), py(artY), px(PANEL_X + PANEL_W - 28),
-                py(artY) + Math.max(1, pl(2)), SEPARADOR);
+                py(artY) + Math.max(1, pl(2)), BORDE);
     }
 
+    /**
+     * &#9888;&#9888;&#9888; LA SOMBRA VA APAGADA, Y AQUI ES DONDE SE VE POR QUE.
+     *
+     * <p>La matriz esta escalada: un texto de 24 px de arte se dibuja con
+     * {@code escala} de 2 o mas, y Minecraft desplaza la sombra <b>una unidad de
+     * fuente</b> -- que a esa escala son dos o tres pixeles de pantalla. Deja de
+     * ser sombra y pasa a ser un contorno negro pegado a cada letra.
+     *
+     * <p>&#9888;&#9888; Y por eso tampoco hay contorno manual: el de cuatro
+     * copias desplazadas que tenia la version anterior <b>empastaba</b> en los
+     * textos pequeños. Sobre este fondo oscuro no hace falta ninguno de los dos.
+     */
     private void texto(DrawContext ctx, Text linea, int cx, int arriba, int alto,
-                       int color, boolean centrado, boolean contorno) {
+                       int color, boolean centrado) {
         float escala = alto * k / textRenderer.fontHeight;
         if (escala <= 0) {
             return;
@@ -377,12 +599,6 @@ public class InicialScreen extends Screen {
         int anchoTexto = textRenderer.getWidth(linea);
         int tx = Math.round(cx * k / escala) - (centrado ? anchoTexto / 2 : 0);
         int ty = Math.round(arriba * k / escala);
-        if (contorno) {
-            ctx.drawText(textRenderer, linea, tx - 1, ty, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx + 1, ty, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx, ty - 1, TEXTO_CONTORNO, false);
-            ctx.drawText(textRenderer, linea, tx, ty + 1, TEXTO_CONTORNO, false);
-        }
         ctx.drawText(textRenderer, linea, tx, ty, color, false);
         m.pop();
     }
@@ -398,7 +614,7 @@ public class InicialScreen extends Screen {
         ctx.fill(x + w - g, y, x + w, y + h, color);
     }
 
-    /** ⚠ `enableBlend()` a mano: regla 1 de dibujado.md. */
+    /** &#9888; `enableBlend()` a mano: regla 1 de dibujado.md. */
     private static void dibujarTextura(DrawContext ctx, Identifier tex,
                                        int x, int y, int w, int h, int natW, int natH) {
         RenderSystem.enableBlend();

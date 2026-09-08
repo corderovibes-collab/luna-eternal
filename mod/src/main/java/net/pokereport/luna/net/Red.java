@@ -2325,6 +2325,30 @@ public class Red implements ModInitializer {
         }
     }
 
+    /**
+     * «ABRE LA ELECCION DE INICIAL». Lo manda OAK, y nadie mas.
+     *
+     * <p>&#9888;&#9888;&#9888; ESTE PAQUETE ES LA PUERTA, Y POR ESO EXISTE. Antes
+     * la pantalla se abria SOLA desde el tick del cliente en cuanto el servidor
+     * decia «no has elegido» --o sea que el cliente decidia CUANDO--. Hoy lo
+     * decide el servidor, y solo cuando alguien ha ido a hablar con Oak.
+     *
+     * <p>&#9888;&#9888; Y NO LLEVA LAS OPCIONES DENTRO. Los seis iniciales viajan
+     * en {@link Iniciales} al entrar, como siempre; esto es solo la orden de
+     * abrir. Meterlos aqui seria un segundo sitio donde vive la misma lista.
+     */
+    public record AbrirInicial() implements CustomPayload {
+        public static final Id<AbrirInicial> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_inicial"));
+        public static final PacketCodec<RegistryByteBuf, AbrirInicial> CODEC =
+                PacketCodec.unit(new AbrirInicial());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record AbrirSantuario() implements CustomPayload {
         public static final Id<AbrirSantuario> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_santuario"));
@@ -3311,6 +3335,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirPase.ID, PedirPase.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionPase.ID, AccionPase.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoPase.ID, EstadoPase.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirInicial.ID, AbrirInicial.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirSantuario.ID, AbrirSantuario.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirCentroPokemon.ID, AbrirCentroPokemon.CODEC);
         PayloadTypeRegistry.playC2S().register(ConfirmarCuraCentro.ID, ConfirmarCuraCentro.CODEC);
@@ -5907,6 +5932,27 @@ public class Red implements ModInitializer {
     public static void enviarAbrirTorreBatalla(
             net.minecraft.server.network.ServerPlayerEntity jugador) {
         ServerPlayNetworking.send(jugador, new AbrirTorreBatalla());
+    }
+
+    /**
+     * Le abre la eleccion de inicial. <b>Solo lo llama Oak.</b>
+     *
+     * <p>&#9888; Manda ANTES el estado y DESPUES la orden de abrir: la pantalla
+     * lee las opciones de {@code EstadoCliente}, y si llegaran al reves se
+     * abriria vacia el primer segundo.
+     */
+    public static void enviarAbrirInicial(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        enviarIniciales(jugador);
+        var servidor = jugador.getServer();
+        if (servidor == null) {
+            return;
+        }
+        servidor.execute(() -> {
+            if (!jugador.isRemoved()) {
+                ServerPlayNetworking.send(jugador, new AbrirInicial());
+            }
+        });
     }
 
     public static void enviarAbrirSantuario(

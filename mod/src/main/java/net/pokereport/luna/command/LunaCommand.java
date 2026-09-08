@@ -599,7 +599,52 @@ public final class LunaCommand {
 
             .then(literal("reiniciarinicial")
                 .requires(s -> s.hasPermissionLevel(4))
-                .executes(ctx -> reiniciarInicial(ctx.getSource())))
+                .executes(ctx -> reiniciarInicial(ctx.getSource(), null)))
+
+            // ⚠⚠ TODO LO DEL INICIAL, EN UN SITIO. `reiniciarinicial` se queda
+            //    como atajo porque lleva semanas escrito en la documentacion y
+            //    en los dedos de quien prueba, pero lo nuevo cuelga de aqui.
+            .then(literal("inicial")
+                .requires(s -> s.hasPermissionLevel(3))
+                .executes(ctx -> estadoInicial(ctx.getSource()))
+                .then(literal("oak")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .executes(ctx -> colocarOak(ctx.getSource()))
+                    .then(literal("quitar")
+                        .executes(ctx -> quitarOak(ctx.getSource()))))
+                .then(literal("reiniciar")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .executes(ctx -> reiniciarInicial(ctx.getSource(), null))
+                    .then(argument("jugador",
+                            net.minecraft.command.argument.EntityArgumentType.player())
+                        .executes(ctx -> reiniciarInicial(ctx.getSource(),
+                                net.minecraft.command.argument.EntityArgumentType
+                                        .getPlayer(ctx, "jugador")))))
+                .then(literal("abrir")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .then(argument("jugador",
+                            net.minecraft.command.argument.EntityArgumentType.player())
+                        .executes(ctx -> abrirInicial(ctx.getSource(),
+                                net.minecraft.command.argument.EntityArgumentType
+                                        .getPlayer(ctx, "jugador")))))
+                .then(literal("dar")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .then(argument("jugador",
+                            net.minecraft.command.argument.EntityArgumentType.player())
+                        .then(argument("especie",
+                                com.mojang.brigadier.arguments.StringArgumentType.word())
+                            .suggests((c, sb) -> {
+                                for (var i : net.pokereport.luna.starter
+                                        .StarterService.todos()) {
+                                    sb.suggest(i.especie());
+                                }
+                                return sb.buildFuture();
+                            })
+                            .executes(ctx -> darInicial(ctx.getSource(),
+                                    net.minecraft.command.argument.EntityArgumentType
+                                            .getPlayer(ctx, "jugador"),
+                                    com.mojang.brigadier.arguments.StringArgumentType
+                                            .getString(ctx, "especie")))))))
 
             // ⚠ LA MODERACION DE FOTOS DEL SANTUARIO va a nivel 3: es de staff,
             //   no de administrador del servidor. Aprobar una foto es lo mismo
@@ -1103,10 +1148,140 @@ public final class LunaCommand {
         return 1;
     }
 
-    private static int reiniciarInicial(ServerCommandSource origen) {
+    /**
+     * COLOCA A OAK donde esta quien escribe.
+     *
+     * <p>&#9888; Igual que las paradas y los lideres: <b>borra antes de poner</b>,
+     * porque a Oak no se le puede pegar ni matar y uno de mas se quedaria en la
+     * plaza para siempre.
+     */
+    private static int colocarOak(ServerCommandSource origen) {
         var jugador = origen.getPlayer();
         if (jugador == null) {
             origen.sendError(Text.literal("Este comando se escribe desde el juego."));
+            return 0;
+        }
+        if (!net.pokereport.luna.starter.OakNpc.colocar(jugador)) {
+            origen.sendError(Text.literal(
+                    "No se pudo colocar. Tiene que ser DENTRO de la ciudadela, y el "
+                    + "entrenador "
+                    + net.pokereport.luna.starter.OakNpc.ENTRENADOR
+                    + " tiene que existir en los datos de rctmod."));
+            return 0;
+        }
+        origen.sendFeedback(() -> Text.literal(
+                "\u00a7aProfesor Oak colocado, mirando a donde tu mirabas. "
+                + "\u00a77Clic derecho para probarlo."), true);
+        return 1;
+    }
+
+    private static int quitarOak(ServerCommandSource origen) {
+        var jugador = origen.getPlayer();
+        if (jugador == null) {
+            origen.sendError(Text.literal("Este comando se escribe desde el juego."));
+            return 0;
+        }
+        int n = net.pokereport.luna.starter.OakNpc.quitar(
+                jugador.getServerWorld(), jugador.getPos(), 12.0);
+        origen.sendFeedback(() -> Text.literal(
+                "\u00a77Quitadas \u00a7f" + n + "\u00a77 entidades de Oak en 12 bloques."),
+                true);
+        return 1;
+    }
+
+    /**
+     * QUE HAY MONTADO AHORA MISMO, sin tocar nada.
+     *
+     * <p>&#9888;&#9888; Contesta las dos preguntas que de verdad se hacen cuando
+     * «el inicial no funciona»: <b>&#191;existe el entrenador de Oak?</b> --si no,
+     * no hay puerta-- y <b>&#191;ya elegi?</b> --si si, el clic derecho contesta
+     * con una frase y no abre nada, que es lo correcto y parece roto--.
+     */
+    private static int estadoInicial(ServerCommandSource origen) {
+        var jugador = origen.getPlayer();
+        boolean oak = net.pokereport.luna.starter.OakNpc.idValido();
+        var iniciales = net.pokereport.luna.starter.StarterService.todos();
+        origen.sendFeedback(() -> Text.literal(
+                "\u00a76Inicial \u00a78\u00b7 \u00a7f" + iniciales.size()
+                + " \u00a77opciones \u00a78\u00b7 \u00a77entrenador de Oak: "
+                + (oak ? "\u00a7aexiste" : "\u00a7cNO EXISTE")
+                + " \u00a78(" + net.pokereport.luna.starter.OakNpc.ENTRENADOR + ")"),
+                false);
+        if (jugador == null) {
+            return 1;
+        }
+        LunaEternal.submit(() -> {
+            String linea;
+            try {
+                long id = LunaEternal.players().resolve(
+                        jugador.getUuid(), jugador.getName().getString());
+                linea = net.pokereport.luna.starter.StarterService.yaEligio(id)
+                        ? "\u00a77Tu ya elegiste: el clic derecho en Oak te dira que si."
+                        : "\u00a77Tu NO has elegido: el clic derecho te abrira la pantalla.";
+            } catch (Exception e) {
+                linea = "\u00a7cNo se pudo consultar tu estado: " + e;
+            }
+            final String f = linea;
+            origen.getServer().execute(() ->
+                    origen.sendFeedback(() -> Text.literal(f), false));
+        });
+        return 1;
+    }
+
+    /** Le abre la pantalla a alguien sin que tenga que ir a ver a Oak. */
+    private static int abrirInicial(ServerCommandSource origen,
+                                    ServerPlayerEntity destino) {
+        net.pokereport.luna.net.Red.enviarAbrirInicial(destino);
+        origen.sendFeedback(() -> Text.literal(
+                "\u00a7aAbierta la eleccion a " + destino.getName().getString()
+                + ". \u00a77Si ya eligio, la pantalla lo dira."), true);
+        return 1;
+    }
+
+    /**
+     * Le da un inicial concreto, saltandose la pantalla.
+     *
+     * <p>&#9888; Pasa por {@code conceder}, o sea por la misma puerta que la
+     * pantalla: marca primero, entrega despues y deshace si falla. Entregar el
+     * Pokemon a mano por otro camino dejaria la marca sin poner, y el jugador
+     * podria elegir otra vez.
+     */
+    private static int darInicial(ServerCommandSource origen,
+                                  ServerPlayerEntity destino, String especie) {
+        if (net.pokereport.luna.starter.StarterService.porEspecie(especie) == null) {
+            origen.sendError(Text.literal(especie + " no es un inicial. "
+                    + "Escribe /luna inicial para ver cuantos hay."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players().resolve(
+                        destino.getUuid(), destino.getName().getString());
+                net.pokereport.luna.starter.StarterService.conceder(
+                        destino, id, especie,
+                        () -> net.pokereport.luna.net.Red.refrescarInicial(destino));
+                origen.getServer().execute(() -> origen.sendFeedback(() -> Text.literal(
+                        "\u00a7aEntregado \u00a7f" + especie + "\u00a7a a "
+                        + destino.getName().getString()), true));
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo dar el inicial: {}", e.toString());
+            }
+        });
+        return 1;
+    }
+
+    /**
+     * Borra la marca del inicial y su mision.
+     *
+     * @param destino a quien, o {@code null} para quien escribe
+     */
+    private static int reiniciarInicial(ServerCommandSource origen,
+                                        ServerPlayerEntity destino) {
+        var jugador = destino != null ? destino : origen.getPlayer();
+        if (jugador == null) {
+            origen.sendError(Text.literal(
+                    "Desde consola hace falta el nombre: "
+                    + "/luna inicial reiniciar <jugador>"));
             return 0;
         }
         LunaEternal.submit(() -> {
@@ -1141,7 +1316,7 @@ public final class LunaCommand {
                 net.pokereport.luna.net.Red.refrescarInicial(jugador);
                 origen.getServer().execute(() -> origen.sendFeedback(() -> Text.literal(
                         "§aReiniciado: marca del inicial y " + borradas
-                        + " mision(es). La pantalla se abrira sola."), false));
+                        + " mision(es). \u00a77Vuelve a hablar con Oak."), false));
             } catch (Exception e) {
                 LunaEternal.LOG.warn("No se pudo reiniciar el inicial: {}", e.toString());
             }

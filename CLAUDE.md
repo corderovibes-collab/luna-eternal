@@ -3243,6 +3243,12 @@ Pase          EL PASE DE BATALLA LUNA (2026-09-08, V032+V033, D-046)
               +26 comprobaciones. Las que importan: EL MINIMO DE 45 DIAS, QUE SIN
               PASE NO SE COBRE NADA, QUE LOS CIEN PREMIOS EXISTAN, y que el nivel
               1 y el 100 sigan siendo los que pidio el usuario
+              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 10:46), LOS DOS DESTINOS:
+                servidor  Done (29,706 s) . AUTOTEST 628/628
+                clientes  manifiesto 987e1d3e05 publicado y sirviendose
+                ⚠ el `RuntimeException: a proposito` del log ES DEL AUTOTEST: la
+                  comprobacion de que una tarea programada que falla NO cancela a
+                  la siguiente. Tiene que salir
               ⚠ SIN VERIFICAR VISUALMENTE la pantalla nueva
 Cazas         YA TIENE PANTALLA (2026-08-25, V017)
               2 pestañas (CAZA . CRIANZA) . 3 objetivos en cada una con

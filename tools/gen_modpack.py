@@ -213,6 +213,16 @@ EXCLUIDOS = {
         "Libreria base de FancyMenu. Sin FancyMenu ningun mod del pack la necesita.",
     "melody":
         "Libreria de audio de FancyMenu. Sin FancyMenu ningun mod del pack la necesita.",
+    "custom-splash-screen":
+        "Intercepta el SplashOverlay nativo, se cuelga calculando el progreso "
+        "con los nuevos modelos de Cobblemon 1.8.0 y deja el framebuffer en "
+        "negro (#000000) al redimensionar o expandir la ventana.",
+    "cobblemon-interface":
+        "Trae core shaders obsoletos (rendertype_text.fsh) incompatibles con "
+        "el reescalado de atlas de fuentes y Cobblemon 1.8.0, provocando "
+        "pantalla negra al renderizar interfaces y redimensionar la ventana.",
+    "cobblemon-interface-modded":
+        "Extension grafica de Cobblemon Interface. Sin el pack base no tiene efecto.",
 }
 
 # Los packs que CobbleVerse manda DESACTIVADOS. Se llaman, literalmente,
@@ -295,6 +305,9 @@ OVERRIDES_FUERA = (
     # 179 MB de banda sonora propia, y ademas dentro de nuestro repositorio:
     # es justo lo que D-030 no hace con los shaders. Ver el bloque de musica.
     "resourcepacks/COBBLEVERSE Soundtrack.zip",
+    # Pantalla de carga y personalizaciones de Cobblemon Interface obsoletas
+    "config/customsplashscreen",
+    "resourcepacks/Cobblemon Interface",
 )
 
 # ---------------------------------------------------------------------------

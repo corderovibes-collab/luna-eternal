@@ -15,3 +15,7 @@
 -- ⚠ La direccion es la SEGURA: como mucho, quien ya hubiera cobrado esos dos
 --   niveles se lleva ademas las LunaCoins. Nunca al reves.
 DELETE FROM pase_reclamo WHERE nivel IN (50, 98);
+
+INSERT INTO schema_version (version, description)
+VALUES (34, 'pase: el 50 y el 98 pasan a dar 100 LunaCoins (D-047)')
+ON DUPLICATE KEY UPDATE version = version;

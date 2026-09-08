@@ -3290,9 +3290,24 @@ Pase          EL PASE DE BATALLA LUNA (2026-09-08, V032+V033, D-046)
                    hubiera cobrado el 50 con Caramelos Raros no veria nunca las
                    LunaCoins. Y NO se vacia la tabla como en V033 -- eso
                    devolveria los cien premios para volver a cobrarlos
-              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 10:46), LOS DOS DESTINOS:
-                servidor  Done (29,706 s) . AUTOTEST 628/628
-                clientes  manifiesto 987e1d3e05 publicado y sirviendose
+              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 11:16), LOS DOS DESTINOS:
+                servidor  V034 aplicada . Done (29,880 s) . AUTOTEST 636/636
+                clientes  manifiesto c36257eb74 publicado y sirviendose
+                /luna pase contesta: 100 niveles . 53.700 XP . tope 1.200/dia .
+                minimo 45 dias . Precio 1.500 LunaCoins . 2 Pokemon
+              ⚠⚠⚠ Y ESE DESPLIEGUE TIRO EL SERVIDOR SIETE MINUTOS, POR UNA
+                 MIGRACION QUE NO SE REGISTRABA A SI MISMA. La V034 hacia su
+                 DELETE y le faltaba el `INSERT INTO schema_version` del final,
+                 asi que el runner se NEGO A ARRANCAR -- y hizo bien: sin ese
+                 apunte la migracion se reaplicaria en CADA arranque, para
+                 siempre y sin que nadie lo notara
+                 ⚠⚠ LA GUARDA FUNCIONO Y AUN ASI COSTO SIETE MINUTOS, porque el
+                    fallo deja el proceso colgado en `stopping` y de ahi NO se
+                    sale reiniciando: hay que `kill` y luego `start`. Estaba
+                    escrito en este mismo documento desde hace semanas
+                 ⚠ el `NullPointerException` de CobblemonFabric al apagar es
+                   RUIDO: Cobblemon intenta listar jugadores de un servidor que
+                   nunca llego a tenerlos. La causa es la de arriba
                 ⚠ el `RuntimeException: a proposito` del log ES DEL AUTOTEST: la
                   comprobacion de que una tarea programada que falla NO cancela a
                   la siguiente. Tiene que salir

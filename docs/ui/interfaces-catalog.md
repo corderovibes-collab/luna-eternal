@@ -218,6 +218,20 @@ base es una lista de destinos con iconos — funciona igual de bien y no bloquea
 
 ---
 
+---
+
+## 5-bis · El Santuario (2026-09-04)
+
+Dos pantallas sobre el chasis compartido, en `docs/world/santuario.md`:
+
+| Pantalla | Patrón | Notas |
+|---|---|---|
+| `SantuarioScreen` | lista paginada + detalle («mi nicho») | los precios viajan del servidor; una acción por fila |
+| `MemorialScreen` | detalle + acción | foto por `TexturasFoto`, campanilla solo si el servidor confirma |
+
+El holograma de la foto en el mundo NO es una pantalla: se dibuja a mano en
+`AFTER_ENTITIES` sobre la posición del proyector (sin entidades nuevas).
+
 ## Next Actions
 
 1. `UI-015` — Medallas

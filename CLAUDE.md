@@ -217,7 +217,15 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 423 + los de gimnasios (2026-08-29)
+Autotest      /luna autotest -> 589 EN VIVO (2026-09-05)
+              +11 con las cartas: sus sobres, la habilidad de
+              aparicion, EL ARTE DE CADA TRAJE Y EL ICONO DE CADA
+              APLICACION DEL POKEPAD. Los dos ultimos se pueden
+              comprobar desde el servidor porque es UN SOLO JAR:
+              `src/client/resources/` acaba dentro del mismo
+              fichero, asi que `getResource` los ve. Una aplicacion
+              sin su PNG sale en MAGENTA y no da ningun error
+              antes 423 + los de gimnasios (2026-08-29)
               +los de MEDALLAS Y RECEPCIONES, y los que importan son:
               que el bit de cada medalla sea SU SALA (si no, ganar a Brock
               enciende la de Misty sin dar ningun error), que la entrada y la
@@ -700,6 +708,66 @@ Mercado       DOS ESCAPARATES HERMANOS (2026-08-25, D-042)
               ⚠ SIN VERIFICAR EN EL JUEGO con dos cuentas
 
 Tienda        COMPRAR Y VENDER, POR CATEGORIAS (2026-08-23)
+              OCHO CATEGORIAS Y 620 ARTICULOS (2026-09-04, DESPLEGADO)
+                esencial 2 . cuidado 7 . crianza 10 . bayas 71 .
+                cultivos 9 . variedades 8 . muebles 367 . peluches 146
+              ⚠⚠⚠ LOS PELUCHES SON LOS UNICOS EN LUNACOINS, Y LOS DE CRIANZA NO.
+                 Un peluche es IDENTIDAD PURA (T1): no protege, no sube nada, no
+                 desbloquea nada -- misma categoria que los cosmeticos (D-039).
+                 El Destiny Knot y los seis objetos de poder deciden QUE IVs Y
+                 QUE EVs HEREDA UNA CRIA, o sea progresion competitiva, y eso
+                 por moneda de pago es T4, la linea roja de D-007 y D-014
+                 ⚠ y por eso los peluches tienen RECOMPRA CERO: si el banco los
+                   recomprara existiria un tipo de cambio LunaCoin -> Plata por
+                   la puerta de atras, que es justo lo que D-014 prohibe
+              ⚠⚠ BAYAS Y CULTIVOS CHOCAN CON EL OFICIO AGRICULTOR, y es una
+                 decision del usuario tomada sabiendolo (el 23-ago se dejaron
+                 fuera por eso mismo). LA PALANCA SI SE NOTA NO ES QUITAR LA
+                 CATEGORIA: es SUBIR SU ESCALON -- un cultivo caro sigue
+                 existiendo para quien tenga prisa y no compite con cosecharlo
+              ⚠⚠⚠ EL PANEL SE LLENABA EN LA QUINTA Y HOY PAGINA. El tope estaba
+                 escrito como tal («la SEXTA no cabria») y con ocho eran 1.018
+                 px en 692. QUINTA vez que este proyecto tropieza con «cabia por
+                 casualidad». Cuantas caben SE CALCULA
+                 ⚠⚠ y sus numeros estaban EN DOS SITIOS --la pantalla y el
+                    autotest, escritos a mano-- que es la forma exacta del fallo
+                    de LAS TRES LISTAS DE MEDALLAS. Hoy los dos leen de
+                    `PanelTienda`, que vive en `main` porque cliente y servidor
+                    acaban EN EL MISMO JAR
+              ⚠⚠⚠ Y HABIA UN TOPE DE 18 ARTICULOS POR CATEGORIA (3 paginas). Con
+                 146 peluches y 367 muebles eso era NO TENER esas categorias. Su
+                 motivo era bueno --«nadie llegaria al final por pereza»-- y hoy
+                 hay BUSCADOR: se escribe y se filtra
+                 ⚠⚠ el filtro es DEL CLIENTE y el texto NO VIAJA, igual que en el
+                    mercado: un servidor no tiene idioma, y quien escriba
+                    «peluche» no encontraria `pokedoll_eevee` jamas
+                 ⚠⚠ y EL CLIC RECORRE LO FILTRADO, lo mismo que el dibujado. Si
+                    leyera la lista completa, con el buscador puesto comprarias
+                    OTRO articulo del que ves, y cobrado
+              ⚠⚠⚠ «TODO ARTICULO ES DE COBBLEMON» ERA UN INVARIANTE Y FALLO AL
+                 DESPLEGAR ESTO. No estaba roto: estaba diciendo que una
+                 decision escrita habia cambiado, que es para lo que sirve. Se
+                 ACTUALIZO, no se borro -- hoy es una LISTA EXPLICITA de mods
+                 (cobblemon, cobblefurnies, pokeblocks, minecraft), asi que
+                 meter un quinto en la tienda es un acto deliberado y no el
+                 efecto lateral de un patron que casa de mas
+              ⚠⚠ Y `omitidos` DEJA DE SER UNA LINEA DE LOG. `load()` se salta el
+                 objeto que no exista y sigue --correcto-- pero lo contaba solo
+                 para el log. Con 620 articulos de CUATRO mods, basta con que
+                 uno no este en el servidor para que desaparezca una categoria
+                 entera. Comprobados los cuatro en el servidor, y ahora ademas
+                 lo vigila el autotest: 0 omitidos
+              ⚠ el generador BAJA LOS JARS DEL MANIFIESTO PUBLICADO y los cachea
+                por su huella. Antes leia un jar que alguien habia dejado en
+                build/ a mano y que NO ESTA EN GIT: en un clon limpio no se
+                podia ejecutar (la leccion de las seis pantallas en magenta)
+              ⚠ un mod de MUEBLES registra BLOQUES: su clave de idioma es
+                `block.cobblefurnies.oak_chair`, no `item.`. Mirando solo `item.`
+                salian CERO objetos y no daria error: daria una categoria vacia
+              ⚠ un PATRON en vez de 367 lineas: una lista a mano se queda vieja
+                en cuanto el mod cambia y no lo dice nadie
+              ⚠ el paquete pasa a ~38 KB, el 3,8 % del tope de un custom payload
+              ---- lo de antes, que sigue siendo cierto ------------------
               2 categorias . 9 articulos . SIN migracion: la logica
               (ShopService, ShopCatalog) llevaba escrita desde PHASE 3 y
               lo unico que faltaba era la pantalla
@@ -843,6 +911,227 @@ Clanes        EL PRIMER SISTEMA SOCIAL (2026-08-23, V013)
               Fue exacto
               ⚠ SIN VERIFICAR EN EL JUEGO todavia: hacen falta DOS cuentas
               desplegado y V013 aplicada (2026-08-23) . Done (9,2 s)
+
+Cartas        TRES ZONAS DE SOBRES (2026-09-02, V028) . DESPLEGADO 2026-09-04
+              ⚠⚠⚠ Y ESTUVO UN DIA DESAPARECIDO DEL POKEPAD SIN QUE NADIE
+                 BORRARA NADA. El sistema entero vivia SIN COMMITEAR en otro
+                 worktree; la rama de armaduras salio del MISMO commit, compilo
+                 `lunaeternal` y publico su jar encima. El icono no se fue: es
+                 que nunca estuvo en el jar que se publico
+                 ⚠⚠ TERCERA VEZ EN LA MISMA SEMANA, Y LAS TRES SON EL MISMO
+                    PROBLEMA -- DOS RAMAS, UN SERVIDOR: la V028 saltandose sola
+                    porque las dos eligieron el numero 28, `cobblemon-cards`
+                    cayendose del manifiesto, y esto
+                 LA REGLA QUE QUEDA: si dos ramas compilan el MISMO jar, la
+                 segunda que despliegue borra a la primera. Commitear al
+                 terminar no es orden: es lo unico que hace que exista
+              analisis completo en docs/analysis/cobblemon-cards.md
+              icono `cartas` en la PAGINA 1 . la wiki baja a la 2
+                DIARIO gratis 24h . PLATA 24h . LUNA sin limite
+              el mod es CobblemonCards (CC0) y sus CINCO dependencias YA
+              ESTABAN en el pack: no hubo que instalar nada mas
+              ⚠⚠⚠ Y NO ES EL JAR PUBLICADO: ES UN FORK NUESTRO, Y NO ERA EL
+                 PLAN. Se bajo el 1.0.4 del CDN y se abrio con javap:
+                   1.0.4 publicado   config con  9 campos
+                   HEAD 2026-08-15   config con 44 campos
+                 entre los 35 que faltan esta `enableCardStats`, o sea EL
+                 INTERRUPTOR QUE APAGA LO UNICO INADMISIBLE. Y su
+                 BinderSpawnModifier de 1.0.4 es el que TRANSFORMA ENTIDADES YA
+                 GENERADAS, que su propio CHANGELOG describe como «rompia el
+                 equilibrio» y por lo que lo reescribieron
+                 la eleccion no era «probado contra sin publicar»: era «sin
+                 interruptor y con el mecanismo malo» contra «con interruptor y
+                 con el bueno»
+                 ⚠⚠ LA CONTRAPARTIDA ES REAL: corre codigo SIN PUBLICAR. Si
+                    algo va raro con las cartas, el primer sospechoso es esto
+              cards/parchear.py clona, parchea y compila
+              ⚠⚠ FIJADO A UN COMMIT (c02aafb5) Y NO A UNA RAMA: el repositorio
+                 NO TIENE NI UNA ETIQUETA --`git tag -l` sale vacio-- asi que
+                 «la version» no se puede pedir por nombre. Con `main` a secas,
+                 dos compilaciones de dias distintos darian jars distintos y
+                 nadie se enteraria hasta que fallara
+              los 4 parches, verificados EN EL JAR y no en el fuente:
+                maxNationalDex 251 . comandos a nivel 4 (iconst_4 en el
+                bytecode) . LOGGER.debug . es_es.json 387/387 claves
+              ⚠ el tope de generacion va como CONFIG y no a fuego: abrir Gen 3
+                sera cambiar un numero, no recompilar
+              ⚠⚠ y cubre LA LISTA DE EMERGENCIA, que traia rayquaza (384) y
+                 greninja (658) y se usa cuando el registro de especies aun no
+                 esta listo -- o sea EN EL ARRANQUE, cuando nadie mira
+              ⚠⚠ MidnightLib se salvo por el JAR ANIDADO: el nuestro es 1.7.5 y
+                 pide 1.9.2, pero el suyo viaja dentro y Fabric coge el mas alto
+              ⚠⚠ Y TRINKETS NO HACE FALTA aunque el README lo exija: en sus 129
+                 clases no aparece ni una vez. Solo usa `accessories`, que ya
+                 esta. Importa porque Trinkets es el que dejo a todos fuera con
+                 `exported_slots` el 17-ago
+              ⚠⚠⚠ LAS CARTAS DABAN PODER, Y LA TERCERA ZONA LO HACE INADMISIBLE.
+                 Un archivador aplica las stats de sus cartas: daño, armadura,
+                 vida, y 18 multiplicadores de aparicion con tope x100. Con
+                 sobres SIN LIMITE por LunaCoins, eso es comprar poder con
+                 dinero real sin techo -- T4, la linea roja de D-007 y D-014
+                 `enableCardStats = false` en config/cobblemon-cards.json
+              ⚠⚠⚠ Y REPARTIRIA CARTAS DE POKEMON QUE AQUI NO EXISTEN.
+                 `BoosterLootTable` usa `PokemonSpecies.getImplemented()` --las
+                 1.025-- y nuestro datapack solo apaga POOLS DE APARICION, no
+                 marca especies. Un servidor Kanto+Johto dando cartas de
+                 Miraidon, sin un solo error. PIDE PARCHE, y CC0 lo permite
+              ⚠⚠ `/givecard` y `/customboosterset` son hasPermission(2), o sea
+                 NUESTROS CONSTRUCTORES (D-028). En cuanto una carta valga
+                 dinero, eso es una imprenta
+              ⚠⚠ metia sobres en TODAS las tablas de cofre --su filtro es
+                 `path.contains("chest")`-- y eso choca con Tesoros (D-020)
+              LO NUESTRO YA ESTA: pantalla, servicio, V028, protocolo y config
+              ⚠⚠ DOS RELOJES Y NO UNO, y es lo que impide que cobrar el gratis
+                 gaste tambien el de pago. Van en (player_id, kind), asi que lo
+                 dice LA CLAVE PRIMARIA y no un `if`
+              ⚠⚠ mirar el reloj, cobrar y marcarlo van EN LA MISMA TRANSACCION
+                 con FOR UPDATE. Separados, dos clics rapidos leen los dos
+                 «disponible» antes de que ninguno escriba: dos sobres con un
+                 reloj, y el de pago cobrado dos veces
+              ⚠ NO se compila contra su jar: el sobre sale del REGISTRO
+                (`cobblemon-cards:booster_pack`), asi que nuestro mod funciona
+                con el mod y sin el. Sin el, la pantalla LO DICE
+              ⚠ los segundos viajan YA RESTADOS (como EstadoCura) y no el
+                instante (como Cazas): el ciclo de Cazas es del servidor y
+                compartido, y esto es un reloj POR JUGADOR -- con el instante,
+                un cliente adelantado encenderia el boton antes de tiempo
+              ⚠ el color de cada sobre es EL DE LA MONEDA QUE LO COMPRA (Plata
+                blanca D-034, LunaCoin dorada D-033). El diario va azul porque
+                no lo compra ninguna
+              ⚠ PRECIOS PROVISIONALES, como los de la tienda: 900 de Plata y 50
+                LunaCoins, en un solo sitio (el enum `Sobre`)
+              +5 comprobaciones, y la que importa: EXACTAMENTE UNO SIN RELOJ.
+              Si el de LunaCoins ganara reloj, las tres zonas serian la misma
+              cosa a tres precios; si otro lo perdiera, el diario seria sobres
+              INFINITOS GRATIS. Las dos averias son mudas
+              DESPLEGADO Y EN VIVO (2026-09-02)
+                163 mods . Done (26,7 s) . V028 aplicada . AUTOTEST 511/511
+                config leida: maxNationalDex 251, estadisticas OFF, cofres OFF
+                manifiesto d85f24859e publicado y sirviendose
+              ⚠⚠⚠ Y EL PRIMER REINICIO TIRO EL SERVIDOR. Su fabric.mod.json
+                 pedia `fabricloader >=0.18.6` y NUESTRO SERVIDOR CORRE 0.18.4
+                 (los clientes van en 0.19.5; el desfasado es el servidor):
+                   Incompatible mods found!
+                   requires 0.18.6 or later ... but only 0.18.4 is present
+                 Es la familia de letmedespawn/almanac: SOLO SE VE AL REINICIAR
+                 ⚠⚠ Y ESE NUMERO NO ERA UN REQUISITO, era un artefacto del
+                    build: sale de `loader_version` de SU gradle.properties. Se
+                    comprobo antes de bajarlo --en sus 129 clases el UNICO uso
+                    de la API del loader es `isModLoaded()`, que existe desde
+                    0.4-- asi que el fork lo baja a >=0.18.4 y no se toca el
+                    arranque de un servidor vivo
+                 ⚠ se restauro el servicio PRIMERO (quitar el jar y arrancar) y
+                   se arreglo despues. 3 minutos caido, con 0 jugadores
+              ⚠⚠ EL ORDEN FUE: servidor primero (un jar subido no hace nada
+                 hasta arrancar), manifiesto despues. Asi la ventana en que los
+                 dos lados no coinciden es la minima -- y va en la direccion
+                 SEGURA, porque el servidor tiene que ser SUBCONJUNTO del
+                 cliente, no al reves
+              ⚠ Y AL APAGAR, LA JVM SE COLGO: el log decia «All dimensions are
+                saved» y «luna-db Shutdown completed», o sea que Minecraft
+                termino bien y el proceso no salio. Se sale con kill + start,
+                que ya estaba escrito aqui
+              ⚠ EL LOADER DEL SERVIDOR (0.18.4) VA SEIS VERSIONES POR DETRAS
+                del cliente (0.19.5). Hoy no molesta, pero es la clase de cosa
+                que muerde con el siguiente mod que pida uno nuevo. Subirlo NO
+                es cambiar la variable del panel: `server.jar` son 635 B y el
+                loader vive en `libraries/`
+              ⚠ volver atras son 250 bytes:
+                python tools/gen_manifest.py --volver-a 263f619293
+              ⚠⚠ EL ORDEN FUE: servidor primero (un jar subido no hace nada
+                 hasta arrancar), manifiesto despues. Asi la ventana en que los
+                 dos lados no coinciden es la minima -- y va en la direccion
+                 SEGURA, porque el servidor tiene que ser SUBCONJUNTO del
+                 cliente, no al reves
+              ⚠ volver atras son 250 bytes:
+                python tools/gen_manifest.py --volver-a d5cc954ea7
+              HABILIDAD DE APARICION (2026-09-03, V029) . DESPLEGADA
+              con el santuario (2026-09-04)
+                sneak + clic derecho con la carta en la mano . activa
+                5 min de ventana . 1 hora de espera . una activa por jugador
+                techo por RAREZA DE CARTA (no del Pokemon): x1,3 comun ..
+                x2,7 mitica, la nota (calificacion) afina entre suelo y techo
+              ⚠⚠⚠ EL TECHO SALE DE PESOS REALES DE COBBLEMON, no de un numero
+                 inventado. Se extrajo spawn_pool_world del jar 1.7.3 de este
+                 servidor: comun 4,5-9 . poco comun 0,3-84 . rara 1,5-7,5. Con
+                 esa vara, x1,3-x2,7 es un movimiento real sin salirse del
+                 rango que el propio juego ya maneja entre sus entradas
+              ⚠⚠⚠ Y LOS ONCE LEGENDARIOS DE TESOROS NO TIENEN NI UNA ENTRADA
+                 DE SPAWN, comprobado en el jar. No aparecen salvajes en el
+                 Cobblemon base -- solo existen via el cofre de D-020. La
+                 habilidad NO necesita prohibirlos por lista: multiplica un
+                 peso que ya existe, y cero por cualquier cosa sigue siendo
+                 cero. Se protege sola, sin una lista que mantener
+              ⚠⚠ LA ESTACION DE CALIFICACION VUELVE A TENER MOTIVO: con la
+                 restauradora retirada, calificar se habia quedado en "pon un
+                 numero bonito". Ahora la nota afina el multiplicador de
+                 verdad, dentro del techo de la rareza
+              ⚠⚠ SIN COMPILAR CONTRA SU JAR: especie y rareza se leen del
+                 custom_data de vainilla que parchear.py espeja EN CADA CARTA
+                 al crearse (10 sitios, un patron y un ayudante, no diez una()
+                 a mano). Resolver la especie SI usa Cobblemon, que este mod
+                 ya usa desde hace meses
+
+Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031)
+              DESPLEGADO Y VERIFICANDOSE EN VIVO (2026-09-05)
+              autotest 589 EN VIVO
+              ⚠ FALTA (en el juego, de la mano del usuario): construir los
+                 nichos de verdad y dar sus coordenadas en la config;
+                 colocar la Chansey (/luna santuario npc); y probar el
+                 recorrido entero con DOS cuentas: subir foto -> moderarla
+                 desde el PokePad (vista MODERAR FOTOS) -> holograma ->
+                 memorial -> honores (10 al dia, ventana de 24 h)
+              detalle completo en docs/world/santuario.md
+              un nicho 3x3 en Monumentos . foto, titulo e historia
+              alquilar 24 h por 5.000 de Plata (provisional)
+              comprar para siempre por LunaCoins (300, provisional)
+              1 nicho por jugador, desde CAMPEON mas . NPC Chansey
+              honores: 10 por jugador y por nicho cada 24 h, acumulando
+              clic derecho en el proyector o en el holograma (mano vacia)
+                 -> el memorial. El clic del holograma lo calcula el CLIENTE
+                 repitiendo la geometria del quad dibujado (no hay entidad
+                 que reciba clics); con algo en la mano, el clic es del
+                 objeto y no se roba
+              ⚠⚠⚠ LA FOTO ES DEL SERVIDOR, EL CLIENTE SOLO LA DIBUJA (P6).
+                 Se sube desde el PokePad (dialogo tinyfd de LWJGL, troceada
+                 16 KB y reensamblada POR TAMAÑO en `Subidas` -- comparar
+                 por indice nunca completaba), el servidor la DECODIFICA,
+                 REESCALA a 512 y RECODIFICA (se va el EXIF, GPS incluido),
+                 la guarda como <sha1>.png y la deja PENDIENTE. Un staff la
+                 aprueba: vista «MODERAR FOTOS» en el PokePad (solo nivel 3,
+                 con miniatura, dueño y APROBAR/RECHAZAR, y la lista se
+                 reenvia tras cada decision) o /luna santuario
+                 aprobar|rechazar|pendientes. Solo APROBADA se coloca. El
+                 cliente la pide por sha1 y la pinta como holograma flotando
+                 sobre el proyector, DERECHA Y OPACA (la v del quad iba al
+                 reves y salia boca abajo; hoy sin velo de alfa, la foto tal
+                 cual): NO registra bloque, objeto ni entidad nuevos -- el
+                 quad se dibuja a mano (WorldRenderEvents)
+              ⚠⚠ LOS PRECIOS VAN EN EL PAQUETE DE ESTADO, como en la
+                 tienda: los dice el servidor (sus constantes), el cliente
+                 solo los dibuja. En dos sitios acabarian mintiendo uno
+              ⚠⚠ UNO NO SE HONRA A SI MISMO, y honrar NO da nada: sin
+                 recompensa no hay incentivo de multicuenta (B-004), y el
+                 numero sigue significando lo que debe
+              ⚠ el permanente por LunaCoins NO cruza D-014 (es T1, como
+                 los cosmeticos de D-039) y por eso el alquiler NO se
+                 devuelve al pasarse a permanente -- devolverlo seria
+                 una conversion por la puerta de atras
+              ⚠⚠ LA CONFIG REVIENTA EL ARRANQUE SI ESTA MAL
+                 (config/lunaeternal/santuario.json): ids duplicados,
+                 nichos solapados o proyector fuera de su caja no dan
+                 error, dan un hueco que alguien descubre rompiendo el
+                 memorial de otro. Sin fichero = santuario aun no
+                 construido (los nichos no existen todavia)
+              +56 comprobaciones, y las que importan: el cobro exacto en
+                 cada moneda, el alquiler expira a 24 h y el permanente
+                 nunca, el tope de 10 honores, honores == clics mientras
+                 esta reclamado, el barrido libera de verdad, y ninguna
+                 foto no aprobada colgada de ningun nicho (consulta a la
+                 base, no solo al codigo)
+              ⚠ SUENA CON LA CAMPANILLA DE AMATISTA (vainilla): no hay
+                 OGG propio todavia, y Gemini no genera audio. Cuando el
+                 usuario traiga sonidos CC0, entran en assets/sounds/
 
 Rangos        ENTRENADOR . ELITE . CAMPEON . MAESTRO . LEYENDA (V020, V025)
               y encima ADMIN . DEV . MODERADOR, que son de equipo
@@ -1059,6 +1348,142 @@ Viajes        LAS PARADAS, POR FIN EN SU SITIO (2026-08-27)
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
 
 Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
+              LOS CINCO PUESTOS (2026-09-03), y el ENTRENADOR no es un traje
+              ENTRENADOR  KIT de objetos: cota de malla de vainilla con
+                          Proteccion I, se reclama cada 24 h (ver abajo)
+              ELITE       casco con cresta, hombreras y bandas doradas
+              CAMPEON     la corona de gemas y su armadura dorada
+              MAESTRO     el casco de Mewtwo, con orejas y tubo en la nuca
+              LEYENDA     el casco de Arceus, su armadura y la rueda
+              ⚠⚠ EL ARBOL DEL .bbmodel NO MANDA: en el de Mewtwo el grupo
+                 `armorHead` cuelga DENTRO de `right_arm` --un arrastre en
+                 Blockbench, que alli no cambia nada-- y mirando solo el grupo
+                 raiz los 21 cubos del casco se habrian ido AL BRAZO, girando con
+                 el. Hoy la cabeza se busca EN TODO EL CAMINO de grupos
+              ⚠⚠ EL ESPEJO SE DECIDE POR RECUADRO COMPARTIDO, no por hueso. La
+                 primera version solo miraba los tres pares de miembros y se
+                 dejaba fuera lo que estuviera DENTRO de un mismo hueso: las
+                 placas laterales del casco del ELITE van emparejadas dentro de
+                 `armorHead` y les pasa lo mismo
+              ⚠⚠⚠ DONDE CREE EL AUTOR QUE ESTA LA CABEZA LO DICE EL FICHERO, y hay
+                 que hacerle caso: el de ELITE declara su grupo `bipedHead` --que
+                 es el NOMBRE DEL HUESO DE VAINILLA, o sea una afirmacion-- en
+                 y=26,5, y vainilla la tiene en 24. Su cupula es la cabeza de
+                 vainilla subida EXACTAMENTE 2,5, asi que el casco entero salia
+                 flotando y con la cara del jugador asomando por debajo
+                 el numero NO se clava a mano: se resta la diferencia
+                 ⚠ solo se mira `bipedHead`, no `armorHead`: el primero es un
+                   hueso de vainilla y por tanto una referencia; el segundo es un
+                   grupo nuestro y su origen puede ser cualquier punto de giro
+              ⚠ el casco de Mewtwo se bajo 1,0: TODO el conjunto empezaba en
+                y=24,92 y la cabeza empieza en 24, asi que por esos 0,92 se veia
+                el cuello. «Cuanto tapa» NO sirve de medida en un casco ABIERTO
+                --deja el 99% de la cabeza a la vista antes y despues--: lo que
+                se mide es el BORDE DE ABAJO contra la base de la cabeza
+              python tools/gen_trajes.py --generar     lee arte/trajes/*.bbmodel
+              detalle del importador en docs/ui/trajes-flujo.md §5
+              ⚠⚠⚠ LA Z ESTABA VOLTEADA EN EL DIBUJADO DESDE QUE SE ESCRIBIO, y no
+                 se podia ver: `z = -oz - sz`. Con cubos SIMETRICOS EN Z --que es
+                 todo lo que hubo mientras ningun traje estuvo `listo`-- las dos
+                 formulas dan EL MISMO NUMERO. Con la corona, cuyas puntas van
+                 delante de la cara, la pieza sale DETRAS DE LA CABEZA
+                 lo bueno es `java = (x, 24 - y - alto, z)`: solo la Y se voltea.
+                 Verificado contra vanilla (la cabeza del jugador y las patas del
+                 creeper), no supuesto
+              ⚠⚠⚠ UN CUBO GIRADO ES UN HUESO HIJO, NO UN CUBO MAS. `ModelPart`
+                 gira PARTES, nunca cubos sueltos: un giro escrito dentro del
+                 cubo se ignora y la pieza sale RECTA -- y una corona con las
+                 puntas rectas es un cubo. La corona lleva 2 girados y el casco
+                 de Arceus TRECE
+                 ⚠⚠ y el paso a Java es un REFLEJO, no un giro, asi que invierte
+                    dos de los tres ejes: pitch=-rx, yaw=+ry, roll=-rz
+              ⚠⚠ LA TEXTURA SE REHORNEA, y eso es lo que hace que los dos modelos
+                 entren por la misma puerta: la corona pinta sus 44 cubos con UV
+                 POR CARA y el cuerpo con UV DE CAJA, y `ModelPart` solo sabe
+                 leer cajas. Recortando cara a cara los dos casos son uno solo
+                 ⚠ y de propina desaparece la bandera `mirror`: un cubo espejado
+                   ya trae sus caras intercambiadas y volteadas en el fichero
+              ⚠⚠⚠ EL ID DEL ENUM Y LA CARPETA DEL ARTE SON EL MISMO NOMBRE, y la
+                 primera version lo tenia mal: registro el de Arceus como
+                 «arceus» en vez de «leyenda». Eso NO DA NINGUN ERROR -- se
+                 equipa, se sincroniza y el jugador NO VE NADA. Es el fallo de
+                 los 62 cosmeticos que no existian, otra vez
+                 hoy lo comprueba el generador, en las dos direcciones: un traje
+                 `listo` sin arte vende humo, y arte sin `listo` es peso muerto
+              ⚠⚠ Y HAY UNA PRUEBA QUE COMPARA modelo.py CON Trajes.java rehaciendo
+                 en Python lo que hace Java, LEYENDO EL .geo.json DE DISCO. Es el
+                 unico sitio donde se ve un signo cambiado, y esta probada contra
+                 el fallo real de la Z: lo caza en los dos trajes
+                 ⚠ ida y vuelta POR EL FICHERO: comparar el objeto consigo mismo
+                   pasaria siempre
+              ⚠⚠ LAS HOLGURAS SON LAS DEL AUTOR, no unas nuestras: 0,75 en torso,
+                 brazos y botas y 0,5 en cintura y perneras. Son DOS CAPAS
+                 separadas 0,25, y las dos por encima de 0,25 --que es donde esta
+                 la capa exterior de la piel--. Pisarlas con un numero propio
+                 hace que parpadeen entre ellas
+              ⚠⚠ LOS .bbmodel VIVEN EN arte/trajes/, NO EN DESCARGAS. La primera
+                 version los leia de ~/Downloads: es la leccion de las seis
+                 pantallas en magenta, un generador que depende de un fichero que
+                 no esta en git NO SE PUEDE VOLVER A EJECUTAR
+              ⚠ LA RUEDA DE ARCEUS ES UNA MALLA (13 vertices, 12 triangulos) y el
+                dibujado de armadura son CAJAS. Va como una plancha fina con el
+                dibujo del autor, PINTADA POR LAS DOS CARAS -- delante y detras
+                caen en casillas distintas del reparto, y con una sola copia la
+                espalda seria basura sin dar ningun error
+              ⚠⚠ LAS DOS HOMBRERAS DE ARCEUS VIENEN GIRADAS AL REVES EN EL
+                 FICHERO, y es la UNICA vez que no se respeta el .bbmodel. El
+                 extremo que va en la AXILA les quedaba colgando por fuera del
+                 hombro. Lo caza el usuario mirando la lamina, y se MIDIO antes
+                 de tocar: como venia, 0 esquinas dentro de la axila; invertida,
+                 2. Se dice en voz alta al generar, para que no parezca un fallo
+                 ⚠⚠ Y SE CORRIGEN SOLO ESAS DOS, NO EL CONVENIO ENTERO. «Los
+                    giros salen al reves» tiene dos causas y arreglos distintos:
+                    o el convenio esta mal (habria que invertir TODOS los `roll`)
+                    o esas dos piezas lo estan. Es lo segundo, y lo dicen tres
+                    cosas que tendrian que fallar a la vez: la cresta del casco
+                    --que gira en X-- sale barrida hacia ATRAS, los cuernos hacia
+                    arriba y afuera, y la conversion esta verificada contra
+                    vanilla. Si algun dia se ve que la cresta tambien va al
+                    reves, era lo primero: una linea en `giroJava`
+              ⚠ los brazos y las piernas ENSEÑAN PIEL a proposito: las texturas
+                del autor son parciales, no estan incompletas
+              ⚠⚠⚠ EL ENTRENADOR NO ES UN TRAJE: ES UN KIT DE OBJETOS (2026-09-03,
+                 decision del usuario). Las cuatro piezas de COTA DE MALLA de
+                 vainilla con Proteccion I, que se quitan, se guardan y se
+                 pierden al morir. Se reclama desde la misma pantalla y vuelve a
+                 estar cada 24 h
+                 ⚠ malla porque en vainilla NO SE CRAFTEA: solo sale por comando
+                   o comerciando, asi que regalarla no compite con ninguna receta
+                 ⚠⚠ Y ESTA SI PROTEGE, al reves que los otros cuatro. Es GRATIS
+                    para todos, asi que no cruza la linea de D-007/D-014 --lo que
+                    prohibe es VENDER poder-- pero es armadura gratis para todo
+                    el mundo y toca el equilibrio de combate
+                 ⚠⚠⚠ `KitService.claim` SOLO APUNTABA LA FECHA: no entregaba nada
+                    y no lo llamaba nadie. El catalogo llevaba escrito desde
+                    PHASE 3 sin puerta, como el inicial y como la tienda
+                 ⚠⚠ EL HUECO SE CUENTA ANTES DE RECLAMAR. `claim` marca la fecha y
+                    arranca el reloj de 24 h: al reves, con la mochila llena el
+                    jugador habria GASTADO el kit y las piezas al suelo
+                 ⚠ y si algo falla despues de marcar, se DESHACE a mano: un
+                   inventario no es una tabla
+                 ⚠ `espera` viaja como NUMERO en la ficha: -1 traje, 0 reclamable,
+                   >0 segundos. Asi el cliente no necesita una lista de cuales son
+                   kits -- que es la lista paralela que ya mordio aqui
+                 ⚠ y son DOS PAQUETES, no uno que signifique dos cosas segun el id
+                 ⚠⚠⚠ LA ESPERA DECIA 27h 59min PARA UN COOLDOWN DE 24h, y son DOS
+                    RELOJES: la fecha se guarda con CURRENT_TIMESTAMP (MariaDB, en
+                    UTC) y se comparaba con LocalDateTime.now() (la JVM, cuatro
+                    horas por detras). Hoy la resta la hace la BASE
+                    (TIMESTAMPDIFF), asi que los dos extremos salen del mismo
+                    reloj y la zona horaria deja de importar
+                    ⚠⚠ y llevaba ahi desde PHASE 3: como nadie habia reclamado un
+                       kit nunca, el fallo no tenia forma de verse
+                 ⚠ EL KIT SE PREVISUALIZA EN EL VISOR 3D aunque no este `listo`:
+                   `listo` significa «se puede EQUIPAR» y un kit no se equipa, se
+                   reclama. Su modelo existe para enseñar QUE te llevas ANTES de
+                   gastar el reclamo, y apunta a la textura de vainilla
+              ⚠ SIN VERIFICAR EN EL JUEGO todavia
+              ---- lo de antes, que sigue siendo cierto ------------------
               5 trajes . ENTRENADOR hecho . los otros 4 «en preparacion»
               3 pestañas: KITS DE RANGO . KITS EXCLUSIVOS . MIS KITS
               saldo de LunaCoins con su «+» . previsualizador 3D
@@ -1082,9 +1507,43 @@ Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
                     ABAJO desde el pivote del hueso. De ahi y = 24 - oy - sy y
                     z = -oz - sz. Copiada mal NO DA NINGUN ERROR: el traje sale
                     del reves, dentro del cuerpo, o flotando bajo los pies
-              ⚠⚠ NO HAY TABLA DE «QUE TRAJES TIENES»: se DERIVA del rango. Una
-                 segunda tabla seria una copia que puede quedarse vieja. De
-                 propina, BAJAR DE RANGO RETIRA EL TRAJE SOLO
+              ⚠⚠⚠ CADA TRAJE SE ADQUIERE POR SEPARADO (2026-09-03, V028, decision
+                 del usuario). REVOCA lo que decia V023. Comprar LEYENDA da
+                 LEYENDA Y NADA MAS; el ENTRENADOR es gratis; quien suba de ELITE
+                 a CAMPEON con descuento SE QUEDA CON LOS DOS
+                 /luna traje <jugador>                 que tiene y que lleva
+                 /luna traje dar|quitar <jug> <traje>  nivel 4, lo llama Tebex
+                 ⚠⚠ ESO NO SE PUEDE DERIVAR DEL RANGO, y por eso hay tabla: un
+                    jugador tiene UN rango y puede tener VARIOS trajes. V023 decia
+                    lo contrario --«se deriva, asi no puede desincronizarse»-- y
+                    era correcto PARA EL MODELO DE ENTONCES
+                 ⚠⚠ Y LO QUE V023 DABA GRATIS AHORA SE PAGA A MANO: alli, bajar de
+                    rango retiraba el traje alto SIN ESCRIBIR UNA LINEA. Hoy no, y
+                    es lo correcto: lo comprado no se quita porque cambie el rango.
+                    Lo que si retira es una DEVOLUCION, y de eso se encarga
+                    `revisar` al entrar
+                 ⚠⚠ LA MIGRACION RELLENA. Sin el relleno, el permiso pasa de salir
+                    del rango a salir de una tabla que NACE VACIA: todo LEYENDA
+                    entraria y no podria ponerse el suyo, sin un solo error. Se le
+                    concede EL DE SU RANGO, que es lo que pago
+                 ⚠ EL ENTRENADOR NO VA EN LA TABLA: es gratis, y un traje gratis
+                   es una REGLA (`Traje.gratis()`), no un dato. En la tabla haria
+                   falta una fila por jugador --incluidos los que no han entrado
+                   nunca-- y esa fila es justo la que un dia falta
+                 ⚠ la clave primaria es (player_id, suit): conceder dos veces
+                   FALLA EN LA BASE. Un webhook de Tebex reintenta
+                 ⚠⚠⚠ NACIO COMO V028 Y NO SE APLICO: los numeros 28 y 29 ya
+                    estaban cogidos por las CARTAS, que salen de OTRA RAMA y ya
+                    estaban en la base. El runner solo miraba «?esta aplicada la
+                    28?», dijo que si, Y SE LA SALTO SIN UNA LINEA EN EL LOG
+                    ⚠⚠ el fallo aparecio DESPUES Y CON OTRA CARA: «Table
+                       player_suit_owned doesn't exist», una vez por cada
+                       jugador que entraba. Nada apuntaba a la migracion
+                    hoy el runner compara tambien LA DESCRIPCION --que ya estaba
+                    guardada, asi que no hizo falta tocar el esquema-- y se
+                    NIEGA A ARRANCAR diciendo que renumeres
+                    ⚠ y por eso esta lista NO tiene la 28 ni la 29: son de otra
+                      rama. En una base NUEVA este jar no crearia sus tablas
               ⚠⚠ EL ESTADO NO ES DE QUIEN LO MIRA, y aqui es literal: un traje
                  lo ve TODO EL MUNDO MENOS TU. Se reparte a todos al cambiarlo
                  Y se pone al dia a quien entra -- esa segunda mitad es la que
@@ -1101,7 +1560,103 @@ Trajes        LOS TRAJES DE RANGO, EN LA PANTALLA DE KITS (2026-08-28, V023)
               PONER NI SIENDO LEYENDA. Sin eso se equipa, se sincroniza, no da
               ningun error y el jugador NO VE NADA -- el fallo de los 62
               cosmeticos que no existian, otra vez
+              ⚠⚠⚠ Y ESA COMPROBACION SE FIABA DE UN BOOLEANO (2026-09-01).
+                 `listo` es una promesa escrita a mano en un enum: comprobaba
+                 que un traje SIN arte no se pudiera poner, y NADA comprobaba
+                 que uno CON `listo = true` tuviera los ficheros. Hoy el
+                 autotest los BUSCA
+                 ⚠⚠ Y SE PUEDE DESDE EL SERVIDOR PORQUE ES UN SOLO JAR:
+                    `src/client/resources/` acaba dentro del mismo fichero, asi
+                    que `getResource` los ve aunque el dibujado sea de cliente.
+                    Sin ese detalle parecia imposible de comprobar ahi -- que es
+                    por lo que no se comprobaba
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
+
+Blockbench    DE UN .bbmodel DEL USUARIO AL JUEGO (2026-09-01)
+              tools/trajes/importar.py . importados.py . comprobar_java.py
+              python tools/gen_trajes.py --ver <traje>     solo mirar
+              python tools/gen_trajes.py --generar         lo escribe en el mod
+              python tools/gen_trajes.py --verificar       cruza con Java
+              ⚠⚠ ESTE BLOQUE VIENE DE LA RAMA DE CARTAS Y SE ESCRIBIO CONTRA EL
+                 IMPORTADOR VIEJO. Las lecciones siguen siendo ciertas --son de
+                 como funciona Minecraft, no de como estaba escrito el nuestro--
+                 pero `caras.py`, `arceus.py` y `--al-mod` YA NO EXISTEN: se
+                 rehizo el importador entero el 2026-09-03. Los nombres de
+                 arriba son los de hoy
+              ⚠⚠⚠ HAY DOS SISTEMAS DE UV Y NO SE HABLAN. Un modelo `java_block`
+                 --el del casco-- guarda UN RECTANGULO POR CARA, donde el autor
+                 quiera. `ModelPartBuilder.cuboid()`, que es con lo que se
+                 dibuja una armadura, SOLO sabe el reparto en cruz de la skin.
+                 No se convierten las COORDENADAS: se convierten los PIXELES --
+                 se recorta cada cara y se pega en su hueco (`caras.py`)
+                 ⚠⚠ LAS DOS TABLAS DE ORIENTACION SE LEYERON DEL JAR, no se
+                    dedujeron: `CubeFace` + `ModelElementTexture` para el origen
+                    y `ModelPart$Cuboid` para el destino. Y NO COINCIDEN: las
+                    cuatro caras laterales van ESPEJADAS entre un sistema y el
+                    otro, y la de arriba volteada. Eso no se ve venir mirando el
+                    modelo: se ve en el juego, con el dibujo del lado cambiado,
+                    y se lee como «el arte esta mal hecho»
+                 ⚠ y un rectangulo con las esquinas al reves (u0>u1) NO esta mal
+                   escrito: es un espejo. Normalizarlo sin voltear la imagen
+                   pierde justo esa instruccion
+              ⚠⚠⚠ MINECRAFT NO GIRA CUBOS, GIRA HUESOS. 13 de los 19 cubos del
+                 casco van girados, y `cuboid()` hace cajas rectas y ya. Cada
+                 cubo girado sale a un HUESO PROPIO con su pivote y su rotacion
+                 -- que es lo que hace Blockbench al exportar y lo que hay
+                 dentro del `eevee_head.geo.json` de Diosesmon
+                 ⚠⚠ EL PIVOTE DE UN HIJO ES RELATIVO AL DEL PADRE. En el
+                    .geo.json todos son absolutos; en Java cada
+                    `ModelTransform` se aplica dentro del sistema del padre
+                 ⚠⚠ Y LA ROTACION NO ES COPIAR LOS TRES NUMEROS: el paso de un
+                    espacio al otro invierte la Y, y eso CAMBIA EL SIGNO del
+                    cabeceo y del alabeo, no el de la guiñada
+              ⚠⚠⚠ Y LA Z NO SE NIEGA. `Trajes.java` hacia `z = -oz - sz` y era
+                 FALSO: los dos espacios tienen el frente en -Z. Lo dice el
+                 morro del cerdo de vanilla (`cuboid(-2, 0, -9, ...)`) y lo dice
+                 el reparto de la textura -- la cara que se lleva el rectangulo
+                 (u+d, v+d) en `ModelPart$Cuboid` es la de NORTH, y en la skin
+                 de vanilla ese rectangulo es LA CARA DEL JUGADOR
+                 el traje salia del reves: la visera en la nuca y el aro delante
+                 ⚠⚠ NADIE LO VIO POR EL PEOR MOTIVO POSIBLE: EL MODELO DEL
+                    JUGADOR ES SIMETRICO EN Z. La formula cuadra con la cabeza
+                    (-4..4 -> -4..4), con el torso y con los cuatro miembros.
+                    Solo se rompe con lo que SOBRESALE, y no habia ni una pieza:
+                    los cinco trajes estaban a `listo = false`
+              ⚠⚠ EL HUESO DE UN CUBO SIN NOMBRE LO DICE SU GRUPO DE BLOCKBENCH,
+                 no su posicion. Los seis adornos de la armadura se llaman todos
+                 `cube` y por posicion irian al hueso equivocado: las dos
+                 hombreras caen encima de los BRAZOS y el autor las metio en el
+                 grupo del TORSO. En el brazo se moverian al andar
+                 ⚠ y sin esto no iban al hueso equivocado: SE PERDIAN, con un
+                   «no cae en ningun hueso conocido». Son seis piezas de verdad
+              ⚠⚠ `box_uv` ES UNA BANDERA POR CUBO, NO DEL FICHERO, y `armadura
+                 arceus.bbmodel` los MEZCLA: el cuerpo con UV de caja y los seis
+                 adornos con UV por cara. Lo que no cabe en caja se rehornea
+              ⚠⚠ LA DENSIDAD DE TEXEL: `texture_width` es la UNICA palanca para
+                 cambiar la escala de la textura, porque Minecraft saca el hueco
+                 de cada cara del TAMAÑO DEL CUBO. El casco declara 128 con un
+                 PNG de 512 = cuatro pixeles por unidad, que es a lo que dibujo
+                 el autor. A densidad 1 sus caras de 1 de alto --con 8 pixeles
+                 de dibujo dentro-- salian LISAS: la forma bien y el detalle
+                 borrado, que parece que el arte era asi
+                 ⚠ no es una por cubo sino POR FICHERO, asi que mezclar
+                   densidades dentro de una pieza es una de las dos leyendose
+                   mal. Se comprueba
+              ⚠⚠ LA COLOCACION DEL CASCO SE MIDE, NO SE ELIGE. Viene en espacio
+                 de bloque (0..16) y la cabeza vive en -4..4 / 24..32 / -4..4.
+                 El autor dejo el hueco: sus paredes laterales distan OCHO en X
+                 y OCHO en Z, que es la cabeza exacta. De ahi salen escala 1:1 y
+                 los tres desplazamientos
+                 ⚠ y lleva inflate 0,4: con el hueco exacto la pared interior
+                   cae ENCIMA de la piel y las dos se pelean por el pixel
+              ⚠ un generador que reparte la textura tiene que saber HASTA DONDE
+                hay algo escrito. La rueda tenia un 128 a mano y funcionaba de
+                casualidad; hoy pregunta (`t.libre_y`)
+              ⚠ LO QUE SIGUE FUERA: la rueda es una MALLA (13 vertices, 12
+                triangulos) y una malla no es una caja. Se pone como PLANCHA con
+                su dibujo -- que ademas conserva el arte del autor
+              ⚠ y el visor tenia la cara de ARRIBA volteada. Casi no se ve --hay
+                que mirar al jugador desde el techo-- asi que se habria quedado
 
 EL ARTE       tools/gen_trajes.py . tools/trajes/ . docs/ui/prompts-trajes.md
               ⚠⚠⚠ EL VISOR ES LA PIEZA QUE IMPORTA, NO UN EXTRA. Sin el, un traje
@@ -1855,6 +2410,33 @@ Interfaz      revestida de azul luna · docs/ui/interfaz-luna.md
                    only data packs can". Se registraba y se quedaba
                    apagado — y no se veia porque yo IGNORABA el
                    booleano que devuelve registerBuiltinResourcePack
+Desplegar     EL PROCEDIMIENTO ENTERO: docs/technical/despliegue.md
+              LEERLO ANTES DE DESPLEGAR NADA. Resumen:
+                cd mod && ./build.sh
+                python tools/gen_manifest.py --publicar      <- clientes
+                python tools/desplegar.py mod --reiniciar    <- servidor
+                python tools/rcon.py "luna autotest"
+              ⚠⚠⚠ AÑADIR: manifiesto PRIMERO. QUITAR: servidor primero.
+                 Son la misma regla mirada desde cada lado -- el servidor tiene
+                 que tener LO MISMO O MENOS que el cliente, siempre. Al reves
+                 la conexion se cae EN LA PUERTA con un error que no nombra al
+                 mod que falta
+              ⚠⚠⚠ LA CONFIG DE UN MOD AJENO: PARAR, SUBIR, ARRANCAR. Muchos la
+                 cargan al arrancar y LA REESCRIBEN AL APAGARSE: subirla en
+                 caliente y reiniciar hace que la parada vuelque su copia vieja
+                 encima. No da ningun error -- gana el que escribe el ultimo.
+                 Mordio DOS veces con ClaimBlocks (claims.json y texts.json)
+              ⚠⚠⚠ DOS RAMAS, UN SERVIDOR: si dos compilan el mismo jar, la
+                 segunda que despliegue BORRA A LA PRIMERA. Tres veces en una
+                 semana. D:/pokereportversionmejorada                                                      8998b04 [master]
+D:/pokereportversionmejorada/.claude/worktrees/armadura-casco-arceus-c8e71c       38ebc71 [claude/armadura-casco-arceus-c8e71c]
+D:/pokereportversionmejorada/.claude/worktrees/armaduras-blockbench-server-023b12 acdd71c [claude/armaduras-blockbench-server-023b12] y On branch claude/armaduras-blockbench-server-023b12
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	docs/technical/despliegue.md
+
+nothing added to commit but untracked files present (use "git add" to track) antes de desplegar
+
 Publicar      YA NO QUEDA NI UN FICHERO SIRVIENDOSE DESDE raw (D-036)
               eran 5, y el manifiesto era uno de ellos: LA PRIMERA
               peticion del arranque, en el peor sitio posible
@@ -3103,6 +3685,7 @@ documentación · migración · rollback.
 | D-037 | 2026-08-17 | **La base del pack pasa a ser COBBLEVERSE, quitandole la generacion de estructuras y la musica.** Revoca D-031 | **Orden del usuario, dada despues de que le enseñara las licencias** — `cobbleverse` es All Rights Reserved y `cobbleverse-badges` es CC-BY-NC-ND-4.0, que es la clausula por la que D-006 lo habia descartado. Queda escrito aqui para que quien lo lea dentro de seis meses vea **el dato y la decision**, no solo la decision. **Lo que si se hace bien:** el manifiesto guarda URL y hash y nunca el jar, asi que cada mod se descarga del CDN de Modrinth — no redistribuimos nada suyo, igual que con los shaders (D-030). Se les quita lo que el usuario no queria: **generacion de estructuras** (4 mods) y **421 MB de musica**, que multiplicaba por cinco la descarga de un jugador nuevo (P10). El pack pasa de 185 a **434 MB**. Tres cosas que solo se ven haciendolo: **el slug de Modrinth no es el nombre del jar** y una exclusion mal escrita no surte efecto *sin avisar*; **su configuracion son 155 ficheros** y sueltos eran 155 peticiones a `raw`, o sea el 429 de D-036 otra vez (van en un zip por carpeta con `keepExisting`); y **`continuity:default` cambia 42 bloques de construir** — lo reporto el usuario en vivo con la ciudadela ya empezada, y se apaga |
 | D-038 | 2026-08-17 | **El PokePad enseña datos de sesion —Plata, LunaCoins, Clan, Trabajo, Division y Medallas— en vez de la tarjeta de entrenador** | **Decision del usuario.** La tarjeta enseñaba el nivel de las cinco Vias en estrellas; lo que el queria bajo la cara es lo que se mira a diario. Dos cosas quedan escritas porque no son obvias: **las 16 medallas se referencian por identificador al mod de CobbleVerse y NO se copian sus texturas** — el mod va instalado en el cliente, asi que apuntarlas cuesta cero bytes, no redistribuye nada de un CC-BY-NC-ND y el dibujo lo sigue mandando su autor; y **clan, trabajo y division viajan en el paquete aunque no exista el sistema**, mandando cadena vacia para que el Pad pinte un guion. Un «Sin clan» diria «ya funciona y no tienes ninguno», que no es verdad; y tenerlos ya en el protocolo hace que encenderlos sea rellenar tres lineas en vez de tocar paquete, codec, cache y dibujado |
 | D-042 | 2026-08-25 | **Los objetos del mercado se venden por ESCAPARATE y no por libro de órdenes.** Revoca la mitad de objetos de D-041 | **Decisión del usuario, tomada usándolo**: *«opciones duplicadas, botones duplicados… la idea es publicar una oferta así como en el de los Pokémon: el comprador ve la oferta, se interesa y la compra»*. **D-041 no estaba mal razonada; le faltaba un dato: cuánta gente hay.** Un libro de órdenes es el mecanismo correcto para cosas fungibles —eso sigue siendo cierto— pero **un libro necesita las dos caras pobladas para cruzar**. Con doce personas pones una orden de compra y se queda ahí hasta que alguien pase por casualidad: lo que en Albion es *liquidez*, aquí es *una lista de deseos que nadie lee*. ⚠⚠ **Y los botones duplicados no eran descuido: los pedía el diseño.** La pantalla que un libro necesita tiene **dos entradas para todo** —pestañas LIBRO/MIS ÓRDENES/HISTORIAL para mirar, y campos PRECIO/CANTIDAD con COMPRAR/VENDER para actuar—; un escaparate tiene una: publicas, o compras. **Lo que se gana no es solo la pantalla**: funciona con poca gente, hay una sola forma de hacer cada cosa, se aprende una vez (quien sepa vender un Pokémon sabe vender una pila de piedras) y **la custodia se simplifica** — la doble custodia existía porque una orden de compra retiene *dinero*, y sin órdenes de compra esa mitad desaparece. **Lo que se pierde, y hay que decirlo**: no hay órdenes de compra («compro cobre a 20») ni precio agregado de libro; el índice de precios pasa a medir **ventas cerradas**, que es menos dato y **mejor dato** — un precio solo es información cuando alguien lo ha pagado. ⚠ `MarketService` **no se borra**: sigue escrito, probado y con sus comprobaciones, y vuelve el día que el servidor tenga gente para que un libro cruce. Lo que cambia es **por dónde entra el jugador**. Detalle en [mercado.md §2-bis](docs/trading/mercado.md) |
+| D-043 | 2026-09-04 | **El Santuario de Monumentos: nichos 3x3 con memorial (foto, titulo, historia y honores), alquilables por Plata y comprables por LunaCoins, con la foto moderada por staff** | Orden y reglas del usuario, detalle en [santuario.md](docs/world/santuario.md): alquiler 24 h por 5.000 de Plata, permanente por LunaCoins --T1 identidad, no cruza D-014, y por eso el alquiler no se devuelve al pasarse--, 1 nicho salvo CAMPEON+, 10 honores por jugador/nicho/dia sin recompensa, y la foto se sube desde el PokePad y la aprueba un staff: el cliente nunca inventa una foto (P6). El holograma se dibuja a mano sobre el proyector de cobblemon-cards, sin registrar bloque, objeto ni entidad nuevos |
 | D-040 | 2026-08-23 | **Los clanes son un sistema propio, no un mod adoptado, y NO dan ninguna ventaja de juego** | **Petición del usuario** («si hay algún mod de clan sería excelente… tipo Albion»). Se buscó: lo que hay para Fabric 1.21.1 son **facciones con terreno** (reclamar chunks, guerra, PvP) o **equipos de chat**, y ninguna de las dos cosas es esto — la ciudadela es una isla que construimos nosotros, así que no hay territorio que repartir. P5 pone «mod maduro» antes que «sistema propio», pero **solo cuando el mod resuelve el problema**. **Lo que decide la cuestión es el tesoro:** un mod ajeno guardaría el dinero en su propio almacén, y entonces habría **dos economías** — la nuestra, con libro de asientos, idempotencia y auditoría (R3, R4), y la suya. Todo lo económico de este proyecto pasa por `applyInTransaction`, y un mod externo no puede pasar por ahí. **Y un clan no desbloquea nada:** da identidad (la etiqueta junto al nombre) y un sitio donde juntar dinero, y se queda ahí. Por diseño, porque una ventaja de clan convierte «tener amigos» en una estadística y castiga a quien juegue solo; y por economía, porque **un bono de clan es una fuente** (P3) y este proyecto tiene el problema contrario. Si algún día se le añade algo, la pregunta de P2 que hay que responder primero es la octava: *cómo se abusa* |
 | D-039 | 2026-08-22 | **Los cosmeticos NO se consiguen jugando: solo con LunaCoins o en eventos que organicemos** | **Decision del usuario.** No caen de un cofre, no se craftean, no los suelta un jefe. Dos consecuencias que no son obvias. **La primera es tecnica y es un invariante, no una preferencia:** si no hay ninguna via de mundo, el servidor es la UNICA fuente y el cliente jamas concede un cosmetico -- solo dibuja lo que le mandan (P6). Eso simplifica el anti-abuso a un solo punto: la compra, que va con clave de idempotencia como todo lo economico (R4). **La segunda es de producto, y el propio `monetization.md` la avisa:** «un cosmetico sin nadie que lo vea no vale nada». Si TODO fuera de pago, los unicos que llevarian cosmeticos serian los que pagan, y el escaparate se apaga solo. Los **eventos son los que sostienen eso**: son la via gratuita, y por eso no son un adorno de la decision sino la mitad que la hace funcionar. Conviene que salga algo en cada evento, aunque sea poco. Los cosmeticos siguen siendo **T1 · identidad**, que es venta libre en su propio marco |
 | D-035 | 2026-08-17 | **El launcher se rehace como fork de FreesmLauncher** (C++/Qt6, GPL-3.0), en repositorio propio y publico | **Decision del usuario, tomada tras leer el analisis en contra.** Mi recomendacion fue reestructurar el Electron actual: de los cinco riesgos que rompen al crecer —distribucion, identidad, firma, observabilidad, vuelta atras— el fork **no arregla ninguno**, y su funcionalidad estrella (jugar sin cuenta de Microsoft) ya la tenia el nuestro en 25 lineas. El usuario decidio el fork igualmente. **Dos consecuencias que no son opcionales y quedan escritas aqui para que nadie las descubra tarde:** (1) **GPL-3.0 obliga a publicar el codigo fuente completo** del fork, incluido cualquier anti-abuso o capa de identidad que se le añada encima — con tienda de pago (D-007), eso no es gratis; (2) hay que renombrar la marca (GPL §7.c/e, y Prism lo exige a sus forks). Ganancia real medida: instalador de **28,8 MB frente a 95**. Coste: rehacer perfiles, diagnostico, reparar e interfaz en español, y una cadena Qt6+CMake+MSVC+vcpkg en vez de `npm run dist`. Toolchain ya montado en `.toolchain/` (git-ignorado), fork clonado en `D:\luna-launcher` |

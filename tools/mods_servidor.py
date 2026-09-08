@@ -185,6 +185,11 @@ CONTENIDO = {
     #   namespace `minecraft` --backportea bloques de 1.21.2+-- asi que
     #   buscando "blockstates de namespace propio" parecia que no añadia nada.
     "VanillaBackport":   "72 bloques nuevos, y los registra como `minecraft:`",
+    # ⚠⚠⚠ 49 OBJETOS Y 8 BLOQUES, y ademas ES DE SERVIDOR DE VERDAD: sus
+    #    sobres los reparte `CartasService`, las cartas caen al capturar y al
+    #    derrotar, y sus dos comandos son de operador. Sin el en el servidor no
+    #    solo se descuadran las tablas: la mitad del sistema no existe.
+    "cobblemon-cards":   "49 objetos y 8 bloques del sistema de cartas",
 }
 QUEREMOS.update({k: f"Registra bloques ({v}). Si esta solo en el cliente, las "
                     f"tablas de bloques no coinciden y se dibuja otra cosa"
@@ -192,7 +197,8 @@ QUEREMOS.update({k: f"Registra bloques ({v}). Si esta solo en el cliente, las "
 
 # Lo que NO se toca aunque no este en QUEREMOS: es nuestro o es infraestructura.
 # Sin esta lista, `--aplicar` borraria el mod del servidor entero.
-INTOCABLES = ("lunaeternal", "lunaneon", "fabric-api", "Cobblemon",
+INTOCABLES = ("lunaeternal", "lunaneon", "cobblemon-cards",
+              "fabric-api", "Cobblemon",
               "EasyAuth", "worldedit", "Axiom",
               # ⚠ CHUNKY ES SOLO DE SERVIDOR Y ESTA COMPROBADO, no supuesto:
               #   0 blockstates, 0 modelos de objeto, 0 traducciones y un solo

@@ -52,17 +52,45 @@
       ]
     },
     {
+      "_comment": [
+        "EL KIT DEL RANGO ENTRENADOR: LA COTA DE MALLA DE VAINILLA.",
+        "Decision del usuario (2026-09-03). Antes eran balls y pociones.",
+        "",
+        "POR QUE MALLA Y NO OTRA: en vainilla la cota de malla NO SE CRAFTEA.",
+        "Solo sale por comando o comerciando con aldeanos, asi que regalarla no",
+        "compite con ninguna receta ni devalua ningun material. Es la unica",
+        "armadura que se puede dar sin tocar la cadena de produccion.",
+        "",
+        "⚠⚠ ESTO SI PROTEGE, al contrario que los otros cuatro trajes. Es GRATIS",
+        "para todo el mundo, asi que no cruza la linea de D-007/D-014 --lo que",
+        "esa linea prohibe es VENDER poder-- pero es armadura gratis para todos",
+        "y eso toca el equilibrio de combate. Queda dicho.",
+        "",
+        "⚠ Se puede volver a reclamar cada 24 h (decision del usuario: «si las",
+        "pierde puede volverla a reclamar en 24 horas, no pasa nada»).",
+        "",
+        "⚠ El `value` es BAJO a proposito y no es un descuido: la malla no se",
+        "vende en la tienda y fundida da un triste lingote de hierro. Lo que",
+        "inyecta en la economia es casi nada; lo que da es AGUANTE. El tope",
+        "diario mide lo primero."
+      ],
       "id": "entrenador",
-      "name": "§cKit Entrenador",
-      "icon": "minecraft:iron_sword",
-      "description": "Para quien ya sabe lo que hace.",
+      "name": "§7Kit Entrenador",
+      "icon": "minecraft:chainmail_chestplate",
+      "description": "Cota de malla. No es gran cosa, pero aguanta.",
       "cooldownHours": 24,
       "once": false,
       "requiredRank": "ENTRENADOR",
-      "_calibracion": "3x750 + 1x900 = 3150/dia. Suma con el diario: 5350/dia, por debajo del tope de 6000. Un jugador con rango puede reclamar AMBOS, asi que lo que importa es la suma, no cada kit por separado.",
+      "_calibracion": "4x150 = 600/dia. Suma con el diario: 2800/dia, muy por debajo del tope de 6000. Antes eran 3150/dia de balls y pociones.",
       "items": [
-        { "item": "cobblemon:great_ball",  "count": 3, "value": 750 },
-        { "item": "cobblemon:super_potion","count": 1, "value": 900 }
+        { "item": "minecraft:chainmail_helmet",     "count": 1, "value": 150,
+          "enchants": { "minecraft:protection": 1 } },
+        { "item": "minecraft:chainmail_chestplate", "count": 1, "value": 150,
+          "enchants": { "minecraft:protection": 1 } },
+        { "item": "minecraft:chainmail_leggings",   "count": 1, "value": 150,
+          "enchants": { "minecraft:protection": 1 } },
+        { "item": "minecraft:chainmail_boots",      "count": 1, "value": 150,
+          "enchants": { "minecraft:protection": 1 } }
       ]
     }
   ]

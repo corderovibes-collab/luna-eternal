@@ -83,6 +83,19 @@ EXCLUIDOS = {
     "bisect-mod":
         "Es el mod de integracion de BisectHosting: publicidad de un hosting "
         "que no es el nuestro. Nuestro servidor esta en TaroHosting",
+    "cobbledollars":
+        "TRAE SU PROPIA ECONOMIA, y este servidor ya tiene una. Peticion del "
+        "usuario (2026-09-04): «hay un mod del cobbleverse que ganas dinero "
+        "pero eso con el sistema que tenemos de economia no debe de estar». "
+        "Es el mismo motivo por el que D-040 no adopto un mod de clanes: todo "
+        "lo economico de aqui pasa por `applyInTransaction` --libro de "
+        "asientos, idempotencia, auditoria (R3, R4)-- y un mod externo no "
+        "puede pasar por ahi. Dos economias en el mismo servidor es que una de "
+        "las dos no la controla nadie. "
+        "Se abrio el jar antes de quitarlo: aporta UN huevo de invocacion, un "
+        "mercader y unas estructuras en aldeas, y NADA MAS -- los PELUCHES que "
+        "el usuario si quiere son de `pokeblocks`, no suyos. Y de los 141 mods "
+        "solo `cobblemonraiddens` lo SUGIERE, que es opcional",
     # --- generacion de mundo y estructuras: NO se quiere (peticion del usuario)
     "legendary-monuments":
         "Genera monumentos por el mundo. El usuario no quiere generacion de "

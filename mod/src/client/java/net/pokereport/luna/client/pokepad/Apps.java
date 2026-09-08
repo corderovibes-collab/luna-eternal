@@ -63,6 +63,7 @@ public final class Apps {
             case "clan" -> abrirClan();
             case "tienda" -> abrirTienda();
             case "curar" -> abrirCurar();
+            case "torre_batalla" -> abrirTorre();
             case "gts" -> abrirMercado();
             case "cazas" -> abrirCazas();
             case "mochila" -> abrirMochila();
@@ -71,8 +72,18 @@ public final class Apps {
             case "gyms" -> abrirGimnasios();
             case "kits" -> abrirKits();
             case "tesoros" -> abrirTesoros();
+            case "cartas" -> abrirCartas();
+            case "protecciones" -> abrirProtecciones();
+            case "santuario" -> abrirSantuario();
             default -> false;
         };
+    }
+
+    /** El santuario de Monumentos: nichos, memoriales y honores. */
+    private static boolean abrirSantuario() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new SantuarioScreen(cliente.currentScreen));
+        return true;
     }
 
     /**
@@ -128,6 +139,33 @@ public final class Apps {
     }
 
     /** Tesoros: los cofres. D-020, y docs/economy/treasures.md. */
+    /**
+     * CARTAS: las tres zonas de sobres.
+     *
+     * <p>⚠ NO se comprueba aqui si Cobblemon Cards esta instalado. Lo mira la
+     * propia pantalla contra su registro y lo DICE: un icono que no abre nada
+     * se lee como una averia, y uno que abre y explica que falta algo es
+     * informacion.
+     */
+    /**
+     * PROTECCIONES: tus parcelas.
+     *
+     * <p>⚠ NO se comprueba aqui si ClaimBlocks esta. Lo mira la propia pantalla
+     * y lo DICE: un icono que no abre nada se lee como una averia, y uno que
+     * abre y explica que falta algo es informacion.
+     */
+    private static boolean abrirProtecciones() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new ProteccionesScreen(cliente.currentScreen));
+        return true;
+    }
+
+    private static boolean abrirCartas() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new CartasScreen(cliente.currentScreen));
+        return true;
+    }
+
     private static boolean abrirTesoros() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
         cliente.setScreen(new TesorosScreen(cliente.currentScreen));
@@ -159,6 +197,12 @@ public final class Apps {
     private static boolean abrirCurar() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
         cliente.setScreen(new CurarScreen(cliente.currentScreen));
+        return true;
+    }
+
+    public static boolean abrirTorre() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new net.pokereport.luna.client.pokepad.TorreScreen(cliente.currentScreen));
         return true;
     }
 

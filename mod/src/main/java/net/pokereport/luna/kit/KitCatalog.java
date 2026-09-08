@@ -12,7 +12,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Catálogo de kits, con el tope de valor comprobado al arrancar.
@@ -28,7 +30,17 @@ import java.util.List;
  */
 public final class KitCatalog {
 
-    public record KitItem(Item item, int count, long unitValue) {
+    /**
+     * Un objeto de un kit.
+     *
+     * <p>⚠ {@code encantamientos} va por identificador y no por objeto de
+     * registro: el catálogo se lee <b>al arrancar</b>, antes de que exista el
+     * registro dinámico del servidor. Se resuelve al entregar, y uno que no
+     * exista se salta con un aviso — no se cae la entrega entera por un nombre
+     * mal escrito.
+     */
+    public record KitItem(Item item, int count, long unitValue,
+                          Map<Identifier, Integer> encantamientos) {
         public long totalValue() { return count * unitValue; }
     }
 
@@ -85,8 +97,22 @@ public final class KitCatalog {
                     JsonObject o = ie.getAsJsonObject();
                     Item item = resolve(o.get("item").getAsString());
                     if (item == null) { omitidos++; continue; }
+                    Map<Identifier, Integer> ench = new LinkedHashMap<>();
+                    if (o.has("enchants")) {
+                        for (var en : o.getAsJsonObject("enchants").entrySet()) {
+                            Identifier id = Identifier.tryParse(en.getKey());
+                            if (id == null) {
+                                LunaEternal.LOG.warn(
+                                    "Encantamiento con nombre invalido en kits.json: {}",
+                                    en.getKey());
+                                continue;
+                            }
+                            ench.put(id, en.getValue().getAsInt());
+                        }
+                    }
                     items.add(new KitItem(item, o.get("count").getAsInt(),
-                                          o.get("value").getAsLong()));
+                                          o.get("value").getAsLong(),
+                                          Map.copyOf(ench)));
                 }
                 if (items.isEmpty()) continue;
 

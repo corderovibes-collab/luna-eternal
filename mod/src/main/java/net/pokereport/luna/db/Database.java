@@ -61,7 +61,15 @@ public final class Database implements AutoCloseable {
         "V024__medallas.sql",
         "V025__rango_entrenador.sql",
         "V026__tesoros.sql",
-        "V027__claves_de_especie.sql"
+        "V027__claves_de_especie.sql",
+        // ⚠⚠ LA 28 Y LA 29 SON DE LAS CARTAS Y VENIAN DE OTRA RAMA. Estuvieron
+        //    en la base sin estar en esta lista, y por eso los trajes --que
+        //    tambien habian elegido la 28-- se saltaron sin una linea en el log.
+        //    Ver el aviso de `migrate()`: hoy eso ya no puede pasar callado.
+        "V028__cartas.sql",
+        "V029__habilidad_cartas.sql",
+        "V030__trajes_comprados.sql",
+        "V031__santuario.sql"
     };
 
     private final HikariDataSource ds;
@@ -96,10 +104,39 @@ public final class Database implements AutoCloseable {
 
             for (String file : MIGRATIONS) {
                 int version = versionOf(file);
-                if (applied.contains(version)) continue;
+                String sql = read("/db/migration/" + file);
+                if (applied.contains(version)) {
+                    // ⚠⚠⚠ DOS RAMAS PUEDEN ELEGIR EL MISMO NUMERO, Y ANTES ESO SE
+                    //    SALTABA EN SILENCIO. Paso el 2026-09-03: los numeros 28
+                    //    y 29 ya estaban cogidos por las migraciones de las
+                    //    CARTAS, que venian de otra rama y ya estaban en la base.
+                    //    Esta linea decia solo `if (applied.contains(version))
+                    //    continue;`, asi que la migracion de los trajes --que
+                    //    tambien se llamaba 28-- NUNCA SE APLICO y no hubo ni una
+                    //    linea en el log.
+                    //
+                    //    ⚠⚠ Y EL FALLO APARECIO DESPUES Y CON OTRA CARA: «Table
+                    //       player_suit_owned doesn't exist», una vez por cada
+                    //       jugador que entraba. Nada apuntaba a la migracion.
+                    //
+                    //    La descripcion es lo que distingue una migracion de otra
+                    //    con el mismo numero, y ya estaba guardada: no hace falta
+                    //    tocar el esquema para comprobarlo.
+                    String mia = descriptionOf(sql);
+                    String suya = descriptionApplied(c, version);
+                    if (mia != null && suya != null && !mia.equals(suya)) {
+                        throw new SQLException(
+                            "CHOQUE DE MIGRACIONES: la version " + version
+                          + " ya esta aplicada con la descripcion \"" + suya
+                          + "\", y " + file + " dice \"" + mia + "\". Son dos "
+                          + "migraciones distintas con el mismo numero, "
+                          + "probablemente de dos ramas. Renumera " + file
+                          + " al siguiente numero libre (y su INSERT final).");
+                    }
+                    continue;
+                }
 
                 LunaEternal.LOG.info("Aplicando migracion {}", file);
-                String sql = read("/db/migration/" + file);
 
                 // Cada migración es atómica: o entera o ninguna.
                 boolean prev = c.getAutoCommit();
@@ -129,6 +166,28 @@ public final class Database implements AutoCloseable {
                       + "ON DUPLICATE KEY UPDATE version = version;");
                 }
                 LunaEternal.LOG.info("Migracion {} aplicada", file);
+            }
+        }
+    }
+
+    /** La descripcion que la propia migracion se pone en su INSERT final. */
+    private static String descriptionOf(String sql) {
+        var m = java.util.regex.Pattern.compile(
+                """
+                INSERT\\s+INTO\\s+schema_version\\s*\\([^)]*\\)\\s*VALUES\\s*\
+                \\(\\s*\\d+\\s*,\\s*'((?:[^']|'')*)'""",
+                java.util.regex.Pattern.CASE_INSENSITIVE).matcher(sql);
+        return m.find() ? m.group(1).replace("''", "'") : null;
+    }
+
+    /** La descripcion con la que esa version quedo registrada en la base. */
+    private static String descriptionApplied(Connection c, int version)
+            throws SQLException {
+        try (var ps = c.prepareStatement(
+                "SELECT description FROM schema_version WHERE version = ?")) {
+            ps.setInt(1, version);
+            try (var rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
             }
         }
     }

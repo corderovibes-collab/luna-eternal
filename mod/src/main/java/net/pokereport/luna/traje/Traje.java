@@ -18,12 +18,20 @@ import net.pokereport.luna.ui.Tablist;
  * <p>Aquí no hay armadura. <b>No hay ni objeto.</b> El servidor dice quién lleva
  * cuál y el cliente lo dibuja encima del jugador, igual que los sombreros.
  *
- * <h2>⚠⚠ SE PUEDE LLEVAR CUALQUIERA HASTA EL TUYO, NO SOLO EL TUYO</h2>
+ * <h2>⚠⚠⚠ CADA TRAJE SE ADQUIERE POR SEPARADO</h2>
  *
- * Un LEYENDA puede vestirse de ENTRENADOR si le apetece. Es deliberado: un traje es
- * un disfraz, y obligar a llevar el más alto convierte una recompensa en un
- * uniforme. Además evita el efecto raro de que subir de rango te <b>quite</b> el
- * aspecto con el que la gente te conocía.
+ * Decisión del usuario (2026-09-03). Aquí ponía lo contrario —«se puede llevar
+ * cualquiera hasta el tuyo»— y el código lo hacía: un LEYENDA podía vestirse de
+ * los cinco. <b>Ya no.</b> Comprar LEYENDA da LEYENDA y nada más; los demás se
+ * compran aparte, y quien suba de ÉLITE a CAMPEÓN <b>se queda con los dos</b>.
+ * El ENTRENADOR es gratis para todo el mundo.
+ *
+ * <p>⚠⚠ Lo que sí se conserva del diseño anterior: <b>puedes llevar cualquiera
+ * de los que tengas</b>, no solo el más alto. Un traje es un disfraz, y obligar
+ * al más alto convierte una recompensa en un uniforme.
+ *
+ * <p>⚠ Los precios y los descuentos son de Tebex; el mod solo necesita saber
+ * qué tienes, y eso vive en {@code player_suit_owned} (V028).
  *
  * <h2>⚠⚠ Y `listo` NO ES UNA BANDERA DE DESARROLLO</h2>
  *
@@ -36,21 +44,34 @@ import net.pokereport.luna.ui.Tablist;
  */
 public enum Traje {
 
-    // ⚠⚠⚠ LOS CINCO ESTAN A `false`, Y ES LO CORRECTO AHORA MISMO.
-    //    El arte generado por script se retiro el 2026-08-28 (decision del
-    //    usuario): se hara A MANO en Blockbench. Hasta que un traje tenga sus
-    //    ficheros, se ve en la pantalla --que dice hacia donde va la
-    //    progresion-- y NO SE PUEDE PONER.
-    //    Se enciende cambiando su `false` por `true`, y nada mas.
+    // ⚠⚠⚠ `listo` SE ENCIENDE CUANDO EL ARTE ESTA EN EL JAR DEL CLIENTE, no
+    //    cuando esta dibujado. El cliente busca `trajes/<id>/<id>_<pieza>.geo.json`
+    //    y `textures/armor/<id>/`, y el <id> es EL DE AQUI: si no coincide, el
+    //    traje se equipa, se sincroniza, no da ningun error Y NO SE VE NADA.
+    //    Es el fallo de los 62 cosmeticos que no existian, y ya nos mordio: la
+    //    primera version del importador registro el traje de Arceus como
+    //    «arceus» en vez de «leyenda».
+    //    Los genera `python tools/gen_trajes.py --generar`.
 
     // ⚠ El identificador cambio con el rango (NOVATO -> ENTRENADOR). Salio
     //   gratis porque construye la ruta del arte --textures/armor/<id>/-- y
-    //   ese arte todavia NO EXISTE: `listo` esta a false en los cinco.
+    //   ese arte todavia no existia.
+    // ⚠⚠⚠ EL ENTRENADOR NO ES UN TRAJE COSMETICO, ES UN KIT DE OBJETOS
+    //    (decision del usuario, 2026-09-03): son las cuatro piezas de COTA DE
+    //    MALLA de vainilla, que el jugador se quita, guarda y pierde al morir.
+    //    Por eso `listo` es false --no hay nada que dibujar encima-- y por eso
+    //    existe `esKit()`: la pantalla ensena RECLAMAR en vez de PONER.
+    //    ⚠ Se eligio la malla porque en vainilla NO SE CRAFTEA: solo se
+    //      consigue por comando o comerciando, asi que darla no compite con
+    //      ninguna receta.
     ENTRENADOR("entrenador", Tablist.Rank.ENTRENADOR, false),
-    ELITE("elite", Tablist.Rank.ELITE, false),
-    CAMPEON("campeon", Tablist.Rank.CAMPEON, false),
-    MAESTRO("maestro", Tablist.Rank.MAESTRO, false),
-    LEYENDA("leyenda", Tablist.Rank.LEYENDA, false);
+    ELITE("elite", Tablist.Rank.ELITE, true),
+    // ⚠ ELITE, CAMPEON, MAESTRO y LEYENDA vienen de los .bbmodel del usuario,
+    //   que estan en el repo (arte/trajes/). El ENTRENADOR no es un traje sino
+    //   un kit de objetos.
+    CAMPEON("campeon", Tablist.Rank.CAMPEON, true),
+    MAESTRO("maestro", Tablist.Rank.MAESTRO, true),
+    LEYENDA("leyenda", Tablist.Rank.LEYENDA, true);
 
     private final String id;
     private final Tablist.Rank pide;
@@ -101,14 +122,42 @@ public enum Traje {
     }
 
     /**
-     * ¿Puede este escalón ponerse este traje?
+     * ¿Es gratis para todo el mundo?
      *
-     * <p>⚠⚠ EL ESCALÓN, NO EL RANGO QUE SE VE. Un operador se muestra como ADMIN
-     * en el tablist pero desbloquea por lo que tiene guardado — si no, dar OP a
-     * alguien para mirar una cosa le regalaría el traje de LEYENDA. Es la misma
-     * separación que ya hace la mochila.
+     * <h2>⚠⚠⚠ CADA TRAJE SE ADQUIERE POR SEPARADO (decisión del usuario, 2026-09-03)</h2>
+     *
+     * Aquí había {@code puede(int escalon)}, que devolvía {@code escalon >= }
+     * el del traje: un LEYENDA podía ponerse <b>los cinco</b>. Ya no. Comprar
+     * LEYENDA da LEYENDA y nada más; los demás se compran aparte, y quien suba
+     * de ÉLITE a CAMPEÓN <b>se queda con los dos</b>.
+     *
+     * <p>⚠⚠ Eso no se puede derivar del rango, y por eso existe
+     * {@code player_suit_owned}: un jugador tiene <b>un</b> rango y puede tener
+     * <b>varios</b> trajes. Quién tiene qué lo responde
+     * {@link net.pokereport.luna.traje.TrajeService#tiene}.
+     *
+     * <p>⚠ El ENTRENADOR es la excepción y vive aquí, no en la tabla: un traje
+     * gratis es una <b>regla</b>, no un dato. En la tabla obligaría a insertar
+     * una fila por jugador, incluidos los que no han entrado nunca, y esa fila
+     * es justo la que un día falta.
      */
-    public boolean puede(int escalon) {
-        return listo && escalon >= pide.escalon;
+    public boolean gratis() {
+        return this == ENTRENADOR;
+    }
+
+    /**
+     * ¿Es un kit de objetos en vez de un traje que se dibuja?
+     *
+     * <p>⚠⚠ El ENTRENADOR entrega <b>cota de malla de verdad</b>: se quita, se
+     * guarda, se comercia y se pierde al morir. Los otros cuatro son capas que
+     * se dibujan encima y no existen como objeto.
+     *
+     * <p>⚠ Y por eso este es el único que <b>protege</b>. Es gratis para todo el
+     * mundo, así que no cruza la línea de D-007/D-014 —lo que esa línea prohíbe
+     * es <b>vender</b> poder—, pero conviene tenerlo presente: es armadura
+     * gratis para todos, y eso toca el equilibrio de combate.
+     */
+    public boolean esKit() {
+        return this == ENTRENADOR;
     }
 }

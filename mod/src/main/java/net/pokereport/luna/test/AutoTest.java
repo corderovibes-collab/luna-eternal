@@ -98,6 +98,10 @@ public final class AutoTest {
             testGimnasios();
             testTesoros(a);
             testEspera();
+            testSantuario(a, b);
+            testFotos(a, b);
+            testSubidas();
+            testNichoConfig();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -969,41 +973,79 @@ public final class AutoTest {
                 nombresConColor = false;
             }
         }
-        // ⚠⚠ SOLO ARTICULOS DE COBBLEMON. Decision del usuario (2026-08-23):
-        //    lo de Minecraft se consigue explorando. Y encaja con lo que ya
-        //    habia: las bayas y las bellotas son justo lo que da XP al oficio
-        //    AGRICULTOR, y la madera y la piedra lo del MINERO -- venderlas
-        //    competiria con los oficios que acabamos de construir.
+        // ⚠⚠⚠ AQUI PONIA «SOLO ARTICULOS DE COBBLEMON», Y ESA DECISION SE
+        //    REVOCO (2026-09-04). El usuario pidio seis apartados nuevos, y
+        //    tres de ellos NO son de Cobblemon: los muebles son de
+        //    `cobblefurnies`, los peluches de `pokeblocks` y los cultivos de
+        //    vainilla.
         //
-        //    Se comprueba aqui porque es la clase de regla que se cae sola: el
-        //    catalogo se genera, pero alguien puede editarlo a mano un martes.
-        boolean soloCobblemon = true;
-        boolean iconosCobblemon = true;
+        //    ⚠⚠ Y ESTA COMPROBACION HIZO EXACTAMENTE SU TRABAJO: fallo al
+        //       desplegar el catalogo nuevo. No estaba rota -- estaba diciendo
+        //       que una decision escrita habia cambiado, que es justo para lo
+        //       que sirve. Se ACTUALIZA, no se borra.
+        //
+        // ⚠⚠ LO QUE SE CONSERVA ES EL NUCLEO: la tienda no puede empezar a
+        //    vender cualquier cosa por accidente. Antes eso se decia con un
+        //    solo namespace y hoy con una LISTA EXPLICITA: meter un quinto mod
+        //    en la tienda pasa a ser un acto deliberado --tocar esta linea-- y
+        //    no el efecto lateral de un patron del generador que casa de mas.
+        //
+        //    Lo que dijo el usuario el 2026-08-23 sigue siendo cierto y sigue
+        //    escrito en `gen_tienda.py`: las bayas y los cultivos compiten con
+        //    el oficio AGRICULTOR. Eso ya no lo decide esta comprobacion --lo
+        //    decidio el usuario-- pero la palanca esta documentada: subir su
+        //    escalon, no quitar la categoria.
+        var permitidos = java.util.Set.of(
+                "cobblemon",      // lo de siempre
+                "cobblefurnies",  // muebles (MIT)
+                "pokeblocks",     // peluches
+                "minecraft");     // cultivos y utilidades, la excepcion
+        boolean soloPermitidos = true;
+        boolean iconosPermitidos = true;
         for (var c : catalog.categories()) {
-            if (!net.minecraft.registry.Registries.ITEM.getId(c.icon())
-                    .getNamespace().equals("cobblemon")) {
-                iconosCobblemon = false;
+            String nsIcono = net.minecraft.registry.Registries.ITEM.getId(c.icon())
+                    .getNamespace();
+            if (!permitidos.contains(nsIcono)) {
+                iconosPermitidos = false;
+                LunaEternal.LOG.error("El icono de {} es de «{}», que no esta en "
+                        + "la lista de la tienda", c.id(), nsIcono);
             }
             for (var e : c.entries()) {
-                if (!net.minecraft.registry.Registries.ITEM.getId(e.item())
-                        .getNamespace().equals("cobblemon")) {
-                    soloCobblemon = false;
+                String ns = net.minecraft.registry.Registries.ITEM.getId(e.item())
+                        .getNamespace();
+                if (!permitidos.contains(ns)) {
+                    soloPermitidos = false;
+                    LunaEternal.LOG.error("La tienda vende {} de «{}», que no esta "
+                            + "en la lista", e.item(), ns);
                 }
             }
         }
-        check("todo articulo de la tienda es de Cobblemon", soloCobblemon);
-        check("todo icono de categoria es de Cobblemon", iconosCobblemon);
+        check("todo articulo de la tienda sale de un mod de la lista", soloPermitidos);
+        check("todo icono de categoria sale de un mod de la lista", iconosPermitidos);
 
         // ⚠ NINGUN ARTICULO EN DOS CATEGORIAS. El servidor busca por
         //   (categoria, objeto), asi que dos precios para el mismo objeto se
         //   veria como "el precio cambia segun por donde entres".
+        // ⚠⚠⚠ SE COMPARA POR `clave()`, NO POR EL ID DEL OBJETO (2026-09-04).
+        //    Esto miraba el identificador, y valia mientras ningun objeto se
+        //    repitiera. Las cinco PROTECCIONES son las cinco un
+        //    `minecraft:player_head` --lo que las distingue es la etiqueta que
+        //    llevan dentro, no el objeto-- asi que este invariante FALLO al
+        //    desplegarlas. No estaba roto: decia que la identidad de un
+        //    articulo habia cambiado, que es para lo que sirve.
+        //
+        // ⚠⚠ LO QUE PROTEGE SIGUE SIENDO LO MISMO: que un articulo no tenga DOS
+        //    PRECIOS segun por que categoria entres. El servidor busca por
+        //    (categoria, clave), asi que dos entradas con la misma clave en
+        //    categorias distintas son dos precios para lo mismo.
         java.util.Set<String> articulos = new java.util.HashSet<>();
         boolean sinRepetidos = true;
         for (var c : catalog.categories()) {
             for (var e : c.entries()) {
-                if (!articulos.add(
-                        net.minecraft.registry.Registries.ITEM.getId(e.item()).toString())) {
+                if (!articulos.add(e.clave())) {
                     sinRepetidos = false;
+                    LunaEternal.LOG.error("El articulo {} esta en dos categorias",
+                            e.clave());
                 }
             }
         }
@@ -1015,15 +1057,36 @@ public final class AutoTest {
         check("todo nombre de categoria queda legible sin sus codigos de color",
                 nombresConColor);
 
-        // ⚠ LAS CATEGORIAS TIENEN QUE CABER EN EL PANEL. Van en una lista
-        //   vertical de tarjetas de 86+8 px que empieza en 156, y debajo van el
-        //   separador y el saldo (~110). El panel acaba en 762.
+        // ⚠⚠⚠ EL PANEL YA NO TIENE UN TOPE DE CINCO: PAGINA (2026-09-04).
+        //    Aqui habia un tope duro --«la SEXTA no cabria»-- con los numeros
+        //    ESCRITOS OTRA VEZ (156 + n*94 + 110). Eran los mismos que
+        //    `TiendaScreen`, en dos sitios, y nada obligaba a que coincidieran:
+        //    la misma forma del fallo de las TRES LISTAS DE MEDALLAS.
+        //    Hoy los dos leen de `PanelTienda`, asi que ya no pueden
+        //    contradecirse -- y lo que se comprueba aqui es otra cosa.
         //
-        //   Hoy son 5 y sobran 26 px. La SEXTA no cabria, y el sintoma no seria
-        //   un error: seria una categoria dibujada fuera del marco -- invisible,
-        //   e imposible de pulsar. Que se entere aqui y no un jugador.
-        int alto = 156 + catalog.categories().size() * (86 + 8) + 110;
-        check("las categorias caben en el panel (" + alto + " de 762)", alto <= 762);
+        // ⚠⚠ LO QUE SE COMPRUEBA ES QUE SE PUEDA LLEGAR A TODAS. Con
+        //    paginacion, desbordar el marco ya no es el riesgo; el riesgo es
+        //    que una categoria quede en una pagina que no existe, y eso NO da
+        //    ningun error: da un panel en blanco. Es exactamente lo que paso
+        //    con los 62 cosmeticos, de los que 54 eran INALCANZABLES porque
+        //    nada cambiaba la pagina.
+        int nCat = catalog.categories().size();
+        int catsPorPagina = net.pokereport.luna.pokepad.PanelTienda.porPagina();
+        int paginas = net.pokereport.luna.pokepad.PanelTienda.paginas(nCat);
+        check("cabe al menos una categoria por pagina", catsPorPagina >= 1);
+        check("se puede llegar a las " + nCat + " categorias ("
+                        + paginas + " pagina(s) de " + catsPorPagina + ")",
+                paginas * catsPorPagina >= nCat);
+
+        // ⚠ Y QUE UNA PAGINA LLENA SIGA CABIENDO. `porPagina()` sale de una
+        //   division, asi que no puede desbordar por si sola -- pero SI si
+        //   alguien engorda la tarjeta o el bloque del saldo, y entonces la
+        //   ultima quedaria medio fuera del marco sin dar ningun error.
+        int alto = net.pokereport.luna.pokepad.PanelTienda.altoOcupado(catsPorPagina, paginas > 1);
+        check("una pagina llena cabe en el panel (" + alto + " de "
+                        + net.pokereport.luna.pokepad.PanelTienda.PANEL_H + ")",
+                alto <= net.pokereport.luna.pokepad.PanelTienda.PANEL_H);
 
         // ⚠ Y LOS ARTICULOS TIENEN QUE CABER EN SU PAGINA. La pantalla pagina
         //   sola, asi que esto no puede desbordar -- pero si una categoria
@@ -1033,9 +1096,68 @@ public final class AutoTest {
         for (var c : catalog.categories()) {
             mayor = Math.max(mayor, c.entries().size());
         }
-        int porPagina = (494 - 2 * 14 - 58) / (62 + 6);
-        check("ninguna categoria pasa de 3 paginas (" + mayor + " articulos, "
-                + porPagina + " por pagina)", mayor <= porPagina * 3);
+        // ⚠⚠⚠ AQUI HABIA UN TOPE DE TRES PAGINAS, Y CAYO CON EL BUSCADOR
+        //    (2026-09-04). El motivo escrito era bueno --«nadie llegaria nunca
+        //    al final por pereza»-- y la pantalla no tenia otra forma de
+        //    recorrer una lista larga. Ahora si: se escribe y se filtra.
+        //    Con 146 peluches y 372 muebles, un tope de 18 articulos por
+        //    categoria significaba NO TENER ESAS CATEGORIAS.
+        //
+        // ⚠⚠ Y SUS NUMEROS ESTABAN ESCRITOS OTRA VEZ: `(494-2*14-58)/(62+6)`.
+        //    Al meter el buscador esa cuenta paso a mentir --sobra una fila
+        //    menos-- y la comprobacion habria seguido pasando, midiendo una
+        //    pantalla que ya no existe. Hoy sale de `PanelTienda`.
+        int porPagina = net.pokereport.luna.pokepad.PanelTienda.filasPorPagina();
+        // ⚠⚠⚠ NI UN ARTICULO CAIDO. `ShopCatalog.load` se salta el objeto que no
+        //    exista y sigue --que esta bien: un hueco es mejor que un servidor
+        //    que no arranca-- pero hasta hoy eso solo salia EN UNA LINEA DE LOG
+        //    que nadie mira. Con 620 articulos de CUATRO MODS distintos deja de
+        //    ser teorico: si uno de esos mods no estuviera en el servidor,
+        //    desapareceria UNA CATEGORIA ENTERA sin un solo error.
+        check("ningun articulo del catalogo se ha caido (" + catalog.omitidos()
+                + " omitidos)", catalog.omitidos() == 0);
+
+        // ⚠⚠⚠ LO QUE SE VENDE TIENE QUE PODER ENTREGARSE. Un modulo de
+        //    proteccion no es «un objeto con un id»: es un `player_head` con la
+        //    etiqueta de ClaimBlocks dentro, y lo fabrica SU mod. Si el mod no
+        //    estuviera --o cambiara el nombre de un `template`-- la tienda
+        //    seguiria enseñando las cinco protecciones, el jugador pulsaria
+        //    COMPRAR y no pasaria nada util.
+        //    ⚠⚠ El servidor NO cobra en ese caso (ShopService lo comprueba
+        //       antes de tocar el dinero), asi que no se pierde dinero -- pero
+        //       una tienda que enseña cosas que no se pueden comprar es una
+        //       tienda rota, y esto lo dice al arrancar en vez de dejarlo para
+        //       que lo descubra un jugador.
+        boolean entregables = true;
+        int conProveedor = 0;
+        for (var c : catalog.categories()) {
+            for (var e : c.entries()) {
+                if (e.entrega() == null || e.entrega().isEmpty()) {
+                    continue;
+                }
+                conProveedor++;
+                if (net.pokereport.luna.shop.Modulos.fabricar(e.entrega(), 1) == null) {
+                    entregables = false;
+                    LunaEternal.LOG.error("La tienda vende «{}» y NO se puede "
+                            + "entregar: nadie fabrica {}", e.clave(), e.entrega());
+                }
+            }
+        }
+        check("todo lo que necesita un proveedor se puede entregar ("
+                + conProveedor + " articulos)", entregables);
+
+        check("cabe al menos un articulo por pagina", porPagina >= 1);
+        boolean alcanzables = true;
+        for (var c : catalog.categories()) {
+            int n = c.entries().size();
+            if (net.pokereport.luna.pokepad.PanelTienda.paginasArticulos(n) * porPagina < n) {
+                alcanzables = false;
+                LunaEternal.LOG.error("La categoria {} tiene {} articulos y no se "
+                        + "puede llegar a todos", c.id(), n);
+            }
+        }
+        check("se puede llegar a todos los articulos de cada categoria ("
+                + mayor + " en la mayor, " + porPagina + " por pagina)", alcanzables);
 
         // ⚠ EL DESBORDE DEL PRECIO. La pantalla multiplica precio x cantidad y
         //   la cantidad la elige el CLIENTE. El servidor la acota a 64 antes de
@@ -1789,6 +1911,46 @@ public final class AutoTest {
         if (catalogo == null) return;
         check("hay kits definidos", !catalogo.kits().isEmpty());
 
+        // ⚠⚠⚠ UN TRAJE MARCADO COMO KIT TIENE QUE TENER SU KIT, Y CON EL MISMO
+        //    NOMBRE. La pantalla ensena el boton RECLAMAR porque el servidor le
+        //    dice que esa fila es un kit; si el identificador no cuadra con
+        //    ninguno del catalogo, el boton sale, se pulsa Y NO PASA NADA. Sin
+        //    error, sin traza. Es el fallo de los 62 cosmeticos que no existian,
+        //    y ya nos mordio este mismo mes con «arceus» en vez de «leyenda».
+        boolean sinKit = false;
+        for (var t : net.pokereport.luna.traje.Traje.todos()) {
+            if (t.esKit() && catalogo.byId(t.id()) == null) {
+                sinKit = true;
+                LunaEternal.LOG.error("El traje {} dice ser un kit y no hay ningun "
+                        + "kit con ese id en kits.json", t.id());
+            }
+        }
+        check("todo traje que dice ser un kit tiene su kit", !sinKit);
+
+        // ⚠⚠ Y SUS ENCANTAMIENTOS TIENEN QUE EXISTIR. Uno mal escrito no da
+        //    error: se salta con un aviso que nadie mira y el jugador recibe la
+        //    armadura SIN encantar. Se comprueba contra el registro de verdad,
+        //    no contra una lista nuestra.
+        boolean encMal = false;
+        // ⚠ Los registros ya los tiene el AutoTest: hacen falta para codificar
+        //   paquetes de verdad, y sirven igual para esto.
+        var registro = registros.getWrapperOrThrow(
+                net.minecraft.registry.RegistryKeys.ENCHANTMENT);
+        for (var k : catalogo.kits()) {
+            for (var it : k.items()) {
+                for (var id : it.encantamientos().keySet()) {
+                    var clave = net.minecraft.registry.RegistryKey.of(
+                            net.minecraft.registry.RegistryKeys.ENCHANTMENT, id);
+                    if (registro.getOptional(clave).isEmpty()) {
+                        encMal = true;
+                        LunaEternal.LOG.error("El kit {} pide el encantamiento {}, "
+                                + "que no existe", k.id(), id);
+                    }
+                }
+            }
+        }
+        check("los encantamientos de los kits existen", !encMal);
+
         long inyeccionDiaria = catalogo.kits().stream()
             .mapToLong(net.pokereport.luna.kit.KitCatalog.Kit::dailyValue).sum();
         check("la inyeccion diaria de los kits esta bajo el tope",
@@ -2496,19 +2658,278 @@ public final class AutoTest {
         //    impide vender humo: sin esto, se equipa, se sincroniza, no da
         //    ningun error y el jugador NO VE NADA. Es el fallo de los 62
         //    cosmeticos que no existian, otra vez.
+        // Un jugador de mentira que lo tiene TODO comprado: si aun asi no puede
+        // ponerse un traje sin arte, la guarda esta donde tiene que estar.
+        var quienSea = java.util.UUID.randomUUID();
         boolean humo = false;
         for (var t : todos) {
-            if (!t.listo() && t.puede(99)) {
+            if (!t.listo() && net.pokereport.luna.traje.TrajeService.tiene(quienSea, t)) {
                 humo = true;
                 LunaEternal.LOG.error("El traje {} no tiene arte y se puede poner",
                         t.id());
             }
         }
-        check("un traje sin arte no se puede poner ni con el escalon mas alto", !humo);
+        check("un traje sin arte no se puede poner aunque lo tengas", !humo);
 
-        // ⚠⚠ LA ESCALERA SUBE Y NO BAJA. Si un rango alto abriera MENOS trajes
-        //    que uno bajo, subir de rango QUITARIA aspecto -- que es lo contrario
-        //    de una recompensa. Se rompe reordenando el enum.
+        // ⚠⚠⚠ EL ENTRENADOR ES EL UNICO GRATIS, y esto no es una perogrullada:
+        //    `gratis()` es lo que salta la tabla de propiedad. Si otro traje
+        //    devolviera true, se REGALARIA a todo el mundo -- sin error, sin
+        //    traza, y sin que nadie lo comprara. Es lo contrario de vender humo:
+        //    es regalar lo que se vende.
+        int gratis = 0;
+        for (var t : todos) {
+            if (t.gratis()) {
+                gratis++;
+            }
+        }
+        check("solo hay UN traje gratis", gratis == 1);
+        check("y es el ENTRENADOR",
+                net.pokereport.luna.traje.Traje.ENTRENADOR.gratis());
+
+        // ⚠⚠⚠ Y AHORA SE COMPRUEBA QUE EL ARTE EXISTE DE VERDAD, no solo que
+        //    alguien puso `listo = true`. `listo` es una promesa escrita a mano
+        //    en un enum: nada obligaba a que los ficheros estuvieran, y sin
+        //    ellos el traje se equipa, se sincroniza, NO DA NINGUN ERROR y el
+        //    jugador no ve nada -- los 62 cosmeticos que no existian, otra vez.
+        //
+        //    ⚠⚠ SE PUEDE COMPROBAR DESDE EL SERVIDOR PORQUE ES **UN SOLO JAR**:
+        //       `src/client/resources/` acaba dentro del mismo fichero que esta
+        //       clase, asi que `getResource` los ve aunque el dibujado sea de
+        //       cliente. Sin ese detalle esto habria parecido imposible de
+        //       comprobar aqui, que es justo por lo que no se comprobaba.
+        //
+        //    ⚠ Una PIEZA puede faltar a proposito (un traje sin botas), pero
+        //      entonces faltan las dos cosas. Un geo sin su textura --o al
+        //      reves-- es media pieza, y eso siempre es un fallo.
+        boolean conArte = true;
+        for (var t : todos) {
+            if (!t.listo()) {
+                continue;
+            }
+            int piezas = 0;
+            for (String pieza : new String[] {"head", "body", "legs", "boots"}) {
+                boolean geo = existe("/assets/lunaeternal/trajes/" + t.id() + "/"
+                        + t.id() + "_" + pieza + ".geo.json");
+                boolean png = existe("/assets/lunaeternal/textures/armor/" + t.id()
+                        + "/" + t.id() + "_" + pieza + ".png");
+                if (geo != png) {
+                    conArte = false;
+                    LunaEternal.LOG.error("El traje {} tiene la pieza {} a medias"
+                            + " (geo {}, textura {})", t.id(), pieza, geo, png);
+                } else if (geo) {
+                    piezas++;
+                }
+            }
+            if (piezas == 0) {
+                conArte = false;
+                LunaEternal.LOG.error("El traje {} se declara listo y NO tiene "
+                        + "ni una pieza de arte en el jar", t.id());
+            }
+        }
+        check("todo traje declarado listo tiene su arte dentro del jar", conArte);
+
+        // ⚠⚠⚠ UNA APLICACION DEL POKEPAD SIN SU PNG SALE EN MAGENTA, Y NO DA
+        //    NINGUN ERROR. La celda dibuja SU PROPIO ICONO aunque este
+        //    bloqueada --el candado es solo para los huecos SIN aplicacion--,
+        //    asi que dar de alta una aplicacion antes de que llegue su arte
+        //    deja un cuadro magenta en la PANTALLA PRINCIPAL del Pad.
+        //
+        //    Ya paso el 2026-08-23 por el otro lado: un generador borro tres
+        //    PNG que no eran suyos y seis pantallas salieron en magenta. Se
+        //    compilo, se desplego, y solo se vio ABRIENDOLAS.
+        //
+        //    ⚠⚠ Y se puede comprobar desde el servidor porque es UN SOLO JAR:
+        //       `src/client/resources/` acaba dentro del mismo fichero, asi que
+        //       `getResourceAsStream` los ve aunque el dibujado sea de cliente.
+        //       Es el mismo detalle que hace posible la comprobacion de arriba.
+        boolean iconos = true;
+        for (var ficha : net.pokereport.luna.pokepad.CatalogoPad.TODAS) {
+            if (!existe(net.pokereport.luna.pokepad.CatalogoPad.rutaIcono(ficha.id()))) {
+                iconos = false;
+                LunaEternal.LOG.error("La aplicacion {} del PokePad no tiene su "
+                        + "icono en el jar: saldria en MAGENTA", ficha.id());
+            }
+        }
+        check("toda aplicacion del PokePad tiene su icono dentro del jar", iconos);
+
+        // ⚠⚠⚠ Y SU MCMETA TIENE QUE SER JSON DE VERDAD, no solo existir. Paso
+        //    el 2026-09-04: un script escribio los .mcmeta con «\n» literales
+        //    (backslash + n) en vez de saltos de linea. El servidor no los lee
+        //    nunca, asi que el autotest estaba en verde, desplego, y el CLIENTE
+        //    crasheo al abrir el PokePad -- GeckoLib parsea el mcmeta de TODAS
+        //    las texturas al registrarlas y un JSON malformado revienta el
+        //    registro de la textura. El fallo no daba error en ningun sitio...
+        //    hasta el primer jugador que abrio la rejilla.
+        boolean mcmetas = true;
+        for (var ficha : net.pokereport.luna.pokepad.CatalogoPad.TODAS) {
+            String ruta = net.pokereport.luna.pokepad.CatalogoPad.rutaIcono(ficha.id())
+                    + ".mcmeta";
+            try (var in = AutoTest.class.getResourceAsStream(ruta)) {
+                if (in == null) {
+                    mcmetas = false;
+                    LunaEternal.LOG.error("El icono {} no tiene su .mcmeta", ficha.id());
+                } else {
+                    com.google.gson.JsonParser.parseReader(
+                            new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+                }
+            } catch (Exception e) {
+                mcmetas = false;
+                LunaEternal.LOG.error("El .mcmeta de {} no es JSON valido: {}",
+                        ficha.id(), e.toString());
+            }
+        }
+        check("el .mcmeta de cada icono del PokePad es JSON valido", mcmetas);
+
+        // ⚠⚠ Y NINGUNA REPETIDA. `OrdenPad` guarda el orden del jugador POR
+        //    IDENTIFICADOR y lo relee con un LinkedHashSet: dos fichas con el
+        //    mismo id dejarian de ser dos celdas al recargar --se perderia una
+        //    sin avisar-- y `App.de` devolveria siempre la primera.
+        var idsPad = new java.util.HashSet<String>();
+        boolean padUnicos = true;
+        for (var ficha : net.pokereport.luna.pokepad.CatalogoPad.TODAS) {
+            if (!idsPad.add(ficha.id())) {
+                padUnicos = false;
+                LunaEternal.LOG.error("La aplicacion {} del PokePad esta dos "
+                        + "veces en la lista", ficha.id());
+            }
+        }
+        check("ninguna aplicacion del PokePad esta repetida", padUnicos);
+
+        // ---- CARTAS: las tres zonas de sobres -----------------------------
+        //
+        // ⚠⚠ EL ARTE, IGUAL QUE LOS ICONOS. Cada zona dibuja su sobre; sin el
+        //    PNG sale un cuadro magenta EN MEDIO de la tarjeta, y no da ningun
+        //    error. Se puede comprobar desde aqui porque los recursos del
+        //    cliente viajan en el mismo jar.
+        boolean arteSobres = true;
+        for (var s : net.pokereport.luna.cards.CartasService.Sobre.values()) {
+            if (!existe(s.rutaArte())) {
+                arteSobres = false;
+                LunaEternal.LOG.error("El sobre {} no tiene su arte en el jar ({})",
+                        s, s.rutaArte());
+            }
+        }
+        check("cada sobre de cartas tiene su arte dentro del jar", arteSobres);
+
+        // ⚠⚠⚠ EL DIARIO TIENE QUE SER GRATIS, Y ES LA REGLA DEL SISTEMA.
+        //    La zona diaria existe para que alguien que no paga abra una carta
+        //    al dia. Ponerle precio la convierte en una segunda zona de Plata
+        //    -- y no daria ningun error: daria un servidor donde lo gratuito
+        //    dejo de serlo y nadie se entera hasta que un jugador se queja.
+        var diario = net.pokereport.luna.cards.CartasService.Sobre.DIARIO;
+        check("el sobre diario es gratis",
+                diario.moneda == null && diario.precio == 0);
+
+        // ⚠⚠ Y LOS DE PAGO TIENEN QUE COSTAR ALGO. Un precio a cero por un
+        //    descuido convierte la zona de LunaCoins en sobres INFINITOS
+        //    gratis, que es justo lo contrario de lo que sostiene el sistema.
+        boolean cobran = true;
+        for (var s : net.pokereport.luna.cards.CartasService.Sobre.values()) {
+            if (s.moneda != null && s.precio <= 0) {
+                cobran = false;
+                LunaEternal.LOG.error("El sobre {} tiene moneda {} y precio {}",
+                        s, s.moneda, s.precio);
+            }
+            if (s.moneda == null && s.precio != 0) {
+                cobran = false;
+                LunaEternal.LOG.error("El sobre {} no tiene moneda pero cuesta {}",
+                        s, s.precio);
+            }
+        }
+        check("todo sobre de pago cuesta algo, y el gratis no", cobran);
+
+        // ⚠⚠⚠ EXACTAMENTE UNO SIN RELOJ, y esto vigila el diseño entero.
+        //    Si el de LunaCoins ganara reloj, las tres zonas serian la misma
+        //    cosa a tres precios y la pantalla dejaria de tener sentido. Si
+        //    otro lo PERDIERA, el diario pasaria a ser sobres infinitos gratis.
+        //    Las dos averias son mudas: la pantalla se dibuja igual de bien.
+        long sinReloj = java.util.Arrays.stream(
+                        net.pokereport.luna.cards.CartasService.Sobre.values())
+                .filter(s -> !s.llevaReloj()).count();
+        check("solo el sobre de LunaCoins no tiene reloj",
+                sinReloj == 1
+                        && !net.pokereport.luna.cards.CartasService.Sobre.LUNA.llevaReloj());
+
+        // ⚠ El identificador del sobre viaja en el paquete y se guarda en
+        //   `card_pack_claim.kind`, que es VARCHAR(16). Un nombre mas largo se
+        //   TRUNCA al insertar --con un aviso que nadie mira-- y entonces el
+        //   reloj se guarda con otra clave y no caduca nunca. Es la leccion de
+        //   la columna de 64 caracteres del cofre shiny.
+        boolean caben = true;
+        for (var s : net.pokereport.luna.cards.CartasService.Sobre.values()) {
+            if (s.name().length() > 16) {
+                caben = false;
+                LunaEternal.LOG.error("El sobre {} tiene {} caracteres y la columna"
+                        + " admite 16", s, s.name().length());
+            }
+        }
+        check("el nombre de cada sobre cabe en su columna", caben);
+
+        // ---- HABILIDAD DE APARICION: la tabla de multiplicadores ----------
+        //
+        // ⚠⚠ EL MULTIPLICADOR TIENE QUE SUBIR CON LA RAREZA, no solo tener un
+        //    numero para cada una. Si una rareza mas alta diera MENOS que una
+        //    mas baja, comprar el sobre dorado --que es donde salen las
+        //    rarezas altas-- seria peor que abrir el gratis. Se rompe
+        //    reordenando el mapa, y nada mas lo comprobaria.
+        String[] ordenRarezas = {"common", "uncommon", "rare", "epic", "legendary", "mythic"};
+        boolean crecienteHabilidad = true;
+        float anteriorHabilidad = 0f;
+        for (String r : ordenRarezas) {
+            float techo = net.pokereport.luna.cards.HabilidadService.multiplicador(r, 10);
+            if (techo <= anteriorHabilidad) {
+                crecienteHabilidad = false;
+                LunaEternal.LOG.error("El techo de {} ({}) no supera al de la rareza anterior ({})",
+                        r, techo, anteriorHabilidad);
+            }
+            anteriorHabilidad = techo;
+        }
+        check("el techo de la habilidad crece con la rareza de la carta", crecienteHabilidad);
+
+        // ⚠ Y LA NOTA TIENE QUE MOVER ALGO, sin nota (0) por debajo de nota
+        //   10, para las dos rarezas mas altas -- que son las que de verdad
+        //   se calificarian. Si no, la estacion de calificacion volveria a
+        //   ser un numero bonito sin efecto, que es justo lo que se corrigio
+        //   al retirar la restauradora.
+        boolean notaImporta = net.pokereport.luna.cards.HabilidadService.multiplicador("mythic", 0)
+                < net.pokereport.luna.cards.HabilidadService.multiplicador("mythic", 10)
+                && net.pokereport.luna.cards.HabilidadService.multiplicador("legendary", 0)
+                < net.pokereport.luna.cards.HabilidadService.multiplicador("legendary", 10);
+        check("calificar una carta sube su multiplicador de aparicion", notaImporta);
+
+        // ⚠⚠⚠ NINGUN MULTIPLICADOR POR DEBAJO DE 1.0. Uno menor que 1
+        //    BAJARIA la probabilidad de esa especie, y la habilidad esta
+        //    pensada para ayudar, nunca para perjudicar sin que el jugador lo
+        //    sepa -- ni siquiera por un error de calculo.
+        boolean sinBajar = true;
+        for (String r : ordenRarezas) {
+            for (int nota = 0; nota <= 10; nota++) {
+                if (net.pokereport.luna.cards.HabilidadService.multiplicador(r, nota) < 1.0f) {
+                    sinBajar = false;
+                }
+            }
+        }
+        check("ningun multiplicador de aparicion baja de x1", sinBajar);
+
+        // ⚠⚠ NADIE TIENE NADA POR DEFECTO. Un jugador que no ha comprado nada
+        //    solo puede ponerse el gratis. Se rompe el dia que alguien haga que
+        //    `tiene` caiga a true ante un uuid desconocido -- y entonces todo el
+        //    mundo llevaria el traje de LEYENDA.
+        boolean regalado = false;
+        for (var t : todos) {
+            if (!t.gratis() && net.pokereport.luna.traje.TrajeService.tiene(quienSea, t)) {
+                regalado = true;
+                LunaEternal.LOG.error("El traje {} se puede poner sin haberlo "
+                        + "adquirido", t.id());
+            }
+        }
+        check("sin comprar nada, solo se puede poner el gratis", !regalado);
+
+        // ⚠⚠ LA ESCALERA SUBE Y NO BAJA. Ya no gobierna el permiso --eso lo
+        //    hace la propiedad (V028)-- pero sigue siendo el ORDEN en que se
+        //    dibujan y el que empareja cada traje con su rango en la tienda. Se
+        //    rompe reordenando el enum, y entonces la pantalla los lista al
+        //    reves de como se venden.
         int previo = -1;
         boolean crece = true;
         for (var t : todos) {
@@ -2522,19 +2943,19 @@ public final class AutoTest {
         }
         check("cada traje pide un escalon MAS ALTO que el anterior", crece);
 
-        // ⚠ Y lo que abre un escalon lo abre tambien el siguiente: se puede
-        //   llevar cualquiera hasta el tuyo, no solo el tuyo.
-        boolean acumula = true;
-        for (int e = 0; e <= 6; e++) {
-            for (var t : todos) {
-                if (t.puede(e) && !t.puede(e + 1)) {
-                    acumula = false;
-                    LunaEternal.LOG.error("El escalon {} abre {} y el {} no",
-                            e, t.id(), e + 1);
-                }
+        // ⚠⚠⚠ CADA TRAJE TIENE SU PROPIO RANGO, Y NINGUNO SE REPITE. Es lo que
+        //    hace que «comprar CAMPEON» signifique una sola cosa: con dos trajes
+        //    apuntando al mismo rango, la tienda no sabria cual esta vendiendo y
+        //    el jugador se llevaria el que decidiera el orden del enum.
+        var rangos = new java.util.HashSet<String>();
+        boolean unicos = true;
+        for (var t : todos) {
+            if (!rangos.add(t.pide().name())) {
+                unicos = false;
+                LunaEternal.LOG.error("Dos trajes piden el rango {}", t.pide().name());
             }
         }
-        check("un escalon abre todo lo del anterior", acumula);
+        check("no hay dos trajes para el mismo rango", unicos);
 
         // ⚠ El identificador llega DEL CLIENTE: uno desconocido no puede caer al
         //   primero, o un cliente modificado siempre acertaria con algo (P6).
@@ -2671,8 +3092,516 @@ public final class AutoTest {
         }
     }
 
-    // ------------------------------------------------------------ auxiliares
+    /**
+     * SANTUARIO: reclamar, honrar y caducar.
+     *
+     * <p>⚠⚠ El dinero del alquiler y de la compra son dos monedas distintas
+     * (Plata y LunaCoins), y el tope de nichos depende del rango: son las tres
+     * reglas del usuario, y las tres son <b>lo que NO se puede hacer</b> -- una
+     * regla de permiso no falla ruidosamente, falla dejando que alguien pague
+     * con la moneda equivocada o reclame un segundo nicho sin rango (P6).
+     *
+     * <p>⚠⚠ Y LA SUMA HONORES == CLICS. Mientras un nicho esta reclamado, cada
+     * clic de honor es una fila y el total es una columna: si dejaran de estar
+     * de acuerdo, el contador publico mentiria SIN NINGUN ERROR. Es el unico
+     * invariante de aqui que caza un honor fantasma o un honor comido.
+     */
+    private void testSantuario(long a, long b) throws Exception {
+        var svc = new net.pokereport.luna.santuario.SantuarioService(db);
+        var N1 = "__autotest_n1";
+        var N2 = "__autotest_n2";
+        long precio = net.pokereport.luna.santuario.SantuarioService.PRECIO_ALQUILER;
+        long permanente = net.pokereport.luna.santuario.SantuarioService.PRECIO_PERMANENTE;
+        int tope = net.pokereport.luna.santuario.SantuarioService.HONORES_DIA;
+        var CAMPEON = net.pokereport.luna.ui.Tablist.Rank.CAMPEON.escalon;
+        var ENTRENADOR = net.pokereport.luna.ui.Tablist.Rank.ENTRENADOR.escalon;
 
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "INSERT IGNORE INTO santuario (nicho_id) VALUES (?), (?)")) {
+            ps.setString(1, N1);
+            ps.setString(2, N2);
+            ps.executeUpdate();
+        }
+
+        economy.credit(a, Currency.POKEDOLLAR, 100_000, "autotest", key());
+        economy.credit(b, Currency.POKEDOLLAR, 100_000, "autotest", key());
+        economy.credit(b, Currency.REPORTCOIN, 2_000, "autotest", key());
+
+        // --- reclamar, y lo que NO se puede
+        check("santuario: un nicho que no existe se rechaza",
+                !svc.alquilar("__no_existe", a, ENTRENADOR, key()).ok());
+        check("santuario: un id de nicho raro se rechaza",
+                !svc.alquilar("MAL ID!", a, ENTRENADOR, key()).ok());
+
+        long antes = economy.balance(a, Currency.POKEDOLLAR);
+        check("santuario: alquilar un nicho libre va bien",
+                svc.alquilar(N1, a, ENTRENADOR, key()).ok());
+        check("santuario: el alquiler cobra exactamente su precio",
+                economy.balance(a, Currency.POKEDOLLAR) == antes - precio);
+        check("santuario: el segundo no puede reclamar lo ajeno",
+                !svc.alquilar(N1, b, ENTRENADOR, key()).ok());
+        check("santuario: sin rango, un segundo nicho se rechaza",
+                !svc.alquilar(N2, a, ENTRENADOR, key()).ok());
+        check("santuario: con CAMPEON, el segundo nicho entra",
+                svc.alquilar(N2, a, CAMPEON, key()).ok());
+
+        // ⚠⚠ El vencimiento tiene que caer a 24 h con margen de reloj, no
+        //    «algun dia». Un expira mal escrito convierte el alquiler en
+        //    permanente o en instantaneo, y eso no daria ningun error.
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT expira_ms, permanente FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                long expira = rs.getLong("expira_ms");
+                long esperado = System.currentTimeMillis()
+                        + net.pokereport.luna.santuario.SantuarioService.ALQUILER_MS;
+                check("santuario: el alquiler expira a 24 h (con margen de reloj)",
+                        Math.abs(expira - esperado) < 5 * 60_000
+                                && !rs.getBoolean("permanente"));
+            }
+        }
+
+        // --- los textos del memorial: solo el dueno, y sin trucos
+        check("santuario: el ajeno no escribe el memorial",
+                "no_es_tuyo".equals(svc.textos(N1, b, "Titulo", "Texto")));
+        check("santuario: un titulo con codigo de color se rechaza",
+                "titulo_invalido".equals(svc.textos(N1, a, "\u00a7cHola", "Texto")));
+        check("santuario: un titulo vacio se rechaza",
+                "titulo_invalido".equals(svc.textos(N1, a, "   ", "Texto")));
+        check("santuario: un titulo de 33 letras se rechaza",
+                "titulo_invalido".equals(svc.textos(N1, a, "x".repeat(33), "Texto")));
+        check("santuario: una descripcion de 321 letras se rechaza",
+                "descripcion_invalida".equals(svc.textos(N1, a, "Titulo", "x".repeat(321))));
+        check("santuario: el dueno escribe su memorial",
+                svc.textos(N1, a, "En memoria de Luna", "Siempre contigo") == null);
+
+        // --- honrar: el dueño no, el tope si, y la idempotencia si
+        check("santuario: uno no se honra a si mismo",
+                !svc.honrar(N1, a, key()).ok());
+        check("santuario: no se honra un nicho que no existe",
+                !svc.honrar("__no_existe", b, key()).ok());
+
+        var primero = svc.honrar(N1, b, key());
+        check("santuario: honrar un memorial va bien",
+                primero.ok() && primero.honores() == 1
+                        && primero.restantes() == tope - 1);
+
+        // ⚠ El MISMO idem reenviado no suma: es el paquete que se repite
+        //   porque la respuesta se perdio (P6, y la leccion de crate_open).
+        String idemDuplicado = "santuario_test_" + UUID.randomUUID();
+        var uno = svc.honrar(N1, b, idemDuplicado);
+        var dos = svc.honrar(N1, b, idemDuplicado);
+        check("santuario: un clic reenviado devuelve el estado y no suma",
+                uno.ok() && dos.ok() && dos.honores() == uno.honores()
+                        && dos.honores() == 2);
+
+        for (int i = 0; i < tope - 2; i++) {
+            svc.honrar(N1, b, key());
+        }
+        var harto = svc.honrar(N1, b, key());
+        check("santuario: el tope diario de honores corta",
+                !harto.ok() && "tope_diario".equals(harto.motivo()));
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT honores FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                // ⚠ Solo el jugador b ha podido honrar (el dueño se rechaza y
+                //   el duplicado no suma), asi que el total no puede pasar del
+                //   presupuesto diario de una sola persona.
+                check("santuario: el total no pasa del presupuesto gastado",
+                        rs.getLong(1) == tope);
+            }
+        }
+
+        // ⚠⚠ EL TOTAL ES LA SUMA DE LOS CLICS, ni mas ni menos. Mientras el
+        //    nicho esta reclamado cada honor es una fila: si la columna y la
+        //    tabla dejaran de estar de acuerdo, el contador publico mentiria.
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT (SELECT honores FROM santuario WHERE nicho_id = ?) "
+                             + "- (SELECT COUNT(*) FROM santuario_honor_click "
+                             + "WHERE nicho_id = ?)")) {
+            ps.setString(1, N1);
+            ps.setString(2, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                check("santuario: honores == clics mientras esta reclamado",
+                        rs.getLong(1) == 0);
+            }
+        }
+
+        // --- caducar: se libera de verdad, y el memorial muere con el
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "UPDATE santuario SET expira_ms = 1 WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            ps.executeUpdate();
+        }
+        check("santuario: el barrido libera el alquiler vencido",
+                svc.caducar() >= 1);
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT owner_id, honores, titulo FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                check("santuario: el nicho liberado queda sin dueno y sin memorial",
+                        rs.getLong("owner_id") == 0 && rs.wasNull()
+                                && rs.getLong("honores") == 0
+                                && rs.getString("titulo").isEmpty());
+            }
+        }
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT COUNT(*) FROM santuario_honor_click WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                check("santuario: los honores del memorial mueren con el",
+                        rs.getLong(1) == 0);
+            }
+        }
+        check("santuario: un nicho liberado no se puede honrar",
+                !svc.honrar(N1, b, key()).ok());
+
+        // --- la compra permanente: LunaCoins, no Plata
+        long lunaAntes = economy.balance(b, Currency.REPORTCOIN);
+        check("santuario: comprar un nicho libre va bien",
+                svc.comprar(N1, b, ENTRENADOR, key()).ok());
+        check("santuario: la compra cobra LunaCoins, no Plata",
+                economy.balance(b, Currency.REPORTCOIN) == lunaAntes - permanente);
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT permanente, expira_ms FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N1);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                check("santuario: lo permanente no expira nunca",
+                        rs.getBoolean("permanente") && rs.getLong("expira_ms") == 0
+                                && rs.wasNull());
+            }
+        }
+        check("santuario: lo comprado no se puede volver a comprar",
+                !svc.comprar(N1, b, ENTRENADOR, key()).ok());
+        check("santuario: lo comprado no se puede alquilar",
+                !svc.alquilar(N1, b, ENTRENADOR, key()).ok());
+        check("santuario: el dueno no pierde su nicho por otro intento ajeno",
+                !svc.comprar(N1, a, ENTRENADOR, key()).ok());
+        check("santuario: sin rango, un segundo nicho permanente se rechaza",
+                !svc.comprar(N2, b, ENTRENADOR, key()).ok());
+        check("santuario: honrar un memorial permanente va bien",
+                svc.honrar(N1, a, key()).ok());
+
+        // --- la renovacion: suma 24 h al final, no al clic
+        long expira1;
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT expira_ms FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N2);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                expira1 = rs.getLong("expira_ms");
+            }
+        }
+        check("santuario: renovar el alquiler propio va bien",
+                svc.alquilar(N2, a, CAMPEON, key()).ok());
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT expira_ms FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, N2);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                long expira2 = rs.getLong("expira_ms");
+                long paso = net.pokereport.luna.santuario.SantuarioService.ALQUILER_MS;
+                check("santuario: la renovacion suma 24 h al final, no al clic",
+                        expira2 >= expira1 + paso - 60_000
+                                && expira2 <= expira1 + paso + 60_000);
+            }
+        }
+
+        // --- administracion: eliminar e info
+        var N_ADMIN = "__autotest_admin";
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "INSERT IGNORE INTO santuario (nicho_id) VALUES (?)")) {
+            ps.setString(1, N_ADMIN);
+            ps.executeUpdate();
+        }
+        check("santuario: alquilar N_ADMIN para probar admin",
+                svc.alquilar(N_ADMIN, a, CAMPEON, key()).ok());
+        check("santuario: info de nicho existente no es nulo",
+                svc.info(N_ADMIN) != null);
+        check("santuario: info de nicho inexistente es nulo",
+                svc.info("__no_existe_nicho") == null);
+        check("santuario: eliminar nicho libera el estado",
+                svc.eliminar(N_ADMIN) == null);
+        check("santuario: eliminar nicho inexistente da error",
+                "no_existe".equals(svc.eliminar("__no_existe_nicho")));
+        check("santuario: nicho eliminado queda libre para alquilar",
+                svc.alquilar(N_ADMIN, a, CAMPEON, key()).ok());
+        check("santuario: NPC tiene etiqueta correcta",
+                "luna_santuario".equals(net.pokereport.luna.santuario.SantuarioNpc.MARCA));
+    }
+
+    /**
+     * LA CONFIG DE NICHOS: las reglas que no pueden fallar en silencio.
+     *
+     * <p>⚠⚠ Las tres son fallos que NO DAN NINGUN ERROR al cargar:
+     * <ul>
+     *   <li>dos nichos con el mismo id comparten fila en la base, asi que
+     *       alquilar uno cobraria dos sitios y el memorial saldria en el de al
+     *       lado;</li>
+     *   <li>dos nichos solapados protegen el bloque compartido con dos dueños
+     *       que se contradicen;</li>
+     *   <li>un proyector fuera de su caja deja un 3x3 protegido que no es el
+     *       construido, y un memorial que se abre desde un bloque que no es el
+     *       que se ve.</li>
+     * </ul>
+     *
+     * <p>⚠ Y la cuarta: cada nicho de la config TIENE su fila en la base
+     * (la crea {@code garantizarNichos} al arrancar). Sin la fila, el nicho
+     * se dibuja y se puede tocar, pero alquilarlo contesta «no existe» -- un
+     * hueco que solo se descubre al primer jugador que llega con la Plata.
+     */
+    private void testNichoConfig() throws Exception {
+        var n1 = new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                "a", "A", new net.minecraft.util.math.BlockPos(0, 0, 0),
+                new net.minecraft.util.math.BlockPos(3, 3, 3),
+                new net.minecraft.util.math.BlockPos(1, 1, 1));
+        boolean idRepetido = falla(() -> net.pokereport.luna.santuario.NichoCatalogo
+                .validar(java.util.List.of(n1, new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                        "a", "B", new net.minecraft.util.math.BlockPos(10, 0, 0),
+                        new net.minecraft.util.math.BlockPos(13, 3, 3),
+                        new net.minecraft.util.math.BlockPos(11, 1, 1)))));
+        check("santuario: la config rechaza dos nichos con el mismo id",
+                idRepetido);
+        boolean solapados = falla(() -> net.pokereport.luna.santuario.NichoCatalogo
+                .validar(java.util.List.of(n1, new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                        "b", "B", new net.minecraft.util.math.BlockPos(2, 0, 2),
+                        new net.minecraft.util.math.BlockPos(5, 3, 5),
+                        new net.minecraft.util.math.BlockPos(3, 1, 3)))));
+        check("santuario: la config rechaza nichos solapados", solapados);
+        boolean proyectorFuera = falla(() -> net.pokereport.luna.santuario.NichoCatalogo
+                .validar(java.util.List.of(new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                        "c", "C", new net.minecraft.util.math.BlockPos(0, 0, 0),
+                        new net.minecraft.util.math.BlockPos(3, 3, 3),
+                        new net.minecraft.util.math.BlockPos(9, 9, 9)))));
+        check("santuario: la config rechaza un proyector fuera de su caja",
+                proyectorFuera);
+        boolean idRaro = falla(() -> net.pokereport.luna.santuario.NichoCatalogo
+                .validar(java.util.List.of(new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                        "MAL ID", "C", new net.minecraft.util.math.BlockPos(0, 0, 0),
+                        new net.minecraft.util.math.BlockPos(3, 3, 3),
+                        new net.minecraft.util.math.BlockPos(1, 1, 1)))));
+        check("santuario: la config rechaza un id que no es limpio", idRaro);
+
+        // ⚠ La geometria del servidor real: si declara nichos, cada uno tiene
+        //   que tener su fila -- si no, el nicho existe en el mundo y no en la
+        //   base, y alquilarlo falla para todos sin que nadie se entere.
+        var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+        if (catalogo.hay()) {
+            java.util.Set<String> filas = new java.util.HashSet<>();
+            try (Connection c = db.connection();
+                 PreparedStatement ps = c.prepareStatement(
+                         "SELECT nicho_id FROM santuario")) {
+                try (var rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        filas.add(rs.getString(1));
+                    }
+                }
+            }
+            boolean todas = true;
+            for (var n : catalogo.todos()) {
+                if (!filas.contains(n.id())) {
+                    todas = false;
+                }
+            }
+            check("santuario: cada nicho de la config tiene su fila", todas);
+        }
+    }
+
+    /** ¿Lanza {@code t}? El catalogo debe reventar con lo que no puede ser. */
+    private static boolean falla(Runnable t) {
+        try {
+            t.run();
+            return false;
+        } catch (IllegalStateException esperada) {
+            return true;
+        }
+    }
+
+    /**
+     * LAS FOTOS DEL SANTUARIO: lo que entra por la puerta del cliente.
+     *
+     * <p>⚠⚠ Todo aqui es P6: la foto es CONTENIDO del cliente, y la regla es
+     * «se decodifica, se reescala y se recodifica, o no entra». Una imagen
+     * rota no puede acabar como fichero en el servidor, una foto ajena no
+     * puede colgarse en el nicho de otro, y una foto sin aprobar no puede
+     * colgarse en ninguno.
+     */
+    private void testFotos(long a, long b) throws Exception {
+        var svc = new net.pokereport.luna.santuario.SantuarioService(db);
+        var N1 = "__autotest_n1"; // de b (permanente, al final de testSantuario)
+        var N2 = "__autotest_n2"; // de a (alquilado)
+
+        check("santuario: una foto que no es imagen se rechaza",
+                !svc.subirFoto(a, new byte[] {1, 2, 3, 4}).ok());
+        check("santuario: una subida vacia se rechaza",
+                !svc.subirFoto(a, new byte[0]).ok());
+        check("santuario: una subida gigante se rechaza",
+                !svc.subirFoto(a, new byte[
+                        net.pokereport.luna.santuario.SantuarioService.FOTO_MAX_BYTES + 1]).ok());
+
+        var f1 = svc.subirFoto(a, pngDePrueba(0xFF2030FF));
+        check("santuario: una imagen valida entra y da su sha1",
+                f1.ok() && f1.sha1().matches("[0-9a-f]{40}"));
+        check("santuario: la foto queda escrita en el disco del servidor",
+                java.nio.file.Files.exists(net.pokereport.luna.santuario.SantuarioService
+                        .carpetaFotos().resolve(f1.sha1() + ".png")));
+        var f2 = svc.subirFoto(a, pngDePrueba(0xFF30FF20));
+        var f3 = svc.subirFoto(a, pngDePrueba(0xFFFF2030));
+        check("santuario: tres pendientes llenan el cupo",
+                f2.ok() && f3.ok());
+        check("santuario: la cuarta pendiente se rechaza",
+                !svc.subirFoto(a, pngDePrueba(0xFFAAAAAA)).ok());
+
+        // --- poner: solo lo mio, solo lo aprobado
+        check("santuario: una foto pendiente no se puede colocar",
+                "foto_no_aprobada".equals(svc.ponerFoto(N2, a, f1.fotoId())));
+        check("santuario: la foto ajena no se puede colocar",
+                "foto_no_tuya".equals(svc.ponerFoto(N1, b, f1.fotoId())));
+        check("santuario: aprobar una pendiente va bien",
+                svc.aprobar(f1.fotoId()) == null);
+        check("santuario: aprobar lo ya aprobado ya no es posible",
+                "no_pendiente".equals(svc.aprobar(f1.fotoId())));
+        check("santuario: la foto aprobada y mia si se coloca",
+                svc.ponerFoto(N2, a, f1.fotoId()) == null);
+        check("santuario: quitar la foto va bien",
+                svc.quitarFoto(N2, a) == null);
+        check("santuario: una foto rechazada no se puede colocar",
+                svc.rechazar(f2.fotoId()) == null
+                        && "foto_no_aprobada".equals(svc.ponerFoto(N2, a, f2.fotoId())));
+        check("santuario: una foto que no existe no se puede colocar",
+                "foto_no_existe".equals(svc.ponerFoto(N2, a, 999_999L)));
+
+        // ⚠⚠ EL INVARIANTE DE LA BASE: un nicho no puede tener colgada una foto
+        //    que no este APROBADA. Si esto fallara, el holograma pintaria una
+        //    foto que el moderador nunca vio -- sin dar ningun error.
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT COUNT(*) FROM santuario s "
+                             + "JOIN santuario_foto f ON f.foto_id = s.foto_id "
+                             + "WHERE f.estado <> 'APROBADA'")) {
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                check("santuario: ningun nicho tiene una foto sin aprobar",
+                        rs.getLong(1) == 0);
+            }
+        }
+
+        // --- limpieza: los PNG de prueba no se quedan en el disco (las filas
+        //     de la base las borra cleanup(), que va por el uuid del jugador)
+        for (String sha : new String[] {f1.sha1(), f2.sha1(), f3.sha1()}) {
+            if (sha != null && !sha.isEmpty()) {
+                java.nio.file.Files.deleteIfExists(
+                        net.pokereport.luna.santuario.SantuarioService
+                                .carpetaFotos().resolve(sha + ".png"));
+            }
+        }
+    }
+
+    /** Un PNG de 8x8 valido, para que la subida tenga algo de verdad. */
+    private static byte[] pngDePrueba(int argb) throws Exception {
+        var imagen = new java.awt.image.BufferedImage(8, 8,
+                java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        var g = imagen.createGraphics();
+        g.setColor(new java.awt.Color(argb, true));
+        g.fillRect(0, 0, 8, 8);
+        g.dispose();
+        var salida = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(imagen, "png", salida);
+        return salida.toByteArray();
+    }
+
+    /**
+     * EL REENSAMBLADO DE LA SUBIDA DE FOTOS: la pieza que ya fallo muda.
+     *
+     * <p>⚠⚠ Paso el 2026-09-04: el manejador comparaba <b>el indice del trozo
+     * contra el tamano total en bytes</b>, asi que la subida nunca se
+     * completaba y «no salia nadie de pendientes» sin un solo error en el log.
+     * Esto prueba la clase {@code Subidas} trozo a trozo: la regla de verdad
+     * es {@code bytesRecibidos == total}, y aqui se clava.
+     */
+    private void testSubidas() {
+        var svc = net.pokereport.luna.santuario.Subidas.class;
+        var uuid = UUID.randomUUID();
+        int total = net.pokereport.luna.santuario.Subidas.TROZO * 2 + 123;
+        byte[] original = new byte[total];
+        for (int i = 0; i < total; i++) {
+            original[i] = (byte) (i * 31);
+        }
+        final byte[][] ensamblado = {null};
+        java.util.function.Consumer<byte[]> guarda = b -> ensamblado[0] = b;
+
+        var r1 = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem1", total, 0,
+                java.util.Arrays.copyOfRange(original, 0, net.pokereport.luna.santuario.Subidas.TROZO),
+                guarda);
+        check("subida: el primer trozo no completa", r1
+                == net.pokereport.luna.santuario.Subidas.Resultado.SEGUIR);
+        var r2 = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem1", total, 1,
+                java.util.Arrays.copyOfRange(original, net.pokereport.luna.santuario.Subidas.TROZO,
+                        2 * net.pokereport.luna.santuario.Subidas.TROZO),
+                guarda);
+        check("subida: el trozo del medio no completa", r2
+                == net.pokereport.luna.santuario.Subidas.Resultado.SEGUIR);
+        var r3 = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem1", total, 2,
+                java.util.Arrays.copyOfRange(original, 2 * net.pokereport.luna.santuario.Subidas.TROZO,
+                        total),
+                guarda);
+        check("subida: el ultimo trozo completa POR TAMAÑO, no por indice", r3
+                == net.pokereport.luna.santuario.Subidas.Resultado.COMPLETA);
+        check("subida: los bytes ensamblados son exactamente los enviados",
+                ensamblado[0] != null
+                        && java.util.Arrays.equals(ensamblado[0], original));
+
+        // --- lo que NO se puede: desorden, exceso y totales imposibles
+        net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem2", total, 0,
+                java.util.Arrays.copyOfRange(original, 0, net.pokereport.luna.santuario.Subidas.TROZO),
+                guarda);
+        var desorden = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem2", total, 2,
+                java.util.Arrays.copyOfRange(original, 2 * net.pokereport.luna.santuario.Subidas.TROZO,
+                        total),
+                guarda);
+        check("subida: un trozo fuera de orden descarta la subida entera", desorden
+                == net.pokereport.luna.santuario.Subidas.Resultado.ROTA);
+        var gigante = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem3",
+                net.pokereport.luna.santuario.SantuarioService.FOTO_MAX_BYTES + 1, 0,
+                new byte[1], guarda);
+        check("subida: un total mayor que el tope se descarta entero", gigante
+                == net.pokereport.luna.santuario.Subidas.Resultado.ROTA);
+        var trozoVacio = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idem4",
+                total, 0, new byte[0], guarda);
+        check("subida: un trozo vacio se descarta", trozoVacio
+                == net.pokereport.luna.santuario.Subidas.Resultado.ROTA);
+
+        // --- un idem nuevo empieza una subida nueva (el indice vuelve a 0)
+        net.pokereport.luna.santuario.Subidas.recibir(uuid, "idemA", total, 0,
+                java.util.Arrays.copyOfRange(original, 0, net.pokereport.luna.santuario.Subidas.TROZO),
+                guarda);
+        var reinicio = net.pokereport.luna.santuario.Subidas.recibir(uuid, "idemB", total, 0,
+                java.util.Arrays.copyOfRange(original, 0, net.pokereport.luna.santuario.Subidas.TROZO),
+                guarda);
+        check("subida: un idem nuevo reinicia el rompecabezas", reinicio
+                == net.pokereport.luna.santuario.Subidas.Resultado.SEGUIR);
+        net.pokereport.luna.santuario.Subidas.olvidar(uuid);
+    }
+
+    // ------------------------------------------------------------ auxiliares
     private static String key() {
         return UUID.randomUUID().toString();
     }
@@ -2734,6 +3663,16 @@ public final class AutoTest {
                         + "ON p.player_id = g.seller_id WHERE p.mc_uuid = ?",
                     "DELETE pp FROM player_path pp JOIN player p "
                         + "ON p.player_id = pp.player_id WHERE p.mc_uuid = ?",
+                    "DELETE sfc FROM santuario_foto sfc JOIN player p "
+                        + "ON p.player_id = sfc.owner_id WHERE p.mc_uuid = ?",
+                    "DELETE shc FROM santuario_honor_click shc JOIN player p "
+                        + "ON p.player_id = shc.player_id WHERE p.mc_uuid = ?",
+                    "DELETE sh FROM santuario_honor sh JOIN player p "
+                        + "ON p.player_id = sh.player_id WHERE p.mc_uuid = ?",
+                    "DELETE FROM santuario WHERE nicho_id IN "
+                        + "('__autotest_n1','__autotest_n2')",
+                    "DELETE s FROM santuario s JOIN player p "
+                        + "ON p.player_id = s.owner_id WHERE p.mc_uuid = ?",
                     "DELETE le FROM ledger_entry le JOIN player p "
                         + "ON p.player_id = le.player_id WHERE p.mc_uuid = ?",
                     "DELETE pe FROM player_economy pe JOIN player p "
@@ -3258,6 +4197,21 @@ public final class AutoTest {
     /** Cada operacion economica necesita la suya (R4). */
     private static String clave() {
         return "autotest_clan_" + UUID.randomUUID();
+    }
+
+    /**
+     * ¿Existe ese recurso dentro del jar?
+     *
+     * <p>⚠ Se cierra el flujo: {@code getResourceAsStream} sobre un jar deja el
+     * fichero abierto, y en un autotest que recorre treinta rutas eso son
+     * treinta descriptores colgando.
+     */
+    private boolean existe(String ruta) {
+        try (var in = AutoTest.class.getResourceAsStream(ruta)) {
+            return in != null;
+        } catch (java.io.IOException e) {
+            return false;
+        }
     }
 
     private void check(String name, boolean ok) {

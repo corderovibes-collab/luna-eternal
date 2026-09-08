@@ -74,6 +74,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.world.Regreso regresos;
     private static net.pokereport.luna.gym.MedallaService medallas;
     private static net.pokereport.luna.cosmetics.CosmeticsService cosmetics;
+    private static net.pokereport.luna.santuario.SantuarioService santuario;
     private static ExecutorService io;
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
     private static String builderKey = "";
@@ -89,6 +90,20 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.world.Decorativos.protegerlos();
         net.pokereport.luna.world.Decorativos.fueraDeLaPokedex();
         net.pokereport.luna.world.Decorativos.abrirViajesAlTocar();
+        // ⚠ Se registra AQUI y no en SERVER_STARTED por lo mismo que los tres
+        //   de arriba: los eventos se suscriben una sola vez, y los nichos
+        //   (geometria y reclamaciones) los lee el manejador cuando llega el
+        //   clic, no al registrarse.
+        net.pokereport.luna.santuario.SantuarioProteccion.registrar();
+        // ⚠ La Chansey de la entrada: su clic abre la app, como el de las
+        //   paradas abre Viajes. Se registra UNA vez, junto a lo demas.
+        net.pokereport.luna.santuario.SantuarioNpc.registrarClic();
+        net.pokereport.luna.torrebatalla.TorreNpc.registrarClic();
+        net.pokereport.luna.torrebatalla.TorreReglas.registrar();
+        net.pokereport.luna.torrebatalla.TorreBatallaService.registrarEventos();
+        net.pokereport.luna.torrebatalla.TorreRanking.load();
+        net.pokereport.luna.torrebatalla.TorreRecompensas.load();
+        net.pokereport.luna.heal.EnfermeraService.registrar();
         // ⚠⚠⚠ TODO LO DE GIMNASIOS VA DETRAS DE ESTA GUARDA, Y NO ES PARANOIA.
         //    El paquete `gym` toca clases de rctmod --TrainerMob, RCTMod-- que
         //    son `modCompileOnly`: existen al compilar y puede que no al
@@ -103,6 +118,42 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.gym.Combate.registrarClic();
         } else {
             LOG.warn("rctmod no esta instalado: los gimnasios quedan apagados");
+        }
+
+        // ⚠⚠⚠ MISMA GUARDA QUE ARRIBA, Y POR EL MISMO MOTIVO: `HabilidadService`
+        //    toca clases de Cobblemon (SpawningInfluence, PokemonSpecies), que
+        //    SI estan siempre -- pero la activacion depende de que exista la
+        //    carta de `cobblemon-cards`, y se comprueba por registro, no por
+        //    `isModLoaded`, igual que en toda la pantalla CARTAS.
+        if (net.pokereport.luna.cards.CartasService.hayCartas()) {
+            // Sneak + clic derecho con una carta en la mano: la activa. Sin
+            // sneak, se deja pasar (ActionResult.PASS) para que su propio
+            // examinador de cartas siga funcionando igual que siempre.
+            net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register(
+                    (jugador, mundo, mano) -> {
+                        if (mundo.isClient() || mano != net.minecraft.util.Hand.MAIN_HAND
+                                || !jugador.isSneaking()
+                                || !(jugador instanceof net.minecraft.server.network.ServerPlayerEntity sp)) {
+                            return net.minecraft.util.TypedActionResult.pass(
+                                    jugador.getStackInHand(mano));
+                        }
+                        var carta = jugador.getStackInHand(mano);
+                        // ⚠ Comprobacion SINCRONA y barata antes de encolar
+                        //   nada: sin esto, cada sneak+clic derecho de
+                        //   CUALQUIER objeto en todo el servidor mandaria una
+                        //   tarea al hilo de E/S.
+                        if (!net.minecraft.util.Identifier.of("cobblemon-cards", "card")
+                                .equals(net.minecraft.registry.Registries.ITEM.getId(carta.getItem()))) {
+                            return net.minecraft.util.TypedActionResult.pass(carta);
+                        }
+                        var copia = carta.copy();
+                        submit(() -> {
+                            var r = net.pokereport.luna.cards.HabilidadService.activar(sp, copia);
+                            sp.getServer().execute(() ->
+                                    sp.sendMessage(net.minecraft.text.Text.literal(r.mensaje()), false));
+                        });
+                        return net.minecraft.util.TypedActionResult.success(carta);
+                    });
         }
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> boot());
@@ -124,6 +175,11 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             if (hayEntrenadores()) {
                 net.pokereport.luna.gym.Combate.escuchar();
             }
+            // ⚠ Igual que arriba con Combate: se engancha a un registro de
+            //   Cobblemon (PlayerSpawnerFactory), y hasta aqui no esta cargado.
+            if (net.pokereport.luna.cards.CartasService.hayCartas()) {
+                net.pokereport.luna.cards.HabilidadService.registrarInfluencia();
+            }
 
             // ⚠ Las ordenes vencidas se cierran AL ARRANCAR y se devuelve lo
             //   retenido. Y las consultas del libro filtran ademas por
@@ -138,6 +194,28 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                     }
                 } catch (Exception e) {
                     LOG.error("No se pudieron caducar las ordenes del mercado", e);
+                }
+            });
+
+            // ⚠⚠ EL SANTUARIO SE ABRE AL ARRANCAR, y son TRES cosas: crear la
+            //    fila de cada nicho de la config, liberar los alquileres que
+            //    vencieron con el servidor apagado, y cargar la cache de
+            //    proteccion. Sin la segunda, un nicho alquilado ayer seguiria
+            //    "ocupado" aunque su hora ya paso -- el barrido periodico lo
+            //    arreglaria al minuto, pero una pantalla que miente un minuto
+            //    tambien miente.
+            var nichos = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+            submit(() -> {
+                try {
+                    santuario.garantizarNichos(
+                            nichos.todos().stream().map(n -> n.id()).toList());
+                    int n = santuario.caducar();
+                    if (n > 0) {
+                        LOG.info("Santuario: {} alquileres vencidos liberados", n);
+                    }
+                    net.pokereport.luna.santuario.SantuarioProteccion.recargar();
+                } catch (Exception e) {
+                    LOG.error("No se pudo abrir el santuario", e);
                 }
             });
         });
@@ -260,6 +338,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // ⚠ Y su cuenta atras, que ademas SUELTA lo que tuviera reservado:
             //   irse a mitad de la cuenta del gimnasio dejaba la ranura pillada.
             net.pokereport.luna.world.Espera.olvidar(player.getUuid());
+            // ⚠ La subida de foto a medias se descarta: sin esto, un jugador que
+            //   empieza a subir y se va dejaria sus trozos en memoria para
+            //   siempre (P6 -- la memoria del servidor no la llena nadie).
+            net.pokereport.luna.net.Red.olvidarSubidas(player.getUuid());
             Tablist.onLeave(server, player);
         });
 
@@ -309,6 +391,25 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // recalcularlo aquí evita tener que engancharlo a cada evento.
             Tablist.updateHeaderFooter(server);
 
+            // ⚠ EL SANTUARIO SE BARRE CADA MINUTO: liberar alquileres vencidos
+            //   y refrescar la cache de proteccion. Un nicho cuyo alquiler
+            //   caduco es libre para comprar YA, no cuando el barrido pase (la
+            //   compra lo comprueba), pero el mundo --quien puede romper ahi--
+            //   se entera por esta via.
+            if (server.getTicks() % 1_200 == 0) {
+                submit(() -> {
+                    try {
+                        int n = santuario.caducar();
+                        if (n > 0) {
+                            LOG.info("Santuario: {} alquileres vencidos liberados", n);
+                        }
+                        net.pokereport.luna.santuario.SantuarioProteccion.recargar();
+                    } catch (Exception e) {
+                        LOG.error("No se pudo barrer el santuario", e);
+                    }
+                });
+            }
+
             // Informe economico al log cada hora. Sin historial no se puede
             // ver una tendencia, y una tendencia es lo unico que permite
             // corregir antes de que el problema sea visible.
@@ -357,6 +458,13 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             crates = new net.pokereport.luna.crate.CrateService(database);
             net.pokereport.luna.crate.Actividad.arrancar(database);
             cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
+            santuario = new net.pokereport.luna.santuario.SantuarioService(database);
+            // ⚠ La config de nichos se lee al arrancar y REVIENTA el arranque
+            //   si esta mal escrita: una coordenada mal puesta protege una zona
+            //   que no es la construida, y eso no da error -- da un hueco que
+            //   alguien descubre rompiendo el memorial de otro.
+            net.pokereport.luna.santuario.SantuarioProteccion.catalogo(
+                    net.pokereport.luna.santuario.NichoCatalogo.load());
             io = Executors.newFixedThreadPool(2, r -> {
                 Thread t = new Thread(r, "luna-io");
                 t.setDaemon(true);
@@ -438,6 +546,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         return regresos;
     }
     public static net.pokereport.luna.cosmetics.CosmeticsService cosmetics() { return cosmetics; }
+    public static net.pokereport.luna.santuario.SantuarioService santuario() { return santuario; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }
     public static net.pokereport.luna.kit.KitCatalog kits() { return kits; }

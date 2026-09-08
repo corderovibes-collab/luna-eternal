@@ -86,3 +86,6 @@ aqtinstall.log
 
 # Credenciales de rclone (token de Google Drive). NUNCA al repositorio.
 rclone.conf
+
+# El clon de CobblemonCards que parchea cards/parchear.py. Se reconstruye solo.
+cards/upstream/

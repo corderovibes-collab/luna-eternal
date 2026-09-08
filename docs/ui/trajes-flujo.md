@@ -12,8 +12,11 @@ el servidor. Qué herramienta hace cada paso, cuál **no** sirve, y qué hago yo
 
 ## Current Status
 
-El sistema del juego está terminado y probado. Lo único que falta de cada traje
-es **su arte**.
+**CAMPEÓN y LEYENDA están hechos** (2026-09-03): vienen de tres `.bbmodel` del
+usuario y entran solos con `python tools/gen_trajes.py --generar`.
+
+Faltan **ENTRENADOR, ELITE y MAESTRO**, y lo que les falta es *su arte*: el
+sistema del juego lleva terminado y probado desde el 2026-08-28.
 
 ---
 
@@ -113,11 +116,18 @@ pudiera entrar.
         ↓             cajas dentro de los huesos armor*
   3. LA TEXTURA       Blockbench, o la genero yo del modelo
         ↓             un PNG de 128x128
-  4. AL JUEGO         yo
-                      copio ocho ficheros y cambio un `false` por `true`
+  4. AL JUEGO         python tools/gen_trajes.py --generar
+                      lee el .bbmodel y escribe las cuatro piezas
 ```
 
 **Cuatro pasos, y solo el 2 es trabajo de verdad.** Todo lo demás es rápido.
+
+> ⚠⚠ **El paso 4 ya no se hace a mano.** Ponía «copio ocho ficheros y cambio un
+> `false` por `true`», y copiar ocho ficheros a mano es donde se cuela el fallo
+> que nadie ve: basta con equivocarse en el nombre de la carpeta para que el
+> traje se equipe, se sincronice, **no dé ningún error y no se vea nada**. Hoy
+> lo hace el importador, y hay dos comprobaciones que no dejan que pase — ver
+> §5.
 
 ### Paso 1 — La idea
 
@@ -157,8 +167,20 @@ yo del propio modelo**, que es como salen los 602 bloques del servidor.
 
 ### Paso 4 — Al juego
 
-Me mandas la carpeta. Yo copio los ficheros, cambio **una línea**, compilo,
-despliego y publico. Diez minutos.
+Me mandas el `.bbmodel`. Va a `arte/trajes/`, se le da un reparto en
+`tools/trajes/importados.py` (qué grupo es la cabeza, cuál el torso…) y:
+
+```bash
+python tools/gen_trajes.py --generar
+```
+
+Eso escribe las cuatro piezas dentro del mod, dibuja la lámina para mirarla y
+pasa las comprobaciones. Luego compilar, desplegar y publicar el manifiesto.
+
+> ⚠⚠ **Los `.bbmodel` van al repo, no se quedan en Descargas.** La primera
+> versión los leía de `~/Downloads` y eso es la lección de las seis pantallas en
+> magenta: un generador que depende de un fichero que no está en git **no se
+> puede volver a ejecutar**, y nadie se entera hasta que hace falta.
 
 ---
 
@@ -169,7 +191,7 @@ Las tres las hemos pagado ya. Están en detalle en
 
 | | |
 |---|---|
-| **Inflate 0,4 mínimo** | La skin del jugador tiene una capa exterior a **0,25 exactos**. Ponerse ahí encima hace que parpadee entre el traje y la piel |
+| **Inflate por encima de 0,25** | La skin del jugador tiene una capa exterior a **0,25 exactos**. Ponerse ahí encima hace que parpadee entre el traje y la piel. ⚠ Y si el `.bbmodel` ya lo trae puesto, **manda el suyo**: el de Arceus usa 0,75 en torso, brazos y botas y 0,5 en cintura y perneras, que son **dos capas** separadas 0,25. Pisarlas con un número propio hace que parpadeen entre ellas |
 | **Cada pieza se sostiene sola** | Casco, peto, perneras y botas son ficheros distintos. Un hueso que cuelgue de otro fichero **tumba la carga de recursos entera** |
 | **Nada más fino que medio bloque** | Un cordón de 0,1 no se ve como un cordón: se ve como una línea que parpadea |
 
@@ -188,6 +210,59 @@ Para que quede claro cuánto camino queda: **esto ya funciona.**
 | Sin objeto | No ocupa ranura, no se cae al morir, no se regala, no añade nada a ningún registro |
 | Sin protección | Se vende identidad, no poder (D-007, D-014) |
 | 10 comprobaciones | La que importa: un traje sin arte no se puede poner ni siendo LEYENDA |
+| El importador | Lee `.bbmodel` con cubos girados, UV por cara y varias texturas (§5) |
+
+---
+
+## 5. El importador, y las cuatro cosas que hay que acertar
+
+`tools/trajes/importar.py` traduce un `.bbmodel` a nuestro formato. Las cuatro
+conversiones están escritas en su cabecera; lo que importa recordar es que
+**ninguna de las cuatro da error si se falla**:
+
+| | Si se falla | Cómo se ve |
+|---|---|---|
+| **Los ejes** | `java = (x, 24 - y - alto, z)` — X y Z **no se tocan** | La corona sale detrás de la cabeza |
+| **Los giros** | El paso a Java es un *reflejo*: `pitch = -rx`, `yaw = +ry`, `roll = -rz` | La cresta se dobla hacia dentro |
+| **Las caras** | east · north · west · south · up · down, en ese orden | El detalle cae en el lado contrario |
+| **La textura** | Se **rehornea**: cada cara se recorta y se pega en su casilla | Media pieza en blanco |
+
+> ⚠⚠⚠ **La Z estaba volteada en `Trajes.java` desde que se escribió**, y no
+> podía verse: con cubos simétricos en Z —que era todo lo que había mientras
+> ningún traje estuvo `listo`— las dos fórmulas dan **el mismo número**. Con la
+> corona del CAMPEÓN, cuyas puntas van delante de la cara, la pieza aparecería
+> detrás de la cabeza.
+
+> ⚠⚠⚠ **Un cubo girado es un hueso hijo, no un cubo más.** `ModelPart` gira
+> *partes*, nunca cubos sueltos: un giro escrito dentro del cubo se ignora y la
+> pieza sale **recta**. Es lo mismo que hace Blockbench al exportar (los
+> `bone_r1`). La corona tiene 2 cubos girados y el casco de Arceus **13**.
+
+> ⚠⚠ **Rehornear la textura es lo que hace que los dos modelos entren por la
+> misma puerta.** La corona pinta sus 44 cubos con UV **por cara** y el cuerpo
+> con UV **de caja**; `ModelPart` solo sabe leer cajas. Recortando cara a cara,
+> los dos casos se convierten en uno — y de propina desaparece la bandera
+> `mirror`, porque un cubo espejado ya trae sus caras intercambiadas.
+
+### Las dos comprobaciones que lo sostienen
+
+Corren en `--verificar` y en `--generar`:
+
+| | |
+|---|---|
+| `Traje.java` ↔ el arte | Que el `id` del enum y la carpeta del arte sean **el mismo nombre**, y que un traje `listo` tenga sus cuatro piezas. ⚠⚠⚠ La primera versión registró el traje de Arceus como **«arceus»** en vez de «leyenda»: se habría equipado, sincronizado, **sin un solo error, y sin verse nada** — el fallo de los 62 cosméticos que no existían |
+| `modelo.py` ↔ `Trajes.java` | Rehace en Python lo que hace Java, **leyendo el `.geo.json` de disco**, y comprueba que cada cubo acaba donde su autor lo puso. Es el único sitio donde se ve un signo cambiado. Probada contra el fallo real de la Z: lo caza en los dos trajes |
+
+> ⚠⚠ **Ida y vuelta por el fichero, no por la memoria.** Comparar el objeto
+> consigo mismo pasaría siempre; lo que se quiere saber es si lo *escrito* se
+> lee bien.
+
+> ⚠ Y la comprobación falló primero **por su propia aritmética**: comparaba las
+> esquinas *ordenadas*, y dos que caen casi en el mismo sitio se ordenan al
+> revés por una millonésima de redondeo. Decía «se ha movido 4,6 unidades»
+> cuando no se había movido nada. Hoy compara los dos conjuntos de esquinas.
+
+---
 
 ## Last Decision
 
@@ -204,7 +279,16 @@ no existe.
 
 ## Next Actions
 
-Elegir A, B o C del paso 2 para el ENTRENADOR.
+**Verificarlos en el juego.** El importador comprueba la geometría y la lámina
+enseña las cuatro vistas, pero ninguna de las dos cosas es un jugador con el
+traje puesto. Lo que hay que mirar:
+
+- que la corona no atraviese la cabeza al mirar arriba y abajo;
+- que la rueda de Arceus no se meta dentro del cuerpo al agacharse;
+- que la cresta del casco no tape la vista en primera persona;
+- y que nada parpadee contra la piel.
+
+Después: elegir A, B o C del paso 2 para ENTRENADOR, ELITE y MAESTRO.
 
 Y aparte: probar el camino de Meshy → ObjToSchematic → Litematica con **una
 estatua de la ciudadela**, que es donde sí sale a cuenta.

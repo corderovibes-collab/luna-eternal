@@ -366,6 +366,14 @@ public class Red implements ModInitializer {
                 }
             };
 
+    /** Cuantos bytes por trozo de foto. 16 KB caben en un payload con holgura. */
+    private static final int TROZO_FOTO = net.pokereport.luna.santuario.Subidas.TROZO;
+
+    /** Se olvida la subida a medias cuando el jugador se va. */
+    public static void olvidarSubidas(java.util.UUID jugador) {
+        net.pokereport.luna.santuario.Subidas.olvidar(jugador);
+    }
+
     /**
      * Escribe una cadena que <b>puede ser nula</b>.
      *
@@ -1180,14 +1188,32 @@ public class Red implements ModInitializer {
     }
 
     /** Un traje en la pantalla: si se puede llevar, y si no, por que no. */
+    /**
+     * Una fila de la pantalla de KITS.
+     *
+     * <p>⚠⚠ {@code espera} distingue las dos clases de entrada que hay ahi, y por
+     * eso viaja un numero y no un booleano:
+     *
+     * <pre>
+     *   -1   es un TRAJE: se pone y se quita, se dibuja encima
+     *    0   es un KIT y se puede reclamar ya
+     *   &gt;0   es un KIT y faltan N segundos
+     * </pre>
+     *
+     * <p>⚠ Asi el cliente no necesita saber CUALES son kits: se lo dice el
+     * servidor. Una lista de identificadores en el cliente seria una lista
+     * paralela, y esas se quedan viejas -- ya nos paso con los cinco rangos
+     * escritos a mano en esta misma pantalla.
+     */
     public record FichaTraje(String id, int pideEscalon, boolean listo,
-                             boolean puede) {
+                             boolean puede, int espera) {
         public static final PacketCodec<RegistryByteBuf, FichaTraje> CODEC =
                 PacketCodec.tuple(
                         CADENA, FichaTraje::id,
                         PacketCodecs.VAR_INT, FichaTraje::pideEscalon,
                         PacketCodecs.BOOL, FichaTraje::listo,
                         PacketCodecs.BOOL, FichaTraje::puede,
+                        PacketCodecs.VAR_INT, FichaTraje::espera,
                         FichaTraje::new);
     }
 
@@ -1217,6 +1243,27 @@ public class Red implements ModInitializer {
     }
 
     /** «Ponme este traje» -- vacio para quitarselo. */
+    /**
+     * «Dame el kit». Es distinto de {@link AccionTraje} a proposito.
+     *
+     * <p>⚠⚠ Se podria haber reutilizado `AccionTraje` mirando si el id es un kit,
+     * y seria un paquete que significa dos cosas segun el contenido. Eso se lee
+     * bien el dia que se escribe y mal cualquier otro: el que lo toque dentro de
+     * seis meses tiene que saber que «ponerse el entrenador» en realidad entrega
+     * cuatro objetos.
+     */
+    public record ReclamarKit(String kit) implements CustomPayload {
+        public static final Id<ReclamarKit> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "reclamar_kit"));
+        public static final PacketCodec<RegistryByteBuf, ReclamarKit> CODEC =
+                PacketCodec.tuple(CADENA, ReclamarKit::kit, ReclamarKit::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record AccionTraje(String traje) implements CustomPayload {
         public static final Id<AccionTraje> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_traje"));
@@ -1419,15 +1466,39 @@ public class Red implements ModInitializer {
      * inventario, que ya esta sincronizado. Mandarlo obligaria a reenviar el
      * catalogo entero cada vez que el jugador recoge algo del suelo.
      */
-    public record EntradaTienda(String item, String etiqueta, long compra,
-                                long venta, String moneda) {
+    /**
+     * @param pila  lo que se entrega, YA MONTADO. Ver abajo
+     * @param clave como se nombra esta entrada al comprar. NO es el id del
+     *              objeto: ver {@code ShopCatalog.Entry#clave()}
+     */
+    public record EntradaTienda(net.minecraft.item.ItemStack pila, String etiqueta,
+                                long compra, long venta, String moneda, String clave) {
+        /**
+         * ⚠⚠⚠ VIAJA LA PILA ENTERA Y NO EL IDENTIFICADOR, y hace falta.
+         *
+         * <p>Un módulo de protección es un {@code player_head} <b>con su
+         * textura dentro</b>: mandando solo {@code minecraft:player_head}, las
+         * cinco protecciones se dibujarían como <b>cinco cabezas de Steve
+         * iguales</b>, y el jugador no podría distinguir la Poké Ball de la
+         * Master Ball más que leyendo el nombre.
+         *
+         * <p>⚠⚠ Y NO ES UNA PUERTA DE ATRÁS: esto es lo que el servidor
+         * <b>enseña</b>, no lo que entrega. Al comprar viaja la {@code clave} y
+         * el servidor vuelve a fabricar la pila de SU catálogo (P6). Un cliente
+         * modificado que cambie esto solo se engaña a sí mismo el dibujo.
+         *
+         * <p>⚠ Medido: 620 artículos son ~38 KB, el 3,8 % del tope de un
+         * paquete. Una pila sin componentes son cuatro bytes.
+         */
         public static final PacketCodec<RegistryByteBuf, EntradaTienda> CODEC =
                 PacketCodec.tuple(
-                        CADENA, EntradaTienda::item,
+                        net.minecraft.item.ItemStack.OPTIONAL_PACKET_CODEC,
+                        EntradaTienda::pila,
                         CADENA, EntradaTienda::etiqueta,
                         PacketCodecs.VAR_LONG, EntradaTienda::compra,
                         PacketCodecs.VAR_LONG, EntradaTienda::venta,
                         CADENA, EntradaTienda::moneda,
+                        CADENA, EntradaTienda::clave,
                         EntradaTienda::new);
     }
 
@@ -1819,6 +1890,841 @@ public class Red implements ModInitializer {
     }
 
     /** «Dame el estado de mi equipo», al abrir la pantalla de curar. */
+    // ---------------------------------------------------------- PROTECCIONES
+
+    public record PedirProtecciones() implements CustomPayload {
+        public static final Id<PedirProtecciones> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_protecciones"));
+        public static final PacketCodec<RegistryByteBuf, PedirProtecciones> CODEC =
+                PacketCodec.unit(new PedirProtecciones());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Una parcela, tal y como se dibuja.
+     *
+     * @param pila el módulo con su ball dentro. ⚠⚠ VIAJA LA PILA Y NO EL TIPO
+     *             por lo mismo que en la tienda: sin ella, las cinco se
+     *             dibujarían como cinco cabezas de Steve iguales y no se
+     *             sabría de un vistazo cuál es cuál
+     * @param lado lo que mide, calculado de sus dos esquinas
+     */
+    public record Parcela(String nombre, net.minecraft.item.ItemStack pila,
+                          net.minecraft.util.math.BlockPos centro, String mundo,
+                          int lado, int miembros) {
+        public static final PacketCodec<RegistryByteBuf, Parcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, Parcela::nombre,
+                        net.minecraft.item.ItemStack.OPTIONAL_PACKET_CODEC, Parcela::pila,
+                        net.minecraft.util.math.BlockPos.PACKET_CODEC, Parcela::centro,
+                        CADENA, Parcela::mundo,
+                        PacketCodecs.VAR_INT, Parcela::lado,
+                        PacketCodecs.VAR_INT, Parcela::miembros,
+                        Parcela::new);
+    }
+
+    /**
+     * @param hayMod {@code false} si ClaimBlocks no está. ⚠⚠ NO ES LO MISMO QUE
+     *               una lista vacía, y por eso viaja aparte: «no tienes ninguna
+     *               parcela» y «el sistema no está puesto» se dibujan igual y
+     *               significan cosas opuestas
+     */
+    public record EstadoProtecciones(List<Parcela> parcelas, boolean hayMod)
+            implements CustomPayload {
+        public static final Id<EstadoProtecciones> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_protecciones"));
+        public static final PacketCodec<RegistryByteBuf, EstadoProtecciones> CODEC =
+                PacketCodec.tuple(
+                        Parcela.CODEC.collect(PacketCodecs.toList()),
+                        EstadoProtecciones::parcelas,
+                        PacketCodecs.BOOL, EstadoProtecciones::hayMod,
+                        EstadoProtecciones::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * ⚠⚠ VIAJA EL NOMBRE DE LA PARCELA, Y EL SERVIDOR COMPRUEBA QUE ES TUYA.
+     * Que la pantalla solo enseñe las tuyas es dibujo, no una regla (P6).
+     */
+    public record BorrarProteccion(String nombre) implements CustomPayload {
+        public static final Id<BorrarProteccion> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "borrar_proteccion"));
+        public static final PacketCodec<RegistryByteBuf, BorrarProteccion> CODEC =
+                PacketCodec.tuple(CADENA, BorrarProteccion::nombre,
+                        BorrarProteccion::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record PedirParcela(String nombre) implements CustomPayload {
+        public static final Id<PedirParcela> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_parcela"));
+        public static final PacketCodec<RegistryByteBuf, PedirParcela> CODEC =
+                PacketCodec.tuple(CADENA, PedirParcela::nombre, PedirParcela::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record MiembroParcela(String uuid, String nombre) {
+        public static final PacketCodec<RegistryByteBuf, MiembroParcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, MiembroParcela::uuid,
+                        CADENA, MiembroParcela::nombre,
+                        MiembroParcela::new);
+    }
+
+    /**
+     * @param porDefecto lo que vale si nadie la toca. ⚠ Viaja para poder
+     *                   enseñar «(por defecto)» al lado: sin eso, un permiso
+     *                   apagado no se distingue de uno que nunca se tocó
+     */
+    public record PermisoParcela(String clave, boolean valor, boolean porDefecto) {
+        public static final PacketCodec<RegistryByteBuf, PermisoParcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, PermisoParcela::clave,
+                        PacketCodecs.BOOL, PermisoParcela::valor,
+                        PacketCodecs.BOOL, PermisoParcela::porDefecto,
+                        PermisoParcela::new);
+    }
+
+    /**
+     * El detalle de UNA parcela, y solo cuando se abre.
+     *
+     * <p>⚠⚠ NO VIAJA CON LA LISTA, a propósito: miembros y permisos son once
+     * booleanos y unos cuantos nombres <b>por parcela</b>, y la lista se manda
+     * cada vez que algo cambia. Mandarlo todo siempre sería pagar el detalle de
+     * diez parcelas para mirar una.
+     */
+    public record DetalleParcela(String nombre, List<MiembroParcela> miembros,
+                                 List<PermisoParcela> permisos, String titulo,
+                                 String subtitulo, boolean visible)
+            implements CustomPayload {
+        public static final Id<DetalleParcela> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "detalle_parcela"));
+        // ⚠ SEIS CAMPOS, que es el tope de `PacketCodec.tuple`. El siguiente
+        //   no cabe: habría que agrupar dos en un record propio, como se hizo
+        //   con `EstadoGimnasio` cuando le sobró el séptimo.
+        public static final PacketCodec<RegistryByteBuf, DetalleParcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, DetalleParcela::nombre,
+                        MiembroParcela.CODEC.collect(PacketCodecs.toList()),
+                        DetalleParcela::miembros,
+                        PermisoParcela.CODEC.collect(PacketCodecs.toList()),
+                        DetalleParcela::permisos,
+                        CADENA, DetalleParcela::titulo,
+                        CADENA, DetalleParcela::subtitulo,
+                        PacketCodecs.BOOL, DetalleParcela::visible,
+                        DetalleParcela::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** @param anadir true para dar permiso, false para quitarlo */
+    public record TocarMiembro(String parcela, String jugador, boolean anadir)
+            implements CustomPayload {
+        public static final Id<TocarMiembro> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "tocar_miembro"));
+        public static final PacketCodec<RegistryByteBuf, TocarMiembro> CODEC =
+                PacketCodec.tuple(
+                        CADENA, TocarMiembro::parcela,
+                        CADENA, TocarMiembro::jugador,
+                        PacketCodecs.BOOL, TocarMiembro::anadir,
+                        TocarMiembro::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record CambiarPermiso(String parcela, String bandera, boolean valor)
+            implements CustomPayload {
+        public static final Id<CambiarPermiso> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "cambiar_permiso"));
+        public static final PacketCodec<RegistryByteBuf, CambiarPermiso> CODEC =
+                PacketCodec.tuple(
+                        CADENA, CambiarPermiso::parcela,
+                        CADENA, CambiarPermiso::bandera,
+                        PacketCodecs.BOOL, CambiarPermiso::valor,
+                        CambiarPermiso::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** @param poner true para volver a poner el módulo, false para esconderlo */
+    public record VerModulo(String parcela, boolean poner) implements CustomPayload {
+        public static final Id<VerModulo> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "ver_modulo"));
+        public static final PacketCodec<RegistryByteBuf, VerModulo> CODEC =
+                PacketCodec.tuple(
+                        CADENA, VerModulo::parcela,
+                        PacketCodecs.BOOL, VerModulo::poner,
+                        VerModulo::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record MensajeParcela(String parcela, String titulo, String subtitulo)
+            implements CustomPayload {
+        public static final Id<MensajeParcela> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "mensaje_parcela"));
+        public static final PacketCodec<RegistryByteBuf, MensajeParcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, MensajeParcela::parcela,
+                        CADENA, MensajeParcela::titulo,
+                        CADENA, MensajeParcela::subtitulo,
+                        MensajeParcela::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record RenombrarParcela(String parcela, String nuevo) implements CustomPayload {
+        public static final Id<RenombrarParcela> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "renombrar_parcela"));
+        public static final PacketCodec<RegistryByteBuf, RenombrarParcela> CODEC =
+                PacketCodec.tuple(
+                        CADENA, RenombrarParcela::parcela,
+                        CADENA, RenombrarParcela::nuevo,
+                        RenombrarParcela::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    // ------------------------------------------------------------ SANTUARIO
+
+    /** «Dame los nichos», al abrir la app o al tocar el NPC. */
+    public record PedirSantuario() implements CustomPayload {
+        public static final Id<PedirSantuario> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_santuario"));
+        public static final PacketCodec<RegistryByteBuf, PedirSantuario> CODEC =
+                PacketCodec.unit(new PedirSantuario());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Abre el santuario»: lo manda el servidor cuando alguien toca a la
+     * Chansey de la entrada.
+     *
+     * <p>⚠ NO LLEVA NADA: es una orden de abrir, no un estado. El estado viaja
+     * por {@code PedirSantuario} como siempre -- que la pantalla se abra no
+     * tiene por que ir atado a como esten los nichos.
+     */
+    public record EntrarTorreBatalla(int modo) implements CustomPayload {
+        public static final Id<EntrarTorreBatalla> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "entrar_torre"));
+        public static final PacketCodec<RegistryByteBuf, EntrarTorreBatalla> CODEC =
+                PacketCodec.tuple(PacketCodecs.INTEGER, EntrarTorreBatalla::modo, EntrarTorreBatalla::new);
+                
+        @Override
+        public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
+    public record AbrirTorreBatalla() implements CustomPayload {
+        public static final Id<AbrirTorreBatalla> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_torre_batalla"));
+        public static final PacketCodec<RegistryByteBuf, AbrirTorreBatalla> CODEC =
+                PacketCodec.unit(new AbrirTorreBatalla());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record PedirRecompensasTorre() implements CustomPayload {
+        public static final Id<PedirRecompensasTorre> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_recompensas_torre"));
+        public static final PacketCodec<RegistryByteBuf, PedirRecompensasTorre> CODEC =
+                PacketCodec.unit(new PedirRecompensasTorre());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record ReclamarRecompensaTorre(int ronda) implements CustomPayload {
+        public static final Id<ReclamarRecompensaTorre> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "reclamar_recompensa_torre"));
+        public static final PacketCodec<RegistryByteBuf, ReclamarRecompensaTorre> CODEC =
+                PacketCodec.tuple(PacketCodecs.INTEGER, ReclamarRecompensaTorre::ronda, ReclamarRecompensaTorre::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record EstadoRecompensasTorre(
+            int temporada,
+            int maxRonda,
+            int ronda1v1,
+            int ronda2v2,
+            int rondaAleatorio,
+            List<Integer> reclamadas
+    ) implements CustomPayload {
+        public static final Id<EstadoRecompensasTorre> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_recompensas_torre"));
+        public static final PacketCodec<RegistryByteBuf, EstadoRecompensasTorre> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.INTEGER, EstadoRecompensasTorre::temporada,
+                        PacketCodecs.INTEGER, EstadoRecompensasTorre::maxRonda,
+                        PacketCodecs.INTEGER, EstadoRecompensasTorre::ronda1v1,
+                        PacketCodecs.INTEGER, EstadoRecompensasTorre::ronda2v2,
+                        PacketCodecs.INTEGER, EstadoRecompensasTorre::rondaAleatorio,
+                        PacketCodecs.INTEGER.collect(PacketCodecs.toList()), EstadoRecompensasTorre::reclamadas,
+                        EstadoRecompensasTorre::new
+                );
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record AbrirSantuario() implements CustomPayload {
+        public static final Id<AbrirSantuario> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_santuario"));
+        public static final PacketCodec<RegistryByteBuf, AbrirSantuario> CODEC =
+                PacketCodec.unit(new AbrirSantuario());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record AbrirCentroPokemon() implements CustomPayload {
+        public static final Id<AbrirCentroPokemon> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_centro"));
+        public static final PacketCodec<RegistryByteBuf, AbrirCentroPokemon> CODEC =
+                PacketCodec.unit(new AbrirCentroPokemon());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record ConfirmarCuraCentro() implements CustomPayload {
+        public static final Id<ConfirmarCuraCentro> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "curar_centro"));
+        public static final PacketCodec<RegistryByteBuf, ConfirmarCuraCentro> CODEC =
+                PacketCodec.unit(new ConfirmarCuraCentro());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Abre el memorial de este nicho»: lo manda el servidor cuando alguien
+     * toca el proyector de un nicho ocupado. El cliente abre la pantalla con
+     * el nicho que le digan -- el identificador decide cual, no el clic.
+     */
+    public record AbrirMemorial(String nicho) implements CustomPayload {
+        public static final Id<AbrirMemorial> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_memorial"));
+        public static final PacketCodec<RegistryByteBuf, AbrirMemorial> CODEC =
+                PacketCodec.tuple(CADENA, AbrirMemorial::nicho, AbrirMemorial::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Donde flota el holograma: el proyector del nicho. */
+    public record PosNicho(int x, int y, int z) {
+        public static final PacketCodec<RegistryByteBuf, PosNicho> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_INT, PosNicho::x,
+                        PacketCodecs.VAR_INT, PosNicho::y,
+                        PacketCodecs.VAR_INT, PosNicho::z,
+                        PosNicho::new);
+    }
+
+    /**
+     * La reclamacion, para dibujar.
+     *
+     * @param dueno      nombre del dueno, "" = libre. ⚠ Va el NOMBRE resuelto
+     *                   por el servidor (userCache), no el uuid: el cliente no
+     *                   tiene con que resolverlo, y un uuid a medio recortar no
+     *                   se lee
+     * @param permanente si es suyo para siempre
+     * @param segundos   cuanto queda de alquiler, YA RESTADO (como EstadoCura):
+     *                   el reloj es del servidor y el cliente solo lo cuenta
+     *                   hacia atras. 0 = libre o permanente
+     * @param mio        si el nicho es del jugador que recibe el paquete: es lo
+     *                   que enciende los botones de editar, y LO DECIDE EL
+     *                   SERVIDOR -- que el cliente lo dedujera comparando su
+     *                   nombre con el dueno seria confiar en el cliente (P6) y
+     *                   ademas fallaria con dos jugadores del mismo nombre en
+     *                   servidores offline
+     * @param restantes  cuantos honores le quedan HOY a este jugador en este
+     *                   nicho, ya calculados por el servidor: es lo que apaga
+     *                   el boton de honrar sin que el cliente haga cuentas
+     */
+    public record EstadoNicho(String dueno, boolean permanente, long segundos,
+                              boolean mio, int restantes) {
+        public static final PacketCodec<RegistryByteBuf, EstadoNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, EstadoNicho::dueno,
+                        PacketCodecs.BOOL, EstadoNicho::permanente,
+                        PacketCodecs.VAR_LONG, EstadoNicho::segundos,
+                        PacketCodecs.BOOL, EstadoNicho::mio,
+                        PacketCodecs.VAR_INT, EstadoNicho::restantes,
+                        EstadoNicho::new);
+    }
+
+    /**
+     * El memorial, para dibujar en la lista y en el mundo.
+     *
+     * <p>⚠ La DESCRIPCION viaja aqui y no en un paquete aparte: la lee tanto el
+     * dueno al editar como cualquiera que abre el memorial, y pedirla aparte
+     * seria un segundo paquete, un segundo receptor y un segundo «todavia no ha
+     * llegado» que dibujar. Son como mucho 320 letras por nicho reclamado.
+     *
+     * @param foto sha1 de la foto aprobada, "" si no hay: es lo que el cliente
+     *             pide por {@code PedirFoto} para pintar el holograma
+     */
+    public record MemorialNicho(String titulo, long honores, String foto,
+                                String descripcion) {
+        public static final PacketCodec<RegistryByteBuf, MemorialNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, MemorialNicho::titulo,
+                        PacketCodecs.VAR_LONG, MemorialNicho::honores,
+                        CADENA, MemorialNicho::foto,
+                        CADENA, MemorialNicho::descripcion,
+                        MemorialNicho::new);
+    }
+
+    /**
+     * Un nicho entero.
+     *
+     * <p>⚠⚠ CINCO CAMPOS AGRUPADOS, no once sueltos: {@code PacketCodec.tuple}
+     * no admite mas de seis, y la alternativa --un codec a mano-- es codigo que
+     * solo se lee cuando se rompe. Es la misma solucion que {@code EstadoGimnasio}.
+     */
+    public record NichoSantuario(String id, String nombre, PosNicho pos,
+                                 EstadoNicho estado, MemorialNicho memorial) {
+        public static final PacketCodec<RegistryByteBuf, NichoSantuario> CODEC =
+                PacketCodec.tuple(
+                        CADENA, NichoSantuario::id,
+                        CADENA, NichoSantuario::nombre,
+                        PosNicho.CODEC, NichoSantuario::pos,
+                        EstadoNicho.CODEC, NichoSantuario::estado,
+                        MemorialNicho.CODEC, NichoSantuario::memorial,
+                        NichoSantuario::new);
+    }
+
+    /**
+     * El estado del santuario entero.
+     *
+     * @param hayNichos {@code false} si la config aun no declara ninguno. ⚠ NO
+     *                  ES LO MISMO QUE UNA LISTA VACIA, y por eso viaja aparte:
+     *                  «todos los nichos estan libres» y «el santuario aun no
+     *                  esta construido» se dibujan igual y significan cosas
+     *                  opuestas (la leccion de {@code hayMod} en protecciones)
+     * @param precioPlata, precioLuna lo que cuesta alquilar y comprar. ⚠ VAN EN
+     *                  EL PAQUETE como en la tienda: el precio lo dice el
+     *                  SERVIDOR (sus constantes), el cliente solo lo dibuja --
+     *                  si estuviera escrito tambien en el cliente, habria dos
+     *                  sitios que pueden dejar de estar de acuerdo y un boton
+     *                  que enseña un precio que no es el que cobra
+     * @param modera    si el jugador puede moderar fotos (nivel 3+). Lo decide
+     *                  el SERVIDOR: es lo que enseña la seccion de moderacion,
+     *                  y que el cliente la dedujera de su OP local seria
+     *                  confiar en el cliente (P6)
+     */
+    public record EstadoSantuario(List<NichoSantuario> nichos, boolean hayNichos,
+                                  long precioPlata, long precioLuna, boolean modera)
+            implements CustomPayload {
+        public static final Id<EstadoSantuario> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_santuario"));
+        public static final PacketCodec<RegistryByteBuf, EstadoSantuario> CODEC =
+                PacketCodec.tuple(
+                        NichoSantuario.CODEC.collect(PacketCodecs.toList()),
+                        EstadoSantuario::nichos,
+                        PacketCodecs.BOOL, EstadoSantuario::hayNichos,
+                        PacketCodecs.VAR_LONG, EstadoSantuario::precioPlata,
+                        PacketCodecs.VAR_LONG, EstadoSantuario::precioLuna,
+                        PacketCodecs.BOOL, EstadoSantuario::modera,
+                        EstadoSantuario::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Alquilame este nicho».
+     *
+     * <p>⚠ Viaja el IDENTIFICADOR y no las coordenadas, igual que en Viajes:
+     * si el cliente mandara un punto, cualquiera alquilaria lo que quisiera
+     * (P6). El precio NO viaja: lo mira el servidor en sus constantes.
+     */
+    public record AlquilarNicho(String nicho, String idem) implements CustomPayload {
+        public static final Id<AlquilarNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "alquilar_nicho"));
+        public static final PacketCodec<RegistryByteBuf, AlquilarNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, AlquilarNicho::nicho,
+                        CADENA, AlquilarNicho::idem,
+                        AlquilarNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Compralo para siempre». */
+    public record ComprarNicho(String nicho, String idem) implements CustomPayload {
+        public static final Id<ComprarNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "comprar_nicho"));
+        public static final PacketCodec<RegistryByteBuf, ComprarNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, ComprarNicho::nicho,
+                        CADENA, ComprarNicho::idem,
+                        ComprarNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Un honor para este memorial». */
+    public record HonrarNicho(String nicho, String idem) implements CustomPayload {
+        public static final Id<HonrarNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "honrar_nicho"));
+        public static final PacketCodec<RegistryByteBuf, HonrarNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, HonrarNicho::nicho,
+                        CADENA, HonrarNicho::idem,
+                        HonrarNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Asi se llama mi memorial y esto dice». */
+    public record TextosNicho(String nicho, String titulo, String descripcion)
+            implements CustomPayload {
+        public static final Id<TextosNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "textos_nicho"));
+        public static final PacketCodec<RegistryByteBuf, TextosNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, TextosNicho::nicho,
+                        CADENA, TextosNicho::titulo,
+                        CADENA, TextosNicho::descripcion,
+                        TextosNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Un trozo de foto, en una direccion u otra.
+     *
+     * <p>⚠⚠ LA FOTO VIAJA TROCEADA porque un custom payload tiene un tope
+     * medido (~1 MB, la tienda gasta 38 KB) y una foto re-encodificada puede
+     * acercarse. 16 KB por trozo caben con holgura y ademas el codec se acota
+     * con {@code byteArray(16*1024)}: un trozo mas grande NI SE DECODIFICA
+     * (P6 -- el tamano de lo que llega tambien se acota).
+     */
+    public record FotoTramo(String sha1, int total, int indice, byte[] trozo)
+            implements CustomPayload {
+        public static final Id<FotoTramo> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "foto_tramo"));
+        public static final PacketCodec<RegistryByteBuf, FotoTramo> CODEC =
+                PacketCodec.tuple(
+                        CADENA, FotoTramo::sha1,
+                        PacketCodecs.VAR_INT, FotoTramo::total,
+                        PacketCodecs.VAR_INT, FotoTramo::indice,
+                        PacketCodecs.byteArray(16 * 1024), FotoTramo::trozo,
+                        FotoTramo::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Mandame la foto con ese sha1».
+     *
+     * <p>⚠ El sha1 es el NOMBRE del fichero en el servidor, y se valida como
+     * hash antes de usarlo: un cliente modificado no puede leer otro fichero
+     * del disco poniendo una ruta en el campo (P6).
+     */
+    public record PedirFoto(String sha1) implements CustomPayload {
+        public static final Id<PedirFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_foto"));
+        public static final PacketCodec<RegistryByteBuf, PedirFoto> CODEC =
+                PacketCodec.tuple(CADENA, PedirFoto::sha1, PedirFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Un trozo de foto que el cliente sube. Mismo formato que {@code FotoTramo}. */
+    public record SubirFoto(String idem, int total, int indice, byte[] trozo)
+            implements CustomPayload {
+        public static final Id<SubirFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "subir_foto"));
+        public static final PacketCodec<RegistryByteBuf, SubirFoto> CODEC =
+                PacketCodec.tuple(
+                        CADENA, SubirFoto::idem,
+                        PacketCodecs.VAR_INT, SubirFoto::total,
+                        PacketCodecs.VAR_INT, SubirFoto::indice,
+                        PacketCodecs.byteArray(16 * 1024), SubirFoto::trozo,
+                        SubirFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * La respuesta a una subida. {@code idem} es el de la subida: sin el, el
+     * cliente no sabria a cual de sus subidas contesta esto.
+     */
+    public record ResultadoFoto(String idem, boolean ok, String motivo,
+                                long fotoId, String sha1)
+            implements CustomPayload {
+        public static final Id<ResultadoFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "resultado_foto"));
+        public static final PacketCodec<RegistryByteBuf, ResultadoFoto> CODEC =
+                PacketCodec.tuple(
+                        CADENA, ResultadoFoto::idem,
+                        PacketCodecs.BOOL, ResultadoFoto::ok,
+                        CADENA, ResultadoFoto::motivo,
+                        PacketCodecs.VAR_LONG, ResultadoFoto::fotoId,
+                        CADENA, ResultadoFoto::sha1,
+                        ResultadoFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Dame mis fotos»: el dueño las ve en su nicho para elegir cual poner. */
+    public record PedirFotos() implements CustomPayload {
+        public static final Id<PedirFotos> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_fotos"));
+        public static final PacketCodec<RegistryByteBuf, PedirFotos> CODEC =
+                PacketCodec.unit(new PedirFotos());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Una foto propia, tal y como se dibuja en la lista. */
+    public record FotoEnvio(long fotoId, String estado, String sha1) {
+        public static final PacketCodec<RegistryByteBuf, FotoEnvio> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_LONG, FotoEnvio::fotoId,
+                        CADENA, FotoEnvio::estado,
+                        CADENA, FotoEnvio::sha1,
+                        FotoEnvio::new);
+    }
+
+    /** Las fotos del jugador. */
+    public record EstadoFotos(List<FotoEnvio> fotos) implements CustomPayload {
+        public static final Id<EstadoFotos> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_fotos"));
+        public static final PacketCodec<RegistryByteBuf, EstadoFotos> CODEC =
+                PacketCodec.tuple(
+                        FotoEnvio.CODEC.collect(PacketCodecs.toList()),
+                        EstadoFotos::fotos,
+                        EstadoFotos::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Pon esta foto mia en mi nicho». El servidor comprueba todo (P6). */
+    public record PonerFoto(String nicho, long fotoId) implements CustomPayload {
+        public static final Id<PonerFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "poner_foto"));
+        public static final PacketCodec<RegistryByteBuf, PonerFoto> CODEC =
+                PacketCodec.tuple(
+                        CADENA, PonerFoto::nicho,
+                        PacketCodecs.VAR_LONG, PonerFoto::fotoId,
+                        PonerFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Quita la foto de mi nicho». */
+    public record QuitarFoto(String nicho) implements CustomPayload {
+        public static final Id<QuitarFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "quitar_foto"));
+        public static final PacketCodec<RegistryByteBuf, QuitarFoto> CODEC =
+                PacketCodec.tuple(CADENA, QuitarFoto::nicho, QuitarFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * El servidor contesta a un honor, y NO solo con el estado entero: este
+     * paquete lleva el total nuevo y lo que le queda al jugador, que es lo que
+     * la pantalla del memorial dibuja. El cliente suena la campanilla SOLO si
+     * esto dice {@code ok} -- si sonara al pulsar, sonaria tambien cuando el
+     * servidor rechaza el honor por el tope diario, y eso miente.
+     */
+    public record RespuestaHonor(String nicho, boolean ok, String motivo,
+                                 long total, int restantes)
+            implements CustomPayload {
+        public static final Id<RespuestaHonor> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "respuesta_honor"));
+        public static final PacketCodec<RegistryByteBuf, RespuestaHonor> CODEC =
+                PacketCodec.tuple(
+                        CADENA, RespuestaHonor::nicho,
+                        PacketCodecs.BOOL, RespuestaHonor::ok,
+                        CADENA, RespuestaHonor::motivo,
+                        PacketCodecs.VAR_LONG, RespuestaHonor::total,
+                        PacketCodecs.VAR_INT, RespuestaHonor::restantes,
+                        RespuestaHonor::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    // --------------------------------------------- LA MODERACION DE FOTOS
+    //
+    // ⚠⚠ La aprueba un staff VIENDO la foto, no a ciegas: estos paquetes son
+    //    la seccion de moderacion de la app. El sha1 de una foto PENDIENTE
+    //    viaja SOLO hacia quien tiene permiso -- el servidor comprueba el
+    //    nivel 3 antes de contestar, y el cliente nunca conoce el sha1 de una
+    //    pendiente por otra via.
+
+    /** «Dame las fotos pendientes»: solo contesta si quien pide es staff. */
+    public record PedirPendientes() implements CustomPayload {
+        public static final Id<PedirPendientes> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_pendientes"));
+        public static final PacketCodec<RegistryByteBuf, PedirPendientes> CODEC =
+                PacketCodec.unit(new PedirPendientes());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Una foto pendiente, con el nombre del dueno ya resuelto. */
+    public record FotoPendiente(long fotoId, String sha1, String dueno) {
+        public static final PacketCodec<RegistryByteBuf, FotoPendiente> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_LONG, FotoPendiente::fotoId,
+                        CADENA, FotoPendiente::sha1,
+                        CADENA, FotoPendiente::dueno,
+                        FotoPendiente::new);
+    }
+
+    /** Las pendientes de moderar, para el staff. */
+    public record EstadoPendientes(List<FotoPendiente> fotos) implements CustomPayload {
+        public static final Id<EstadoPendientes> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_pendientes"));
+        public static final PacketCodec<RegistryByteBuf, EstadoPendientes> CODEC =
+                PacketCodec.tuple(
+                        FotoPendiente.CODEC.collect(PacketCodecs.toList()),
+                        EstadoPendientes::fotos,
+                        EstadoPendientes::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Aprueba o rechaza esta foto». El servidor comprueba el nivel (P6). */
+    public record ModerarFoto(long fotoId, boolean aprobar) implements CustomPayload {
+        public static final Id<ModerarFoto> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "moderar_foto"));
+        public static final PacketCodec<RegistryByteBuf, ModerarFoto> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_LONG, ModerarFoto::fotoId,
+                        PacketCodecs.BOOL, ModerarFoto::aprobar,
+                        ModerarFoto::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record TpNicho(String nicho) implements CustomPayload {
+        public static final Id<TpNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "tp_nicho"));
+        public static final PacketCodec<RegistryByteBuf, TpNicho> CODEC =
+                PacketCodec.tuple(
+                        CADENA, TpNicho::nicho,
+                        TpNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record PedirCura() implements CustomPayload {
         public static final Id<PedirCura> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cura"));
@@ -1901,6 +2807,83 @@ public class Red implements ModInitializer {
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "curar"));
         public static final PacketCodec<RegistryByteBuf, Curar> CODEC =
                 PacketCodec.unit(new Curar());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Dame el estado de los sobres», al abrir la pantalla de CARTAS. */
+    public record PedirCartas() implements CustomPayload {
+        public static final Id<PedirCartas> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_cartas"));
+        public static final PacketCodec<RegistryByteBuf, PedirCartas> CODEC =
+                PacketCodec.unit(new PedirCartas());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Las tres zonas de CARTAS: los dos relojes, los dos precios y los saldos.
+     *
+     * <p>⚠⚠ LOS SEGUNDOS VIAJAN YA RESTADOS, como en {@link EstadoCura} y al
+     * contrario que en Cazas. La diferencia no es capricho: el ciclo de Cazas
+     * es <b>del servidor y compartido</b> —acaba a la misma hora real para
+     * todos— y esto es <b>un reloj por jugador</b>. Mandando el instante en que
+     * toca, un cliente con la hora adelantada encendería el botón antes de
+     * tiempo; el servidor lo rechazaría igual, pero el jugador vería un botón
+     * encendido que no hace nada, que es peor que uno apagado.
+     *
+     * <p>⚠⚠ Y LOS PRECIOS VIAJAN <b>PARA DIBUJARLOS</b>, no para cobrar. Al
+     * comprar sube el <i>identificador</i> del sobre y el servidor mira SU
+     * tabla (P6) — igual que la tienda. Mandarlos aquí es lo contrario de un
+     * riesgo: evita que la pantalla los tenga escritos a mano y acabe
+     * anunciando un precio que ya no es el que se cobra.
+     *
+     * <p>⚠ NO viaja «¿está instalado el mod?». El cliente lo sabe solo: los
+     * registros se sincronizan, así que si el servidor tiene el sobre, el
+     * cliente lo tiene. Un séptimo campo además no cabría — {@code
+     * PacketCodec.tuple} admite seis, que es el límite que ya destapó un campo
+     * de sobra en {@code EstadoGimnasio}.
+     */
+    public record EstadoCartas(long segDiario, long segPlata,
+                               long precioPlata, long precioLuna,
+                               long plata, long lunacoins) implements CustomPayload {
+        public static final Id<EstadoCartas> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_cartas"));
+        public static final PacketCodec<RegistryByteBuf, EstadoCartas> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_LONG, EstadoCartas::segDiario,
+                        PacketCodecs.VAR_LONG, EstadoCartas::segPlata,
+                        PacketCodecs.VAR_LONG, EstadoCartas::precioPlata,
+                        PacketCodecs.VAR_LONG, EstadoCartas::precioLuna,
+                        PacketCodecs.VAR_LONG, EstadoCartas::plata,
+                        PacketCodecs.VAR_LONG, EstadoCartas::lunacoins,
+                        EstadoCartas::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Dame un sobre de este tipo».
+     *
+     * <p>⚠ Viaja el <b>nombre del tipo</b> y nada más: ni el precio, ni si el
+     * reloj está listo. Las dos cosas las decide el servidor mirando su enum y
+     * su tabla (P6). Un paquete que trajera el precio sería un cliente
+     * modificado comprando el sobre dorado por uno.
+     */
+    public record AbrirSobre(String sobre) implements CustomPayload {
+        public static final Id<AbrirSobre> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_sobre"));
+        public static final PacketCodec<RegistryByteBuf, AbrirSobre> CODEC =
+                PacketCodec.tuple(CADENA, AbrirSobre::sobre, AbrirSobre::new);
 
         @Override
         public Id<? extends CustomPayload> getId() {
@@ -2121,6 +3104,28 @@ public class Red implements ModInitializer {
     }
 
     /** Todo lo de todos, para quien acaba de entrar; y lo suyo, para todos. */
+    public static void enviarEstadoRecompensasTorre(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        if (jugador == null || jugador.isRemoved()) return;
+        java.util.UUID uuid = jugador.getUuid();
+        String nombre = jugador.getName().getString();
+        int r1 = net.pokereport.luna.torrebatalla.TorreRanking.getRonda(net.pokereport.luna.torrebatalla.TorreRanking.MODO_1VS1, nombre);
+        int r2 = net.pokereport.luna.torrebatalla.TorreRanking.getRonda(net.pokereport.luna.torrebatalla.TorreRanking.MODO_2VS2, nombre);
+        int ra = net.pokereport.luna.torrebatalla.TorreRanking.getRonda(net.pokereport.luna.torrebatalla.TorreRanking.MODO_ALEATORIO, nombre);
+        int recordRanking = Math.max(r1, Math.max(r2, ra));
+
+        var progreso = net.pokereport.luna.torrebatalla.TorreRecompensas.obtenerProgreso(uuid);
+        if (recordRanking > progreso.maxRonda) {
+            progreso.maxRonda = recordRanking;
+            net.pokereport.luna.torrebatalla.TorreRecompensas.save();
+        }
+
+        int temp = net.pokereport.luna.torrebatalla.TorreRecompensas.getTemporada();
+        java.util.List<Integer> rec = new java.util.ArrayList<>(progreso.reclamadas);
+        java.util.Collections.sort(rec);
+
+        ServerPlayNetworking.send(jugador, new EstadoRecompensasTorre(temp, progreso.maxRonda, r1, r2, ra, rec));
+    }
+
     public static void difundirTodo(net.minecraft.server.network.ServerPlayerEntity quien) {
         var servidor = quien.getServer();
         if (servidor == null) {
@@ -2176,6 +3181,44 @@ public class Red implements ModInitializer {
         //     bloques de desfase que ya estan documentados.
         net.pokereport.luna.backpack.Registro.registrar();
 
+        PayloadTypeRegistry.playC2S().register(PedirParcela.ID, PedirParcela.CODEC);
+        PayloadTypeRegistry.playS2C().register(DetalleParcela.ID, DetalleParcela.CODEC);
+        PayloadTypeRegistry.playC2S().register(TocarMiembro.ID, TocarMiembro.CODEC);
+        PayloadTypeRegistry.playC2S().register(CambiarPermiso.ID, CambiarPermiso.CODEC);
+        PayloadTypeRegistry.playC2S().register(VerModulo.ID, VerModulo.CODEC);
+        PayloadTypeRegistry.playC2S().register(MensajeParcela.ID, MensajeParcela.CODEC);
+        PayloadTypeRegistry.playC2S().register(RenombrarParcela.ID, RenombrarParcela.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirProtecciones.ID, PedirProtecciones.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoProtecciones.ID, EstadoProtecciones.CODEC);
+        PayloadTypeRegistry.playC2S().register(BorrarProteccion.ID, BorrarProteccion.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirSantuario.ID, PedirSantuario.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoSantuario.ID, EstadoSantuario.CODEC);
+        PayloadTypeRegistry.playC2S().register(EntrarTorreBatalla.ID, EntrarTorreBatalla.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirTorreBatalla.ID, AbrirTorreBatalla.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirRecompensasTorre.ID, PedirRecompensasTorre.CODEC);
+        PayloadTypeRegistry.playC2S().register(ReclamarRecompensaTorre.ID, ReclamarRecompensaTorre.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoRecompensasTorre.ID, EstadoRecompensasTorre.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirSantuario.ID, AbrirSantuario.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirCentroPokemon.ID, AbrirCentroPokemon.CODEC);
+        PayloadTypeRegistry.playC2S().register(ConfirmarCuraCentro.ID, ConfirmarCuraCentro.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirMemorial.ID, AbrirMemorial.CODEC);
+        PayloadTypeRegistry.playC2S().register(AlquilarNicho.ID, AlquilarNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(ComprarNicho.ID, ComprarNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(HonrarNicho.ID, HonrarNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(TextosNicho.ID, TextosNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirFoto.ID, PedirFoto.CODEC);
+        PayloadTypeRegistry.playS2C().register(FotoTramo.ID, FotoTramo.CODEC);
+        PayloadTypeRegistry.playC2S().register(SubirFoto.ID, SubirFoto.CODEC);
+        PayloadTypeRegistry.playS2C().register(ResultadoFoto.ID, ResultadoFoto.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirFotos.ID, PedirFotos.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoFotos.ID, EstadoFotos.CODEC);
+        PayloadTypeRegistry.playC2S().register(PonerFoto.ID, PonerFoto.CODEC);
+        PayloadTypeRegistry.playC2S().register(QuitarFoto.ID, QuitarFoto.CODEC);
+        PayloadTypeRegistry.playS2C().register(RespuestaHonor.ID, RespuestaHonor.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirPendientes.ID, PedirPendientes.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoPendientes.ID, EstadoPendientes.CODEC);
+        PayloadTypeRegistry.playC2S().register(ModerarFoto.ID, ModerarFoto.CODEC);
+        PayloadTypeRegistry.playC2S().register(TpNicho.ID, TpNicho.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Ficha.ID, Ficha.CODEC);
@@ -2200,6 +3243,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(EstadoExplorar.ID, EstadoExplorar.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirTrajes.ID, PedirTrajes.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionTraje.ID, AccionTraje.CODEC);
+        PayloadTypeRegistry.playC2S().register(ReclamarKit.ID, ReclamarKit.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoTrajes.ID, EstadoTrajes.CODEC);
         PayloadTypeRegistry.playS2C().register(TrajeDe.ID, TrajeDe.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirViajes.ID, PedirViajes.CODEC);
@@ -2229,6 +3273,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirCura.ID, PedirCura.CODEC);
         PayloadTypeRegistry.playC2S().register(Curar.ID, Curar.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoCura.ID, EstadoCura.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirCartas.ID, PedirCartas.CODEC);
+        PayloadTypeRegistry.playC2S().register(AbrirSobre.ID, AbrirSobre.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoCartas.ID, EstadoCartas.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirMisiones.ID, PedirMisiones.CODEC);
         PayloadTypeRegistry.playC2S().register(ReclamarMision.ID, ReclamarMision.CODEC);
         PayloadTypeRegistry.playS2C().register(Misiones.ID, Misiones.CODEC);
@@ -2283,6 +3330,49 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(PedirTrajes.ID, (carga, ctx) ->
                 enviarTrajes(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(ReclamarKit.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                String fallo;
+                try {
+                    // ⚠ El kit se busca POR IDENTIFICADOR en NUESTRO catalogo, y
+                    //   ademas tiene que ser un traje marcado como kit: asi un
+                    //   cliente modificado no puede pedir el «diario» desde esta
+                    //   pantalla (P6).
+                    var t = net.pokereport.luna.traje.Traje.de(carga.kit());
+                    var kit = t != null && t.esKit()
+                            ? LunaEternal.kits().byId(t.id()) : null;
+                    if (kit == null) {
+                        return;
+                    }
+                    long id = LunaEternal.players().resolve(
+                            jugador.getUuid(), jugador.getGameProfile().getName());
+                    fallo = LunaEternal.kitService().entregar(jugador, id, kit);
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("No se pudo entregar el kit a {}",
+                            jugador.getGameProfile().getName(), e);
+                    return;
+                }
+                final String razon = fallo;
+                jugador.getServer().execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (razon == null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.trajes.kit_entregado"), false);
+                    } else {
+                        jugador.sendMessage(net.minecraft.text.Text.literal(
+                                "§7No se pudo reclamar: " + razon), false);
+                    }
+                    // ⚠ Se reenvia SIEMPRE, salga bien o mal: el reloj de 24 h
+                    //   arranca al entregar y el boton tiene que reflejarlo sin
+                    //   que el jugador reabra la pantalla.
+                    enviarTrajes(jugador);
+                });
+            });
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(AccionTraje.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -2342,6 +3432,504 @@ public class Red implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(PedirTienda.ID, (carga, ctx) ->
                 ServerPlayNetworking.send(ctx.player(), componerTienda()));
 
+        // ⚠ ESTO NO VA POR EL EXECUTOR DE E/S, al contrario que casi todo:
+        //   las parcelas viven EN MEMORIA del otro mod, no en la base. Leerlas
+        //   desde otro hilo seria leerlas mientras el hilo del servidor las
+        //   cambia.
+        ServerPlayNetworking.registerGlobalReceiver(PedirProtecciones.ID,
+                (carga, ctx) -> enviarProtecciones(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirParcela.ID,
+                (carga, ctx) -> enviarParcela(ctx.player(), carga.nombre()));
+
+        ServerPlayNetworking.registerGlobalReceiver(CambiarPermiso.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String motivo = net.pokereport.luna.proteccion.Protecciones.permiso(
+                    jugador, carga.parcela(), carga.bandera(), carga.valor());
+            if (motivo != null) {
+                jugador.sendMessage(net.minecraft.text.Text.translatable(
+                        "pokepad.lunaeternal.protecciones.error." + motivo), false);
+            }
+            // ⚠ Se reenvia el detalle SIEMPRE, salga bien o mal: asi la
+            //   pantalla vuelve sola a la verdad en vez de quedarse con el
+            //   interruptor que el jugador movio y el servidor rechazo.
+            enviarParcela(jugador, carga.parcela());
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(TocarMiembro.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var quien = net.pokereport.luna.proteccion.Protecciones.uuidDe(
+                    jugador, carga.jugador());
+            String motivo;
+            if (quien == null) {
+                motivo = "no_conozco";
+            } else {
+                motivo = net.pokereport.luna.proteccion.Protecciones.miembro(
+                        jugador, carga.parcela(), quien, carga.anadir());
+            }
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    motivo == null
+                            ? (carga.anadir() ? "pokepad.lunaeternal.protecciones.miembro_puesto"
+                                              : "pokepad.lunaeternal.protecciones.miembro_quitado")
+                            : "pokepad.lunaeternal.protecciones.error." + motivo,
+                    carga.jugador()), false);
+            enviarParcela(jugador, carga.parcela());
+            enviarProtecciones(jugador);
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(VerModulo.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String motivo = net.pokereport.luna.proteccion.Protecciones.visible(
+                    jugador, carga.parcela(), carga.poner());
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    motivo == null
+                            ? (carga.poner() ? "pokepad.lunaeternal.protecciones.puesto"
+                                             : "pokepad.lunaeternal.protecciones.escondido")
+                            : "pokepad.lunaeternal.protecciones.error." + motivo), false);
+            enviarParcela(jugador, carga.parcela());
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(MensajeParcela.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String motivo = net.pokereport.luna.proteccion.Protecciones.mensaje(
+                    jugador, carga.parcela(), carga.titulo(), carga.subtitulo());
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    motivo == null ? "pokepad.lunaeternal.protecciones.mensaje_puesto"
+                                   : "pokepad.lunaeternal.protecciones.error." + motivo), false);
+            enviarParcela(jugador, carga.parcela());
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(RenombrarParcela.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String motivo = net.pokereport.luna.proteccion.Protecciones.renombrar(
+                    jugador, carga.parcela(), carga.nuevo());
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    motivo == null ? "pokepad.lunaeternal.protecciones.renombrada"
+                                   : "pokepad.lunaeternal.protecciones.error." + motivo), false);
+            // ⚠⚠ Si se renombro, EL DETALLE VA CON EL NOMBRE NUEVO: pidiendolo
+            //    con el viejo no lo encontraria y la pantalla se quedaria en
+            //    blanco justo despues de una operacion que fue bien.
+            enviarParcela(jugador, motivo == null ? carga.nuevo().trim() : carga.parcela());
+            enviarProtecciones(jugador);
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(BorrarProteccion.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String motivo = net.pokereport.luna.proteccion.Protecciones.borrar(
+                    jugador, carga.nombre());
+            // ⚠ VIAJA LA CLAVE DEL MOTIVO, no la frase: un servidor no tiene
+            //   idioma. El cliente la traduce.
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    motivo == null ? "pokepad.lunaeternal.protecciones.borrada"
+                                   : "pokepad.lunaeternal.protecciones.error." + motivo), false);
+            // ⚠⚠ Y SE REENVIA LA LISTA SIN QUE LA PIDA NADIE: acaba de cambiar
+            //   algo que la pantalla dibuja. Es la leccion del 23-ago.
+            enviarProtecciones(jugador);
+        });
+
+        // -------------------------------------------------------- SANTUARIO
+        //
+        // ⚠ TODO PASA POR EL EXECUTOR DE E/S: el estado vive en la base, y aqui
+        //   abajo estamos en el hilo del servidor. El servicio se llama fuera y
+        //   la respuesta vuelve con `server.execute`.
+
+        ServerPlayNetworking.registerGlobalReceiver(EntrarTorreBatalla.ID, (carga, ctx) -> {
+            ctx.player().getServer().execute(() -> {
+                net.pokereport.luna.torrebatalla.TorreBatallaService.iniciarCola(ctx.player(), carga.modo());
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirRecompensasTorre.ID, (carga, ctx) -> {
+            ctx.player().getServer().execute(() -> {
+                enviarEstadoRecompensasTorre(ctx.player());
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(ReclamarRecompensaTorre.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            jugador.getServer().execute(() -> {
+                if (carga.ronda() == -1) {
+                    net.pokereport.luna.torrebatalla.TorreRecompensas.reclamarTodas(jugador);
+                } else {
+                    net.pokereport.luna.torrebatalla.TorreRecompensas.reclamar(jugador, carga.ronda());
+                }
+                enviarEstadoRecompensasTorre(jugador);
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirSantuario.ID,
+                (carga, ctx) -> enviarSantuario(ctx.player()));
+                
+        ServerPlayNetworking.registerGlobalReceiver(ConfirmarCuraCentro.ID, (carga, ctx) -> {
+            ctx.player().getServer().execute(() -> {
+                net.pokereport.luna.heal.EnfermeraService.confirmar(ctx.player());
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(AlquilarNicho.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            // ⚠ El escalon se lee AQUI, en el hilo del servidor: la cache de
+            //   rangos es de ahi, y el servicio corre en el hilo de E/S.
+            int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
+            LunaEternal.submit(() -> {
+                final net.pokereport.luna.santuario.SantuarioService.Resultado r;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    r = LunaEternal.santuario().alquilar(carga.nicho(), id, escalon, carga.idem());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo alquilando un nicho", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (r.ok()) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.alquilado"), false);
+                        enviarSaldo(jugador);
+                        // ⚠ La reclamacion vive tambien en la cache de
+                        //   proteccion, y el mundo no espera al barrido de cada
+                        //   minuto: se refresca ya, o el nicho estaria unos
+                        //   segundos sin proteger.
+                        LunaEternal.submit(
+                                net.pokereport.luna.santuario.SantuarioProteccion::recargar);
+                    } else {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + r.motivo()), false);
+                    }
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(ComprarNicho.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
+            LunaEternal.submit(() -> {
+                final net.pokereport.luna.santuario.SantuarioService.Resultado r;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    r = LunaEternal.santuario().comprar(carga.nicho(), id, escalon, carga.idem());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo comprando un nicho", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (r.ok()) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.comprado"), false);
+                        enviarSaldo(jugador);
+                        LunaEternal.submit(
+                                net.pokereport.luna.santuario.SantuarioProteccion::recargar);
+                    } else {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + r.motivo()), false);
+                    }
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(HonrarNicho.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final net.pokereport.luna.santuario.SantuarioService.Resultado r;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    r = LunaEternal.santuario().honrar(carga.nicho(), id, carga.idem());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo honrando un nicho", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    // ⚠ La respuesta viaja APARTE del estado: lleva el total y
+                    //   lo que le queda a ESTE jugador, que es lo que la
+                    //   pantalla del memorial dibuja -- y el cliente suena la
+                    //   campanilla solo si `ok`, para no celebrar un rechazo.
+                    ServerPlayNetworking.send(jugador, new RespuestaHonor(
+                            carga.nicho(), r.ok(),
+                            r.motivo() == null ? "" : r.motivo(),
+                            r.honores(), r.restantes()));
+                    if (r.ok()) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.honrado"), false);
+                    } else if (!"tope_diario".equals(r.motivo())) {
+                        // ⚠ El tope diario no avisa por chat: la pantalla lo
+                        //   enseña con el boton apagado y el numero al lado.
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + r.motivo()), false);
+                    }
+                    // ⚠⚠ SE REENVIA EL ESTADO SIN QUE LO PIDA NADIE: el total de
+                    //    honores acaba de cambiar, y quien lo este mirando ve el
+                    //    numero viejo hasta reabrir. Es la leccion de los clanes
+                    //    -- el estado no es de quien lo mira.
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(TextosNicho.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final String motivo;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    motivo = LunaEternal.santuario().textos(
+                            carga.nicho(), id, carga.titulo(), carga.descripcion());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo escribiendo el memorial", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (motivo != null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + motivo), false);
+                    }
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
+        // -------- las fotos: subir (troceada), entregar (troceada), gestionar
+
+        ServerPlayNetworking.registerGlobalReceiver(SubirFoto.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            // ⚠⚠ TODO EL REENSAMBLADO VIVE EN `Subidas`, no aqui: aqui paso un
+            //    fallo mudo --comparar el indice del trozo contra el tamano en
+            //    bytes-- que dejaba la subida a medias para siempre sin un solo
+            //    error. Ahora esa logica tiene invariantes en el autotest.
+            var resultado = net.pokereport.luna.santuario.Subidas.recibir(
+                    jugador.getUuid(), carga.idem(), carga.total(), carga.indice(),
+                    carga.trozo(), bytes -> LunaEternal.submit(() -> {
+                        final net.pokereport.luna.santuario.SantuarioService.ResultadoFoto r;
+                        final long id;
+                        try {
+                            id = LunaEternal.players().resolve(
+                                    perfil.getId(), perfil.getName());
+                            r = LunaEternal.santuario().subirFoto(id, bytes);
+                        } catch (Exception e) {
+                            LunaEternal.LOG.error("Fallo subiendo una foto", e);
+                            return;
+                        }
+                        server.execute(() -> {
+                            if (jugador.isRemoved()) {
+                                return;
+                            }
+                            ServerPlayNetworking.send(jugador, new ResultadoFoto(
+                                    carga.idem(), r.ok(), r.motivo(), r.fotoId(), r.sha1()));
+                        });
+                    }));
+            if (resultado == net.pokereport.luna.santuario.Subidas.Resultado.ROTA) {
+                server.execute(() -> {
+                    if (!jugador.isRemoved()) {
+                        ServerPlayNetworking.send(jugador, new ResultadoFoto(
+                                carga.idem(), false, "subida_rota", 0, ""));
+                    }
+                });
+            }
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirFoto.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            String sha1 = carga.sha1();
+            // ⚠ El sha1 es el NOMBRE del fichero: si no parece un hash, ni se
+            //   mira el disco (P6 -- nadie lee rutas del cliente).
+            if (sha1 == null || !sha1.matches("[0-9a-f]{40}")) {
+                return;
+            }
+            LunaEternal.submit(() -> {
+                final byte[] bytes;
+                try {
+                    var fichero = net.pokereport.luna.santuario.SantuarioService
+                            .carpetaFotos().resolve(sha1 + ".png");
+                    if (!java.nio.file.Files.exists(fichero)) {
+                        bytes = null;
+                    } else {
+                        bytes = java.nio.file.Files.readAllBytes(fichero);
+                    }
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("No se pudo leer la foto {}", sha1, e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved() || bytes == null) {
+                        return;
+                    }
+                    for (int i = 0; i * TROZO_FOTO < bytes.length; i++) {
+                        int desde = i * TROZO_FOTO;
+                        int hasta = Math.min(bytes.length, desde + TROZO_FOTO);
+                        ServerPlayNetworking.send(jugador, new FotoTramo(sha1,
+                                bytes.length, i,
+                                java.util.Arrays.copyOfRange(bytes, desde, hasta)));
+                    }
+                });
+            });
+        });
+
+        // -------- la moderacion: ver la foto ANTES de aprobarla
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirPendientes.ID, (carga, ctx) ->
+                enviarPendientes(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(ModerarFoto.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            LunaEternal.submit(() -> {
+                final String motivo;
+                try {
+                    motivo = carga.aprobar()
+                            ? LunaEternal.santuario().aprobar(carga.fotoId())
+                            : LunaEternal.santuario().rechazar(carga.fotoId());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo moderando una foto", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (motivo != null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + motivo), false);
+                    }
+                    // ⚠ Se reenvia la lista de pendientes SIEMPRE: la foto
+                    //   acaba de salir de ella (o el intento fallo, y hay que
+                    //   volver a la verdad).
+                    enviarPendientes(jugador);
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(TpNicho.ID,
+                (carga, ctx) -> {
+                    var jugador = ctx.player();
+                    var servidor = jugador.getServer();
+                    String nichoId = carga.nicho();
+                    servidor.execute(() -> {
+                        var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+                        var nicho = catalogo.de(nichoId);
+                        if (nicho == null) return;
+                        // ⚠ Solo funciona en CIUDADELA
+                        if (!net.pokereport.luna.world.LunaDimensions.CIUDADELA
+                                .equals(jugador.getServerWorld().getRegistryKey())) {
+                            return;
+                        }
+                        // Teleportar 2 bloques delante del proyector (eje Z+)
+                        var p = nicho.proyector();
+                        jugador.teleport(jugador.getServerWorld(),
+                                p.getX() + 0.5, p.getY(), p.getZ() + 2.5,
+                                java.util.Set.of(), 0f, 0f);
+                    });
+                });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirFotos.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final java.util.List<net.pokereport.luna.santuario.SantuarioService.Foto> fotos;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    fotos = LunaEternal.santuario().misFotos(id);
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("No se pudieron leer las fotos", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    var lista = new ArrayList<FotoEnvio>();
+                    for (var f : fotos) {
+                        lista.add(new FotoEnvio(f.id(), f.estado(), f.sha1()));
+                    }
+                    ServerPlayNetworking.send(jugador,
+                            new EstadoFotos(List.copyOf(lista)));
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PonerFoto.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final String motivo;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    motivo = LunaEternal.santuario().ponerFoto(
+                            carga.nicho(), id, carga.fotoId());
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo poniendo una foto", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (motivo != null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + motivo), false);
+                    }
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(QuitarFoto.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final String motivo;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    motivo = LunaEternal.santuario().quitarFoto(carga.nicho(), id);
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo quitando una foto", e);
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (motivo != null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + motivo), false);
+                    }
+                    enviarSantuario(jugador);
+                });
+            });
+        });
+
         ServerPlayNetworking.registerGlobalReceiver(AccionTienda.ID, (carga, ctx) -> {
             var jugador = ctx.player();
             var catalogo = LunaEternal.shop();
@@ -2357,9 +3945,12 @@ public class Red implements ModInitializer {
             //   aqui. Es la diferencia entre una tienda y un formulario de
             //   deseos (P6).
             net.pokereport.luna.shop.ShopCatalog.Entry entrada = null;
+            // ⚠⚠⚠ SE BUSCA POR `clave()`, NO POR EL ID DEL OBJETO. Las cinco
+            //    protecciones son las cinco un `minecraft:player_head`: con la
+            //    busqueda vieja SIEMPRE HABRIA GANADO LA PRIMERA -- pagas la
+            //    Master Ball y te llevas la Poke Ball, sin un solo error.
             for (var e : categoria.entries()) {
-                if (net.minecraft.registry.Registries.ITEM.getId(e.item())
-                        .toString().equals(carga.item())) {
+                if (e.clave().equals(carga.item())) {
                     entrada = e;
                     break;
                 }
@@ -2405,6 +3996,32 @@ public class Red implements ModInitializer {
             //   el equipo herido hasta que reabra. Es la leccion del 23-ago,
             //   que salio cuatro veces con cuatro caras distintas.
             enviarCura(jugador);
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirCartas.ID, (carga, ctx) ->
+                enviarCartas(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AbrirSobre.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            var sobre = net.pokereport.luna.cards.CartasService.Sobre.de(carga.sobre());
+            if (sobre == null) {
+                // ⚠ Un tipo que no existe NO es un caso raro: es un cliente
+                //   modificado. Se ignora en silencio y no se contesta -- pero
+                //   se anota, porque si empieza a pasar hay que enterarse.
+                LunaEternal.LOG.warn("{} pidio un sobre que no existe: {}",
+                        jugador.getName().getString(), carga.sobre());
+                return;
+            }
+            net.pokereport.luna.cards.CartasService.abrir(jugador, sobre, r -> {
+                jugador.sendMessage(net.minecraft.text.Text.literal(r.mensaje()), false);
+                // ⚠⚠ SE REENVIA EL ESTADO SIEMPRE, salga bien o mal. El
+                //    servidor acaba de cambiar dos cosas que la pantalla dibuja
+                //    --el reloj y el saldo--, y sin reenviarlas el jugador
+                //    seguiria viendo el boton encendido y su dinero de antes
+                //    hasta reabrir. Es la leccion del 23-ago, y la misma que ya
+                //    aplica `Curar` aqui al lado.
+                enviarCartas(jugador);
+            });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirClan.ID, (carga, ctx) ->
@@ -2990,6 +4607,11 @@ public class Red implements ModInitializer {
             try {
                 long id = LunaEternal.players()
                         .resolve(jugador.getUuid(), jugador.getName().getString());
+                // ⚠⚠⚠ EL VENDEDOR SE MIRA ANTES DE COMPRAR. Despues de la compra
+                //    la fila ya no esta, y sin su identificador no hay a quien
+                //    refrescarle el saldo. Es lo mismo que ya hacia el mercado de
+                //    objetos; aqui faltaba.
+                Long vendedor = LunaEternal.gts().duenoDe(carga.listado());
                 var r = LunaEternal.gts().buy(id, carga.listado());
                 servidor.execute(() -> jugador.sendMessage(
                         net.minecraft.text.Text.literal(r.message()), true));
@@ -3000,7 +4622,22 @@ public class Red implements ModInitializer {
                 }
                 enviarSaldo(jugador);
                 enviarGts(jugador, PedirGts.vacio());
-                refrescarGtsATodos(servidor);
+                // ⚠⚠ AQUI YA NO SE REFRESCA A TODO EL MUNDO. Ver el javadoc de
+                //    `refrescarGtsATodos`: costaba un recorrido del PC de CADA
+                //    jugador conectado, en el hilo del servidor, POR VENTA.
+                //    Quien tenga la lista abierta la vera un momento vieja y al
+                //    pulsar le dira que ya no existe -- que es exactamente lo que
+                //    lleva haciendo la mitad de objetos desde el principio.
+                // ⚠⚠⚠ Y AL VENDEDOR SE LE MANDA EL SALDO, NO SOLO LA LISTA.
+                //    `refrescarGtsATodos` le quitaba la oferta de la pantalla y
+                //    le dejaba el DINERO VIEJO delante: veia desaparecer su
+                //    Pokemon sin ver llegar el pago, que es la peor forma
+                //    posible de enterarse de una venta. El mercado de objetos ya
+                //    lo hacia bien (`refrescarMercadoA`); esta mitad se quedo sin
+                //    hacer, y no daba ningun error.
+                if (r.ok() && vendedor != null && !vendedor.equals(id)) {
+                    refrescarGtsA(servidor, vendedor);
+                }
             } catch (Exception e) {
                 LunaEternal.LOG.warn("No se pudo comprar el listado {}: {}",
                         carga.listado(), e.toString());
@@ -3049,6 +4686,25 @@ public class Red implements ModInitializer {
                 enviarGts(otro, PedirGts.vacio());
             }
         });
+    }
+
+    /** Refresca el GTS y el saldo de un jugador concreto, si está conectado. */
+    private static void refrescarGtsA(net.minecraft.server.MinecraftServer servidor,
+                                      long playerId) {
+        for (var otro : servidor.getPlayerManager().getPlayerList()) {
+            try {
+                long suyo = LunaEternal.players()
+                        .resolve(otro.getUuid(), otro.getName().getString());
+                if (suyo == playerId) {
+                    enviarGts(otro, PedirGts.vacio());
+                    enviarSaldo(otro);
+                    return;
+                }
+            } catch (Exception e) {
+                LunaEternal.LOG.debug("No se pudo refrescar el GTS de {}: {}",
+                        otro.getName().getString(), e.toString());
+            }
+        }
     }
 
     /** Manda el GTS: lo que hay, lo tuyo publicado y lo tuyo publicable. */
@@ -3909,6 +5565,206 @@ public class Red implements ModInitializer {
      * arrancar y se valida entonces. Por eso se puede componer aqui mismo, en el
      * hilo del servidor, sin pasar por el executor.
      */
+    /** El clic en la Chansey del monumento: abre la app. */
+    public static void enviarAbrirTorreBatalla(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        ServerPlayNetworking.send(jugador, new AbrirTorreBatalla());
+    }
+
+    public static void enviarAbrirSantuario(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        ServerPlayNetworking.send(jugador, new AbrirSantuario());
+    }
+
+    public static void enviarAbrirCentroPokemon(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        ServerPlayNetworking.send(jugador, new AbrirCentroPokemon());
+    }
+
+    /**
+     * Las fotos pendientes de moderar, SOLO si quien pide es staff.
+     *
+     * <p>⚠⚠ EL NIVEL SE COMPRUEBA AQUI, en el servidor: que la pantalla
+     * esconda la seccion a los demas es dibujo, no una regla (P6). Un cliente
+     * modificado puede mandar el paquete igualmente, y se lleva una lista
+     * vacia -- nunca el sha1 de una foto sin moderar.
+     */
+    public static void enviarPendientes(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        if (!jugador.hasPermissionLevel(3)) {
+            ServerPlayNetworking.send(jugador, new EstadoPendientes(List.of()));
+            return;
+        }
+        var server = jugador.getServer();
+        if (server == null) {
+            return;
+        }
+        LunaEternal.submit(() -> {
+            final java.util.List<java.util.AbstractMap.SimpleEntry<
+                    net.pokereport.luna.santuario.SantuarioService.Foto, String>> pendientes;
+            try {
+                pendientes = LunaEternal.santuario().pendientes();
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudieron leer las fotos pendientes", e);
+                return;
+            }
+            server.execute(() -> {
+                if (jugador.isRemoved()) {
+                    return;
+                }
+                var lista = new ArrayList<FotoPendiente>();
+                for (var e : pendientes) {
+                    lista.add(new FotoPendiente(e.getKey().id(),
+                            e.getKey().sha1(),
+                            nombreDe(jugador, e.getValue())));
+                }
+                ServerPlayNetworking.send(jugador,
+                        new EstadoPendientes(List.copyOf(lista)));
+            });
+        });
+    }
+
+    /** El clic en el proyector de un nicho ocupado: abre su memorial. */
+    public static void enviarAbrirMemorial(
+            net.minecraft.server.network.ServerPlayerEntity jugador, String nicho) {
+        ServerPlayNetworking.send(jugador, new AbrirMemorial(nicho));
+    }
+
+    /**
+     * Manda el estado del santuario: la lista de nichos en el orden de la
+     * config, con su reclamacion y su memorial.
+     *
+     * <p>⚠ Las filas se leen en el hilo de E/S y el paquete se compone en el
+     * hilo del servidor: los nombres salen de la userCache, que es de ahi. La
+     * geometria sale del catalogo, no de la base -- un nicho sin fila se
+     * ensena libre, que es justo lo que es antes del primer {@code
+     * garantizarNichos}.
+     */
+    public static void enviarSantuario(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+        var server = jugador.getServer();
+        if (server == null) {
+            return;
+        }
+        var perfil = jugador.getGameProfile();
+        LunaEternal.submit(() -> {
+            final java.util.List<net.pokereport.luna.santuario.SantuarioService.Nicho> filas;
+            final java.util.Map<String, Integer> restantes;
+            final long miId;
+            try {
+                filas = LunaEternal.santuario().nichos();
+                miId = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                restantes = LunaEternal.santuario().restantes(miId);
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo leer el estado del santuario", e);
+                return;
+            }
+            server.execute(() -> {
+                if (jugador.isRemoved()) {
+                    return;
+                }
+                var lista = new ArrayList<NichoSantuario>();
+                long ahora = System.currentTimeMillis();
+                for (var n : catalogo.todos()) {
+                    net.pokereport.luna.santuario.SantuarioService.Nicho fila = null;
+                    for (var f : filas) {
+                        if (f.id().equals(n.id())) {
+                            fila = f;
+                            break;
+                        }
+                    }
+                    String dueno = "";
+                    boolean permanente = false;
+                    long segundos = 0;
+                    boolean mio = false;
+                    String titulo = "";
+                    long honores = 0;
+                    String foto = "";
+                    String descripcion = "";
+                    if (fila != null && fila.ownerId() != null && !fila.libre(ahora)) {
+                        dueno = nombreDe(jugador, fila.ownerUuid());
+                        permanente = fila.permanente();
+                        if (!permanente) {
+                            segundos = Math.max(0, (fila.expiraMs() - ahora) / 1000);
+                        }
+                        mio = fila.ownerId() == miId;
+                        titulo = fila.titulo();
+                        honores = fila.honores();
+                        foto = fila.fotoSha1() == null ? "" : fila.fotoSha1();
+                        descripcion = fila.descripcion();
+                    }
+                    int quedan = restantes.getOrDefault(n.id(),
+                            net.pokereport.luna.santuario.SantuarioService.HONORES_DIA);
+                    lista.add(new NichoSantuario(n.id(), n.nombre(),
+                            new PosNicho(n.proyector().getX(), n.proyector().getY(),
+                                    n.proyector().getZ()),
+                            new EstadoNicho(dueno, permanente, segundos, mio, quedan),
+                            new MemorialNicho(titulo, honores, foto, descripcion)));
+                }
+                ServerPlayNetworking.send(jugador, new EstadoSantuario(
+                        List.copyOf(lista), catalogo.hay(),
+                        net.pokereport.luna.santuario.SantuarioService.PRECIO_ALQUILER,
+                        net.pokereport.luna.santuario.SantuarioService.PRECIO_PERMANENTE,
+                        jugador.hasPermissionLevel(3)));
+            });
+        });
+    }
+
+    /** El nombre de un uuid, o el uuid recortado si no se sabe de quien es. */
+    private static String nombreDe(
+            net.minecraft.server.network.ServerPlayerEntity jugador, String uuid) {
+        if (uuid == null) {
+            return "";
+        }
+        try {
+            var server = jugador.getServer();
+            var cache = server == null ? null : server.getUserCache();
+            if (cache != null) {
+                var perfil = cache.getByUuid(java.util.UUID.fromString(uuid));
+                if (perfil.isPresent()) {
+                    return perfil.get().getName();
+                }
+            }
+        } catch (IllegalArgumentException ignorado) {
+            // uuid roto: se enseña vacio, que es lo que hay.
+        }
+        // ⚠ Se enseña el uuid recortado y no «desconocido»: con «desconocido»
+        //   no se pueden distinguir dos, y eso es justo lo que hace falta.
+        return uuid.substring(0, Math.min(8, uuid.length()));
+    }
+
+    /** Manda al jugador sus parcelas. */
+    public static void enviarProtecciones(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var lista = new ArrayList<Parcela>();
+        for (var p : net.pokereport.luna.proteccion.Protecciones.de(jugador.getUuid())) {
+            lista.add(new Parcela(p.nombre(),
+                    net.pokereport.luna.proteccion.Protecciones.pilaDe(p.tipo()),
+                    p.centro(), p.mundo(), p.lado(), p.miembros()));
+        }
+        ServerPlayNetworking.send(jugador, new EstadoProtecciones(List.copyOf(lista),
+                net.pokereport.luna.proteccion.Protecciones.hay()));
+    }
+
+    /** Manda el detalle de UNA parcela. Si no es suya, no manda nada. */
+    public static void enviarParcela(net.minecraft.server.network.ServerPlayerEntity jugador,
+                                     String nombre) {
+        var d = net.pokereport.luna.proteccion.Protecciones.detalle(jugador, nombre);
+        if (d == null) {
+            return;
+        }
+        var ms = new ArrayList<MiembroParcela>();
+        for (var m : d.miembros()) {
+            ms.add(new MiembroParcela(m.uuid(), m.nombre()));
+        }
+        var ps = new ArrayList<PermisoParcela>();
+        for (var x : d.permisos()) {
+            ps.add(new PermisoParcela(x.clave(), x.valor(), x.porDefecto()));
+        }
+        ServerPlayNetworking.send(jugador,
+                new DetalleParcela(d.nombre(), List.copyOf(ms), List.copyOf(ps),
+                        d.titulo(), d.subtitulo(), d.visible()));
+    }
+
     private static Tienda componerTienda() {
         var catalogo = LunaEternal.shop();
         List<CategoriaTienda> salida = new ArrayList<>();
@@ -3918,10 +5774,20 @@ public class Red implements ModInitializer {
         for (var c : catalogo.categories()) {
             List<EntradaTienda> entradas = new ArrayList<>();
             for (var e : c.entries()) {
+                // ⚠ La pila que se ENSEÑA se monta igual que la que se
+                //   entrega: si el proveedor no esta, sale el objeto pelado y
+                //   la compra dira que no se puede. Nunca se enseña una cosa y
+                //   se entrega otra.
+                var pila = e.entrega() != null && !e.entrega().isEmpty()
+                        ? net.pokereport.luna.shop.Modulos.fabricar(e.entrega(), 1)
+                        : null;
+                if (pila == null) {
+                    pila = new net.minecraft.item.ItemStack(e.item());
+                }
                 entradas.add(new EntradaTienda(
-                        net.minecraft.registry.Registries.ITEM.getId(e.item()).toString(),
+                        pila,
                         e.label() == null ? "" : e.label(),
-                        e.buy(), e.sell(), e.currency().name()));
+                        e.buy(), e.sell(), e.currency().name(), e.clave()));
             }
             salida.add(new CategoriaTienda(c.id(), c.name(),
                     net.minecraft.registry.Registries.ITEM.getId(c.icon()).toString(),
@@ -3969,6 +5835,63 @@ public class Red implements ModInitializer {
                 List.copyOf(equipo),
                 net.pokereport.luna.heal.HealService.restante(jugador),
                 net.pokereport.luna.heal.HealService.necesitaCura(jugador)));
+    }
+
+    /**
+     * Manda el estado de las tres zonas de CARTAS.
+     *
+     * <p>⚠ Lee la base, asi que va al hilo de E/S y vuelve al del servidor para
+     * mandar. Consultar desde el hilo del servidor esta prohibido (R1).
+     *
+     * <p>⚠⚠ Y SI LA LECTURA FALLA SE MANDA EL PAQUETE IGUAL, con los dos relojes
+     * a cero y los saldos a cero. Sin paquete, la pantalla se queda en
+     * «cargando» para siempre y el jugador no sabe si es lenta o esta rota --
+     * mismo motivo por el que `enviarCura` manda el equipo vacio.
+     */
+    private static void enviarCartas(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var servidor = jugador.getServer();
+        if (servidor == null) {
+            return;
+        }
+        var perfil = jugador.getGameProfile();
+        LunaEternal.submit(() -> {
+            long diario = 0;
+            long plataSeg = 0;
+            long saldoPlata = 0;
+            long saldoLuna = 0;
+            try {
+                long id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                var e = net.pokereport.luna.cards.CartasService.estado(id);
+                long ahora = System.currentTimeMillis();
+                diario = restante(e, net.pokereport.luna.cards.CartasService.Sobre.DIARIO, ahora);
+                plataSeg = restante(e, net.pokereport.luna.cards.CartasService.Sobre.PLATA, ahora);
+                saldoPlata = e.plata();
+                saldoLuna = e.lunacoins();
+            } catch (Exception ex) {
+                LunaEternal.LOG.error("No se pudo leer el estado de las cartas", ex);
+            }
+            final long d = diario;
+            final long p = plataSeg;
+            final long sp = saldoPlata;
+            final long sl = saldoLuna;
+            servidor.execute(() -> {
+                if (jugador.isRemoved()) {
+                    return;
+                }
+                ServerPlayNetworking.send(jugador, new EstadoCartas(d, p,
+                        net.pokereport.luna.cards.CartasService.Sobre.PLATA.precio,
+                        net.pokereport.luna.cards.CartasService.Sobre.LUNA.precio,
+                        sp, sl));
+            });
+        });
+    }
+
+    /** Segundos que faltan para ese sobre, ya restados. 0 = ya se puede. */
+    private static long restante(net.pokereport.luna.cards.CartasService.Estado e,
+                                 net.pokereport.luna.cards.CartasService.Sobre s,
+                                 long ahora) {
+        Long cuando = e.disponibleEn().get(s);
+        return cuando == null ? 0 : Math.max(0, (cuando - ahora) / 1000);
     }
 
     /**
@@ -4281,18 +6204,60 @@ public class Red implements ModInitializer {
         }
     }
 
-    /** Manda a un jugador su pantalla de trajes. */
+    /**
+     * Manda a un jugador su pantalla de KITS.
+     *
+     * <p>⚠⚠ VA FUERA DEL HILO DEL SERVIDOR porque ahora lee la espera del kit en
+     * la base (R1). Lo que se lee de memoria —el rango y qué trajes tiene— se
+     * podría leer aquí mismo; el reloj de 24 h no. Se calcula todo fuera y se
+     * envía dentro.
+     */
     public static void enviarTrajes(
             net.minecraft.server.network.ServerPlayerEntity jugador) {
-        int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
-        var fichas = new java.util.ArrayList<FichaTraje>();
-        for (var t : net.pokereport.luna.traje.Traje.todos()) {
-            fichas.add(new FichaTraje(t.id(), t.pide().escalon, t.listo(),
-                    t.puede(escalon)));
-        }
-        String puesto = net.pokereport.luna.traje.TrajeService.enCache(jugador.getUuid());
-        ServerPlayNetworking.send(jugador,
-                new EstadoTrajes(puesto == null ? "" : puesto, escalon, fichas));
+        LunaEternal.submit(() -> {
+            int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
+            var fichas = new java.util.ArrayList<FichaTraje>();
+            long id = -1;
+            for (var t : net.pokereport.luna.traje.Traje.todos()) {
+                int espera = -1;
+                if (t.esKit()) {
+                    // ⚠ -1 seguiria significando «no es un kit», asi que un
+                    //   fallo al leer NO puede dejarlo en -1: se dice que falta
+                    //   mucho, que es el lado seguro (no se entrega de mas).
+                    espera = Integer.MAX_VALUE;
+                    var kit = LunaEternal.kits().byId(t.id());
+                    if (kit != null) {
+                        try {
+                            if (id < 0) {
+                                id = LunaEternal.players().resolve(jugador.getUuid(),
+                                        jugador.getGameProfile().getName());
+                            }
+                            var st = LunaEternal.kitService().status(id, kit);
+                            espera = st.claimable() ? 0
+                                    : (int) Math.max(1, java.time.Duration.between(
+                                        java.time.LocalDateTime.now(),
+                                        st.nextAvailable()).getSeconds());
+                        } catch (Exception e) {
+                            LunaEternal.LOG.warn("No se pudo leer la espera del kit {}"
+                                    + " de {}: {}", t.id(),
+                                    jugador.getGameProfile().getName(), e.toString());
+                        }
+                    }
+                }
+                fichas.add(new FichaTraje(t.id(), t.pide().escalon, t.listo(),
+                        net.pokereport.luna.traje.TrajeService.tiene(
+                                jugador.getUuid(), t),
+                        espera));
+            }
+            String puesto = net.pokereport.luna.traje.TrajeService
+                    .enCache(jugador.getUuid());
+            var carga = new EstadoTrajes(puesto == null ? "" : puesto, escalon, fichas);
+            jugador.getServer().execute(() -> {
+                if (!jugador.isRemoved()) {
+                    ServerPlayNetworking.send(jugador, carga);
+                }
+            });
+        });
     }
 
     /**

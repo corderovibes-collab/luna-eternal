@@ -506,6 +506,38 @@ public final class LunaCommand {
                             StringArgumentType.getString(ctx, "jugador"),
                             StringArgumentType.getString(ctx, "rango"))))))
 
+            .then(literal("traje")
+                // ⚠ Nivel 4, como `rango`: esto es lo que Tebex ejecuta por
+                //   consola cuando alguien paga. Un traje es una compra.
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(argument("jugador", StringArgumentType.word())
+                    .executes(ctx -> verTrajes(ctx.getSource(),
+                        StringArgumentType.getString(ctx, "jugador"))))
+                .then(literal("dar")
+                    .then(argument("jugador", StringArgumentType.word())
+                        .then(argument("traje", StringArgumentType.word())
+                            .suggests((c, b) -> {
+                                for (var t : net.pokereport.luna.traje.Traje.todos()) {
+                                    b.suggest(t.id());
+                                }
+                                return b.buildFuture();
+                            })
+                            .executes(ctx -> darTraje(ctx.getSource(),
+                                StringArgumentType.getString(ctx, "jugador"),
+                                StringArgumentType.getString(ctx, "traje"), true)))))
+                .then(literal("quitar")
+                    .then(argument("jugador", StringArgumentType.word())
+                        .then(argument("traje", StringArgumentType.word())
+                            .suggests((c, b) -> {
+                                for (var t : net.pokereport.luna.traje.Traje.todos()) {
+                                    b.suggest(t.id());
+                                }
+                                return b.buildFuture();
+                            })
+                            .executes(ctx -> darTraje(ctx.getSource(),
+                                StringArgumentType.getString(ctx, "jugador"),
+                                StringArgumentType.getString(ctx, "traje"), false))))))
+
             .then(literal("rotarcazas")
                 .requires(s -> s.hasPermissionLevel(3))
                 .executes(ctx -> rotarCazas(ctx.getSource())))
@@ -568,6 +600,66 @@ public final class LunaCommand {
             .then(literal("reiniciarinicial")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> reiniciarInicial(ctx.getSource())))
+
+            // ⚠ LA MODERACION DE FOTOS DEL SANTUARIO va a nivel 3: es de staff,
+            //   no de administrador del servidor. Aprobar una foto es lo mismo
+            //   que moderar un mensaje de chat -- y el chat lo moderan los de
+            //   nivel 3.
+            .then(literal("santuario")
+                .requires(s -> s.hasPermissionLevel(3))
+                .then(literal("aprobar")
+                    .then(argument("foto", com.mojang.brigadier.arguments.LongArgumentType
+                            .longArg(1))
+                        .executes(ctx -> fotoSantuario(ctx.getSource(),
+                                com.mojang.brigadier.arguments.LongArgumentType
+                                        .getLong(ctx, "foto"), true))))
+                .then(literal("rechazar")
+                    .then(argument("foto", com.mojang.brigadier.arguments.LongArgumentType
+                            .longArg(1))
+                        .executes(ctx -> fotoSantuario(ctx.getSource(),
+                                com.mojang.brigadier.arguments.LongArgumentType
+                                        .getLong(ctx, "foto"), false))))
+                .then(literal("pendientes")
+                    .executes(ctx -> pendientesSantuario(ctx.getSource())))
+                .then(literal("eliminar").requires(s -> s.hasPermissionLevel(4)).then(argument("nicho", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(ctx -> eliminarNicho(ctx.getSource(), com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "nicho")))))
+                .then(literal("info").requires(s -> s.hasPermissionLevel(4)).then(argument("nicho", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(ctx -> infoNicho(ctx.getSource(), com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "nicho")))))
+                .then(literal("recargar").requires(s -> s.hasPermissionLevel(4)).executes(ctx -> recargarSantuario(ctx.getSource())))
+                .then(literal("listar").requires(s -> s.hasPermissionLevel(4)).executes(ctx -> listarNichos(ctx.getSource())))
+                // ⚠ Colocar la Chansey es nivel 4: es decoracion del mundo,
+                //   como /luna decorar -- un moderador no construye.
+                .then(literal("npc")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .executes(ctx -> npcSantuario(ctx.getSource()))))
+
+            .then(literal("enfermera")
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(literal("npc")
+                    .executes(ctx -> npcEnfermera(ctx.getSource()))))
+
+            .then(literal("torre_batalla")
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(literal("npc")
+                    .executes(ctx -> npcTorreBatalla(ctx.getSource())))
+                .then(literal("holograma")
+                    .then(literal("1vs1").executes(ctx -> hologramaTorre(ctx.getSource(), "1vs1")))
+                    .then(literal("2vs2").executes(ctx -> hologramaTorre(ctx.getSource(), "2vs2")))
+                    .then(literal("aleatorio").executes(ctx -> hologramaTorre(ctx.getSource(), "aleatorio")))
+                    .then(literal("quitar").executes(ctx -> quitarHologramaTorre(ctx.getSource())))
+                    .then(literal("actualizar").executes(ctx -> actualizarHologramasTorre(ctx.getSource()))))
+                .then(literal("arena")
+                    .executes(ctx -> arenaTorre(ctx.getSource())))
+                .then(literal("tp")
+                    .executes(ctx -> tpTorre(ctx.getSource())))
+                .then(literal("nueva_temporada")
+                    .executes(ctx -> nuevaTemporadaTorre(ctx.getSource())))
+                .then(literal("dar_ronda")
+                    .then(argument("jugador", net.minecraft.command.argument.EntityArgumentType.player())
+                        .then(argument("modo", com.mojang.brigadier.arguments.StringArgumentType.word())
+                            .then(argument("ronda", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                                .executes(ctx -> darRondaTorre(ctx.getSource(),
+                                        net.minecraft.command.argument.EntityArgumentType.getPlayer(ctx, "jugador"),
+                                        com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "modo"),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "ronda"))))))))
 
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
@@ -1168,6 +1260,109 @@ public final class LunaCommand {
         return 1;
     }
 
+    /**
+     * Da o quita un traje. Es la puerta por la que entra una compra de Tebex.
+     *
+     * <h2>⚠⚠ FUNCIONA CON EL JUGADOR DESCONECTADO, Y TIENE QUE FUNCIONAR</h2>
+     *
+     * Una compra llega cuando llega. Por eso se resuelve el {@code player_id}
+     * por nombre igual que {@code /luna rango}, y el {@code uuid} solo se usa
+     * para refrescar la caché de quien esté dentro.
+     *
+     * <p>⚠ Si está conectado se le reenvía la pantalla: el estado no es de quien
+     * lo mira. Sin eso, alguien que acaba de pagar abre KITS y ve su traje
+     * bloqueado hasta reconectar — y eso parece que no le ha llegado la compra.
+     */
+    private static int darTraje(ServerCommandSource src, String jugador,
+                                String traje, boolean dar) {
+        var svc = LunaEternal.trajes();
+        if (svc == null) {
+            src.sendFeedback(() -> Text.literal("§cEl sistema de trajes no está listo."), false);
+            return 0;
+        }
+        var t = net.pokereport.luna.traje.Traje.de(traje);
+        if (t == null) {
+            // ⚠ `Traje.de` devuelve null ante lo desconocido a proposito, asi
+            //   que aqui se puede dar un error de verdad en vez de conceder otro.
+            src.sendFeedback(() -> Text.literal(
+                "§cNo existe el traje §f" + traje + "§c."), false);
+            return 0;
+        }
+        if (t.gratis()) {
+            src.sendFeedback(() -> Text.literal(
+                "§7El traje §f" + t.id() + " §7es gratis para todo el mundo: "
+                + "no hay nada que dar ni que quitar."), false);
+            return 0;
+        }
+        var server = src.getServer();
+        LunaEternal.submit(() -> {
+            try {
+                var conectado = server.getPlayerManager().getPlayer(jugador);
+                Long id = LunaEternal.players().resolveByName(jugador);
+                if (id == null) {
+                    server.execute(() -> src.sendFeedback(() -> Text.literal(
+                        "§cNo conozco a §f" + jugador + "§c."), false));
+                    return;
+                }
+                // ⚠ Desconectado no hay uuid ni falta: la cache se rellena al
+                //   entrar (`cargarPropiedad`), asi que lo unico que importa es
+                //   que la fila quede escrita.
+                java.util.UUID uuid = conectado != null ? conectado.getUuid() : null;
+                boolean cambio = dar ? svc.conceder(id, uuid, t)
+                                     : svc.retirar(id, uuid, t);
+                server.execute(() -> {
+                    src.sendFeedback(() -> Text.literal(
+                        "§a" + jugador + "§7: " + (dar ? "tiene" : "ya no tiene")
+                        + " el traje §f" + t.id()
+                        + (cambio ? "" : " §8(ya estaba así)")), true);
+                    if (conectado != null && !conectado.isRemoved()) {
+                        if (!dar) {
+                            svc.revisar(conectado, id);
+                            net.pokereport.luna.net.Red.repartirTraje(conectado);
+                        }
+                        net.pokereport.luna.net.Red.enviarTrajes(conectado);
+                    }
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo cambiar el traje de {}", jugador, e);
+            }
+        });
+        return 1;
+    }
+
+    /** Qué trajes tiene alguien. Para comprobar una compra sin abrir la base. */
+    private static int verTrajes(ServerCommandSource src, String jugador) {
+        var server = src.getServer();
+        LunaEternal.submit(() -> {
+            try {
+                var conectado = server.getPlayerManager().getPlayer(jugador);
+                if (conectado == null) {
+                    server.execute(() -> src.sendFeedback(() -> Text.literal(
+                        "§7§f" + jugador + " §7no está conectado: los trajes se "
+                        + "leen al entrar, así que no puedo listárselos."), false));
+                    return;
+                }
+                var suyos = new java.util.ArrayList<String>();
+                for (var t : net.pokereport.luna.traje.Traje.todos()) {
+                    if (net.pokereport.luna.traje.TrajeService.tiene(
+                            conectado.getUuid(), t)) {
+                        suyos.add(t.id() + (t.gratis() ? " §8(gratis)§7" : ""));
+                    }
+                }
+                String puesto = net.pokereport.luna.traje.TrajeService
+                        .enCache(conectado.getUuid());
+                server.execute(() -> src.sendFeedback(() -> Text.literal(
+                    "§7" + jugador + " puede ponerse: §f"
+                    + (suyos.isEmpty() ? "nada" : String.join("§7, §f", suyos))
+                    + "§7. Lleva puesto: §f"
+                    + (puesto == null ? "ninguno" : puesto)), false));
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudieron listar los trajes de {}", jugador, e);
+            }
+        });
+        return 1;
+    }
+
     private static int rotarCazas(ServerCommandSource src) {
         var server = src.getServer();
         LunaEternal.submit(() -> {
@@ -1193,6 +1388,283 @@ public final class LunaCommand {
 
     private static void reply(ServerPlayerEntity p, String msg) {
         p.getServer().execute(() -> p.sendMessage(Text.literal(msg), false));
+    }
+
+    /** Coloca la Mew del santuario donde esta quien lo ejecuta. */
+    private static int npcSantuario(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        // ⚠ Es decoracion del MUNDO (crear la entidad es trabajo de tick), y el
+        //   comando ya corre en el hilo del servidor: nada de executor aqui.
+        if (!net.pokereport.luna.santuario.SantuarioNpc.colocar(p)) {
+            src.sendError(Text.literal("Solo se puede colocar en la ciudadela."));
+            return 0;
+        }
+        src.sendFeedback(() -> Text.literal(
+                "§aMew del santuario colocado. Tocarla abre la app."), false);
+        return 1;
+    }
+
+    private static int npcEnfermera(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(net.minecraft.text.Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        
+        net.pokereport.luna.heal.EnfermeraService.colocarEnfermera(p);
+        p.sendMessage(net.minecraft.text.Text.literal("§aEnfermera Joy colocada en el centro Pokémon. ¡Quedó invulnerable y estática!"), false);
+        return 1;
+    }
+
+    private static int npcTorreBatalla(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(net.minecraft.text.Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        
+        net.pokereport.luna.torrebatalla.TorreNpc.colocarNpc(p);
+        p.sendMessage(net.minecraft.text.Text.literal("¡NPC de la Torre de Batalla colocado. Quedó invulnerable y estático!"), false);
+        return 1;
+    }
+
+    private static int hologramaTorre(ServerCommandSource src, String modo) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        net.pokereport.luna.torrebatalla.TorreRanking.colocarHolograma(p.getServerWorld(), p.getPos(), modo);
+        p.sendMessage(Text.literal("§aHolograma de ranking para §e" + modo + " §acolocado exitosamente."), false);
+        return 1;
+    }
+
+    private static int quitarHologramaTorre(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        int quitados = net.pokereport.luna.torrebatalla.TorreRanking.quitarCercano(p.getServerWorld(), p.getPos());
+        p.sendMessage(Text.literal("§eSe han retirado §f" + quitados + " §eholograma(s) de la torre cercanos."), false);
+        return 1;
+    }
+
+    private static int actualizarHologramasTorre(ServerCommandSource src) {
+        net.pokereport.luna.torrebatalla.TorreRanking.actualizarHologramasEnMundos(src.getServer());
+        src.sendFeedback(() -> Text.literal("§aTodos los hologramas de ranking de la torre han sido actualizados."), false);
+        return 1;
+    }
+
+    private static int arenaTorre(ServerCommandSource src) {
+        net.minecraft.server.world.ServerWorld mundoTorre = src.getServer().getWorld(net.pokereport.luna.world.LunaDimensions.TORRE);
+        if (mundoTorre == null) {
+            src.sendError(Text.literal("§cDimensión lunaeternal:torre no encontrada."));
+            return 0;
+        }
+        net.pokereport.luna.torrebatalla.TorreBatallaService.asegurarBloquesArena(mundoTorre);
+        src.sendFeedback(() -> Text.literal("§aBloques de posiciones de combate asegurados en la plataforma."), false);
+        return 1;
+    }
+
+    private static int tpTorre(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        net.minecraft.server.world.ServerWorld mundoTorre = src.getServer().getWorld(net.pokereport.luna.world.LunaDimensions.TORRE);
+        if (mundoTorre == null) {
+            src.sendError(Text.literal("§cDimensión lunaeternal:torre no encontrada."));
+            return 0;
+        }
+        var pos = net.pokereport.luna.torrebatalla.TorreBatallaService.POS_JUGADOR;
+        p.teleport(mundoTorre, pos.x, pos.y, pos.z,
+                net.pokereport.luna.torrebatalla.TorreBatallaService.YAW_JUGADOR, 0f);
+        p.sendMessage(Text.literal("§aTeletransportado a la plataforma de la Torre de Batalla."), false);
+        return 1;
+    }
+
+    private static int nuevaTemporadaTorre(ServerCommandSource src) {
+        int nueva = net.pokereport.luna.torrebatalla.TorreRecompensas.avanzarTemporada();
+        for (ServerPlayerEntity p : src.getServer().getPlayerManager().getPlayerList()) {
+            net.pokereport.luna.net.Red.enviarEstadoRecompensasTorre(p);
+        }
+        src.getServer().getPlayerManager().broadcast(Text.literal(
+                "§6§l[TORRE DE BATALLA] §e¡Ha comenzado la §6§lTemporada #" + nueva + "§e! Las recompensas han sido reiniciadas. ¡A luchar!"), false);
+        return 1;
+    }
+
+    private static int darRondaTorre(ServerCommandSource src, ServerPlayerEntity p, String modo, int ronda) {
+        String modoKey = switch (modo.toLowerCase()) {
+            case "1vs1", "1v1" -> net.pokereport.luna.torrebatalla.TorreRanking.MODO_1VS1;
+            case "2vs2", "2v2" -> net.pokereport.luna.torrebatalla.TorreRanking.MODO_2VS2;
+            default -> net.pokereport.luna.torrebatalla.TorreRanking.MODO_ALEATORIO;
+        };
+        net.pokereport.luna.torrebatalla.TorreRanking.actualizarRonda(src.getServer(), modoKey, p.getName().getString(), ronda);
+        net.pokereport.luna.torrebatalla.TorreRecompensas.registrarVictoria(p.getUuid(), ronda);
+        net.pokereport.luna.net.Red.enviarEstadoRecompensasTorre(p);
+        src.sendFeedback(() -> Text.literal("§aRonda " + ronda + " asignada a " + p.getName().getString() + " en modo " + modoKey), false);
+        return 1;
+    }
+
+/** Aprueba o rechaza una foto pendiente del santuario. */
+    private static int fotoSantuario(ServerCommandSource src, long fotoId, boolean aprobar) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            String motivo = aprobar
+                    ? LunaEternal.santuario().aprobar(fotoId)
+                    : LunaEternal.santuario().rechazar(fotoId);
+            if (motivo == null) {
+                reply(p, aprobar
+                        ? "§aFoto " + fotoId + " aprobada. Su dueno ya puede colocarla."
+                        : "§aFoto " + fotoId + " rechazada.");
+            } else if ("no_pendiente".equals(motivo)) {
+                reply(p, "§cEsa foto ya no esta pendiente.");
+            } else {
+                reply(p, "§cNo se pudo: " + motivo);
+            }
+        });
+        return 1;
+    }
+
+    /** Las fotos pendientes de moderar. */
+    private static int pendientesSantuario(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            try (var c = LunaEternal.database().connection();
+                 var ps = c.prepareStatement(
+                         "SELECT f.foto_id, p.mc_uuid, f.subida_ms FROM santuario_foto f "
+                                 + "JOIN player p ON p.player_id = f.owner_id "
+                                 + "WHERE f.estado = 'PENDIENTE' ORDER BY f.foto_id")) {
+                var lineas = new java.util.ArrayList<String>();
+                try (var rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        lineas.add("§f#" + rs.getLong("foto_id") + " §7de §f"
+                                + rs.getString("mc_uuid").substring(0, 8));
+                    }
+                }
+                if (lineas.isEmpty()) {
+                    reply(p, "§7No hay fotos pendientes de moderar.");
+                } else {
+                    reply(p, "§7Fotos pendientes (" + lineas.size() + "): "
+                            + String.join(" §8·§7 ", lineas)
+                            + " §8-- /luna santuario aprobar <id>");
+                }
+            } catch (Exception e) {
+                reply(p, "§cNo se pudieron leer las pendientes: " + e.getMessage());
+            }
+        });
+        return 1;
+    }
+
+    /** Elimina la reclamacion de un nicho (lo deja libre). */
+    private static int eliminarNicho(ServerCommandSource src, String nichoId) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            String motivo = LunaEternal.santuario().eliminar(nichoId);
+            if (motivo == null) {
+                net.pokereport.luna.santuario.SantuarioProteccion.recargar();
+                reply(p, "§aNicho '" + nichoId + "' liberado.");
+            } else {
+                reply(p, "§cNo se pudo eliminar: " + motivo);
+            }
+        });
+        return 1;
+    }
+
+    /** Muestra la informacion de un nicho. */
+    private static int infoNicho(ServerCommandSource src, String nichoId) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            var info = LunaEternal.santuario().info(nichoId);
+            if (info == null) {
+                reply(p, "§cNicho '" + nichoId + "' no existe.");
+            } else {
+                reply(p, info);
+            }
+        });
+        return 1;
+    }
+
+    /** Recarga la config de nichos sin reiniciar. */
+    private static int recargarSantuario(ServerCommandSource src) {
+        // ⚠ La config es un fichero local pequeno, se lee en el hilo del servidor.
+        try {
+            int n = net.pokereport.luna.santuario.SantuarioProteccion.catalogo().recargar();
+            LunaEternal.santuario().garantizarNichos(
+                    net.pokereport.luna.santuario.SantuarioProteccion.catalogo().todos().stream()
+                            .map(net.pokereport.luna.santuario.NichoCatalogo.Nicho::id)
+                            .toList());
+            net.pokereport.luna.santuario.SantuarioProteccion.recargar();
+            src.sendFeedback(() -> Text.literal(
+                    "§aSantuario recargado: " + n + " nichos."), false);
+            return 1;
+        } catch (Exception e) {
+            src.sendError(Text.literal("§cError al recargar: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    /** Lista todos los nichos y su estado. */
+    private static int listarNichos(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+            if (!catalogo.hay()) {
+                reply(p, "§7No hay nichos configurados.");
+                return;
+            }
+            try {
+                var nichos = LunaEternal.santuario().nichos();
+                var sb = new StringBuilder("§7Nichos (" + catalogo.todos().size() + "):\n");
+                for (var cn : catalogo.todos()) {
+                    net.pokereport.luna.santuario.SantuarioService.Nicho sn = null;
+                    for (var n : nichos) {
+                        if (n.id().equals(cn.id())) {
+                            sn = n;
+                            break;
+                        }
+                    }
+                    sb.append("§f ").append(cn.id());
+                    if (sn != null && sn.ownerId() != null && !sn.libre(System.currentTimeMillis())) {
+                        sb.append(" §a[ocupado]");
+                        if (sn.permanente()) sb.append(" §6permanente");
+                    } else {
+                        sb.append(" §7[libre]");
+                    }
+                    sb.append("\n");
+                }
+                reply(p, sb.toString().trim());
+            } catch (Exception e) {
+                reply(p, "§cError al leer los nichos: " + e.getMessage());
+            }
+        });
+        return 1;
     }
 
     /**

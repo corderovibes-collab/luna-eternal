@@ -25,6 +25,9 @@ public final class EstadoCliente {
     private static Red.EstadoClan clan;
     private static Red.Tienda tienda;
     private static Red.EstadoCura cura;
+    private static Red.EstadoProtecciones protecciones;
+    private static Red.DetalleParcela parcela;
+    private static Red.EstadoCartas cartas;
     private static Red.EstadoMercado mercado;
     private static Red.EstadoGts gts;
     private static Red.EstadoCazas cazas;
@@ -42,6 +45,12 @@ public final class EstadoCliente {
     private static Red.EstadoViajes viajes;
     private static Red.EstadoGimnasio gimnasio;
     private static Red.EstadoTrajes trajes;
+    private static Red.EstadoSantuario santuario;
+    private static Red.ResultadoFoto fotoSubida;
+    private static Red.EstadoFotos misFotos;
+    private static Red.RespuestaHonor honor;
+    private static Red.EstadoPendientes pendientes;
+    private static Red.EstadoRecompensasTorre recompensasTorre;
 
     private EstadoCliente() {}
 
@@ -137,6 +146,30 @@ public final class EstadoCliente {
         cura = nueva;
     }
 
+    public static void guardar(Red.EstadoProtecciones nuevas) {
+        protecciones = nuevas;
+    }
+
+    public static void guardar(Red.DetalleParcela nueva) {
+        parcela = nueva;
+    }
+
+    /** El detalle de la parcela abierta. {@code null} si no hay ninguna. */
+    public static Red.DetalleParcela parcela() {
+        return parcela;
+    }
+
+    /** Se olvida al volver a la lista: si no, la siguiente que abras enseñaría
+     *  un instante los miembros de la anterior. */
+    public static void olvidarParcela() {
+        parcela = null;
+    }
+
+    /** Las parcelas del jugador. {@code null} hasta que el servidor conteste. */
+    public static Red.EstadoProtecciones protecciones() {
+        return protecciones;
+    }
+
     /**
      * El equipo y el reloj de la cura. {@code null} hasta que contesta.
      *
@@ -145,6 +178,22 @@ public final class EstadoCliente {
      */
     public static Red.EstadoCura cura() {
         return cura;
+    }
+
+    public static void guardar(Red.EstadoCartas nueva) {
+        cartas = nueva;
+    }
+
+    /**
+     * Los dos relojes, los dos precios y los saldos de CARTAS. {@code null}
+     * hasta que el servidor contesta.
+     *
+     * <p>⚠ Los segundos que trae son los que habia AL MANDARLO. La pantalla les
+     * resta el tiempo que lleva en pantalla; no se vuelven a pedir cada
+     * segundo.
+     */
+    public static Red.EstadoCartas cartas() {
+        return cartas;
     }
 
     public static void guardar(Red.EstadoMercado nuevo) {
@@ -226,6 +275,71 @@ public final class EstadoCliente {
         return cosmeticos;
     }
 
+    public static void guardar(Red.EstadoSantuario nuevo) {
+        santuario = nuevo;
+    }
+
+    /**
+     * Los nichos del santuario. {@code null} hasta que contesta el servidor.
+     *
+     * <p>⚠ Que sea {@code null} y que {@code hayNichos()} sea {@code false} son
+     * cosas DISTINTAS: lo primero es «todavía no lo sé», lo segundo es «el
+     * santuario aun no esta construido». Confundirlas dejaria la pantalla en
+     * blanco durante el medio segundo que tarda la respuesta.
+     */
+    public static Red.EstadoSantuario santuario() {
+        return santuario;
+    }
+
+    public static void guardar(Red.ResultadoFoto nuevo) {
+        fotoSubida = nuevo;
+    }
+
+    /** La respuesta a la ultima subida de foto, o {@code null}. */
+    public static Red.ResultadoFoto fotoSubida() {
+        return fotoSubida;
+    }
+
+    public static void guardar(Red.EstadoFotos nuevo) {
+        misFotos = nuevo;
+    }
+
+    /** Mis fotos. {@code null} hasta que contesta el servidor. */
+    public static Red.EstadoFotos misFotos() {
+        return misFotos;
+    }
+
+    public static void guardar(Red.RespuestaHonor nuevo) {
+        honor = nuevo;
+    }
+
+    /**
+     * La respuesta al ultimo honor. {@code null} si aun no ha habido ninguno.
+     *
+     * <p>⚠ NO SE BORRA AL LEERLO, como el resultado del cofre: la pantalla la
+     * lee cuando puede, y un redibujado no puede comersela.
+     */
+    public static Red.RespuestaHonor honor() {
+        return honor;
+    }
+
+    public static void guardar(Red.EstadoPendientes nuevo) {
+        pendientes = nuevo;
+    }
+
+    /** Las fotos pendientes de moderar (solo staff). {@code null} si aun no. */
+    public static Red.EstadoPendientes pendientes() {
+        return pendientes;
+    }
+
+    public static void guardar(Red.EstadoRecompensasTorre nuevo) {
+        recompensasTorre = nuevo;
+    }
+
+    public static Red.EstadoRecompensasTorre recompensasTorre() {
+        return recompensasTorre;
+    }
+
     /** Al salir del mundo se olvida: el saldo es de esa partida, no del cliente. */
     public static void olvidar() {
         tesoros = null;
@@ -236,10 +350,19 @@ public final class EstadoCliente {
         clan = null;
         tienda = null;
         cura = null;
+        protecciones = null;
+        parcela = null;
+        cartas = null;
         mercado = null;
         gts = null;
         saldo = null;
         ficha = null;
+        santuario = null;
+        fotoSubida = null;
+        misFotos = null;
+        honor = null;
+        pendientes = null;
+        recompensasTorre = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo
         // entre partidas enseñaria en el servidor B lo que se compro en el A.
         cosmeticos = null;

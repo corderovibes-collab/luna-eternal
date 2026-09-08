@@ -319,9 +319,34 @@ VERSION_PACK = "0.2.0"
 # separarlo en dos mods obligaria a duplicar los tipos que viajan entre
 # cliente y servidor, y eso se desincroniza a la primera. Credenciales NO
 # lleva: se leen de `config/` en el servidor y nunca entran en el jar.
+#
+# ⚠⚠⚠ `cobblemon-cards` NO ES NUESTRO, PERO VIAJA COMO SI LO FUERA, y el motivo
+# importa: es una version PARCHEADA (CC0, `cards/parchear.py`). El jar de
+# Modrinth NO SIRVE -- su release publicado no tiene `enableCardStats`, que es
+# el interruptor que impide que una carta de pago de daño, armadura y x100 de
+# apariciones. Comprobado con `javap` sobre el jar del CDN: nueve campos de
+# configuracion frente a cuarenta y cuatro.
+#
+# Al parchearlo dejamos de poder servirlo desde el CDN de Modrinth --seria otro
+# fichero con el mismo nombre-- asi que va a NUESTRA release, con su huella,
+# igual que los dos mods propios.
+#
+# ⚠⚠⚠ Y AQUI ESTUVO EL FALLO DEL 2026-09-03, QUE DEJO EL SERVIDOR INACCESIBLE.
+#    Esta entrada no existia, asi que una republicacion rutinaria --solo cambiaba
+#    nuestro jar-- lo dejo fuera SIN DECIR NADA. El servidor si lo tiene y manda
+#    sus 89 entradas de registro; el cliente que no lo tiene NO ENTRA:
+#
+#      «Se han recibido 89 entradas de registro desconocidas para este
+#       cliente ... cobblemon-cards»
+#
+#    Es la regla de `trinkets` --un mod que registra algo que se sincroniza
+#    tiene que estar en los DOS lados-- mordiendo por el otro extremo: no por
+#    añadirlo al servidor, sino por QUITARLO del cliente. Lo que impide que
+#    vuelva a pasar es `comprobar_bajas()`, mas abajo.
 PROPIOS = [
     {"carpeta": "neon", "prefijo": "lunaneon"},
     {"carpeta": "mod", "prefijo": "lunaeternal"},
+    {"carpeta": "cards", "prefijo": "cobblemon-cards"},
 ]
 
 
@@ -588,6 +613,35 @@ def construir() -> dict:
             "once": True,
         })
 
+    # 6-bis. REGLAS DEL SERVIDOR, y estas SI se pisan.
+    #
+    # ⚠⚠⚠ AL CONTRARIO QUE LAS DE ARRIBA, NO VAN `once`. Lo de arriba es
+    #    configuracion DEL JUGADOR --sus servidores, su shader-- y pisarla seria
+    #    borrarle lo que eligio. Esto son REGLAS DEL SERVIDOR: si un cliente se
+    #    quedara con su copia vieja, su carta anunciaria un bono que el servidor
+    #    no aplica. Un numero que miente es peor que no ensenarlo.
+    #
+    # ⚠ El fichero vive en `config/` del repositorio y no aqui dentro, para que
+    #   sea EL MISMO que se sube al servidor. Dos copias del mismo ajuste es
+    #   como acaban diciendo cosas distintas.
+    for ruta in ("config/cobblemon-cards.json",):
+        origen = RAIZ / ruta
+        if not origen.exists():
+            raise SystemExit(f"Falta {ruta}: es una regla del servidor, no un "
+                             f"adorno. Ver config/README.md")
+        datos = origen.read_bytes()
+        sha = hashlib.sha1(datos).hexdigest()
+        nombre = origen.name
+        tallo, punto, ext = nombre.partition(".")
+        (SALIDA / f"{tallo}-{sha[:10]}{punto}{ext}").write_bytes(datos)
+        ficheros.append({
+            "path": ruta,
+            "sha1": sha,
+            "size": len(datos),
+            "url": f"{BASE_ACTIVOS}/{tallo}-{sha[:10]}{punto}{ext}",
+        })
+    print("  reglas          config/cobblemon-cards.json (se pisa siempre)")
+
     # Se comprueban los DOS perfiles por separado. El de jugador no es un
     # subconjunto inofensivo: es el que corre casi todo el mundo, y un fallo
     # ahi no lo ve nadie hasta que le da a Jugar y le sale
@@ -644,6 +698,60 @@ def construir() -> dict:
         "server": {"name": "PokeReport : Luna Eternal", "host": host, "port": int(puerto)},
         "files": ficheros,
     }
+
+
+def mods_publicados() -> set:
+    """Los jars que sirve AHORA MISMO el manifiesto vigente, o None si no se puede."""
+    import urllib.request
+    try:
+        puntero = json.loads(urllib.request.urlopen(
+            f"{BASE_PUNTERO}/latest.json", timeout=30).read())
+        vivo = json.loads(urllib.request.urlopen(
+            puntero["manifest"], timeout=60).read())
+    except Exception as e:                       # noqa: BLE001
+        print(f"  no he podido leer el manifiesto vigente ({e}):")
+        print("  NO puedo comprobar si esta publicacion quita algun mod")
+        return None
+    return {f["path"] for f in vivo["files"] if f["path"].startswith("mods/")}
+
+
+def comprobar_bajas(manifiesto: dict, permitir: bool) -> None:
+    """
+    Se niega a publicar si esta version QUITA un mod que hoy esta servido.
+
+    ⚠⚠⚠ ESTA COMPROBACION EXISTE POR UN FALLO REAL Y CARO. El 2026-09-03 una
+       republicacion rutinaria --solo cambiaba nuestro jar-- se dejo fuera
+       `cobblemon-cards`, que el servidor si tiene. Resultado: nadie podia
+       entrar, con un mensaje que habla de «entradas de registro desconocidas» y
+       no de un mod que falta.
+
+    ⚠⚠ QUITAR UN MOD NO SE VE EN LA SALIDA DEL GENERADOR. El generador imprime
+       lo que PONE, mod a mod; lo que se deja fuera no aparece por ningun sitio,
+       porque no hay nada que imprimir. Un diff contra lo que hay publicado es
+       la unica forma de ver una ausencia.
+
+    ⚠ Quitar un mod es legitimo --a veces es justo lo que se quiere-- pero tiene
+      que decirlo alguien: `--permitir-bajas`.
+    """
+    antes = mods_publicados()
+    if antes is None:
+        return
+    ahora = {f["path"] for f in manifiesto["files"] if f["path"].startswith("mods/")}
+    bajas = sorted(antes - ahora)
+    if not bajas:
+        return
+    print()
+    print("  ESTA PUBLICACION QUITARIA %d mod(s) DEL CLIENTE:" % len(bajas))
+    for b in bajas:
+        print("    - %s" % b.rsplit("/", 1)[-1])
+    if not permitir:
+        raise SystemExit(
+            "\n  Me niego a publicar. Si el servidor todavia tiene alguno de "
+            "esos mods,\n  NADIE PODRA ENTRAR: el servidor manda sus entradas "
+            "de registro y el\n  cliente que no las conoce se queda en la "
+            "puerta.\n\n  Comprueba el servidor:  python tools/mods_servidor.py"
+            "\n  Si la baja es a proposito:  --permitir-bajas")
+    print("  ...y se publica igual porque lo has pedido (--permitir-bajas)")
 
 
 def publicar() -> None:
@@ -857,6 +965,10 @@ def main() -> None:
     ap.add_argument("--volver-a", metavar="HUELLA", dest="volver_a",
                     help="devolver el pack a un manifiesto anterior (10 caracteres). "
                          "No regenera nada: solo reescribe el puntero")
+    ap.add_argument("--permitir-bajas", action="store_true",
+                    help="publicar aunque esta version QUITE mods del cliente. "
+                         "Sin esto se aborta: si el servidor todavia los tiene, "
+                         "nadie puede entrar")
     args = ap.parse_args()
 
     # Volver atras no genera nada: si el pack esta roto, lo ultimo que se quiere
@@ -876,6 +988,9 @@ def main() -> None:
     print(f"     Fabric Loader {manifiesto['fabricLoader']}")
 
     if args.publicar:
+        # ⚠ ANTES de subir nada: una publicacion que QUITA un mod del cliente
+        #   deja fuera a todo el mundo si el servidor todavia lo tiene.
+        comprobar_bajas(manifiesto, args.permitir_bajas)
         publicar()
     else:
         print("\n  Para publicarlo:  python tools/gen_manifest.py --publicar")

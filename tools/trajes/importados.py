@@ -1,0 +1,570 @@
+# -*- coding: utf-8 -*-
+"""
+LOS DOS TRAJES QUE VIENEN DE BLOCKBENCH: CAMPEON y LEYENDA.
+
+⚠⚠⚠ ESTOS NO SE MODELAN AQUI: SE IMPORTAN. A diferencia de `leyenda.py`, que se
+   midio de una referencia y se escribio cubo a cubo, estos vienen enteros de
+   los .bbmodel del usuario. Lo unico que se construye a mano es LA RUEDA de
+   Arceus, y por un motivo concreto que esta abajo.
+
+   CAMPEON   arte/trajes/campeon-corona.bbmodel        corona + cuerpo
+   LEYENDA   arte/trajes/leyenda-arceus-casco.bbmodel  el casco
+             arte/trajes/leyenda-arceus-cuerpo.bbmodel el cuerpo + la rueda
+
+⚠⚠ LOS FICHEROS VIVEN EN EL REPO, NO EN DESCARGAS. La primera version los
+   buscaba en `~/Downloads`, y eso es exactamente la leccion que este proyecto
+   ya pago con las seis pantallas en magenta: un generador que depende de un
+   fichero que no esta en git NO SE PUEDE VOLVER A EJECUTAR, y nadie se entera
+   hasta que hace falta.
+
+⚠⚠ EL LADO SE MIDE, NO SE LEE DEL NOMBRE. Los dos ficheros llaman `right_arm`
+   al cubo que esta en x=+4 --o sea el brazo IZQUIERDO-- porque lo nombran desde
+   el punto de vista de quien mira, que es lo natural dibujando. Que la derecha
+   esta en X NEGATIVA lo dice el propio fichero de la corona: su maniqui de
+   referencia se llama «brazo derecho» y va de x=-8 a -4, que es donde vanilla
+   pone el brazo derecho.
+   ⚠ Y asignar por el nombre NO DARIA NINGUN ERROR: los miembros son espejos,
+     asi que la silueta sale bien y solo las costuras caen al lado que no es.
+
+⚠⚠ LAS HOLGURAS SON LAS DEL AUTOR, no unas nuestras. El cuerpo viene con
+   `inflate` puesto: 0,75 en torso, brazos y botas, y 0,5 en cintura y perneras.
+   No es un descuido, son DOS CAPAS separadas 0,25 -- y las dos por encima de
+   0,25, que es donde esta la capa exterior de la piel del jugador. A holgura
+   cero el traje PARPADEA contra la piel; con dos capas a la misma, parpadean
+   entre ellas. Pisarlas con un numero propio rompe las dos cosas a la vez.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from . import modelo as M
+from .importar import (color_medio, cubos_de, leer,
+                       transformacion_cabeza)
+from .modelo import Cubo
+
+ARTE = Path(__file__).resolve().parents[2] / "arte" / "trajes"
+
+CORONA = ARTE / "campeon-corona.bbmodel"
+CASCO = ARTE / "leyenda-arceus-casco.bbmodel"
+CUERPO = ARTE / "leyenda-arceus-cuerpo.bbmodel"
+MEWTWO = ARTE / "maestro-mewtwo.bbmodel"
+ELITE = ARTE / "elite.bbmodel"
+
+
+# ------------------------------------------------------------- el reparto
+
+# Grupo de primer nivel -> familia. Se reparte POR GRUPO y no por nombre de
+# elemento: un grupo es lo que el autor agrupo a proposito, y los nombres de los
+# elementos de estos ficheros son «cubo» cuarenta y cuatro veces.
+FAMILIA = {
+    "torso": "cuerpo",
+    "hips": "cuerpo",          # la cintura: es la capa de los pantalones
+    "left_arm": "brazo",
+    "right_arm": "brazo",
+    "left_leg": "pierna",
+    "right_leg": "pierna",
+    "left_boot": "bota",
+    "right_boot": "bota",
+}
+
+LADOS = {
+    "brazo": ("armorRightArm", "armorLeftArm"),
+    "pierna": ("armorRightLeg", "armorLeftLeg"),
+    "bota": ("armorRightBoot", "armorLeftBoot"),
+}
+
+
+def _reparto_cuerpo(cabeza=()):
+    """
+    El reparto del cuerpo, comun a los dos trajes.
+
+    `cabeza` son los grupos cuyo contenido va al casco.
+    """
+    def reparto(e):
+        raiz = e.grupos[0] if e.grupos else ""
+        # ⚠ El maniqui del jugador esta DENTRO del fichero de la corona, para
+        #   que su autor viera donde cae cada cosa. Copiarlo al traje pondria
+        #   una segunda cabeza gris encima de la del jugador.
+        if raiz.upper().startswith("EL JUGADOR"):
+            return None
+        # ⚠⚠⚠ LA CABEZA SE BUSCA EN TODO EL CAMINO, NO SOLO EN LA RAIZ. En el
+        #    .bbmodel de Mewtwo el grupo `armorHead` cuelga DENTRO de `right_arm`
+        #    --un arrastre en el arbol de Blockbench, que no cambia nada de lo
+        #    que se ve alli-- y mirando solo la raiz, los 21 cubos del casco se
+        #    habrian ido AL BRAZO: el casco puesto en el hombro y girando con el.
+        #    ⚠ Y no habria dado ningun error: son cubos validos en un hueso
+        #      valido. Se habria descubierto mirandolo.
+        if any(g in cabeza for g in e.grupos):
+            return "armorHead"
+        # ⚠ Igual con la familia: el grupo que manda es el PRIMERO del camino
+        #   que este repartido, no el de arriba del todo.
+        familia = next((FAMILIA[g] for g in e.grupos if g in FAMILIA), None)
+        if familia is None:
+            raise ValueError(
+                "el grupo %r de %r no esta repartido. Un grupo sin hueso se "
+                "quedaria fuera del traje sin dar ningun error, asi que hay "
+                "que decidirlo aqui" % (raiz, e.nombre))
+        if familia == "cuerpo":
+            return "armorBody"
+        izq, der = LADOS[familia]
+        return izq if (e.f[0] + e.to[0]) / 2.0 < 0 else der
+    return reparto
+
+
+def _espejar_pares(t):
+    """
+    Marca el espejo en la pieza de X POSITIVA cuando dos comparten recuadro.
+
+    ⚠⚠⚠ ESTO ES LA REGLA DE VAINILLA, NO UNA CORRECCION AL AUTOR. Cuando dos
+       piezas leen EL MISMO recuadro de textura, Minecraft dibuja la de +X con
+       `mirrored()`. La casilla 1 del reparto cae siempre en la cara de X MINIMA:
+       en la pieza de x negativa esa es la cara de FUERA, y en la de x positiva
+       es la de DENTRO. Sin el espejo, una sale bien y la otra con el dibujo
+       cambiado de lado.
+
+    ⚠⚠ Y ASI SALIO EN EL JUEGO: «la manga derecha quedo bien y la izquierda
+       volteada». UNA correcta y la otra no es la firma de este fallo -- si
+       fuera el convenio de caras, estarian mal las dos.
+
+    ⚠⚠ SE BUSCA POR RECUADRO COMPARTIDO, NO POR HUESO. La primera version solo
+       miraba los tres pares de miembros (brazo, pierna, bota) y se dejaba fuera
+       lo que estuviera DENTRO de un mismo hueso: el casco del ELITE tiene sus
+       placas laterales emparejadas dos a dos dentro de `armorHead`, y les pasa
+       exactamente lo mismo. Agrupando por `caja_src` da igual donde vivan.
+
+    ⚠ Y se mira si COMPARTEN CAJA, no si el fichero trae `mirror_uv`: los
+      .bbmodel marcan el espejo en la pieza de X NEGATIVA --al reves que
+      vainilla-- y ademas, si algun dia cada lado tiene su propio dibujo, no hay
+      nada que espejar y esto no hace nada.
+    """
+    porCaja = {}
+    for hueso, cubos in t.huesos.items():
+        for c in cubos:
+            if c.caja_src:
+                porCaja.setdefault(c.caja_src, []).append((hueso, c))
+
+    avisos = []
+    for caja, lista in sorted(porCaja.items()):
+        if len(lista) != 2:
+            continue          # o es unica, o son mas de dos: no es un par
+        (h1, c1), (h2, c2) = lista
+        x1 = c1.origen[0] + c1.tam[0] / 2.0
+        x2 = c2.origen[0] + c2.tam[0] / 2.0
+        if x1 * x2 >= 0:
+            continue          # no son un par izquierda/derecha
+        derecha, izquierda = (c1, c2) if x1 < 0 else (c2, c1)
+        nombre = h2 if x1 < 0 else h1
+        izquierda.espejo = True
+        avisos.append("%s: la pieza en x=%+.1f comparte recuadro con la de "
+                      "x=%+.1f, se espeja (la regla de vainilla)"
+                      % (nombre, max(x1, x2), min(x1, x2)))
+    return avisos
+
+
+def _traje(id_, nombre, partes):
+    """
+    Monta un Traje a partir de (documento, reparto, espacio) y encadena las
+    texturas de todos los ficheros en una sola lista.
+    """
+    t = M.Traje(id_, nombre)
+    avisos = []
+    for doc, reparto, espacio in partes:
+        base = len(t.fuentes)
+        huesos, aviso = cubos_de(doc, reparto, espacio, base_fuentes=base)
+        for hueso, cubos in huesos.items():
+            t.poner(hueso, *cubos)
+        avisos += ["%s: %s" % (doc.ruta.name, a) for a in aviso]
+        t.fuentes += [img for _, img in doc.texturas]
+    avisos += _espejar_pares(t)
+    return t, avisos
+
+
+# ⚠⚠ LA GEMA DEL MEDIO NO SE APOYABA EN NADA. Las tres gemas de la corona van
+#    montadas sobre una pieza de oro que asoma por debajo --la repisa-- y la del
+#    centro se quedaba casi sin ella. Medido sobre el .bbmodel:
+#
+#      gema izquierda   y 32,5206  respaldo desde 31,6656  -> repisa 0,855
+#      gema CENTRAL     y 31,7706  respaldo desde 31,6156  -> repisa 0,155
+#      gema derecha     y 32,5206  respaldo desde 31,6656  -> repisa 0,855
+#
+#    O sea que la central se comia cinco sextos de su repisa y quedaba colgando
+#    del borde de la corona. Es lo que el usuario describio como «en la parte de
+#    las gemas, la del medio le falta algo abajito».
+#
+# ⚠⚠ SE SUBE LA GEMA, NO SE BAJA EL RESPALDO. Bajar la placa central la sacaria
+#    por debajo del aro de la corona --ya sobresale 0,05-- y eso es exactamente
+#    lo contrario de lo que se quiere. La gema sube hasta que su repisa mide lo
+#    mismo que las de al lado.
+#
+# ⚠ La diferencia se CALCULA de las gemas laterales, no se escribe: si el autor
+#   cambia la altura del aro, esto sigue cuadrando. Y si algun dia no encuentra
+#   las tres gemas, lo DICE en vez de callarse.
+GEMA_Z = -5.775          # el plano donde van montadas las tres
+GEMA_STUD_Z = -5.985     # el taco que va delante de cada una
+
+
+def _repisa_gema_central(t):
+    """Iguala la repisa de oro de la gema central con la de las laterales."""
+    cs = [c for c in t.huesos.get("armorHead", []) if not c.rot]
+
+    def repisa(gema):
+        """Lo que asoma del respaldo por debajo de esa gema."""
+        detras = [c for c in cs
+                  if c is not gema and c.origen[2] > gema.origen[2] + 0.05
+                  and c.origen[0] <= gema.origen[0] + 0.4
+                  and c.origen[0] + c.tam[0] >= gema.origen[0] + gema.tam[0] - 0.4]
+        if not detras:
+            return None
+        return gema.origen[1] - min(c.origen[1] for c in detras)
+
+    gemas = [c for c in cs if abs(c.origen[2] - GEMA_Z) < 0.01]
+    centro = [c for c in gemas if abs(c.origen[0] + c.tam[0] / 2.0) < 0.01]
+    lados = [c for c in gemas if abs(c.origen[0] + c.tam[0] / 2.0) > 1.0]
+    if len(centro) != 1 or not lados:
+        return ["no reconozco las gemas de la corona: si el .bbmodel cambio, "
+                "comprueba la repisa de la del medio a mano"]
+
+    centro = centro[0]
+    objetivo = repisa(lados[0])
+    actual = repisa(centro)
+    if objetivo is None or actual is None:
+        return ["las gemas de la corona no tienen respaldo detras: no toco nada"]
+    sube = round(objetivo - actual, 5)
+    if abs(sube) < 0.01:
+        return ["la repisa de la gema central ya cuadra: sobra `_repisa_gema_central`"]
+
+    # ⚠ El taco de delante sube CON ella: es su relieve, y dejarlo atras partiria
+    #   la gema en dos piezas a distinta altura.
+    taco = [c for c in cs
+            if abs(c.origen[2] - GEMA_STUD_Z) < 0.01
+            and abs(c.origen[0] + c.tam[0] / 2.0) < 0.01]
+    for c in [centro] + taco:
+        c.origen = (c.origen[0], round(c.origen[1] + sube, 5), c.origen[2])
+    return ["corona: la gema del medio sube %.3f para que su repisa mida %.3f, "
+            "como las de los lados (venia con %.3f)" % (sube, objetivo, actual)]
+
+
+# ----------------------------------------------------------------- CAMPEON
+
+def campeon():
+    """La corona y su armadura. Un solo fichero, cuerpo entero."""
+    doc = leer(CORONA)
+    t, avisos = _traje("campeon", "Traje CAMPEON · Corona",
+                       [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
+    avisos += _repisa_gema_central(t)
+    return t, avisos
+
+
+# ⚠⚠ EL CASCO DE MEWTWO SE QUEDABA ALTO Y ENSEÑABA LA CABEZA POR DEBAJO. No es
+#    que le falte geometria --es un casco ABIERTO a proposito, con placas
+#    laterales y nuca-- sino que TODO EL CONJUNTO empieza en y = 24,92 y la
+#    cabeza del jugador empieza en 24: por esos 0,92 se le ve el cuello.
+#    Bajandolo 1,0 el borde queda en 23,92, justo por debajo de la cabeza.
+#
+#    ⚠ «Cuanto tapa el casco» NO sirve de medida aqui, y lo comprobe: al ser
+#      abierto deja el 99% de la superficie de la cabeza a la vista tanto antes
+#      como despues. Lo que se mide es el BORDE DE ABAJO contra la base de la
+#      cabeza, que es lo que el usuario ve.
+MAESTRO_BAJAR_CASCO = -1.0
+
+
+def _bajar(t, hueso, cuanto):
+    """
+    Baja un hueso entero. Devuelve el aviso, porque toca el modelo del autor.
+
+    ⚠ Mueve TAMBIEN el pivote de los cubos girados. Bajar solo el origen dejaria
+      cada pieza girando alrededor de un punto que ya no le corresponde: las que
+      no giran bajarian y las que giran ademas se DESPLAZARIAN de lado.
+    """
+    for c in t.huesos.get(hueso, []):
+        c.origen = (c.origen[0], round(c.origen[1] + cuanto, 5), c.origen[2])
+        if c.pivote:
+            c.pivote = (c.pivote[0], round(c.pivote[1] + cuanto, 5), c.pivote[2])
+    return ["%s: bajado %.2f" % (hueso, cuanto)]
+
+
+# ⚠⚠⚠ DONDE CREE EL AUTOR QUE ESTA LA CABEZA. En vainilla el hueso `bipedHead`
+#    tiene su pivote en y = 24: es la base de la cabeza y no se negocia.
+#    Un .bbmodel puede haberse construido sobre otra referencia --el de ELITE
+#    declara su `bipedHead` en y = 26,5-- y entonces TODO EL CASCO sale esas
+#    unidades mas alto, con la cara del jugador asomando por debajo.
+CABEZA_VAINILLA = 24.0
+
+
+def _alinear_cabeza(doc, t):
+    """
+    Baja (o sube) el casco si el fichero dice que su cabeza esta en otro sitio.
+
+    ⚠⚠ EL NUMERO NO SE CLAVA A MANO: LO DICE EL PROPIO FICHERO. El de ELITE
+       declara un grupo `bipedHead` --que es el nombre del hueso de vainilla, o
+       sea una afirmacion sobre donde va la cabeza-- en y = 26,5, y su cupula es
+       la cabeza de vainilla ([-4,24,-4] a [4,32,4]) subida exactamente 2,5.
+       Restando esa diferencia, la cupula cae clavada sobre la cabeza.
+
+    ⚠ Solo se mira `bipedHead`, y no `armorHead`: el primero es el nombre de un
+      hueso de vainilla y por tanto una referencia; el segundo es un grupo
+      nuestro y su origen puede ser cualquier punto de giro que al autor le
+      viniera bien. Confundirlos movería cascos que estan bien puestos.
+    """
+    origen = doc.grupos.get("bipedHead")
+    if origen is None:
+        return []
+    delta = CABEZA_VAINILLA - float(origen[1])
+    if abs(delta) < 1e-6:
+        return []
+    return _bajar(t, "armorHead", delta) + [
+        "el fichero declara `bipedHead` en y=%.2f y vainilla la tiene en %.0f: "
+        "el casco se mueve %+.2f" % (origen[1], CABEZA_VAINILLA, delta)]
+
+
+# ----------------------------------------------------------------- MAESTRO
+
+def maestro():
+    """El casco de Mewtwo y su armadura. Un solo fichero, cuerpo entero."""
+    doc = leer(MEWTWO)
+    # ⚠ El grupo del casco se llama `armorHead` y cuelga DENTRO de `right_arm`.
+    #   Ver el aviso de `_reparto_cuerpo`: se busca en todo el camino.
+    t, avisos = _traje("maestro", "Traje MAESTRO · Mewtwo",
+                       [(doc, _reparto_cuerpo(cabeza=("armorHead",)), None)])
+    avisos += _hombreras_al_reves(t)
+    avisos += _bajar(t, "armorHead", MAESTRO_BAJAR_CASCO)
+    return t, avisos
+
+
+# ------------------------------------------------------------------- ELITE
+
+def elite():
+    """El casco y la armadura de ELITE. Un solo fichero, cuerpo entero.
+
+    ⚠ No lleva hombreras: sus dos barras del torso son de 2x2x1 y viven en
+      `armorBody`, asi que `_hombreras_al_reves` no toca nada aqui -- y por eso
+      no se llama, en vez de llamarla y que avise de que no encuentra ninguna.
+    """
+    doc = leer(ELITE)
+    t, avisos = _traje("elite", "Traje ELITE",
+                       [(doc, _reparto_cuerpo(cabeza=("armorHead", "bipedHead")), None)])
+    avisos += _alinear_cabeza(doc, t)
+    return t, avisos
+
+
+# ----------------------------------------------------------------- LEYENDA
+
+# ⚠ Medido de la malla, no elegido: sus doce vertices de borde caen a 16,565 del
+#   centro, que es el CIRCUNRADIO de un docecagono cuyo apotema es 16,0 exactos
+#   -- o sea el radio del anillo dibujado. Por eso la plancha mide 32 y la
+#   textura de 32x32 le cae pixel a pixel. Con 33 habria que reescalar el
+#   dibujo, y reescalar arte de pixel es justo lo que lo estropea.
+RUEDA_RADIO = 16.0
+RUEDA_GROSOR = 1.0
+
+
+def _rueda(doc):
+    """
+    La rueda de Arceus: una plancha fina con el dibujo del autor.
+
+    ⚠⚠⚠ LA RUEDA NO ES GEOMETRIA, ESTA DIBUJADA. En el fichero es una MALLA de
+       13 vertices y 12 triangulos con grosor CERO, y su dibujo entero --el
+       anillo, los radios y las gemas-- vive en «aro blanco.png» con fondo
+       transparente. Rehacerla con barras seria REDIBUJAR A MANO lo que su autor
+       ya dibujo, y ademas el dibujado de armadura son cajas: no hay forma de
+       meter una malla.
+
+    ⚠⚠ Y SE PUEDE PORQUE LA ARMADURA SE PINTA CON RECORTE DE ALFA
+       (`getEntityCutoutNoCull`): un pixel transparente no se pinta. Sobre una
+       capa opaca la rueda saldria dentro de un cuadrado blanco.
+
+    ⚠ LOS CANTOS SE QUEDAN SIN PINTAR A PROPOSITO. El borde de la plancha es el
+      del CUADRADO, y el anillo solo lo toca en cuatro puntos: pintarlo dibujaria
+      una barra dorada recta por fuera del aro. Sin pintar, la rueda desaparece
+      vista exactamente de canto -- que es lo que hace tambien la malla del
+      autor, que no tiene grosor ninguno.
+    """
+    idx = None
+    for i, (n, _) in enumerate(doc.texturas):
+        if "aro" in n.lower():
+            idx = i
+    if idx is None:
+        return None, ["no encuentro la textura del aro: la rueda se queda fuera"]
+
+    malla = [e for e in doc.elementos if e.tipo == "mesh"]
+    if len(malla) != 1:
+        return None, ["esperaba UNA malla (la rueda) y hay %d" % len(malla)]
+    cx, cy, cz = malla[0].pivote
+
+    ancho, alto = doc.texturas[idx][1].size
+    rect = ((0, 0, ancho, alto), False, False)
+    c = Cubo(origen=(cx - RUEDA_RADIO, cy - RUEDA_RADIO, cz),
+             tam=(RUEDA_RADIO * 2, RUEDA_RADIO * 2, RUEDA_GROSOR),
+             color=color_medio(doc.texturas[idx][1], (0, 0, ancho, alto)),
+             material="metal")
+    # ⚠⚠⚠ SE PINTA UNA SOLA CARA, Y ESO NO ES UN RECORTE: ES EL ARREGLO. La
+    #    primera version pintaba la de delante Y la de detras, que sobre el papel
+    #    es lo correcto --en el reparto de caja caen en casillas distintas-- y en
+    #    el juego se ve como DOS AROS: la plancha tiene grosor, asi que los dos
+    #    dibujos quedan separados y desde cualquier angulo que no sea el frontal
+    #    exacto se ven los dos bordes. El usuario lo describio exactamente asi:
+    #    «como que se duplica».
+    #
+    #    ⚠⚠ Y SE PUEDE PINTAR UNA SOLA PORQUE LA ARMADURA SE DIBUJA SIN DESCARTE
+    #       DE CARAS TRASERAS (`getEntityCutoutNoCull`): un plano se ve por los
+    #       dos lados. Con la de atras transparente, desde detras se ve ESTA
+    #       misma a traves -- un aro, no dos.
+    #
+    #    ⚠ Va en la cara NORTE porque el aro cuelga a la espalda (z positivo): a
+    #      quien mire al jugador de frente le queda detras, y es esa cara la que
+    #      le da.
+    c.caras_src = {"north": (idx, rect)}
+    return c, []
+
+
+# ------------------------------------------------- las hombreras al reves
+
+# ⚠⚠⚠ ESTA ES LA UNICA VEZ QUE NO SE RESPETA EL .bbmodel, Y POR ESO SE DICE EN
+#    VOZ ALTA AL GENERAR. Las dos hombreras vienen mal puestas en el fichero, y
+#    hacen falta DOS correcciones distintas -- se descubrieron una detras de
+#    otra, y son cosas diferentes aunque las dos se arreglen girando:
+#
+#      EL GIRO (roll)      el extremo que va en la AXILA quedaba colgando por
+#                          fuera del hombro. Medido antes de tocar:
+#                            como viene  0 esquinas dentro de la axila
+#                            invertida   2 esquinas dentro de la axila
+#                          (axila = pegado al torso, x > -5,5, y por debajo del
+#                           hombro, y < 23,5; el torso va de -4 a 4)
+#
+#      MEDIA VUELTA (yaw)  y aun asi salia LA CARA QUE NO ES hacia afuera: en el
+#                          juego se veia el panel ROJO del interior mirando al
+#                          frente. Eso no es posicion, es ORIENTACION, y por eso
+#                          el primer arreglo no lo toco: invertir el `roll`
+#                          cambia hacia donde SE INCLINA la pieza, no hacia donde
+#                          MIRA. Lo caza el usuario en el juego, no la lamina.
+#
+#    ⚠⚠ LAS DOS SON INDEPENDIENTES, y eso es lo que costo ver. La hombrera es
+#       casi simetrica de perfil, asi que media vuelta NO cambia su silueta --
+#       solo que cara queda fuera--. Por eso la primera correccion parecia
+#       completa mirando la lamina: la silueta ya era la buena.
+#
+# ⚠⚠ SE CORRIGEN SOLO ESTAS DOS, Y NO EL CONVENIO ENTERO. Es la pregunta que hay
+#    que hacerse aqui, porque «los giros salen al reves» tiene dos causas
+#    posibles y el arreglo es distinto:
+#
+#      a) el convenio de giro esta mal   -> habria que invertir TODOS los `roll`
+#      b) esas dos piezas estan mal      -> se corrigen esas dos
+#
+#    Es (b), y ahora lo dice el juego y no un razonamiento: la corona, el casco,
+#    la cresta, los cuernos y las perneras salen bien en las mismas capturas en
+#    las que las hombreras salen mal. Si fuera el convenio, estarian TODAS mal.
+#
+# ⚠ Se busca por GIRO y por HUESO, no por nombre: los dos cubos se llaman «cube».
+HOMBRERAS = ("armorRightArm", "armorLeftArm")
+HOMBRERA_GIRO_MINIMO = 45.0
+MEDIA_VUELTA = 180.0
+
+
+# ⚠⚠⚠ AQUI HUBO UNA CORRECCION QUE SOBRABA, Y LA HISTORIA IMPORTA. Los brazos
+#    salian volteados en los dos trajes --la armadura pintada por dentro y la
+#    piel a la vista por fuera-- y se «arreglo» dandoles media vuelta. Funciono
+#    de lado, y rompio otra cosa: la cara de ARRIBA del brazo tiene su ultima
+#    columna transparente a proposito --es el borde que va pegado al torso-- y
+#    media vuelta la saco al hombro, o sea un HUECO donde antes no habia nada.
+#
+#    La causa real no era el modelo: era el horneado. Un cubo con `mirror_uv`
+#    guarda `east` y `west` intercambiados, y hornear por nombre deshacia ese
+#    intercambio. Hoy una caja se copia ENTERA (`importar.caja_uv`), asi que el
+#    espejo del autor viaja dentro y no hay nada que corregir aqui.
+#
+#    ⚠⚠ LA LECCION: una correccion que arregla el sintoma sin explicar la causa
+#       tapa el fallo por un lado y lo abre por otro. El brazo se veia bien de
+#       frente y aparecio un hueco en el hombro.
+
+
+def _hombreras_al_reves(t):
+    """Endereza las hombreras. Devuelve los avisos, para que se vea."""
+    avisos = []
+    for hueso in HOMBRERAS:
+        for c in t.huesos.get(hueso, []):
+            if not (c.rot and abs(c.rot[2]) >= HOMBRERA_GIRO_MINIMO):
+                continue
+            antes = c.rot
+            # ⚠ El orden es ZYX, asi que poner 180 en la Y significa «date media
+            #   vuelta y DESPUES inclinate»: primero mira a donde tiene que
+            #   mirar, luego cae sobre el hombro.
+            c.rot = (antes[0], antes[1] + MEDIA_VUELTA, -antes[2])
+            avisos.append(
+                "hombrera de %s: venia a (%.1f, %.1f, %.1f) y sale a "
+                "(%.1f, %.1f, %.1f) -- giro invertido y media vuelta, a proposito"
+                % (hueso, antes[0], antes[1], antes[2], *c.rot))
+    if not avisos:
+        # ⚠ Si un dia el fichero llega ya corregido, esto deja de encontrar nada
+        #   y hay que quitarlo -- o estaria torciendo lo que ya esta bien.
+        avisos.append("no he encontrado ninguna hombrera que girar: si el "
+                      ".bbmodel ya viene corregido, sobra `_hombreras_al_reves`")
+    return avisos
+
+
+# ⚠⚠⚠ EL CASCO DEJABA VER LA CORONILLA, y es geometria del fichero, no del
+#    horneado. Medido barriendo la tapa de la cabeza (y=32, x -4..4, z -4..4) a
+#    medio bloque: 96 de 256 puntos al aire, TODOS en la franja de delante
+#    (z -4 .. -0,75). Es el trozo de pelo que se ve desde arriba.
+#
+#    La causa: el casco son dos platos, y el de DELANTE se queda una unidad por
+#    debajo del de DETRAS --31,8 contra 32,8-- asi que entre el borde del plato
+#    y la cabeza (32) queda una rendija abierta.
+#
+#    ⚠⚠ SE IGUALAN LOS DOS PLATOS en vez de inventar un cubo tapa. Es geometria
+#       del propio autor: el plato de delante crece hasta donde ya llega el de
+#       detras, que es donde tenia que llegar. Un cubo nuevo seria arte mio
+#       metido en su modelo.
+#
+#    ⚠ No se busca por nombre --los 19 cubos del casco se llaman «cube»-- sino
+#      por su medida y su sitio. Si el .bbmodel cambia y ya no aparece, se DICE:
+#      callarlo dejaria el agujero de vuelta sin que nadie se enterara.
+CASCO_PLATO = ((-5.0, 29.80543, -4.75), (10.0, 2.0, 4.0))
+CASCO_ALTO_BUENO = 3.0
+
+
+def _tapar_coronilla(t):
+    """Iguala el plato frontal del casco con el trasero."""
+    for c in t.huesos.get("armorHead", []):
+        if c.rot:
+            continue
+        if (all(abs(c.origen[i] - CASCO_PLATO[0][i]) < 0.01 for i in range(3))
+                and all(abs(c.tam[i] - CASCO_PLATO[1][i]) < 0.01 for i in range(3))):
+            c.tam = (c.tam[0], CASCO_ALTO_BUENO, c.tam[2])
+            return ["casco: el plato de delante sube de %.1f a %.1f para tapar la "
+                    "coronilla" % (CASCO_PLATO[1][1], CASCO_ALTO_BUENO)]
+    return ["no encuentro el plato frontal del casco: si el .bbmodel cambio, "
+            "comprueba que la coronilla siga tapada"]
+
+
+def leyenda():
+    """El casco de Arceus, su armadura y la rueda."""
+    casco = leer(CASCO)
+    cuerpo = leer(CUERPO)
+
+    # ⚠⚠⚠ EL CASCO ES UN MODELO DE BLOQUE, no de entidad: va de 0 a 16 y se
+    #    lleva en la ranura de la cabeza. Sin la conversion de `display.head`
+    #    saldria en una esquina y a un octavo de su tamaño.
+    espacio = transformacion_cabeza(casco.display)
+
+    def solo_cabeza(e):
+        return "armorHead"
+
+    t, avisos = _traje(
+        "leyenda", "Traje LEYENDA · Arceus",
+        [(casco, solo_cabeza, espacio),
+         (cuerpo, _reparto_cuerpo(), None)])
+
+    avisos += _hombreras_al_reves(t)
+    avisos += _tapar_coronilla(t)
+
+    rueda, mas = _rueda(cuerpo)
+    avisos += mas
+    if rueda is not None:
+        # La rueda usa las texturas del SEGUNDO fichero, que ya van detras de
+        # las del casco en la lista.
+        base = len(casco.texturas)
+        rueda.caras_src = {cara: (base + i, r)
+                           for cara, (i, r) in rueda.caras_src.items()}
+        t.poner("armorBody", rueda)
+    return t, avisos

@@ -11,6 +11,37 @@ D-045. **El mod está desplegado y funcionando contra MariaDB:** economía de
 tres monedas, vías de progresión, Torre de Batalla con recompensas de temporada e
 interfaces completas en el PokePad. Autotest en vivo.
 
+> **2026-09-08 (madrugada) — DESPLEGADO, Y AL PUBLICAR SALIO UNA DERIVA QUE
+> LLEVABA CUATRO DIAS ABIERTA.**
+>
+> ⚠⚠⚠ **`gen_manifest.py --publicar` SE NEGO, Y TENIA RAZON EN NEGARSE.** Avisó
+> de que la publicacion **quitaria CobbleDollars del cliente** y se planto:
+> *«si el servidor todavia tiene alguno de esos mods, NADIE PODRA ENTRAR»*.
+> Comprobado antes de forzar nada: el servidor tiene **60 jars y ninguno es
+> CobbleDollars** — lo excluyo el propio usuario el 2026-09-04 («ganas dinero y
+> eso con el sistema de economia que tenemos no debe de estar»).
+>
+> **O sea que la exclusion se hizo y el manifiesto NUNCA se republico**, y desde
+> entonces los clientes tenian un mod de bloques y objetos que el servidor no
+> tiene. Esa es exactamente la direccion que descuadra las dos tablas de
+> registro — la de los 5.687 bloques de desfase—, solo que al reves. Publicar
+> hoy la ha cerrado.
+>
+> ⚠⚠ **LA LECCION: EXCLUIR UN MOD NO ES DESINSTALARLO.** `gen_modpack.py` lo
+> saca de la lista, pero hasta que alguien publica el manifiesto **el cliente lo
+> sigue teniendo**. La guarda de `--permitir-bajas` no es burocracia: es lo unico
+> que hace que esa deriva se vea, y solo se ve el dia que alguien publica por
+> otro motivo.
+>
+> ⚠ **Y hay siete reclamaciones de GTS que llevan dias sin poder entregarse**
+> (#145 Raichu, #148 Chikorita, #151 Charizard, #156 Typhlosion, #161, #206
+> Totodile, #207): el payload no se puede leer —`Not a map: null` en los Pokemon
+> y `ZipException: Not in GZIP format` en los objetos, dentro de
+> `ItemCodec.decode`—. **Comprobado en tres logs anteriores al despliegue: son
+> las mismas siete.** El sistema hace lo correcto —NO las marca entregadas— asi
+> que no se ha perdido nada, pero el jugador no recibe lo suyo y el intento se
+> repite en cada arranque. **Pendiente de investigar.**
+
 > **2026-09-08 — EL PASE DE BATALLA, Y LO QUE LO SOSTIENE ES UN SOLO NUMERO.**
 >
 > Cincuenta niveles, sesenta dias, dos vias y XP de **todo lo que se hace en
@@ -3003,7 +3034,7 @@ Interfaz      VEINTICINCO PANTALLAS. Nueve verificadas en el juego.
                 GTS         2026-08-25   Pokemon: 3D, tasador, filtros
                 Mercado     2026-08-25   Objetos: escaparate (D-042)
                 Cazas       2026-08-25   2 pestañas, 3+3
-                Mochila     2026-08-27   7 filas por rango . CONTENEDOR
+                Mochila     2026-08-27   7 filas por rango . CONTENEDOR (pag. 2)
                 Explorar    2026-08-27   2 mundos, arte 768x512
                 Viajes      2026-08-27   7 paradas . rejilla 4x2
                 Kits        2026-08-28   trajes de rango . 3D
@@ -3027,7 +3058,10 @@ Interfaz      VEINTICINCO PANTALLAS. Nueve verificadas en el juego.
 Pase          EL PASE DE BATALLA LUNA (2026-09-08, V032, D-045)
               detalle completo en docs/economy/pase-batalla.md
               50 niveles . 60 dias por temporada . dos vias
-              icono `pase`, primer hueco de la PAGINA 2 del Pad
+              icono `pase` EN LA PAGINA 1 (orden del usuario, 2026-09-08) y
+              la MOCHILA baja a la 2: es la unica de la pagina 1 con TECLA
+              PROPIA (N), asi que se llega a ella sin abrir el Pad -- las otras
+              catorce solo se alcanzan por la rejilla
               ⚠⚠⚠ EL NUMERO QUE SOSTIENE EL SISTEMA ENTERO:
                  curva  300 + 20n  ->  39.500 XP el pase completo
                  tope   900 XP AL DIA
@@ -3160,7 +3194,15 @@ Pase          EL PASE DE BATALLA LUNA (2026-09-08, V032, D-045)
                 falta el arte dibuja la misma silueta en vez de dejar la celda
                 en MAGENTA -- una celda dibuja SU icono aunque este bloqueada,
                 asi que dar de alta una app sin PNG no da ningun error
-              ⚠ SIN VERIFICAR EN EL JUEGO todavia, y SIN DESPLEGAR
+              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 02:16), LOS DOS DESTINOS:
+                servidor  V032 aplicada . Done (31,075 s) . 627/627
+                clientes  manifiesto 454be6840c publicado y servido
+                /luna pase contesta los numeros del diseno:
+                  Temporada 1, 60 dias . 50 niveles . 39.500 XP
+                  tope 900/dia . minimo 44 dias
+                  Via Luna 15.000 (vale 31.600 en tienda)
+                  via libre 15.300 de Plata
+              ⚠ SIN VERIFICAR VISUALMENTE: nadie ha abierto la pantalla
 Cazas         YA TIENE PANTALLA (2026-08-25, V017)
               2 pestañas (CAZA . CRIANZA) . 3 objetivos en cada una con
               1, 2 y 3 ESTRELLAS . mismas para todo el servidor
@@ -3577,7 +3619,7 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 
 | | |
 |---|---|
-| **0. Desplegar y verificar el PASE** | **Construido, compilado y con 30 comprobaciones nuevas en `/luna autotest`; sin desplegar y sin mirar.** ⚠ Son **DOS destinos**: `python tools/desplegar.py mod --reiniciar` y `python tools/gen_manifest.py --publicar`. Sin el segundo, el jugador tiene el jar viejo y **el icono no abre nada** — que se comporta como debe, y eso despista. ⚠ Aquí **no hay registro que se sincronice** (ni bloques, ni objetos, ni contenedor): un cliente viejo entra igual y solo pierde la pantalla. Aun así, **avisar antes de reiniciar** |
+| **0. MIRAR el PASE en el juego** | **Desplegado el 2026-09-08 y con 627/627 en `/luna autotest`; nadie ha abierto la pantalla todavia.** ⚠ Son **DOS destinos**: `python tools/desplegar.py mod --reiniciar` y `python tools/gen_manifest.py --publicar`. Sin el segundo, el jugador tiene el jar viejo y **el icono no abre nada** — que se comporta como debe, y eso despista. ⚠ Aquí **no hay registro que se sincronice** (ni bloques, ni objetos, ni contenedor): un cliente viejo entra igual y solo pierde la pantalla. Aun así, **avisar antes de reiniciar** |
 | ~~**0-bis. El arte del icono**~~ | ✅ **Instalado el 2026-09-08.** Prompt y procedimiento en `docs/ui/prompts-arte-pokepad.md` §5.4-quater |
 
 Y lo que ya estaba (2026-08-27, noche):

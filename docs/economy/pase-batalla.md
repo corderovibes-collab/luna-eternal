@@ -39,8 +39,12 @@ mod/src/main/resources/db/migration/V032__pase.sql
 
 ## Current Status
 
-**Construido, compilado, con arte y con sus invariantes en `/luna autotest`.**
-**SIN VERIFICAR EN EL JUEGO** y sin desplegar. El icono de la rejilla ya es el
+**DESPLEGADO Y EN VIVO (2026-09-08, 02:16).** V032 aplicada, `Done (31 s)`,
+**627/627 comprobaciones** y `/luna pase` contestando los numeros del diseno:
+*Temporada 1, 60 dias · 50 niveles · 39.500 XP · tope 900/dia · minimo 44 dias ·
+Via Luna 15.000 (vale 31.600 en tienda) · via libre 15.300 de Plata*.
+Manifiesto `454be6840c` publicado y servido por el CDN.
+**SIN VERIFICAR VISUALMENTE**: nadie ha abierto la pantalla todavia. El icono de la rejilla ya es el
 definitivo (2026-09-08): se instaló con
 `python tools/gen_icono_pase.py --origen <ruta>`, que pasa el PNG por **el mismo
 pipeline que los otros veinte iconos** (importado de `gen_pokepad.py`, no
@@ -473,7 +477,9 @@ Tres cosas, y las tres son la misma lección de este proyecto:
 
 ## Next Actions
 
-1. **Verificarlo en el juego.** Nada de esto se ha visto en pantalla.
+1. **Mirarlo en el juego.** Esta desplegado y probado, pero **nadie ha abierto
+   la pantalla**: falta ver que el anillo, el carril y los latidos se vean como
+   deben, y cobrar un premio de verdad.
 2. ~~El arte del icono~~ ✅ **instalado el 2026-09-08.**
 3. **Calibrar con datos reales.** Como todo lo económico de este proyecto, los
    importes son provisionales. Aquí hay **cuatro palancas** y ninguna más:

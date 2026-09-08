@@ -83,9 +83,13 @@ public final class CatalogoPad {
             //   El usuario los puso aquí, no en un icono propio, y tiene razón:
             //   un traje ES un kit de rango. De paso no hizo falta arte nuevo.
             new Ficha("kits",       true),
-            // ⚠ Se enciende con su pantalla (2026-08-26). Es la única del Pad
-            //   con CONTENEDOR: arrastrar objetos lo hace Minecraft, no nosotros.
-            new Ficha("mochila",    true),
+            // ⚠⚠ EL PASE DE BATALLA SUBE A LA PAGINA 1 (2026-09-08, orden del
+            //    usuario) Y BAJA LA MOCHILA, que es la que menos pierde: es la
+            //    UNICA aplicacion de la pagina 1 que tiene tecla propia (N), asi
+            //    que se llega a ella sin abrir el Pad. Las otras catorce solo se
+            //    alcanzan por esta rejilla.
+            //    ⚠ Revertirlo es intercambiar estas dos lineas.
+            new Ficha("pase",       true),
             // ⚠ Se enciende con su pantalla: los dieciséis gimnasios, ocho por
             //   región. La lógica llevaba escrita desde que existe `Gimnasio`.
             new Ficha("gyms",       true),
@@ -100,15 +104,10 @@ public final class CatalogoPad {
             // ⚠⚠ ARRANCA APAGADA: su pantalla todavia no existe. La celda sale
             //    bloqueada en vez de desaparecer, que es la regla de esta lista
             //    -- enseñar lo que va a haber es informacion; esconderlo, no.
-            // ⚠⚠ EL PASE DE BATALLA ABRE LA PAGINA 2, y esa colocacion es la
-            //    unica que no toma una decision que no me toca: la pagina 1 son
-            //    quince y estan llenas, asi que meterlo arriba baja a otra
-            //    --y eso lo decide el usuario, no yo--. De la 2, el primer
-            //    hueco es el mas visible que hay.
-            //    ⚠ Si el usuario lo quiere en la pagina 1, es cambiar esta
-            //      linea de sitio: la rejilla pagina sola y cada jugador
-            //      reordena la suya (OrdenPad).
-            new Ficha("pase",       true),
+            // ⚠ Baja de la pagina 1 el 2026-09-08 para dejarle el hueco al
+            //   PASE. Sigue teniendo su tecla propia (N), que es el motivo por
+            //   el que le tocaba a ella y no a otra.
+            new Ficha("mochila",    true),
             new Ficha("protecciones", true),
             // ⚠⚠ EL SANTUARIO VA TRAS LAS PROTECCIONES, en la pagina 2: las dos
             //    son «mi terreno». Y es el mismo motivo que el resto de la

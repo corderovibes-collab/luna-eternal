@@ -42,19 +42,37 @@ mod/src/main/resources/db/migration/V032__pase.sql
 
 ## Current Status
 
-**Reescrito entero el 2026-09-08 por D-046** y compilado. La version de la
-mañana (dos vias, 50 niveles) estuvo en vivo unas horas; esta la sustituye.
+**DESPLEGADO Y EN VIVO** (2026-09-08, 11:16). Reescrito entero por **D-046** y
+recalibrado el mismo día por **D-047**. La versión de la mañana (dos vías, 50
+niveles) estuvo en vivo unas horas; ésta la sustituye.
 
-- 100 niveles, curva y tope recalibrados, **45 dias minimos** de 60.
-- Los 95 objetos y las 5 especies **validados contra el jar** antes de
+```
+servidor   V034 aplicada · Done (29,880 s) · AUTOTEST 636/636
+clientes   manifiesto c36257eb74 publicado y sirviéndose
+/luna pase 100 niveles · 53.700 XP · tope 1.200/día · mínimo 45 días
+           Precio 1.500 LunaCoins · 2 Pokémon
+```
+
+- 100 niveles, curva y tope recalibrados, **45 días mínimos** de 60.
+- Los 95 objetos y las 2 especies **validados contra el jar** antes de
   escribirlos, y revalidados contra el registro por el autotest.
 - Pantalla rehecha: una fila de cuatro tarjetas de 180x336, texto de 13 a 46 px,
   halos, brillos, marcos vivos, chispas y mini-mapa de los cien niveles.
 - Icono definitivo instalado el 2026-09-08.
+- **D-047**: precio 15.000 → **1.500**, el 50 y el 98 pagan **100 LunaCoins**
+  cada uno (§3.3), y la XP por mena baja de 4 a **1** (§2).
 
-**SIN VERIFICAR VISUALMENTE**: nadie ha abierto la pantalla nueva todavia.
+**SIN VERIFICAR VISUALMENTE**: nadie ha abierto la pantalla nueva todavía.
+
+⚠ **Y hay dos cosas sin recalibrar que se parecen a lo que ya falló**: las tasas
+de **cosechar** y **pescar** (§2). Están fuera del invariante a propósito.
 
 ## Last Decision
+
+**D-047** — El pase baja a **1.500 LunaCoins**, devuelve **100 en el nivel 50 y
+100 en el 98**, y la XP por **mena** baja de 4 a **1**. Las tres son órdenes del
+usuario; la de la mena vino con el diagnóstico dentro (*«eso es muy roto»*) y
+tenía razón: la tabla de §2 llevaba una estimación falsa.
 
 **D-046** — Una sola vía, de pago, con objetos de Cobblemon y Pokémon.
 **Revoca D-045**, que decía «solo cosméticos».
@@ -144,15 +162,15 @@ sin explicación parece un fallo.
 ## 2. De qué se saca XP
 
 Las cifras salen de **cuántas veces por hora ocurre cada cosa**, no de a ojo.
-El objetivo: que **ninguna actividad llene sola el tope en menos de hora y
-media**, y que jugar variado sea lo más rápido.
+El objetivo: que **ninguna actividad llene sola el tope en menos de dos horas**,
+y que jugar variado sea lo más rápido.
 
 | Acción | XP | veces/hora | XP/hora si SOLO haces eso |
 |---|---:|---:|---:|
 | Pescar (recoger la caña Poké) | 8 | ~70 | 560 |
 | Cosechar (cultivo, baya, bellota) | 3 | ~200 | 600 |
-| Picar una mena común | 4 | ~90 | 360 |
-| Picar diamante o esmeralda | 12 | ~12 | 144 |
+| **Picar una mena común** | **1** | ~400 | 400 |
+| Picar diamante o esmeralda | 12 | ~15 | 180 |
 | **Picar piedra** | **0** | ~2.500 | — |
 | Capturar un Pokémon | 12 | ~25 | 300 |
 | **Registrar una especie nueva** | **120** | (251 en toda la partida) | — |
@@ -168,6 +186,46 @@ media**, y que jugar variado sea lo más rápido.
 > sirve: son **2.500 bloques a la hora**, así que a 1 XP el pase sería un
 > temporizador y **toda la tabla de arriba daría igual**. Lo que cuenta para el
 > pase son las **menas**.
+
+> ⚠⚠⚠ **Y LA MENA VALÍA 4, QUE ERA DEMASIADO — Y ESTA MISMA TABLA MENTÍA**
+> (2026-09-08, D-047). Aquí ponía *«mena común · 4 · ~90 veces/hora · 360»*, y
+> **las 90 veces por hora eran falsas**: el carbón y el cobre salen en **vetas de
+> veinte y treinta bloques**, así que un minero dedicado saca del orden de
+> **400 menas a la hora**. Lo de verdad eran **1.600 XP/hora**, o sea **el tope
+> diario entero en cuarenta y cinco minutos** — y con eso el resto de esta tabla
+> era decoración.
+>
+> ⚠⚠ **Es exactamente la regla del párrafo de arriba, un escalón más arriba.** La
+> piedra vale cero *porque son 2.500 bloques a la hora*; la mena valía 4 y son
+> 400. **La regla estaba escrita y aun así falló**, porque la estimación de
+> cuántas veces por hora pasa algo vivía en un comentario — y **un comentario no
+> se comprueba**.
+>
+> Hoy las tasas son constantes en `PaseXp` (`VECES_HORA_MENA`) y el autotest
+> cruza XP × tasa contra el tope: *«MINAR SOLO NO LLENA EL TOPE DIARIO EN MENOS
+> DE DOS HORAS»*. Volver a poner 4 **se pone rojo**.
+>
+> ⚠ **Lo destapó el usuario picando**, no una revisión ni el autotest.
+
+> ⚠⚠ **La mena RARA no se tocó, y es la mitad de la decisión.** Lo que estaba
+> roto era el **volumen**, y un diamante no tiene volumen: no sale en vetas de
+> treinta y aparece del orden de quince veces en una sesión larga de mina.
+> Bajarla también habría arreglado un problema que no tenía, y habría dejado el
+> hallazgo que de verdad importa pagando lo mismo que picar cobre.
+
+> ⚠⚠ **Y de la otra idea del usuario —«5 de experiencia cada 10 menas»— se
+> descartó el mecanismo, no la intención.** Es media XP por mena, o sea la mitad
+> otra vez; pero **pagar por tandas obliga a recordar cuántas lleva rotas entre
+> pago y pago**: una columna nueva, su migración y una escritura por bloque
+> picado. Y se ve raro desde dentro: rompes nueve menas y no pasa nada. Si hace
+> falta bajar más, **la palanca sigue siendo este número**.
+
+> ⚠⚠ **COSECHAR Y PESCAR TIENEN LA MISMA FORMA DE PROBLEMA, y siguen sin
+> recalibrar.** Cosecha son 3 × ~200 = 600/h y pesca 8 × ~70 = 560/h, los dos
+> rozando el límite, **y sus tasas no se han vuelto a medir** — igual que la de
+> la mena llevaba una semana siendo falsa. Quedan **fuera** del invariante a
+> propósito: meterlas con una tasa inventada sería la confianza falsa que ya
+> mordió en los gimnasios. Entran el día que se midan.
 
 > ⚠ **Y el escaneo tampoco da XP: la da el REGISTRO.** Escanear se repite sobre
 > el mismo Pokémon; registrar una especie ocurre **una vez** y hay 251. Es la
@@ -256,9 +314,9 @@ decorativo**: es el orden en que un jugador necesita las cosas.
 |---|---|---|
 | **PREPARACIÓN** | 1-20 | Balls, pociones, bayas, Caramelos EXP S/M. Para poder jugar en serio |
 | **CRIANZA** | 21-40 | **Destiny Knot**, Everstone, los **seis objetos de poder**, Lucky Egg, Love/Friend/Moon/Dream Ball |
-| **ENTRENAMIENTO** | 41-60 | Las seis vitaminas, PP Up, Caramelos Raros, Caramelos EXP L/XL |
+| **ENTRENAMIENTO** | 41-60 | Las seis vitaminas, PP Up, Caramelos Raros, Caramelos EXP L/XL. **El 50 paga 100 LunaCoins** (§3.3) |
 | **COMBATE** | 61-80 | Restos, Vidasfera, Banda/Gafas/Pañuelo Elegido, Chaleco Asalto, Eviolita, Casco Dentado, Botas Gruesas |
-| **MAESTRÍA** | 81-100 | Mentas de naturaleza, **Cápsula y Parche de Habilidad**, PP Max, **Master Ball** |
+| **MAESTRÍA** | 81-100 | Mentas de naturaleza, **Cápsula y Parche de Habilidad**, PP Max, **Master Ball**. **El 98 paga 100 LunaCoins** (§3.3) |
 
 > ⚠ **Los seis objetos de poder van repartidos del 26 al 35 a propósito.** Sirven
 > de uno en uno —cada uno fija una estadística al heredar— así que darlos juntos
@@ -280,9 +338,9 @@ decorativo**: es el orden en que un jugador necesita las cosas.
 > **ensanchar el encargo por tu cuenta es exactamente igual de malo que
 > recortarlo**.
 >
-> Los tres huecos son ahora hitos de **objeto** del tramo que les toca: Huevo
-> Suerte (25, crianza), **15 Caramelos Raros** (50, entrenamiento) y dos Capas
-> Furtivas (75, combate).
+> Los tres huecos pasaron a ser hitos del tramo que les toca: Huevo Suerte
+> (25, crianza), 15 Caramelos Raros (50) y dos Capas Furtivas (75, combate).
+> **El del 50 volvió a cambiar con D-047 y hoy son 100 LunaCoins** (§3.3).
 
 > ⚠⚠ **El autotest comprueba que sean EXACTAMENTE DOS**, y en el 1 y en el 100.
 > Un `>= 2` habría dejado pasar el mismo error dentro de seis meses sin decir
@@ -306,6 +364,59 @@ la tarjeta echa chispas**.
 
 Y el autotest comprueba una cosa que un reordenado accidental rompería sin dar
 error: **la segunda mitad del pase premia más que la primera**.
+
+### 3.3 · Las 200 LunaCoins que devuelve el pase
+
+**Nivel 50 → 100 LunaCoins. Nivel 98 → 100 LunaCoins.** Petición del usuario, el
+mismo día que el precio bajó a 1.500 (D-047).
+
+> ⚠⚠⚠ **Es la ÚNICA recompensa del pase que no se entrega: se INGRESA.** Un
+> objeto y un Pokémon van a un inventario —que no es una tabla— y por eso se
+> reparten **después** del commit que apunta el cobro. Esto es **dinero**, así
+> que le aplica R3 y va **dentro de la misma transacción** que la fila de
+> `pase_reclamo`: o se apunta y se paga, o no pasa ninguna de las dos cosas.
+>
+> Aquí además sale gratis, porque esa fila **ya está en esa transacción**.
+> Pagarlas fuera dejaría el nivel marcado como cobrado y las LunaCoins sin
+> ingresar: el jugador ve «RECOGIDO» y **no tiene nada**, y no hay forma de saber
+> a quién le pasó.
+
+> ⚠⚠ **Y `Red.entregarPase` las salta explícitamente.** Su javadoc decía *«R3 no
+> aplica aquí porque no se mueve dinero»* — y **eso dejó de ser verdad** el día
+> que el 50 y el 98 pagaron moneda. Si ese método también las pagara, **se
+> cobrarían dos veces**.
+
+> ⚠⚠ **No cruza D-014**, que es la regla de la que cuelga todo el modelo de pago:
+> **no convierte una moneda en otra**. El pase se compra con LunaCoins y devuelve
+> LunaCoins — es un **reembolso**, no un tipo de cambio. Y no es una categoría
+> nueva: **la Torre ya hacía lo mismo** (+50 LunaCoins cada 30 rondas).
+
+> ⚠⚠⚠ **LO QUE HAY QUE VIGILAR NO ES QUE DEVUELVA, SINO CUÁNTO.** Un pase que
+> devuelve lo que cuesta **se paga solo para siempre**: se compra una vez, se
+> completa, y la temporada siguiente sale gratis — a partir de ahí el producto
+> deja de venderse **sin que nadie toque una línea de código**. Es el único fallo
+> de esto que no se ve mirando la pantalla: se ve en la facturación, meses
+> después.
+>
+> Hoy son **200 sobre 1.500, el 13 %**, y harían falta 7,5 temporadas de
+> reembolso para pagar una. El autotest exige que **no llegue ni a la mitad** del
+> precio, y comprueba también que los dos premios sigan **en el 50 y en el 98**:
+> moverlos al 1 y al 2 cumpliría todo lo demás y regalaría el reembolso el primer
+> día.
+
+> ⚠ **Con 200 LunaCoins no se compra ningún cosmético** (el más barato son
+> 1.200). No es un error —es la misma nota que ya tiene el bono de los oficios—
+> pero conviene saberlo: el reembolso **acumula**, no compra solo.
+
+> ⚠ **V034 suelta esos dos reclamos, y sólo esos dos.** Una fila de
+> `pase_reclamo` dice «este nivel está cobrado», **no dice QUÉ se cobró**: quien
+> hubiera cobrado el 50 cuando daba 15 Caramelos Raros se quedaría con la tarjeta
+> en gris para siempre y no vería nunca las LunaCoins. Y **no se vacía la tabla
+> entera como en la V033** — eso le devolvería a cualquiera los cien premios para
+> volver a cobrarlos, que es la vuelta atrás más cara posible por un cambio de
+> dos filas.
+
+---
 
 ## 4. La temporada
 
@@ -540,6 +651,10 @@ con la única protección del sistema, y el comando decía «hecho».
 | La segunda mitad premia más que la primera | Reordenar la tabla al revés no da ningún error y deja el pase sin sentido |
 | Ninguna ronda de la Torre vale más de un quinto del tope | Que la Torre no sea la única fuente que importa |
 | El pase **cabe** en una temporada de 60 días | Con un pase de PAGO importa igual que el mínimo: quien lo compra tiene que poder terminarlo |
+| **Minar solo no llena el tope en menos de dos horas** | Nace de un fallo real: la mena valía 4 con una tasa falsa, o sea el día entero en 45 min. No daba error — el pase subía perfectamente, sólo que sólo se subía picando |
+| …y minar **sigue mereciendo la pena** (≥ 10 % del día por hora) | El otro lado: una fuente apagada de hecho sobra de la tabla |
+| **El pase no devuelve lo que cuesta**, ni la mitad | Un pase que se paga solo deja de venderse **para siempre**, y eso no se ve en la pantalla: se ve en la facturación meses después |
+| Los dos premios de LunaCoins siguen **en el 50 y en el 98** | Moverlos al 1 y al 2 cumpliría todo lo demás y regalaría el reembolso el primer día |
 
 ---
 
@@ -549,11 +664,15 @@ con la única protección del sistema, y el comando decía «hecho».
    la pantalla**: falta ver que el anillo, el carril y los latidos se vean como
    deben, y cobrar un premio de verdad.
 2. ~~El arte del icono~~ ✅ **instalado el 2026-09-08.**
-3. **Calibrar con datos reales.** Como todo lo económico de este proyecto, los
+3. **Medir de verdad las tasas de cosechar y pescar.** Es lo que queda abierto
+   de D-047: los dos rozan el límite con una estimación que nadie ha vuelto a
+   comprobar, y la de la mena llevaba una semana siendo falsa. Cuando se midan,
+   entran en el invariante de §8 junto a la minería.
+4. **Calibrar con datos reales.** Como todo lo económico de este proyecto, los
    importes son provisionales. Aquí hay **cuatro palancas** y ninguna más:
    `PaseNivel.BASE`, `PaseNivel.PASO`, `PaseNivel.TOPE_DIARIO` y la tabla de
    `PaseXp`. La tabla de premios es una quinta, y es la que más se va a tocar.
-4. **Retos diarios y semanales**, si algún día hace falta. Hoy la XP es un goteo
+5. **Retos diarios y semanales**, si algún día hace falta. Hoy la XP es un goteo
    por acción con tope; los retos son la otra mitad de un pase moderno y
    encajarían sin tocar nada de lo de arriba — entrarían como una fuente más por
    `Pase.ganar`, y el tope las contendría igual que a las demás.

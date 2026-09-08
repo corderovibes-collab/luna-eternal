@@ -2,6 +2,7 @@ package net.pokereport.luna.client.pokepad;
 
 import com.cobblemon.mod.common.client.gui.PokemonGuiUtilsKt;
 import com.cobblemon.mod.common.client.render.models.blockbench.FloatingState;
+import com.cobblemon.mod.common.client.gui.ProfileTransformType;
 import com.cobblemon.mod.common.entity.PoseType;
 
 import net.minecraft.client.gui.DrawContext;
@@ -228,12 +229,13 @@ public final class Mascota3D {
                     estado,             // state
                     animar ? delta : 0f, // partialTicks: ver `animar`
                     Math.min(ancho, alto) * 0.45f,  // scale: la proporcion de Cobblemon
-                    true,               // applyProfileTransform
+                    ProfileTransformType.PROFILE,   // profileTransformType (Cobblemon 1.8.0)
                     false,              // applyBaseScale: ver el javadoc de `escala`
                     false,              // doQuirks: los tics de idle distraen en una rejilla
                     1f, 1f, 1f, 1f,     // r, g, b, a
                     0f,                 // headYaw
-                    0f);                // headPitch
+                    0f,                 // headPitch
+                    13);                // blockLight (Cobblemon 1.8.0)
         } catch (RuntimeException e) {
             // ⚠ NO SE DEJA PROPAGAR. Esto corre dentro de `render`, así que una
             // excepción aquí no rompe una celda: tumba la pantalla entera y saca

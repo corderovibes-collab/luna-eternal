@@ -215,7 +215,7 @@ INTOCABLES = ("lunaeternal", "lunaneon", "cobblemon-cards",
               # sea verdad y puede que no, y la diferencia entre las dos cosas
               # es un servidor que no arranca. Borrar una libreria para ahorrar
               # 800 KB no compensa ni de lejos.
-              "cloth-config", "owo-lib")
+              "cloth-config", "owo-lib", "ClaimBlocks", "GooeyLibs")
 
 
 # Lo que aporta el propio entorno: no hay jar que buscar para esto.

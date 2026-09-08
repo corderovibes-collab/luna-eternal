@@ -6,10 +6,46 @@
 **Última actualización:** 2026-09-08
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela) ·
 PHASE 4 — Gimnasios y Torre de Batalla · PHASE 10 — Pase de Batalla
-**Estado:** Torre de Batalla y Santuario construidos y desplegados. Decisiones D-001 a
-D-046. **El mod está desplegado y funcionando contra MariaDB:** economía de
-tres monedas, vías de progresión, Torre de Batalla con recompensas de temporada e
-interfaces completas en el PokePad. Autotest en vivo.
+**Estado:** Cobblemon 1.8.0 («Make Your Move») integrado y desplegado. Torre de Batalla
+y Santuario construidos. Decisiones D-001 a D-046. **El mod está desplegado y funcionando
+contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Batalla con
+recompensas de temporada e interfaces completas en el PokePad. Autotest en vivo 636/636.
+
+> **2026-09-08 (tarde) — COBBLEMON 1.8.0 («MAKE YOUR MOVE») INTEGRADO Y EN VIVO.**
+>
+> Cobblemon 1.8.0 (Fabric 1.21.1, Modrinth `YgmyyFcs`) desplegado con cero regresiones en
+> Torre de Batalla, Pase de Batalla (100 niveles), Santuario, Oficios, Gimnasios y Economía.
+>
+> ⚠⚠⚠ **LA FIRMA DE `drawProfilePokemon` EN EL PokePad CAMBIÓ.**
+> En 1.7.3 recibía un booleano `applyProfileTransform: Boolean` en el parámetro 8.
+> En 1.8.0 pasa a recibir `ProfileTransformType.PROFILE` (del paquete
+> `com.cobblemon.mod.common.client.gui.ProfileTransformType`) y añade al final
+> `blockLight: Int = 13`. Adaptado en `Mascota3D.java`.
+>
+> ⚠⚠ **GRAALVM DEJA DE ESTAR RELOCALIZADO: `com.cobblemon.mod.relocations.graalvm` -> `org.graalvm`.**
+> Cobblemon 1.8.0 abandonó el sombreado/relocalización de GraalVM Polyglot y usa
+> las clases oficiales `org.graalvm.polyglot.Context` y `Value`.
+> Los addons que interactúan con Showdown y no se habían recompilado
+> (`cobblemonraiddens 0.11.7`) fallaban con `NoSuchMethodError: ...GraalShowdownService.getContext()`.
+> Se parcheó el pool de constantes de `StatusEffectsReloadListener.class` sustituyendo
+> la ruta de paquete por `org/graalvm/polyglot/`, eliminando el fallo limpiamente.
+>
+> ⚠⚠ **TODOS LOS ADDONS SINCRONIZADOS Y DEPENDENCIAS DE MANIFIESTO RESUELTAS.**
+> Se actualizaron en cliente y servidor:
+>   - Cobblemon 1.8.0 (`YgmyyFcs`)
+>   - RCTMod 0.19.0-beta (`jdUENp3C`) y RCTApi 0.16.0-beta (`poXTxoNY`)
+>   - Mega Showdown 1.0.2+1.8 y Navas ZA Megas 1.7.7+1.8 (`jlpvkxRM`)
+>   - Cobbreeding 2.3.0 (`dED6lApR`)
+>   - Fight or Flight 0.11.0 (`CHXL2ka3`)
+>   - TMCraft 1.4.19+1.8.0 (`ixxKJV1J`)
+>   - Only Bottle Caps 1.5.0-fabric (`l7Gi3yRs`)
+>   - Tim Core 1.8.0-fabric-1.32.0 y Capture XP 1.8.0-fabric-1.3.0
+> Se excluyeron del cliente por incompatibilidad con 1.8.0 y Java 21:
+>   - `better-pokedex-scanner` (bloqueado a <1.8.0, escáner renovado en 1.8.0 nativo)
+>   - `c2me-fabric` (su submódulo `c2me-opts-natives-math` exige Java >= 25)
+> Manifiesto `manifest-c387b9869d.json` publicado en el CDN con 295 mods verificados.
+> En vivo: Servidor levantado en 31.2 s, **AUTOTEST 636/636 EN VERDE**.
+
 
 > **2026-09-08 (madrugada) — DESPLEGADO, Y AL PUBLICAR SALIO UNA DERIVA QUE
 > LLEVABA CUATRO DIAS ABIERTA.**

@@ -198,6 +198,12 @@ EXCLUIDOS = {
         "Texturas conectadas en 42 bloques de construir. Cambiaba fachadas ya "
         "construidas. Apagar su pack no bastaba: la lista de packs es una "
         "plantilla y no alcanza a quien ya tiene options.txt",
+    "cobblemon-better-pokedex-scanner":
+        "Bloqueado estrictamente a Cobblemon <1.8.0 ([1.7.3, 1.8.0)) y su autor "
+        "no lo ha actualizado. Cobblemon 1.8.0 renovó el sistema nativo de escaneo.",
+    "c2me-fabric":
+        "Su submodulo c2me-opts-natives-math exige OpenJDK >= 25 y el juego "
+        "corre en Java 21, impidiendo el arranque en Fabric Loader 0.19.",
 }
 
 # Los packs que CobbleVerse manda DESACTIVADOS. Se llaman, literalmente,
@@ -224,6 +230,31 @@ SUBIR = {
         "mantiene la subida porque Fabric API es aditiva y quitarla en la misma "
         "publicacion que arregla un crasheo es cambiar dos cosas a la vez. "
         "Se puede volver a la 0.116.8 del pack oficial cuando haya calma",
+    "cobblemon":
+        "Cobblemon 1.8.0 «Make Your Move» (lanzado 2026-09-06). Alinea el "
+        "cliente con la version del servidor.",
+    "cobblemon-mega-showdown":
+        "Version 1.0.1+1.8+1.21.1 compatible con Cobblemon 1.8.0.",
+    "rctmod":
+        "Version 0.19.0-beta compatible con Cobblemon 1.8.0.",
+    "rctapi":
+        "Version 0.16.0-beta compatible con Cobblemon 1.8.0.",
+    "cobbreeding":
+        "Version 2.3.0 compatible con Cobblemon 1.8.0.",
+    "cobblemon-fight-or-flight-reborn":
+        "Version 0.11.0 compatible con Cobblemon 1.8.0.",
+    "tmcraft":
+        "Version 1.4.19+1.8.0 compatible con Cobblemon 1.8.0.",
+    "cobblemonraiddens":
+        "Version 0.11.7+1.21.1 compatible con Cobblemon 1.8.0.",
+    "only-bottle-caps":
+        "Version 1.5.0-fabric compatible con Cobblemon 1.8.0.",
+    "navas-zamega":
+        "Version 1.7.7+1.8 compatible con Cobblemon 1.8.0 y Mega Showdown 1.0.1.",
+    "cobblemon-tim-core":
+        "Version 1.8.0-fabric-1.32.0 compatible con Cobblemon 1.8.0.",
+    "cobblemon-capture-xp":
+        "Version 1.8.0-fabric-1.3.0 compatible con Cobblemon 1.8.0.",
 }
 
 # Overrides de la base que NO se copian.

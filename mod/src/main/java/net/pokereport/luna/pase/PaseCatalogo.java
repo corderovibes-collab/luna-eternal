@@ -48,13 +48,27 @@ import net.pokereport.luna.pase.Recompensa.Rareza;
  *   81-100  MAESTRIA       mentas, Capsula y Parche de Habilidad, Master Ball
  * </pre>
  *
- * <h2>&#9888;&#9888; LOS CINCO POKEMON SON HITOS, Y DOS LOS FIJO EL USUARIO</h2>
+ * <h2>&#9888;&#9888;&#9888; HAY DOS POKEMON Y SON EXACTAMENTE LOS QUE PIDIO EL
+ * USUARIO</h2>
  *
- * Nivel 1 un Charizard de nivel 15 y nivel 100 un <b>Charizard shiny de nivel
- * 50</b>: los dos son orden directa. Los otros tres (25, 50 y 75) los elegi yo
- * para que la mitad del carril tenga a donde mirar, y son de <b>Kanto o
- * Johto</b> porque D-017 dice que son las unicas generaciones activas &mdash; un
- * hito de Gen 5 seria un Pokemon que la Pokedex de este servidor no reconoce.
+ * Nivel 1 un <b>Charizard de nivel 15</b> y nivel 100 un <b>Charizard shiny de
+ * nivel 50</b>. Y no hay mas.
+ *
+ * <p>&#9888;&#9888; LA PRIMERA VERSION METIA TRES MAS &mdash;Gengar en el 25,
+ * Tyranitar en el 50 y Dragonite en el 75&mdash; «para que la mitad del carril
+ * tuviera a donde mirar». <b>Nadie los habia pedido.</b> El usuario lo corrigio:
+ * <i>«no te dije que me dieras mas pokemons, solo charizard y charizard
+ * variocolor»</i>, y tenia razon: ensanchar el encargo por tu cuenta es
+ * exactamente igual de malo que recortarlo.
+ *
+ * <p>Los tres huecos que dejaron son ahora hitos de OBJETO del tramo que les
+ * toca: Huevo Suerte (crianza), 15 Caramelos Raros (entrenamiento) y dos Capas
+ * Furtivas (combate).
+ *
+ * <p>&#9888; El autotest comprueba que sean <b>EXACTAMENTE DOS</b> y que esten
+ * en el 1 y en el 100. Sin ese numero exacto, meter un cuarto Pokemon dentro de
+ * seis meses no daria ningun error &mdash; y volveria a ser una decision que no
+ * es mia.
  */
 public final class PaseCatalogo {
 
@@ -156,7 +170,7 @@ public final class PaseCatalogo {
         /*  22 */ o("lum_berry", 10, Rareza.COMUN),
         /*  23 */ o("destiny_knot", 1, Rareza.EPICA),
         /*  24 */ o("love_ball", 8, Rareza.RARA),
-        /*  25 */ p("gengar", 25, false),
+        /*  25 */ o("lucky_egg", 1, Rareza.EPICA),
         /*  26 */ o("power_weight", 1, Rareza.RARA),
         /*  27 */ o("friend_ball", 8, Rareza.COMUN),
         /*  28 */ o("power_bracer", 1, Rareza.RARA),
@@ -164,7 +178,7 @@ public final class PaseCatalogo {
         /*  30 */ o("power_belt", 1, Rareza.RARA),
         /*  31 */ o("moon_ball", 8, Rareza.COMUN),
         /*  32 */ o("power_lens", 1, Rareza.RARA),
-        /*  33 */ o("lucky_egg", 1, Rareza.EPICA),
+        /*  33 */ o("mirror_herb", 1, Rareza.EPICA),
         /*  34 */ o("power_band", 1, Rareza.RARA),
         /*  35 */ o("power_anklet", 1, Rareza.RARA),
         /*  36 */ o("everstone", 2, Rareza.COMUN),
@@ -183,12 +197,12 @@ public final class PaseCatalogo {
         /*  47 */ o("calcium", 6, Rareza.RARA),
         /*  48 */ o("rare_candy", 5, Rareza.EPICA),
         /*  49 */ o("zinc", 6, Rareza.RARA),
-        /*  50 */ p("tyranitar", 35, false),
+        /*  50 */ o("rare_candy", 15, Rareza.LEGENDARIA),
         /*  51 */ o("carbos", 6, Rareza.RARA),
         /*  52 */ o("exp_candy_xl", 2, Rareza.EPICA),
         /*  53 */ o("pp_up", 4, Rareza.RARA),
         /*  54 */ o("hp_up", 6, Rareza.RARA),
-        /*  55 */ o("rare_candy", 8, Rareza.EPICA),
+        /*  55 */ o("exp_candy_xl", 4, Rareza.EPICA),
         /*  56 */ o("protein", 6, Rareza.RARA),
         /*  57 */ o("max_elixir", 6, Rareza.RARA),
         /*  58 */ o("iron", 6, Rareza.RARA),
@@ -210,7 +224,7 @@ public final class PaseCatalogo {
         /*  72 */ o("eviolite", 1, Rareza.EPICA),
         /*  73 */ o("quick_claw", 1, Rareza.RARA),
         /*  74 */ o("choice_specs", 1, Rareza.EPICA),
-        /*  75 */ p("dragonite", 45, false),
+        /*  75 */ o("covert_cloak", 2, Rareza.LEGENDARIA),
         /*  76 */ o("scope_lens", 1, Rareza.RARA),
         /*  77 */ o("heavy_duty_boots", 1, Rareza.EPICA),
         /*  78 */ o("shell_bell", 1, Rareza.RARA),

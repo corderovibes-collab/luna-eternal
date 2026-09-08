@@ -4337,9 +4337,15 @@ public final class AutoTest {
         check("toda especie del pase existe en Cobblemon", especiesExisten);
         check("ninguna cantidad es cero o negativa", cantidadesSanas);
         check("los Pokemon del pase salen a un nivel valido", nivelesDePokemonSanos);
-        check("hay Pokemon en los hitos",
-              pokemon == net.pokereport.luna.pase.PaseCatalogo.cuantosPokemon()
-                  && pokemon >= 2);
+        // ⚠⚠⚠ EXACTAMENTE DOS, Y EN EL 1 Y EN EL 100. La primera version metia
+        //    tres mas «para que la mitad del carril tuviera a donde mirar» y
+        //    NADIE LOS HABIA PEDIDO -- el usuario lo corrigio. Un `>= 2` habria
+        //    dejado pasar ese mismo error dentro de seis meses sin decir nada:
+        //    lo que hay que fijar es EL NUMERO EXACTO, porque cuantos Pokemon
+        //    da el pase no es una decision mia.
+        check("EL PASE DA EXACTAMENTE DOS POKEMON",
+              pokemon == 2
+                  && pokemon == net.pokereport.luna.pase.PaseCatalogo.cuantosPokemon());
 
         // ⚠⚠ EL NIVEL 1 Y EL 100 LOS FIJO EL USUARIO, y son lo unico de esta
         //    tabla que no puedo cambiar por mi cuenta: si alguien los toca sin

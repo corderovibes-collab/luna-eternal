@@ -8,8 +8,8 @@ pescando, criando, registrando la Pokédex, ganando medallas y escalando la
 Torre— y **una sola vía, de pago**: 15.000 LunaCoins.
 
 Cada nivel da un objeto de Cobblemon, organizado en **cinco tramos por
-categoría**, y **cinco niveles dan un Pokémon** — el 1 un Charizard de nivel 15
-y el 100, el premio mayor, **un Charizard variocolor de nivel 50**.
+categoría**, y **dos niveles dan un Pokémon**: el 1 un Charizard de nivel 15 y el 100,
+el premio mayor, **un Charizard variocolor de nivel 50**.
 
 Este documento es el sitio donde vive la calibración. Los números están
 justificados uno a uno; cambiarlos es cambiar constantes en dos ficheros.
@@ -264,23 +264,30 @@ decorativo**: es el orden en que un jugador necesita las cosas.
 > de uno en uno —cada uno fija una estadística al heredar— así que darlos juntos
 > convertiría diez niveles en uno.
 
-### 3.1 · Los cinco Pokémon, y cuáles fijó el usuario
+### 3.1 · Los DOS Pokémon
 
-| Nivel | Pokémon | Quién lo decidió |
-|---|---|---|
-| **1** | Charizard nivel 15 | **Orden del usuario** |
-| 25 | Gengar nivel 25 | Elección mía |
-| 50 | Tyranitar nivel 35 | Elección mía |
-| 75 | Dragonite nivel 45 | Elección mía |
-| **100** | **Charizard VARIOCOLOR nivel 50** | **Orden del usuario — el premio mayor** |
+| Nivel | Pokémon |
+|---|---|
+| **1** | Charizard nivel 15 |
+| **100** | **Charizard VARIOCOLOR nivel 50** — el premio mayor |
 
-> ⚠⚠ **Los tres de en medio son de Kanto o Johto**, y no por gusto: D-017 dice
-> que son las únicas generaciones activas. Un hito de Gen 5 sería un Pokémon que
-> **la Pokédex de este servidor no reconoce** — parecería un fallo, no un premio.
+**Y no hay más.**
 
-> ⚠ **El nivel 1 y el 100 los vigila el autotest.** Son lo único de la tabla que
-> no puedo cambiar por mi cuenta: si alguien los toca sin querer, se pone rojo
-> antes de llegar al servidor.
+> ⚠⚠⚠ **La primera versión metía tres más** —Gengar en el 25, Tyranitar en el 50
+> y Dragonite en el 75— *«para que la mitad del carril tuviera a dónde mirar»*.
+> **Nadie los había pedido.** El usuario lo corrigió: *«no te dije que me dieras
+> más pokemons, solo charizard y charizard variocolor»*, y tenía razón:
+> **ensanchar el encargo por tu cuenta es exactamente igual de malo que
+> recortarlo**.
+>
+> Los tres huecos son ahora hitos de **objeto** del tramo que les toca: Huevo
+> Suerte (25, crianza), **15 Caramelos Raros** (50, entrenamiento) y dos Capas
+> Furtivas (75, combate).
+
+> ⚠⚠ **El autotest comprueba que sean EXACTAMENTE DOS**, y en el 1 y en el 100.
+> Un `>= 2` habría dejado pasar el mismo error dentro de seis meses sin decir
+> nada: lo que hay que fijar es **el número exacto**, porque cuántos Pokémon da
+> el pase **no es una decisión mía**.
 
 > ⚠⚠ **Si el equipo está lleno, el Pokémon va al PC y se avisa por el chat.**
 > `getParty().add()` devuelve `false` con seis dentro: sin mirarlo, el jugador
@@ -481,6 +488,7 @@ Tres cosas, y las tres son la misma lección de este proyecto:
 
 | El pase no se cobra dos veces | 15.000 LunaCoins cobrados por duplicado |
 | **Todo objeto existe en el registro** | El fallo de las Cazas, **con factura**: el jugador soltó 15.000 LunaCoins, hizo 45 días de trabajo y no recibe nada |
+| **Exactamente DOS Pokémon**, en el 1 y en el 100 | Cuántos Pokémon da el pase **no es una decisión mía**: el número exacto es lo que impide que vuelva a ensancharse solo |
 | Toda especie existe en Cobblemon | Se le pregunta **a Cobblemon**, no a una lista nuestra: una lista repetiría el mismo error que intenta cazar |
 | **Sin el pase no se cobra ni el nivel 1** | Es la regla que sostiene D-046: el pase es de PAGO. Un fallo en ese `if` regalaría los cien premios a todo el servidor **y no daría ningún error**, porque entregar funciona igual de bien |
 | El nivel 1 da Charizard 15 y **el 100 Charizard shiny 50** | Son los dos que fijó el usuario: si alguien los toca sin querer, rojo antes de desplegar |

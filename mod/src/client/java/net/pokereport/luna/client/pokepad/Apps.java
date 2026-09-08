@@ -75,8 +75,16 @@ public final class Apps {
             case "cartas" -> abrirCartas();
             case "protecciones" -> abrirProtecciones();
             case "santuario" -> abrirSantuario();
+            case "pase" -> abrirPase();
             default -> false;
         };
+    }
+
+    /** El PASE DE BATALLA. Misma regla que las demas: NUESTRA pantalla. */
+    private static boolean abrirPase() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new PaseScreen(cliente.currentScreen));
+        return true;
     }
 
     /** El santuario de Monumentos: nichos, memoriales y honores. */

@@ -130,7 +130,23 @@ public final class CatalogoLuna {
             aura("aura_corazones", "Corazones", 0,
                     "minecraft:heart", MAGENTA, 12, 1, Forma.ANILLO),
             aura("aura_destello", "Destello", 0,
-                    "minecraft:electric_spark", CIAN, 4, 4, Forma.ORBITA));
+                    "minecraft:electric_spark", CIAN, 4, 4, Forma.ORBITA),
+
+            // ---- LAS DOS DEL PASE DE BATALLA (D-045) ----------------------
+            //
+            // ⚠⚠ TAMBIEN A 0, Y ESO ES LO QUE VALEN. No se pueden comprar ni
+            //    hoy ni nunca: solo salen de terminar una temporada del pase.
+            //    Es la unica pieza del pase que NO se puede conseguir de otra
+            //    forma, y por eso es la que hace que la via Luna signifique
+            //    algo — un cosmetico que ademas esta en la tienda solo ahorra
+            //    LunaCoins; uno que no esta, dice donde estabas esa temporada.
+            //
+            // ⚠ Y NO se retiran al acabar la temporada: quien la tenga la
+            //   conserva. Retirarla convertiria un recuerdo en un alquiler.
+            aura("aura_pase_estelar", "Polvo Estelar", 0,
+                    "minecraft:enchant", PLATA, 4, 3, Forma.ESPIRAL),
+            aura("aura_pase_eclipse", "Eclipse", 0,
+                    "minecraft:reverse_portal", VIOLETA, 5, 3, Forma.ORBITA));
 
     private static PiezaAura aura(String id, String nombre, int precio,
                                   String particula, int color,

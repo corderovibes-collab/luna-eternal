@@ -89,6 +89,7 @@ Guardería · Tesoros · Modificadores · Descargas · Ajustes
 | 20 | **Explorar / mapa** | ⬜ | ⚪ | zonas |
 | 21 | **Historial** | ⬜ | ⚪ | `ledger_entry` (ya existe) |
 | 22 | **Rangos** | ⬜ | ⚪ | catálogo |
+| 23 | **Pase de Batalla** | ✅ **hecha** (2026-09-08, `PaseScreen` — ver [pase-batalla.md](../economy/pase-batalla.md)) — 50 niveles, dos vías | — | D-045. ⚠ La vía de pago lleva **solo cosméticos**: es el test de [monetization.md](../economy/monetization.md) §6, no una preferencia |
 
 > **Ojo con leer esta tabla como trabajo perdido.** Lo que hay que rehacer es
 > la pantalla; **lo de debajo sigue vivo y probado**: economía, progresión,

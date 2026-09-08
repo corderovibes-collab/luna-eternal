@@ -471,10 +471,21 @@ public class TorreRecompensas {
     }
 
     /**
-     * Gancho preparado para conectar con el futuro sistema de Pase de Batalla.
+     * Superar una ronda da XP del PASE DE BATALLA (D-045).
+     *
+     * <p>La cantidad crece con la ronda porque la ronda crece en dificultad, y
+     * la decide {@link net.pokereport.luna.pase.PaseXp#torre(int)} &mdash; no
+     * este fichero&mdash;: todas las cifras del pase viven juntas para que
+     * calibrarlo sea mirar una sola tabla.
+     *
+     * <p>&#9888;&#9888; Y NO HAY QUE PREOCUPARSE DE QUE LA TORRE DESBORDE EL
+     * PASE. El tope diario vive en {@code PaseService.ganar}, asi que una tanda
+     * hasta la ronda 100 no da mas que un dia de pesca: lo que sobra del tope
+     * se descarta. Sin ese tope habria que recalibrar el pase entero cada vez
+     * que se toca la Torre.
      */
     public static void hookExpPaseBatalla(ServerPlayerEntity jugador, int ronda) {
-        // En el próximo sistema de Pase de Batalla:
-        // PaseBatallaService.agregarExp(jugador, calcularExpPase(ronda));
+        net.pokereport.luna.pase.Pase.ganar(jugador,
+                net.pokereport.luna.pase.PaseXp.torre(ronda), "torre");
     }
 }

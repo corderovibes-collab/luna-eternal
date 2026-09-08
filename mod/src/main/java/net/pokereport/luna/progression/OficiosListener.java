@@ -74,16 +74,27 @@ public final class OficiosListener {
      * ocurre — sin dar ningun error, como siempre.
      *
      * <p>{@code oficio} puede ser {@code null}: hay cosas que cuentan para una
-     * mision y no para ningun oficio, como ganar un combate.
+     * mision y no para ningun oficio, como ganar un combate. Y {@code xpPase}
+     * puede ser 0: la piedra sube el oficio de MINERO y NO da nada al pase
+     * (ver {@code PaseXp}).
      */
     private static void anotar(ServerPlayerEntity jugador, Path oficio,
                                long xp, net.pokereport.luna.quest.Quest.Objective.Type mision,
-                               long cuantas) {
+                               long cuantas, long xpPase) {
         if (jugador == null) {
             return;
         }
         if (oficio != null && xp > 0) {
             OficiosService.ganarAsync(jugador, oficio, xp);
+        }
+        // ⚠⚠ EL PASE DE BATALLA CUELGA DE AQUI Y NO DE SUS PROPIOS EVENTOS, y
+        //    es por lo que dice el parrafo de arriba: si se suscribiera aparte,
+        //    el dia que alguien cambie de que evento cuelga la pesca lo
+        //    cambiaria en un sitio y el pase se quedaria mirando un evento que
+        //    ya no ocurre. Colgados del mismo embudo, no pueden discrepar.
+        if (xpPase > 0) {
+            net.pokereport.luna.pase.Pase.ganar(jugador, xpPase,
+                    mision == null ? "oficio" : mision.name());
         }
         if (mision != null && cuantas > 0) {
             var uuid = jugador.getUuid();
@@ -121,7 +132,7 @@ public final class OficiosListener {
                             if (sp != null) {
                                 anotar(sp, null, 0,
                                        net.pokereport.luna.quest.Quest.Objective.Type.BATTLE_WIN,
-                                       1);
+                                       1, net.pokereport.luna.pase.PaseXp.COMBATE);
                             }
                         }
                     }
@@ -161,13 +172,15 @@ public final class OficiosListener {
                 long cultivo = valorCultivo(estado);
                 if (cultivo > 0) {
                     anotar(sp, Path.AGRICULTOR, cultivo,
-                           net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1);
+                           net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1,
+                           net.pokereport.luna.pase.PaseXp.COSECHA);
                     return;
                 }
                 long xp = valorDe(estado.getBlock());
                 if (xp > 0) {
                     anotar(sp, Path.MINERO, xp,
-                           net.pokereport.luna.quest.Quest.Objective.Type.MINE, 1);
+                           net.pokereport.luna.quest.Quest.Objective.Type.MINE, 1,
+                           valorPase(estado.getBlock()));
                 }
             } catch (Throwable t) {
                 LunaEternal.LOG.error("Error anotando mineria o cultivo", t);
@@ -202,6 +215,27 @@ public final class OficiosListener {
             return XP_PIEDRA;
         }
         return 0;
+    }
+
+    /**
+     * Cuanto vale ese bloque PARA EL PASE, que no es lo mismo que para el
+     * oficio.
+     *
+     * <p>⚠⚠ LA PIEDRA VALE CERO AQUI Y 1 PARA EL OFICIO, y las dos cosas son
+     * correctas. El oficio paga la piedra porque «cavar un tunel tambien es
+     * minar»; el pase no puede, porque son 2.500 bloques a la hora y el tope
+     * diario se llenaria cavando sin mirar. Lo que cuenta para el pase son las
+     * MENAS.
+     */
+    private static long valorPase(Block bloque) {
+        long oficio = valorDe(bloque);
+        if (oficio >= XP_MENA_RARA) {
+            return net.pokereport.luna.pase.PaseXp.MENA_RARA;
+        }
+        if (oficio >= XP_MENA) {
+            return net.pokereport.luna.pase.PaseXp.MENA;
+        }
+        return net.pokereport.luna.pase.PaseXp.PIEDRA;
     }
 
     /**
@@ -252,7 +286,8 @@ public final class OficiosListener {
                 try {
                     if (evento.getPlayer() instanceof ServerPlayerEntity sp) {
                         anotar(sp, Path.PESCADOR, XP_PESCA,
-                               net.pokereport.luna.quest.Quest.Objective.Type.FISH, 1);
+                               net.pokereport.luna.quest.Quest.Objective.Type.FISH, 1,
+                               net.pokereport.luna.pase.PaseXp.PESCA);
                     }
                 } catch (Throwable t) {
                     LunaEternal.LOG.error("Error anotando pesca", t);
@@ -273,7 +308,8 @@ public final class OficiosListener {
             CobblemonEvents.BERRY_HARVEST.subscribe(evento -> {
                 try {
                     anotar(evento.getPlayer(), Path.AGRICULTOR, XP_BAYA,
-                           net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1);
+                           net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1,
+                           net.pokereport.luna.pase.PaseXp.COSECHA);
                 } catch (Throwable t) {
                     LunaEternal.LOG.error("Error anotando cosecha de bayas", t);
                 }
@@ -285,7 +321,8 @@ public final class OficiosListener {
             CobblemonEvents.APRICORN_HARVESTED.subscribe(evento -> {
                 try {
                     anotar(evento.getPlayer(), Path.AGRICULTOR, XP_BELLOTA,
-                           net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1);
+                           net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1,
+                           net.pokereport.luna.pase.PaseXp.COSECHA);
                 } catch (Throwable t) {
                     LunaEternal.LOG.error("Error anotando cosecha de bellotas", t);
                 }
@@ -306,7 +343,8 @@ public final class OficiosListener {
             CobblemonEvents.HATCH_EGG_POST.subscribe(evento -> {
                 try {
                     anotar(evento.getPlayer(), Path.CRIADOR, XP_ECLOSION,
-                           net.pokereport.luna.quest.Quest.Objective.Type.HATCH, 1);
+                           net.pokereport.luna.quest.Quest.Objective.Type.HATCH, 1,
+                           net.pokereport.luna.pase.PaseXp.ECLOSION);
                 } catch (Throwable t) {
                     LunaEternal.LOG.error("Error anotando eclosion", t);
                 }

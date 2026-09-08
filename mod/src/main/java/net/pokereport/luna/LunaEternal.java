@@ -75,6 +75,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.gym.MedallaService medallas;
     private static net.pokereport.luna.cosmetics.CosmeticsService cosmetics;
     private static net.pokereport.luna.santuario.SantuarioService santuario;
+    private static net.pokereport.luna.pase.PaseService pase;
     private static ExecutorService io;
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
     private static String builderKey = "";
@@ -459,6 +460,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.crate.Actividad.arrancar(database);
             cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
             santuario = new net.pokereport.luna.santuario.SantuarioService(database);
+            pase = new net.pokereport.luna.pase.PaseService(database);
             // ⚠ La config de nichos se lee al arrancar y REVIENTA el arranque
             //   si esta mal escrita: una coordenada mal puesta protege una zona
             //   que no es la construida, y eso no da error -- da un hueco que
@@ -547,6 +549,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     }
     public static net.pokereport.luna.cosmetics.CosmeticsService cosmetics() { return cosmetics; }
     public static net.pokereport.luna.santuario.SantuarioService santuario() { return santuario; }
+    public static net.pokereport.luna.pase.PaseService pase() { return pase; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }
     public static net.pokereport.luna.kit.KitCatalog kits() { return kits; }

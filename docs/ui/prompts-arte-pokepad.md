@@ -495,6 +495,62 @@ Serene, calm, reverent. Plain solid black background. No text, no watermark.
 > El generador la conserva (no es de la rejilla): se procesa y se commitea a
 > mano, como los sobres de CARTAS.
 
+### 5.4-quater · PASE DE BATALLA — el icono, y solo el icono (2026-09-08)
+
+Igual que PROTECCIONES y SANTUARIO: la pantalla usa el **chasis compartido**
+(`pokepad_cosmeticos.png`) y lo único que hace falta pedir es el icono de la
+rejilla.
+
+> ⚠️ **Hay un provisional instalado.** `python tools/gen_icono_pase.py` dibuja
+> por código la misma idea que pide este prompt —tres escalones dorados y una
+> luna creciente— para que la celda no salga en **magenta** mientras el arte no
+> llega. Es el mismo caso que el candado provisional de `gen_pokepad.py`: una
+> celda dibuja su propio icono aunque esté bloqueada, así que dar de alta una
+> aplicación **sin su PNG no da ningún error** — da un cuadro magenta que solo
+> se ve abriendo el Pad. Pasó el 2026-08-23 con seis pantallas a la vez.
+>
+> **El provisional dibuja la misma silueta a propósito**: así lo que se ve en la
+> rejilla hoy es lo que se verá mañana, y cambiar el arte no cambia cómo se lee
+> la pantalla.
+
+#### `pase.png` — 100 × 100
+
+Plantilla de §5.2, con este objeto:
+
+```
+a short golden staircase of three chunky cube-shaped steps rising from left
+to right and filling the frame, seen at a gentle three-quarter angle, a soft
+violet ribbon banner draped across the lowest step and trailing off to the
+left, and a glowing pale gold crescent moon medallion floating just above the
+tallest step with three or four small sparkles around it. Warm golden metal
+with soft highlights on the step tops.
+Same style, outline weight, lighting and ground shadow as the previous icon.
+Plain solid black background. No text, no letters, no numbers, no watermark.
+```
+
+> ⚠ **Por qué una escalera y no un billete ni una medalla.**
+>
+> - Una **medalla o una estrella** compite de lleno con `gyms` (el estuche de
+>   insignias) y con las estrellas del propio Pad.
+> - Un **billete o carta de temporada** compite con `cartas`, que ya es un
+>   abanico de cartas — a 100 × 100 las dos siluetas son *un rectángulo
+>   inclinado*.
+> - Una **escalera de tres escalones** no se parece a **ninguno** de los otros
+>   veinte iconos: es la única silueta escalonada de la rejilla, se lee de un
+>   vistazo a 100 px y dice literalmente lo que hace el sistema — **subir de
+>   nivel**. Es la misma lección por la que `gyms` pasó de una medalla suelta al
+>   estuche abierto y `protecciones` de un escudo a una parcela con cúpula.
+>
+> ⚠ **La luna creciente no es decoración**: es la marca de la casa (el servidor
+> se llama Luna Eternal y la ciudadela es de noche permanente), y es lo que
+> distingue *este* pase de un icono de progreso genérico.
+>
+> ⚠ **Y la cinta es violeta a propósito**: es el color de la **Vía Luna** en la
+> pantalla (`#B98CFF`). El icono enseña las dos mitades del sistema —lo que se
+> sube y lo que se compra— sin una sola letra.
+
+---
+
 ### 5.5 · Los tres sobres de CARTAS — 512 × 512 (2026-09-02)
 
 La pantalla tiene **tres zonas** y las tres hacen lo mismo: abrir un sobre.

@@ -100,6 +100,15 @@ public final class CatalogoPad {
             // ⚠⚠ ARRANCA APAGADA: su pantalla todavia no existe. La celda sale
             //    bloqueada en vez de desaparecer, que es la regla de esta lista
             //    -- enseñar lo que va a haber es informacion; esconderlo, no.
+            // ⚠⚠ EL PASE DE BATALLA ABRE LA PAGINA 2, y esa colocacion es la
+            //    unica que no toma una decision que no me toca: la pagina 1 son
+            //    quince y estan llenas, asi que meterlo arriba baja a otra
+            //    --y eso lo decide el usuario, no yo--. De la 2, el primer
+            //    hueco es el mas visible que hay.
+            //    ⚠ Si el usuario lo quiere en la pagina 1, es cambiar esta
+            //      linea de sitio: la rejilla pagina sola y cada jugador
+            //      reordena la suya (OrdenPad).
+            new Ficha("pase",       true),
             new Ficha("protecciones", true),
             // ⚠⚠ EL SANTUARIO VA TRAS LAS PROTECCIONES, en la pagina 2: las dos
             //    son «mi terreno». Y es el mismo motivo que el resto de la

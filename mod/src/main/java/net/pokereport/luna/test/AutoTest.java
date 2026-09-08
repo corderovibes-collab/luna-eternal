@@ -102,6 +102,7 @@ public final class AutoTest {
             testFotos(a, b);
             testSubidas();
             testNichoConfig();
+            testPase(a);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -3673,6 +3674,10 @@ public final class AutoTest {
                         + "('__autotest_n1','__autotest_n2')",
                     "DELETE s FROM santuario s JOIN player p "
                         + "ON p.player_id = s.owner_id WHERE p.mc_uuid = ?",
+                    "DELETE pr FROM pase_reclamo pr JOIN player p "
+                        + "ON p.player_id = pr.player_id WHERE p.mc_uuid = ?",
+                    "DELETE pj FROM pase_jugador pj JOIN player p "
+                        + "ON p.player_id = pj.player_id WHERE p.mc_uuid = ?",
                     "DELETE le FROM ledger_entry le JOIN player p "
                         + "ON p.player_id = le.player_id WHERE p.mc_uuid = ?",
                     "DELETE pe FROM player_economy pe JOIN player p "
@@ -4212,6 +4217,246 @@ public final class AutoTest {
         } catch (java.io.IOException e) {
             return false;
         }
+    }
+
+    /**
+     * EL PASE DE BATALLA (D-045).
+     *
+     * <p>&#9888;&#9888;&#9888; LA COMPROBACION QUE IMPORTA ES <b>EL MINIMO DE
+     * DIAS</b>. Todo lo demas del pase se puede mirar en pantalla; que el pase
+     * no se pueda completar en una semana no se ve hasta que alguien lo ha
+     * completado en una semana, y para entonces ya no hay vuelta atras. Sale de
+     * dos numeros &mdash;la curva y el tope diario&mdash; que estan en ficheros
+     * distintos y que nada obliga a mirar juntos.
+     *
+     * <p>&#9888;&#9888; Y LA SEGUNDA ES LA MONETIZACION: que la via de PAGO no
+     * lleve nada que no sea un cosmetico. Un Caramelo Raro colado ahi no da
+     * ningun error &mdash; da un producto que vende progresion por dinero real,
+     * que es T4 y la linea roja de D-007 y D-014. Es exactamente la clase de
+     * regla que se cae sola cuando alguien edita una tabla.
+     */
+    private void testPase(long jugador) throws Exception {
+        // ---- la curva: funcion pura, sin base --------------------------
+        long suma = 0;
+        for (int n = 0; n < net.pokereport.luna.pase.PaseNivel.MAX; n++) {
+            suma += net.pokereport.luna.pase.PaseNivel.coste(n);
+        }
+        check("la curva del pase suma exactamente el total",
+              suma == net.pokereport.luna.pase.PaseNivel.total());
+        check("con la XP total se llega al nivel maximo",
+              net.pokereport.luna.pase.PaseNivel.nivelDe(
+                      net.pokereport.luna.pase.PaseNivel.total())
+                  == net.pokereport.luna.pase.PaseNivel.MAX);
+
+        // ⚠ Los BORDES son donde esto se rompe: un jugador con la XP justa del
+        //   nivel 12 tiene que estar en el 12, no en el 11 -- si no, ve el
+        //   premio y no lo puede cobrar, una vez de cada cincuenta y sin traza.
+        boolean inversa = true;
+        for (int n = 0; n <= net.pokereport.luna.pase.PaseNivel.MAX; n++) {
+            long justo = net.pokereport.luna.pase.PaseNivel.acumulada(n);
+            if (net.pokereport.luna.pase.PaseNivel.nivelDe(justo) != n) {
+                inversa = false;
+            }
+            if (n < net.pokereport.luna.pase.PaseNivel.MAX
+                    && net.pokereport.luna.pase.PaseNivel.nivelDe(
+                            net.pokereport.luna.pase.PaseNivel.acumulada(n + 1) - 1)
+                        != n) {
+                inversa = false;
+            }
+        }
+        check("nivelDe y acumulada cuadran en los 51 bordes", inversa);
+
+        // ⚠⚠⚠ LA PROPIEDAD DE DISEÑO DEL SISTEMA ENTERO.
+        check("EL PASE NO SE PUEDE COMPLETAR EN MENOS DE 40 DIAS",
+              net.pokereport.luna.pase.PaseNivel.diasMinimos() >= 40);
+        check("el pase cabe en una temporada de 60 dias",
+              net.pokereport.luna.pase.PaseNivel.diasMinimos() <= 60);
+        check("el descanso acumulado no pasa de tres dias",
+              net.pokereport.luna.pase.PaseNivel.TOPE_MAXIMO
+                  == net.pokereport.luna.pase.PaseNivel.TOPE_DIARIO
+                     * net.pokereport.luna.pase.PaseNivel.DIAS_DESCANSO);
+
+        // ---- la XP de la Torre -----------------------------------------
+        boolean sube = true;
+        long anterior = -1;
+        for (int r = 1; r <= 200; r++) {
+            long x = net.pokereport.luna.pase.PaseXp.torre(r);
+            if (x < anterior) {
+                sube = false;
+            }
+            anterior = x;
+        }
+        check("la XP de la Torre nunca baja al subir de ronda", sube);
+        check("la XP de la Torre tiene techo",
+              net.pokereport.luna.pase.PaseXp.torre(2000)
+                  == net.pokereport.luna.pase.PaseXp.torre(200));
+        // ⚠⚠ NINGUN COMBATE SUELTO VALE MAS DE UN QUINTO DEL DIA. Es lo que
+        //    impide que la Torre se coma el pase: el tope diario ya lo taparia,
+        //    pero un numero enorme en pantalla enseñaria que lo demas sobra --y
+        //    lo que el usuario pidio es que NO ESTE CHETADO, no que este chetado
+        //    y contenido.
+        check("ninguna ronda de la Torre vale mas de un quinto del tope diario",
+              net.pokereport.luna.pase.PaseXp.torre(100_000)
+                  <= net.pokereport.luna.pase.PaseNivel.TOPE_DIARIO / 5);
+
+        // ---- el catalogo -------------------------------------------------
+        boolean todosLosNiveles = true;
+        boolean libreSinCosmeticos = true;
+        boolean objetosExisten = true;
+        boolean cofresExisten = true;
+        for (int n = 1; n <= net.pokereport.luna.pase.PaseNivel.MAX; n++) {
+            var r = net.pokereport.luna.pase.PaseCatalogo.libre(n);
+            if (r == null) {
+                todosLosNiveles = false;
+                continue;
+            }
+            // D-039: los cosmeticos NO se consiguen jugando. Uno en la via
+            // gratuita seria justo eso, y no daria ningun error.
+            if (r.tipo() == net.pokereport.luna.pase.Recompensa.Tipo.COSMETICO) {
+                libreSinCosmeticos = false;
+            }
+            if (r.tipo() == net.pokereport.luna.pase.Recompensa.Tipo.OBJETO) {
+                var id = net.minecraft.util.Identifier.tryParse(r.id());
+                var item = id == null ? null
+                        : net.minecraft.registry.Registries.ITEM.get(id);
+                if (item == null || item == net.minecraft.item.Items.AIR
+                        || r.cantidad() <= 0) {
+                    objetosExisten = false;
+                    LunaEternal.LOG.error("El pase promete un objeto que no "
+                            + "existe: {} (nivel {})", r.id(), n);
+                }
+            }
+            if (r.tipo() == net.pokereport.luna.pase.Recompensa.Tipo.LLAVE
+                    && net.pokereport.luna.crate.Cofre.de(r.id()) == null) {
+                cofresExisten = false;
+                LunaEternal.LOG.error("El pase da llaves de un cofre que no "
+                        + "existe: {} (nivel {})", r.id(), n);
+            }
+        }
+        check("los 50 niveles tienen premio en la via libre", todosLosNiveles);
+        check("la via libre no regala cosmeticos (D-039)", libreSinCosmeticos);
+        check("todo objeto del pase existe en el registro", objetosExisten);
+        check("toda llave del pase apunta a un cofre real", cofresExisten);
+
+        // ⚠⚠⚠ LA REGLA DE MONETIZACION, Y NO ES DE ESTILO.
+        boolean lunaSoloCosmeticos = true;
+        boolean lunaEnRango = true;
+        boolean cosmeticosExisten = true;
+        for (int n : net.pokereport.luna.pase.PaseCatalogo.nivelesLuna()) {
+            if (n < 1 || n > net.pokereport.luna.pase.PaseNivel.MAX) {
+                lunaEnRango = false;
+                continue;
+            }
+            var r = net.pokereport.luna.pase.PaseCatalogo.luna(n);
+            if (r.tipo() != net.pokereport.luna.pase.Recompensa.Tipo.COSMETICO) {
+                lunaSoloCosmeticos = false;
+                LunaEternal.LOG.error("LA VIA DE PAGO DEL PASE VENDE ALGO QUE NO "
+                        + "ES UN COSMETICO: {} en el nivel {}. Eso es T4.",
+                        r.tipo(), n);
+            } else if (net.pokereport.luna.cosmetics.Catalogo.de(r.id()) == null) {
+                // El fallo de los 62 cosmeticos que no existian: se concede, no
+                // da error, y el jugador no ve NADA.
+                cosmeticosExisten = false;
+                LunaEternal.LOG.error("El pase da un cosmetico que no esta en el "
+                        + "catalogo: {} (nivel {})", r.id(), n);
+            }
+        }
+        check("LA VIA LUNA SOLO LLEVA COSMETICOS (T4, D-007/D-014)",
+              lunaSoloCosmeticos);
+        check("los niveles de la via Luna estan dentro del pase", lunaEnRango);
+        check("todo cosmetico del pase existe en el catalogo", cosmeticosExisten);
+
+        // ⚠⚠ EL MULTIPLO QUE DECIDE SI EL PASE SE COME LA TIENDA. Con un
+        //    cosmetico en cada nivel serian 4x y nadie volveria a comprar un
+        //    sombrero suelto -- y la tienda de cosmeticos es la que, segun
+        //    monetization.md §2, tiene que sostener el negocio.
+        long valor = net.pokereport.luna.pase.PaseCatalogo.valorTiendaLuna();
+        check("la via Luna devuelve entre 1,5x y 3x lo que cuesta",
+              valor >= net.pokereport.luna.pase.PaseCatalogo.PRECIO_LUNA * 3 / 2
+                  && valor <= net.pokereport.luna.pase.PaseCatalogo.PRECIO_LUNA * 3);
+        // ⚠ Y que haya al menos uno que NO se pueda comprar: es lo unico del
+        //   pase que no se consigue de ninguna otra forma, y sin ello la via
+        //   Luna solo ahorra LunaCoins.
+        boolean hayExclusivo = false;
+        for (int n : net.pokereport.luna.pase.PaseCatalogo.nivelesLuna()) {
+            var pieza = net.pokereport.luna.cosmetics.Catalogo.de(
+                    net.pokereport.luna.pase.PaseCatalogo.luna(n).id());
+            if (pieza != null && pieza.precio() == 0) {
+                hayExclusivo = true;
+            }
+        }
+        check("la via Luna lleva cosmeticos que no estan a la venta", hayExclusivo);
+
+        // ---- el servicio, contra la base -------------------------------
+        var svc = LunaEternal.pase();
+        if (svc == null) {
+            return;
+        }
+        var temporada = svc.temporada();
+        check("hay una temporada de pase en curso", temporada.numero() >= 1);
+
+        // ⚠⚠⚠ EL TOPE DIARIO SE APLICA DE VERDAD. Es la comprobacion que
+        //    convierte el diseño en una garantia: se piden diez topes de golpe
+        //    y solo puede entrar uno.
+        var antes = svc.estado(jugador);
+        long pedido = net.pokereport.luna.pase.PaseNivel.TOPE_MAXIMO * 10L;
+        var g = svc.ganar(jugador, pedido);
+        check("el tope diario recorta una concesion desmedida",
+              g.concedida() <= net.pokereport.luna.pase.PaseNivel.TOPE_MAXIMO
+                  && g.concedida() < pedido);
+        var g2 = svc.ganar(jugador, pedido);
+        check("una vez topado, el dia no da ni una XP mas", g2.concedida() == 0);
+
+        var despues = svc.estado(jugador);
+        check("la XP del pase sube exactamente lo concedido",
+              despues.xp() == antes.xp() + g.concedida());
+        check("el nivel del pase sale de la XP y no de una columna",
+              despues.nivel()
+                  == net.pokereport.luna.pase.PaseNivel.nivelDe(despues.xp()));
+
+        // ---- cobrar --------------------------------------------------------
+        int nivel = despues.nivel();
+        if (nivel >= 1) {
+            var cobro = svc.reclamar(jugador, 1,
+                    net.pokereport.luna.pase.PaseCatalogo.LIBRE);
+            check("un premio alcanzado se puede cobrar", cobro != null);
+            // ⚠ La clave primaria lo corta EN LA BASE, no una comprobacion.
+            var otra = svc.reclamar(jugador, 1,
+                    net.pokereport.luna.pase.PaseCatalogo.LIBRE);
+            check("EL MISMO PREMIO NO SE COBRA DOS VECES", otra == null);
+        }
+
+        // ⚠⚠ P6: EL CLIENTE PIDE, EL SERVIDOR DECIDE. Sin esto un cliente
+        //    modificado pide el nivel 50 el primer dia y se lleva la Master Ball.
+        var alto = svc.reclamar(jugador, net.pokereport.luna.pase.PaseNivel.MAX,
+                net.pokereport.luna.pase.PaseCatalogo.LIBRE);
+        check("no se cobra un nivel que no se ha alcanzado",
+              nivel >= net.pokereport.luna.pase.PaseNivel.MAX || alto == null);
+
+        // ⚠⚠ Y LO MISMO CON LA VIA DE PAGO: sin comprarla, no se cobra.
+        int primerLuna = net.pokereport.luna.pase.PaseCatalogo.nivelesLuna().get(0);
+        var sinPagar = svc.reclamar(jugador, primerLuna,
+                net.pokereport.luna.pase.PaseCatalogo.LUNA);
+        check("no se cobra la via Luna sin haberla comprado",
+              !despues.premium() && sinPagar == null);
+
+        // ---- comprar la via Luna ------------------------------------------
+        //
+        // ⚠ Se le da el dinero justo: la compra tiene que cobrar exactamente
+        //   el precio, ni mas ni menos, y dejarlo a cero lo demuestra.
+        long saldoAntes = economy.balance(jugador, Currency.REPORTCOIN);
+        economy.credit(jugador, Currency.REPORTCOIN,
+                net.pokereport.luna.pase.PaseCatalogo.PRECIO_LUNA,
+                "autotest_pase", "autotest_pase_luna:" + jugador
+                        + ":" + System.nanoTime());
+        var compra = svc.comprarLuna(jugador);
+        check("la via Luna se compra", compra.ok());
+        check("la via Luna cuesta exactamente su precio",
+              economy.balance(jugador, Currency.REPORTCOIN) == saldoAntes);
+        var repetida = svc.comprarLuna(jugador);
+        check("LA VIA LUNA NO SE COBRA DOS VECES", !repetida.ok());
+        check("tras comprarla, la via Luna consta activa",
+              svc.estado(jugador).premium());
     }
 
     private void check(String name, boolean ok) {

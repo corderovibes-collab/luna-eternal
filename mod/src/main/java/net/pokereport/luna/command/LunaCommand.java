@@ -636,6 +636,35 @@ public final class LunaCommand {
                 .then(literal("npc")
                     .executes(ctx -> npcEnfermera(ctx.getSource()))))
 
+            .then(literal("pase")
+                .requires(s -> s.hasPermissionLevel(3))
+                .executes(ctx -> pase(ctx.getSource()))
+                .then(literal("nueva_temporada")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .executes(ctx -> nuevaTemporadaPase(ctx.getSource(), 60))
+                    .then(argument("dias",
+                            com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 365))
+                        .executes(ctx -> nuevaTemporadaPase(ctx.getSource(),
+                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                        .getInteger(ctx, "dias")))))
+                .then(literal("xp")
+                    .then(argument("jugador",
+                            net.minecraft.command.argument.EntityArgumentType.player())
+                        .then(argument("cantidad",
+                                com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                            .executes(ctx -> xpPase(ctx.getSource(),
+                                    net.minecraft.command.argument.EntityArgumentType
+                                            .getPlayer(ctx, "jugador"),
+                                    com.mojang.brigadier.arguments.IntegerArgumentType
+                                            .getInteger(ctx, "cantidad"))))))
+                .then(literal("via_luna")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .then(argument("jugador",
+                            net.minecraft.command.argument.EntityArgumentType.player())
+                        .executes(ctx -> viaLunaPase(ctx.getSource(),
+                                net.minecraft.command.argument.EntityArgumentType
+                                        .getPlayer(ctx, "jugador"))))))
+
             .then(literal("torre_batalla")
                 .requires(s -> s.hasPermissionLevel(4))
                 .then(literal("npc")
@@ -1486,6 +1515,120 @@ public final class LunaCommand {
         p.teleport(mundoTorre, pos.x, pos.y, pos.z,
                 net.pokereport.luna.torrebatalla.TorreBatallaService.YAW_JUGADOR, 0f);
         p.sendMessage(Text.literal("§aTeletransportado a la plataforma de la Torre de Batalla."), false);
+        return 1;
+    }
+
+    // ======================= PASE DE BATALLA (D-045) =======================
+
+    /** Que dice el pase ahora mismo: temporada, curva y tope. */
+    private static int pase(ServerCommandSource src) {
+        var svc = LunaEternal.pase();
+        if (svc == null) {
+            src.sendError(Text.literal("\u00a7cEl pase no esta cargado."));
+            return 0;
+        }
+        // \u26a0 La base se lee en el hilo de E/S y la respuesta se manda por el del
+        //   servidor: `sendFeedback` toca el estado del comando, y eso no se
+        //   hace desde otro hilo.
+        LunaEternal.submit(() -> {
+            try {
+                var t = svc.temporada();
+                String linea1 = String.format(
+                        "\u00a76Pase de Batalla \u00a78\u00b7 \u00a7fTemporada %d, quedan %d dias",
+                        t.numero(), t.diasRestantes());
+                String linea2 = String.format(
+                        "\u00a77%d niveles \u00a78\u00b7 \u00a77%,d XP en total \u00a78\u00b7 "
+                        + "\u00a77tope %,d/dia \u00a78\u00b7 \u00a77minimo %d dias",
+                        net.pokereport.luna.pase.PaseNivel.MAX,
+                        net.pokereport.luna.pase.PaseNivel.total(),
+                        net.pokereport.luna.pase.PaseNivel.TOPE_DIARIO,
+                        net.pokereport.luna.pase.PaseNivel.diasMinimos());
+                String linea3 = String.format(
+                        "\u00a77Via Luna %,d LunaCoins \u00a78\u00b7 \u00a77vale %,d en tienda "
+                        + "\u00a78\u00b7 \u00a77via libre %,d de Plata",
+                        net.pokereport.luna.pase.PaseCatalogo.PRECIO_LUNA,
+                        net.pokereport.luna.pase.PaseCatalogo.valorTiendaLuna(),
+                        net.pokereport.luna.pase.PaseCatalogo.plataDeLaViaLibre());
+                src.getServer().execute(() -> {
+                    src.sendFeedback(() -> Text.literal(linea1), false);
+                    src.sendFeedback(() -> Text.literal(linea2), false);
+                    src.sendFeedback(() -> Text.literal(linea3), false);
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo leer el pase", e);
+            }
+        });
+        return 1;
+    }
+
+    /**
+     * Rota la temporada.
+     *
+     * <p>&#9888;&#9888; NO BORRA NADA: las filas viejas llevan el numero de
+     * temporada en la clave. Y avisa por difusion, como la Torre &mdash; una
+     * temporada que empieza sin que nadie se entere no la juega nadie.
+     */
+    private static int nuevaTemporadaPase(ServerCommandSource src, int dias) {
+        var svc = LunaEternal.pase();
+        if (svc == null) {
+            src.sendError(Text.literal("\u00a7cEl pase no esta cargado."));
+            return 0;
+        }
+        LunaEternal.submit(() -> {
+            try {
+                var t = svc.nuevaTemporada(dias);
+                src.getServer().execute(() -> {
+                    src.getServer().getPlayerManager().broadcast(Text.literal(
+                            "\u00a76\u00a7l[PASE DE BATALLA] \u00a7eEmpieza la "
+                            + "\u00a76\u00a7lTemporada #" + t.numero()
+                            + "\u00a7e. " + dias + " dias para llegar al nivel "
+                            + net.pokereport.luna.pase.PaseNivel.MAX + "."), false);
+                    for (ServerPlayerEntity p
+                            : src.getServer().getPlayerManager().getPlayerList()) {
+                        net.pokereport.luna.net.Red.enviarPase(p);
+                    }
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo rotar la temporada del pase", e);
+            }
+        });
+        return 1;
+    }
+
+    /** Da XP del pase a mano. Para probar sin jugar sesenta dias. */
+    private static int xpPase(ServerCommandSource src, ServerPlayerEntity p, int xp) {
+        net.pokereport.luna.pase.Pase.ganar(p, xp, "comando");
+        src.sendFeedback(() -> Text.literal("\u00a7a+" + xp + " XP de pase a "
+                + p.getName().getString() + " \u00a78(el tope diario se aplica igual)"),
+                false);
+        return 1;
+    }
+
+    /**
+     * Da la via Luna sin cobrar.
+     *
+     * <p>&#9888; Existe para los DOS casos que van a pasar de verdad: un
+     * reembolso y un premio de evento. Sin comando, la unica forma seria tocar
+     * la base a mano.
+     */
+    private static int viaLunaPase(ServerCommandSource src, ServerPlayerEntity p) {
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players().resolve(
+                        p.getUuid(), p.getName().getString());
+                LunaEternal.pase().darLuna(id);
+                net.pokereport.luna.net.Red.enviarPase(p);
+                // \u26a0 `sendFeedback` toca el estado del comando, y eso no se hace
+                //   desde el hilo de E/S: se compone aqu\u00ed y se manda por el del
+                //   servidor.
+                src.getServer().execute(() -> src.sendFeedback(
+                        () -> Text.literal("\u00a7aVia Luna concedida a "
+                                + p.getName().getString() + " \u00a78(sin cobrar)"),
+                        false));
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo dar la via Luna", e);
+            }
+        });
         return 1;
     }
 

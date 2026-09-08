@@ -467,6 +467,12 @@ public final class Combate {
                         "cobblemon:poke_ball",
                         net.minecraft.sound.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
                         1.0f);
+                // PASE DE BATALLA: solo la PRIMERA vez, dentro del `if (nueva)`.
+                // Fuera, repetir un gimnasio ya ganado seria 300 XP del pase por
+                // combate, o sea el tope diario en tres combates -- y sin dar
+                // ningun error, que es como se descubren estas cosas tarde.
+                net.pokereport.luna.pase.Pase.ganar(jugador,
+                        net.pokereport.luna.pase.PaseXp.MEDALLA, "medalla");
             }
             // ⚠⚠ EL ESTADO NO ES DE QUIEN LO MIRA, y aquí es literal: la ficha
             //    del PokePad la dibuja el cliente con lo que le mandaron la

@@ -134,6 +134,18 @@ public final class CaptureListener {
                 LunaEternal.progression().grant(id, Path.COLECCIONISTA,
                     nueva ? XP_ESPECIE_NUEVA : XP_CAPTURA);
 
+                // PASE DE BATALLA. Va aquí y no en un listener aparte por lo
+                // mismo que en `OficiosListener`: este es el sitio donde ya se
+                // sabe si la especie era nueva, y esa es la única diferencia
+                // entre 12 XP y 120. Suscribirse otra vez a POKEMON_CAPTURED
+                // obligaría a preguntarle a la Pokédex por segunda vez —y a
+                // hacerlo en el instante justo, porque para entonces la
+                // especie YA ESTÁ registrada y siempre saldría «no era nueva».
+                net.pokereport.luna.pase.Pase.ganar(player,
+                    nueva ? net.pokereport.luna.pase.PaseXp.ESPECIE_NUEVA
+                          : net.pokereport.luna.pase.PaseXp.CAPTURA,
+                    nueva ? "pokedex_nueva" : "captura");
+
                 if (nueva) {
                     // Las Marcas no se comercian, así que premiar aquí no
                     // infla nada (ECO-001 §2).

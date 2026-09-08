@@ -51,8 +51,18 @@ public final class EstadoCliente {
     private static Red.RespuestaHonor honor;
     private static Red.EstadoPendientes pendientes;
     private static Red.EstadoRecompensasTorre recompensasTorre;
+    private static Red.EstadoPase pase;
 
     private EstadoCliente() {}
+
+    public static void guardar(Red.EstadoPase nuevo) {
+        pase = nuevo;
+    }
+
+    /** El pase de batalla, o {@code null} mientras no haya llegado nada. */
+    public static Red.EstadoPase pase() {
+        return pase;
+    }
 
     public static void guardar(Red.Saldo nuevo) {
         saldo = nuevo;

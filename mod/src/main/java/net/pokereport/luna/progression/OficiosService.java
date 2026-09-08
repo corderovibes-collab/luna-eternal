@@ -107,6 +107,14 @@ public final class OficiosService {
                 jugador, oficio.displayName.toUpperCase(java.util.Locale.ROOT),
                 detalle, objeto);
 
+        // PASE DE BATALLA: uno por cada nivel CRUZADO, no uno por concesion.
+        // Es la misma cuenta que el pago de arriba y por el mismo motivo: una
+        // concesion grande puede saltar de I a IV, y pagar solo el IV regalaria
+        // dos niveles de trabajo.
+        int cruzados = subida.estado().level() - subida.nivelAnterior();
+        net.pokereport.luna.pase.Pase.ganar(jugador,
+                net.pokereport.luna.pase.PaseXp.NIVEL_VIA * cruzados, "nivel_via");
+
         comprobarCompletos(jugador, playerId);
     }
 

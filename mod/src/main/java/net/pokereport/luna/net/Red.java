@@ -2215,6 +2215,115 @@ public class Red implements ModInitializer {
         }
     }
 
+    // ======================= PASE DE BATALLA (D-045) =======================
+
+    /** «Dame mi pase». Se pide al abrir la pantalla. */
+    public record PedirPase() implements CustomPayload {
+        public static final Id<PedirPase> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_pase"));
+        public static final PacketCodec<RegistryByteBuf, PedirPase> CODEC =
+                PacketCodec.unit(new PedirPase());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Lo que se puede hacer con el pase: {@code comprar}, {@code reclamar} o
+     * {@code reclamar_todo}.
+     *
+     * <p>&#9888;&#9888; NO VIAJA NI EL PRECIO NI LA RECOMPENSA: viaja el NIVEL y
+     * la VIA, y el servidor mira su propio catalogo. Es lo mismo que ya hace la
+     * tienda, y por lo mismo &mdash; si el premio viniera del cliente, un
+     * cliente modificado pediria la Master Ball del nivel 50 el primer dia.
+     */
+    public record AccionPase(String accion, int nivel, String via)
+            implements CustomPayload {
+        public static final Id<AccionPase> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_pase"));
+        public static final PacketCodec<RegistryByteBuf, AccionPase> CODEC =
+                PacketCodec.tuple(
+                        CADENA, AccionPase::accion,
+                        PacketCodecs.VAR_INT, AccionPase::nivel,
+                        CADENA, AccionPase::via,
+                        AccionPase::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * El pase del jugador.
+     *
+     * <h2>&#9888;&#9888; EL NIVEL NO VIAJA: SE CALCULA</h2>
+     *
+     * Viaja la XP total y el cliente la pasa por {@code PaseNivel.nivelDe}, que
+     * vive en {@code main} y por tanto es <b>la misma funcion</b> que usa el
+     * servidor para decidir que se puede cobrar. Mandar el nivel seria un
+     * segundo sitio donde vive la curva, y ya sabemos como acaba eso: dos listas
+     * que nada obliga a coincidir. Por lo mismo el catalogo de premios tampoco
+     * viaja &mdash; la pantalla lee {@code PaseCatalogo} directamente.
+     *
+     * <h2>&#9888; Lo cobrado va como MASCARA DE BITS, una por via</h2>
+     *
+     * Cincuenta niveles caben de sobra en un {@code long}, y de cada uno solo
+     * hay que saber si esta cobrado. Es la misma decision que las medallas
+     * &mdash; y aqui el bit es <b>el numero del nivel</b>, que es intrinseco y no
+     * una posicion en una lista: el fallo de «ganar a Brock enciende la de
+     * Misty» no puede darse porque el nivel 7 es el nivel 7 mire quien lo mire.
+     *
+     * @param saldoLuna las LunaCoins que tiene, para pintar el boton de comprar
+     */
+    public record EstadoPase(int temporada, int diasRestantes, long xp,
+                             boolean premium, int xpHoy, int topeHoy,
+                             long cobradoLibre, long cobradoLuna, long saldoLuna)
+            implements CustomPayload {
+        public static final Id<EstadoPase> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_pase"));
+        // Nueve campos: `PacketCodec.tuple` admite seis, asi que el codificador
+        // va a mano. Es lo mismo que hace `EstadoTesoros`.
+        public static final PacketCodec<RegistryByteBuf, EstadoPase> CODEC =
+                PacketCodec.ofStatic(EstadoPase::escribir, EstadoPase::leer);
+
+        private static void escribir(RegistryByteBuf buf, EstadoPase e) {
+            buf.writeVarInt(e.temporada);
+            buf.writeVarInt(e.diasRestantes);
+            buf.writeVarLong(e.xp);
+            buf.writeBoolean(e.premium);
+            buf.writeVarInt(e.xpHoy);
+            buf.writeVarInt(e.topeHoy);
+            buf.writeLong(e.cobradoLibre);
+            buf.writeLong(e.cobradoLuna);
+            buf.writeVarLong(e.saldoLuna);
+        }
+
+        private static EstadoPase leer(RegistryByteBuf buf) {
+            return new EstadoPase(buf.readVarInt(), buf.readVarInt(),
+                    buf.readVarLong(), buf.readBoolean(), buf.readVarInt(),
+                    buf.readVarInt(), buf.readLong(), buf.readLong(),
+                    buf.readVarLong());
+        }
+
+        /** Si ese nivel de esa via ya esta cobrado. */
+        public boolean cobrado(int nivel, String via) {
+            if (nivel < 1 || nivel > 63) {
+                return false;
+            }
+            long mascara = net.pokereport.luna.pase.PaseCatalogo.LUNA.equals(via)
+                    ? cobradoLuna : cobradoLibre;
+            return (mascara & (1L << (nivel - 1))) != 0;
+        }
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record AbrirSantuario() implements CustomPayload {
         public static final Id<AbrirSantuario> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_santuario"));
@@ -3198,6 +3307,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirRecompensasTorre.ID, PedirRecompensasTorre.CODEC);
         PayloadTypeRegistry.playC2S().register(ReclamarRecompensaTorre.ID, ReclamarRecompensaTorre.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoRecompensasTorre.ID, EstadoRecompensasTorre.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirPase.ID, PedirPase.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionPase.ID, AccionPase.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoPase.ID, EstadoPase.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirSantuario.ID, AbrirSantuario.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirCentroPokemon.ID, AbrirCentroPokemon.CODEC);
         PayloadTypeRegistry.playC2S().register(ConfirmarCuraCentro.ID, ConfirmarCuraCentro.CODEC);
@@ -4213,6 +4325,11 @@ public class Red implements ModInitializer {
                                 : "Recompensa cobrada";
                         net.pokereport.luna.ui.Aviso.logro(jugador, "MISION COMPLETA",
                                 detalle, "minecraft:written_book");
+                        // PASE DE BATALLA. Va dentro del `if (claim)`: `claim`
+                        // es quien decide que la mision estaba completa y sin
+                        // cobrar, asi que pulsar dos veces no paga dos veces.
+                        net.pokereport.luna.pase.Pase.ganar(jugador,
+                                net.pokereport.luna.pase.PaseXp.MISION, "mision");
                     }
                 } catch (Exception e) {
                     LunaEternal.LOG.warn("No se pudo cobrar la mision {}: {}",
@@ -4226,6 +4343,41 @@ public class Red implements ModInitializer {
                 // regla es «lo que mueve dinero reenvia el saldo», y una regla
                 // que solo se aplica donde hoy se nota deja de aplicarse el dia
                 // que se añada el numero a la pantalla.
+                enviarSaldo(jugador);
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirPase.ID, (carga, ctx) ->
+                enviarPase(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionPase.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                if (LunaEternal.pase() == null) {
+                    return;
+                }
+                try {
+                    long id = LunaEternal.players().resolve(
+                            jugador.getUuid(), jugador.getGameProfile().getName());
+                    switch (carga.accion()) {
+                        case "comprar" -> comprarPase(jugador, id);
+                        case "reclamar" -> {
+                            var cobro = LunaEternal.pase().reclamar(
+                                    id, carga.nivel(), carga.via());
+                            if (cobro != null) {
+                                entregarPase(jugador, id, java.util.List.of(cobro));
+                            }
+                        }
+                        case "reclamar_todo" -> entregarPase(jugador, id,
+                                LunaEternal.pase().reclamarTodo(id));
+                        default -> { }
+                    }
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo en el pase de batalla", e);
+                }
+                // Se reenvia SIEMPRE, saliera bien o mal: es la forma de que la
+                // pantalla vuelva a la verdad sin tener que adivinar que cambio.
+                enviarPase(jugador);
                 enviarSaldo(jugador);
             });
         });
@@ -5279,6 +5431,159 @@ public class Red implements ModInitializer {
             }
         } catch (Throwable t) {
             LunaEternal.LOG.error("No se pudo entregar {}", premio.id(), t);
+        }
+    }
+
+    /**
+     * Manda el pase del jugador.
+     *
+     * <p>&#9888; Es {@code public} porque lo llama {@code pase.Pase} al subir de
+     * nivel: el estado que dibuja la pantalla ha cambiado, asi que el servidor
+     * lo reenvia sin que nadie pulse nada. Es la leccion del 23-ago.
+     *
+     * <p>&#9888;&#9888; SE SOMETE AL EXECUTOR DE E/S <b>POR SU CUENTA</b>, y no
+     * es una comodidad: lee la base, y lo llaman desde CUATRO sitios &mdash;dos
+     * manejadores de red, el aviso de subida de nivel y un comando&mdash;, de
+     * los cuales dos estan en el HILO DEL SERVIDOR. Si dependiera de que quien
+     * llama se acuerde de someterlo, bastaria con que uno se olvidara para
+     * congelar el servidor entero en cada subida de nivel. Aqui no se puede
+     * usar mal. (Es lo mismo que ya hace {@code enviarCazas}.)
+     */
+    public static void enviarPase(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var svc = LunaEternal.pase();
+        var servidor = jugador == null ? null : jugador.getServer();
+        if (svc == null || servidor == null) {
+            return;
+        }
+        LunaEternal.submit(() -> enviarPaseAhora(jugador, svc, servidor));
+    }
+
+    private static void enviarPaseAhora(
+            net.minecraft.server.network.ServerPlayerEntity jugador,
+            net.pokereport.luna.pase.PaseService svc,
+            net.minecraft.server.MinecraftServer servidor) {
+        try {
+            long id = LunaEternal.players().resolve(
+                    jugador.getUuid(), jugador.getGameProfile().getName());
+            var e = svc.estado(id);
+            long libre = 0;
+            long luna = 0;
+            for (String clave : e.reclamadas()) {
+                int dosPuntos = clave.indexOf(':');
+                if (dosPuntos <= 0) {
+                    continue;
+                }
+                int nivel = Integer.parseInt(clave.substring(0, dosPuntos));
+                if (nivel < 1 || nivel > 63) {
+                    continue;
+                }
+                long bit = 1L << (nivel - 1);
+                if (net.pokereport.luna.pase.PaseCatalogo.LUNA
+                        .equals(clave.substring(dosPuntos + 1))) {
+                    luna |= bit;
+                } else {
+                    libre |= bit;
+                }
+            }
+            long saldo = LunaEternal.economy().balance(
+                    id, net.pokereport.luna.economy.Currency.REPORTCOIN);
+            final long fl = libre;
+            final long fu = luna;
+            servidor.execute(() -> {
+                if (!jugador.isRemoved()) {
+                    ServerPlayNetworking.send(jugador, new EstadoPase(
+                            e.temporada().numero(), e.temporada().diasRestantes(),
+                            e.xp(), e.premium(), e.xpHoy(), e.topeHoy(),
+                            fl, fu, saldo));
+                }
+            });
+        } catch (Exception e) {
+            LunaEternal.LOG.error("No se pudo enviar el pase", e);
+        }
+    }
+
+    /** Compra la via Luna. Va por el executor de E/S. */
+    private static void comprarPase(
+            net.minecraft.server.network.ServerPlayerEntity jugador, long id) {
+        try {
+            var compra = LunaEternal.pase().comprarLuna(id);
+            if (compra.ok()) {
+                net.pokereport.luna.ui.Aviso.logro(jugador, "VIA LUNA ACTIVADA",
+                        "Reclama tus premios en el PokePad", "minecraft:nether_star",
+                        net.minecraft.sound.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
+                        1.0f);
+            }
+        } catch (net.pokereport.luna.economy.EconomyException e) {
+            avisar(jugador, "pase.lunaeternal.sin_saldo");
+        } catch (Exception e) {
+            LunaEternal.LOG.error("No se pudo comprar la via Luna", e);
+        }
+    }
+
+    /**
+     * ENTREGA LO YA COBRADO.
+     *
+     * <p>&#9888;&#9888; LA PLATA Y LAS LLAVES YA ESTAN DADAS: las aplico
+     * {@code PaseService} dentro de la misma transaccion que apunto el cobro
+     * (R3). Aqui solo quedan las dos cosas que no caben en una transaccion: un
+     * inventario no es una tabla, y un cosmetico vive en otra.
+     *
+     * <p>&#9888; Se entrega con {@code Inventarios.meter}, que usa
+     * {@code offerOrDrop}: lo que no cabe cae al suelo y la rama de no-cupo deja
+     * de existir. Con {@code insertStack} el jugador se quedaria con la mitad de
+     * los objetos y el premio ya apuntado como cobrado.
+     */
+    private static void entregarPase(
+            net.minecraft.server.network.ServerPlayerEntity jugador, long id,
+            java.util.List<net.pokereport.luna.pase.PaseService.Cobro> cobros) {
+        if (cobros.isEmpty()) {
+            return;
+        }
+        var servidor = jugador.getServer();
+        for (var cobro : cobros) {
+            var r = cobro.recompensa();
+            switch (r.tipo()) {
+                case OBJETO -> {
+                    var item = net.pokereport.luna.market.Inventarios.objeto(r.id());
+                    if (item == null) {
+                        // Un identificador que no existe es el fallo de las
+                        // Cazas: el jugador ha hecho el trabajo y no recibe
+                        // nada. Se anota FUERTE porque no lo va a ver nadie.
+                        LunaEternal.LOG.error("El pase promete un objeto que no "
+                                + "existe: {} (nivel {})", r.id(), cobro.nivel());
+                        continue;
+                    }
+                    if (servidor != null) {
+                        servidor.execute(() -> {
+                            if (!jugador.isRemoved()) {
+                                net.pokereport.luna.market.Inventarios.meter(
+                                        jugador, item, r.cantidad());
+                            }
+                        });
+                    }
+                }
+                case COSMETICO -> {
+                    try {
+                        LunaEternal.cosmetics().conceder(id, r.id(), "evento");
+                    } catch (Exception e) {
+                        LunaEternal.LOG.error("No se pudo conceder el cosmetico {} "
+                                + "del pase", r.id(), e);
+                    }
+                }
+                default -> { }
+            }
+        }
+        if (servidor != null) {
+            servidor.execute(() -> {
+                if (!jugador.isRemoved()) {
+                    net.pokereport.luna.ui.Aviso.logro(jugador, "PASE DE BATALLA",
+                            cobros.size() == 1
+                                    ? "Premio del nivel " + cobros.get(0).nivel()
+                                    : cobros.size() + " premios recogidos",
+                            "minecraft:nether_star");
+                }
+            });
         }
     }
 

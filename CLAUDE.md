@@ -749,13 +749,105 @@ Inicial       LA PANTALLA QUE DESBLOQUEA EL PROYECTO (2026-08-23)
               ⚠ y que la rejilla de 3x2 tenga SEIS iniciales EXACTOS: un septimo
                 seria inalcanzable sin dar ningun error. SEXTA vez que este
                 proyecto tropieza con una rejilla que cabia por casualidad
-              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 16:42):
-                servidor  Done (33,488 s) . AUTOTEST 642/642
-                clientes  manifiesto 909051d7cb publicado y sirviendose
+              ⚠⚠⚠ Y LO QUE ENSEÑARON LAS CAPTURAS DEL USUARIO, que es lo que de
+                 verdad vale de este bloque:
+                 1) TAPAR UN MODELO 3D CON UN `fill` ES IMPOSIBLE. La
+                    confirmacion pintaba un velo OPACO sobre la pantalla entera y
+                    salio con EL POKEPAD DESAPARECIDO, el panel flotando en negro
+                    y LOS SEIS POKEMON DIBUJADOS POR ENCIMA del velo Y del texto.
+                    ⚠⚠ NO ERA EL ORDEN DE LAS LLAMADAS: los modelos de Cobblemon
+                       NO van en el lote de `DrawContext` -- salen por su propio
+                       `VertexConsumerProvider`, que se vuelca AL FINAL del
+                       fotograma. Da igual cuando pidas el `fill`: siempre queda
+                       debajo
+                    LA REGLA QUE QUEDA: la unica forma de que un modelo 3D no se
+                    vea es NO PINTARLO. Es la regla de las 2 pasadas de
+                    dibujado.md llevada a su conclusion -- no basta con separar
+                    las pasadas: LA DE 3D SIEMPRE GANA
+                    ⚠ y al arreglarlo salio mejor diseño del que habia: el velo
+                      ocupa SOLO el hueco de la rejilla, asi que el chasis sigue
+                      ahi y el panel de la izquierda SIGUE ENSEÑANDO AL ELEGIDO
+                      EN 3D -- ves lo que confirmas mientras lo confirmas
+                 2) EL VISOR DEL PANEL DEJABA AL POKEMON SENTADO EN EL SUELO.
+                    `origenY` es la fraccion de la caja donde cae el ORIGEN del
+                    modelo, y EL MODELO CRECE HACIA ABAJO desde ahi: con 0,30
+                    sobre una caja de 232 el origen caia a 70 y Squirtle acababa
+                    pegado al borde inferior. Hoy 0,12, calibrado contra la
+                    captura y no deducido
+                 3) EL CARTEL DE OAK NO SE LEIA, Y EL NUMERO VENIA HEREDADO.
+                    `0x40000000` es negro al 25 % y en los gimnasios ESTA BIEN
+                    --son de piedra gris--, pero EL LABORATORIO DE OAK ES BLANCO
+                    ENTERO: sobre blanco un velo del 25 % no oscurece nada
+                    LA REGLA: un cartel del mundo NO SABE contra que pared lo van
+                    a leer, asi que SE TRAE SU PROPIO FONDO. Es la misma decision
+                    que los hologramas de la Torre --«fondo solido para que el
+                    texto sea legible contra cualquier iluminacion o shaders»--
+                    y estaba escrita desde el 7 de septiembre
+                 4) Y EL NOMBRE SALIA DOS VECES. `setTrainerId` llama por dentro
+                    a `udpateCustomName` --el typo es de rctmod-- y vanilla
+                    dibuja la etiqueta de un mob con nombre EN CUANTO LE APUNTAS.
+                    ⚠ `setCustomNameVisible(false)` NO BASTA: esa via es la de
+                      `shouldRenderName()`, y la de apuntar pregunta por
+                      `hasCustomName()`. Hay que dejarlo en null
+              EL MOMENTO, que se perdia en un fotograma:
+                celebracion de 1,8 s antes de cerrar --aro que se abre, destellos
+                girando, chispas y «¡ES TUYO!»-- con la FANFARRIA DE LOGRO de
+                vainilla, que es la que el jugador ya asocia con «has conseguido
+                algo» y llega a todo el mundo tenga o no resource pack
+              ⚠⚠ HAY QUE RETRASAR EL CIERRE A PROPOSITO: el servidor contesta en
+                 decimas, asi que cerrar al recibir se llevaba por delante lo
+                 unico memorable del primer minuto de partida
+              ⚠ al elegir, campana con EL TONO POR COLUMNA: planta grave, fuego
+                medio, agua aguda. Recorrer la fila suena a escala, y eso dice sin
+                palabras que las tres columnas son la misma familia
+              EL ICONO DEL CLIC DERECHO ES UN GLIFO DE FUENTE (2026-09-08)
+                arte del usuario . python tools/gen_icono_clic.py
+                `Iconos.clicDerecho()` en main, o sea usable desde los DOS lados
+              ⚠⚠⚠ MINECRAFT NO TIENE «IMAGE DISPLAY». Las entidades de dibujo son
+                 TRES --texto, objeto y bloque-- asi que un PNG flotando en el
+                 mundo solo se puede hacer pintando un quad a mano en
+                 `WorldRenderEvents` (el holograma del santuario, cientos de
+                 lineas) o METIENDO EL PNG EN UNA FUENTE. Como glifo es UN
+                 CARACTER MAS: cabe en el cartel que ya existe, escala con el
+                 texto, se orienta solo, y sirve igual en el chat. Cero dibujado
+              ⚠⚠⚠ Y EL COLOR DE UN GLIFO NO ES DECORACION: LO TIÑE. Minecraft
+                 dibuja un glifo de mapa de bits MULTIPLICANDO por el color del
+                 estilo, igual que a una letra. El cartel colgaba sus trozos de un
+                 `Text.literal(...).formatted(GOLD, BOLD)`, asi que el raton
+                 habria salido DORADO y, con la negrita, DIBUJADO DOS VECES
+                 DESPLAZADO -- en doce pixeles, una mancha
+                 hoy la raiz es `Text.empty()` y cada trozo lleva el suyo; el
+                 icono se construye con BLANCO EXPLICITO (que multiplica por uno,
+                 o sea que no tiñe) y negrita e italica apagadas A MANO. No se
+                 confia en heredar, porque heredar es justo lo que rompe
+              ⚠⚠ VA SIEMPRE CON SU PALABRA AL LADO, nunca solo. Un TextDisplay
+                 guarda su texto EN EL MUNDO: si el glifo faltara, lo que quedaria
+                 plantado en el laboratorio PARA SIEMPRE seria un CUADRADO BLANCO,
+                 y solo se arregla volviendo a colocar el cartel
+              ⚠ el arte llegaba PEGADO AL BORDE de arriba (contenido en y=1 de
+                256): un glifo que toca su celda roza la linea de encima y al
+                filtrarlo se come su contorno. El generador recorta y deja un 7 %
+              ⚠ y le SANGRA EL ALFA importando la funcion de gen_pokepad.py en vez
+                de copiarla: un pixel invisible sigue guardando color, y al
+                encoger de 256 px a 12 el filtrado lo mezcla con lo visible -- son
+                los micropuntos de colores que ya costaron tres diagnosticos
+              ⚠ SIN `.mcmeta`: `guardar()` le pone uno con clamp porque sus
+                texturas son de INTERFAZ; las de fuente las carga el gestor de
+                fuentes, y las de vainilla no llevan ninguno
+              +3 comprobaciones mas, y la que importa: EL ICONO QUE ESCRIBE JAVA
+              ES EL QUE DIBUJA LA FUENTE. El JSON declara un caracter y `Iconos`
+              escribe otro; son DOS FICHEROS y nada les obliga a coincidir. Si
+              dejaran de hacerlo saldria un cuadrado en vez del raton, SIN UN SOLO
+              ERROR. Es el fallo de las tres listas de medallas, en un caracter
+              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 17:56):
+                servidor  Done (21,933 s) . AUTOTEST 645/645
+                clientes  manifiesto 0f05925e34 publicado y sirviendose
                 /luna inicial contesta: 6 opciones . entrenador de Oak: existe
               ⚠ FALTA COLOCARLO: `/luna inicial oak` de pie donde vaya, dentro
                 de la ciudadela. La parada del Laboratorio esta en -25 68 -52
-              ⚠ SIN VERIFICAR EN EL JUEGO: nadie ha hecho el clic derecho todavia
+              ⚠⚠ Y HAY QUE REABRIR EL LAUNCHER: el glifo y la pantalla son
+                 CLIENTE. Sin bajarse el jar nuevo se sigue viendo el cartel viejo
+                 -- y eso se comporta como debe, que es lo que despista
               ---- lo de antes, que explica por que existe -------------
               ⚠⚠ EL BLOQUEO LLEVABA MESES ABIERTO Y NO ERA LOGICA.
                  feature-gap-analysis.md lo describia: un jugador nuevo

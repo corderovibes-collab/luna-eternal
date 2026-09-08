@@ -31,7 +31,24 @@ public record Recompensa(Tipo tipo, String id, int cantidad, int nivel,
          * lee. Es el fallo del payload del escaparate, que se come mercancia en
          * silencio.
          */
-        POKEMON
+        POKEMON,
+        /**
+         * LunaCoins.
+         *
+         * <p>&#9888;&#9888;&#9888; ES EL UNICO PREMIO QUE NO SE ENTREGA: SE
+         * INGRESA. Un objeto y un Pokemon van a un inventario, que no es una
+         * tabla y por eso se reparten <b>despues</b> de apuntar el cobro. Esto
+         * es <b>dinero</b>, asi que le aplica R3 y va <b>dentro de la misma
+         * transaccion</b> que la fila de {@code pase_reclamo}: o se apunta y se
+         * paga, o no pasa ninguna de las dos cosas.
+         *
+         * <p>&#9888;&#9888; Y NO CRUZA D-014, que es la regla de la que cuelga
+         * todo el modelo de pago: <b>no convierte una moneda en otra</b>. El
+         * pase se compra con LunaCoins y devuelve LunaCoins &mdash; es un
+         * reembolso, no un tipo de cambio. La Torre ya hacia esto mismo (+50
+         * cada 30 rondas), asi que no es una categoria nueva.
+         */
+        MONEDA
     }
 
     /**
@@ -78,6 +95,17 @@ public record Recompensa(Tipo tipo, String id, int cantidad, int nivel,
     }
 
     /**
+     * LunaCoins.
+     *
+     * <p>&#9888; El {@code id} se queda con el nombre de la moneda y NO se usa
+     * para buscar nada: quien paga mira {@link Tipo#MONEDA}, no el texto. Esta
+     * ahi para que una fila del catalogo se lea sola.
+     */
+    public static Recompensa luna(int cuantas, Rareza rareza) {
+        return new Recompensa(Tipo.MONEDA, "lunacoins", cuantas, 0, false, rareza);
+    }
+
+    /**
      * El identificador de objeto con el que el cliente dibuja el icono.
      *
      * <p>&#9888; Un Pokemon NO tiene objeto: el cliente dibuja su modelo 3D. Se
@@ -85,7 +113,15 @@ public record Recompensa(Tipo tipo, String id, int cantidad, int nivel,
      * sitio donde no quepa un modelo.
      */
     public String iconoObjeto() {
-        return tipo == Tipo.POKEMON ? "cobblemon:poke_ball" : id;
+        return switch (tipo) {
+            case POKEMON -> "cobblemon:poke_ball";
+            // ⚠ Las LunaCoins no son un objeto del juego y no tienen ninguno
+            //   que las represente: la pantalla las dibuja con SU PROPIA
+            //   textura (`lunacoin_oro.png`), la misma del saldo. Esto es solo
+            //   el respaldo por si algun dia se pintan donde no cabe.
+            case MONEDA -> "minecraft:gold_nugget";
+            case OBJETO -> id;
+        };
     }
 
     /**

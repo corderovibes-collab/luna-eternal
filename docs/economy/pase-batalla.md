@@ -5,7 +5,7 @@
 Cómo funciona el **Pase de Batalla** (D-046, revoca D-045): una temporada de
 60 días con **100 niveles** que se suben **jugando** —capturando, minando,
 pescando, criando, registrando la Pokédex, ganando medallas y escalando la
-Torre— y **una sola vía, de pago**: 15.000 LunaCoins.
+Torre— y **una sola vía, de pago**: 1.500 LunaCoins.
 
 Cada nivel da un objeto de Cobblemon, organizado en **cinco tramos por
 categoría**, y **dos niveles dan un Pokémon**: el 1 un Charizard de nivel 15 y el 100,
@@ -322,7 +322,7 @@ error: **la segunda mitad del pase premia más que la primera**.
 
 > ⚠⚠ **La temporada NO rota sola.** Las Cazas rotan al mirar y está bien: lo que
 > se pierde es un ciclo de 24 h. Aquí rotar **borra el progreso de sesenta días
-> y la vía Luna que alguien pagó con 15.000 LunaCoins**, así que no puede
+> y la vía Luna que alguien pagó con 1.500 LunaCoins**, así que no puede
 > dispararlo un reloj.
 
 > ⚠ **Y pasada la fecha de fin se sigue ganando XP.** Pararla castigaría al
@@ -530,8 +530,8 @@ con la única protección del sistema, y el comando decía «hecho».
 | El mismo premio no se cobra dos veces | La clave primaria, ejercitada |
 | No se cobra un nivel que no se ha alcanzado | **P6**. Sin esto un cliente modificado pide el nivel 100 el primer día y se lleva el shiny |
 
-| El pase no se cobra dos veces | 15.000 LunaCoins cobrados por duplicado |
-| **Todo objeto existe en el registro** | El fallo de las Cazas, **con factura**: el jugador soltó 15.000 LunaCoins, hizo 45 días de trabajo y no recibe nada |
+| El pase no se cobra dos veces | 1.500 LunaCoins cobrados por duplicado |
+| **Todo objeto existe en el registro** | El fallo de las Cazas, **con factura**: el jugador soltó 1.500 LunaCoins, hizo 45 días de trabajo y no recibe nada |
 | **Exactamente DOS Pokémon**, en el 1 y en el 100 | Cuántos Pokémon da el pase **no es una decisión mía**: el número exacto es lo que impide que vuelva a ensancharse solo |
 | Toda especie existe en Cobblemon | Se le pregunta **a Cobblemon**, no a una lista nuestra: una lista repetiría el mismo error que intenta cazar |
 | **Sin el pase no se cobra ni el nivel 1** | Es la regla que sostiene D-046: el pase es de PAGO. Un fallo en ese `if` regalaría los cien premios a todo el servidor **y no daría ningún error**, porque entregar funciona igual de bien |

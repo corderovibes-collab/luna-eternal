@@ -568,6 +568,27 @@ public final class PaseService {
                     if (filas == 0) {
                         continue;
                     }
+                    // ⚠⚠⚠ LAS LUNACOINS SE PAGAN AQUI DENTRO, y es la unica
+                    //    recompensa que puede. Los objetos y los Pokemon van a
+                    //    un inventario --que no es una tabla-- asi que se
+                    //    reparten despues del commit; esto es DINERO, y R3 dice
+                    //    que el saldo se mueve en la MISMA transaccion que su
+                    //    asiento. Aqui ademas sale gratis: la fila de
+                    //    `pase_reclamo` ya esta en esta transaccion, asi que el
+                    //    ingreso y la marca de cobrado no pueden separarse.
+                    //    ⚠⚠ Si se pagara fuera, un fallo entre medias dejaria el
+                    //       nivel marcado como cobrado y las LunaCoins sin
+                    //       ingresar: el jugador ve «RECOGIDO» y no tiene nada,
+                    //       y no hay forma de saber a quien le paso.
+                    if (r.tipo() == Recompensa.Tipo.MONEDA) {
+                        net.pokereport.luna.LunaEternal.economy().applyInTransaction(
+                                c, playerId, Currency.REPORTCOIN, r.cantidad(),
+                                "pase_premio", "pase", (long) nivel,
+                                // R4: la clave lleva temporada Y nivel, o sea
+                                // exactamente lo que identifica el premio.
+                                "pase_premio:" + playerId + ":" + t.numero()
+                                        + ":" + nivel);
+                    }
                     out.add(new Cobro(nivel, r));
                 }
                 c.commit();

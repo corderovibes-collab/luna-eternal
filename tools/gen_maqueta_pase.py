@@ -83,13 +83,19 @@ def premios() -> list:
     salida = []
     for m in re.finditer(
             r'/\*\s*(\d+)\s*\*/\s*(?:o\("([a-z_0-9]+)",\s*(\d+),\s*Rareza\.([A-Z]+)\)'
-            r'|p\("([a-z_0-9]+)",\s*(\d+),\s*(true|false)\))', txt):
+            r'|p\("([a-z_0-9]+)",\s*(\d+),\s*(true|false)\)'
+            r'|luna\((\d+),\s*Rareza\.([A-Z]+)\))', txt):
         nivel = int(m.group(1))
         if m.group(2):
             nombre = m.group(2).replace("_", " ").title()
             salida.append((nivel, nombre, int(m.group(3)), m.group(4), False))
-        else:
+        elif m.group(5):
             salida.append((nivel, m.group(5).title(), 1, "LEGENDARIA", True))
+        else:
+            # ⚠ «LunaCoins» es lo MAS LARGO que se pinta en una tarjeta junto a
+            #   su «x100»: si algun dia deja de caber, se ve aqui y no en una
+            #   captura del usuario.
+            salida.append((nivel, "LunaCoins", int(m.group(8)), m.group(9), False))
     if len(salida) != 100:
         raise SystemExit(f"He leido {len(salida)} premios de PaseCatalogo.java "
                          f"y tiene que haber 100: ha cambiado de forma")
@@ -162,7 +168,7 @@ def panel(L: Lienzo, C: dict) -> None:
             "centro", limite=PANEL_W - 60)
     L.caja("comprar.btn", PANEL_X + 28, y + C["BOTON_COMPRAR_DY"],
            PANEL_W - 56, C["BOTON_COMPRAR_H"], None, VIOLETA, 2)
-    L.texto("comprar.precio", "15.000", cx + 16, y + C["BOTON_COMPRAR_DY"] + 10,
+    L.texto("comprar.precio", "1.500", cx + 16, y + C["BOTON_COMPRAR_DY"] + 10,
             22, ORO, "centro")
     L.texto("saldo.txt", "Tienes 148.500 LunaCoins", cx, y + 82, 13, SUAVE,
             "centro", limite=PANEL_W - 60)

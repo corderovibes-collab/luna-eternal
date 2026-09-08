@@ -848,6 +848,16 @@ public class PaseScreen extends Screen {
                     pxd(hx), py(hy), pl(hueco), pl(hueco), 0.16f, delta, true);
             return;
         }
+        // ⚠ Las LunaCoins se dibujan con SU textura, la misma del saldo de
+        //   arriba: `iconoObjeto()` devuelve una pepita de oro de respaldo, y
+        //   una pepita en la tarjeta del nivel 50 se lee como «te dan oro».
+        if (r.tipo() == Recompensa.Tipo.MONEDA) {
+            int lado = 56;
+            int ix = hx + (hueco - lado) / 2;
+            int iy = hy + (hueco - lado) / 2;
+            textura(ctx, LUNACOIN, pxd(ix), py(iy), pl(lado), pl(lado), 40, 40);
+            return;
+        }
         var item = Registries.ITEM.get(Identifier.of(r.iconoObjeto()));
         if (item == null) {
             return;
@@ -915,6 +925,12 @@ public class PaseScreen extends Screen {
             //   congelaria en ingles para todo el mundo.
             return Text.translatable("cobblemon.species." + r.id() + ".name")
                     .getString();
+        }
+        if (r.tipo() == Recompensa.Tipo.MONEDA) {
+            // ⚠ Sin esto la tarjeta pondria «lunacoins» en minusculas: el
+            //   identificador crudo, que es justo lo que se ve cuando algo no
+            //   se ha traducido. El nombre de la moneda lo fija D-033.
+            return "LunaCoins";
         }
         var item = Registries.ITEM.get(Identifier.of(r.id()));
         return item == null ? r.id() : item.getName().getString();

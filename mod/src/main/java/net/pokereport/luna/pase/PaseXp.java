@@ -19,23 +19,55 @@ package net.pokereport.luna.pase;
  *
  * <h2>Las cifras, y de donde salen</h2>
  *
- * No estan puestas a ojo: salen de <b>cuantas veces por hora ocurre cada
- * cosa</b>, medido contra lo que ya paga cada oficio. El objetivo es que
- * ninguna actividad llene sola el tope diario (900) en menos de hora y media,
- * y que jugar variado sea lo mas rapido.
+ * Salen de <b>cuantas veces por hora ocurre cada cosa</b>. El objetivo es que
+ * ninguna actividad llene sola el tope diario (1.200) en menos de dos horas, y
+ * que jugar variado sea lo mas rapido.
  *
  * <pre>
  *   accion            XP   veces/hora   XP/hora si SOLO haces eso
  *   ─────────────────────────────────────────────────────────────
+ *   mena comun         1     ~400            400
+ *   mena rara         12      ~15            180   (las dos juntas: 580)
  *   pescar             8      ~70            560
  *   cosechar           3     ~200            600
- *   mena comun         4      ~90            360
  *   capturar          12      ~25            300
  *   ganar combate      6      ~30            180
  *   eclosionar        40       ~5            200
  *   torre (ronda 20)  50      ~20          1.000  <- lo mas rapido, y aun asi
  *                                                    es UNA HORA de combates
  * </pre>
+ *
+ * <h2>⚠⚠⚠ LA MENA VALIA 4 Y ERA DEMASIADO, Y LA TABLA MENTIA</h2>
+ *
+ * Esta misma tabla decia <i>«mena comun 4, ~90 veces/hora, 360 XP/hora»</i>, y
+ * <b>las 90 veces/hora estaban mal</b>: un minero dedicado saca del orden de
+ * <b>400 menas por hora</b> —el carbon y el cobre salen en vetas de veinte y
+ * treinta bloques, no de una en una—, asi que lo de verdad eran <b>1.600 XP a
+ * la hora</b>: el tope diario entero <b>en cuarenta y cinco minutos</b>, y todo
+ * lo demas de esta tabla convertido en adorno.
+ *
+ * <p>⚠⚠ <b>Es la MISMA regla que ya justificaba que la piedra valga cero</b>
+ * —«son 2.500 bloques a la hora, asi que el pase se convertiria en un
+ * temporizador»— solo que aplicada un escalon mas arriba y con el numero
+ * equivocado. La regla estaba escrita y aun asi fallo, porque <b>la estimacion
+ * de cuantas veces por hora pasa algo vivia en un comentario</b>, y un
+ * comentario no se comprueba.
+ *
+ * <p>⚠ <b>Lo destapo el usuario jugando</b>, no una revision ni el autotest.
+ * Por eso las tasas de arriba bajan a constantes ({@link #VECES_HORA_MENA} y
+ * compañia) y el autotest cruza XP x tasa contra el tope: cambiar la mena a 4
+ * otra vez ya no compila en silencio, se pone rojo.
+ *
+ * <h2>⚠ Por que 1 por mena y no «5 cada 10 menas»</h2>
+ *
+ * Las dos ideas eran del usuario y las dos arreglan el problema. «5 cada 10»
+ * es <b>media XP por mena</b>, o sea la mitad otra vez — y para pagar por
+ * tandas hay que <b>recordar cuantas lleva rotas entre pago y pago</b>: una
+ * columna nueva, su migracion, y una escritura por bloque picado. Ademas se ve
+ * raro desde dentro: rompes nueve menas y no pasa nada.
+ *
+ * <p>A cambio de todo eso, lo unico que se gana es dividir por dos otra vez. Si
+ * hace falta bajar mas, la palanca sigue siendo <b>este numero</b>.
  *
  * <h2>⚠⚠ LA PIEDRA VALE CERO, Y NO ES UN OLVIDO</h2>
  *
@@ -82,14 +114,49 @@ public final class PaseXp {
 
     // ---- mundo -------------------------------------------------------------
 
-    /** Una mena corriente: carbon, hierro, cobre, redstone, lapis, oro. */
-    public static final long MENA = 4;
+    /**
+     * Una mena corriente: carbon, hierro, cobre, redstone, lapis, oro.
+     *
+     * <p>⚠⚠ <b>Era 4 y se bajo a 1 el 2026-09-08</b>, por orden del usuario y
+     * con razon: ver el aviso de arriba. Es la mena que sale <b>en vetas</b>,
+     * o sea la que se cuenta por cientos.
+     */
+    public static final long MENA = 1;
 
-    /** Diamante o esmeralda. */
+    /**
+     * Diamante o esmeralda.
+     *
+     * <p>⚠⚠ <b>Esta NO se toca, y es la mitad de la decision.</b> Lo que
+     * estaba roto era el <b>volumen</b>, y un diamante no tiene volumen: no
+     * sale en vetas de treinta, no se farmea a la hora y aparece del orden de
+     * <b>quince veces</b> en una sesion larga de mina. Bajarla tambien habria
+     * arreglado un problema que no tenia y habria dejado el hallazgo que de
+     * verdad importa pagando lo mismo que picar cobre.
+     *
+     * <p>Hoy un diamante vale <b>doce menas corrientes</b> —y por rareza real
+     * se queda corto— o lo mismo que capturar un Pokemon.
+     */
     public static final long MENA_RARA = 12;
 
     /** Piedra. Ver el aviso de arriba: <b>cero a proposito</b>. */
     public static final long PIEDRA = 0;
+
+    // ---- cada cuanto pasa cada cosa ---------------------------------------
+    //
+    // ⚠⚠⚠ ESTO ESTABA EN UN COMENTARIO Y POR ESO PUDO MENTIR UNA SEMANA. Son
+    //    ESTIMACIONES del mundo, no decisiones nuestras, y por eso van
+    //    separadas de la XP: la XP es la palanca, la tasa es el terreno. El
+    //    autotest multiplica una por otra y la compara con el tope diario.
+    //
+    // ⚠⚠ Y LA COMPROBACION NO VALE MAS QUE LA ESTIMACION. La vieja decia 90
+    //    menas/hora y era falsa; lo que la corrigio fue alguien PICANDO. Si
+    //    algun dia se mide de verdad, se cambia AQUI y el resto se recoloca.
+
+    /** Menas corrientes que saca a la hora un minero dedicado. */
+    public static final int VECES_HORA_MENA = 400;
+
+    /** Diamantes o esmeraldas en esa misma hora. */
+    public static final int VECES_HORA_MENA_RARA = 15;
 
     /** Cosechar un cultivo, una baya o una bellota. */
     public static final long COSECHA = 3;

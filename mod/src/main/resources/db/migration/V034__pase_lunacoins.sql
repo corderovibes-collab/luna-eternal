@@ -1,0 +1,17 @@
+-- El nivel 50 y el 98 dejan de dar objetos y pasan a dar 100 LunaCoins.
+--
+-- ⚠⚠⚠ HAY QUE SOLTAR ESOS DOS RECLAMOS, Y SOLO ESOS DOS. Una fila de
+--     `pase_reclamo` dice «este nivel ya esta cobrado», no dice QUE se cobro:
+--     quien hubiera cobrado el 50 cuando daba 15 Caramelos Raros se quedaria
+--     con la tarjeta en gris para siempre y NUNCA veria las LunaCoins, sin dar
+--     ningun error. Es lo mismo que ya obligo a la V033.
+--
+-- ⚠⚠ Y AQUI SE BORRAN DOS NIVELES, NO LA TABLA ENTERA COMO EN LA V033. Alli se
+--     pudo vaciar porque el catalogo cambio de arriba abajo y nadie habia
+--     comprado el pase todavia. Eso ultimo ya no se puede dar por hecho, y
+--     vaciar la tabla le devolveria a cualquiera los cien premios para volver a
+--     cobrarlos: la vuelta atras mas cara posible por un cambio de dos filas.
+--
+-- ⚠ La direccion es la SEGURA: como mucho, quien ya hubiera cobrado esos dos
+--   niveles se lleva ademas las LunaCoins. Nunca al reves.
+DELETE FROM pase_reclamo WHERE nivel IN (50, 98);

@@ -82,7 +82,7 @@ public final class PaseCatalogo {
      * comprarlo. Sin eso seria una suscripcion que se paga una vez, y el pase
      * dejaria de tener nada que ofrecer a partir de la segunda temporada.
      */
-    public static final long PRECIO = 15_000;
+    public static final long PRECIO = 1_500;
 
     /** Un tramo del carril: veinte niveles con un tema y un color. */
     public record Tramo(String nombre, String lema, int desde, int hasta, int color) {
@@ -126,6 +126,10 @@ public final class PaseCatalogo {
 
     private static Recompensa p(String especie, int nivel, boolean shiny) {
         return Recompensa.pokemon(especie, nivel, shiny, Rareza.LEGENDARIA);
+    }
+
+    private static Recompensa luna(int cuantas, Rareza r) {
+        return Recompensa.luna(cuantas, r);
     }
 
     /**
@@ -197,7 +201,7 @@ public final class PaseCatalogo {
         /*  47 */ o("calcium", 6, Rareza.RARA),
         /*  48 */ o("rare_candy", 5, Rareza.EPICA),
         /*  49 */ o("zinc", 6, Rareza.RARA),
-        /*  50 */ o("rare_candy", 15, Rareza.LEGENDARIA),
+        /*  50 */ luna(100, Rareza.LEGENDARIA),
         /*  51 */ o("carbos", 6, Rareza.RARA),
         /*  52 */ o("exp_candy_xl", 2, Rareza.EPICA),
         /*  53 */ o("pp_up", 4, Rareza.RARA),
@@ -254,7 +258,7 @@ public final class PaseCatalogo {
         /*  95 */ o("ability_patch", 1, Rareza.LEGENDARIA),
         /*  96 */ o("calm_mint", 1, Rareza.EPICA),
         /*  97 */ o("pp_max", 2, Rareza.LEGENDARIA),
-        /*  98 */ o("beast_ball", 3, Rareza.EPICA),
+        /*  98 */ luna(100, Rareza.LEGENDARIA),
         /*  99 */ o("master_ball", 1, Rareza.LEGENDARIA),
         // ⚠⚠ EL PREMIO MAYOR, y es orden directa del usuario.
         /* 100 */ p("charizard", 50, true),

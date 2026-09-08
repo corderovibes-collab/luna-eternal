@@ -4292,6 +4292,39 @@ public final class AutoTest {
               net.pokereport.luna.pase.PaseXp.torre(100_000)
                   <= net.pokereport.luna.pase.PaseNivel.TOPE_DIARIO / 5);
 
+        // ---- lo que se hace CIENTOS de veces por hora --------------------
+        //
+        // ⚠⚠⚠ ESTA COMPROBACION NACE DE UN FALLO REAL: la mena valia 4 y se
+        //    saca del orden de 400 a la hora, o sea 1.600 XP/hora -- el tope
+        //    diario entero en CUARENTA Y CINCO MINUTOS, con lo que el resto de
+        //    la tabla de fuentes daba igual. No dio ningun error: el pase subia
+        //    perfectamente, solo que solo se subia picando.
+        //    Lo caza el usuario jugando; esto es para que no vuelva.
+        //
+        // ⚠⚠ CUBRE LA MINERIA Y NADA MAS, Y HAY QUE DECIRLO: `PESCA` (8 x ~70 =
+        //    560/h) y `COSECHA` (3 x ~200 = 600/h) tienen la MISMA forma de
+        //    problema y sus tasas NO se han vuelto a medir -- la de la mena
+        //    llevaba una semana siendo falsa. Meterlas aqui con una tasa
+        //    inventada seria la confianza falsa que ya nos mordio en los
+        //    gimnasios (comparar constantes que nadie ha comprobado). Entran el
+        //    dia que se midan.
+        long tope = net.pokereport.luna.pase.PaseNivel.TOPE_DIARIO;
+        long minaPorHora =
+              net.pokereport.luna.pase.PaseXp.MENA
+                  * net.pokereport.luna.pase.PaseXp.VECES_HORA_MENA
+            + net.pokereport.luna.pase.PaseXp.MENA_RARA
+                  * net.pokereport.luna.pase.PaseXp.VECES_HORA_MENA_RARA;
+        check("MINAR SOLO NO LLENA EL TOPE DIARIO EN MENOS DE DOS HORAS",
+              minaPorHora <= tope / 2);
+        // ⚠ y por abajo tambien: una fuente que no llega ni al 10 % del dia en
+        //   una hora esta apagada de hecho, y entonces sobra de la tabla.
+        check("y minar sigue mereciendo la pena", minaPorHora >= tope / 10);
+        check("la piedra sigue valiendo cero para el pase",
+              net.pokereport.luna.pase.PaseXp.PIEDRA == 0);
+        check("una mena rara paga mas que una corriente",
+              net.pokereport.luna.pase.PaseXp.MENA_RARA
+                  > net.pokereport.luna.pase.PaseXp.MENA);
+
         // ---- el catalogo -------------------------------------------------
         boolean todosLosNiveles = true;
         boolean objetosExisten = true;
@@ -4299,6 +4332,8 @@ public final class AutoTest {
         boolean especiesExisten = true;
         boolean nivelesDePokemonSanos = true;
         int pokemon = 0;
+        int monedas = 0;
+        long lunaTotal = 0;
         for (int n = 1; n <= net.pokereport.luna.pase.PaseNivel.MAX; n++) {
             var r = net.pokereport.luna.pase.PaseCatalogo.de(n);
             if (r == null) {
@@ -4323,6 +4358,11 @@ public final class AutoTest {
                 }
                 continue;
             }
+            if (r.tipo() == net.pokereport.luna.pase.Recompensa.Tipo.MONEDA) {
+                monedas++;
+                lunaTotal += r.cantidad();
+                continue;
+            }
             var id = net.minecraft.util.Identifier.tryParse(r.id());
             var item = id == null ? null
                     : net.minecraft.registry.Registries.ITEM.get(id);
@@ -4337,6 +4377,30 @@ public final class AutoTest {
         check("toda especie del pase existe en Cobblemon", especiesExisten);
         check("ninguna cantidad es cero o negativa", cantidadesSanas);
         check("los Pokemon del pase salen a un nivel valido", nivelesDePokemonSanos);
+        // ---- las LunaCoins que devuelve el pase --------------------------
+        //
+        // ⚠⚠⚠ LO QUE HAY QUE VIGILAR NO ES QUE DEVUELVA, ES CUANTO. Un pase que
+        //    devuelve lo que cuesta SE PAGA SOLO PARA SIEMPRE: se compra una
+        //    vez, se completa, y la temporada siguiente sale gratis -- y a
+        //    partir de ahi el producto deja de venderse sin que nadie toque una
+        //    linea de codigo. Es el unico fallo de esto que no se ve mirando la
+        //    pantalla: se ve en la facturacion, meses despues.
+        //    Hoy: 200 devueltas sobre 1.500, o sea el 13 %.
+        check("EL PASE NO DEVUELVE LO QUE CUESTA",
+              lunaTotal < net.pokereport.luna.pase.PaseCatalogo.PRECIO);
+        check("y no devuelve ni la mitad",
+              lunaTotal * 2 < net.pokereport.luna.pase.PaseCatalogo.PRECIO);
+        check("los dos premios de LunaCoins siguen ahi", monedas == 2);
+        // ⚠ Van en el 50 y en el 98 por peticion del usuario. Se comprueba el
+        //   sitio y no solo la cantidad: moverlos al 1 y al 2 cumpliria todo lo
+        //   de arriba y regalaria el reembolso el primer dia.
+        check("y estan en el nivel 50 y en el 98",
+              net.pokereport.luna.pase.PaseCatalogo.de(50) != null
+                  && net.pokereport.luna.pase.PaseCatalogo.de(50).tipo()
+                      == net.pokereport.luna.pase.Recompensa.Tipo.MONEDA
+                  && net.pokereport.luna.pase.PaseCatalogo.de(98) != null
+                  && net.pokereport.luna.pase.PaseCatalogo.de(98).tipo()
+                      == net.pokereport.luna.pase.Recompensa.Tipo.MONEDA);
         // ⚠⚠⚠ EXACTAMENTE DOS, Y EN EL 1 Y EN EL 100. La primera version metia
         //    tres mas «para que la mitad del carril tuviera a donde mirar» y
         //    NADIE LOS HABIA PEDIDO -- el usuario lo corrigio. Un `>= 2` habria

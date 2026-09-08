@@ -5526,9 +5526,15 @@ public class Red implements ModInitializer {
      *
      * <p>&#9888;&#9888; NADA DE ESTO CABE EN LA TRANSACCION que apunto el cobro:
      * un inventario no es una tabla y el almacen de Cobblemon tampoco. Por eso
-     * el orden es <b>apuntar primero y entregar despues</b> (R3 no aplica aqui
-     * porque no se mueve dinero), y por eso la entrega no puede fallar:
-     * {@code offerOrDrop} tira al suelo lo que no cabe.
+     * el orden es <b>apuntar primero y entregar despues</b>, y por eso la
+     * entrega no puede fallar: {@code offerOrDrop} tira al suelo lo que no cabe.
+     *
+     * <p>&#9888;&#9888;&#9888; LAS LUNACOINS NO PASAN POR AQUI, Y ES A PROPOSITO.
+     * Aqui ponia <i>«R3 no aplica porque no se mueve dinero»</i>, y desde que el
+     * nivel 50 y el 98 pagan LunaCoins <b>eso dejo de ser verdad</b>. El ingreso
+     * vive dentro de la transaccion que apunta el cobro
+     * ({@code PaseService.reclamarVarios}), que es lo que R3 exige; este metodo
+     * <b>se las salta</b>. Si tambien las pagara, <b>se cobrarian dos veces</b>.
      *
      * <p>&#9888;&#9888;&#9888; EL POKEMON VA AL EQUIPO, Y SI ESTA LLENO SE PIERDE
      * &mdash; por eso se avisa. {@code getParty().add()} devuelve {@code false}
@@ -5554,6 +5560,11 @@ public class Red implements ModInitializer {
                         entregarPokemonDelPase(jugador, r);
                     }
                 });
+                continue;
+            }
+            if (r.tipo() == net.pokereport.luna.pase.Recompensa.Tipo.MONEDA) {
+                // Ya ingresadas, dentro de la transaccion del cobro. Ver el
+                // aviso del javadoc: pagarlas aqui seria pagarlas dos veces.
                 continue;
             }
             var item = net.pokereport.luna.market.Inventarios.objeto(r.id());

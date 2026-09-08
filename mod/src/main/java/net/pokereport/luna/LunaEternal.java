@@ -279,9 +279,15 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                         player.sendMessage(net.minecraft.text.Text.literal(
                                 "§6§lPROF. OAK §8» §fTodavia no tienes tu primer "
                                 + "Pokemon."), false);
+                        // ⚠ El icono va con su palabra detras, igual que en
+                        //   el cartel: un cuadrado blanco a secas no dice
+                        //   nada el dia que el glifo falte.
                         player.sendMessage(net.minecraft.text.Text.literal(
                                 "§7Ven a verme al §eLaboratorio§7 de la ciudadela "
-                                + "y elige. §8(clic derecho)"), false);
+                                + "y elige. §8(")
+                                .append(net.pokereport.luna.ui.Iconos.clicDerecho())
+                                .append(net.minecraft.text.Text.literal(
+                                        "§8 clic derecho)")), false);
                     });
                 } catch (Exception e) {
                     LOG.warn("No se pudo avisar del inicial a {}: {}",

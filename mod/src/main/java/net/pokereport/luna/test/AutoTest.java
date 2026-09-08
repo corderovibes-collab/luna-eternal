@@ -4300,6 +4300,50 @@ public final class AutoTest {
                     net.pokereport.luna.starter.OakNpc.ENTRENADOR);
         }
         check("EL ENTRENADOR DE OAK EXISTE (sin el no hay forma de elegir)", oak);
+
+        // ---- el icono del clic derecho -----------------------------------
+        //
+        // ⚠⚠⚠ UN GLIFO QUE FALTA NO DA NINGUN ERROR: DA UN CUADRADO BLANCO. Y
+        //    aqui es peor que en una pantalla, porque el cartel de Oak es un
+        //    TextDisplay y GUARDA SU TEXTO EN EL MUNDO: el cuadrado se queda
+        //    plantado en el laboratorio hasta que alguien vuelva a colocarlo.
+        //    ⚠⚠ Y SE PUEDE COMPROBAR DESDE EL SERVIDOR PORQUE ES UN SOLO JAR:
+        //       `src/client/resources/` acaba dentro del mismo fichero, asi que
+        //       `getResource` lo ve. Es el mismo truco con el que se comprueban
+        //       el arte de los trajes y los iconos del Pad.
+        String fuente = recurso("/assets/lunaeternal/font/iconos.json");
+        check("la fuente de iconos esta en el jar", fuente != null);
+        check("y su textura tambien",
+              AutoTest.class.getResource(
+                      "/assets/lunaeternal/textures/font/clic_derecho.png") != null);
+
+        // ⚠⚠⚠ LA QUE DE VERDAD IMPORTA: QUE LOS DOS HABLEN DEL MISMO CARACTER.
+        //    El JSON declara que caracter dibuja y `Iconos` escribe uno; son dos
+        //    ficheros distintos y NADA les obliga a coincidir. Si dejaran de
+        //    hacerlo, el cartel saldria con un cuadrado en vez del raton --sin un
+        //    solo error-- y se descubriria mirando. Es el fallo de las tres
+        //    listas de medallas, aplicado a un caracter.
+        String glifo = net.pokereport.luna.ui.Iconos.clicDerecho().getString();
+        boolean mismoCaracter = false;
+        if (fuente != null && glifo.length() == 1) {
+            // El JSON lo puede llevar escapado (`\ue000`) o crudo, segun quien lo
+            // haya escrito. Se aceptan las dos formas: lo que se comprueba es que
+            // hablen del mismo, no como esta guardado.
+            String escapado = String.format("\\u%04x", (int) glifo.charAt(0));
+            mismoCaracter = fuente.contains(glifo)
+                    || fuente.toLowerCase(java.util.Locale.ROOT).contains(escapado);
+        }
+        check("EL ICONO QUE ESCRIBE JAVA ES EL QUE DIBUJA LA FUENTE", mismoCaracter);
+    }
+
+    /** Lee un recurso del jar como texto, o {@code null} si no esta. */
+    private static String recurso(String ruta) {
+        try (var in = AutoTest.class.getResourceAsStream(ruta)) {
+            return in == null ? null
+                    : new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void testPase(long jugador) throws Exception {

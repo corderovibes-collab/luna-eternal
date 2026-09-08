@@ -1,0 +1,13 @@
+{
+  "providers": [
+    {
+      "type": "bitmap",
+      "file": "lunaeternal:font/clic_derecho.png",
+      "height": 12,
+      "ascent": 9,
+      "chars": [
+        "\ue000"
+      ]
+    }
+  ]
+}

@@ -251,11 +251,20 @@ public final class OakNpc {
             return;
         }
         cartel.setPosition(pies.x, pies.y + ALTURA_CARTEL, pies.z);
-        cartel.setText(Text.literal("Profesor Oak\n")
-                .formatted(Formatting.GOLD, Formatting.BOLD)
+        // ⚠⚠ LA RAIZ VA VACIA, Y NO ES UNA MANIA DE ESTILO: ES LO QUE
+        //    PROTEGE AL ICONO. Colgando los trozos de un
+        //    `Text.literal("Profesor Oak").formatted(GOLD, BOLD)`, todo lo
+        //    que se le añade HEREDA dorado y negrita -- y un glifo de mapa de
+        //    bits se dibuja MULTIPLICANDO por el color del estilo, asi que el
+        //    raton habria salido dorado y, con la negrita, dibujado DOS VECES
+        //    desplazado. Con `Text.empty()` cada trozo lleva el suyo.
+        cartel.setText(Text.empty()
+                .append(Text.literal("Profesor Oak\n")
+                        .formatted(Formatting.GOLD, Formatting.BOLD))
                 .append(Text.literal("Elige tu primer Pokemon\n")
                         .formatted(Formatting.WHITE))
-                .append(Text.literal("Clic derecho")
+                .append(net.pokereport.luna.ui.Iconos.clicDerecho())
+                .append(Text.literal(" Clic derecho")
                         .formatted(Formatting.AQUA)));
         cartel.setBillboardMode(DisplayEntity.BillboardMode.CENTER);
         // Fondo oscuro a media transparencia: el texto claro sobre la piedra

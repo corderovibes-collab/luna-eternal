@@ -657,8 +657,106 @@ Cosmeticos    LA PRIMERA SUB-PANTALLA YA EXISTE Y FUNCIONA EN EL JUEGO
               resolvio dejando de inventar un sistema paralelo
               ⚠ SIN VERIFICAR EN EL JUEGO todavia
 Inicial       LA PANTALLA QUE DESBLOQUEA EL PROYECTO (2026-08-23)
-              6 iniciales (Kanto + Johto) en 3D . se abre SOLA al entrar
+              LA PUERTA ES EL PROFESOR OAK (2026-09-08, D-048)
+              6 iniciales (Kanto + Johto) en 3D . clic derecho a OAK
               ninguna cadena de misiones avanzaba sin esto
+              ⚠⚠⚠ NO HABIA NINGUNA TECLA QUE QUITAR, y esto se comprobo EN EL JAR
+                 de Cobblemon 1.8.0 antes de tocar nada. El usuario pidio «quita
+                 esa tecla con la que se elegia el inicial», y esa tecla NO
+                 EXISTE:
+                   keybinds  los SEIS son HIDE_PARTY, SUMMARY, PARTY_OVERLAY
+                             UP/DOWN, SEND_OUT_POKEMON y RIDING_FREELOOK
+                   al entrar `CobblemonStarterHandler.handleJoin` ESTA VACIO:
+                             un null-check y `return`. Cobblemon 1.8 NO ofrece
+                             inicial al entrar, y `allowStarterOnJoin` --que
+                             existe en la config-- no lo usa nadie
+                   comando   `/openstarterscreen` pide
+                             CHEAT_COMMANDS_AND_COMMAND_BLOCKS = op 2, o sea
+                             fuera del alcance de un jugador
+                 LO QUE ABRIA LA PANTALLA ERA NUESTRA PROPIA APERTURA AUTOMATICA
+                 (`abrirInicialSiToca`, en el tick del cliente). Eso es lo que se
+                 ha quitado
+                 ⚠ queda un hueco de op 2 y se deja escrito: un CONSTRUCTOR con
+                   `/openstarterscreen` cogeria un inicial de Cobblemon SIN que
+                   se marque nuestro `kit_claim`, y despues podria pedirle otro a
+                   Oak. Es de staff, no se blinda
+              ⚠⚠⚠ OAK NO SE DIBUJO: YA VIENE DENTRO DE rctmod. Se busco en el jar
+                 antes de plantearse un datapack o un PNG, y estan las TRES
+                 pieles (`professor_oak_00c8`, `..._00d2`, `prof_prof_oak_01ff`)
+                 Y SUS TRES ENTRENADORES COMPLETOS en data/rctmod/trainers/.
+                 Cero arte, cero datapack, y el mod ya esta en los dos lados
+                 desde los gimnasios
+                 ⚠⚠ Y TRAE UN TAUROS DE NIVEL 99. Un TrainerMob con
+                    forceBattleOnSight a OCHO BLOQUES seria el jefe final del
+                    servidor plantado en la plaza. Lo corta `setAiDisabled(true)`
+                    ANTES del primer tick --como Brock, y por eso va antes de
+                    `spawnEntity`-- y el clic derecho, que se ataja con SUCCESS
+                    antes de llegar a `interactMob`
+                 ⚠ lleva ademas la MARCA de los decorativos: es la unica
+                   proteccion que cubre el creativo, y sin ella cualquier
+                   operador le rompe la cara sin querer
+              ⚠⚠⚠ Y LA PANTALLA YA SE PUEDE CERRAR. Antes NO se podia, y estaba
+                 bien: sin inicial no hay partida Y NO HABIA FORMA DE VOLVER.
+                 Hoy la hay --Oak sigue ahi-- asi que atrapar al jugador ha
+                 dejado de proteger a nadie, y con eso se va de golpe toda la
+                 familia de fallos de «me quede encerrado» (que ya mordio una vez)
+              ⚠⚠ LA APERTURA AUTOMATICA HACIA UN TRABAJO QUE ALGUIEN TIENE QUE
+                 SEGUIR HACIENDO: era imposible no verla. Quitarla a secas deja a
+                 un jugador nuevo dentro del servidor sin Pokemon y sin ninguna
+                 pista -- que es EXACTAMENTE el bloqueo que este sistema vino a
+                 resolver. Lo sustituyen TRES cosas:
+                   Oak en la llegada . su cartel flotante . un mensaje al entrar
+                 ⚠ el mensaje va con 60 TICKS DE RETRASO: al entrar, el chat se
+                   lo come el aviso de conexion y lo que escriban los demas. Y va
+                   por `Programador.en`, que corre en el TICK del servidor --que
+                   es donde se puede tocar a un jugador--
+              LA PANTALLA, rehecha el mismo dia:
+              ⚠⚠ LA REJILLA SIGNIFICA ALGO: FILA = REGION, COLUMNA = TIPO. Arriba
+                 Kanto, abajo Johto, y las columnas siempre Planta/Fuego/Agua,
+                 con la cinta del tipo arriba de cada tarjeta. Explica el juego
+                 antes de que nadie lea una palabra. Misma razon por la que cada
+                 parada de Viajes tiene su color
+              ⚠⚠ Y PASA A FONDO OSCURO. La version anterior pintaba celdas CLARAS
+                 sobre el chasis claro y le ponia al texto un CONTORNO DE CUATRO
+                 COPIAS desplazadas -- que es justo lo que este documento tiene
+                 escrito que EMPASTA en textos pequeños. Sobre fondo oscuro no
+                 hace falta ninguno de los dos: el contraste lo da el fondo, y la
+                 sombra sigue apagada por la leccion de la matriz escalada
+              ⚠⚠ CONFIRMACION ANTES DE ENTREGAR (peticion del usuario): es la
+                 unica decision permanente del primer minuto de partida
+                 ⚠⚠ el velo va DESPUES de `ctx.draw()` y es OPACO. Las dos cosas:
+                    DrawContext amontona el texto en una capa que se vuelca la
+                    ULTIMA, asi que un relleno pedido despues acaba DEBAJO de las
+                    letras. Es la leccion del panel de ayuda del Pase, aplicada
+                    antes de que costara otra captura
+              /luna inicial                      estado: ¿existe Oak? ¿ya elegi?
+              /luna inicial oak | oak quitar     lo coloca o lo quita donde estas
+              /luna inicial reiniciar [jugador]  la marca Y la mision
+              /luna inicial dar <jug> <especie>  entrega saltandose la pantalla
+              /luna inicial abrir <jugador>      fuerza la pantalla sin ir a Oak
+              ⚠ `dar` pasa por `conceder` a proposito: entregar el Pokemon por
+                otro camino dejaria la marca sin poner y el jugador podria elegir
+                OTRA VEZ
+              ⚠⚠ OAK CUELGA DE LA GUARDA `hayEntrenadores()`, y eso tiene una
+                 consecuencia: sin rctmod no hay Oak, y sin Oak NO HAY FORMA DE
+                 ELEGIR INICIAL desde el juego. La salida no es sacarlo de la
+                 guarda --se caeria al arrancar con un NoClassDefFoundError que no
+                 nombra a rctmod-- sino `/luna inicial abrir`
+              +4 comprobaciones, y la que importa: EL ENTRENADOR DE OAK EXISTE.
+              Si ese id dejara de existir no habria ningun error -- habria un
+              muñeco generico, o ninguno, y NADIE PODRIA EMPEZAR A JUGAR. Es el
+              fallo de los 62 cosmeticos que no existian, en la puerta de entrada
+              ⚠ y que la rejilla de 3x2 tenga SEIS iniciales EXACTOS: un septimo
+                seria inalcanzable sin dar ningun error. SEXTA vez que este
+                proyecto tropieza con una rejilla que cabia por casualidad
+              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 16:42):
+                servidor  Done (33,488 s) . AUTOTEST 642/642
+                clientes  manifiesto 909051d7cb publicado y sirviendose
+                /luna inicial contesta: 6 opciones . entrenador de Oak: existe
+              ⚠ FALTA COLOCARLO: `/luna inicial oak` de pie donde vaya, dentro
+                de la ciudadela. La parada del Laboratorio esta en -25 68 -52
+              ⚠ SIN VERIFICAR EN EL JUEGO: nadie ha hecho el clic derecho todavia
+              ---- lo de antes, que explica por que existe -------------
               ⚠⚠ EL BLOQUEO LLEVABA MESES ABIERTO Y NO ERA LOGICA.
                  feature-gap-analysis.md lo describia: un jugador nuevo
                  NO TENIA NINGUN POKEMON, y sin Pokemon no servia nada de
@@ -666,8 +764,9 @@ Inicial       LA PANTALLA QUE DESBLOQUEA EL PROYECTO (2026-08-23)
                  DESDE EL PRINCIPIO --marca primero, entrega despues,
                  deshace si falla, da XP y avanza la mision-- y lo unico
                  que faltaba era QUIEN LLAMARA a conceder()
-              ⚠ SE ABRE SOLA porque un icono mas no habria servido: QUIEN
-                ACABA DE ENTRAR NO SABE QUE EL POKEPAD EXISTE
+              ⚠ SE ABRIA SOLA porque un icono mas no habria servido: QUIEN
+                ACABA DE ENTRAR NO SABE QUE EL POKEPAD EXISTE. Sigue siendo
+                cierto, y por eso Oak esta en la llegada y avisa por el chat
               ⚠ Y LO DECIDE EL SERVIDOR (kit_claim), no "?tengo algun
                 Pokemon?" -- eso daria falso positivo con quien guarde su
                 equipo en el PC
@@ -3082,6 +3181,7 @@ Interfaz      VEINTICINCO PANTALLAS. Nueve verificadas en el juego.
                 Santuario   2026-09-04   nichos, y el Memorial aparte
                 Torre       2026-09-07   3 modos, y sus Recompensas
                 Pase        2026-09-08   100 niveles . 1 via de pago . SIN VERIFICAR
+                Inicial     2026-09-08   rehecha: la abre OAK . SIN VERIFICAR
               11 de los 16 iconos abren algo: pokedex (la de Cobblemon),
               cosmeticos, trabajos, misiones, clan, tienda, curar, mercado,
               cazas, explorar y viajes
@@ -4086,6 +4186,7 @@ documentación · migración · rollback.
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
 | D-037 | 2026-08-17 | **La base del pack pasa a ser COBBLEVERSE, quitandole la generacion de estructuras y la musica.** Revoca D-031 | **Orden del usuario, dada despues de que le enseñara las licencias** — `cobbleverse` es All Rights Reserved y `cobbleverse-badges` es CC-BY-NC-ND-4.0, que es la clausula por la que D-006 lo habia descartado. Queda escrito aqui para que quien lo lea dentro de seis meses vea **el dato y la decision**, no solo la decision. **Lo que si se hace bien:** el manifiesto guarda URL y hash y nunca el jar, asi que cada mod se descarga del CDN de Modrinth — no redistribuimos nada suyo, igual que con los shaders (D-030). Se les quita lo que el usuario no queria: **generacion de estructuras** (4 mods) y **421 MB de musica**, que multiplicaba por cinco la descarga de un jugador nuevo (P10). El pack pasa de 185 a **434 MB**. Tres cosas que solo se ven haciendolo: **el slug de Modrinth no es el nombre del jar** y una exclusion mal escrita no surte efecto *sin avisar*; **su configuracion son 155 ficheros** y sueltos eran 155 peticiones a `raw`, o sea el 429 de D-036 otra vez (van en un zip por carpeta con `keepExisting`); y **`continuity:default` cambia 42 bloques de construir** — lo reporto el usuario en vivo con la ciudadela ya empezada, y se apaga |
 | D-038 | 2026-08-17 | **El PokePad enseña datos de sesion —Plata, LunaCoins, Clan, Trabajo, Division y Medallas— en vez de la tarjeta de entrenador** | **Decision del usuario.** La tarjeta enseñaba el nivel de las cinco Vias en estrellas; lo que el queria bajo la cara es lo que se mira a diario. Dos cosas quedan escritas porque no son obvias: **las 16 medallas se referencian por identificador al mod de CobbleVerse y NO se copian sus texturas** — el mod va instalado en el cliente, asi que apuntarlas cuesta cero bytes, no redistribuye nada de un CC-BY-NC-ND y el dibujo lo sigue mandando su autor; y **clan, trabajo y division viajan en el paquete aunque no exista el sistema**, mandando cadena vacia para que el Pad pinte un guion. Un «Sin clan» diria «ya funciona y no tienes ninguno», que no es verdad; y tenerlos ya en el protocolo hace que encenderlos sea rellenar tres lineas en vez de tocar paquete, codec, cache y dibujado |
+| D-048 | 2026-09-08 | **El inicial se elige ante el Profesor Oak, y la pantalla deja de abrirse sola** | **Peticion del usuario**: *«colocar al npc Profesor Oak y cuando se le de clic derecho se abra la pestaña para seleccionar a un pokemon inicial»*, con confirmacion antes de entregar. ⚠⚠⚠ **Lo primero que salio de la auditoria es que la mitad ya existia**: `StarterService`, el protocolo y la pantalla en 3D llevan desde el 2026-08-23, y `/luna reiniciarinicial` tambien. Lo que se ha hecho no es la eleccion de inicial: es **ponerle una puerta**. ⚠⚠⚠ **Y no habia ninguna tecla que quitar**, comprobado en el jar de Cobblemon 1.8.0: sus seis keybinds no incluyen ninguna de inicial, `CobblemonStarterHandler.handleJoin` **esta vacio** --Cobblemon 1.8 no ofrece inicial al entrar-- y `/openstarterscreen` pide op 2. **Lo que abria la pantalla era nuestra propia apertura automatica**, y eso es lo que se ha retirado. ⚠⚠⚠ **Oak no se dibujo: ya viene dentro de rctmod** --tres pieles y tres entrenadores completos-- asi que cero arte y cero datapack. ⚠⚠ Pero **trae un Tauros de nivel 99**, y un TrainerMob con `forceBattleOnSight` a ocho bloques seria el jefe final del servidor plantado en la plaza: lo cortan `setAiDisabled(true)` antes del primer tick y el clic derecho atajado con `SUCCESS`. ⚠⚠⚠ **La pantalla ya se puede cerrar, y eso es consecuencia directa de la puerta**: no se podia cerrar porque **no habia forma de volver**, y hoy la hay. Con eso desaparece toda la familia de «me quede encerrado». ⚠⚠ **Lo que la apertura automatica hacia bien hay que seguir haciendolo**: era imposible no verla. Quitarla a secas deja a un jugador nuevo sin Pokemon y sin pista --el bloqueo original-- asi que la sustituyen Oak en la llegada, su cartel y un mensaje al entrar con 60 ticks de retraso. ⚠ **La rejilla pasa a significar algo**: fila = region, columna = tipo. ⚠ Y el fondo pasa a oscuro, con lo que se va el contorno de cuatro copias que este documento ya tenia fichado como «empasta». Detalle en `OakNpc.java` e `InicialScreen.java` |
 | D-047 | 2026-09-08 | **El pase baja a 1.500 LunaCoins, devuelve 100 en el nivel 50 y 100 en el 98, y la XP por mena baja de 4 a 1** | **Las tres son ordenes del usuario**, y la de la mena viene con el diagnostico dentro: *«la experiencia que da lo de la mena, que de a 1, eso es muy roto»*. ⚠⚠⚠ **Tenia razon y el numero que lo demuestra estaba escrito en nuestro propio fichero, mal**: el javadoc de `PaseXp` decia «mena comun 4, ~90 veces/hora, 360 XP/hora» y **las 90 veces/hora eran falsas** — un minero saca del orden de **400 menas a la hora**, porque el carbon y el cobre salen en **vetas de veinte y treinta bloques**, asi que lo de verdad eran **1.600 XP/hora**: el tope diario entero **en cuarenta y cinco minutos**, con el resto de la tabla de fuentes convertido en adorno. ⚠⚠ **Es la MISMA regla que ya justificaba que la piedra valga cero** («son 2.500 bloques a la hora, asi que el pase seria un temporizador»), un escalon mas arriba — **la regla estaba escrita y aun asi fallo, porque la estimacion vivia en un comentario y un comentario no se comprueba**. Hoy las tasas son constantes (`VECES_HORA_MENA`) y el autotest cruza XP x tasa contra el tope. ⚠ **La mena RARA no se toca**: lo roto era el volumen y un diamante no tiene volumen. ⚠ Y **cosecha y pesca tienen la misma forma de problema** con tasas sin volver a medir: quedan **fuera** del invariante a proposito, porque meterlas con una tasa inventada seria la confianza falsa de los gimnasios. ⚠⚠ **De la otra idea del usuario —«5 cada 10 menas»— se descarto el mecanismo, no la intencion**: es media XP por mena, y pagar por tandas obliga a **recordar cuantas lleva rotas entre pago y pago** (columna, migracion y una escritura por bloque picado) para ganar solo dividir por dos otra vez. Si hace falta bajar mas, la palanca sigue siendo el mismo numero. ⚠⚠⚠ **Las 200 LunaCoins que devuelve son la unica recompensa que no se entrega: se INGRESA**, y por eso va **dentro de la transaccion que apunta el cobro** (R3) en vez de despues del commit como los objetos — pagarlas fuera dejaria el nivel marcado como cobrado y el dinero sin ingresar. **No cruza D-014**: no convierte una moneda en otra, se compra con LunaCoins y devuelve LunaCoins, y **la Torre ya hacia lo mismo** (+50 cada 30 rondas). ⚠⚠ **Lo que hay que vigilar no es que devuelva sino CUANTO**: un pase que devuelve lo que cuesta **se paga solo para siempre** y el producto deja de venderse sin que nadie toque una linea de codigo — hoy son **200 sobre 1.500, el 13 %**, y el autotest exige que no llegue ni a la mitad. ⚠ **El precio sigue siendo provisional**, como todos los de este proyecto; lo unico que cambia con el 1.500 es que la exposicion a T4 que D-046 acepto a sabiendas **es diez veces mas barata de adquirir**, no que cambie de categoria. |
 | D-046 | 2026-09-08 | **El Pase de Batalla pasa a tener UNA SOLA VIA, DE PAGO, con 100 niveles de objetos de Cobblemon y DOS Pokemon.** **Revoca D-045** | **Orden del usuario, el mismo dia y despues de usarlo**: *«este pase de batalla si o si es comprando lunacoins, no hay via libre ni nada... debe tener buenos items competitivos para crianza y cositas asi»*, con el nivel 1 dando un Charizard de nivel 15 y el 100 **un Charizard variocolor de nivel 50**. ⚠⚠⚠ **Queda escrito que esto cruza T4, y no para volver a discutirlo**: [monetization.md](docs/economy/monetization.md) §2 pone **shinies** y **objetos competitivos exclusivos** en la lista de «nunca, bajo ninguna circunstancia» y el test de §6 se para en la **primera** pregunta. Se tomo **a sabiendas**, igual que D-020 con los legendarios de los cofres, y **el riesgo que queda vivo no es interno**: son las reglas comerciales de Mojang (`B-008`, `SEC-004`), que prohiben vender ventaja de juego y siguen sin verificar desde el 2026-08-11. ⚠⚠ **Lo unico que se dejo fuera es la MONEDA**: el pase no da ni un PokeDolar, porque un objeto entra en la economia de objetos pero moneda vendida por dinero real **saltea todos los sumideros a la vez** (P3) — y esa es la unica averia de la lista que no se arregla bajando un numero. ⚠⚠⚠ **Lo que impide que se complete rapido sigue siendo el TOPE DIARIO**, recalibrado: 53.700 XP y 1.200 al dia dan **45 dias naturales como minimo** de una temporada de 60 — y con un pase de PAGO la cota de arriba importa igual, porque quien paga tiene que poder terminarlo. ⚠ **Y el paso de la curva baja de 20 a 6 al doblar los niveles**: con 20, el pase entero costaria 129.000 XP, o sea 107 dias, y habria sido imposible sin dar ningun error. ⚠ **La XP guardada como TOTAL (V032) es lo que salvo el cambio**: al cambiar la curva de 50 a 100 niveles todo el mundo se recoloco solo. Lo que si hubo que borrar son los reclamos (V033), porque el nivel 3 ya no da lo que daba. Detalle en [pase-batalla.md](docs/economy/pase-batalla.md) |
 | D-045 | 2026-09-08 | **El Pase de Batalla tiene DOS vías, y la de pago (15.000 LunaCoins) lleva ÚNICAMENTE cosméticos** | **Petición del usuario** (un pase que se sube jugando, con recompensas, «bien calibrado matemáticamente» y «que no consigan todo rápido»). La estructura de dos vías no es un adorno: es **lo único que deja cumplir las dos mitades de la petición a la vez**. La vía libre reparte Plata, objetos y llaves —se gana jugando, así que es una fuente más del juego y se calibra como tal (P3)—; la vía de pago se compra con moneda premium, y ahí el test de [monetization.md](docs/economy/monetization.md) §6 **se para en la segunda pregunta**: *«¿crea moneda u objetos comerciables? SÍ = NO SE VENDE»*. ⚠⚠ **Un Caramelo Raro en la vía libre es un premio por jugar; el mismo Caramelo en la vía de pago es COMPRAR PROGRESIÓN**, que es T4 y la línea roja de D-007 y D-014 — CLAUDE.md ya lo decía de la tienda: *«si algún día vuelven, que no sea por LunaCoins»*. Y no es solo cumplir una regla: §2 de ese documento dice que la identidad **debe ser el grueso de la facturación** y que es lo único que no rompe nada, así que un pase de cosméticos es exactamente el producto que ese marco pide. ⚠⚠⚠ **Lo que impide que se complete rápido no es la curva sino el TOPE DIARIO**: 39.500 XP y 900 al día dan **44 días naturales como mínimo**, y ese mínimo no depende de cuánto juegue nadie ni de cuántas fuentes de XP se añadan mañana — que es lo que hace segura a cualquier fuente nueva, la Torre incluida. ⚠ **La vía Luna premia solo en los niveles pares por una cuenta, no por tacañería**: 50 cosméticos serían 60.000 de valor de tienda por un pase de 15.000 y nadie volvería a comprar un sombrero suelto; con 25 devuelve 2,1× y la tienda sigue teniendo sentido. ⚠ **Los importes son provisionales**, como todos los de este proyecto, y hay exactamente cuatro palancas: `PaseNivel.BASE`, `PaseNivel.PASO`, `PaseNivel.TOPE_DIARIO` y la tabla de `PaseXp`. Detalle en [pase-batalla.md](docs/economy/pase-batalla.md) |

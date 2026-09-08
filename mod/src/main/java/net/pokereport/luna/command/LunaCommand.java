@@ -645,7 +645,11 @@ public final class LunaCommand {
                     .then(literal("2vs2").executes(ctx -> hologramaTorre(ctx.getSource(), "2vs2")))
                     .then(literal("aleatorio").executes(ctx -> hologramaTorre(ctx.getSource(), "aleatorio")))
                     .then(literal("quitar").executes(ctx -> quitarHologramaTorre(ctx.getSource())))
-                    .then(literal("actualizar").executes(ctx -> actualizarHologramasTorre(ctx.getSource())))))
+                    .then(literal("actualizar").executes(ctx -> actualizarHologramasTorre(ctx.getSource()))))
+                .then(literal("arena")
+                    .executes(ctx -> arenaTorre(ctx.getSource())))
+                .then(literal("tp")
+                    .executes(ctx -> tpTorre(ctx.getSource()))))
 
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
@@ -1443,6 +1447,35 @@ public final class LunaCommand {
     private static int actualizarHologramasTorre(ServerCommandSource src) {
         net.pokereport.luna.torrebatalla.TorreRanking.actualizarHologramasEnMundos(src.getServer());
         src.sendFeedback(() -> Text.literal("§aTodos los hologramas de ranking de la torre han sido actualizados."), false);
+        return 1;
+    }
+
+    private static int arenaTorre(ServerCommandSource src) {
+        net.minecraft.server.world.ServerWorld mundoTorre = src.getServer().getWorld(net.pokereport.luna.world.LunaDimensions.TORRE);
+        if (mundoTorre == null) {
+            src.sendError(Text.literal("§cDimensión lunaeternal:torre no encontrada."));
+            return 0;
+        }
+        net.pokereport.luna.torrebatalla.TorreBatallaService.asegurarBloquesArena(mundoTorre);
+        src.sendFeedback(() -> Text.literal("§aBloques de posiciones de combate asegurados en la plataforma."), false);
+        return 1;
+    }
+
+    private static int tpTorre(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        net.minecraft.server.world.ServerWorld mundoTorre = src.getServer().getWorld(net.pokereport.luna.world.LunaDimensions.TORRE);
+        if (mundoTorre == null) {
+            src.sendError(Text.literal("§cDimensión lunaeternal:torre no encontrada."));
+            return 0;
+        }
+        var pos = net.pokereport.luna.torrebatalla.TorreBatallaService.POS_JUGADOR;
+        p.teleport(mundoTorre, pos.x, pos.y, pos.z,
+                net.pokereport.luna.torrebatalla.TorreBatallaService.YAW_JUGADOR, 0f);
+        p.sendMessage(Text.literal("§aTeletransportado a la plataforma de la Torre de Batalla."), false);
         return 1;
     }
 

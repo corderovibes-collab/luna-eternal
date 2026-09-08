@@ -23,10 +23,13 @@ import com.gitlab.srcmc.rctmod.api.RCTMod;
 import com.gitlab.srcmc.rctmod.world.entities.TrainerMob;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
+import net.minecraft.registry.Registries;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
@@ -43,11 +46,24 @@ public class TorreBatallaService {
     }
 
     private static final ConcurrentHashMap<UUID, Partida> partidasActivas = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Integer, Boolean> arenasOcupadas = new ConcurrentHashMap<>();
     private static final Set<UUID> enCombate = ConcurrentHashMap.newKeySet();
     
     private static final String PREFIJO_NPC = "luna_ladder_";
     private static final Map<UUID, TrainerMob> MOB_ACTUAL = new ConcurrentHashMap<>();
+
+    // Coordenadas fijas de la plataforma mapeada por el usuario
+    public static final Vec3d POS_JUGADOR = new Vec3d(50.489, 117.0, 62.56);
+    public static final float YAW_JUGADOR = 180.0f; // Mira al norte (-Z)
+
+    public static final Vec3d POS_NPC = new Vec3d(50.48, 117.0, 38.51);
+    public static final float YAW_NPC = 0.0f; // Mira al sur (+Z)
+
+    public static final BlockPos POS_BLOCK_JUGADOR_STAND = new BlockPos(50, 116, 62);
+    public static final BlockPos POS_BLOCK_NPC_STAND = new BlockPos(50, 116, 38);
+    public static final BlockPos POS_BLOCK_JUGADOR_POKEMON = new BlockPos(50, 115, 54);
+    public static final BlockPos POS_BLOCK_NPC_POKEMON = new BlockPos(50, 115, 46);
+
+    public static final Box ARENA_BOX = new Box(20, 100, 10, 80, 140, 90);
 
     private static final List<String> SKINS_RIVALES = List.of(
         "kanto_brock", "kanto_misty", "kanto_ltsurge", "kanto_erika", "kanto_koga",
@@ -202,33 +218,26 @@ public class TorreBatallaService {
             asignarEquipoAleatorio(jugador);
         }
 
-        // Encontrar una arena libre
-        int arenaId = 0;
-        while (arenasOcupadas.containsKey(arenaId) && arenasOcupadas.get(arenaId)) {
-            arenaId++;
+        if (!partidasActivas.isEmpty()) {
+            jugador.sendMessage(Text.literal("§c[Torre de Batalla] La arena está ocupada por otro entrenador en este momento. Por favor espera a que termine su desafío."));
+            return;
         }
-        
-        arenasOcupadas.put(arenaId, true);
-        partidasActivas.put(uuid, new Partida(arenaId, modo, 1));
+
+        partidasActivas.put(uuid, new Partida(0, modo, 1));
         
         ServerWorld mundoTorre = jugador.getServer().getWorld(LunaDimensions.TORRE);
         if (mundoTorre == null) return;
 
-        int cx = arenaId * 1000;
-        int cy = 100;
-        int cz = 0;
-
-        construirBase(mundoTorre, cx, cy, cz);
+        asegurarBloquesArena(mundoTorre);
         
         // Barrer la arena de cualquier TrainerMob previo antes de teletransportar
-        Box arenaBox = new Box(cx - 20, cy - 5, cz - 20, cx + 20, cy + 20, cz + 20);
-        for (TrainerMob m : mundoTorre.getEntitiesByClass(TrainerMob.class, arenaBox, e -> true)) {
+        for (TrainerMob m : mundoTorre.getEntitiesByClass(TrainerMob.class, ARENA_BOX, e -> true)) {
             m.discard();
         }
         MOB_ACTUAL.remove(uuid);
 
-        // Teletransportar al jugador (centro)
-        jugador.teleport(mundoTorre, cx + 0.5, cy + 1, cz + 2.5, 180, 0);
+        // Teletransportar al jugador a su posición fija en la plataforma mirando al norte
+        jugador.teleport(mundoTorre, POS_JUGADOR.x, POS_JUGADOR.y, POS_JUGADOR.z, YAW_JUGADOR, 0f);
         
         jugador.sendMessage(Text.literal("§e¡La Torre de Batalla ha comenzado! Ronda 1."));
         
@@ -266,10 +275,6 @@ public class TorreBatallaService {
         ServerWorld mundoTorre = jugador.getServer().getWorld(LunaDimensions.TORRE);
         if (mundoTorre == null) return;
 
-        int cx = partida.arenaId() * 1000;
-        int cy = 100;
-        int cz = 0;
-
         // Limpiar el mob anterior si existe
         TrainerMob oldMob = MOB_ACTUAL.remove(jugador.getUuid());
         if (oldMob != null && !oldMob.isRemoved()) {
@@ -277,8 +282,7 @@ public class TorreBatallaService {
         }
 
         // Barrer la arena de cualquier TrainerMob residual
-        Box arenaBox = new Box(cx - 20, cy - 5, cz - 20, cx + 20, cy + 20, cz + 20);
-        for (TrainerMob m : mundoTorre.getEntitiesByClass(TrainerMob.class, arenaBox, e -> true)) {
+        for (TrainerMob m : mundoTorre.getEntitiesByClass(TrainerMob.class, ARENA_BOX, e -> true)) {
             m.discard();
         }
 
@@ -288,7 +292,7 @@ public class TorreBatallaService {
         String bossTrainerName = nombreBase + " (Ronda " + partida.ronda() + ")";
         String skinId = elegirSkinRival();
 
-        TrainerMob mob = spawnOpponentMob(mundoTorre, new Vec3d(cx + 0.5, cy + 1, cz - 2.5), 0f, bossDisplayName, skinId);
+        TrainerMob mob = spawnOpponentMob(mundoTorre, POS_NPC, YAW_NPC, bossDisplayName, skinId);
         if (mob != null) {
             MOB_ACTUAL.put(jugador.getUuid(), mob);
         }
@@ -368,7 +372,6 @@ public class TorreBatallaService {
         enCombate.remove(uuid);
         Partida partida = partidasActivas.remove(uuid);
         if (partida != null) {
-            arenasOcupadas.put(partida.arenaId(), false);
             // Si el modo era Aleatorio, retirar los 6 Pokémon prestados
             if (partida.modo() == 2) {
                 var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
@@ -385,11 +388,7 @@ public class TorreBatallaService {
             }
             ServerWorld mundoTorre = jugador.getServer().getWorld(LunaDimensions.TORRE);
             if (mundoTorre != null) {
-                int cx = partida.arenaId() * 1000;
-                int cy = 100;
-                int cz = 0;
-                Box arenaBox = new Box(cx - 20, cy - 5, cz - 20, cx + 20, cy + 20, cz + 20);
-                for (TrainerMob m : mundoTorre.getEntitiesByClass(TrainerMob.class, arenaBox, e -> true)) {
+                for (TrainerMob m : mundoTorre.getEntitiesByClass(TrainerMob.class, ARENA_BOX, e -> true)) {
                     m.discard();
                 }
             }
@@ -534,14 +533,33 @@ public class TorreBatallaService {
         return new PokemonModel(p);
     }
 
-    private static void construirBase(ServerWorld mundo, int cx, int cy, int cz) {
-        for (int dx = -5; dx <= 5; dx++) {
-            for (int dz = -5; dz <= 5; dz++) {
-                BlockPos pos = new BlockPos(cx + dx, cy, cz + dz);
-                if (mundo.isAir(pos)) {
-                    mundo.setBlockState(pos, Blocks.SMOOTH_QUARTZ.getDefaultState());
-                }
+    public static void asegurarBloquesArena(ServerWorld mundo) {
+        try {
+            var reg = Registries.BLOCK;
+            var idPlayerStand = Identifier.of("cobblemonbattlepositions", "player_stand_position");
+            var idTrainerStand = Identifier.of("cobblemonbattlepositions", "trainer_stand_position");
+            var idPlayerPokemon = Identifier.of("cobblemonbattlepositions", "player_pokemon_position");
+            var idTrainerPokemon = Identifier.of("cobblemonbattlepositions", "trainer_pokemon_position");
+
+            var bPlayerStand = reg.get(idPlayerStand);
+            var bTrainerStand = reg.get(idTrainerStand);
+            var bPlayerPokemon = reg.get(idPlayerPokemon);
+            var bTrainerPokemon = reg.get(idTrainerPokemon);
+
+            if (bPlayerStand != null && bPlayerStand != Blocks.AIR) {
+                mundo.setBlockState(POS_BLOCK_JUGADOR_STAND, bPlayerStand.getDefaultState());
             }
+            if (bTrainerStand != null && bTrainerStand != Blocks.AIR) {
+                mundo.setBlockState(POS_BLOCK_NPC_STAND, bTrainerStand.getDefaultState());
+            }
+            if (bPlayerPokemon != null && bPlayerPokemon != Blocks.AIR) {
+                mundo.setBlockState(POS_BLOCK_JUGADOR_POKEMON, bPlayerPokemon.getDefaultState());
+            }
+            if (bTrainerPokemon != null && bTrainerPokemon != Blocks.AIR) {
+                mundo.setBlockState(POS_BLOCK_NPC_POKEMON, bTrainerPokemon.getDefaultState());
+            }
+        } catch (Exception e) {
+            LunaEternal.LOG.error("Error asegurando bloques de posición en la Torre de Batalla", e);
         }
     }
 }

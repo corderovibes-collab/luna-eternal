@@ -3056,6 +3056,28 @@ public final class AutoTest {
             }
         }
         check("los identificadores valen para una clave de traducción", formaOk);
+
+        // ⚠⚠⚠ Y CADA PARADA TIENE SU ARTE, QUE ES LO QUE ESTA COMPROBACION
+        //    EXISTE PARA CAZAR. `ViajesScreen` compone la ruta pegando el
+        //    identificador (`textures/gui/viajes/<id>.png`), asi que renombrar
+        //    una parada SIN renombrar su PNG deja una ficha EN MAGENTA -- sin
+        //    un solo error, ni al compilar ni al arrancar.
+        //    ⚠⚠ Salio al cambiar «monumentos» por «santuario» (2026-09-08), y
+        //       no habia nada que lo vigilara: es el fallo de los 62 cosmeticos
+        //       que no existian y el del traje registrado como «arceus», otra
+        //       vez, en la pantalla de Viajes.
+        //    ⚠ Se puede comprobar DESDE EL SERVIDOR porque es UN SOLO JAR:
+        //      `src/client/resources/` acaba dentro del mismo fichero.
+        boolean hayArte = true;
+        for (var p : todas) {
+            if (AutoTest.class.getResource("/assets/lunaeternal/textures/gui/viajes/"
+                    + p.id() + ".png") == null) {
+                hayArte = false;
+                LunaEternal.LOG.error("La parada '{}' no tiene su PNG: saldria en "
+                        + "MAGENTA sin dar ningun error", p.id());
+            }
+        }
+        check("CADA PARADA TIENE SU ARTE (si no, sale en magenta y no avisa)", hayArte);
     }
 
     private void testCura() {
@@ -3348,6 +3370,152 @@ public final class AutoTest {
                 svc.alquilar(N_ADMIN, a, CAMPEON, key()).ok());
         check("santuario: NPC tiene etiqueta correcta",
                 "luna_santuario".equals(net.pokereport.luna.santuario.SantuarioNpc.MARCA));
+
+        testNichoEditor();
+    }
+
+    /**
+     * EL COMANDO QUE ESCRIBE LA CONFIG DE LOS NICHOS.
+     *
+     * <h2>⚠⚠⚠ LO QUE SE COMPRUEBA AQUI ES QUE NO PUEDA DEJAR EL SERVIDOR SIN
+     * ARRANCAR</h2>
+     *
+     * {@code NichoCatalogo} se niega a cargar --y con ella el servidor-- ante una
+     * config invalida, y eso es correcto. Lo peligroso es el comando nuevo: si
+     * {@code NichoEditor.guardar} escribiera antes de validar, un operador
+     * capturando nichos podria dejar el arranque roto <b>y no enterarse hasta el
+     * siguiente reinicio</b> -- que es el peor momento posible, y es la familia
+     * de fallo que ya mordio con `letmedespawn` y con la V034.
+     */
+    private void testNichoEditor() {
+        var E = net.pokereport.luna.santuario.NichoEditor.class;  // solo para leerlo
+        check("editor: la clase existe", E != null);
+
+        // ⚠ La forma capturada tiene que ser un 3x3, que es lo que dicen el
+        //   documento y la construccion. Con RADIO 2 saldrian nichos de 5x5 que
+        //   se solaparian con los ya construidos, y el sintoma seria un comando
+        //   que «no deja capturar» en vez de una constante cambiada.
+        check("editor: el nicho capturado es de 3x3",
+                net.pokereport.luna.santuario.NichoEditor.RADIO == 1);
+
+        var suelo = new net.minecraft.util.math.BlockPos(100, 70, 200);
+        var n = net.pokereport.luna.santuario.NichoEditor.capturar(
+                suelo, "nicho_01", "Nicho 1");
+
+        check("editor: la caja capturada mide 3 de ancho",
+                n.max().getX() - n.min().getX() == 2
+                        && n.max().getZ() - n.min().getZ() == 2);
+        check("editor: el suelo del nicho es donde estan los pies",
+                n.min().getY() == suelo.getY());
+
+        // ⚠⚠ EL PROYECTOR DENTRO DE SU CAJA NO ES COSMETICO: `validar` lo exige,
+        //    porque si cayera fuera se protegeria un 3x3 que no es el que tiene
+        //    el proyector -- y el memorial se abriria desde un bloque que no se
+        //    ve. Un cambio en ALTO o en ALTURA_PROYECTOR que los descuadre
+        //    dejaria el comando rechazando TODAS las capturas.
+        check("EDITOR: EL PROYECTOR CAPTURADO CAE DENTRO DE SU CAJA",
+                n.contiene(n.proyector()));
+
+        // ⚠⚠⚠ Y LA COMPROBACION QUE DE VERDAD IMPORTA: que lo que captura el
+        //    comando PASE la validacion que decide si el servidor arranca. Es
+        //    cruzar las dos piezas, no mirar cada una por su lado.
+        boolean valida = true;
+        try {
+            net.pokereport.luna.santuario.NichoCatalogo.validar(java.util.List.of(n));
+        } catch (IllegalStateException e) {
+            valida = false;
+            LunaEternal.LOG.error("La captura del comando NO valida: {}", e.getMessage());
+        }
+        check("EDITOR: LO QUE CAPTURA EL COMANDO ARRANCARIA EL SERVIDOR", valida);
+
+        // ⚠ Dos nichos pegados a 2 bloques SE SOLAPAN, y eso tiene que salir por
+        //   el camino de «no se guardo nada», no por el de un servidor caido.
+        var pegado = net.pokereport.luna.santuario.NichoEditor.capturar(
+                new net.minecraft.util.math.BlockPos(102, 70, 200), "nicho_02", "Nicho 2");
+        boolean cazaSolape = false;
+        try {
+            net.pokereport.luna.santuario.NichoCatalogo.validar(
+                    java.util.List.of(n, pegado));
+        } catch (IllegalStateException e) {
+            cazaSolape = true;
+        }
+        check("editor: dos nichos a 2 bloques se detectan como solapados", cazaSolape);
+
+        // ⚠ Y a 3 bloques (pared con pared) SI caben: si esto fallara, no se
+        //   podrian construir nichos en fila, que es como estan construidos.
+        var contiguo = net.pokereport.luna.santuario.NichoEditor.capturar(
+                new net.minecraft.util.math.BlockPos(103, 70, 200), "nicho_02", "Nicho 2");
+        boolean enFila = true;
+        try {
+            net.pokereport.luna.santuario.NichoCatalogo.validar(
+                    java.util.List.of(n, contiguo));
+        } catch (IllegalStateException e) {
+            enFila = false;
+        }
+        check("editor: dos nichos en fila a 3 bloques caben", enFila);
+
+        // ⚠⚠ EL ID SE GENERA SOLO PORQUE «SON MUCHISIMOS», y dos nichos con el
+        //    mismo id comparten UNA SOLA FILA en la base: alquilar uno cobraria
+        //    dos sitios, o el memorial saldria en el de al lado. Que el
+        //    generador no repita es lo que impide esa averia muda.
+        var lista = new java.util.ArrayList<net.pokereport.luna.santuario.NichoCatalogo.Nicho>();
+        var vistos = new java.util.HashSet<String>();
+        boolean sinRepetir = true;
+        for (int i = 0; i < 40; i++) {
+            String id = net.pokereport.luna.santuario.NichoEditor.siguienteId(lista);
+            if (id == null || !vistos.add(id)) {
+                sinRepetir = false;
+                break;
+            }
+            lista.add(net.pokereport.luna.santuario.NichoEditor.capturar(
+                    new net.minecraft.util.math.BlockPos(i * 4, 70, 0), id,
+                    net.pokereport.luna.santuario.NichoEditor.nombrePara(id)));
+        }
+        check("EDITOR: CUARENTA CAPTURAS SEGUIDAS NO REPITEN IDENTIFICADOR", sinRepetir);
+
+        // ⚠ Y los cuarenta tienen que valer como config: es el caso real del
+        //   usuario, no uno de laboratorio.
+        boolean cuarentaValen = true;
+        try {
+            net.pokereport.luna.santuario.NichoCatalogo.validar(lista);
+        } catch (IllegalStateException e) {
+            cuarentaValen = false;
+            LunaEternal.LOG.error("Cuarenta nichos capturados NO validan: {}", e.getMessage());
+        }
+        check("editor: cuarenta nichos capturados en fila siguen siendo config valida",
+                cuarentaValen);
+
+        // ⚠ El hueco se reutiliza: borrar el 7 y capturar otro devuelve el 7, en
+        //   vez de dejar un agujero en la numeracion para siempre.
+        net.pokereport.luna.santuario.NichoEditor.quitar(lista, "nicho_07");
+        check("editor: el identificador borrado se vuelve a ofrecer",
+                "nicho_07".equals(
+                        net.pokereport.luna.santuario.NichoEditor.siguienteId(lista)));
+
+        // ⚠⚠⚠ EL JSON QUE ESCRIBE TIENE QUE VOLVER A LEERSE, y esto es ida y
+        //    vuelta POR EL TEXTO: comparar el objeto consigo mismo pasaria
+        //    siempre. Si el escritor y el lector dejaran de estar de acuerdo
+        //    --una coma, unas comillas, un nombre con acento-- el servidor no
+        //    arrancaria, y el fichero lo habria escrito nuestro propio comando.
+        //    Es el invariante del PAYLOAD del escaparate, aplicado a un fichero.
+        var conComillas = net.pokereport.luna.santuario.NichoEditor.capturar(
+                new net.minecraft.util.math.BlockPos(500, 70, 500), "nicho_99",
+                "El \"Bueno\" de Añón");
+        var ida = java.util.List.of(n, conComillas);
+        boolean vuelta = false;
+        try {
+            var leidos = net.pokereport.luna.santuario.NichoCatalogo.parsear(
+                    net.pokereport.luna.santuario.NichoEditor.json(ida));
+            vuelta = leidos.equals(ida);
+            if (!vuelta) {
+                LunaEternal.LOG.error("El JSON del editor no vuelve igual: {} vs {}",
+                        ida, leidos);
+            }
+        } catch (RuntimeException e) {
+            LunaEternal.LOG.error("El JSON del editor no se puede releer: {}",
+                    e.getMessage());
+        }
+        check("EDITOR: EL JSON QUE ESCRIBE ES EL QUE LEE EL ARRANQUE", vuelta);
     }
 
     /**

@@ -670,11 +670,51 @@ public final class LunaCommand {
                 .then(literal("info").requires(s -> s.hasPermissionLevel(4)).then(argument("nicho", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(ctx -> infoNicho(ctx.getSource(), com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "nicho")))))
                 .then(literal("recargar").requires(s -> s.hasPermissionLevel(4)).executes(ctx -> recargarSantuario(ctx.getSource())))
                 .then(literal("listar").requires(s -> s.hasPermissionLevel(4)).executes(ctx -> listarNichos(ctx.getSource())))
-                // ⚠ Colocar la Chansey es nivel 4: es decoracion del mundo,
+                // ⚠ Colocar la Mew es nivel 4: es decoracion del mundo,
                 //   como /luna decorar -- un moderador no construye.
                 .then(literal("npc")
                     .requires(s -> s.hasPermissionLevel(4))
-                    .executes(ctx -> npcSantuario(ctx.getSource()))))
+                    .executes(ctx -> npcSantuario(ctx.getSource()))
+                    .then(literal("quitar")
+                        .executes(ctx -> quitarNpcSantuario(ctx.getSource()))))
+
+                // ⚠⚠ DEFINIR LOS NICHOS DE PIE DENTRO DE ELLOS. Es lo que pidio
+                //    el usuario --«es mejor con un comando y la posicion del
+                //    jugador definir cada punto ya que son muchisimos»-- y es
+                //    nivel 4 por lo mismo que `npc`: esto escribe la geometria
+                //    del mundo, no modera contenido.
+                .then(literal("nicho")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .executes(ctx -> listarNichos(ctx.getSource()))
+                    .then(literal("aqui")
+                        .executes(ctx -> capturarNicho(ctx.getSource(), null))
+                        .then(argument("nombre", StringArgumentType.greedyString())
+                            .executes(ctx -> capturarNicho(ctx.getSource(),
+                                    StringArgumentType.getString(ctx, "nombre")))))
+                    .then(literal("proyector")
+                        .then(argument("nicho", StringArgumentType.word())
+                            .suggests(LunaCommand::sugerirNichos)
+                            .executes(ctx -> proyectorNicho(ctx.getSource(),
+                                    StringArgumentType.getString(ctx, "nicho")))))
+                    .then(literal("renombrar")
+                        .then(argument("nicho", StringArgumentType.word())
+                            .suggests(LunaCommand::sugerirNichos)
+                            .then(argument("nombre", StringArgumentType.greedyString())
+                                .executes(ctx -> renombrarNicho(ctx.getSource(),
+                                        StringArgumentType.getString(ctx, "nicho"),
+                                        StringArgumentType.getString(ctx, "nombre"))))))
+                    .then(literal("borrar")
+                        .then(argument("nicho", StringArgumentType.word())
+                            .suggests(LunaCommand::sugerirNichos)
+                            .executes(ctx -> borrarNicho(ctx.getSource(),
+                                    StringArgumentType.getString(ctx, "nicho")))))
+                    .then(literal("ir")
+                        .then(argument("nicho", StringArgumentType.word())
+                            .suggests(LunaCommand::sugerirNichos)
+                            .executes(ctx -> irANicho(ctx.getSource(),
+                                    StringArgumentType.getString(ctx, "nicho")))))
+                    .then(literal("ver")
+                        .executes(ctx -> verNichos(ctx.getSource())))))
 
             .then(literal("enfermera")
                 .requires(s -> s.hasPermissionLevel(4))
@@ -2012,21 +2052,61 @@ public final class LunaCommand {
 
     /** Recarga la config de nichos sin reiniciar. */
     private static int recargarSantuario(ServerCommandSource src) {
-        // ⚠ La config es un fichero local pequeno, se lee en el hilo del servidor.
+        // ⚠ La config es un fichero local pequeno, se lee en el hilo del
+        //   servidor. Lo que NO puede ir ahi es la parte de base de datos: de
+        //   eso se encarga `aplicarSantuario`.
+        int n;
         try {
-            int n = net.pokereport.luna.santuario.SantuarioProteccion.catalogo().recargar();
-            LunaEternal.santuario().garantizarNichos(
-                    net.pokereport.luna.santuario.SantuarioProteccion.catalogo().todos().stream()
-                            .map(net.pokereport.luna.santuario.NichoCatalogo.Nicho::id)
-                            .toList());
-            net.pokereport.luna.santuario.SantuarioProteccion.recargar();
-            src.sendFeedback(() -> Text.literal(
-                    "§aSantuario recargado: " + n + " nichos."), false);
-            return 1;
+            n = net.pokereport.luna.santuario.SantuarioProteccion.catalogo().recargar();
         } catch (Exception e) {
             src.sendError(Text.literal("§cError al recargar: " + e.getMessage()));
             return 0;
         }
+        aplicarSantuario(src.getServer());
+        final int total = n;
+        src.sendFeedback(() -> Text.literal(
+                "§aSantuario recargado: " + total + " nichos."), false);
+        return 1;
+    }
+
+    /**
+     * LO QUE HAY QUE HACER DESPUES DE QUE CAMBIE LA GEOMETRIA DE LOS NICHOS.
+     *
+     * <h2>⚠⚠⚠ LA MITAD DE ESTO ESTABA EN EL HILO DEL SERVIDOR, Y ES BASE DE DATOS</h2>
+     *
+     * {@code recargarSantuario} llamaba a {@code garantizarNichos} y a
+     * {@code SantuarioProteccion.recargar()} directamente desde el comando, o
+     * sea <b>dos consultas a MariaDB en el hilo del tick</b> -- la regla numero
+     * uno de este proyecto. No daba error porque el fichero es pequeño y la
+     * consulta rapida: lo que da es un servidor que se para el dia que la base
+     * tarde, y eso se lee como «lag», no como este fallo.
+     *
+     * <p>⚠⚠ <b>Y HAY QUE REENVIAR EL ESTADO.</b> Es la leccion de los clanes:
+     * <i>el estado no es de quien lo mira</i>. Quien tuviera la pantalla del
+     * Santuario abierta mientras se captura un nicho seguiria viendo la lista
+     * vieja --sin el nicho nuevo, o con el borrado-- hasta reabrir, y eso se
+     * comporta como debe, que es lo que despista.
+     */
+    private static void aplicarSantuario(net.minecraft.server.MinecraftServer servidor) {
+        var ids = net.pokereport.luna.santuario.SantuarioProteccion.catalogo().todos()
+                .stream()
+                .map(net.pokereport.luna.santuario.NichoCatalogo.Nicho::id)
+                .toList();
+        LunaEternal.submit(() -> {
+            try {
+                LunaEternal.santuario().garantizarNichos(ids);
+            } catch (Exception e) {
+                LunaEternal.LOG.error("Santuario: no se pudieron crear las filas", e);
+            }
+            net.pokereport.luna.santuario.SantuarioProteccion.recargar();
+            if (servidor != null) {
+                servidor.execute(() -> {
+                    for (var jugador : servidor.getPlayerManager().getPlayerList()) {
+                        net.pokereport.luna.net.Red.enviarSantuario(jugador);
+                    }
+                });
+            }
+        });
     }
 
     /** Lista todos los nichos y su estado. */
@@ -2060,6 +2140,13 @@ public final class LunaCommand {
                     } else {
                         sb.append(" §7[libre]");
                     }
+                    // ⚠ LAS COORDENADAS SALEN AQUI porque esta lista es la que
+                    //   usa quien esta construyendo: sin ellas, un nicho que
+                    //   quedo dos bloques corrido no se distingue del bueno --
+                    //   y saber CUAL revisar es la mitad del trabajo.
+                    sb.append(" §8").append(cn.nombre())
+                      .append("\n §7  caja ").append(caja(cn))
+                      .append(" §7· holo §b").append(punto(cn.proyector()));
                     sb.append("\n");
                 }
                 reply(p, sb.toString().trim());
@@ -2068,6 +2155,347 @@ public final class LunaCommand {
             }
         });
         return 1;
+    }
+
+    // =====================================================================
+    // DEFINIR LOS NICHOS ANDANDO POR ELLOS
+    //
+    // ⚠⚠ Peticion del usuario, con su motivo dentro: «falta colocar el lugar de
+    //    cada holografica y todo eso, asi que es mejor con un comando y la
+    //    posicion del jugador definir cada punto ya que son muchisimos».
+    //
+    // ⚠⚠⚠ Y LA HOLOGRAFICA NO TIENE COORDENADA PROPIA: el cliente dibuja la foto
+    //    a `proyector.y + 1,55`, asi que colocar el proyector ES colocar el
+    //    holograma. Un cuarto punto que declarar seria un cuarto punto que
+    //    puede dejar de cuadrar con los otros tres.
+    // =====================================================================
+
+    /** Autocompleta con los nichos que hay en la config. */
+    private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions>
+            sugerirNichos(com.mojang.brigadier.context.CommandContext<ServerCommandSource> ctx,
+                          com.mojang.brigadier.suggestion.SuggestionsBuilder sb) {
+        for (var n : net.pokereport.luna.santuario.SantuarioProteccion.catalogo().todos()) {
+            sb.suggest(n.id());
+        }
+        return sb.buildFuture();
+    }
+
+    /**
+     * CAPTURA UN NICHO DONDE ESTA EL JUGADOR.
+     *
+     * <p>⚠ El centro es <b>el bloque sobre el que estan los pies</b>, no el que
+     * pisa: {@code getBlockPos()} de un jugador de pie ya devuelve el bloque de
+     * aire donde esta el cuerpo, que es el suelo del nicho. Es lo que hace que
+     * ponerse en medio del nicho y teclear el comando baste.
+     *
+     * <p>⚠⚠ Y NO SE ESCRIBE NADA SI NO VALIDA. La caja nueva puede solapar con
+     * una que ya estaba --dos nichos pegados a dos bloques-- y eso, escrito en
+     * la config, <b>deja el servidor sin arrancar</b>. Aqui se dice y no se
+     * toca el disco.
+     */
+    private static int capturarNicho(ServerCommandSource src, String nombreDado) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego: hace falta tu posicion."));
+            return 0;
+        }
+        if (!net.pokereport.luna.world.LunaDimensions.CIUDADELA.equals(
+                p.getServerWorld().getRegistryKey())) {
+            src.sendError(Text.literal("\u00a7cLos nichos van en la CIUDADELA. "
+                    + "\u00a77Estas en otra dimension."));
+            return 0;
+        }
+        var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+        var lista = net.pokereport.luna.santuario.NichoEditor.copia(catalogo);
+        String id = net.pokereport.luna.santuario.NichoEditor.siguienteId(lista);
+        if (id == null) {
+            src.sendError(Text.literal("\u00a7cNo quedan identificadores libres."));
+            return 0;
+        }
+        String nombre = nombreDado == null || nombreDado.isBlank()
+                ? net.pokereport.luna.santuario.NichoEditor.nombrePara(id)
+                : nombreDado.trim();
+
+        var nicho = net.pokereport.luna.santuario.NichoEditor.capturar(
+                p.getBlockPos(), id, nombre);
+        lista.add(nicho);
+        String malo = net.pokereport.luna.santuario.NichoEditor.guardar(lista);
+        if (malo != null) {
+            src.sendError(Text.literal("\u00a7cNo se guardo nada: \u00a7f" + malo));
+            return 0;
+        }
+        recargarCatalogo(src);
+        pintarNicho(p.getServerWorld(), nicho, 3);
+        src.sendFeedback(() -> Text.literal(
+                "\u00a7aNicho \u00a7f" + id + "\u00a7a capturado \u00a77(" + nombre + ")\n"
+                + "\u00a77  caja " + caja(nicho) + "\n"
+                + "\u00a77  holografica sobre \u00a7b" + punto(nicho.proyector())
+                + "\u00a77 -- pon ahi el proyector"), true);
+        return 1;
+    }
+
+    /**
+     * MUEVE LA HOLOGRAFICA DE UN NICHO AL BLOQUE QUE MIRAS.
+     *
+     * <p>⚠⚠ Existe porque la forma capturada es <b>una suposicion razonable</b>,
+     * no una verdad: si un nicho se construyo con el pedestal en otro sitio, el
+     * proyector va donde lo pusiera el constructor. Se apunta al bloque y se
+     * teclea, que es la unica forma de no volver a escribir coordenadas.
+     *
+     * <p>⚠ Y tiene que caer <b>dentro de su caja</b> -- lo exige
+     * {@code NichoCatalogo.validar}, porque si no se protegeria un 3x3 que no es
+     * el que tiene el proyector y el memorial se abriria desde un bloque que no
+     * se ve. Aqui se avisa antes de escribir.
+     */
+    private static int proyectorNicho(ServerCommandSource src, String id) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        var lista = net.pokereport.luna.santuario.NichoEditor.copia(
+                net.pokereport.luna.santuario.SantuarioProteccion.catalogo());
+        int i = indiceDe(lista, id);
+        if (i < 0) {
+            src.sendError(Text.literal("\u00a7cNo hay ningun nicho \u00a7f" + id));
+            return 0;
+        }
+        var golpe = p.raycast(8.0, 0f, false);
+        if (!(golpe instanceof net.minecraft.util.hit.BlockHitResult bloque)
+                || golpe.getType() != net.minecraft.util.hit.HitResult.Type.BLOCK) {
+            src.sendError(Text.literal("\u00a7cApunta al bloque del proyector "
+                    + "\u00a77(a menos de 8 bloques)\u00a7c y vuelve a intentarlo."));
+            return 0;
+        }
+        var viejo = lista.get(i);
+        var nuevo = new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                viejo.id(), viejo.nombre(), viejo.min(), viejo.max(),
+                bloque.getBlockPos());
+        lista.set(i, nuevo);
+        String malo = net.pokereport.luna.santuario.NichoEditor.guardar(lista);
+        if (malo != null) {
+            src.sendError(Text.literal("\u00a7cNo se guardo nada: \u00a7f" + malo));
+            return 0;
+        }
+        recargarCatalogo(src);
+        pintarNicho(p.getServerWorld(), nuevo, 3);
+        src.sendFeedback(() -> Text.literal(
+                "\u00a7aHolografica de \u00a7f" + id + "\u00a7a en \u00a7b"
+                + punto(nuevo.proyector())), true);
+        return 1;
+    }
+
+    /** Le cambia el nombre visible a un nicho. */
+    private static int renombrarNicho(ServerCommandSource src, String id, String nombre) {
+        var lista = net.pokereport.luna.santuario.NichoEditor.copia(
+                net.pokereport.luna.santuario.SantuarioProteccion.catalogo());
+        int i = indiceDe(lista, id);
+        if (i < 0) {
+            src.sendError(Text.literal("\u00a7cNo hay ningun nicho \u00a7f" + id));
+            return 0;
+        }
+        var viejo = lista.get(i);
+        lista.set(i, new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                viejo.id(), nombre.trim(), viejo.min(), viejo.max(), viejo.proyector()));
+        String malo = net.pokereport.luna.santuario.NichoEditor.guardar(lista);
+        if (malo != null) {
+            src.sendError(Text.literal("\u00a7cNo se guardo nada: \u00a7f" + malo));
+            return 0;
+        }
+        recargarCatalogo(src);
+        src.sendFeedback(() -> Text.literal(
+                "\u00a7a" + id + " pasa a llamarse \u00a7f" + nombre.trim()), true);
+        return 1;
+    }
+
+    /**
+     * BORRA UN NICHO DE LA CONFIG.
+     *
+     * <p>⚠⚠ <b>Esto NO borra su fila de la base</b>, y es a proposito: la fila
+     * guarda quien lo tiene, hasta cuando y su memorial. Si el nicho se quito
+     * por error, volver a capturarlo con el mismo id lo devuelve entero. Para
+     * soltar la reclamacion esta {@code /luna santuario eliminar}, que es otra
+     * decision y se toma aparte.
+     *
+     * <p>⚠ Lo que si desaparece de inmediato es <b>su proteccion</b>: sin caja
+     * en la config, ese 3x3 vuelve a ser suelo publico.
+     */
+    private static int borrarNicho(ServerCommandSource src, String id) {
+        var lista = net.pokereport.luna.santuario.NichoEditor.copia(
+                net.pokereport.luna.santuario.SantuarioProteccion.catalogo());
+        if (!net.pokereport.luna.santuario.NichoEditor.quitar(lista, id)) {
+            src.sendError(Text.literal("\u00a7cNo hay ningun nicho \u00a7f" + id));
+            return 0;
+        }
+        String malo = net.pokereport.luna.santuario.NichoEditor.guardar(lista);
+        if (malo != null) {
+            src.sendError(Text.literal("\u00a7cNo se guardo nada: \u00a7f" + malo));
+            return 0;
+        }
+        recargarCatalogo(src);
+        src.sendFeedback(() -> Text.literal(
+                "\u00a7aNicho \u00a7f" + id + "\u00a7a fuera de la config. "
+                + "\u00a77Su reclamacion sigue guardada."), true);
+        return 1;
+    }
+
+    /** Teletransporta al centro de un nicho, para mirarlo. */
+    private static int irANicho(ServerCommandSource src, String id) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        var nicho = net.pokereport.luna.santuario.SantuarioProteccion.catalogo().de(id);
+        if (nicho == null) {
+            src.sendError(Text.literal("\u00a7cNo hay ningun nicho \u00a7f" + id));
+            return 0;
+        }
+        var mundo = p.getServer().getWorld(net.pokereport.luna.world.LunaDimensions.CIUDADELA);
+        if (mundo == null) {
+            src.sendError(Text.literal("\u00a7cLa ciudadela no existe."));
+            return 0;
+        }
+        // ⚠ Por `Traslado` y no a pelo: carga el chunk de destino antes de
+        //   mover. La ciudadela es un vacio con una isla, y llegar a un chunk
+        //   frio es caerse.
+        net.pokereport.luna.world.Traslado.ir(p, mundo,
+                new net.minecraft.util.math.Vec3d(
+                        nicho.min().getX() + net.pokereport.luna.santuario
+                                .NichoEditor.RADIO + 0.5,
+                        nicho.min().getY(),
+                        nicho.min().getZ() + net.pokereport.luna.santuario
+                                .NichoEditor.RADIO + 0.5));
+        pintarNicho(mundo, nicho, 5);
+        src.sendFeedback(() -> Text.literal("\u00a7aEn \u00a7f" + id
+                + " \u00a77" + caja(nicho)), false);
+        return 1;
+    }
+
+    /**
+     * DIBUJA TODOS LOS NICHOS CON PARTICULAS DURANTE UNOS SEGUNDOS.
+     *
+     * <h2>⚠⚠ ES LA MITAD QUE HACE QUE «MUCHISIMOS» SE PUEDA COMPROBAR</h2>
+     *
+     * Un comando que captura coordenadas y no las enseña obliga a fiarse: con
+     * cuarenta nichos, el que quedo dos bloques corrido <b>no se ve</b> --su
+     * caja protege un sitio que no es el construido, y eso no da error, da un
+     * hueco--. Aqui se ven las ocho aristas y el punto de la holografica, en el
+     * mundo y encima de lo que hay construido.
+     */
+    private static int verNichos(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
+        if (!catalogo.hay()) {
+            src.sendFeedback(() -> Text.literal("\u00a77No hay ningun nicho todavia. "
+                    + "\u00a7fPonte dentro de uno y usa /luna santuario nicho aqui"), false);
+            return 1;
+        }
+        var mundo = p.getServerWorld();
+        for (var n : catalogo.todos()) {
+            pintarNicho(mundo, n, 10);
+        }
+        src.sendFeedback(() -> Text.literal("\u00a7a" + catalogo.todos().size()
+                + " nichos marcados durante 10 s. \u00a77Blanco la caja, "
+                + "\u00a7bazul\u00a77 la holografica."), false);
+        return 1;
+    }
+
+    /** Quita la Mew del santuario y su cartel. */
+    private static int quitarNpcSantuario(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        int n = net.pokereport.luna.santuario.SantuarioNpc.quitar(p);
+        src.sendFeedback(() -> Text.literal(
+                "\u00a7a" + n + " entidades del santuario quitadas."), true);
+        return 1;
+    }
+
+    // ------------------------------------------------------------ ayudantes
+
+    private static int indiceDe(
+            java.util.List<net.pokereport.luna.santuario.NichoCatalogo.Nicho> lista,
+            String id) {
+        for (int i = 0; i < lista.size(); i++) {
+            if (lista.get(i).id().equals(id)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static String punto(net.minecraft.util.math.BlockPos p) {
+        return p.getX() + " " + p.getY() + " " + p.getZ();
+    }
+
+    private static String caja(net.pokereport.luna.santuario.NichoCatalogo.Nicho n) {
+        return punto(n.min()) + " \u2192 " + punto(n.max());
+    }
+
+    /** Relee la config del disco y pone al dia base y clientes. */
+    private static void recargarCatalogo(ServerCommandSource src) {
+        try {
+            net.pokereport.luna.santuario.SantuarioProteccion.catalogo().recargar();
+        } catch (Exception e) {
+            // No deberia pasar: se acaba de escribir un fichero que ya valido.
+            LunaEternal.LOG.error("Santuario: la config recien escrita no se relee", e);
+            src.sendError(Text.literal("\u00a7cEscrito, pero no se pudo releer: "
+                    + e.getMessage()));
+            return;
+        }
+        aplicarSantuario(src.getServer());
+    }
+
+    /**
+     * Marca un nicho con particulas: las aristas en blanco y la holografica en
+     * azul, repetido una vez por segundo.
+     *
+     * <p>⚠ Va por {@code Programador}, que corre en el tick del servidor -- que
+     * es donde se pueden mandar particulas.
+     */
+    private static void pintarNicho(net.minecraft.server.world.ServerWorld mundo,
+                                    net.pokereport.luna.santuario.NichoCatalogo.Nicho n,
+                                    int segundos) {
+        for (int s = 0; s < segundos; s++) {
+            net.pokereport.luna.gym.Programador.en(1 + s * 20, () -> {
+                var min = n.min();
+                var max = n.max();
+                for (int x = min.getX(); x <= max.getX(); x++) {
+                    for (int y = min.getY(); y <= max.getY(); y++) {
+                        for (int z = min.getZ(); z <= max.getZ(); z++) {
+                            // Solo las ARISTAS: pintar la caja maciza son 45
+                            // particulas por nicho y no se ve la forma.
+                            int bordes = 0;
+                            if (x == min.getX() || x == max.getX()) bordes++;
+                            if (y == min.getY() || y == max.getY()) bordes++;
+                            if (z == min.getZ() || z == max.getZ()) bordes++;
+                            if (bordes < 2) {
+                                continue;
+                            }
+                            mundo.spawnParticles(
+                                    net.minecraft.particle.ParticleTypes.END_ROD,
+                                    x + 0.5, y + 0.5, z + 0.5, 1, 0, 0, 0, 0);
+                        }
+                    }
+                }
+                var pr = n.proyector();
+                mundo.spawnParticles(net.minecraft.particle.ParticleTypes.SOUL_FIRE_FLAME,
+                        pr.getX() + 0.5, pr.getY() + 0.5, pr.getZ() + 0.5,
+                        6, 0.15, 0.15, 0.15, 0.0);
+                // Donde va a flotar la foto: proyector + 1,55 (lo dice
+                // HologramaSantuario, y este numero se lee de ahi al escribirlo).
+                mundo.spawnParticles(net.minecraft.particle.ParticleTypes.END_ROD,
+                        pr.getX() + 0.5, pr.getY() + 1.55, pr.getZ() + 0.5,
+                        4, 0.35, 0.35, 0.35, 0.0);
+            });
+        }
     }
 
     /**

@@ -3,17 +3,15 @@ package net.pokereport.luna.starter;
 import com.gitlab.srcmc.rctmod.world.entities.TrainerMob;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.pokereport.luna.LunaEternal;
+import net.pokereport.luna.ui.Cartel;
 import net.pokereport.luna.world.Decorativos;
 import net.pokereport.luna.world.LunaDimensions;
 
@@ -240,53 +238,13 @@ public final class OakNpc {
      * jugador nuevo no sabe que ese señor de bata da Pokemon: sin cartel, Oak es
      * un adorno mas de la plaza. Con el, se lee desde lejos.
      *
-     * <p>&#9888; Va en español y COMPUESTO, al reves de la regla del idioma: un
-     * TextDisplay guarda el {@code Text} <b>en el mundo</b>, asi que una clave de
-     * traduccion se resolveria al colocarlo y quedaria congelada para todos.
+     * <p>&#9888; El fondo, el icono y el borrado viven en {@link Cartel}: eran
+     * de Oak y hoy los comparte con la Mew del Santuario. Copiarlos habria sido
+     * la doceava copia de {@code recalcular()}.
      */
     private static void cartel(ServerWorld mundo, Vec3d pies) {
-        var cartel = EntityType.TEXT_DISPLAY.create(mundo);
-        if (cartel == null) {
-            LunaEternal.LOG.warn("No se pudo crear el cartel de Oak");
-            return;
-        }
-        cartel.setPosition(pies.x, pies.y + ALTURA_CARTEL, pies.z);
-        // ⚠⚠ LA RAIZ VA VACIA, Y NO ES UNA MANIA DE ESTILO: ES LO QUE
-        //    PROTEGE AL ICONO. Colgando los trozos de un
-        //    `Text.literal("Profesor Oak").formatted(GOLD, BOLD)`, todo lo
-        //    que se le añade HEREDA dorado y negrita -- y un glifo de mapa de
-        //    bits se dibuja MULTIPLICANDO por el color del estilo, asi que el
-        //    raton habria salido dorado y, con la negrita, dibujado DOS VECES
-        //    desplazado. Con `Text.empty()` cada trozo lleva el suyo.
-        cartel.setText(Text.empty()
-                .append(Text.literal("Profesor Oak\n")
-                        .formatted(Formatting.GOLD, Formatting.BOLD))
-                .append(Text.literal("Elige tu primer Pokemon\n")
-                        .formatted(Formatting.WHITE))
-                .append(net.pokereport.luna.ui.Iconos.clicDerecho())
-                .append(Text.literal(" Clic derecho")
-                        .formatted(Formatting.AQUA)));
-        cartel.setBillboardMode(DisplayEntity.BillboardMode.CENTER);
-        // Fondo oscuro a media transparencia: el texto claro sobre la piedra
-        // clara de la ciudadela desaparece sin el.
-        // ⚠⚠⚠ CASI OPACO, Y ANTES ESTABA AL 25 %. El valor venia del cartel
-        //    de los gimnasios (`0x40000000`, negro al 25 %) y ALLI ESTA BIEN: las
-        //    salas de gimnasio son de piedra gris. EL LABORATORIO DE OAK ES BLANCO
-        //    ENTERO, y sobre blanco un velo del 25 % no oscurece nada: el texto
-        //    blanco desaparecia y el gris de «Clic derecho» todavia mas.
-        //    ⚠⚠ LA REGLA QUE QUEDA: un cartel del mundo NO SABE contra que pared
-        //       lo van a leer, asi que SE TRAE SU PROPIO FONDO. Es la misma
-        //       decision que ya tomaron los hologramas de la Torre --«fondo azul
-        //       pizarra SOLIDO para que el texto sea legible contra cualquier
-        //       iluminacion o shaders»-- y estaba escrita desde el 7 de septiembre.
-        cartel.setBackground(0xE6060B14);
-        cartel.setLineWidth(220);
-        // Multiplicador de 64, no una distancia: 48 bloques, que es mas que el
-        // lado de la plaza.
-        cartel.setViewRange(0.75f);
-        cartel.setNoGravity(true);
-        cartel.addCommandTag(MARCA_CARTEL);
-        mundo.spawnEntity(cartel);
+        Cartel.poner(mundo, pies, ALTURA_CARTEL, MARCA_CARTEL,
+                Cartel.texto("Profesor Oak", "Elige tu primer Pokemon"));
     }
 
     /**
@@ -306,12 +264,7 @@ public final class OakNpc {
             e.discard();
             n++;
         }
-        for (var e : mundo.getEntitiesByClass(
-                DisplayEntity.TextDisplayEntity.class, caja,
-                x -> x.getCommandTags().contains(MARCA_CARTEL))) {
-            e.discard();
-            n++;
-        }
+        n += Cartel.quitar(mundo, centro, radio, MARCA_CARTEL);
         return n;
     }
 

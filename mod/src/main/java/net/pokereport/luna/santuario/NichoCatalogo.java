@@ -147,8 +147,16 @@ public final class NichoCatalogo {
         return leidos.size();
     }
 
-    /** Del JSON a la lista, sin validar todavia. */
-    static List<Nicho> parsear(String texto) {
+    /**
+     * Del JSON a la lista, sin validar todavia.
+     *
+     * <p>&#9888; Es publico para que el autotest pueda cruzarlo con
+     * {@code NichoEditor.json}: son <b>el lector del arranque y el escritor del
+     * comando</b>, dos sitios con su propia idea del formato, y si dejaran de
+     * estar de acuerdo el servidor no arrancaria con un fichero escrito por
+     * nosotros. Es el invariante del payload del escaparate, en un fichero.
+     */
+    public static List<Nicho> parsear(String texto) {
         var salida = new ArrayList<Nicho>();
         JsonObject root;
         try {

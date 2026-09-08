@@ -96,7 +96,7 @@ public class ViajesScreen extends Screen {
         new Parada("torre_batalla",   0xFF8C3A2E),
         new Parada("laboratorio",     0xFF2E6E8C),
         new Parada("palacio",         0xFF7A5C1E),
-        new Parada("monumentos",      0xFF5A5A6E),
+        new Parada("santuario",       0xFF5A5A6E),
         new Parada("torre_comercial", 0xFF2E7A4E),
         new Parada("centro_curacion", 0xFF9E3A5C),
         new Parada("montana",         0xFF4A6E8C),

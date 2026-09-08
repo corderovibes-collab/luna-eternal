@@ -57,7 +57,7 @@ public final class Paradas {
         new Parada("torre_batalla",  56.5,  68, -13.9),
         new Parada("laboratorio",   -25.0,  68, -52.0),
         new Parada("palacio",       -78.6,  68, -10.8),
-        new Parada("monumentos",    -63.9,  68, 142.0),
+        new Parada("santuario",     -63.9,  68, 142.0),
         new Parada("torre_comercial", 14.97, 68, 78.8),
         new Parada("centro_curacion", 72.3, 68, 66.11),
         new Parada("montana",        48.6,  92, -94.9));

@@ -958,6 +958,13 @@ public class SantuarioScreen extends Screen {
     private boolean clicNichos(int rx, int ry) {
         if (clicPaginacion(rx, ry)) return true;
         var e = EstadoCliente.santuario();
+        // ⚠⚠ SIN ESTA LINEA, UN CLIC ANTES DE QUE LLEGUE EL ESTADO REVIENTA.
+        //    De los diez sitios que leen `EstadoCliente.santuario()` este era el
+        //    UNICO sin la comprobacion --su hermano `clicCompraLista` la tiene
+        //    dos metodos mas arriba-- y el dibujado ya contempla el caso: pinta
+        //    «cargando». O sea que la pantalla SI se puede estar viendo con el
+        //    estado a nulo, y ahi un clic era un NullPointerException.
+        if (e == null) return false;
         var lista = e.nichos().stream()
                 .filter(n -> !n.estado().dueno().isEmpty())
                 .toList();
@@ -1236,8 +1243,27 @@ public class SantuarioScreen extends Screen {
         return PANT_Y + MARGEN + 26 + n * (FILA_ALTO + FILA_AIRE);
     }
 
+    /**
+     * CUANTAS FILAS CABEN EN EL PANEL. <b>Se calcula.</b>
+     *
+     * <h2>&#9888;&#9888;&#9888; ESTO ERA UN {@code return 4} ESCRITO A MANO</h2>
+     *
+     * Y hoy da cuatro, o sea que estaba bien -- <b>por casualidad</b>. Es
+     * exactamente el fallo que la maqueta del mercado cazo el 25 de agosto:
+     * <i>«{@code filasCaben()} era una formula a mano que ya no cuadraba con
+     * {@code listaY()}: salian cinco filas donde caben cuatro, y la quinta se
+     * dibujaba ENCIMA DE LA PAGINACION»</i>. Aqui bastaba con tocar
+     * {@code MARGEN}, {@code FILA_ALTO} o el alto del panel para que el numero
+     * dejara de significar lo que dice, <b>sin dar ningun error</b>.
+     *
+     * <p>&#9888; La cuenta: desde donde empieza la primera fila
+     * ({@link #filaY(int)} con {@code n = 0}) hasta el borde de abajo del panel,
+     * en pasos de fila + aire. El ultimo aire no hace falta, por eso se le suma
+     * antes de dividir.
+     */
     private int filasCaben() {
-        return 4;
+        int hueco = (PANT_Y + PANT_H) - filaY(0);
+        return Math.max(1, (hueco + FILA_AIRE) / (FILA_ALTO + FILA_AIRE));
     }
 
     private int paginas() {

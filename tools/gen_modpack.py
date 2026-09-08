@@ -308,6 +308,8 @@ OVERRIDES_FUERA = (
     # Pantalla de carga y personalizaciones de Cobblemon Interface obsoletas
     "config/customsplashscreen",
     "resourcepacks/Cobblemon Interface",
+    # Resolver roto en Cobblemon 1.8.0: referencia cobblemon:mewtwo_mega_x.geo que no existe
+    "resourcepacks/ATMxMSD RP.zip",
 )
 
 # ---------------------------------------------------------------------------
@@ -700,6 +702,11 @@ def contenido(z, nombre: str) -> bytes:
     el fichero dentro de un ano le hara creer que esos packs deberian estar.
     """
     datos = z.read(nombre)
+    if nombre.endswith("immediatelyfast.json"):
+        cfg = json.loads(datos)
+        cfg["hud_batching"] = False
+        cfg["font_atlas_resizing"] = False
+        return json.dumps(cfg, indent=2).encode("utf-8")
     if not nombre.endswith("options.txt"):
         return datos
     texto = datos.decode("utf-8", "replace")

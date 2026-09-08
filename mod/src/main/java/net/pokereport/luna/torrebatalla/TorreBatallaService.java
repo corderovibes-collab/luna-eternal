@@ -341,8 +341,14 @@ public class TorreBatallaService {
         // Avanzar ronda y actualizar record actual
         Partida nueva = partida.avanzar();
         partidasActivas.put(uuid, nueva);
+        int rondaGanada = nueva.ronda() - 1;
         String modoKeyVictoria = TorreRanking.modoDe(nueva.modo());
-        TorreRanking.actualizarRonda(jugador.getServer(), modoKeyVictoria, jugador.getName().getString(), nueva.ronda() - 1);
+        TorreRanking.actualizarRonda(jugador.getServer(), modoKeyVictoria, jugador.getName().getString(), rondaGanada);
+        TorreRecompensas.registrarVictoria(uuid, rondaGanada);
+        TorreRecompensas.hookExpPaseBatalla(jugador, rondaGanada);
+        if (TorreRecompensas.puedeReclamar(uuid, rondaGanada)) {
+            jugador.sendMessage(Text.literal("§6[Torre de Batalla] §e¡Recompensa desbloqueada para la Ronda " + rondaGanada + "! Reclámala en el PokePad."));
+        }
         
         // Iniciar la siguiente ronda tras 2 segundos
         net.pokereport.luna.gym.Programador.en(40, () -> {
@@ -361,9 +367,11 @@ public class TorreBatallaService {
         Partida partida = partidasActivas.get(uuid);
         if (partida == null) return;
         
+        int rondaFinal = partida.ronda() - 1;
         jugador.sendMessage(Text.literal("§cHas caído en la Ronda " + partida.ronda() + ". Fin de tu intento."));
         String modoKeyDerrota = TorreRanking.modoDe(partida.modo());
-        TorreRanking.actualizarRonda(jugador.getServer(), modoKeyDerrota, jugador.getName().getString(), partida.ronda() - 1);
+        TorreRanking.actualizarRonda(jugador.getServer(), modoKeyDerrota, jugador.getName().getString(), rondaFinal);
+        TorreRecompensas.registrarVictoria(uuid, rondaFinal);
         salir(jugador);
     }
 

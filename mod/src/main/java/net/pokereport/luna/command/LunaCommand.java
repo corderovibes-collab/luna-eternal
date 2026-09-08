@@ -649,7 +649,17 @@ public final class LunaCommand {
                 .then(literal("arena")
                     .executes(ctx -> arenaTorre(ctx.getSource())))
                 .then(literal("tp")
-                    .executes(ctx -> tpTorre(ctx.getSource()))))
+                    .executes(ctx -> tpTorre(ctx.getSource())))
+                .then(literal("nueva_temporada")
+                    .executes(ctx -> nuevaTemporadaTorre(ctx.getSource())))
+                .then(literal("dar_ronda")
+                    .then(argument("jugador", net.minecraft.command.argument.EntityArgumentType.player())
+                        .then(argument("modo", com.mojang.brigadier.arguments.StringArgumentType.word())
+                            .then(argument("ronda", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                                .executes(ctx -> darRondaTorre(ctx.getSource(),
+                                        net.minecraft.command.argument.EntityArgumentType.getPlayer(ctx, "jugador"),
+                                        com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "modo"),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "ronda"))))))))
 
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
@@ -1476,6 +1486,29 @@ public final class LunaCommand {
         p.teleport(mundoTorre, pos.x, pos.y, pos.z,
                 net.pokereport.luna.torrebatalla.TorreBatallaService.YAW_JUGADOR, 0f);
         p.sendMessage(Text.literal("§aTeletransportado a la plataforma de la Torre de Batalla."), false);
+        return 1;
+    }
+
+    private static int nuevaTemporadaTorre(ServerCommandSource src) {
+        int nueva = net.pokereport.luna.torrebatalla.TorreRecompensas.avanzarTemporada();
+        for (ServerPlayerEntity p : src.getServer().getPlayerManager().getPlayerList()) {
+            net.pokereport.luna.net.Red.enviarEstadoRecompensasTorre(p);
+        }
+        src.getServer().getPlayerManager().broadcast(Text.literal(
+                "§6§l[TORRE DE BATALLA] §e¡Ha comenzado la §6§lTemporada #" + nueva + "§e! Las recompensas han sido reiniciadas. ¡A luchar!"), false);
+        return 1;
+    }
+
+    private static int darRondaTorre(ServerCommandSource src, ServerPlayerEntity p, String modo, int ronda) {
+        String modoKey = switch (modo.toLowerCase()) {
+            case "1vs1", "1v1" -> net.pokereport.luna.torrebatalla.TorreRanking.MODO_1VS1;
+            case "2vs2", "2v2" -> net.pokereport.luna.torrebatalla.TorreRanking.MODO_2VS2;
+            default -> net.pokereport.luna.torrebatalla.TorreRanking.MODO_ALEATORIO;
+        };
+        net.pokereport.luna.torrebatalla.TorreRanking.actualizarRonda(src.getServer(), modoKey, p.getName().getString(), ronda);
+        net.pokereport.luna.torrebatalla.TorreRecompensas.registrarVictoria(p.getUuid(), ronda);
+        net.pokereport.luna.net.Red.enviarEstadoRecompensasTorre(p);
+        src.sendFeedback(() -> Text.literal("§aRonda " + ronda + " asignada a " + p.getName().getString() + " en modo " + modoKey), false);
         return 1;
     }
 

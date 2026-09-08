@@ -117,6 +117,14 @@ public class TorreRanking {
         }
     }
 
+    public static synchronized int getRonda(String modoStr, String jugador) {
+        String m = normalizarModo(modoStr);
+        Map<String, Integer> tabla = rankings.get(m);
+        return (tabla != null && jugador != null) ? tabla.getOrDefault(jugador, 0) : 0;
+    }
+
+    public static final int COLOR_FONDO_HOLOGRAMA = 0xF40A0E18; // ~96% opacidad, azul pizarra sólido
+
     public static void actualizarHologramasEnMundos(MinecraftServer server) {
         if (server == null) return;
         for (ServerWorld world : server.getWorlds()) {
@@ -129,6 +137,7 @@ public class TorreRanking {
                         modo = MODO_ALEATORIO;
                     }
                     td.setText(generarTexto(modo));
+                    td.setBackground(COLOR_FONDO_HOLOGRAMA);
                 }
             }
         }
@@ -144,7 +153,7 @@ public class TorreRanking {
         cartel.setPosition(pies.x, pies.y + 2.2, pies.z);
         cartel.setText(generarTexto(modo));
         cartel.setBillboardMode(DisplayEntity.BillboardMode.CENTER);
-        cartel.setBackground(0x900B0E14);
+        cartel.setBackground(COLOR_FONDO_HOLOGRAMA);
         cartel.setLineWidth(320);
         cartel.setViewRange(1.2f);
         cartel.setNoGravity(true);
@@ -177,21 +186,21 @@ public class TorreRanking {
                 t.append(Text.literal("§b§l     ⚡ TORRE · COMBATES DOBLES 2VS2 ⚡\n"));
                 t.append(Text.literal("§3§l            🏆 SALÓN DE LA FAMA 🏆\n"));
                 t.append(Text.literal("§b§l╚═══════════════════════════════╝\n"));
-                t.append(Text.literal("§8       ── TOP 10 ENTRENADORES ──\n\n"));
+                t.append(Text.literal("§b§l       ── TOP 10 ENTRENADORES ──\n\n"));
             }
             case MODO_ALEATORIO -> {
                 t.append(Text.literal("§a§l╔═══════════════════════════════╗\n"));
                 t.append(Text.literal("§a§l       🎲 TORRE · DRAFT ALEATORIO 🎲\n"));
                 t.append(Text.literal("§2§l            🏆 SALÓN DE LA FAMA 🏆\n"));
                 t.append(Text.literal("§a§l╚═══════════════════════════════╝\n"));
-                t.append(Text.literal("§8       ── TOP 10 ENTRENADORES ──\n\n"));
+                t.append(Text.literal("§a§l       ── TOP 10 ENTRENADORES ──\n\n"));
             }
             default -> {
                 t.append(Text.literal("§6§l╔═══════════════════════════════╗\n"));
                 t.append(Text.literal("§6§l        ⚔ TORRE DE BATALLA · 1 VS 1 ⚔\n"));
                 t.append(Text.literal("§e§l            🏆 SALÓN DE LA FAMA 🏆\n"));
                 t.append(Text.literal("§6§l╚═══════════════════════════════╝\n"));
-                t.append(Text.literal("§8       ── TOP 10 ENTRENADORES ──\n\n"));
+                t.append(Text.literal("§e§l       ── TOP 10 ENTRENADORES ──\n\n"));
             }
         }
 
@@ -200,28 +209,29 @@ public class TorreRanking {
         lista.sort((a, b) -> b.getValue().compareTo(a.getValue()));
 
         if (lista.isEmpty()) {
-            t.append(Text.literal("§c§o        ¡Aún no hay récords registrados!\n"));
-            t.append(Text.literal("§7     Sé el primero en entrar a la historia.\n\n"));
+            t.append(Text.literal("§c§l        ¡Aún no hay récords registrados!\n"));
+            t.append(Text.literal("§f     Sé el primero en entrar a la historia.\n\n"));
         } else {
             for (int i = 0; i < Math.min(10, lista.size()); i++) {
                 Map.Entry<String, Integer> entry = lista.get(i);
                 int pos = i + 1;
                 String medalla = switch (pos) {
                     case 1 -> "§e🥇 §6§l1º";
-                    case 2 -> "§f🥈 §7§l2º";
-                    case 3 -> "§6🥉 §c§l3º";
-                    default -> " §7#" + pos + " ";
+                    case 2 -> "§f🥈 §f§l2º";
+                    case 3 -> "§6🥉 §e§l3º";
+                    default -> "§b#" + (pos < 10 ? "0" + pos : pos) + " ";
                 };
-                String colorNombre = (pos == 1) ? "§f§l" : (pos <= 3) ? "§f" : "§7";
-                String colorRonda = (pos == 1) ? "§a§l" : (pos <= 3) ? "§e§l" : "§b";
+                String colorNombre = (pos == 1) ? "§f§l" : (pos <= 3) ? "§f§l" : "§f";
+                String colorRonda = (pos == 1) ? "§a§l" : (pos <= 3) ? "§e§l" : "§b§l";
+                String sep = (pos == 1) ? "§e»" : (pos <= 3) ? "§f»" : "§7»";
 
-                t.append(Text.literal(medalla + " " + colorNombre + entry.getKey() + " §8» " + colorRonda + "Ronda " + entry.getValue() + (pos == 1 ? " §6★\n" : "\n")));
+                t.append(Text.literal(medalla + " " + colorNombre + entry.getKey() + " " + sep + " " + colorRonda + "Ronda " + entry.getValue() + (pos == 1 ? " §6★\n" : "\n")));
             }
             t.append(Text.literal("\n"));
         }
 
-        t.append(Text.literal("§8─────────────────────────────────\n"));
-        t.append(Text.literal("§7▸ Abre el §6PokePad §7y desafía la Torre de Batalla"));
+        t.append(Text.literal("§8═══════════════════════════════\n"));
+        t.append(Text.literal("§f▸ Abre el §6§lPokePad §fpara desafiar la Torre"));
         return t;
     }
 }

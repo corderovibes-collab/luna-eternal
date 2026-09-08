@@ -77,6 +77,7 @@ public class TorreScreen extends Screen {
     @Override
     protected void init() {
         recalcular();
+        ClientPlayNetworking.send(new Red.PedirRecompensasTorre());
     }
 
     private void recalcular() {
@@ -176,6 +177,39 @@ public class TorreScreen extends Screen {
         texto(ctx, Text.literal("¡Compite por el Top 10!"), cx, y, 14, TEXTO_SUAVE, true, false);
         y += 18;
         texto(ctx, Text.literal("Holograma en Ciudadela"), cx, y, 13, 0xFF8FA0C8, true, false);
+
+        // Botón de Recompensas de Temporada
+        int btnRecX = PANEL_X + 22;
+        int btnRecY = 625;
+        int btnRecW = PANEL_W - 44;
+        int btnRecH = 50;
+
+        var estadoRec = net.pokereport.luna.client.EstadoCliente.recompensasTorre();
+        int pendientes = 0;
+        if (estadoRec != null && estadoRec.maxRonda() >= 4) {
+            for (int r = 4; r <= estadoRec.maxRonda(); r++) {
+                if (!estadoRec.reclamadas().contains(r)) pendientes++;
+            }
+        }
+
+        boolean hoverRec = dentro(rx, ry, px(btnRecX), py(btnRecY), pl(btnRecW), pl(btnRecH));
+        int fondoBtn = hoverRec ? 0xFF2D3B55 : 0xFF1E283C;
+        int bordeBtn = hoverRec ? ORO : (pendientes > 0 ? 0xFF35A854 : BORDE_BASE);
+
+        ctx.fill(px(btnRecX), py(btnRecY), px(btnRecX + btnRecW), py(btnRecY + btnRecH), fondoBtn);
+        marco(ctx, px(btnRecX), py(btnRecY), pl(btnRecW), pl(btnRecH), bordeBtn, Math.max(1, pl(hoverRec ? 2 : 1)));
+
+        texto(ctx, Text.literal("🏆 RECOMPENSAS"), btnRecX + btnRecW / 2, btnRecY + 11, 16,
+                hoverRec ? 0xFFFFFFFF : ORO, true, false);
+
+        if (pendientes > 0) {
+            texto(ctx, Text.literal("§a" + pendientes + " disponibles"), btnRecX + btnRecW / 2, btnRecY + 29, 12,
+                    0xFF55FF55, true, false);
+        } else {
+            int numTemp = estadoRec != null ? estadoRec.temporada() : 1;
+            texto(ctx, Text.literal("Temporada #" + numTemp), btnRecX + btnRecW / 2, btnRecY + 29, 11,
+                    TEXTO_SUAVE, true, false);
+        }
     }
 
     /** Pantalla Derecha: Las 3 tarjetas de modos (1vs1, 2vs2, Aleatorio). */
@@ -271,6 +305,19 @@ public class TorreScreen extends Screen {
         if (dentro(rx, ry, cx, cy - pl(32), pl(80), pl(64))) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
             close();
+            return true;
+        }
+
+        // Botón Recompensas
+        int btnRecX = PANEL_X + 22;
+        int btnRecY = 625;
+        int btnRecW = PANEL_W - 44;
+        int btnRecH = 50;
+        if (dentro(rx, ry, px(btnRecX), py(btnRecY), pl(btnRecW), pl(btnRecH))) {
+            sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
+            if (client != null) {
+                client.setScreen(new TorreRecompensasScreen(this));
+            }
             return true;
         }
 

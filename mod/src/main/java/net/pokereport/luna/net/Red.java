@@ -2164,6 +2164,57 @@ public class Red implements ModInitializer {
         }
     }
 
+    public record PedirRecompensasTorre() implements CustomPayload {
+        public static final Id<PedirRecompensasTorre> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_recompensas_torre"));
+        public static final PacketCodec<RegistryByteBuf, PedirRecompensasTorre> CODEC =
+                PacketCodec.unit(new PedirRecompensasTorre());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record ReclamarRecompensaTorre(int ronda) implements CustomPayload {
+        public static final Id<ReclamarRecompensaTorre> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "reclamar_recompensa_torre"));
+        public static final PacketCodec<RegistryByteBuf, ReclamarRecompensaTorre> CODEC =
+                PacketCodec.tuple(PacketCodecs.INTEGER, ReclamarRecompensaTorre::ronda, ReclamarRecompensaTorre::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record EstadoRecompensasTorre(
+            int temporada,
+            int maxRonda,
+            int ronda1v1,
+            int ronda2v2,
+            int rondaAleatorio,
+            List<Integer> reclamadas
+    ) implements CustomPayload {
+        public static final Id<EstadoRecompensasTorre> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_recompensas_torre"));
+        public static final PacketCodec<RegistryByteBuf, EstadoRecompensasTorre> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.INTEGER, EstadoRecompensasTorre::temporada,
+                        PacketCodecs.INTEGER, EstadoRecompensasTorre::maxRonda,
+                        PacketCodecs.INTEGER, EstadoRecompensasTorre::ronda1v1,
+                        PacketCodecs.INTEGER, EstadoRecompensasTorre::ronda2v2,
+                        PacketCodecs.INTEGER, EstadoRecompensasTorre::rondaAleatorio,
+                        PacketCodecs.INTEGER.collect(PacketCodecs.toList()), EstadoRecompensasTorre::reclamadas,
+                        EstadoRecompensasTorre::new
+                );
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record AbrirSantuario() implements CustomPayload {
         public static final Id<AbrirSantuario> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_santuario"));
@@ -3053,6 +3104,28 @@ public class Red implements ModInitializer {
     }
 
     /** Todo lo de todos, para quien acaba de entrar; y lo suyo, para todos. */
+    public static void enviarEstadoRecompensasTorre(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        if (jugador == null || jugador.isRemoved()) return;
+        java.util.UUID uuid = jugador.getUuid();
+        String nombre = jugador.getName().getString();
+        int r1 = net.pokereport.luna.torrebatalla.TorreRanking.getRonda(net.pokereport.luna.torrebatalla.TorreRanking.MODO_1VS1, nombre);
+        int r2 = net.pokereport.luna.torrebatalla.TorreRanking.getRonda(net.pokereport.luna.torrebatalla.TorreRanking.MODO_2VS2, nombre);
+        int ra = net.pokereport.luna.torrebatalla.TorreRanking.getRonda(net.pokereport.luna.torrebatalla.TorreRanking.MODO_ALEATORIO, nombre);
+        int recordRanking = Math.max(r1, Math.max(r2, ra));
+
+        var progreso = net.pokereport.luna.torrebatalla.TorreRecompensas.obtenerProgreso(uuid);
+        if (recordRanking > progreso.maxRonda) {
+            progreso.maxRonda = recordRanking;
+            net.pokereport.luna.torrebatalla.TorreRecompensas.save();
+        }
+
+        int temp = net.pokereport.luna.torrebatalla.TorreRecompensas.getTemporada();
+        java.util.List<Integer> rec = new java.util.ArrayList<>(progreso.reclamadas);
+        java.util.Collections.sort(rec);
+
+        ServerPlayNetworking.send(jugador, new EstadoRecompensasTorre(temp, progreso.maxRonda, r1, r2, ra, rec));
+    }
+
     public static void difundirTodo(net.minecraft.server.network.ServerPlayerEntity quien) {
         var servidor = quien.getServer();
         if (servidor == null) {
@@ -3122,6 +3195,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(EstadoSantuario.ID, EstadoSantuario.CODEC);
         PayloadTypeRegistry.playC2S().register(EntrarTorreBatalla.ID, EntrarTorreBatalla.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirTorreBatalla.ID, AbrirTorreBatalla.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirRecompensasTorre.ID, PedirRecompensasTorre.CODEC);
+        PayloadTypeRegistry.playC2S().register(ReclamarRecompensaTorre.ID, ReclamarRecompensaTorre.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoRecompensasTorre.ID, EstadoRecompensasTorre.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirSantuario.ID, AbrirSantuario.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirCentroPokemon.ID, AbrirCentroPokemon.CODEC);
         PayloadTypeRegistry.playC2S().register(ConfirmarCuraCentro.ID, ConfirmarCuraCentro.CODEC);
@@ -3460,6 +3536,24 @@ public class Red implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(EntrarTorreBatalla.ID, (carga, ctx) -> {
             ctx.player().getServer().execute(() -> {
                 net.pokereport.luna.torrebatalla.TorreBatallaService.iniciarCola(ctx.player(), carga.modo());
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirRecompensasTorre.ID, (carga, ctx) -> {
+            ctx.player().getServer().execute(() -> {
+                enviarEstadoRecompensasTorre(ctx.player());
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(ReclamarRecompensaTorre.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            jugador.getServer().execute(() -> {
+                if (carga.ronda() == -1) {
+                    net.pokereport.luna.torrebatalla.TorreRecompensas.reclamarTodas(jugador);
+                } else {
+                    net.pokereport.luna.torrebatalla.TorreRecompensas.reclamar(jugador, carga.ronda());
+                }
+                enviarEstadoRecompensasTorre(jugador);
             });
         });
 

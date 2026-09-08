@@ -236,6 +236,9 @@ public class LunaCliente implements ClientModInitializer {
         //    delante, para no cerrar de golpe lo que el jugador este mirando.
         ClientPlayNetworking.registerGlobalReceiver(Red.AbrirTorreBatalla.ID,
                 (carga, ctx) -> ctx.client().execute(() -> net.pokereport.luna.client.pokepad.Apps.abrirTorre()));
+
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoRecompensasTorre.ID,
+                (carga, ctx) -> ctx.client().execute(() -> EstadoCliente.guardar(carga)));
         
         ClientPlayNetworking.registerGlobalReceiver(Red.AbrirSantuario.ID,
                 (carga, ctx) -> {

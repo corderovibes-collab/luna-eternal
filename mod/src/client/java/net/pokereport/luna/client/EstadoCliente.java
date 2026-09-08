@@ -50,6 +50,7 @@ public final class EstadoCliente {
     private static Red.EstadoFotos misFotos;
     private static Red.RespuestaHonor honor;
     private static Red.EstadoPendientes pendientes;
+    private static Red.EstadoRecompensasTorre recompensasTorre;
 
     private EstadoCliente() {}
 
@@ -331,6 +332,14 @@ public final class EstadoCliente {
         return pendientes;
     }
 
+    public static void guardar(Red.EstadoRecompensasTorre nuevo) {
+        recompensasTorre = nuevo;
+    }
+
+    public static Red.EstadoRecompensasTorre recompensasTorre() {
+        return recompensasTorre;
+    }
+
     /** Al salir del mundo se olvida: el saldo es de esa partida, no del cliente. */
     public static void olvidar() {
         tesoros = null;
@@ -353,6 +362,7 @@ public final class EstadoCliente {
         misFotos = null;
         honor = null;
         pendientes = null;
+        recompensasTorre = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo
         // entre partidas enseñaria en el servidor B lo que se compro en el A.
         cosmeticos = null;

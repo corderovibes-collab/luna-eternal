@@ -1,10 +1,16 @@
 package net.pokereport.luna.torrebatalla;
 
+import com.gitlab.srcmc.rctmod.world.entities.TrainerMob;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.entity.Entity;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
 import net.pokereport.luna.net.Red;
+import net.pokereport.luna.world.Decorativos;
 
 public class TorreNpc {
 
@@ -34,40 +40,41 @@ public class TorreNpc {
     }
 
     public static void colocarNpc(ServerPlayerEntity jugador) {
-        var src = jugador.getCommandSource().withSilent();
-        
-        // Spawnear el NPC de la torre (un veterano o algo)
-        jugador.getServer().getCommandManager().executeWithPrefix(src, "spawnnpc cobblemon:veteran_male");
-        
-        // Buscarlo
-        net.minecraft.util.math.Box caja = jugador.getBoundingBox().expand(2.0);
-        var entidades = jugador.getServerWorld().getOtherEntities(jugador, caja, 
-            e -> e.getType().getUntranslatedName().contains("npc") || e.getType().getUntranslatedName().contains("cobblemon"));
-        
-        for (Entity e : entidades) {
-            if (!e.getCommandTags().contains("luna_torre_batalla") && !e.getCommandTags().contains("luna_santuario") && !e.getCommandTags().contains("luna_enfermera")) {
-                e.addCommandTag("luna_torre_batalla");
-                
-                if (e instanceof net.minecraft.entity.mob.MobEntity me) {
-                    me.setInvulnerable(true);
-                    me.setPersistent();
-                }
-                
-                e.setYaw(jugador.getYaw());
-                e.setPitch(0);
-                e.setHeadYaw(jugador.getHeadYaw());
-                
-                // Colocar el holograma justo al lado del NPC (+1 en Z o X dependiendo hacia donde mire, o justo arriba)
-                // Usamos la posicion del NPC pero con offset
-                net.minecraft.util.math.Vec3d pos = e.getPos();
-                // Lo ponemos 1.5 bloques a la derecha basado en el YAW
-                double angulo = Math.toRadians(jugador.getYaw() - 90);
-                double offsetX = Math.cos(angulo) * 1.5;
-                double offsetZ = Math.sin(angulo) * 1.5;
-                TorreRanking.colocarHolograma(jugador.getServerWorld(), pos.add(offsetX, 0, offsetZ));
+        ServerWorld mundo = jugador.getServerWorld();
+        Vec3d pos = jugador.getPos();
+        float yaw = jugador.getYaw();
 
-                break;
-            }
+        // Limpiar cualquier NPC previo u holograma de la torre en un radio cercano
+        Box caja = Box.of(pos, 8, 8, 8);
+        for (Entity prev : mundo.getEntitiesByClass(Entity.class, caja, e -> e.getCommandTags().contains("luna_torre_batalla"))) {
+            prev.discard();
         }
+        TorreRanking.quitar(mundo, pos);
+
+        // Crear el NPC recepcionista directamente como TrainerMob
+        TrainerMob mob = TrainerMob.getEntityType().create(mundo);
+        if (mob != null) {
+            mob.refreshPositionAndAngles(pos.x, pos.y, pos.z, yaw, 0f);
+            mob.setHeadYaw(yaw);
+            mob.setBodyYaw(yaw);
+            mob.setTrainerId("hoenn_champion_rocco");
+            mob.setCustomName(Text.literal("§6§lRecepcionista de la Torre"));
+            mob.setCustomNameVisible(true);
+            mob.setAiDisabled(true);
+            mob.setInvulnerable(true);
+            mob.setSilent(true);
+            mob.setPersistent(true);
+            mob.addCommandTag("luna_torre_batalla");
+            mob.addCommandTag(Decorativos.MARCA);
+            mundo.spawnEntity(mob);
+        }
+
+        // Colocar el holograma del TOP 10 2 bloques a la derecha de donde mira el jugador
+        double angulo = Math.toRadians(yaw - 90);
+        double offsetX = Math.cos(angulo) * 2.0;
+        double offsetZ = Math.sin(angulo) * 2.0;
+        TorreRanking.colocarHolograma(mundo, pos.add(offsetX, 0, offsetZ));
+
+        jugador.sendMessage(Text.literal("§a[Torre de Batalla] Recepcionista y Holograma de Ranking colocados con éxito."), false);
     }
 }

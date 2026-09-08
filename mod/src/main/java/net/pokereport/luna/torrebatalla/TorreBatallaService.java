@@ -2,11 +2,13 @@ package net.pokereport.luna.torrebatalla;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.cobblemon.mod.common.Cobblemon;
 import com.cobblemon.mod.common.api.Priority;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
+import com.cobblemon.mod.common.api.pokemon.PokemonSpecies;
 import com.cobblemon.mod.common.battles.BattleFormat;
 import com.cobblemon.mod.common.battles.ai.StrongBattleAI;
 import com.cobblemon.mod.common.pokemon.Pokemon;
@@ -29,6 +31,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.pokereport.luna.LunaEternal;
+import net.pokereport.luna.pokedex.ClaveEspecie;
 import net.pokereport.luna.world.LunaDimensions;
 import net.pokereport.luna.world.TravelService;
 
@@ -45,6 +48,115 @@ public class TorreBatallaService {
     
     private static final String PREFIJO_NPC = "luna_ladder_";
     private static final Map<UUID, TrainerMob> MOB_ACTUAL = new ConcurrentHashMap<>();
+
+    private static final List<String> SKINS_RIVALES = List.of(
+        "kanto_brock", "kanto_misty", "kanto_ltsurge", "kanto_erika", "kanto_koga",
+        "kanto_sabrina", "kanto_blaine", "kanto_giovanni", "kanto_champion_blue",
+        "kanto_league_lorelei", "kanto_league_bruno", "kanto_league_agatha", "kanto_league_lance",
+        "johto_valerio", "johto_chiara", "johto_angelo", "johto_furio", "johto_jasmine",
+        "johto_alfredo", "johto_sandra", "johto_champion_lance", "johto_league_karen",
+        "johto_league_pino", "johto_raffaello",
+        "hoenn_petra", "hoenn_fiammetta", "hoenn_norman", "hoenn_alice", "hoenn_adriano",
+        "hoenn_champion_rocco", "hoenn_rudi", "hoenn_walter", "hoenn_lyris", "hoenn_pat",
+        "hoenn_tell", "hoenn_league_drake", "hoenn_league_ester", "hoenn_league_fosco", "hoenn_league_frida",
+        "sinnoh_pedro", "sinnoh_marzia", "sinnoh_fannie", "sinnoh_corrado", "sinnoh_champion_camilla",
+        "sinnoh_bianca", "sinnoh_buck", "sinnoh_elfio", "sinnoh_ferruccio", "sinnoh_gardenia",
+        "sinnoh_league_aaron", "sinnoh_league_luciano", "sinnoh_league_terrie", "sinnoh_league_vulcano", "sinnoh_omar",
+        "team_rocket_duo_james", "team_rocket_duo_jessie", "team_rocket_admin_apollo", "team_rocket_admin_archer",
+        "team_rocket_admin_atena", "team_rocket_agent_01", "team_rocket_member_01", "team_rocket_officer_01",
+        "team_rocket_scientist_01", "team_galactic_grunt_01", "team_galactic_scientist_01",
+        "team_galactic_commander_mars", "team_galactic_commander_jupiter", "team_galactic_commander_saturn",
+        "pallet_ash", "rival_red", "old_sage", "hisui_damon", "hisui_perula", "team_aqua_ivan", "team_magma_max"
+    );
+
+    private static final List<String> TITULOS_ENTRENADOR = List.of(
+        "Entrenador", "Entrenadora", "Joven", "Chica", "Líder", "Veterano", "Veterana",
+        "Campista", "Karateka", "Experto", "Experta", "Aristócrata", "Científico", "Científica",
+        "Montañero", "Nadador", "Nadadora", "Excursionista", "As de la Torre", "Guardián", "Guardiana"
+    );
+
+    private static final List<String> NOMBRES_ENTRENADOR = List.of(
+        "Carlos", "Mateo", "Lucas", "Marcos", "Alejandro", "Sofía", "Valentina", "David",
+        "Diego", "Gonzalo", "Fernando", "Andrés", "Camila", "Lucía", "Elena", "Javier",
+        "Pablo", "Adrián", "Hugo", "Daniel", "Martina", "Paula", "Valeria", "Sara",
+        "Manuel", "Joaquín", "Gabriel", "Rodrigo", "Samuel", "Ignacio", "Esteban", "Clara"
+    );
+
+    private static String generarNombreRival(int ronda) {
+        var rng = ThreadLocalRandom.current();
+        String titulo = TITULOS_ENTRENADOR.get(rng.nextInt(TITULOS_ENTRENADOR.size()));
+        String nombre = NOMBRES_ENTRENADOR.get(rng.nextInt(NOMBRES_ENTRENADOR.size()));
+        return titulo + " " + nombre;
+    }
+
+    private static String elegirSkinRival() {
+        var rng = ThreadLocalRandom.current();
+        return SKINS_RIVALES.get(rng.nextInt(SKINS_RIVALES.size()));
+    }
+
+    private static volatile List<String> POOL_GEN1_2 = null;
+
+    public static List<String> obtenerEspeciesGen1y2() {
+        if (POOL_GEN1_2 != null && !POOL_GEN1_2.isEmpty()) {
+            return POOL_GEN1_2;
+        }
+        List<String> pool = new ArrayList<>();
+        try {
+            for (var s : PokemonSpecies.getImplemented()) {
+                int dex = s.getNationalPokedexNumber();
+                if (dex >= 1 && dex <= 251) {
+                    boolean prohibido = false;
+                    try {
+                        for (String tag : s.getLabels()) {
+                            String t = tag.toLowerCase();
+                            if (t.equals("mythical") || t.equals("restricted") || t.equals("ultra_beast") || t.equals("paradox")) {
+                                prohibido = true;
+                                break;
+                            }
+                        }
+                    } catch (Throwable ignored) {}
+                    if (!prohibido) {
+                        String id = ClaveEspecie.de(s);
+                        if (!id.isBlank() && !pool.contains(id)) {
+                            pool.add(id);
+                        }
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            LunaEternal.LOG.error("Torre de Batalla: error al consultar especies Gen 1 y 2", t);
+        }
+
+        if (pool.isEmpty()) {
+            pool.addAll(List.of(
+                "bulbasaur", "ivysaur", "venusaur", "charmander", "charmeleon", "charizard",
+                "squirtle", "wartortle", "blastoise", "butterfree", "beedrill", "pidgeot",
+                "raticate", "fearow", "arbok", "raichu", "sandslash", "nidoqueen", "nidoking",
+                "clefable", "ninetales", "wigglytuff", "golbat", "vileplume", "parasect",
+                "venomoth", "dugtrio", "persian", "golduck", "primeape", "arcanine", "poliwrath",
+                "alakazam", "machamp", "victreebel", "tentacruel", "golem", "rapidash",
+                "slowbro", "magneton", "farfetchd", "dodrio", "dewgong", "muk", "cloyster",
+                "gengar", "onix", "hypno", "kingler", "electrode", "exeggutor", "marowak",
+                "hitmonlee", "hitmonchan", "weezing", "rhydon", "chansey", "tangela", "kangaskhan",
+                "seadra", "seaking", "starmie", "mr_mime", "scyther", "jynx", "electabuzz",
+                "magmar", "pinsir", "tauros", "gyarados", "lapras", "ditto", "eevee", "vaporeon",
+                "jolteon", "flareon", "porygon", "omastar", "kabutops", "aerodactyl", "snorlax",
+                "dragonite", "meganium", "typhlosion", "feraligatr", "furret", "noctowl",
+                "ledian", "ariados", "crobat", "lanturn", "xatu", "ampharos", "bellossom",
+                "azumarill", "sudowoodo", "politoed", "jumpluff", "aipom", "sunflora", "yanma",
+                "quagsire", "espeon", "umbreon", "slowking", "misdreavus", "wobbuffet",
+                "girafarig", "forretress", "dunsparce", "gligar", "steelix", "granbull",
+                "qwilfish", "scizor", "shuckle", "heracross", "sneasel", "teddiursa", "ursaring",
+                "magcargo", "piloswine", "corsola", "octillery", "mantine", "skarmory",
+                "houndoom", "kingdra", "donphan", "porygon2", "stantler", "smeargle", "hitmontop",
+                "miltank", "blissey", "tyranitar"
+            ));
+        }
+
+        POOL_GEN1_2 = Collections.unmodifiableList(pool);
+        LunaEternal.LOG.info("Torre de Batalla: cargadas {} especies de Gen 1 y Gen 2", pool.size());
+        return pool;
+    }
 
     // Inicia la escalera Mortal Kombat
     public static void iniciarCola(ServerPlayerEntity jugador, int modo) {
@@ -135,20 +247,16 @@ public class TorreBatallaService {
             party.remove(p);
         }
 
-        List<String> pool = new ArrayList<>(List.of(
-            "charizard", "blastoise", "venusaur", "gengar", "dragonite",
-            "snorlax", "lucario", "garchomp", "tyranitar", "metagross",
-            "alakazam", "gyarados", "arcanine", "scizor", "salamence",
-            "milotic", "togekiss", "electivire", "gardevoir", "weavile",
-            "mamoswine", "gliscor", "gallade", "machamp"
-        ));
+        List<String> pool = new ArrayList<>(obtenerEspeciesGen1y2());
         Collections.shuffle(pool);
 
         for (int i = 0; i < 6; i++) {
             var props = PokemonProperties.Companion.parse(pool.get(i) + " level=100");
-            party.add(props.create());
+            Pokemon poke = props.create();
+            poke.getPersistentData().putBoolean(TorreReglas.TAG_TORRE, true);
+            party.add(poke);
         }
-        jugador.sendMessage(Text.literal("§a[Torre de Batalla] ¡Has recibido un equipo sorpresa de 6 Pokémon Nivel 100!"));
+        jugador.sendMessage(Text.literal("§a[Torre de Batalla] ¡Has recibido un equipo aleatorio de 6 Pokémon (Gen 1 y 2) Nivel 100!"));
     }
 
     private static void prepararRonda(ServerPlayerEntity jugador) {
@@ -174,22 +282,20 @@ public class TorreBatallaService {
             m.discard();
         }
 
-        // Spawnear al nuevo rival
-        String bossName = "Rival de Torre (Ronda " + partida.ronda() + ")";
-        TrainerMob mob = spawnOpponentMob(mundoTorre, new Vec3d(cx + 0.5, cy + 1, cz - 2.5), 0f, bossName);
+        // Rival con nombre propio y skin único por ronda
+        String nombreBase = generarNombreRival(partida.ronda());
+        String bossDisplayName = "§e" + nombreBase + " §7(Ronda " + partida.ronda() + ")";
+        String bossTrainerName = nombreBase + " (Ronda " + partida.ronda() + ")";
+        String skinId = elegirSkinRival();
+
+        TrainerMob mob = spawnOpponentMob(mundoTorre, new Vec3d(cx + 0.5, cy + 1, cz - 2.5), 0f, bossDisplayName, skinId);
         if (mob != null) {
             MOB_ACTUAL.put(jugador.getUuid(), mob);
         }
 
-        // El rival SIEMPRE tiene 6 Pokémon nivel 100
+        // El rival SIEMPRE tiene 6 Pokémon nivel 100 de Gen 1 y Gen 2
         List<PokemonModel> opponentTeam = new ArrayList<>();
-        List<String> pool = new ArrayList<>(List.of(
-            "charizard", "blastoise", "venusaur", "gengar", "dragonite",
-            "snorlax", "lucario", "garchomp", "tyranitar", "metagross",
-            "alakazam", "gyarados", "arcanine", "scizor", "salamence",
-            "milotic", "togekiss", "electivire", "gardevoir", "weavile",
-            "mamoswine", "gliscor", "gallade", "machamp"
-        ));
+        List<String> pool = new ArrayList<>(obtenerEspeciesGen1y2());
         Collections.shuffle(pool);
         for (int i = 0; i < 6; i++) {
             opponentTeam.add(buildModel(pool.get(i)));
@@ -198,7 +304,7 @@ public class TorreBatallaService {
         // Esperamos 2 segundos antes de iniciar el combate para que el jugador vea al mob
         net.pokereport.luna.gym.Programador.en(40, () -> {
             if (partidasActivas.containsKey(jugador.getUuid())) {
-                startLadderBattle(jugador, mob, bossName, Math.min(5, partida.ronda() / 2), opponentTeam);
+                startLadderBattle(jugador, mob, bossTrainerName, Math.min(5, partida.ronda() / 2), opponentTeam);
             }
         });
     }
@@ -304,13 +410,16 @@ public class TorreBatallaService {
         }
     }
 
-    private static TrainerMob spawnOpponentMob(ServerWorld world, Vec3d pos, float yaw, String name) {
+    private static TrainerMob spawnOpponentMob(ServerWorld world, Vec3d pos, float yaw, String name, String skinId) {
         TrainerMob mob = TrainerMob.getEntityType().create(world);
         if (mob == null) return null;
 
         mob.refreshPositionAndAngles(pos.x, pos.y, pos.z, yaw, 0f);
         mob.setHeadYaw(yaw);
         mob.setBodyYaw(yaw);
+        if (skinId != null && !skinId.isBlank()) {
+            mob.setTrainerId(skinId);
+        }
         mob.setCustomName(Text.literal(name));
         mob.setCustomNameVisible(true);
         mob.setAiDisabled(true);
@@ -419,6 +528,7 @@ public class TorreBatallaService {
 
     private static PokemonModel buildModel(String species) {
         Pokemon p = PokemonProperties.Companion.parse(species + " level=100").create();
+        p.getPersistentData().putBoolean(TorreReglas.TAG_TORRE, true);
         return new PokemonModel(p);
     }
 

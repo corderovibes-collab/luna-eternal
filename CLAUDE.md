@@ -3463,11 +3463,51 @@ Pase          EL PASE DE BATALLA LUNA (2026-09-08, V032+V033, D-046)
                     moneda vendida por dinero real SALTEA TODOS LOS SUMIDEROS A
                     LA VEZ (P3), y es la unica averia de la lista que no se
                     arregla bajando un numero
+              EL TOPE DIARIO SUBE A 6.000 (2026-09-08, orden del usuario: «asi
+              pueden farmear rapido»). El minimo pasa de 45 dias a 9
+              ⚠⚠⚠ Y SUBIR EL TOPE NO ACELERA A NADIE POR SI SOLO, porque EL TOPE
+                 NO ERA EL LIMITE DE CASI NADIE. Medido: una hora seguida paga
+                 Torre 1.000 . cosechar 600 . minar 580 . pescar 560 .
+                 capturar 300 . combates 180
+                 con 1.200, dos horas de mina lo llenaban; con 6.000 harian falta
+                 DIEZ HORAS SEGUIDAS. El techo ya no lo toca nadie: quien manda
+                 ahora es `PaseXp`. Si el pase sigue pareciendo lento, el sitio
+                 donde tocar es la TABLA DE FUENTES, no este numero
+                 ⚠ subir tambien las fuentes se PROPUSO y el usuario dijo que no:
+                   el tope sube solo. Queda escrito para no volver a plantearlo
+                   sin que el lo pida
+              ⚠⚠ Y UNA COMPROBACION CAMBIO DE VARA, NO DE UMBRAL: «minar sigue
+                 mereciendo la pena» se medía contra el 10 % del tope, que con
+                 6.000 son 600 -- y minar da 580, asi que SE PONIA ROJA sin que
+                 la mineria hubiera cambiado nada. La alarma NO era falsa (a
+                 6.000 ninguna fuente llena el dia), pero medir «vale la pena»
+                 con una vara que se mueve cada vez que alguien toca el techo no
+                 sirve: hoy se mide contra LA CURVA
+                 ⚠ y la de los 40 dias baja a UNA SEMANA porque bajo la decision,
+                   no para poner verde una prueba roja. Lo que sigue defendiendo
+                   es su FORMA: que el pase sea una TEMPORADA y no una compra que
+                   se agota el primer fin de semana
+              LA AUDITORIA DE LAS FUENTES, EN DOS MITADES (peticion del usuario)
+              ⚠⚠⚠ HASTA HOY SE COMPROBABA LA TABLA, NO EL CAMINO. Habia
+                 invariantes de que los numeros son sanos --la piedra a cero, la
+                 rara por encima de la comun-- y NINGUNO de que dar esa XP la
+                 sume. Un fallo en `ganar` no habria salido en rojo: habria
+                 salido como «el pase no me sube», que hay que estar JUGANDO para
+                 notar. Es la familia de `KitService.claim`
+                 `testFuentesDelPase` recorre LAS DOCE con su VALOR REAL --no con
+                 un 100 inventado, para que una puesta a cero por error se vea--
+              ⚠⚠ Y EL CABLEADO NO LO PUEDE COMPROBAR EL AUTOTEST: sabe que
+                 `ganar` acredita, pero no si alguien LO LLAMA al pescar. Una
+                 constante declarada y no enganchada da CERO XP PARA SIEMPRE en
+                 silencio -- el fallo de los 62 cosmeticos que no existian
+                 python tools/comprobar_pase.py   (13/13 tienen quien las llame)
+              ✅ EN VIVO (2026-09-08, 23:27): AUTOTEST 670/670 . tope 6.000 .
+                minimo 9 dias . manifiesto c742abef29
               ⚠⚠⚠ EL NUMERO QUE SOSTIENE EL SISTEMA ENTERO:
                  curva  240 + 6n  ->  53.700 XP el pase completo
-                 tope   1.200 XP AL DIA
+                 tope   6.000 XP AL DIA   (era 1.200 hasta el 2026-09-08)
                  ─────────────────────────────────────────────
-                 53.700 / 1.200 = 44,75  ->  45 DIAS COMO MINIMO
+                 53.700 / 6.000 = 8,95   ->  9 DIAS COMO MINIMO
                  y ese minimo NO DEPENDE DE CUANTO JUEGUE NADIE: la XP de D
                  dias naturales no puede pasar de 1.200 x D. El descanso
                  acumulado (3 dias) REPARTE el tope, no lo crea

@@ -203,6 +203,9 @@ public class LunaCliente implements ClientModInitializer {
         //   honor ajeno cambia el total que tu pantalla dibuja, y el servidor
         //   lo reenvia. Aqui solo se guarda; la pantalla, si esta abierta, lo
         //   relee al refrescarse.
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoPuerta.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoPaseo.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
 
@@ -369,6 +372,16 @@ public class LunaCliente implements ClientModInitializer {
         //   Preguntar en vez de esperar quita la ventana entera: el unico que
         //   sabe cuando esta listo es el cliente.
         ClientPlayConnectionEvents.JOIN.register((manejador, remitente, cliente) -> {
+            // ⚠⚠⚠ EL SALUDO, Y ES LO QUE DEMUESTRA QUE ESTE JAR ESTA AL DIA.
+            //    El servidor NO lo pide: un jar viejo no sabria contestar y
+            //    habria que inventar un tiempo de espera. Que no llegue ES la
+            //    respuesta. Ver `Puerta.PROTOCOLO`.
+            //    ⚠ `Puerta` vive en `main`, que corre en los dos lados, asi que
+            //      el numero sale del MISMO sitio en cliente y servidor. En dos
+            //      constantes acabarian mintiendo una -- y el sintoma seria que
+            //      nadie puede cruzar la puerta.
+            ClientPlayNetworking.send(new Red.Saludo(
+                    net.pokereport.luna.puerta.Puerta.PROTOCOLO));
             ClientPlayNetworking.send(new Red.PedirLlevados());
             // Y las opciones de inicial, para tenerlas listas cuando Oak
             // mande abrir. Ya NO abren nada por si mismas.
@@ -395,7 +408,14 @@ public class LunaCliente implements ClientModInitializer {
 
             // `wasPressed` vacía la cola de pulsaciones: con un `if` simple, una
             // pulsación larga abriría y cerraría la pantalla en bucle.
+            // ⚠⚠ EN EL LOBBY NO HAY POKEPAD. `wasPressed` se sigue vaciando
+            //    aunque no se abra nada: si se saltara el bucle, las pulsaciones
+            //    se quedarian EN LA COLA y el Pad se abriria solo --varias
+            //    veces-- en cuanto el jugador cruzara la puerta.
             while (abrirPad.wasPressed()) {
+                if (EstadoCliente.enLobby()) {
+                    continue;
+                }
                 if (cliente.currentScreen == null) {
                     cliente.setScreen(new PokePadScreen());
                 }
@@ -406,6 +426,9 @@ public class LunaCliente implements ClientModInitializer {
             //    pantalla abierta por el cliente no estaria conectada a nada y
             //    lo que moviera dentro no existiria.
             while (abrirMochila.wasPressed()) {
+                if (EstadoCliente.enLobby()) {
+                    continue;
+                }
                 if (cliente.currentScreen == null) {
                     ClientPlayNetworking.send(new Red.AbrirMochila());
                 }

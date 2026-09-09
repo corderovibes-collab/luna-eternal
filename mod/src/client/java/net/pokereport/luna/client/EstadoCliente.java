@@ -45,6 +45,19 @@ public final class EstadoCliente {
     private static Red.EstadoViajes viajes;
     private static Red.EstadoGimnasio gimnasio;
     private static Red.EstadoTrajes trajes;
+    /**
+     * ¿Esta en el lobby? Mientras lo este, no hay PokePad ni teclas.
+     *
+     * <p>⚠⚠ Empieza en {@code false} y NO en {@code true}, y no es indiferente:
+     * hasta que llegue el primer {@code EstadoPuerta} no sabemos donde esta, y
+     * de las dos equivocaciones posibles esta es la barata. Con {@code true} por
+     * defecto, cualquier tirón que retrasara ese paquete dejaria el PokePad
+     * muerto en la ciudadela -- y un boton que no responde se lee como un fallo
+     * del mod, no como un candado. Al reves solo se abre una pantalla vacia
+     * durante un instante, porque el SERVIDOR tambien lo rechaza (P6).
+     */
+    private static boolean enLobby;
+
     private static Red.EstadoSantuario santuario;
 
     /**
@@ -316,6 +329,14 @@ public final class EstadoCliente {
      * santuario aun no esta construido». Confundirlas dejaria la pantalla en
      * blanco durante el medio segundo que tarda la respuesta.
      */
+    public static boolean enLobby() {
+        return enLobby;
+    }
+
+    public static void guardar(Red.EstadoPuerta nuevo) {
+        enLobby = nuevo.enLobby();
+    }
+
     public static Red.EstadoSantuario santuario() {
         return santuario;
     }
@@ -413,6 +434,7 @@ public final class EstadoCliente {
         saldo = null;
         ficha = null;
         santuario = null;
+        enLobby = false;
         paseo = null;
         fotoSubida = null;
         misFotos = null;

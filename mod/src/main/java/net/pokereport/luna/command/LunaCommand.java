@@ -604,6 +604,19 @@ public final class LunaCommand {
             // ⚠⚠ TODO LO DEL INICIAL, EN UN SITIO. `reiniciarinicial` se queda
             //    como atajo porque lleva semanas escrito en la documentacion y
             //    en los dedos de quien prueba, pero lo nuevo cuelga de aqui.
+            .then(literal("puerta")
+                .requires(s -> s.hasPermissionLevel(3))
+                .executes(ctx -> estadoPuerta(ctx.getSource()))
+                .then(literal("npc")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .executes(ctx -> colocarGuardian(ctx.getSource(),
+                            net.pokereport.luna.puerta.PuertaNpc.ESPECIE))
+                    .then(literal("quitar")
+                        .executes(ctx -> quitarGuardian(ctx.getSource())))
+                    .then(argument("especie", StringArgumentType.word())
+                        .executes(ctx -> colocarGuardian(ctx.getSource(),
+                                StringArgumentType.getString(ctx, "especie"))))))
+
             .then(literal("inicial")
                 .requires(s -> s.hasPermissionLevel(3))
                 .executes(ctx -> estadoInicial(ctx.getSource()))
@@ -803,6 +816,72 @@ public final class LunaCommand {
     }
 
     // ------------------------------------------------------------------
+
+    // ------------------------------------------------------- la puerta
+
+    private static int estadoPuerta(ServerCommandSource src) {
+        src.sendFeedback(() -> Text.literal(
+                "\u00a76La puerta\u00a78 \u00b7 \u00a7fprotocolo exigido: \u00a7e"
+                + net.pokereport.luna.puerta.Puerta.PROTOCOLO), false);
+        ServerPlayerEntity p = src.getPlayer();
+        if (p != null) {
+            var v = net.pokereport.luna.puerta.Puerta.veredicto(p);
+            src.sendFeedback(() -> Text.literal("\u00a77tu cliente: "
+                    + (v.pasa() ? "\u00a7aal dia" : "\u00a7c" + v.fallo())), false);
+            src.sendFeedback(() -> Text.literal("\u00a77est\u00e1s en el lobby: "
+                    + (net.pokereport.luna.puerta.Puerta.enElLobby(p)
+                            ? "\u00a7es\u00ed" : "\u00a77no")), false);
+        }
+        var svc = LunaEternal.puerta();
+        if (svc != null) {
+            src.sendFeedback(() -> Text.literal("\u00a78" + svc.enCache()
+                    + " jugadores en cache"), false);
+        }
+        return 1;
+    }
+
+    /**
+     * ⚠ Se exige estar EN EL LOBBY, y no es burocracia: el guardian colocado en
+     *   otra dimension seria un adorno que no abre ninguna puerta, y el operador
+     *   creeria que ya esta hecho. Un comando que acepta lo que no sirve es un
+     *   comando que miente.
+     */
+    private static int colocarGuardian(ServerCommandSource src, String especie) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        if (!net.pokereport.luna.world.LunaDimensions.LOBBY.equals(
+                p.getServerWorld().getRegistryKey())) {
+            src.sendError(Text.literal("\u00a7cEl guardi\u00e1n va en el LOBBY. "
+                    + "Ve con \u00a7f/luna ir lobby\u00a7c y vuelve a intentarlo."));
+            return 0;
+        }
+        boolean ok = net.pokereport.luna.puerta.PuertaNpc.colocar(
+                p.getServerWorld(), p.getPos(), p.getYaw(), especie);
+        if (!ok) {
+            src.sendError(Text.literal("\u00a7cNo se pudo colocar: \u00bfexiste la "
+                    + "especie \u00ab" + especie + "\u00bb?"));
+            return 0;
+        }
+        src.sendFeedback(() -> Text.literal(
+                "\u00a7aGuardi\u00e1n colocado\u00a78 (" + especie + ")"), false);
+        return 1;
+    }
+
+    private static int quitarGuardian(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        int n = net.pokereport.luna.puerta.PuertaNpc.quitar(
+                p.getServerWorld(), p.getPos(), 16.0);
+        src.sendFeedback(() -> Text.literal("\u00a77Quitadas \u00a7f" + n
+                + "\u00a77 entidades."), false);
+        return 1;
+    }
 
     /** Nombre corto → dimensión. El orden es el que sale al autocompletar. */
     private static final java.util.Map<String, net.minecraft.registry.RegistryKey<net.minecraft.world.World>> DESTINOS =

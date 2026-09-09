@@ -2868,6 +2868,57 @@ public class Red implements ModInitializer {
      * conceden los que le queden del dia y el resto se rechazan en
      * {@code SantuarioService.verNicho}, que es quien lleva la cuenta.
      */
+    /**
+     * EL SALUDO DEL CLIENTE: «tengo el mod, y esta version».
+     *
+     * <h2>&#9888;&#9888;&#9888; LA AUSENCIA DE ESTE PAQUETE ES LA SEÑAL</h2>
+     *
+     * Un jar viejo <b>no sabe mandarlo</b>, asi que «no ha saludado» ya
+     * significa «no esta al dia» sin necesidad de preguntarle nada. Por eso el
+     * saludo lo manda el CLIENTE al entrar y el servidor no lo pide: pedirlo
+     * obligaria a esperar una respuesta que un cliente viejo nunca dara, y
+     * habria que inventar un tiempo de espera.
+     *
+     * <p>&#9888;&#9888; <b>Y NO VIAJA LA VERSION DEL MOD, VIAJA UN PROTOCOLO.</b>
+     * {@code mod_version} lleva en {@code 0.1.0} desde el primer dia --lo que
+     * distingue un jar de otro es la huella del NOMBRE DEL FICHERO, que el mod
+     * no puede leerse a si mismo--, asi que comparar versiones habria dicho
+     * siempre que todo el mundo esta al dia. Ver {@code Puerta.PROTOCOLO}.
+     */
+    public record Saludo(int protocolo) implements CustomPayload {
+        public static final Id<Saludo> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "saludo"));
+        public static final PacketCodec<RegistryByteBuf, Saludo> CODEC =
+                PacketCodec.tuple(PacketCodecs.VAR_INT, Saludo::protocolo, Saludo::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * «Estas en el lobby»: el cliente apaga el PokePad y las teclas.
+     *
+     * <p>&#9888;&#9888; Esto es <b>presentacion</b>, no seguridad. Que el PokePad
+     * no se abra en el lobby lo decide tambien el servidor, que rechaza los
+     * paquetes de quien esta ahi ({@code Puerta.bloqueado}). Este paquete
+     * existe para que la tecla no haga nada <b>en vez de</b> abrir una pantalla
+     * que el servidor va a ignorar -- un boton que no responde parece roto.
+     */
+    public record EstadoPuerta(boolean enLobby) implements CustomPayload {
+        public static final Id<EstadoPuerta> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_puerta"));
+        public static final PacketCodec<RegistryByteBuf, EstadoPuerta> CODEC =
+                PacketCodec.tuple(PacketCodecs.BOOL, EstadoPuerta::enLobby,
+                        EstadoPuerta::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record VerNicho(String nicho) implements CustomPayload {
         public static final Id<VerNicho> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "ver_nicho"));
@@ -3437,6 +3488,8 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(EstadoPendientes.ID, EstadoPendientes.CODEC);
         PayloadTypeRegistry.playC2S().register(ModerarFoto.ID, ModerarFoto.CODEC);
         PayloadTypeRegistry.playC2S().register(TpNicho.ID, TpNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(Saludo.ID, Saludo.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoPuerta.ID, EstadoPuerta.CODEC);
         PayloadTypeRegistry.playC2S().register(VerNicho.ID, VerNicho.CODEC);
         PayloadTypeRegistry.playC2S().register(CobrarPremioSantuario.ID,
                 CobrarPremioSantuario.CODEC);
@@ -4060,6 +4113,13 @@ public class Red implements ModInitializer {
                     enviarSantuarioATodos(server);
                 });
             });
+        });
+
+        // ⚠ El saludo NO toca la base ni el mundo: solo apunta un numero en
+        //   memoria, asi que corre donde llega y no hace falta encolarlo.
+        ServerPlayNetworking.registerGlobalReceiver(Saludo.ID, (carga, ctx) -> {
+            net.pokereport.luna.puerta.Puerta.saludar(
+                    ctx.player().getUuid(), carga.protocolo());
         });
 
         ServerPlayNetworking.registerGlobalReceiver(VerNicho.ID, (carga, ctx) -> {
@@ -6265,6 +6325,21 @@ public class Red implements ModInitializer {
                 }
             });
         });
+    }
+
+    /**
+     * Le dice al cliente si esta en el lobby, para que apague el PokePad.
+     *
+     * <p>&#9888; Se manda en los DOS sentidos --al entrar al lobby y al salir--
+     * y no solo al entrar: un candado que se pone y no se quita deja el PokePad
+     * muerto en la ciudadela, y eso se comporta igual que un fallo.
+     */
+    public static void enviarPuerta(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        if (!ServerPlayNetworking.canSend(jugador, EstadoPuerta.ID)) {
+            return;
+        }
+        ServerPlayNetworking.send(jugador, new EstadoPuerta(
+                net.pokereport.luna.puerta.Puerta.enElLobby(jugador)));
     }
 
     public static void enviarSantuarioATodos(net.minecraft.server.MinecraftServer servidor) {

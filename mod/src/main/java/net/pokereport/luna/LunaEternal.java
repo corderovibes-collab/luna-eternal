@@ -76,6 +76,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.cosmetics.CosmeticsService cosmetics;
     private static net.pokereport.luna.santuario.SantuarioService santuario;
     private static net.pokereport.luna.pase.PaseService pase;
+    private static net.pokereport.luna.puerta.PuertaService puerta;
     private static ExecutorService io;
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
     private static String builderKey = "";
@@ -91,6 +92,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.world.Decorativos.protegerlos();
         net.pokereport.luna.world.Decorativos.fueraDeLaPokedex();
         net.pokereport.luna.world.Decorativos.abrirViajesAlTocar();
+        net.pokereport.luna.puerta.PuertaNpc.engancharClic();
         // ⚠ Se registra AQUI y no en SERVER_STARTED por lo mismo que los tres
         //   de arriba: los eventos se suscriben una sola vez, y los nichos
         //   (geometria y reclamaciones) los lee el manejador cuando llega el
@@ -271,6 +273,41 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                 }
             });
 
+            // ⚠⚠⚠ LA PUERTA. Quien no ha cruzado nunca empieza en el lobby.
+            //    ⚠⚠ La lectura es ASINCRONA y la decision depende de ella, asi
+            //       que el envio al lobby va DENTRO del callback -- preguntar
+            //       justo despues de pedir leeria el estado anterior, que es la
+            //       trampa de `conceder()` que dejo atrapado a un jugador.
+            //    ⚠⚠ Y el movimiento va encolado (`Puerta.RETRASO`): mover a
+            //       alguien DENTRO del evento de conexion deja el apunte de
+            //       chunks a medias y revienta minutos despues, en otro sitio.
+            if (puerta != null) {
+                var perfilP = player.getGameProfile();
+                submit(() -> {
+                    final long idP;
+                    try {
+                        idP = players.resolve(perfilP.getId(), perfilP.getName());
+                    } catch (Exception e) {
+                        LOG.error("No se pudo resolver a {} para la puerta",
+                                perfilP.getName(), e);
+                        return;
+                    }
+                    puerta.cargar(perfilP.getId(), idP, () -> server.execute(() -> {
+                        if (player.isRemoved()) {
+                            return;
+                        }
+                        net.pokereport.luna.gym.Programador.en(
+                                net.pokereport.luna.puerta.Puerta.RETRASO, () -> {
+                            if (player.isRemoved()) {
+                                return;
+                            }
+                            net.pokereport.luna.puerta.Puerta.alEntrar(player);
+                            net.pokereport.luna.net.Red.enviarPuerta(player);
+                        });
+                    }));
+                });
+            }
+
             // ⚠⚠⚠ EL AVISO DE QUE HAY QUE IR A VER A OAK, Y ES LA MITAD DE
             //    QUITAR LA APERTURA AUTOMATICA. Antes la pantalla del inicial
             //    se abria sola al entrar --imposible no verla--. Hoy hay que ir
@@ -396,6 +433,11 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.world.Regreso.apuntar(player);
             net.pokereport.luna.backpack.Abiertas.guardarYOlvidar(player);
             net.pokereport.luna.rank.RankService.olvidar(player.getUuid());
+            if (puerta != null) {
+                puerta.olvidar(player.getUuid());
+            }
+            net.pokereport.luna.puerta.Puerta.olvidar(player.getUuid());
+            net.pokereport.luna.puerta.PuertaNpc.olvidar(player.getUuid());
             // ⚠⚠ ANTES de `players.forget`: el volcado necesita resolver el
             //    id, y si ya se olvido tendria que volver a la base.
             net.pokereport.luna.crate.Actividad.alSalir(player);
@@ -544,6 +586,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             cosmetics = new net.pokereport.luna.cosmetics.CosmeticsService(database);
             santuario = new net.pokereport.luna.santuario.SantuarioService(database);
             pase = new net.pokereport.luna.pase.PaseService(database);
+            puerta = new net.pokereport.luna.puerta.PuertaService(database);
             // ⚠ La config de nichos se lee al arrancar y REVIENTA el arranque
             //   si esta mal escrita: una coordenada mal puesta protege una zona
             //   que no es la construida, y eso no da error -- da un hueco que
@@ -632,6 +675,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     }
     public static net.pokereport.luna.cosmetics.CosmeticsService cosmetics() { return cosmetics; }
     public static net.pokereport.luna.santuario.SantuarioService santuario() { return santuario; }
+    public static net.pokereport.luna.puerta.PuertaService puerta() { return puerta; }
     public static net.pokereport.luna.pase.PaseService pase() { return pase; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }

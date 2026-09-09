@@ -47,6 +47,17 @@ public final class Traslado {
         if (jugador.isRemoved() || jugador.isDisconnected()) {
             return false;
         }
+        // ⚠⚠⚠ EL CANDADO DEL LOBBY, y esta aqui porque este es el UNICO camino
+        //    por el que se mueve a un jugador en todo el proyecto. Quien no ha
+        //    cruzado la puerta solo puede ir al lobby: sin esto, un cliente
+        //    modificado se salta el guardian mandando el paquete de Explorar, y
+        //    el viaje funcionaria perfectamente. Ver `Puerta.puedeIrA`.
+        if (!net.pokereport.luna.puerta.Puerta.puedeIrA(
+                jugador, destino.getRegistryKey())) {
+            jugador.sendMessage(net.minecraft.text.Text.literal(
+                    "\u00a7cPrimero tienes que entrar por el lobby."), true);
+            return false;
+        }
         // ⚠ Primero el chunk. Después el apunte. Y por último mover.
         destino.getChunk(BlockPos.ofFloored(donde));
         Regreso.apuntar(jugador);

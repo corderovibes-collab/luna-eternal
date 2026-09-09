@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.pokereport.luna.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MixinRastreadorEntidades"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -20,6 +20,9 @@
       "net.pokereport.luna.client.LunaCliente"
     ]
   },
+  "mixins": [
+    "lunaeternal.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": "~1.21.1",

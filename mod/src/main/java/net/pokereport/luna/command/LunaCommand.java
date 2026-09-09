@@ -843,6 +843,23 @@ public final class LunaCommand {
             src.sendFeedback(() -> Text.literal("\u00a78" + svc.enCache()
                     + " jugadores en cache"), false);
         }
+        src.sendFeedback(() -> Text.literal("\u00a77activa: "
+                + (net.pokereport.luna.puerta.Puerta.activa()
+                        ? "\u00a7as\u00ed" : "\u00a7cno")), false);
+
+        // ⚠⚠ EL ESTADO DEL RECORTE DE JUGADORES SE MIRA AQUI, y hay que mirarlo
+        //    CON GENTE DENTRO: el mixin se enciende la primera vez que corre, y
+        //    con el servidor vacio no ha corrido nunca. Un «no» con cero
+        //    jugadores no significa nada; un «no» con gente dando vueltas
+        //    significa que el mixin NO se aplico y que el recorte no existe.
+        src.sendFeedback(() -> Text.literal("\u00a76Visibilidad\u00a78 \u00b7 "
+                + "\u00a7flobby \u00a7e"
+                + net.pokereport.luna.world.VisibilidadJugadores.TOPE_LOBBY
+                + "\u00a7f \u00b7 ciudadela \u00a7e"
+                + net.pokereport.luna.world.VisibilidadJugadores.TOPE_CIUDADELA), false);
+        src.sendFeedback(() -> Text.literal("\u00a77el recorte ha corrido: "
+                + (net.pokereport.luna.world.VisibilidadJugadores.vivo()
+                        ? "\u00a7as\u00ed" : "\u00a7etodav\u00eda no")), false);
         return 1;
     }
 

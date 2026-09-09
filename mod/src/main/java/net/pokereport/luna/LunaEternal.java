@@ -439,6 +439,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             }
             net.pokereport.luna.puerta.Puerta.olvidar(player.getUuid());
             net.pokereport.luna.puerta.PuertaNpc.olvidar(player.getUuid());
+            net.pokereport.luna.world.VisibilidadJugadores.olvidar(player.getUuid());
             // ⚠⚠ ANTES de `players.forget`: el volcado necesita resolver el
             //    id, y si ya se olvido tendria que volver a la base.
             net.pokereport.luna.crate.Actividad.alSalir(player);
@@ -505,6 +506,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             //   que cuenta son SEGUNDOS, y mirar la posicion veinte veces por
             //   segundo no lo haria mas justo -- solo veinte veces mas caro.
             net.pokereport.luna.crate.Actividad.tick(server);
+            // Quien ve a quien. Va en el corte de 20 ticks porque la lista solo
+            // cambia cuando la gente se mueve, y cuando se mueve vanilla vuelve
+            // a preguntar por su cuenta.
+            net.pokereport.luna.world.VisibilidadJugadores.tick(server);
             // El contador de conectados cambia con cada entrada y salida;
             // recalcularlo aquí evita tener que engancharlo a cada evento.
             Tablist.updateHeaderFooter(server);

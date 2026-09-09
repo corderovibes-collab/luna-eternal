@@ -3479,6 +3479,34 @@ public final class AutoTest {
             puertaSvc.olvidar(T3);
         }
 
+        // ---- a cuanta gente se ve ----------------------------------------
+        // ⚠⚠⚠ EL MUNDO SALVAJE Y EL HOGAR NO PUEDEN LLEVAR TOPE. Ahi la gente
+        //    esta repartida por kilometros y el problema que esto resuelve --una
+        //    plaza con doscientas personas-- no existe. Si alguien les pusiera
+        //    uno, habria jugadores INVISIBLES en mitad del campo: te cruzas con
+        //    alguien y no esta. Y no daria ningun error.
+        check("VISIBILIDAD: EL MUNDO ABIERTO NO RECORTA A NADIE",
+                net.pokereport.luna.world.VisibilidadJugadores.topeDe(
+                        net.pokereport.luna.world.LunaDimensions.HOGAR)
+                        == net.pokereport.luna.world.VisibilidadJugadores.SIN_TOPE
+                && net.pokereport.luna.world.VisibilidadJugadores.topeDe(
+                        net.pokereport.luna.world.LunaDimensions.SALVAJE)
+                        == net.pokereport.luna.world.VisibilidadJugadores.SIN_TOPE);
+
+        // ⚠⚠ EN EL LOBBY NO SE VE A NADIE, que es la mitad de lo que hace que el
+        //    lobby sea un lobby: la otra mitad es que no se puede hacer nada.
+        check("VISIBILIDAD: EN EL LOBBY NO SE VE A NADIE",
+                net.pokereport.luna.world.VisibilidadJugadores.topeDe(
+                        net.pokereport.luna.world.LunaDimensions.LOBBY) == 0);
+
+        // ⚠ Y la ciudadela recorta, pero recorta ALGO: con el tope a cero la
+        //   plaza quedaria desierta --que es justo lo contrario de una ciudad--
+        //   y con SIN_TOPE no serviria de nada tener el mixin.
+        int topeCiu = net.pokereport.luna.world.VisibilidadJugadores.topeDe(
+                net.pokereport.luna.world.LunaDimensions.CIUDADELA);
+        check("visibilidad: la ciudadela recorta, pero deja ver gente",
+                topeCiu > 0);
+
         check("SANTUARIO: NADIE PUEDE TENER MAS DE 3 NICHOS",
                 net.pokereport.luna.santuario.SantuarioService.tope(CAMPEON) == 3);
         check("santuario: por debajo de CAMPEON sigue siendo uno",

@@ -48,7 +48,15 @@ public final class AutoTest {
      * sin que nadie hubiera tocado nada -- una prueba que solo pasa una vez.
      */
     private static final UUID T3 = UUID.fromString("00000000-0000-3000-8000-000000000003");
-    private static final String N3 = "__autotest_puerta";
+    /**
+     * ⚠ DOCE CARACTERES, NO DIECISIETE. "__autotest_puerta" reventaba con
+     *   "Data too long for column username": la columna es VARCHAR(16) porque
+     *   ese es el maximo de un nombre de Minecraft. Mismo tropiezo que la
+     *   columna cuatro caracteres corta que el autotest cazo en su primera
+     *   ejecucion en vivo -- y por eso los otros dos se llaman "__autotest_1"
+     *   y "__autotest_2" y no algo descriptivo.
+     */
+    private static final String N3 = "__autotest_3";
 
     private final Database db;
     private final PlayerService players;

@@ -31,9 +31,31 @@ CREATE TABLE IF NOT EXISTS player_puerta (
 
 -- El relleno. Todo el que ya existe en `player` ha entrado alguna vez, o sea
 -- que ya cruzo: mandarlo al lobby seria castigarle por una funcion nueva.
+--
+-- ⚠⚠⚠ SE ELIGE LO QUE FALTA CON UN LEFT JOIN, Y NO CON `ON DUPLICATE KEY`.
+--    La primera version de esta migracion TIRO EL SERVIDOR:
+--        INSERT INTO player_puerta (...) SELECT player_id, 0 FROM player
+--        ON DUPLICATE KEY UPDATE player_id = player_id;
+--    -> Column 'player_id' in field list is ambiguous
+--    En un INSERT ... SELECT, la clausula ON DUPLICATE ve **las dos tablas** a
+--    la vez --la de destino y la del SELECT-- y `player_id` existe en ambas, asi
+--    que MariaDB no sabe a cual te refieres y se niega. Con un INSERT de valores
+--    literales el mismo patron funciona, y por eso estaba escrito asi: es el
+--    patron que usan las otras diez migraciones del proyecto, donde no hay
+--    SELECT y por tanto no hay ambigüedad.
+--
+-- ⚠⚠ Y NO SE TAPA CON `INSERT IGNORE`, que era la salida corta: IGNORE se traga
+--    TODOS los errores, no solo el de clave duplicada -- una clave ajena que no
+--    case, un dato que no quepa. El relleno se quedaria a medias en silencio, y
+--    un relleno a medias es exactamente el fallo que esta migracion existe para
+--    evitar: gente que ya juega apareciendo en el lobby.
+--    El LEFT JOIN dice lo que quiere decir --«los que no tienen fila»-- y es
+--    igual de idempotente.
 INSERT INTO player_puerta (player_id, cruzada_ms)
-SELECT player_id, 0 FROM player
-ON DUPLICATE KEY UPDATE player_id = player_id;
+SELECT p.player_id, 0
+FROM player p
+LEFT JOIN player_puerta pp ON pp.player_id = p.player_id
+WHERE pp.player_id IS NULL;
 
 INSERT INTO schema_version (version, description)
 VALUES (36, 'la puerta: el lobby como unica entrada, con relleno de los que ya jugaban')

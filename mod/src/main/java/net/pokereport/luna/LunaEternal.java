@@ -93,6 +93,34 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.world.Decorativos.fueraDeLaPokedex();
         net.pokereport.luna.world.Decorativos.abrirViajesAlTocar();
         net.pokereport.luna.puerta.PuertaNpc.engancharClic();
+
+        // ⚠⚠⚠ EL CANDADO DEL LOBBY SE REFRESCA AL CAMBIAR DE MUNDO, Y SIN ESTO
+        //    EL POKEPAD SE QUEDABA MUERTO DESPUES DE CADA LOGIN.
+        //
+        //    La traza, que es de las que solo se ven siguiendo al jugador:
+        //      1. un veterano vuelve tras 15 min, sin autenticar
+        //      2. EasyAuth lo retiene en el LOBBY
+        //      3. a los 40 ticks el servidor le manda `EstadoPuerta` y el
+        //         cliente APAGA el PokePad -- correcto, esta en el lobby
+        //      4. hace /login y EasyAuth lo devuelve a la ciudadela
+        //      5. NADIE le vuelve a mandar `EstadoPuerta`
+        //    -> PokePad muerto hasta reconectar, y sin ningun error. Es
+        //       exactamente «un boton que no responde parece roto».
+        //
+        //    ⚠⚠ Y SE ENGANCHA AL CAMBIO DE MUNDO, no a nuestros teletransportes.
+        //       Quien mueve al jugador dentro y fuera del lobby son VARIOS: la
+        //       puerta, `Puerta.vigilar`, EasyAuth, un operador con /tp, un
+        //       portal. Poner el reenvio en cada uno seria una lista que hay que
+        //       acordarse de ampliar; el cambio de mundo ocurre en todos, por
+        //       definicion. Es la misma decision que llevo el candado a
+        //       `Traslado.ir` en vez de a los treinta receptores.
+        //
+        //    ⚠ El servidor NO dependia de esto y sigue sin depender:
+        //      `Puerta.bloqueado` lee el mundo de verdad en cada paquete. Lo que
+        //      se arregla es que el cliente deje de mentir.
+        net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents
+                .AFTER_PLAYER_CHANGE_WORLD.register((jugador, origen, destino) ->
+                        net.pokereport.luna.net.Red.enviarPuerta(jugador));
         net.pokereport.luna.puerta.Puerta.cargarInterruptor();
         // ⚠ Se registra AQUI y no en SERVER_STARTED por lo mismo que los tres
         //   de arriba: los eventos se suscriben una sola vez, y los nichos

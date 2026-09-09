@@ -621,7 +621,14 @@ public final class LunaCommand {
                     .executes(ctx -> activarPuerta(ctx.getSource(), true)))
                 .then(literal("desactivar")
                     .requires(s -> s.hasPermissionLevel(4))
-                    .executes(ctx -> activarPuerta(ctx.getSource(), false))))
+                    .executes(ctx -> activarPuerta(ctx.getSource(), false)))
+                .then(literal("reiniciar")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .then(argument("jugador",
+                            net.minecraft.command.argument.EntityArgumentType.player())
+                        .executes(ctx -> reiniciarPuerta(ctx.getSource(),
+                                net.minecraft.command.argument.EntityArgumentType
+                                        .getPlayer(ctx, "jugador"))))))
 
             .then(literal("inicial")
                 .requires(s -> s.hasPermissionLevel(3))
@@ -931,6 +938,45 @@ public final class LunaCommand {
         src.sendFeedback(() -> Text.literal(valor
                 ? "§aPuerta ACTIVA§7: los jugadores nuevos empiezan en el lobby."
                 : "§7Puerta apagada: nadie pasa por el lobby."), true);
+        return 1;
+    }
+
+    /**
+     * Devuelve a alguien a la casilla de salida.
+     *
+     * <p>&#9888;&#9888; HACE FALTA PARA PODER PROBAR NADA. La cuenta del
+     * operador esta marcada como cruzada por el relleno de la V036 --y tiene que
+     * estarlo: sin ese relleno, todos los que ya jugaban habrian aparecido en el
+     * lobby-- asi que sin este comando la unica forma de recorrer la puerta como
+     * un jugador nuevo es entrar con OTRA CUENTA.
+     *
+     * <p>&#9888; No hace falta echarle ni pedirle que reconecte: {@code vigilar}
+     * corre cada segundo, ve que ya no consta como cruzado y lo lleva al lobby
+     * solo. Si la puerta esta apagada no se movera nadie, y se dice.
+     */
+    private static int reiniciarPuerta(ServerCommandSource src, ServerPlayerEntity quien) {
+        var svc = LunaEternal.puerta();
+        if (svc == null) {
+            src.sendError(Text.literal("\u00a7cLa puerta no esta arrancada."));
+            return 0;
+        }
+        var perfil = quien.getGameProfile();
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                svc.reiniciar(perfil.getId(), id);
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo reiniciar la puerta de {}",
+                        perfil.getName(), e);
+                return;
+            }
+            src.getServer().execute(() -> src.sendFeedback(() -> Text.literal(
+                    "\u00a7a" + perfil.getName() + " vuelve a ser un jugador nuevo"
+                    + (net.pokereport.luna.puerta.Puerta.activa()
+                            ? "\u00a77: en un segundo estara en el lobby."
+                            : "\u00a7e, pero la puerta esta APAGADA: no se movera.")),
+                    true));
+        });
         return 1;
     }
 

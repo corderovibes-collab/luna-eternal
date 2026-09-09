@@ -108,6 +108,34 @@ public final class PuertaService {
         cache.put(uuid, Boolean.TRUE);
     }
 
+    /**
+     * Deshace el cruce: vuelve a ser un jugador nuevo.
+     *
+     * <h2>&#9888;&#9888;&#9888; BORRA LA FILA **Y** LA CACHE, Y ESO ES TODO EL
+     * COMANDO</h2>
+     *
+     * Borrar solo la fila no hace nada visible: la cache se rellena en el
+     * evento de conexion y manda mientras el jugador siga dentro, asi que
+     * seguiria contando como cruzado hasta que se desconectara. Es exactamente
+     * por lo que {@code /luna reiniciarinicial} «no servia» en su dia --
+     * «borraba la fila y el cliente seguia con su copia»--, y por lo que
+     * reiniciar el inicial tiene que tocar DOS tablas.
+     *
+     * <p>&#9888; Se pone {@code FALSE} en vez de quitar la entrada: quitarla
+     * dejaria «no lo se», y ante «no lo se» la puerta <b>deja pasar</b> a
+     * proposito. El jugador no volveria al lobby hasta reconectar, que es justo
+     * lo que este comando existe para evitar.
+     */
+    public void reiniciar(UUID uuid, long playerId) throws SQLException {
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "DELETE FROM player_puerta WHERE player_id = ?")) {
+            ps.setLong(1, playerId);
+            ps.executeUpdate();
+        }
+        cache.put(uuid, Boolean.FALSE);
+    }
+
     public void olvidar(UUID uuid) {
         cache.remove(uuid);
     }

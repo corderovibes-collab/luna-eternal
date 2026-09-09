@@ -1539,6 +1539,22 @@ Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031)
                 servidor  Done (27,253 s) . AUTOTEST 663/663
                           «Santuario: 341 NICHOS EN LA CONFIG»
                 clientes  manifiesto 124d6e5d67 publicado y sirviendose
+              ⚠⚠ LA FOTO BAJA A 1,40 SOBRE EL PEDESTAL (2026-09-08, con la
+                 captura del usuario delante: «un poquito mas abajo, de resto
+                 quedaron bien»): ocupa de +1,20 a +3,60 del suelo del nicho
+                 ⚠⚠⚠ Y ESE NUMERO ESTABA EN DOS FICHEROS, DUPLICADO EN EL MISMO
+                    DIA QUE SE ESCRIBIO: el dibujado en `client` y su copia A
+                    MANO en el autotest. Bajar la foto sin tocar la prueba la
+                    habria dejado midiendo la altura vieja y diciendo «cabe»
+                    sobre una foto que ya no esta ahi -- CONFIANZA FALSA, que es
+                    peor que no tener la prueba (la leccion del autotest de
+                    gimnasios que comparaba dos ejes distintos)
+                    hoy las tres medidas viven en `santuario/Holograma`, en
+                    `main`, y las leen el cliente Y el autotest: se puede porque
+                    los dos acaban EN EL MISMO JAR. Es lo de `PanelTienda`
+                 ⚠ solo hizo falta PUBLICAR: la altura la dibuja el cliente y el
+                   servidor manda la misma posicion, asi que no se reinicio a
+                   nadie -- manifiesto efe8e0d6d6
               ⚠⚠⚠ Y CON 341 NICHOS LA PANTALLA SON 86 PAGINAS DE CUATRO FILAS.
                  No es un fallo --pagina bien, y `filasCaben` ya se calcula--
                  pero elegir nicho a base de 86 clics de flecha no es elegir. Lo

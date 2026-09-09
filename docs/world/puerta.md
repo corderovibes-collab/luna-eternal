@@ -186,6 +186,31 @@ fiarse, y exige estar **dentro del lobby**: un barrido solo ve entidades en
 chunks cargados, así que desde fuera un cero significaría «no lo estoy mirando» y
 no «no hay guardián» (la lección de los cuatro diagnósticos con `@e`).
 
+### 4.4-bis Y si el guardián desaparece, la puerta se apaga sola
+
+⚠⚠⚠ `activar` comprueba que esté puesto, pero eso es **una foto del momento de
+encenderla**. Después puede irse: un `/luna decorar quitar` con radio se lo
+lleva —lleva la marca de los decorativos— o alguien lo borra al retocar el
+lobby. Y entonces el lobby **sigue siendo una cárcel**: `Traslado` no deja
+salir, y la única puerta ya no está. No habría ningún error — habría jugadores
+nuevos dando vueltas dentro hasta que alguien se quejara.
+
+**Se apaga la puerta en vez de avisar.** Apagada, un jugador nuevo va al Mundo
+Hogar —el comportamiento viejo, que es malo— pero **puede jugar**. Atrapado no
+puede hacer nada.
+
+⚠⚠ **Hacen falta DOS comprobaciones seguidas fallidas (60 s), no una.** El
+guardián se busca alrededor del punto de llegada, y **un barrido solo ve chunks
+cargados**: en una dimensión de vacío se vuela, así que basta con que alguien se
+aleje para que el chunk del guardián se descargue y el barrido diga cero
+teniéndolo delante. Con una sola comprobación eso apagaría la puerta **sin que
+nadie haya tocado nada**.
+
+⚠ **Y solo se mira cuando hay alguien esperando dentro**, que es lo que hace
+fiable la comprobación: si hay un jugador en el lobby, su chunk está cargado.
+Mirarlo con el lobby vacío daría cero siempre. Es la lección de los cuatro
+diagnósticos con `@e`.
+
 ### 4.5 La visibilidad: un botón, dos números
 
 ⚠⚠⚠ **ESTO NO BAJA EL LAG DEL SERVIDOR.** Quita **ancho de banda y FPS del
@@ -207,6 +232,38 @@ esa comprobación pasaría aquí y fallaría allí. El mixin se marca vivo al co
 `/luna puerta` lo enseña — **mirado con gente dentro**, que es cuando la
 respuesta significa algo.
 
+### 4.6 El candado sigue a la puerta, no al sitio
+
+⚠⚠ La primera versión de `Puerta.bloqueado` miraba solo *«¿estás en el lobby?»*.
+Con la puerta **apagada** —que es como se despliega y como se construye— el lobby
+no es un lobby todavía: es una dimensión vacía donde alguien está trabajando. Y
+ese alguien se quedaba **sin PokePad**: la tecla no hacía nada y la ficha no
+llegaba, sin ningún aviso.
+
+Hoy `bloqueado` = `activa && enElLobby`, y `enviarPuerta` manda **el mismo
+criterio**. Si el cliente apagara el Pad por un motivo y el servidor rechazara
+por otro, habría estados donde uno dice sí y el otro no — y el síntoma sería una
+pantalla que se abre vacía, o una tecla muerta sin motivo.
+
+### 4.7 El candado se refresca al CAMBIAR DE MUNDO
+
+⚠⚠⚠ Sin esto **el PokePad se quedaba muerto después de cada login**:
+
+1. Un veterano vuelve tras 15 min, sin autenticar
+2. EasyAuth lo retiene en el **lobby**
+3. El servidor le manda `EstadoPuerta` y el cliente apaga el Pad — correcto
+4. Hace `/login` y EasyAuth lo devuelve a la ciudadela
+5. **Nadie le vuelve a mandar `EstadoPuerta`**
+
+→ Pad muerto hasta reconectar, sin ningún error. Y le pasaría **a todo el mundo,
+todos los días**.
+
+⚠⚠ **Se engancha al cambio de mundo, no a nuestros teletransportes.** Quien mueve
+al jugador dentro y fuera del lobby son varios —la puerta, `vigilar`, EasyAuth,
+un `/tp`, un portal— y ponerlo en cada uno sería una lista que hay que acordarse
+de ampliar. El cambio de mundo ocurre en todos, por definición. Misma decisión
+que llevó el candado a `Traslado.ir` en vez de a los treinta receptores.
+
 ## 5. Los comandos
 
 ```
@@ -215,7 +272,18 @@ respuesta significa algo.
 /luna puerta npc quitar            lo quita
 /luna puerta activar               la enciende — exige guardián puesto
 /luna puerta desactivar            la apaga
+/luna puerta reiniciar <jugador>   vuelve a ser un jugador nuevo
 ```
+
+⚠⚠ `reiniciar` **hace falta para poder probar nada**: la cuenta del operador está
+marcada como cruzada por el relleno de la V036 —y tiene que estarlo— así que sin
+él la única forma de recorrer la puerta como jugador nuevo es **entrar con otra
+cuenta**. Borra la fila **y la caché**; solo la fila no haría nada visible, que
+es por lo que `/luna reiniciarinicial` «no servía» en su día.
+
+⚠ Si te lo aplicas a ti mismo quedas dentro del lobby como cualquiera: `/luna ir`
+tampoco te saca. La salida es el guardián, o `/luna puerta desactivar`, que
+funciona desde cualquier sitio.
 
 ## 6. Puesta en marcha
 
@@ -303,10 +371,10 @@ el autotest.
 ✅ **El saludo llega**, verificado en el log en vivo:
 `Puerta: TheJuanCE saluda con protocolo 1 (se exige 1)`.
 
-⚠ **La puerta está APAGADA.** Se apagó para desplegar el arreglo del saludo —con
-el fallo vivo, un jugador nuevo entraba al lobby y **no podía cruzar**— y **no se
-ha vuelto a encender**. Se enciende con `/luna puerta activar`, estando dentro
-del lobby.
+⚠ **La puerta está APAGADA** (comprobado el 2026-09-09 a las 19:28). El
+guardián **sí está puesto**: verificado cargando el chunk a mano —`forceload` y
+después contar por etiqueta— y ahí está el Lugia con su cartel. Se enciende con
+`/luna puerta activar`, estando dentro del lobby.
 
 ⚠⚠ **El recorrido completo de un jugador nuevo NO se ha probado todavía**, y no
 se puede probar con la cuenta del operador: está marcada como cruzada por el

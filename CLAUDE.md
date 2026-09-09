@@ -10,7 +10,114 @@ PHASE 4 — Gimnasios y Torre de Batalla · PHASE 10 — Pase de Batalla
 y Santuario construidos. Decisiones D-001 a D-050. **El mod está desplegado y funcionando
 contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Batalla con
 recompensas de temporada e interfaces completas en el PokePad. **El lobby es la
-unica entrada al mundo** (D-050). Autotest en vivo 695/695.
+unica entrada al mundo** (D-050). Autotest en vivo 696/696.
+
+> **2026-09-09 (tarde) — UN MOD DE ABRIL TIRO EL SERVIDOR TRES VECES, Y AL
+> BUSCARLO SALIERON CUATRO MAS.**
+>
+> ⚠⚠⚠ **`cobblenav` SE QUEDO FUERA DE LA RONDA DE COBBLEMON 1.8.0.** Su mixin
+> llamaba a `SpawnDetail.getBucket()`, que 1.8.0 ya no tiene:
+>
+> ```
+> java.lang.NoSuchMethodError: ...SpawnDetail.getBucket()
+>   at PokemonSpawnAction.handler$zmk000$cobblenav$saveSpawnData
+> ```
+>
+> El pack fijaba la **2.3.3, de ABRIL**. La ronda del 08-09 actualizo DOCE
+> addons y **se dejo este**, y nada lo dijo.
+>
+> ⚠⚠ **Y ESTUVO UN DIA ENTERO SIN VERSE.** No falla al arrancar ni al
+> conectarse: solo cuando **un Pokemon salvaje intenta aparecer cerca de
+> alguien**. Quien probaba estaba en la ciudadela y en el lobby, que son
+> dimensiones de vacio. Lo destapo **la primera cuenta nueva que piso un mundo
+> con spawns** -- o sea que no fue lo que hizo, fue DONDE ESTABA.
+>
+> **`tools/comprobar_mods.py` (NUEVO)** le pregunta a Modrinth por los 130 mods
+> del manifiesto en vez de fiarse de una lista escrita a mano, y saca **los
+> addons de Cobblemon APARTE** porque son los que crashean. Encontro cuatro mas
+> --`catch-rate-display`, `catch-indicator`, `more-cobblemon-tweaks` y
+> `cobblemon-additions`-- y **tres publicaron version el 6, el 7 y el 8 de
+> septiembre**, la semana de 1.8.0.
+> ⚠ Saca el proyecto **de la URL del CDN**, no del nombre del jar: la URL lleva
+> el id dentro (`/data/<proyecto>/versions/...`) y el nombre del jar miente.
+>
+> ⚠⚠⚠ **Y AL ARREGLARLO, LA MISMA TRAMPA CUATRO VECES: EL SLUG NO ES EL NOMBRE
+> DEL JAR.** Escribi `cobblenav` y su slug es `cobblemon-pokenav`: la entrada se
+> quedo ahi **sin hacer nada** y el generador dijo que todo bien. Estaba
+> documentado desde `repurposed-structures-fabric` --«sin el sufijo la exclusion
+> NO SURTE EFECTO y no avisa»-- **y volvio a morder, porque un aviso escrito en
+> un comentario no comprueba nada**. Tambien fallan `catchrate-display` ->
+> `catch-rate-display`, `toms_storage` -> `toms-storage`, `defaultoptions` ->
+> `default-options`, `EuphoriaPatcher` -> `euphoria-patches`.
+>
+> **TRES GUARDAS NUEVAS EN `gen_modpack.py`, y las tres cazan lo mismo: cosas
+> que no hacian nada y no se quejaban.**
+>
+> 1. **Clave huerfana.** Una clave de `SUBIR` que no casa con ningun mod
+>    **ABORTA**. ⚠ Y distingue los dos casos, que no son iguales: un `SUBIR`
+>    huerfano es un arreglo que no existe; un `EXCLUIDOS` huerfano suele ser una
+>    **red de seguridad** deliberada (`stendhal` y `bisect-mod` son del pack
+>    oficial de Cobblemon, que ya no es la base) -- ese solo avisa.
+> 2. **Un EXTRA que ya viene en la base.** `construir` añadia la base y luego los
+>    EXTRA **sin mirar si ya estaban**, y el cliente se llevaba **DOS
+>    EuphoriaPatcher activos** (1.9.3 de CobbleVerse y 1.10.0 nuestro). **Fabric
+>    no arranca con dos ids iguales.** Nadie lo habia notado porque durante meses
+>    CobbleVerse no lo traia: **lo añadieron ellos**, y nuestro pack se lo comio
+>    en silencio -- un mod que aparece en la base ajena convierte un EXTRA
+>    nuestro en un duplicado **sin que cambie una linea de nuestro codigo**.
+>    Se resuelve a favor del nuestro (D-030: Euphoria SOLO se obtiene ejecutando
+>    su parcheador) y **se aborta** en vez de deduplicar solo, porque las dos
+>    salidas son decisiones.
+> 3. **Subir no puede bajar.** `version_de` prefiere RELEASE sobre beta --lo
+>    correcto casi siempre-- asi que un mod cuyo pack fije una BETA reciente
+>    **retrocede**. Paso con `particle-rain`: `4.0.0-beta.10` -> `3.0.5`, una
+>    version MAYOR hacia atras, **y la salida ponia «SUBIDO» igual**.
+>    ⚠ Se compara **por FECHA DE PUBLICACION**, no por el numero: los numeros de
+>    Modrinth son cadenas libres (`mc1.21.1-0.8.13-fabric`, `v4-beta.11`,
+>    `1.9.8-B`) y compararlos es inventarse un orden que no existe.
+>
+> **`cobblemon-additions` SE PARCHEA** (`tools/parchear_bca.py`), decision del
+> usuario: al dia pero sin lo que no queremos. Su 4.3.0 **exige `cobbledollars`**
+> --que el usuario mando quitar-- y ademas **GENERA CONSTRUCCIONES**, que ya se
+> rechazo cuatro veces aqui. **Se colo porque su nombre no dice «structures»**:
+> 298 piezas `.nbt`, y **PISA los `structure_set` de VAINILLA** (`villages` y
+> `swamp_huts`) -- no añadia aldeas, las **sobrescribia**.
+> ⚠ Solo UNA clase nombra `cobbledollars`, y es una **cadena en una lista de
+> config**, no una llamada. Comprobado con `javap` **antes** de tocar la
+> dependencia: quitar una dependencia que el codigo usa de verdad solo cambia un
+> fallo de arranque por uno de ejecucion.
+> ⚠⚠ **Los spawn pools se van con las estructuras aunque nadie lo pidiera**:
+> dicen `"structures": ["bca:village/witch_hut"]`, asi que sin la estructura
+> **no parsean** -- el fallo de las «55 tablas de botin». De paso eran spawns de
+> Gen 5 y un Meowth de Galar (D-017).
+> ⚠ Viaja por `PROPIOS` como `cobblemon-cards`, y el de Modrinth va a
+> `EXCLUIDOS`: sin eso viajarian **los dos**.
+>
+> **WAYSTONES FUERA** (peticion del usuario). Es **viaje rapido paralelo al
+> nuestro**, y encaja con una decision ya tomada tres veces: no dos sistemas para
+> lo mismo. `Viajes` solo funciona DENTRO de la ciudadela **a proposito** --«si se
+> pudieran usar desde el salvaje serian un volver a casa instantaneo, y salir a
+> explorar dejaria de tener riesgo»-- y una waystone en el salvaje se salta esa
+> regla entera. Mismo motivo que CobbleDollars (dos economias) y que D-040.
+> ⚠⚠ Registra **45 bloques**, asi que la retirada fue **SERVIDOR PRIMERO**: al
+> reves el servidor manda entradas de registro que el cliente ya no conoce y
+> **nadie puede entrar**. Verificado con el servidor arrancado sin el ANTES de
+> publicar.
+> ⚠ Lo que estuviera **colocado en el mundo se convierte en AIRE**. Es la unica
+> perdida real, y es irreversible para esos bloques.
+>
+> **LOS 27 ATRASADOS AL DIA: 24 subidos, 3 no.** Y los tres «no» valen mas que
+> los 24 «si», porque a los tres los cazo una guarda: `particle-rain` (bajaba),
+> `axiom` (**esta CLAVADO** a 5.4.2 porque su 6.x inyecta en un metodo que Sodium
+> ya no tiene **y su declaracion miente**, asi que el resolutor no lo caza) y
+> `zfastnoise` (su 1.0.14 estrena la dependencia `zconfig`).
+> ⚠ **`pokeblocks` 1.4.0 -> 1.5.0 obligo a regenerar el catalogo de la tienda**,
+> porque de su jar salen los peluches: **146 -> 162**, total **620 -> 641**. El
+> generador ABORTA ante un objeto que no exista, y el servidor confirma
+> «641 objetos (0 omitidos)».
+>
+> ✅ **EN VIVO (2026-09-09, 19:28):** `Done (28,990 s)` · **AUTOTEST 696/696** ·
+> manifiesto `86e44a595d` · **0 addons de Cobblemon atrasados**.
 
 > **2026-09-09 — LA PUERTA: EL LOBBY ES LA UNICA ENTRADA. Y hasta hoy NO HABIA
 > NINGUNA.**
@@ -500,7 +607,7 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 695 EN VIVO (2026-09-09)
+Autotest      /luna autotest -> 696 EN VIVO (2026-09-09)
               +10 de LA PUERTA y la visibilidad, y los dos que
               importan son mudos y catastroficos: que la ESPECIE
               DEL GUARDIAN exista --sin el, nadie puede salir del

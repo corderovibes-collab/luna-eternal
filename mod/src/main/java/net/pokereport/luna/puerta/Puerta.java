@@ -401,6 +401,33 @@ public final class Puerta {
     private static long ultimaComprobacion;
 
     /**
+     * Cuantas comprobaciones seguidas tienen que fallar antes de apagar.
+     *
+     * <h2>&#9888;&#9888;&#9888; UNA SOLA NO BASTA, Y EL MOTIVO ES EL DE SIEMPRE:
+     * UN BARRIDO SOLO VE CHUNKS CARGADOS</h2>
+     *
+     * El guardian se busca alrededor del punto de llegada, no del jugador. En
+     * una dimension de vacio se vuela, asi que basta con que alguien se aleje
+     * lo suficiente para que el chunk del guardian se descargue -- y entonces
+     * el barrido dice cero cuando el guardian esta perfectamente ahi. Con una
+     * sola comprobacion, eso apagaria la puerta <b>sin que nadie haya tocado
+     * nada</b>.
+     *
+     * <p>Con dos seguidas hacen falta {@code 2 x 30 s} de ausencia continuada,
+     * y un chunk descargado por alejarse vuelve en cuanto el jugador se acerca
+     * o entra otro.
+     *
+     * <p>&#9888;&#9888; Y sigue errando hacia el lado barato: si de verdad no
+     * hay guardian, se apaga un minuto mas tarde. Un minuto de mas con la
+     * puerta encendida son jugadores esperando; una puerta apagada por error
+     * son jugadores que se saltan el lobby. Lo unico que no se puede permitir
+     * es dejar a alguien encerrado, y eso sigue cubierto.
+     */
+    private static final int FALLOS_PARA_APAGAR = 2;
+
+    private static int fallosSeguidos;
+
+    /**
      * QUE EL GUARDIAN SIGA EXISTIENDO, O LA PUERTA SE APAGA SOLA.
      *
      * <h2>&#9888;&#9888;&#9888; SIN ESTO, PERDER AL GUARDIAN ENCIERRA A TODO EL
@@ -440,8 +467,18 @@ public final class Puerta {
         //   deberia hacer creer que ha desaparecido.
         int cuantos = PuertaNpc.contar(mundo, TravelService.spawnLobby(), 64.0);
         if (cuantos > 0) {
+            // ⚠ Se reinicia la cuenta: lo que apaga la puerta es una ausencia
+            //   CONTINUADA, no dos sustos sueltos separados por media hora.
+            fallosSeguidos = 0;
             return;
         }
+        if (++fallosSeguidos < FALLOS_PARA_APAGAR) {
+            LunaEternal.LOG.warn("Puerta: no veo al guardian en el lobby ({} de "
+                    + "{}). Si sigue sin aparecer, se apagara la puerta.",
+                    fallosSeguidos, FALLOS_PARA_APAGAR);
+            return;
+        }
+        fallosSeguidos = 0;
         LunaEternal.LOG.error("PUERTA: NO HAY GUARDIAN en el lobby y hay gente "
                 + "esperando dentro. Se APAGA la puerta para no dejar a nadie "
                 + "encerrado: sin guardian, del lobby no se sale. "

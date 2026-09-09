@@ -6361,8 +6361,13 @@ public class Red implements ModInitializer {
         if (!ServerPlayNetworking.canSend(jugador, EstadoPuerta.ID)) {
             return;
         }
+        // ⚠ El MISMO criterio que usa el servidor para rechazar (`bloqueado`).
+        //   Si el cliente apagara el Pad por «estoy en el lobby» y el servidor
+        //   lo rechazara por «la puerta esta activa», habria estados en los que
+        //   uno dice si y el otro no -- y el sintoma seria una pantalla que se
+        //   abre vacia, o una tecla muerta sin motivo.
         ServerPlayNetworking.send(jugador, new EstadoPuerta(
-                net.pokereport.luna.puerta.Puerta.enElLobby(jugador)));
+                net.pokereport.luna.puerta.Puerta.bloqueado(jugador)));
     }
 
     public static void enviarSantuarioATodos(net.minecraft.server.MinecraftServer servidor) {

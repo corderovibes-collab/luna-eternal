@@ -233,7 +233,16 @@ public final class Puerta {
      * vea bien, el servidor para que sea verdad.
      */
     public static boolean bloqueado(ServerPlayerEntity jugador) {
-        return enElLobby(jugador);
+        // ⚠⚠⚠ EL CANDADO SIGUE A LA PUERTA, NO AL SITIO, y la primera version
+        //    lo tenia al reves: miraba solo si estabas en el lobby. Con la
+        //    puerta APAGADA --que es como se despliega y como se construye-- el
+        //    lobby no es un lobby todavia, es una dimension vacia donde alguien
+        //    esta trabajando. Y ese alguien se quedaba SIN POKEPAD, sin ningun
+        //    aviso y sin forma de relacionarlo con nada: la tecla no hacia nada
+        //    y la ficha no llegaba.
+        //    Lo vio la auditoria del diff, no el juego: desde dentro se ve como
+        //    «el mod va raro hoy».
+        return activa && enElLobby(jugador);
     }
 
     // ------------------------------------------------------------ entrar

@@ -69,12 +69,25 @@ public abstract class MixinRastreadorEntidades {
             at = @At("HEAD"),
             cancellable = true)
     private void luna$recortarJugadores(ServerPlayerEntity visor, CallbackInfo ci) {
-        // Deja constancia de que el mixin SI se aplico, que es lo unico que
-        // distingue «el recorte funciona» de «el recorte no existe y nadie lo
-        // sabe». Ver VisibilidadJugadores.vivo().
-        VisibilidadJugadores.marcarVivo();
+        // ⚠⚠⚠ LO PRIMERO ES SALIR, Y ES LO QUE MAS IMPORTA DE ESTE METODO.
+        //    Esto corre por CADA PAREJA (entidad, jugador que mira) y muchas
+        //    veces por tick: con doscientas personas y los Pokemon de un mundo
+        //    vivo son decenas de miles de llamadas por segundo. Todo lo que no
+        //    sea imprescindible sale del camino, y la comprobacion mas barata
+        //    --¿es esto siquiera un jugador?-- va la primera.
         if (!(this.entity instanceof ServerPlayerEntity objetivo)) {
             return;
+        }
+        // ⚠⚠ Y la marca va DESPUES, y detras de una lectura. La primera version
+        //    llamaba a `marcarVivo()` arriba del todo: una escritura volatil por
+        //    cada Pokemon, cada objeto y cada jugador, en el bucle mas caliente
+        //    del servidor, para escribir `true` encima de `true` para siempre.
+        //    Una lectura volatil es casi gratis; la escritura ocurre una vez.
+        //    ⚠ De paso el dato MEJORA: ahora «ha corrido» significa que el
+        //      recorte llego a decidir sobre un JUGADOR, que es lo que se quiere
+        //      saber, y no que se cruzo con un item en el suelo.
+        if (!VisibilidadJugadores.vivo()) {
+            VisibilidadJugadores.marcarVivo();
         }
         if (VisibilidadJugadores.visible(visor, objetivo)) {
             return;

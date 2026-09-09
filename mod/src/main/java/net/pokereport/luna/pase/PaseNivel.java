@@ -17,17 +17,29 @@ package net.pokereport.luna.pase;
  * <pre>
  *   coste(n)     = BASE + PASO * n        XP para pasar del nivel n al n+1
  *   total(100)   = 53.700 XP
- *   tope diario  = 1.200 XP
+ *   tope diario  = 6.000 XP               (era 1.200 hasta el 2026-09-08)
  *   ────────────────────────────────────────────────────────────────────
- *   53.700 / 1.200 = 44,75  ->  MINIMO 45 DIAS NATURALES
+ *   53.700 / 6.000 = 8,95   ->  MINIMO 9 DIAS NATURALES
  * </pre>
+ *
+ * <p>⚠⚠⚠ <b>EL MINIMO BAJO DE 45 DIAS A 9 POR ORDEN DEL USUARIO</b> («asi
+ * pueden farmear rapido»). No es una regresion: es una decision.
+ *
+ * <p>⚠⚠ <b>Pero con eso el tope deja de limitar a nadie</b>, y eso cambia donde
+ * hay que mirar: la actividad mas rentable de la tabla paga 1.000 XP/hora, asi
+ * que llenar 6.000 son seis horas, y minando son diez. Quien manda ahora es
+ * {@link PaseXp}.
  *
  * <p>Y ese minimo <b>no depende de cuanto juegue nadie</b>. Por muchas horas
  * que se echen, por muchas fuentes de XP que se añadan mañana y por muy
  * generosa que sea la Torre en la ronda 100, la XP acumulada en D dias
- * naturales nunca puede pasar de {@code 900 * D} — el descanso acumulado
- * reparte el tope, no lo crea. La temporada dura 60 dias, asi que quedan 16
- * dias de holgura para quien no juegue a diario.
+ * naturales nunca puede pasar de {@code TOPE_DIARIO * D} — el descanso
+ * acumulado reparte el tope, no lo crea.
+ *
+ * <p>⚠ <b>Eso sigue siendo cierto y sigue siendo lo que hace segura a cualquier
+ * fuente nueva</b>, aunque el numero haya subido: con tope, añadir una forma de
+ * ganar XP no obliga a recalcular el pase entero. Lo unico que cambia es donde
+ * esta el techo.
  *
  * <p>&#9888;&#9888; Y CON EL PASE DE PAGO ESO IMPORTA MAS, NO MENOS: quien ha
  * pagado espera poder terminarlo, asi que la temporada tiene que dar de sobra
@@ -75,15 +87,42 @@ public final class PaseNivel {
      * XP de oficio, misiones y todo lo demas. Lo unico que se para es la barra
      * del pase, y la pantalla lo dice con todas las letras.
      */
-    public static final int TOPE_DIARIO = 1_200;
+    /**
+     * ⚠⚠⚠ 1.200 -> 6.000 (2026-09-08, orden del usuario: «asi pueden farmear
+     * rapido el pase»). HAY QUE ESCRIBIR LO QUE ESO HACE Y LO QUE NO.
+     *
+     * <p><b>Lo que hace:</b> el minimo teorico para completar el pase pasa de
+     * <b>45 dias a 9</b>, de una temporada de 60. La propiedad que D-045
+     * llamaba «lo que impide que se complete en una semana» <b>se retira a
+     * proposito</b>, igual que D-046 retiro la via gratuita.
+     *
+     * <p><b>Lo que NO hace, y es lo que importa:</b> subir el tope <b>no acelera
+     * a nadie por si solo</b>, porque el tope no era el limite de casi nadie.
+     * Medido contra la tabla de {@link PaseXp}, una hora seguida paga:
+     * cosechar 600, minar 580, pescar 560, capturar 300, combates 180, y la
+     * Torre 1.000 -- que es lo mas rapido que hay.
+     *
+     * <p>Con el tope en 1.200, dos horas de mina lo llenaban. Con 6.000 harian
+     * falta <b>diez horas seguidas</b>. O sea que el techo ya no lo toca nadie:
+     * <b>quien manda ahora es la tabla de fuentes</b>, no este numero.
+     *
+     * <p>⚠⚠ Queda escrito porque es la clase de cosa que se lee al reves dentro
+     * de seis meses: si el pase sigue pareciendo lento, <b>el sitio donde tocar
+     * es {@link PaseXp}</b>, no aqui.
+     */
+    public static final int TOPE_DIARIO = 6_000;
 
     /**
      * Cuantos dias de tope se pueden acumular sin jugar.
      *
-     * <p>⚠⚠ EL DESCANSO NO ROMPE EL MINIMO DE 44 DIAS, y conviene ver por que:
-     * lo que se acumula es el tope de dias que YA HAN PASADO. Tres dias sin
-     * jugar dan 2.700 el cuarto, que es exactamente lo que se habria ganado
-     * jugando los tres. Reparte, no regala.
+     * <p>⚠⚠ EL DESCANSO NO ROMPE EL MINIMO, y conviene ver por que: lo que se
+     * acumula es el tope de dias que YA HAN PASADO. Tres dias sin jugar dan
+     * 18.000 el cuarto, que es exactamente lo que se habria ganado jugando los
+     * tres. Reparte, no regala.
+     *
+     * <p>⚠ Con el tope en 6.000 eso son 18.000 en un dia, o sea <b>un tercio del
+     * pase entero</b> — pero solo para quien llevara tres dias sin jugar, y solo
+     * si encuentra dieciocho horas de actividad.
      */
     public static final int DIAS_DESCANSO = 3;
 

@@ -4614,9 +4614,19 @@ public final class AutoTest {
         }
         check("nivelDe y acumulada cuadran en los 101 bordes", inversa);
 
-        // ⚠⚠⚠ LA PROPIEDAD DE DISEÑO DEL SISTEMA ENTERO.
-        check("EL PASE NO SE PUEDE COMPLETAR EN MENOS DE 40 DIAS",
-              net.pokereport.luna.pase.PaseNivel.diasMinimos() >= 40);
+        // ⚠⚠⚠ ESTO PEDIA 40 DIAS Y HOY PIDE UNA SEMANA, y el umbral se movio
+        //    PORQUE SE MOVIO LA DECISION, no para poner verde una prueba roja:
+        //    el usuario subio el tope diario de 1.200 a 6.000 («asi pueden
+        //    farmear rapido»), y con eso el minimo pasa de 45 dias a 9.
+        //    ⚠⚠ LO QUE ESTA COMPROBACION SIGUE DEFENDIENDO ES SU FORMA: que el
+        //       pase sea una TEMPORADA y no una compra que se agota el primer
+        //       fin de semana. Un tope de 60.000 lo completaria en un dia, y eso
+        //       tiene que seguir poniendose rojo.
+        //    ⚠ Bajar el numero HASTA QUE PASE habria sido la confianza falsa que
+        //      este proyecto tiene fichada desde los gimnasios. Se baja hasta
+        //      donde la decision nueva lo deja, y ni un dia mas.
+        check("EL PASE NO SE PUEDE COMPLETAR EN MENOS DE UNA SEMANA",
+              net.pokereport.luna.pase.PaseNivel.diasMinimos() >= 7);
         // ⚠⚠ Y EL OTRO LADO, que con un pase DE PAGO importa igual: quien lo
         //    compra tiene que poder terminarlo dentro de la temporada.
         check("el pase cabe en una temporada de 60 dias",
@@ -4665,9 +4675,18 @@ public final class AutoTest {
                   * net.pokereport.luna.pase.PaseXp.VECES_HORA_MENA_RARA;
         check("MINAR SOLO NO LLENA EL TOPE DIARIO EN MENOS DE DOS HORAS",
               minaPorHora <= tope / 2);
-        // ⚠ y por abajo tambien: una fuente que no llega ni al 10 % del dia en
-        //   una hora esta apagada de hecho, y entonces sobra de la tabla.
-        check("y minar sigue mereciendo la pena", minaPorHora >= tope / 10);
+        // ⚠⚠⚠ Y ESTE SE MIDE CONTRA LA CURVA, NO CONTRA EL TOPE, PORQUE EL TOPE
+        //    DEJO DE SER UNA REFERENCIA. Decia «una fuente que no llega al 10 %
+        //    del dia en una hora esta apagada de hecho», y con el tope en 1.200
+        //    eso eran 120 XP. Al subirlo a 6.000 el liston pasa a 600 y MINAR SE
+        //    PONE ROJO con 580 -- sin que la mineria haya cambiado nada.
+        //    ⚠⚠ Y LA ALARMA NO SERIA FALSA: dice la verdad de que a 6.000
+        //       ninguna fuente de la tabla llena el dia. Pero medir «vale la
+        //       pena» con una vara que se mueve sola cada vez que alguien toca
+        //       el tope no sirve de nada -- la pregunta es si una hora de mina
+        //       AVANZA EL PASE, y eso lo dice la CURVA y no el techo.
+        check("y minar sigue mereciendo la pena (una hora vale medio nivel)",
+              minaPorHora >= net.pokereport.luna.pase.PaseNivel.coste(0) / 2);
         check("la piedra sigue valiendo cero para el pase",
               net.pokereport.luna.pase.PaseXp.PIEDRA == 0);
         check("una mena rara paga mas que una corriente",
@@ -4872,6 +4891,94 @@ public final class AutoTest {
               nivel >= net.pokereport.luna.pase.PaseNivel.MAX
                   || svc.reclamar(jugador, net.pokereport.luna.pase.PaseNivel.MAX)
                      == null);
+
+        testFuentesDelPase(svc, jugador);
+    }
+
+    /**
+     * QUE CADA FUENTE DE XP DEL PASE ACREDITE DE VERDAD.
+     *
+     * <h2>&#9888;&#9888;&#9888; HASTA HOY SE COMPROBABA LA TABLA, NO EL CAMINO</h2>
+     *
+     * Habia comprobaciones de que los numeros son sanos --que la piedra vale
+     * cero, que la mena rara paga mas que la comun, que la Torre no baja al
+     * subir de ronda-- y <b>ninguna de que dar esa XP la sume</b>. Un fallo en
+     * {@code ganar} --el tope mal contado, la fila que no existe, la temporada
+     * equivocada-- no habria salido en rojo aqui: habria salido como <i>«el pase
+     * no me sube»</i>, que es lo que hay que estar jugando para notar. Es la
+     * familia de {@code KitService.claim}, que solo apuntaba la fecha y no
+     * entregaba nada.
+     *
+     * <p>&#9888;&#9888; <b>Se prueba con el VALOR REAL de cada constante</b>, no
+     * con un 100 inventado: asi, una fuente que alguien ponga a cero por error
+     * se ve aqui y no dentro de dos meses, cuando un jugador diga que pescar no
+     * le sube nada.
+     *
+     * <p>&#9888; Empieza reiniciando el pase del jugador de pruebas: las
+     * comprobaciones de arriba gastan tope diario <b>a proposito</b> --miden que
+     * recorta-- y sin reiniciar esto estaria midiendo el recorte y no la fuente.
+     */
+    private void testFuentesDelPase(net.pokereport.luna.pase.PaseService svc,
+                                    long jugador) throws Exception {
+        svc.reiniciar(jugador);
+
+        record Fuente(String nombre, long xp) {}
+        var fuentes = new Fuente[] {
+            new Fuente("capturar", net.pokereport.luna.pase.PaseXp.CAPTURA),
+            new Fuente("especie nueva", net.pokereport.luna.pase.PaseXp.ESPECIE_NUEVA),
+            new Fuente("eclosionar", net.pokereport.luna.pase.PaseXp.ECLOSION),
+            new Fuente("pescar", net.pokereport.luna.pase.PaseXp.PESCA),
+            new Fuente("ganar un combate", net.pokereport.luna.pase.PaseXp.COMBATE),
+            new Fuente("romper una mena", net.pokereport.luna.pase.PaseXp.MENA),
+            new Fuente("romper una mena rara", net.pokereport.luna.pase.PaseXp.MENA_RARA),
+            new Fuente("cosechar", net.pokereport.luna.pase.PaseXp.COSECHA),
+            new Fuente("ganar una medalla", net.pokereport.luna.pase.PaseXp.MEDALLA),
+            new Fuente("completar una mision", net.pokereport.luna.pase.PaseXp.MISION),
+            new Fuente("subir un nivel de Via", net.pokereport.luna.pase.PaseXp.NIVEL_VIA),
+            new Fuente("una ronda de la Torre", net.pokereport.luna.pase.PaseXp.torre(20)),
+        };
+
+        boolean todasAcreditan = true;
+        boolean todasPositivas = true;
+        long sumaEsperada = 0;
+        for (var f : fuentes) {
+            if (f.xp() <= 0) {
+                todasPositivas = false;
+                LunaEternal.LOG.error("La fuente de XP del pase '{}' vale {}: esta "
+                        + "APAGADA, y el jugador no lo sabria nunca", f.nombre(), f.xp());
+                continue;
+            }
+            long antes = svc.estado(jugador).xp();
+            var g = svc.ganar(jugador, f.xp());
+            long despues = svc.estado(jugador).xp();
+            sumaEsperada += f.xp();
+            if (despues - antes != f.xp() || g.concedida() != f.xp()) {
+                todasAcreditan = false;
+                LunaEternal.LOG.error("La fuente '{}' pedia {} y sumo {} (concedida {})",
+                        f.nombre(), f.xp(), despues - antes, g.concedida());
+            }
+        }
+        check("TODA FUENTE DEL PASE PAGA ALGO (ninguna esta a cero)", todasPositivas);
+        check("CADA FUENTE DEL PASE SUMA EXACTAMENTE LO QUE DICE", todasAcreditan);
+        check("y el total del jugador es la suma de las doce",
+              svc.estado(jugador).xp() == sumaEsperada);
+
+        // ⚠⚠ LAS DOCE JUNTAS TIENEN QUE CABER EN UN DIA. Si no cupieran, esta
+        //    prueba estaria midiendo el tope y no las fuentes, y pasaria a ser
+        //    verde por el motivo equivocado -- que es como se pudre una prueba.
+        check("las doce fuentes juntas caben en el tope diario",
+              sumaEsperada < net.pokereport.luna.pase.PaseNivel.TOPE_DIARIO);
+
+        // ⚠⚠⚠ Y QUE EL TOPE SIGA CORTANDO, medido AQUI y no de oidas: pedir el
+        //    tope entero otra vez tiene que conceder solo lo que quedaba. Sin
+        //    esto, un `ganar` que se saltara el tope pasaria todas las demas.
+        long queda = net.pokereport.luna.pase.PaseNivel.TOPE_DIARIO - sumaEsperada;
+        var pasada = svc.ganar(jugador, net.pokereport.luna.pase.PaseNivel.TOPE_DIARIO);
+        check("EL TOPE DIARIO CORTA LO QUE SOBRA", pasada.concedida() == queda);
+        check("y una vez topado, el dia no da ni una XP mas",
+              svc.ganar(jugador, 1).concedida() == 0);
+
+        svc.reiniciar(jugador);
     }
 
     private void check(String name, boolean ok) {

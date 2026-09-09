@@ -49,11 +49,11 @@ niveles) estuvo en vivo unas horas; ésta la sustituye.
 ```
 servidor   V034 aplicada · Done (29,880 s) · AUTOTEST 636/636
 clientes   manifiesto c36257eb74 publicado y sirviéndose
-/luna pase 100 niveles · 53.700 XP · tope 1.200/día · mínimo 45 días
+/luna pase 100 niveles · 53.700 XP · tope 6.000/día · mínimo 9 días
            Precio 1.500 LunaCoins · 2 Pokémon
 ```
 
-- 100 niveles, curva y tope recalibrados, **45 días mínimos** de 60.
+- 100 niveles, curva y tope recalibrados. **9 días mínimos** de 60 (eran 45 hasta el 2026-09-08: ver §1).
 - Los 95 objetos y las 2 especies **validados contra el jar** antes de
   escribirlos, y revalidados contra el registro por el autotest.
 - Pantalla rehecha: una fila de cuatro tarjetas de 180x336, texto de 13 a 46 px,
@@ -106,15 +106,50 @@ rápido**. Las tres se resuelven con dos números:
 curva      coste(n) = 240 + 6n      para n = 0..99   (100 niveles)
            total    = 53.700 XP
 
-tope       1.200 XP de pase al día
+tope       6.000 XP de pase al día      (era 1.200 hasta el 2026-09-08)
            ──────────────────────────────────────────
-           53.700 / 1.200 = 44,75  ->  45 DIAS COMO MINIMO
+           53.700 / 6.000 =  8,95  ->   9 DIAS COMO MINIMO
 ```
 
-> ⚠⚠⚠ **El mínimo de 45 días no depende de cuánto juegue nadie.** Por muchas
+### ⚠⚠⚠ El mínimo bajó de 45 días a 9, y hay que decir lo que eso hace y lo que no
+
+**Orden del usuario (2026-09-08):** *«vamos a subirle el límite a 6000 así pueden
+farmear rápido el pase de batalla»*. El tope diario pasa de 1.200 a **6.000**.
+
+**Lo que hace:** retira a propósito la propiedad que D-045 llamaba *«lo que
+impide que se complete en una semana»*. No es una regresión, es una decisión —
+igual que D-046 retiró la vía gratuita.
+
+**Lo que NO hace, y es lo que importa:** *subir el tope no acelera a nadie por sí
+solo*, porque **el tope no era el límite de casi nadie**. Medido contra la tabla
+de §2, una hora seguida de cada actividad paga:
+
+| actividad | XP/hora | horas para llenar 6.000 |
+|---|---|---|
+| Torre de Batalla (ronda ~20) | 1.000 | 6,0 |
+| cosechar | 600 | 10,0 |
+| minar | 580 | 10,3 |
+| pescar | 560 | 10,7 |
+| capturar | 300 | 20,0 |
+| ganar combates | 180 | 33,3 |
+
+> ⚠⚠ Con el tope en 1.200, **dos horas de mina lo llenaban**. Con 6.000 harían
+> falta **diez horas seguidas**. O sea que el techo ya no lo toca nadie y **quien
+> manda ahora es la tabla de fuentes de §2**, no este número. Si el pase sigue
+> pareciendo lento, *el sitio donde tocar es `PaseXp`*.
+
+> ⚠ Y una comprobación del autotest tuvo que cambiar de vara por esto: *«minar
+> sigue mereciendo la pena»* se medía contra el 10 % del tope diario, que con
+> 6.000 son 600 — y minar da 580, así que **se ponía roja sin que la minería
+> hubiera cambiado nada**. Hoy se mide contra la **curva** (una hora vale medio
+> nivel), que es lo que de verdad significa «avanza el pase» y no se mueve cada
+> vez que alguien toca el techo.
+
+> ⚠⚠⚠ **El mínimo no depende de cuánto juegue nadie.** Por muchas
 > horas que se echen, por muchas fuentes de XP que se añadan mañana y por muy
 > generosa que sea la Torre en la ronda 100, **la XP acumulada en D días
-> naturales nunca puede pasar de `1.200 × D`**. La temporada dura 60 días, así que
+> naturales nunca puede pasar de `TOPE_DIARIO × D`**. Eso sigue siendo lo que
+> hace segura a cualquier fuente nueva. La temporada dura 60 días, así que
 > quedan **15 de holgura** para quien no juegue a diario.
 
 Y esa es la propiedad que hace **seguras a todas las fuentes**. Sin el tope,
@@ -144,12 +179,12 @@ Un tope diario duro deja fuera a quien solo juega los fines de semana. Así que
 **el tope no usado se acumula hasta tres días**:
 
 ```
-jugaste ayer            ->  1.200
+jugaste ayer            ->  6.000
 hace 2 dias             ->  2.400
 hace 3 dias o mas       ->  3.600   (tope maximo)
 ```
 
-> ⚠⚠ **Y no rompe el mínimo de 45 días**, que es lo que hay que ver: lo que se
+> ⚠⚠ **Y no rompe el mínimo**, que es lo que hay que ver: lo que se
 > acumula son días **que ya han pasado**. Tres días sin jugar dan 3.600 el
 > cuarto, que es exactamente lo que se habría ganado jugando los tres.
 > **Reparte, no regala.**
@@ -236,6 +271,32 @@ y que jugar variado sea lo más rápido.
 > medalla es un tercio del día, no un salto gratis. Sin tope habría que
 > rebajarlos; con tope, lo que hacen es que **un día en el que consigues algo
 > importante llene el tope sin farmear**.
+
+#### 2.0 · ⚠⚠ Que cada fuente PAGUE DE VERDAD, y cómo se comprueba
+
+La tabla de arriba dice de qué se saca XP. Que una constante exista **no
+significa que nadie la use**: si `PESCA` valiera 8 y ningún sitio llamara a
+`Pase.ganar` al pescar, el pase sencillamente **no subiría al pescar** — sin
+error al compilar, sin error al arrancar y sin una línea en el log, con la tabla
+de este documento prometiéndolo igual. Es el fallo de los 62 cosméticos que no
+existían, y el de `KitService.claim`, que apuntaba la fecha y no entregaba nada.
+
+Se comprueba en **dos mitades, porque son dos preguntas distintas**:
+
+| | pregunta | dónde |
+|---|---|---|
+| el camino | ¿dar esa XP la suma? | `AutoTest.testFuentesDelPase` — recorre las **doce** fuentes con su valor real, y exige que el total del jugador suba exactamente eso |
+| el cableado | ¿alguien llama a `ganar` cuando el jugador pesca? | `python tools/comprobar_pase.py` |
+
+> ⚠⚠ **El autotest no puede comprobar el cableado**: sabe que `ganar` acredita,
+> pero no si alguien lo llama al pescar — eso es la suscripción a los eventos y
+> solo se ve leyendo el código. Por eso el segundo es un script, de la misma
+> familia que `comprobar_textos.py`: dos listas que tienen que estar de acuerdo
+> y nada las obliga.
+
+> ⚠ **Lo que ninguno de los dos dice** es si el evento del que cuelga la llamada
+> se dispara de verdad. Eso solo se ve jugando. Verificado el 2026-09-08: las 13
+> fuentes tienen quien las llame.
 
 ### 2.1 · La Torre de Batalla
 

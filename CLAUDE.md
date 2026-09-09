@@ -1529,15 +1529,29 @@ Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031)
                 lleva la marca de los decorativos y a un TextDisplay no le llega
                 el daño de nada. `/kill` diria «Killed 2 entities» y no se iria
                 ninguna
-              +13 comprobaciones. La que importa: QUE LO QUE CAPTURA EL COMANDO
+              +18 comprobaciones (13 del editor y 5 de las reglas nuevas). La
+              que importa: QUE LO QUE CAPTURA EL COMANDO
               PASE LA VALIDACION QUE DECIDE SI EL SERVIDOR ARRANCA -- es cruzar
               las dos piezas, no mirar cada una por su lado. Y que el JSON que
               escribe sea el que lee el arranque, ida y vuelta POR EL TEXTO:
               comparar el objeto consigo mismo pasaria siempre
-              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 18:34), LOS DOS DESTINOS:
+              ✅ DESPLEGADO Y EN VIVO (2026-09-08, 21:57), LOS DOS DESTINOS:
+                servidor  Done (27,253 s) . AUTOTEST 663/663
+                          «Santuario: 341 NICHOS EN LA CONFIG»
+                clientes  manifiesto 124d6e5d67 publicado y sirviendose
+              ⚠⚠⚠ Y CON 341 NICHOS LA PANTALLA SON 86 PAGINAS DE CUATRO FILAS.
+                 No es un fallo --pagina bien, y `filasCaben` ya se calcula--
+                 pero elegir nicho a base de 86 clics de flecha no es elegir. Lo
+                 que hace falta es lo que ya resolvio la tienda con 620
+                 articulos: UN BUSCADOR que filtre EN EL CLIENTE (un servidor no
+                 tiene idioma) y que EL CLIC RECORRA LO FILTRADO, no la lista
+                 entera -- si leyera la completa, con el filtro puesto se
+                 alquilaria OTRO nicho del que se ve, y cobrado
+              ⚠ el paquete de estado pasa a ~15 KB con los 341: el 1,5 % del tope
+                de un custom payload, asi que ahi no hay problema
+              ---- el despliegue anterior del mismo dia -----------------
                 servidor  Done (33,202 s) . AUTOTEST 658/658
-                          «Santuario: 1 nichos en la config» (el de prueba)
-                clientes  manifiesto 5030fd225e publicado y sirviendose
+                clientes  manifiesto 5030fd225e
               ⚠ FALTA COLOCARLO TODO EN EL JUEGO: la Mew (`/luna santuario npc`)
                 y capturar los nichos construidos (`... nicho aqui`, y despues
                 `... nicho ver` para comprobar las cajas antes de darlas por

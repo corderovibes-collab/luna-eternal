@@ -67,13 +67,25 @@ public final class NichoEditor {
     /**
      * A que altura sobre el suelo del nicho va el proyector.
      *
-     * <p>&#9888;&#9888; <b>ESTE ES EL NUMERO DE LA HOLOGRAFICA.</b> La foto no
-     * tiene posicion propia: {@code HologramaSantuario} la dibuja a
-     * <b>{@code proyector.y + 1,55}</b>, asi que colocar el proyector ES colocar
-     * el holograma. Con 3, la foto flota a 4,55 sobre el suelo del nicho -- por
-     * encima de la cabeza de quien pase, y dentro de una caja de 5.
+     * <h2>&#9888;&#9888;&#9888; ESTE ES EL NUMERO DE LA HOLOGRAFICA, Y ESTABA EN 3</h2>
+     *
+     * La foto no tiene posicion propia: {@code HologramaSantuario} la dibuja
+     * centrada a <b>{@code proyector.y + 1,75}</b> y mide 2,4 de alto. Con el
+     * pedestal a 3 sobre el suelo, eso ponia la foto entre <b>+3,55 y +5,95</b>
+     * en una caja de 5: <b>se salia por el techo del nicho</b>, medio metida en
+     * el dintel. Es lo que el usuario vio y reporto como «estan mal
+     * posicionados».
+     *
+     * <p>Con 1 --altura de cintura, que ademas es donde un pedestal <b>se puede
+     * pulsar</b>-- la foto va de +1,55 a +3,95 y cabe entera.
+     *
+     * <p>&#9888;&#9888; <b>ESTO SOLO AFECTA A LO QUE SE CAPTURE A PARTIR DE
+     * AHORA.</b> Los nichos ya escritos en la config siguen con su proyector
+     * donde estaba, porque la config guarda coordenadas y no formas -- que es
+     * justo lo que la hace sobrevivir a este cambio. Para los que ya estan:
+     * {@code /luna santuario nicho recolocar}.
      */
-    public static final int ALTURA_PROYECTOR = 3;
+    public static final int ALTURA_PROYECTOR = 1;
 
     /** Prefijo de los ids que se generan solos. */
     private static final String PREFIJO = "nicho_";
@@ -229,5 +241,27 @@ public final class NichoEditor {
     /** Quita de la lista el nicho con ese id. {@code true} si estaba. */
     public static boolean quitar(List<Nicho> lista, String id) {
         return lista.removeIf(n -> n.id().equals(id));
+    }
+
+    /**
+     * PONE EL PROYECTOR DE UN NICHO DONDE HOY DICE LA FORMA, sin tocar su caja.
+     *
+     * <p>&#9888;&#9888; Existe porque {@link #ALTURA_PROYECTOR} bajo de 3 a 1, y
+     * los nichos capturados con el numero viejo tienen la foto saliendose por el
+     * techo. Recapturarlos uno a uno seria volver a andar hasta cada uno --con
+     * «muchisimos» nichos, eso es la tarde entera-- y ademas <b>perderia su
+     * nombre y su reclamacion</b>.
+     *
+     * <p>&#9888; Solo mueve el proyector: la caja, el id y el nombre se quedan
+     * como estan. Un nicho cuyo proyector ya este bien no cambia.
+     *
+     * @return el nicho con el proyector recolocado
+     */
+    public static Nicho recolocar(Nicho n) {
+        BlockPos centro = new BlockPos(
+                (n.min().getX() + n.max().getX()) / 2,
+                n.min().getY() + ALTURA_PROYECTOR,
+                (n.min().getZ() + n.max().getZ()) / 2);
+        return new Nicho(n.id(), n.nombre(), n.min(), n.max(), centro);
     }
 }

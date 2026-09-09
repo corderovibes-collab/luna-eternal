@@ -2403,12 +2403,27 @@ public class Red implements ModInitializer {
     }
 
     /** Donde flota el holograma: el proyector del nicho. */
-    public record PosNicho(int x, int y, int z) {
+    /**
+     * Donde esta el proyector de un nicho, y HACIA DONDE SE ABRE.
+     *
+     * <p>⚠⚠⚠ <b>EL `frente` LO CALCULA EL SERVIDOR Y VIAJA, en vez de que cada
+     * lado lo deduzca por su cuenta.</b> Lo necesitan DOS sitios --el
+     * teletransporte, que es de servidor, y el dibujado del holograma, que es de
+     * cliente-- y los dos podrian mirar los bloques ellos mismos. Eso seria
+     * <b>la misma verdad viviendo en dos sitios</b>: el dia que uno de los dos
+     * cambiara de criterio, el jugador apareceria mirando a un sitio y la foto
+     * estaria en otro. Es el fallo de las tres listas de medallas.
+     *
+     * <p>⚠ Viaja como INDICE HORIZONTAL (0-3), no como el {@code ordinal()} del
+     * enum de Minecraft: ver {@code Orientacion.indice}.
+     */
+    public record PosNicho(int x, int y, int z, int frente) {
         public static final PacketCodec<RegistryByteBuf, PosNicho> CODEC =
                 PacketCodec.tuple(
                         PacketCodecs.VAR_INT, PosNicho::x,
                         PacketCodecs.VAR_INT, PosNicho::y,
                         PacketCodecs.VAR_INT, PosNicho::z,
+                        PacketCodecs.VAR_INT, PosNicho::frente,
                         PosNicho::new);
     }
 
@@ -3739,7 +3754,7 @@ public class Red implements ModInitializer {
                         jugador.sendMessage(net.minecraft.text.Text.translatable(
                                 "pokepad.lunaeternal.santuario.error." + r.motivo()), false);
                     }
-                    enviarSantuario(jugador);
+                    enviarSantuarioATodos(jugador.getServer());
                 });
             });
         });
@@ -3773,7 +3788,7 @@ public class Red implements ModInitializer {
                         jugador.sendMessage(net.minecraft.text.Text.translatable(
                                 "pokepad.lunaeternal.santuario.error." + r.motivo()), false);
                     }
-                    enviarSantuario(jugador);
+                    enviarSantuarioATodos(jugador.getServer());
                 });
             });
         });
@@ -3817,7 +3832,7 @@ public class Red implements ModInitializer {
                     //    honores acaba de cambiar, y quien lo este mirando ve el
                     //    numero viejo hasta reabrir. Es la leccion de los clanes
                     //    -- el estado no es de quien lo mira.
-                    enviarSantuario(jugador);
+                    enviarSantuarioATodos(jugador.getServer());
                 });
             });
         });
@@ -3845,7 +3860,7 @@ public class Red implements ModInitializer {
                         jugador.sendMessage(net.minecraft.text.Text.translatable(
                                 "pokepad.lunaeternal.santuario.error." + motivo), false);
                     }
-                    enviarSantuario(jugador);
+                    enviarSantuarioATodos(jugador.getServer());
                 });
             });
         });
@@ -3959,6 +3974,11 @@ public class Red implements ModInitializer {
                     //   acaba de salir de ella (o el intento fallo, y hay que
                     //   volver a la verdad).
                     enviarPendientes(jugador);
+                    // ⚠⚠ Y EL SANTUARIO A TODO EL MUNDO: aprobar una foto es lo
+                    //    que la convierte en holograma. Sin esto, el memorial
+                    //    aparecia solo para el moderador --y para el resto
+                    //    seguia siendo un pedestal vacio hasta reconectar.
+                    enviarSantuarioATodos(server);
                 });
             });
         });
@@ -3977,11 +3997,32 @@ public class Red implements ModInitializer {
                                 .equals(jugador.getServerWorld().getRegistryKey())) {
                             return;
                         }
-                        // Teleportar 2 bloques delante del proyector (eje Z+)
+                        // ⚠⚠⚠ ESTO TENIA TRES FALLOS EN CUATRO LINEAS, y el
+                        //    usuario los vio de golpe («salen medio raro, no al
+                        //    frente del holograma»):
+                        //    1) usaba la Y DEL PROYECTOR, que esta a varios
+                        //       bloques del suelo: el jugador aparecia en el
+                        //       aire y CAIA;
+                        //    2) sumaba 2,5 EN Z SIEMPRE, asi que en tres de cada
+                        //       cuatro orientaciones aparecia DENTRO DE LA PARED;
+                        //    3) y con yaw 0, que en Minecraft es el SUR: de
+                        //       espaldas al memorial que acababa de abrir.
+                        //    Hoy el suelo sale de la caja, el sitio de la
+                        //    orientacion medida, y se mira al proyector.
                         var p = nicho.proyector();
-                        jugador.teleport(jugador.getServerWorld(),
-                                p.getX() + 0.5, p.getY(), p.getZ() + 2.5,
-                                java.util.Set.of(), 0f, 0f);
+                        var frente = net.pokereport.luna.santuario.Orientacion.de(
+                                jugador.getServerWorld(), p);
+                        double px = p.getX() + 0.5 + frente.getOffsetX() * 2.0;
+                        double pz = p.getZ() + 0.5 + frente.getOffsetZ() * 2.0;
+                        // El suelo del nicho, no la altura del pedestal.
+                        double py = nicho.min().getY();
+                        // Mirar HACIA el nicho es mirar al reves de por donde
+                        // se sale: `asRotation` da el yaw de la direccion.
+                        float giro = frente.getOpposite().asRotation();
+                        net.pokereport.luna.world.Traslado.ir(jugador,
+                                jugador.getServerWorld(),
+                                new net.minecraft.util.math.Vec3d(px, py, pz),
+                                giro, 0f);
                     });
                 });
 
@@ -4036,7 +4077,7 @@ public class Red implements ModInitializer {
                         jugador.sendMessage(net.minecraft.text.Text.translatable(
                                 "pokepad.lunaeternal.santuario.error." + motivo), false);
                     }
-                    enviarSantuario(jugador);
+                    enviarSantuarioATodos(jugador.getServer());
                 });
             });
         });
@@ -4063,7 +4104,7 @@ public class Red implements ModInitializer {
                         jugador.sendMessage(net.minecraft.text.Text.translatable(
                                 "pokepad.lunaeternal.santuario.error." + motivo), false);
                     }
-                    enviarSantuario(jugador);
+                    enviarSantuarioATodos(jugador.getServer());
                 });
             });
         });
@@ -6024,6 +6065,56 @@ public class Red implements ModInitializer {
      * ensena libre, que es justo lo que es antes del primer {@code
      * garantizarNichos}.
      */
+    /**
+     * EL SANTUARIO, A TODO EL MUNDO.
+     *
+     * <h2>⚠⚠⚠ EL ESTADO SOLO LLEGABA A QUIEN ACABABA DE PULSAR, Y ESO DEJABA
+     * A LOS DEMAS SIN VER NI UN HOLOGRAMA</h2>
+     *
+     * `EstadoSantuario` es lo unico de lo que sale la foto flotante: el cliente
+     * no dibuja nada hasta recibirlo (P6). Y solo se mandaba <b>al jugador que
+     * habia hecho la accion</b> o a quien abriera la app. O sea:
+     *
+     * <ul>
+     *   <li>quien no abriera nunca el PokePad <b>NO VEIA UN SOLO HOLOGRAMA</b>,
+     *       que es justo lo que el usuario reporto;</li>
+     *   <li>y al reclamar un nicho o aprobar una foto, <b>nadie mas se
+     *       enteraba</b> hasta reabrir la pantalla.</li>
+     * </ul>
+     *
+     * <p>Es la leccion de los clanes, literal: <b>el estado no es de quien lo
+     * mira</b>. Un memorial lo ve todo el que pasa por delante.
+     *
+     * <p>⚠ Cuesta tres consultas POR JUGADOR conectado, porque «cuantos honores
+     * me quedan» y «este es mio» son de cada uno. Con la docena de personas que
+     * hay eso son ~36 consultas en el pool de E/S y ocurre <b>solo cuando algo
+     * cambia</b>, no por tick. Si algun dia hay cien jugadores, lo que hay que
+     * partir es el paquete: la parte compartida una vez y la personal aparte.
+     */
+    public static void enviarSantuarioATodos(net.minecraft.server.MinecraftServer servidor) {
+        if (servidor == null) {
+            return;
+        }
+        servidor.execute(() -> {
+            for (var j : servidor.getPlayerManager().getPlayerList()) {
+                enviarSantuario(j);
+            }
+        });
+    }
+
+    /**
+     * La ciudadela, que es donde viven los nichos.
+     *
+     * <p>⚠ Si no existiera, se devuelve el overworld: {@code Orientacion.de}
+     * degrada a SUR ante un mundo que no sabe de nichos, que es el
+     * comportamiento que habia antes de medir nada.
+     */
+    private static net.minecraft.server.world.ServerWorld mundoSantuario(
+            net.minecraft.server.MinecraftServer servidor) {
+        var m = servidor.getWorld(net.pokereport.luna.world.LunaDimensions.CIUDADELA);
+        return m != null ? m : servidor.getOverworld();
+    }
+
     public static void enviarSantuario(net.minecraft.server.network.ServerPlayerEntity jugador) {
         var catalogo = net.pokereport.luna.santuario.SantuarioProteccion.catalogo();
         var server = jugador.getServer();
@@ -6079,9 +6170,15 @@ public class Red implements ModInitializer {
                     }
                     int quedan = restantes.getOrDefault(n.id(),
                             net.pokereport.luna.santuario.SantuarioService.HONORES_DIA);
+                    // ⚠ Se mide AQUI y no en el hilo de E/S: leer un bloque
+                    //   es tocar el mundo, y eso solo se puede en el tick. Este
+                    //   bloque ya corre dentro de `server.execute`.
+                    int frente = net.pokereport.luna.santuario.Orientacion.indice(
+                            net.pokereport.luna.santuario.Orientacion.de(
+                                    mundoSantuario(server), n.proyector()));
                     lista.add(new NichoSantuario(n.id(), n.nombre(),
                             new PosNicho(n.proyector().getX(), n.proyector().getY(),
-                                    n.proyector().getZ()),
+                                    n.proyector().getZ(), frente),
                             new EstadoNicho(dueno, permanente, segundos, mio, quedan),
                             new MemorialNicho(titulo, honores, foto, descripcion)));
                 }

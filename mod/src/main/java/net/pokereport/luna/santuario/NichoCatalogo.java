@@ -143,6 +143,9 @@ public final class NichoCatalogo {
         }
         validar(leidos);
         this.nichos = List.copyOf(leidos);
+        // ⚠ Lo unico que puede mover un proyector es esta recarga, asi que es
+        //   aqui donde deja de valer la orientacion medida.
+        Orientacion.olvidar();
         LunaEternal.LOG.info("Santuario: recargados {} nichos", leidos.size());
         return leidos.size();
     }

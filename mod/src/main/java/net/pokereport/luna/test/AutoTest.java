@@ -3208,21 +3208,30 @@ public final class AutoTest {
         check("santuario: no se honra un nicho que no existe",
                 !svc.honrar("__no_existe", b, key()).ok());
 
-        var primero = svc.honrar(N1, b, key());
+        // ⚠⚠ ESTE BLOQUE ESTABA ESCRITO CONTRA EL TOPE DE 10 aunque leyera la
+        //    constante: daba por hecho que despues del primer honor quedaba
+        //    presupuesto para un segundo (`dos.honores() == 2`, a mano). Al
+        //    bajar el tope a 1 (peticion del usuario) eso deja de ser cierto y
+        //    la prueba se pondria roja SIN QUE HUBIERA NADA ROTO -- que es la
+        //    peor clase de comprobacion, porque enseña a ignorarla. Hoy no
+        //    supone nada sobre cuanto vale el tope.
+        String idemPrimero = key();
+        var primero = svc.honrar(N1, b, idemPrimero);
         check("santuario: honrar un memorial va bien",
                 primero.ok() && primero.honores() == 1
                         && primero.restantes() == tope - 1);
 
-        // ⚠ El MISMO idem reenviado no suma: es el paquete que se repite
-        //   porque la respuesta se perdio (P6, y la leccion de crate_open).
-        String idemDuplicado = "santuario_test_" + UUID.randomUUID();
-        var uno = svc.honrar(N1, b, idemDuplicado);
-        var dos = svc.honrar(N1, b, idemDuplicado);
+        // ⚠ El MISMO idem reenviado no suma: es el paquete que se repite porque
+        //   la respuesta se perdio (P6, y la leccion de crate_open). Se reenvia
+        //   LA CLAVE QUE ACABA DE FUNCIONAR, que ademas prueba lo que de verdad
+        //   importa: el reintento se responde ANTES de mirar el presupuesto, asi
+        //   que sigue funcionando aunque el tope ya este gastado.
+        var repetido = svc.honrar(N1, b, idemPrimero);
         check("santuario: un clic reenviado devuelve el estado y no suma",
-                uno.ok() && dos.ok() && dos.honores() == uno.honores()
-                        && dos.honores() == 2);
+                repetido.ok() && repetido.honores() == primero.honores());
 
-        for (int i = 0; i < tope - 2; i++) {
+        // Se gasta lo que quede del presupuesto, sea el que sea.
+        for (int i = 1; i < tope; i++) {
             svc.honrar(N1, b, key());
         }
         var harto = svc.honrar(N1, b, key());
@@ -3371,6 +3380,23 @@ public final class AutoTest {
         check("santuario: NPC tiene etiqueta correcta",
                 "luna_santuario".equals(net.pokereport.luna.santuario.SantuarioNpc.MARCA));
 
+        // ⚠⚠⚠ EL TOPE DE NICHOS ERA 99, QUE ES NO TENER TOPE. Un solo CAMPEON
+        //    con dinero podia quedarse con el Santuario entero, y eso no da
+        //    ningun error -- da un memorial donde todos los nichos llevan el
+        //    mismo nombre. El usuario lo fijo en 3 (2026-09-08) y aqui se
+        //    comprueba EL NUMERO EXACTO: un «<= 99» habria dejado pasar el
+        //    mismo problema sin decir nada.
+        check("SANTUARIO: NADIE PUEDE TENER MAS DE 3 NICHOS",
+                net.pokereport.luna.santuario.SantuarioService.tope(CAMPEON) == 3);
+        check("santuario: por debajo de CAMPEON sigue siendo uno",
+                net.pokereport.luna.santuario.SantuarioService.tope(ENTRENADOR) == 1);
+
+        // ⚠⚠ UN HONOR POR NICHO Y DIA (decision del usuario). Con mas de uno, el
+        //    contador del memorial deja de decir «a cuanta gente le importa» y
+        //    pasa a decir «cuantas veces ha vuelto a pulsar el mismo».
+        check("SANTUARIO: UN SOLO HONOR POR NICHO Y DIA",
+                net.pokereport.luna.santuario.SantuarioService.HONORES_DIA == 1);
+
         testNichoEditor();
     }
 
@@ -3516,6 +3542,35 @@ public final class AutoTest {
                     e.getMessage());
         }
         check("EDITOR: EL JSON QUE ESCRIBE ES EL QUE LEE EL ARRANQUE", vuelta);
+
+        // ⚠⚠⚠ Y LA COMPROBACION QUE NACE DEL FALLO QUE VIO EL USUARIO: la foto
+        //    TIENE QUE CABER DENTRO DE SU NICHO. `HologramaSantuario` la dibuja
+        //    centrada a `proyector + 1,75` y mide 2,4 de alto, asi que ocupa de
+        //    +0,55 a +2,95 sobre el pedestal. Con ALTURA_PROYECTOR en 3 eso se
+        //    salia POR EL TECHO de una caja de 5 -- y no da ningun error: da una
+        //    foto medio metida en el dintel, que es lo que se reporto.
+        //    ⚠⚠ Los tres numeros viven en dos ficheros distintos (el editor en
+        //       `main`, el dibujado en `client`) y nada les obliga a cuadrar.
+        //       Aqui se cruzan: si alguien sube el tamaño de la foto o el
+        //       pedestal, esto se pone rojo antes de que salga en una captura.
+        double centroFoto = net.pokereport.luna.santuario.NichoEditor.ALTURA_PROYECTOR + 1.75;
+        double medioAlto = 2.4 / 2;
+        check("HOLOGRAFICA: LA FOTO CABE ENTERA DENTRO DE SU NICHO",
+                centroFoto - medioAlto >= 0
+                        && centroFoto + medioAlto
+                                <= net.pokereport.luna.santuario.NichoEditor.ALTO - 1);
+
+        // ⚠ Y `recolocar` deja el proyector donde lo pondria una captura nueva:
+        //   es lo que hace que los nichos viejos se puedan arreglar sin volver a
+        //   andar hasta cada uno.
+        var torcido = new net.pokereport.luna.santuario.NichoCatalogo.Nicho(
+                "nicho_01", "Nicho 1", n.min(), n.max(),
+                new net.minecraft.util.math.BlockPos(
+                        n.min().getX(), n.max().getY(), n.min().getZ()));
+        var arreglado = net.pokereport.luna.santuario.NichoEditor.recolocar(torcido);
+        check("editor: recolocar deja el proyector como una captura nueva",
+                arreglado.proyector().equals(n.proyector())
+                        && arreglado.nombre().equals(torcido.nombre()));
     }
 
     /**

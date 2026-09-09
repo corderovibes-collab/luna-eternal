@@ -714,7 +714,9 @@ public final class LunaCommand {
                             .executes(ctx -> irANicho(ctx.getSource(),
                                     StringArgumentType.getString(ctx, "nicho")))))
                     .then(literal("ver")
-                        .executes(ctx -> verNichos(ctx.getSource())))))
+                        .executes(ctx -> verNichos(ctx.getSource())))
+                    .then(literal("recolocar")
+                        .executes(ctx -> recolocarNichos(ctx.getSource())))))
 
             .then(literal("enfermera")
                 .requires(s -> s.hasPermissionLevel(4))
@@ -2099,13 +2101,7 @@ public final class LunaCommand {
                 LunaEternal.LOG.error("Santuario: no se pudieron crear las filas", e);
             }
             net.pokereport.luna.santuario.SantuarioProteccion.recargar();
-            if (servidor != null) {
-                servidor.execute(() -> {
-                    for (var jugador : servidor.getPlayerManager().getPlayerList()) {
-                        net.pokereport.luna.net.Red.enviarSantuario(jugador);
-                    }
-                });
-            }
+            net.pokereport.luna.net.Red.enviarSantuarioATodos(servidor);
         });
     }
 
@@ -2402,6 +2398,42 @@ public final class LunaCommand {
         src.sendFeedback(() -> Text.literal("\u00a7a" + catalogo.todos().size()
                 + " nichos marcados durante 10 s. \u00a77Blanco la caja, "
                 + "\u00a7bazul\u00a77 la holografica."), false);
+        return 1;
+    }
+
+    /**
+     * RECOLOCA EL PROYECTOR DE TODOS LOS NICHOS A LA ALTURA DE HOY.
+     *
+     * <p>&#9888;&#9888; Es la migracion de que {@code ALTURA_PROYECTOR} bajara de
+     * 3 a 1: los nichos capturados antes tienen la foto saliendose por el techo.
+     * Recapturarlos a mano seria volver a andar hasta cada uno <b>y perder su
+     * nombre y su reclamacion</b>; esto solo mueve el pedestal.
+     */
+    private static int recolocarNichos(ServerCommandSource src) {
+        var lista = net.pokereport.luna.santuario.NichoEditor.copia(
+                net.pokereport.luna.santuario.SantuarioProteccion.catalogo());
+        if (lista.isEmpty()) {
+            src.sendError(Text.literal("\u00a7cNo hay ningun nicho en la config."));
+            return 0;
+        }
+        int movidos = 0;
+        for (int i = 0; i < lista.size(); i++) {
+            var nuevo = net.pokereport.luna.santuario.NichoEditor.recolocar(lista.get(i));
+            if (!nuevo.proyector().equals(lista.get(i).proyector())) {
+                movidos++;
+            }
+            lista.set(i, nuevo);
+        }
+        String malo = net.pokereport.luna.santuario.NichoEditor.guardar(lista);
+        if (malo != null) {
+            src.sendError(Text.literal("\u00a7cNo se guardo nada: \u00a7f" + malo));
+            return 0;
+        }
+        recargarCatalogo(src);
+        final int n = movidos;
+        src.sendFeedback(() -> Text.literal("\u00a7a" + n + " de " + lista.size()
+                + " proyectores recolocados. \u00a77Mira con "
+                + "\u00a7f/luna santuario nicho ver"), true);
         return 1;
     }
 

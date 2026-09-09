@@ -252,6 +252,25 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                             }
                         }));
             }
+            // ⚠⚠⚠ EL SANTUARIO SE EMPUJA AL ENTRAR, Y SIN ESTO NO SE VEIA UN
+            //    SOLO HOLOGRAMA. `EstadoSantuario` es lo unico de lo que sale la
+            //    foto flotante --el cliente no dibuja nada hasta recibirlo
+            //    (P6)-- y hasta hoy solo se mandaba a quien ABRIERA LA APP. O
+            //    sea que quien nunca abriera el PokePad cruzaba Monumentos y
+            //    veia los pedestales vacios, sin un solo error.
+            //    ⚠⚠ Es el mismo fallo que los cosmeticos que no volvian al
+            //       reconectar, y se arregla igual: si el servidor tiene un
+            //       estado que el cliente dibuja, EL SERVIDOR LO MANDA.
+            //    ⚠ Con retraso, y por el mismo motivo que el aviso de Oak: al
+            //      entrar el cliente todavia esta cargando y su pantalla no
+            //      existe. Aqui ademas hace falta que el mundo este cargado,
+            //      porque la orientacion de cada nicho SE MIDE en bloques.
+            net.pokereport.luna.gym.Programador.en(40, () -> {
+                if (!player.isRemoved()) {
+                    net.pokereport.luna.net.Red.enviarSantuario(player);
+                }
+            });
+
             // ⚠⚠⚠ EL AVISO DE QUE HAY QUE IR A VER A OAK, Y ES LA MITAD DE
             //    QUITAR LA APERTURA AUTOMATICA. Antes la pantalla del inicial
             //    se abria sola al entrar --imposible no verla--. Hoy hay que ir

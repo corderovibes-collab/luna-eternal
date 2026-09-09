@@ -48,7 +48,69 @@ import net.pokereport.luna.net.Red;
  */
 public final class HologramaSantuario {
 
+    /**
+     * CUANTO MIDE DE ALTO LA FOTO, en bloques.
+     *
+     * <h2>&#9888;&#9888; ERA 1,6 Y SE VEIA PEQUEÑA (peticion del usuario)</h2>
+     *
+     * Un nicho construido es un hueco de 3 de ancho: una foto de 1,6 dejaba
+     * medio hueco vacio alrededor y desde el pasillo no se distinguia de que
+     * era. A 2,4 llena el nicho sin tocar sus paredes -- una apaisada 16:9 mide
+     * 4,27 de ancho, asi que <b>se sale del 3x3 a proposito</b>: sobresalir por
+     * delante es lo que la hace visible desde lejos, y por detras no hay nada
+     * que tapar porque la pared queda a su espalda.
+     */
+    private static final float ALTO = 2.4f;
+
+    /**
+     * A que altura sobre el proyector flota su CENTRO.
+     *
+     * <p>&#9888; Sube de 1,55 a 1,75 para que, al crecer la foto, <b>el borde de
+     * abajo se quede donde estaba</b> (0,75 sobre el pedestal) y todo lo que
+     * gana lo gane hacia arriba. Bajar el centro con una foto mas alta la
+     * habria metido dentro del pedestal.
+     */
+    private static final float ALTURA = 1.75f;
+
+    /**
+     * CUANTO SE SEPARA DE LA PARED DEL FONDO.
+     *
+     * <h2>&#9888;&#9888;&#9888; ESTO ES «LOS HOLOGRAMAS ESTAN MAL POSICIONADOS»</h2>
+     *
+     * El quad se dibujaba <b>centrado en el bloque del proyector</b>, y el
+     * proyector de un nicho esta pegado a su pared del fondo. Como la foto
+     * <b>gira para mirar a la camara</b>, en cuanto uno se pone de lado la mitad
+     * del quad barre hacia dentro del muro y <b>desaparece dentro de la pared</b>:
+     * se ve un trozo de foto recortado, y parece un fallo de dibujado.
+     *
+     * <p>La foto se adelanta 0,8 hacia donde el nicho se abre, asi que gira en
+     * el aire del hueco y no dentro de la piedra. <b>La direccion la manda el
+     * servidor</b> ({@code PosNicho.frente}), medida en bloques: aqui no se
+     * deduce nada, porque el teletransporte usa esa misma direccion y las dos
+     * tienen que estar de acuerdo.
+     */
+    private static final double SALIENTE = 0.8;
+
     private HologramaSantuario() {}
+
+    /**
+     * El centro exacto de la foto de un nicho.
+     *
+     * <p>&#9888;&#9888; <b>LO USAN EL DIBUJADO Y EL CLIC, y por eso esta aqui.</b>
+     * La geometria estaba escrita dos veces --una en {@code dibujar} y otra en
+     * {@code clicSiToca}-- con los numeros a mano en las dos. Nada obligaba a
+     * que coincidieran: al mover la foto, el sitio donde hay que pulsar se
+     * habria quedado donde estaba, <b>sin dar ningun error</b>. Es la leccion de
+     * la rejilla del PokePad, donde el dibujado y el clic calculan la ranura
+     * igual.
+     */
+    private static Vec3d centroDe(Red.PosNicho pos) {
+        var frente = net.pokereport.luna.santuario.Orientacion.porIndice(pos.frente());
+        return new Vec3d(
+                pos.x() + 0.5 + frente.getOffsetX() * SALIENTE,
+                pos.y() + ALTURA,
+                pos.z() + 0.5 + frente.getOffsetZ() * SALIENTE);
+    }
 
     /** True si el boton de usar estaba pulsado en el tick anterior: el flanco
      *  se detecta con {@code isPressed} para no depender de quien consuma
@@ -83,7 +145,7 @@ public final class HologramaSantuario {
                 var pos = nicho.pos();
                 double dx = pos.x() + 0.5 - posCam.x;
                 double dz = pos.z() + 0.5 - posCam.z;
-                if (dx * dx + dz * dz > 64 * 64) {
+                if (dx * dx + dz * dz > 96 * 96) {
                     continue;
                 }
                 String sha1 = nicho.memorial().foto();
@@ -145,8 +207,7 @@ public final class HologramaSantuario {
                 // Sin textura no hay holograma dibujado al que apuntar.
                 continue;
             }
-            var p = nicho.pos();
-            Vec3d centro = new Vec3d(p.x() + 0.5, p.y() + 1.55, p.z() + 0.5);
+            Vec3d centro = centroDe(nicho.pos());
             Vec3d hacia = centro.subtract(origen);
             double t = hacia.dotProduct(direccion);
             if (t < 0.4 || t > tope) {
@@ -161,9 +222,9 @@ public final class HologramaSantuario {
             derecha = derecha.normalize();
             Vec3d arriba = derecha.crossProduct(direccion);
             Vec3d tocado = origen.add(direccion.multiply(t)).subtract(centro);
-            float ancho = 1.6f * foto.ancho() / Math.max(1, foto.alto());
+            float ancho = ALTO * foto.ancho() / Math.max(1, foto.alto());
             if (Math.abs(tocado.dotProduct(derecha)) <= ancho / 2
-                    && Math.abs(tocado.dotProduct(arriba)) <= 0.8) {
+                    && Math.abs(tocado.dotProduct(arriba)) <= ALTO / 2) {
                 cliente.setScreen(new MemorialScreen(null, nicho));
                 return;
             }
@@ -182,17 +243,18 @@ public final class HologramaSantuario {
         //   desfase ven la foto en el mismo sitio, a distinta altura de ola.
         float bob = MathHelper.sin(tiempo * 1.1f) * 0.045f;
 
+        Vec3d centro = centroDe(pos);
         matrices.push();
-        matrices.translate(pos.x() + 0.5 - posCam.x,
-                pos.y() + 1.55 + bob - posCam.y,
-                pos.z() + 0.5 - posCam.z);
+        matrices.translate(centro.x - posCam.x,
+                centro.y + bob - posCam.y,
+                centro.z - posCam.z);
         // ⚠ Orientar hacia la camara = girar el quad con SUS angulos. Es la
         //   tecnica del cartel de un nombre flotante, sin entidades de por
         //   medio.
         matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-camara.getYaw()));
         matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camara.getPitch()));
 
-        float alto = 1.6f;
+        float alto = ALTO;
         float ancho = alto * foto.ancho() / Math.max(1, foto.alto());
         float m = ancho / 2f;
         float n = alto / 2f;

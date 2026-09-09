@@ -76,8 +76,20 @@ public final class SantuarioService {
     /** Cuanto dura un alquiler: 24 h. */
     public static final long ALQUILER_MS = 24L * 3_600_000L;
 
-    /** El presupuesto diario de honores por jugador y por nicho. */
-    public static final int HONORES_DIA = 10;
+    /**
+     * El presupuesto diario de honores por jugador y por nicho.
+     *
+     * <p>⚠⚠ <b>ERA 10 Y HOY ES 1</b> (decision del usuario, 2026-09-08). Y no es
+     * tacañeria: con diez, el numero del memorial dejaba de decir «a cuanta
+     * gente le importa» y pasaba a decir «cuantas veces ha vuelto a pulsar el
+     * mismo». Con uno, <b>honores == personas</b>, que es lo unico que ese
+     * contador puede significar para que valga algo.
+     *
+     * <p>⚠ Lo que NO cambia es que honrar sigue sin dar nada (§3.3): sin
+     * recompensa no hay incentivo de multicuenta (B-004), y bajar el tope a 1
+     * lo refuerza en vez de sustituirlo.
+     */
+    public static final int HONORES_DIA = 1;
 
     /** La ventana de honores: 24 h desde el primer honor del ciclo. */
     public static final long VENTANA_HONOR_MS = 24L * 3_600_000L;
@@ -97,8 +109,23 @@ public final class SantuarioService {
      * la leccion del switch por indice de {@code KitsScreen}.
      */
     public static int tope(int escalon) {
-        return escalon >= Rank.CAMPEON.escalon ? 99 : 1;
+        return escalon >= Rank.CAMPEON.escalon ? TOPE_NICHOS : 1;
     }
+
+    /**
+     * Cuantos nichos como maximo, por alto que sea el rango.
+     *
+     * <p>⚠⚠⚠ <b>ERA 99, QUE ES NO TENER TOPE</b> (decision del usuario,
+     * 2026-09-08: «que maximo puedan comprar 3 nichos»). Noventa y nueve no
+     * limitaba nada: <b>un solo CAMPEON con dinero podia quedarse con el
+     * Santuario entero</b>, y eso no da ningun error -- da un memorial donde
+     * todos los nichos llevan el mismo nombre, que es exactamente lo contrario
+     * de para lo que existe.
+     *
+     * <p>⚠ El limite es del jugador, no del rango: por debajo de CAMPEON sigue
+     * siendo <b>uno</b>. Lo que cambia es el techo de arriba.
+     */
+    public static final int TOPE_NICHOS = 3;
 
     // -------------------------------------------------------------- el estado
 

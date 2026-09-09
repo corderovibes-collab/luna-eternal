@@ -49,7 +49,39 @@ public final class TravelService {
      * esto pasará a leerse de la base de datos junto con los puntos de viaje.
      */
     private static final Vec3d SPAWN_CIUDADELA = new Vec3d(4.27, 70, 0.36);
-    private static final Vec3d SPAWN_LOBBY = new Vec3d(0.5, 64, 0.5);
+    /**
+     * Donde aterriza quien llega al lobby. <b>Medido por el usuario</b> de pie
+     * en el juego, con la construccion ya levantada.
+     *
+     * <p>&#9888; Los decimales <b>son</b> la posicion, igual que en la llegada de
+     * la ciudadela: redondear a la casilla mueve al jugador medio bloque
+     * respecto al sitio donde se puso a medir.
+     *
+     * <p>&#9888;&#9888;&#9888; ESTE PUNTO ESTA EN <b>DOS</b> SITIOS: aqui y en
+     * {@code config/EasyAuth/main.conf} ({@code world-spawn}), porque EasyAuth
+     * retiene ahi a quien no se ha autenticado. <b>Nada los obliga a
+     * coincidir</b>, y si divergieran no habria ningun error: habria gente
+     * apareciendo fuera de la construccion. Lo vigila el autotest.
+     */
+    private static final Vec3d SPAWN_LOBBY = new Vec3d(43.998, 72, 47.97);
+
+    /**
+     * Hacia donde mira quien llega al lobby: <b>al oeste</b> (peticion del
+     * usuario), que es donde queda el guardian.
+     *
+     * <h2>&#9888;&#9888; EN MINECRAFT EL CERO ES EL SUR, NO EL NORTE</h2>
+     *
+     * sur 0 &#183; oeste 90 &#183; norte 180 &#183; este -90. Es la misma tabla
+     * que ya usan los carteles y la orientacion de los nichos, y el fallo de
+     * escribirla de memoria no da error: da a alguien apareciendo de espaldas a
+     * lo unico que tiene que ver.
+     */
+    public static final float GIRO_LOBBY = 90f;
+
+    /** El punto de llegada del lobby. Lo lee el autotest para cruzarlo con EasyAuth. */
+    public static Vec3d spawnLobby() {
+        return SPAWN_LOBBY;
+    }
     /** Radio de la plataforma de emergencia. */
     private static final int PLATFORM_RADIUS = 4;
 
@@ -83,7 +115,16 @@ public final class TravelService {
         //   Sumarlo aquí --como se hacía-- desplazaba media casilla el punto que
         //   el usuario había medido de pie en el juego.
         // ⚠⚠ Y por `Traslado`, que carga el chunk y apunta de dónde vienes.
-        if (!Traslado.ir(player, world, destination)) {
+        // ⚠⚠ AL LOBBY SE LLEGA MIRANDO A UN SITIO CONCRETO, y al resto de
+        //    mundos conservando hacia donde mirabas. En el lobby hay UNA cosa
+        //    que hacer --hablar con el guardian-- y aparecer de espaldas a el
+        //    obliga a girarse a buscarlo: es la primera friccion que se lleva a
+        //    alguien que acaba de entrar al servidor. En el Hogar o el Salvaje
+        //    seria al reves, ahi girar a nadie por sorpresa es lo raro.
+        boolean llegada = target.equals(LunaDimensions.LOBBY)
+                ? Traslado.ir(player, world, destination, GIRO_LOBBY, 0f)
+                : Traslado.ir(player, world, destination);
+        if (!llegada) {
             return false;
         }
         player.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL,

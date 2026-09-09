@@ -1811,6 +1811,12 @@ Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031)
                  despista
 
 Puerta        EL LOBBY ES LA UNICA ENTRADA (2026-09-09, V036, D-050)
+              llegada 43.998 / 72 / 47.97 mirando al OESTE (yaw 90)
+              ⚠⚠ ESE PUNTO ESTA EN DOS SITIOS --TravelService y el
+                 world-spawn de EasyAuth-- y desde hoy LO CRUZA EL
+                 AUTOTEST: se puede porque la config de otro mod es UN
+                 FICHERO EN NUESTRO DISCO, sin su API ni compilar contra el
+              ⚠ en Minecraft el cero del yaw es el SUR: oeste 90
               detalle completo en docs/world/puerta.md
               APAGADA hasta que se construya el lobby y se ponga el NPC
               /luna puerta                  estado y diagnostico
@@ -4427,7 +4433,7 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 | | |
 |---|---|
 | **0. CONSTRUIR EL LOBBY Y ENCENDER LA PUERTA** | Es lo único que hoy separa a un jugador nuevo de poder jugar. Los prompts de Gemini y Meshy están en `docs/ui/prompts-lobby.md`; el procedimiento, en `docs/world/puerta.md` §6. **En orden: reabrir el launcher · construir alrededor de `0.5/64/0.5` · `/luna ir lobby` · `/luna puerta npc` · `/luna puerta activar`.** ⚠ El launcher va **primero**: el saludo del cliente es nuevo, y un jar viejo **no saluda** — la puerta te rechazaría a ti el primero |
-| **0-bis. Colocar a Oak** | `/luna inicial oak` en el laboratorio. **Sigue pendiente desde el 8-sep**, y sin él la puerta lleva al jugador a una ciudadela donde no hay de quién coger inicial |
+| ~~**0-bis. Colocar a Oak**~~ | ✅ **Colocado** (usuario, 2026-09-09). Era lo que hacía falta para que la puerta llevara a alguna parte: sin él, cruzarla dejaba al jugador en una ciudadela donde no hay de quién coger inicial |
 | **0-ter. El Santuario** | `/luna santuario npc` (la Mew) y `/luna santuario nicho recolocar` para los 341 nichos, que tienen los proyectores a la altura vieja |
 
 Y lo del Pase, que sigue sin mirarse:

@@ -173,9 +173,24 @@ respuesta significa algo.
 
 1. **Reabrir el launcher.** El saludo del cliente es nuevo: un jar viejo **no
    saluda** y la puerta lo tratará como desfasado — al operador el primero.
-2. Construir el lobby alrededor de **0.5 / 64 / 0.5** (ver
+2. Construir el lobby alrededor del punto de llegada (ver
    [prompts-lobby.md](../ui/prompts-lobby.md)).
 3. `/luna ir lobby` → `/luna puerta npc` → `/luna puerta activar`.
+
+**El punto de llegada, medido en el juego (2026-09-09):**
+
+```
+43.998 / 72 / 47.97     mirando al OESTE (yaw 90)
+```
+
+⚠⚠ **En Minecraft el cero del yaw es el SUR, no el norte**: sur 0 · oeste 90 ·
+norte 180 · este −90. Escribirlo de memoria no da error — da a alguien
+apareciendo de espaldas a lo único que tiene que ver.
+
+⚠ **Al lobby se llega mirando a un sitio fijo, y al resto de mundos
+conservando hacia dónde mirabas.** Allí hay una sola cosa que hacer, y aparecer
+de espaldas al guardián es la primera fricción para quien acaba de entrar. En
+el Hogar o el Salvaje sería al revés: girar a alguien por sorpresa es lo raro.
 
 ⚠ **El lobby solo admite y = 0 .. 255** (`min_y: 0`, `height: 256`), al contrario
 que la ciudadela y el Hogar, que llegan a −64.
@@ -189,7 +204,7 @@ rompe nada — pero es feo y desconcierta.
 ```
 session-timeout    86400 -> 900      15 min (decisión del usuario)
 hide-player-coords false -> true     sin esto world-spawn no se usa PARA NADA
-world-spawn        overworld -> lunaeternal:lobby  0.5 / 64 / 0.5
+world-spawn        overworld -> lunaeternal:lobby  43.998 / 72 / 47.97  yaw 90
 ```
 
 ⚠⚠ **PARAR, SUBIR, ARRANCAR.** EasyAuth carga su config al arrancar y **la
@@ -201,8 +216,17 @@ arranque, que es la única comprobación que vale.
 ⚠⚠⚠ **LAS COORDENADAS DEL LOBBY ESTÁN EN DOS SITIOS** —`TravelService.SPAWN_LOBBY`
 y la config de EasyAuth— y **nada las obliga a coincidir**. Si divergieran,
 EasyAuth soltaría al jugador en un punto del lobby y la puerta en otro: no daría
-error, daría **gente apareciendo fuera de la construcción**. Al mover el lobby
-hay que tocar **los dos**.
+error, daría **gente apareciendo fuera de la construcción**, y en una dimensión
+de vacío eso es caerse. Al mover el lobby hay que tocar **los dos**.
+
+✅ **Y desde el 2026-09-09 lo vigila el autotest**, así que dejó de ser un aviso
+que hay que recordar: `PUERTA: EASYAUTH Y LA PUERTA LLEGAN AL MISMO SITIO`.
+**Se puede comprobar porque la config de otro mod es un fichero en nuestro
+disco** — no hace falta su API ni compilar contra él. Con holgura de dos
+bloques: lo que se caza es «alguien movió el lobby y actualizó uno de los dos»,
+que son decenas de bloques; exigir igualdad exacta se pondría rojo por cómo cada
+uno escribe un decimal, y un rojo que no significa nada enseña a ignorar los
+rojos.
 
 ⚠ `vanish-until-auth=true` pide el mod **Vanish**, que no está instalado, así que
 hoy no hace nada — **y no hace falta**: el recorte de visibilidad ya deja el
@@ -222,15 +246,18 @@ del todo es un trabajo deliberado, no un añadido al final.
 ✅ **En vivo desde 2026-09-09.** `Done (30,397 s)` · V036 aplicada · **autotest
 695/695** · EasyAuth 3.4.4 con la config nueva verificada tras el arranque.
 
-⚠ **La puerta está APAGADA**, a la espera de que se construya el lobby y se
-coloque el guardián.
+✅ **El lobby está construido y el guardián colocado** (2026-09-09). Punto de
+llegada `43.998 / 72 / 47.97` mirando al oeste, en los dos sitios y cruzado por
+el autotest.
+
+⚠ **La puerta sigue APAGADA**: falta rematar la construcción y encenderla con
+`/luna puerta activar`.
 
 ## Last Decision
 D-050 — el lobby es la única entrada, y la visibilidad se recorta por dimensión.
 
 ## Next Actions
-1. Construir el lobby (usuario).
-2. `/luna puerta npc` y `/luna puerta activar`.
-3. Comprobar con **dos cuentas** que el recorte de visibilidad corre
+1. Rematar el lobby y `/luna puerta activar` (usuario).
+2. Comprobar con **dos cuentas** que el recorte de visibilidad corre
    (`/luna puerta` → «el recorte ha corrido: sí»).
-4. Pendiente y aparte: la guarda por acción del §8, y el proxy si se llega a 200.
+3. Pendiente y aparte: la guarda por acción del §8, y el proxy si se llega a 200.

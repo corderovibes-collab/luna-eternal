@@ -44,8 +44,8 @@ separados** dan una construcción legible.
 ```
 huella      ~24 x 24 bloques      cabe holgado alrededor de la plataforma 9x9
 alto         16 bloques           --alto 16, que es el defecto del script
-llegada      0.5 / 64 / 0.5       el centro exacto del pabellón
-suelo        y = 63               donde está la plataforma de piedra lisa
+llegada      43.998 / 72 / 47.97  mirando al OESTE (yaw 90)
+suelo        y = 71               la casilla de debajo de los pies
 ```
 
 ⚠ **El lobby solo admite y = 0 .. 255** (`min_y: 0`, `height: 256` en su

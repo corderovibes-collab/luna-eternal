@@ -3487,6 +3487,42 @@ public final class AutoTest {
             puertaSvc.olvidar(T3);
         }
 
+        // ⚠⚠⚠ EL PUNTO DE LLEGADA DEL LOBBY VIVE EN DOS SITIOS, Y ESTA ES LA
+        //    UNICA COSA QUE LOS ATA. `TravelService.SPAWN_LOBBY` lo usa la
+        //    puerta; `config/EasyAuth/main.conf` (world-spawn) lo usa EasyAuth
+        //    para retener a quien no se ha autenticado. Son dos ficheros de dos
+        //    proyectos distintos y NADA los obliga a coincidir.
+        //    Si divergieran no habria ningun error: habria gente apareciendo
+        //    FUERA de la construccion --en el aire de una dimension de vacio--
+        //    y el sintoma seria «a veces caigo al vacio al entrar».
+        //    Se puede comprobar porque la config de otro mod es UN FICHERO EN
+        //    NUESTRO DISCO: no hace falta su API ni compilar contra el.
+        var lobbyEA = spawnDeEasyAuth();
+        if (lobbyEA == null) {
+            // ⚠ Sin fichero no se inventa un rojo: puede ser un servidor de
+            //   desarrollo sin EasyAuth. Se dice, que es distinto de callarse.
+            LunaEternal.LOG.info("Autotest: EasyAuth no tiene config, no se puede "
+                    + "cruzar el punto de llegada del lobby");
+        } else {
+            var mio = net.pokereport.luna.world.TravelService.spawnLobby();
+            // ⚠ Con holgura de dos bloques: lo que se caza es «alguien movio el
+            //   lobby y actualizo un sitio de los dos», que son decenas de
+            //   bloques. Exigir igualdad exacta se pondria rojo por como cada
+            //   uno escribe un decimal, y un rojo que no significa nada enseña
+            //   a ignorar los rojos.
+            boolean cuadra = lobbyEA[0] == 1.0
+                    && Math.abs(lobbyEA[1] - mio.x) <= 2.0
+                    && Math.abs(lobbyEA[2] - mio.y) <= 2.0
+                    && Math.abs(lobbyEA[3] - mio.z) <= 2.0;
+            if (!cuadra) {
+                LunaEternal.LOG.error("EasyAuth retiene en dim={} {} {} {} y la "
+                        + "puerta llega a {} {} {}", (int) lobbyEA[0] == 1
+                                ? "lunaeternal:lobby" : "OTRA",
+                        lobbyEA[1], lobbyEA[2], lobbyEA[3], mio.x, mio.y, mio.z);
+            }
+            check("PUERTA: EASYAUTH Y LA PUERTA LLEGAN AL MISMO SITIO", cuadra);
+        }
+
         // ---- a cuanta gente se ve ----------------------------------------
         // ⚠⚠⚠ EL MUNDO SALVAJE Y EL HOGAR NO PUEDEN LLEVAR TOPE. Ahi la gente
         //    esta repartida por kilometros y el problema que esto resuelve --una
@@ -5215,6 +5251,50 @@ public final class AutoTest {
             try (var rs = ps.executeQuery()) {
                 return rs.next() ? rs.getLong(1) : -1;
             }
+        }
+    }
+
+    /**
+     * El {@code world-spawn} de EasyAuth, leido de su fichero.
+     *
+     * <p>&#9888; Se parsea a mano y no con una libreria de HOCON: son cuatro
+     * numeros y meter una dependencia para leerlos seria mas superficie de la
+     * que ahorra. Si el formato cambiara, esto devuelve {@code null} y la
+     * comprobacion se salta diciendolo -- que es el fallo seguro.
+     *
+     * @return {@code [esElLobby, x, y, z]}, o {@code null} si no se pudo leer
+     */
+    private double[] spawnDeEasyAuth() {
+        try {
+            java.nio.file.Path f = java.nio.file.Path.of(
+                    "config", "EasyAuth", "main.conf");
+            if (!java.nio.file.Files.exists(f)) {
+                return null;
+            }
+            String txt = java.nio.file.Files.readString(f);
+            var bloque = java.util.regex.Pattern
+                    .compile("world-spawn\\s*\\{([^}]*)\\}").matcher(txt);
+            if (!bloque.find()) {
+                return null;
+            }
+            String dentro = bloque.group(1);
+            double[] out = new double[4];
+            out[0] = dentro.contains("lunaeternal:lobby") ? 1.0 : 0.0;
+            String[] ejes = {"x", "y", "z"};
+            for (int i = 0; i < 3; i++) {
+                var m = java.util.regex.Pattern
+                        .compile("(?m)^\\s*" + ejes[i] + "\\s*=\\s*(-?[0-9.]+)")
+                        .matcher(dentro);
+                if (!m.find()) {
+                    return null;
+                }
+                out[i + 1] = Double.parseDouble(m.group(1));
+            }
+            return out;
+        } catch (Exception e) {
+            LunaEternal.LOG.warn("No se pudo leer el world-spawn de EasyAuth: {}",
+                    e.toString());
+            return null;
         }
     }
 

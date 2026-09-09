@@ -177,6 +177,40 @@ public final class PaseXp {
     /** Subir un nivel de Via o de oficio. */
     public static final long NIVEL_VIA = 100;
 
+    // ---- el paseo por el Santuario -----------------------------------------
+
+    /**
+     * Abrir el memorial de un nicho. Una vez cada 24 h por nicho.
+     *
+     * <p>&#9888;&#9888;&#9888; <b>ES LA UNICA FUENTE DE ESTA TABLA QUE NO
+     * DEPENDE DE JUGAR SINO DE CUANTO HEMOS CONSTRUIDO NOSOTROS</b>, y por eso
+     * es la unica que lleva techo propio. Hoy hay <b>341 nichos</b>: sin
+     * {@link #VISITAS_DIA}, «una vez cada 24 h por nicho» serian 341 cobros al
+     * dia por hacer clic derecho, y el numero <b>sube cada vez que el equipo
+     * construye mas</b> -- una fuente de XP que crece sola, sin que nadie toque
+     * esta tabla ni se entere.
+     *
+     * <p>&#9888;&#9888; Por eso el techo <b>no esta en cuanto paga cada
+     * visita</b>: esta en cuantas visitas cuentan. Bajar este numero solo hace
+     * el premio mas pobre; lo que impide que la fuente se desmadre es el otro.
+     */
+    public static final long VISITA_NICHO = 15;
+
+    /**
+     * Cuantas visitas cuentan al dia.
+     *
+     * <p>&#9888;&#9888;&#9888; <b>ESTE ES EL NUMERO QUE HACE SEGURA LA FUENTE.</b>
+     * Diez visitas x 15 XP son <b>150 XP al dia</b>, el 2,5 % del tope --
+     * un extra por darse una vuelta por Monumentos, no una forma de subir el
+     * pase. Y sigue siendo 150 con 341 nichos y con tres mil.
+     *
+     * <p>&#9888; Diez, y no otro numero, <b>porque es el mismo diez</b> que pide
+     * la Ultra Ball: quien se da la vuelta para cobrarla ya ha visitado los que
+     * necesita. Dos cifras distintas serian dos vueltas distintas por el mismo
+     * sitio.
+     */
+    public static final int VISITAS_DIA = 10;
+
     // ---- Torre de Batalla --------------------------------------------------
 
     /** Lo que da la ronda 1. */

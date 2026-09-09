@@ -72,7 +72,8 @@ public final class Database implements AutoCloseable {
         "V031__santuario.sql",
         "V032__pase.sql",
         "V033__pase_una_via.sql",
-        "V034__pase_lunacoins.sql"
+        "V034__pase_lunacoins.sql",
+        "V035__santuario_paseo.sql"
     };
 
     private final HikariDataSource ds;

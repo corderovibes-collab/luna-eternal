@@ -46,6 +46,24 @@ public final class EstadoCliente {
     private static Red.EstadoGimnasio gimnasio;
     private static Red.EstadoTrajes trajes;
     private static Red.EstadoSantuario santuario;
+
+    /**
+     * CUANDO llego ese estado, en milisegundos del reloj local.
+     *
+     * <h2>⚠⚠⚠ SIN ESTO EL ALQUILER NO CORRIA</h2>
+     *
+     * {@code EstadoNicho.segundos} viaja <b>ya restado</b> por el servidor --lo
+     * correcto, y la misma decision que {@code EstadoCura}: un cliente con el
+     * reloj adelantado no puede inventarse tiempo--. Pero un numero restado UNA
+     * VEZ <b>se queda quieto</b>: el jugador veia «quedan 7 h 12 min» y seguia
+     * viendo 7 h 12 min diez minutos despues, hasta reabrir la pantalla.
+     *
+     * <p>Guardando cuando llego, la cuenta atras se dibuja restando el tiempo
+     * que ha pasado <b>desde entonces</b>. La verdad la sigue diciendo el
+     * servidor; el cliente solo la anima, que es exactamente lo que ya hacen
+     * el vaiven del holograma y la cuenta atras de Cazas.
+     */
+    private static long santuarioMs;
     private static Red.ResultadoFoto fotoSubida;
     private static Red.EstadoFotos misFotos;
     private static Red.RespuestaHonor honor;
@@ -287,6 +305,7 @@ public final class EstadoCliente {
 
     public static void guardar(Red.EstadoSantuario nuevo) {
         santuario = nuevo;
+        santuarioMs = System.currentTimeMillis();
     }
 
     /**
@@ -300,6 +319,32 @@ public final class EstadoCliente {
     public static Red.EstadoSantuario santuario() {
         return santuario;
     }
+
+    /**
+     * Los segundos que le quedan a un alquiler <b>ahora mismo</b>.
+     *
+     * <p>&#9888; Nunca baja de cero: un numero negativo en pantalla asusta, y
+     * ademas el barrido del servidor puede tardar hasta un minuto en liberarlo.
+     * Mientras tanto se enseña «caducado», que es la verdad.
+     */
+    public static long segundosNicho(Red.NichoSantuario n) {
+        if (n == null || n.estado().permanente() || n.estado().dueno().isEmpty()) {
+            return 0;
+        }
+        long pasados = (System.currentTimeMillis() - santuarioMs) / 1000L;
+        return Math.max(0, n.estado().segundos() - pasados);
+    }
+
+    /** El paseo por el santuario de hoy. {@code null} hasta que conteste. */
+    public static Red.EstadoPaseo paseo() {
+        return paseo;
+    }
+
+    public static void guardar(Red.EstadoPaseo nuevo) {
+        paseo = nuevo;
+    }
+
+    private static Red.EstadoPaseo paseo;
 
     public static void guardar(Red.ResultadoFoto nuevo) {
         fotoSubida = nuevo;
@@ -368,6 +413,7 @@ public final class EstadoCliente {
         saldo = null;
         ficha = null;
         santuario = null;
+        paseo = null;
         fotoSubida = null;
         misFotos = null;
         honor = null;

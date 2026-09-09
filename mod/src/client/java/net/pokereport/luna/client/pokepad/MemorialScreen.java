@@ -86,6 +86,14 @@ public class MemorialScreen extends Screen {
     protected void init() {
         recalcular();
         ClientPlayNetworking.send(new Red.PedirSantuario());
+        // ⚠⚠ ABRIR UN MEMORIAL DA XP DEL PASE, una vez cada 24 h por nicho.
+        //    Se avisa AQUI y no al dibujar: `init` corre una vez por apertura,
+        //    y `render` sesenta veces por segundo -- avisar desde el dibujado
+        //    seria mandar sesenta paquetes por segundo para que el servidor
+        //    rechazara cincuenta y nueve.
+        //    ⚠ Y EL SERVIDOR DECIDE SI ESO PAGA (P6): aqui solo se dice «lo he
+        //      abierto». Quien lleva la cuenta de las diez del dia es el.
+        ClientPlayNetworking.send(new Red.VerNicho(nichoId));
         // ⚠ Un sonido suave al abrir: es el recibidor del memorial. Vainilla
         //   (resonancia de amatista), como la campanilla -- sin OGG propio aun.
         if (client != null && client.player != null) {
@@ -224,6 +232,38 @@ public class MemorialScreen extends Screen {
                 puedo, ORO);
         texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.honrar_queda", quedan),
                 PANT_X + PANT_W - 230, by + 56, 15, TEXTO_SUAVE, true, false);
+
+        // ⚠⚠ LO QUE LE QUEDA AL ALQUILER, Y HASTA HOY NO SE ENSEÑABA EN NINGUN
+        //    SITIO. El campo `segundos` viajaba en el paquete desde que se
+        //    escribio el sistema y NADIE lo dibujaba: quien alquilaba un nicho
+        //    por 24 h no tenia forma de saber cuanto le quedaba. No daba ningun
+        //    error -- daba un alquiler que se acaba sin avisar.
+        if (!nicho.estado().permanente() && !nicho.estado().dueno().isEmpty()) {
+            long seg = EstadoCliente.segundosNicho(nicho);
+            texto(ctx, seg > 0
+                            ? Text.translatable("pokepad.lunaeternal.santuario.queda",
+                                    reloj(seg))
+                            : Text.translatable("pokepad.lunaeternal.santuario.caducado"),
+                    hcx, by + 74, 16, seg > 3600 ? TEXTO_SUAVE : BORDE_ENCIMA,
+                    false, false);
+        }
+    }
+
+    /**
+     * «7h 12m» o «12m 30s».
+     *
+     * <p>&#9888; Baja a segundos en la ultima hora y no antes: un reloj que
+     * cuenta segundos durante veinticuatro horas es un reloj que nadie mira. En
+     * la ultima hora si, porque ahi es cuando importa.
+     */
+    private static String reloj(long segundos) {
+        long h = segundos / 3600;
+        long m = (segundos % 3600) / 60;
+        long s2 = segundos % 60;
+        if (h > 0) {
+            return h + "h " + m + "m";
+        }
+        return m + "m " + s2 + "s";
     }
 
     private Red.NichoSantuario elNicho() {

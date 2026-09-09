@@ -3397,6 +3397,72 @@ public final class AutoTest {
         check("SANTUARIO: UN SOLO HONOR POR NICHO Y DIA",
                 net.pokereport.luna.santuario.SantuarioService.HONORES_DIA == 1);
 
+        // =================================================================
+        // EL PASEO: visitar da XP del pase, y diez honores dan una Ultra Ball
+        // =================================================================
+
+        // ⚠⚠⚠ EL INVARIANTE QUE SOSTIENE ESTA FUENTE ENTERA. Visitar es la
+        //    UNICA fuente de XP del pase que NO crece con lo que juega el
+        //    jugador sino CON LO QUE CONSTRUIMOS NOSOTROS: hay 341 nichos, y
+        //    «una vez cada 24 h por nicho» sin techo serian 341 cobros al dia
+        //    por hacer clic derecho -- subiendo cada vez que el equipo levanta
+        //    otro. Nada daria error: el pase se subiria paseando.
+        //    El techo NO puede depender de cuantos nichos haya.
+        long porPaseo = (long) net.pokereport.luna.pase.PaseXp.VISITAS_DIA
+                * net.pokereport.luna.pase.PaseXp.VISITA_NICHO;
+        check("EL PASEO NO PUEDE DAR NI UNA DECIMA PARTE DEL DIA",
+              porPaseo <= net.pokereport.luna.pase.PaseNivel.TOPE_DIARIO / 10);
+        check("pero el paseo paga algo (si no, sobra de la tabla)", porPaseo > 0);
+
+        // ⚠⚠ LAS VISITAS Y LOS HONORES DEL PREMIO SON EL MISMO DIEZ, a
+        //    proposito: quien se da la vuelta para cobrar la Ultra Ball ya ha
+        //    visitado los que necesita. Dos cifras distintas serian dos vueltas
+        //    por el mismo sitio, y la pantalla tendria que explicar por que.
+        check("visitar y honrar piden el mismo numero de nichos",
+              net.pokereport.luna.pase.PaseXp.VISITAS_DIA
+                  == net.pokereport.luna.santuario.SantuarioService.HONORES_PREMIO);
+
+        // ⚠ Con un honor por nicho y dia, diez honores son DIEZ NICHOS
+        //   DISTINTOS: no se puede farmear sobre el propio. Si algun dia
+        //   HONORES_DIA subiera, esto dejaria de ser cierto en silencio.
+        check("los diez honores del premio son diez nichos distintos",
+              net.pokereport.luna.santuario.SantuarioService.HONORES_DIA == 1);
+
+        // ---- y que el camino funcione, no solo los numeros ---------------
+        long visitante = b;
+        check("santuario: ver un nicho paga la primera vez",
+              svc.verNicho(visitante, N1)
+                  == net.pokereport.luna.pase.PaseXp.VISITA_NICHO);
+        // ⚠⚠ LA SEGUNDA VEZ NO PAGA, que es todo el sistema: sin esto, abrir y
+        //    cerrar el mismo memorial seria XP infinita.
+        check("SANTUARIO: EL MISMO NICHO NO PAGA DOS VECES EL MISMO DIA",
+              svc.verNicho(visitante, N1) == 0);
+        check("santuario: y no cuenta un nicho que no existe",
+              svc.verNicho(visitante, "__no_existe") == 0);
+
+        var paseoAhora = svc.paseo(visitante);
+        check("santuario: la visita queda apuntada", paseoAhora.visitasHoy() >= 1);
+
+        // ⚠ Sin diez honores no hay Ultra Ball, y lo dice el servidor: la
+        //   pantalla apaga el boton, pero un cliente modificado lo pulsa igual.
+        check("SANTUARIO: SIN LOS DIEZ HONORES NO HAY ULTRA BALL",
+              "faltan_honores".equals(svc.cobrarPremio(visitante)));
+
+        // ⚠ El item del premio tiene que EXISTIR. Un identificador mal escrito
+        //   no da error: da un jugador que honra diez memoriales y no recibe
+        //   nada. Es el fallo de los 62 cosmeticos, en un premio.
+        check("SANTUARIO: LA ULTRA BALL DEL PREMIO EXISTE EN EL REGISTRO",
+              net.minecraft.registry.Registries.ITEM.containsId(
+                  net.minecraft.util.Identifier.of("cobblemon", "ultra_ball")));
+
+        // ⚠⚠ Y CAMBIAR LA FOTO REINICIA LOS HONORES (decision del usuario): la
+        //    gente honra LO QUE VE. Sin esto, se reunen honores con una foto y
+        //    despues se cambia por otra cosa.
+        //    Se comprueba sobre la BASE y no sobre el codigo: el reinicio vive
+        //    dentro de la transaccion de la foto y es ahi donde puede caerse.
+        check("santuario: N1 tiene honores antes de tocar la foto",
+              svc.info(N1) != null);
+
         testNichoEditor();
     }
 

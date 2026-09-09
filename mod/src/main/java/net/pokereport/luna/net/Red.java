@@ -2860,6 +2860,71 @@ public class Red implements ModInitializer {
         }
     }
 
+    /**
+     * «He abierto el memorial de este nicho».
+     *
+     * <p>&#9888;&#9888; EL CLIENTE DICE QUE HA MIRADO, EL SERVIDOR DECIDE SI ESO
+     * PAGA (P6). Un cliente modificado puede mandar los 341 de golpe: se le
+     * conceden los que le queden del dia y el resto se rechazan en
+     * {@code SantuarioService.verNicho}, que es quien lleva la cuenta.
+     */
+    public record VerNicho(String nicho) implements CustomPayload {
+        public static final Id<VerNicho> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "ver_nicho"));
+        public static final PacketCodec<RegistryByteBuf, VerNicho> CODEC =
+                PacketCodec.tuple(CADENA, VerNicho::nicho, VerNicho::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** «Quiero mi Ultra Ball por haber honrado diez nichos». */
+    public record CobrarPremioSantuario(String idem) implements CustomPayload {
+        public static final Id<CobrarPremioSantuario> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "cobrar_premio_santuario"));
+        public static final PacketCodec<RegistryByteBuf, CobrarPremioSantuario> CODEC =
+                PacketCodec.tuple(CADENA, CobrarPremioSantuario::idem,
+                        CobrarPremioSantuario::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * El paseo por el santuario: cuanto llevo hoy y si puedo cobrar.
+     *
+     * <p>&#9888; Va en un paquete APARTE del estado del santuario, y no como
+     * tres campos mas, por dos motivos: es <b>de cada jugador</b> mientras que
+     * el otro es del mundo, y cambia en momentos distintos (al mirar, al
+     * honrar). Metido dentro obligaria a reenviar los 341 nichos cada vez que
+     * alguien abre un memorial.
+     *
+     * <p>&#9888; El techo de visitas y los diez honores <b>no viajan</b>: viven
+     * en {@code PaseXp.VISITAS_DIA} y {@code SantuarioService.HONORES_PREMIO},
+     * que estan en `main`, asi que la pantalla los lee. Mandarlos seria un
+     * segundo sitio donde vive la misma verdad.
+     */
+    public record EstadoPaseo(int visitas, int honrados, boolean premioListo)
+            implements CustomPayload {
+        public static final Id<EstadoPaseo> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_paseo"));
+        public static final PacketCodec<RegistryByteBuf, EstadoPaseo> CODEC =
+                PacketCodec.tuple(
+                        PacketCodecs.VAR_INT, EstadoPaseo::visitas,
+                        PacketCodecs.VAR_INT, EstadoPaseo::honrados,
+                        PacketCodecs.BOOL, EstadoPaseo::premioListo,
+                        EstadoPaseo::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record TpNicho(String nicho) implements CustomPayload {
         public static final Id<TpNicho> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "tp_nicho"));
@@ -3372,6 +3437,10 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(EstadoPendientes.ID, EstadoPendientes.CODEC);
         PayloadTypeRegistry.playC2S().register(ModerarFoto.ID, ModerarFoto.CODEC);
         PayloadTypeRegistry.playC2S().register(TpNicho.ID, TpNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(VerNicho.ID, VerNicho.CODEC);
+        PayloadTypeRegistry.playC2S().register(CobrarPremioSantuario.ID,
+                CobrarPremioSantuario.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoPaseo.ID, EstadoPaseo.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirSaldo.ID, PedirSaldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Saldo.ID, Saldo.CODEC);
         PayloadTypeRegistry.playS2C().register(Ficha.ID, Ficha.CODEC);
@@ -3711,7 +3780,14 @@ public class Red implements ModInitializer {
         });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirSantuario.ID,
-                (carga, ctx) -> enviarSantuario(ctx.player()));
+                (carga, ctx) -> {
+                    enviarSantuario(ctx.player());
+                    // ⚠ Y el paseo con el: la banda del menu se dibuja en cuanto
+                    //   se abre la app, asi que su dato tiene que ir en el mismo
+                    //   viaje. Si no, la primera vez sale «0 de 10» y se corrige
+                    //   sola un segundo despues, que parece un fallo.
+                    enviarPaseo(ctx.player());
+                });
                 
         ServerPlayNetworking.registerGlobalReceiver(ConfirmarCuraCentro.ID, (carga, ctx) -> {
             ctx.player().getServer().execute(() -> {
@@ -3833,6 +3909,9 @@ public class Red implements ModInitializer {
                     //    numero viejo hasta reabrir. Es la leccion de los clanes
                     //    -- el estado no es de quien lo mira.
                     enviarSantuarioATodos(jugador.getServer());
+                    // ⚠ Y el paseo de QUIEN HONRA: acaba de cambiar su cuenta
+                    //   de hoy, y con el decimo se le enciende la Ultra Ball.
+                    enviarPaseo(jugador);
                 });
             });
         });
@@ -3979,6 +4058,78 @@ public class Red implements ModInitializer {
                     //    aparecia solo para el moderador --y para el resto
                     //    seguia siendo un pedestal vacio hasta reconectar.
                     enviarSantuarioATodos(server);
+                });
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(VerNicho.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            String nichoId = carga.nicho();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                try {
+                    long id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    long xp = LunaEternal.santuario().verNicho(id, nichoId);
+                    if (xp > 0) {
+                        // ⚠ Por `Pase.ganar` y no escribiendo la XP a mano: ahi
+                        //   viven el filtro del creativo, el tope diario, el
+                        //   aviso de subida de nivel y el reenvio del estado.
+                        //   Un segundo camino se quedaria sin las cuatro cosas.
+                        net.pokereport.luna.pase.Pase.ganar(jugador, xp, "santuario_visita");
+                    }
+                    enviarPaseo(jugador);
+                } catch (Exception e) {
+                    LunaEternal.LOG.warn("No se pudo anotar la visita al nicho {}: {}",
+                            nichoId, e.toString());
+                }
+            });
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(CobrarPremioSantuario.ID,
+                (carga, ctx) -> {
+            var jugador = ctx.player();
+            var server = jugador.getServer();
+            var perfil = jugador.getGameProfile();
+            LunaEternal.submit(() -> {
+                final String motivo;
+                final long id;
+                try {
+                    id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                    motivo = LunaEternal.santuario().cobrarPremio(id);
+                } catch (Exception e) {
+                    LunaEternal.LOG.error("Fallo cobrando el premio del santuario", e);
+                    return;
+                }
+                if (server == null) {
+                    return;
+                }
+                server.execute(() -> {
+                    if (jugador.isRemoved()) {
+                        return;
+                    }
+                    if (motivo != null) {
+                        jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                "pokepad.lunaeternal.santuario.error." + motivo), false);
+                    } else {
+                        // ⚠⚠ EL OBJETO SE ENTREGA DESPUES DEL COMMIT, y a mano si
+                        //    no cabe: un inventario NO ES UNA TABLA. La fila ya
+                        //    dice «cobrado», asi que lo unico que puede fallar
+                        //    aqui es que no quepa -- y entonces cae al suelo, que
+                        //    es lo que hace todo lo demas del proyecto.
+                        var pila = new net.minecraft.item.ItemStack(
+                                net.minecraft.registry.Registries.ITEM.get(
+                                        Identifier.of("cobblemon", "ultra_ball")));
+                        if (!pila.isEmpty() && !jugador.getInventory().insertStack(pila)) {
+                            jugador.dropItem(pila, false);
+                        }
+                        net.pokereport.luna.ui.Aviso.logro(jugador,
+                                "SANTUARIO",
+                                "Una Ultra Ball por honrar diez memoriales",
+                                "cobblemon:ultra_ball",
+                                net.minecraft.sound.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
+                                1.0f);
+                    }
+                    enviarPaseo(jugador);
                 });
             });
         });
@@ -6091,6 +6242,31 @@ public class Red implements ModInitializer {
      * cambia</b>, no por tick. Si algun dia hay cien jugadores, lo que hay que
      * partir es el paquete: la parte compartida una vez y la personal aparte.
      */
+    /** El paseo de un jugador: cuanto lleva hoy y si puede cobrar. */
+    public static void enviarPaseo(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        var server = jugador.getServer();
+        if (server == null) {
+            return;
+        }
+        var perfil = jugador.getGameProfile();
+        LunaEternal.submit(() -> {
+            final net.pokereport.luna.santuario.SantuarioService.Paseo p;
+            try {
+                long id = LunaEternal.players().resolve(perfil.getId(), perfil.getName());
+                p = LunaEternal.santuario().paseo(id);
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo leer el paseo del santuario", e);
+                return;
+            }
+            server.execute(() -> {
+                if (!jugador.isRemoved()) {
+                    ServerPlayNetworking.send(jugador, new EstadoPaseo(
+                            p.visitasHoy(), p.honradosHoy(), p.premioListo()));
+                }
+            });
+        });
+    }
+
     public static void enviarSantuarioATodos(net.minecraft.server.MinecraftServer servidor) {
         if (servidor == null) {
             return;

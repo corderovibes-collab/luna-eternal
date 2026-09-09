@@ -362,8 +362,14 @@ public class SantuarioScreen extends Screen {
                 Text.translatable("pokepad.lunaeternal.santuario.menu_nichos"),
                 Text.translatable("pokepad.lunaeternal.santuario.menu_nichos_desc"));
         
+        // ⚠⚠ EL PASEO VA EN EL MENU, que es la primera pantalla: lo que un
+        //    jugador necesita saber al abrir el Santuario es si le queda algo
+        //    por hacer hoy. Escondido detras de una pestaña, la Ultra Ball se
+        //    cobraria el dia que alguien la descubriera por casualidad.
+        dibujarPaseo(ctx, rx, ry, ty + cardH + 16);
+
         if (e.modera()) {
-            int my = ty + cardH + 16;
+            int my = ty + cardH + 16 + PASEO_ALTO + 12;
             int mw = PANT_W - 22;
             int pendN = 0;
             var pend = EstadoCliente.pendientes();
@@ -422,6 +428,77 @@ public class SantuarioScreen extends Screen {
     }
 
     // ---- COMPRA TU ESPACIO (2 tarjetas estilizadas) ------------------------
+
+    /** Lo que ocupa la banda del paseo. */
+    private static final int PASEO_ALTO = 84;
+
+    /** Donde cae el boton de cobrar la Ultra Ball, para dibujarlo y pulsarlo. */
+    private int[] botonPremio(int y) {
+        return new int[] {PANT_X + PANT_W - 11 - 260, y + 20, 260, 46};
+    }
+
+    /**
+     * LA BANDA DEL PASEO: lo que llevas hoy y la Ultra Ball.
+     *
+     * <h2>&#9888;&#9888; DOS BARRAS Y NO DOS NUMEROS</h2>
+     *
+     * «Memoriales vistos 7 de 10» dice lo mismo que una barra, pero hay que
+     * LEERLO. La barra dice de un vistazo si merece la pena darse otra vuelta,
+     * que es la unica decision que esta pantalla pide.
+     *
+     * <p>&#9888; Los topes (10 visitas, 10 honores) <b>se leen de `main`</b>
+     * --{@code PaseXp.VISITAS_DIA} y {@code SantuarioService.HONORES_PREMIO}--
+     * y no viajan ni se escriben aqui: dos copias del mismo numero acabarian
+     * enseñando «8 de 10» mientras el servidor cuenta hasta doce.
+     */
+    private void dibujarPaseo(DrawContext ctx, int rx, int ry, int y) {
+        var paseo = EstadoCliente.paseo();
+        int ax = PANT_X + 11, aw = PANT_W - 22;
+
+        ctx.fill(px(ax), py(y), px(ax + aw), py(y + PASEO_ALTO), CARD_FONDO);
+        marco(ctx, px(ax), py(y), pl(aw), pl(PASEO_ALTO), CARD_BORDE, Math.max(1, pl(2)));
+        ctx.fill(px(ax), py(y), px(ax + 6), py(y + PASEO_ALTO), ORO);
+
+        texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.paseo"),
+                ax + 20, y + 10, 20, TEXTO_BLANCO, false, CONTORNO_OSCURO);
+
+        int topeV = net.pokereport.luna.pase.PaseXp.VISITAS_DIA;
+        int topeH = net.pokereport.luna.santuario.SantuarioService.HONORES_PREMIO;
+        int vistos = paseo == null ? 0 : Math.min(paseo.visitas(), topeV);
+        int honrados = paseo == null ? 0 : Math.min(paseo.honrados(), topeH);
+
+        barraPaseo(ctx, ax + 20, y + 40, 300, vistos, topeV, AZUL_ZAFIRO,
+                Text.translatable("pokepad.lunaeternal.santuario.paseo_visitas",
+                        vistos, topeV));
+        barraPaseo(ctx, ax + 340, y + 40, 300, honrados, topeH, ROJO_CORAZON,
+                Text.translatable("pokepad.lunaeternal.santuario.paseo_honores",
+                        honrados, topeH));
+
+        int[] b = botonPremio(y);
+        boolean listo = paseo != null && paseo.premioListo();
+        boton(ctx, rx, ry, b[0], b[1], b[2], b[3],
+                listo
+                        ? Text.translatable("pokepad.lunaeternal.santuario.paseo_premio")
+                        : (honrados >= topeH
+                                ? Text.translatable("pokepad.lunaeternal.santuario.paseo_hecho")
+                                : Text.translatable("pokepad.lunaeternal.santuario.paseo_falta",
+                                        topeH - honrados)),
+                listo, ORO);
+    }
+
+    /** Una barra con su rotulo encima. */
+    private void barraPaseo(DrawContext ctx, int x, int y, int w, int hecho, int tope,
+                            int color, Text rotulo) {
+        texto(ctx, rotulo, x, y - 16, 15, TEXTO_SUAVE, false, 0);
+        ctx.fill(px(x), py(y), px(x + w), py(y + 14), CARD_SUBFONDO);
+        // ⚠ El ancho SE CALCULA sobre el tope, no sobre un 10 escrito aqui:
+        //   con el tope leido de `main`, cambiarlo mueve la barra sola.
+        int lleno = tope <= 0 ? 0 : (int) ((long) w * hecho / tope);
+        if (lleno > 0) {
+            ctx.fill(px(x), py(y), px(x + lleno), py(y + 14), color);
+        }
+        marco(ctx, px(x), py(y), pl(w), pl(14), CARD_BORDE, Math.max(1, pl(1)));
+    }
 
     private void dibujarCompra(DrawContext ctx, int rx, int ry) {
         var e = EstadoCliente.santuario();
@@ -666,6 +743,19 @@ public class SantuarioScreen extends Screen {
         return null;
     }
 
+    /**
+     * «7h 12m», y en la ultima hora «12m 30s».
+     *
+     * <p>⚠ Baja a segundos solo al final: un reloj que cuenta segundos durante
+     * veinticuatro horas es un reloj que nadie mira, y en la ultima hora es
+     * justo cuando importa.
+     */
+    private static String relojCorto(long segundos) {
+        long h = segundos / 3600;
+        long m = (segundos % 3600) / 60;
+        return h > 0 ? h + "h " + m + "m" : m + "m " + (segundos % 60) + "s";
+    }
+
     private void dibujarMio(DrawContext ctx, int rx, int ry) {
         var nicho = elAbierto();
         if (nicho == null) {
@@ -675,6 +765,23 @@ public class SantuarioScreen extends Screen {
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
         texto(ctx, Text.literal("EDITANDO: " + nicho.nombre()), ax + 8, PANT_Y + MARGEN - 4, 26,
                 TEXTO_BLANCO, false, CONTORNO_OSCURO);
+
+        // ⚠⚠ LO QUE LE QUEDA AL ALQUILER, EN LA PANTALLA DE SU DUEÑO. El campo
+        //    `segundos` viajaba desde que se escribio el sistema y NADIE lo
+        //    dibujaba: quien alquilaba por 24 h no tenia forma de saber cuanto
+        //    le quedaba. No daba error -- daba un alquiler que se acaba sin
+        //    avisar, y un nicho que un dia aparece vacio.
+        //    ⚠ Corre de verdad: `segundosNicho` resta lo que ha pasado desde que
+        //      llego el paquete, asi que el numero baja mirandolo.
+        if (!nicho.estado().permanente()) {
+            long seg = EstadoCliente.segundosNicho(nicho);
+            texto(ctx, seg > 0
+                            ? Text.translatable("pokepad.lunaeternal.santuario.queda",
+                                    relojCorto(seg))
+                            : Text.translatable("pokepad.lunaeternal.santuario.caducado"),
+                    ax + aw - 300, PANT_Y + MARGEN, 20,
+                    seg > 3600 ? TEXTO_CLARO : CARD_BORDE_ENCIMA, false, CONTORNO_OSCURO);
+        }
 
         if (!abierta.equals(rellenado)) {
             rellenado = abierta;
@@ -932,8 +1039,14 @@ public class SantuarioScreen extends Screen {
             return true;
         }
 
+        // ⚠ El paseo va ANTES que moderar: su boton esta encima en la pantalla,
+        //   y el orden del clic tiene que seguir al del dibujado.
+        if (clicPaseo(rx, ry, ty + cardH + 16)) {
+            return true;
+        }
+
         if (e.modera()) {
-            int my = ty + cardH + 16;
+            int my = ty + cardH + 16 + PASEO_ALTO + 12;
             int mw = PANT_W - 22;
             if (dentro(rx, ry, px(PANT_X + 11), py(my), pl(mw), pl(44))) {
                 sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
@@ -963,6 +1076,28 @@ public class SantuarioScreen extends Screen {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.2f);
             compraPermanente = true;
             irA(Vista.COMPRA_LISTA);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * El boton de cobrar la Ultra Ball.
+     *
+     * <p>&#9888; Lee {@code botonPremio}, la MISMA funcion que lo dibuja: si
+     * cada uno calculara su rectangulo, mover el panel dejaria el boton
+     * pulsable donde ya no esta -- y eso no da ningun error.
+     */
+    private boolean clicPaseo(int rx, int ry, int y) {
+        var paseo = EstadoCliente.paseo();
+        if (paseo == null || !paseo.premioListo()) {
+            return false;
+        }
+        int[] b = botonPremio(y);
+        if (dentro(rx, ry, px(b[0]), py(b[1]), pl(b[2]), pl(b[3]))) {
+            sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.2f);
+            ClientPlayNetworking.send(new Red.CobrarPremioSantuario(
+                    UUID.randomUUID().toString()));
             return true;
         }
         return false;

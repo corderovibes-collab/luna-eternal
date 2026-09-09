@@ -101,6 +101,41 @@ public final class SantuarioService {
     public static final int DESCRIPCION_MAX = 320;
 
     /**
+     * BORRA LOS HONORES DE UN NICHO. Se llama al cambiar la foto.
+     *
+     * <h2>⚠⚠ CAMBIAR LA FOTO REINICIA LOS HONORES (decision del usuario)</h2>
+     *
+     * Y tiene sentido de sobra: <b>la gente honra lo que ve</b>. Un memorial con
+     * ochocientos honores que cambia de foto se quedaria con ochocientos honores
+     * de una foto que ya no esta -- el numero seguiria ahi diciendo algo que
+     * dejo de ser verdad. Ademas cierra el hueco obvio: reunir honores con una
+     * foto y cambiarla despues por otra cosa.
+     *
+     * <p>⚠ Se borran <b>las dos</b> cosas: el total de la columna y las filas de
+     * {@code santuario_honor_click}. El autotest comprueba que el total iguala a
+     * la suma de clics mientras el nicho esta reclamado, asi que borrar solo una
+     * lo pondria rojo -- y con razon, porque seria el contador mintiendo.
+     *
+     * <p>⚠⚠ Lo que NO se toca es {@code santuario_honor}, que es el presupuesto
+     * DIARIO de quien honra. Borrarlo tambien dejaria que la misma gente
+     * volviera a honrar hoy: cambiar la foto seria una forma de pedir honores
+     * otra vez a los mismos, el mismo dia.
+     */
+    private static void reiniciarHonores(Connection c, String nichoId)
+            throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement(
+                "DELETE FROM santuario_honor_click WHERE nicho_id = ?")) {
+            ps.setString(1, nichoId);
+            ps.executeUpdate();
+        }
+        try (PreparedStatement ps = c.prepareStatement(
+                "UPDATE santuario SET honores = 0 WHERE nicho_id = ?")) {
+            ps.setString(1, nichoId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
      * Cuantos nichos puede reclamar un jugador segun su escalon.
      *
      * <p>⚠⚠ SE COMPARA CONTRA {@link Rank#escalon}, NO CONTRA UN NUMERO ESCRITO
@@ -935,6 +970,263 @@ public final class SantuarioService {
     public static final int PENDIENTES_MAX = 3;
 
     /** Donde viven los PNG en el servidor. El nombre es el sha1 del contenido. */
+    // =====================================================================
+    // EL PASEO POR EL SANTUARIO
+    //
+    // ⚠⚠⚠ LA XP POR VISITAR ES LA UNICA FUENTE DEL PASE QUE CRECE CON LO QUE
+    //    CONSTRUIMOS NOSOTROS, NO CON LO QUE JUEGA EL JUGADOR. Hay 341 nichos:
+    //    sin techo, «una vez cada 24 h por nicho» son 341 cobros al dia por
+    //    hacer clic derecho, y sube cada vez que el equipo construye mas.
+    //    El techo esta en CUANTAS VISITAS CUENTAN (PaseXp.VISITAS_DIA), no en
+    //    cuanto paga cada una: asi, mil nichos mas no mueven ni una XP.
+    //
+    // ⚠⚠ Y LO DECIDE EL SERVIDOR. El cliente solo dice «he abierto este»; si
+    //    un cliente modificado los mandara los 341 de golpe, se le concederian
+    //    diez y el resto se rechazan aqui (P6).
+    // =====================================================================
+
+    /** La ventana del paseo: 24 h, la misma que la de los honores. */
+    public static final long VENTANA_PASEO_MS = 24L * 3_600_000L;
+
+    /** Cuantos nichos hay que honrar para poder cobrar la Ultra Ball. */
+    public static final int HONORES_PREMIO = 10;
+
+    /** Lo que se lleva quien honra {@link #HONORES_PREMIO} nichos. */
+    public static final String PREMIO_ITEM = "cobblemon:ultra_ball";
+
+    /**
+     * Lo que hay que enseñar del paseo de un jugador.
+     *
+     * @param visitasHoy   memoriales que ya le han dado XP en la ventana
+     * @param honradosHoy  nichos distintos que ha honrado en la ventana
+     * @param premioListo  si puede cobrar la Ultra Ball ya
+     */
+    public record Paseo(int visitasHoy, int honradosHoy, boolean premioListo) {}
+
+    /**
+     * ABRIR EL MEMORIAL DE UN NICHO: da XP del pase, una vez cada 24 h por
+     * nicho y como mucho {@link net.pokereport.luna.pase.PaseXp#VISITAS_DIA}
+     * veces al dia.
+     *
+     * <p>⚠ Devuelve la XP que hay que conceder, o <b>0</b> si ya estaba visto
+     * hoy o si el jugador ya gasto sus visitas. Quien llama <b>no decide</b>:
+     * solo entrega lo que esto diga.
+     *
+     * @return la XP a conceder (0 si no toca)
+     */
+    public long verNicho(long playerId, String nichoId) throws SQLException {
+        if (!nichoValido(nichoId)) {
+            return 0;
+        }
+        long ahora = System.currentTimeMillis();
+        long desde = ahora - VENTANA_PASEO_MS;
+        try (Connection c = db.connection()) {
+            c.setAutoCommit(false);
+            try {
+                // ⚠⚠ La fila del nicho se bloquea ANTES de contar: dos clics
+                //    rapidos sobre dos memoriales distintos podrian leer los dos
+                //    «llevo 9» y cobrar los dos el decimo. Con FOR UPDATE sobre
+                //    la propia fila de visita, el segundo espera al primero.
+                long visto = 0;
+                boolean habia = false;
+                try (PreparedStatement ps = c.prepareStatement(
+                        "SELECT visto_ms FROM santuario_visita "
+                                + "WHERE player_id = ? AND nicho_id = ? FOR UPDATE")) {
+                    ps.setLong(1, playerId);
+                    ps.setString(2, nichoId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            habia = true;
+                            visto = rs.getLong(1);
+                        }
+                    }
+                }
+                if (habia && visto > desde) {
+                    c.rollback();
+                    return 0;   // ya cobrado hoy
+                }
+                int usadas;
+                try (PreparedStatement ps = c.prepareStatement(
+                        "SELECT COUNT(*) FROM santuario_visita "
+                                + "WHERE player_id = ? AND visto_ms > ?")) {
+                    ps.setLong(1, playerId);
+                    ps.setLong(2, desde);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        rs.next();
+                        usadas = rs.getInt(1);
+                    }
+                }
+                if (usadas >= net.pokereport.luna.pase.PaseXp.VISITAS_DIA) {
+                    c.rollback();
+                    return 0;   // techo del dia
+                }
+                try (PreparedStatement ps = c.prepareStatement(
+                        "INSERT INTO santuario_visita (player_id, nicho_id, visto_ms) "
+                                + "VALUES (?,?,?) ON DUPLICATE KEY UPDATE visto_ms = ?")) {
+                    ps.setLong(1, playerId);
+                    ps.setString(2, nichoId);
+                    ps.setLong(3, ahora);
+                    ps.setLong(4, ahora);
+                    ps.executeUpdate();
+                }
+                c.commit();
+                return net.pokereport.luna.pase.PaseXp.VISITA_NICHO;
+            } catch (SQLException e) {
+                c.rollback();
+                throw e;
+            } finally {
+                c.setAutoCommit(true);
+            }
+        }
+    }
+
+    /**
+     * El estado del paseo de un jugador.
+     *
+     * <p>⚠⚠ «Cuantos he honrado hoy» <b>se cuenta</b> sobre
+     * {@code santuario_honor} en vez de guardarse en un contador: esa tabla ya
+     * lleva una fila por (nicho, jugador) con su ventana. Un contador aparte
+     * seria un segundo sitio donde vive la misma verdad, y el dia que se
+     * desincronizara pagaria una Ultra Ball de mas o de menos <b>sin dar ningun
+     * error</b>.
+     */
+    public Paseo paseo(long playerId) throws SQLException {
+        long ahora = System.currentTimeMillis();
+        long desde = ahora - VENTANA_PASEO_MS;
+        try (Connection c = db.connection()) {
+            return paseo(c, playerId, ahora, desde);
+        }
+    }
+
+    private Paseo paseo(Connection c, long playerId, long ahora, long desde)
+            throws SQLException {
+        int visitas = 0;
+        try (PreparedStatement ps = c.prepareStatement(
+                "SELECT COUNT(*) FROM santuario_visita "
+                        + "WHERE player_id = ? AND visto_ms > ?")) {
+            ps.setLong(1, playerId);
+            ps.setLong(2, desde);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                visitas = rs.getInt(1);
+            }
+        }
+        int honrados = 0;
+        try (PreparedStatement ps = c.prepareStatement(
+                "SELECT COUNT(*) FROM santuario_honor "
+                        + "WHERE player_id = ? AND ventana_ms > ?")) {
+            ps.setLong(1, playerId);
+            ps.setLong(2, desde);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                honrados = rs.getInt(1);
+            }
+        }
+        long cobrado = 0;
+        try (PreparedStatement ps = c.prepareStatement(
+                "SELECT ultimo_ms FROM santuario_premio WHERE player_id = ?")) {
+            ps.setLong(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    cobrado = rs.getLong(1);
+                }
+            }
+        }
+        boolean listo = honrados >= HONORES_PREMIO && cobrado <= desde;
+        return new Paseo(visitas, honrados, listo);
+    }
+
+    /**
+     * COBRAR LA ULTRA BALL POR HABER HONRADO {@link #HONORES_PREMIO} NICHOS.
+     *
+     * <h2>⚠⚠⚠ ESTO ROMPE UNA REGLA ESCRITA, Y HAY QUE DECIRLO</h2>
+     *
+     * {@code santuario.md} §3.3 dice <i>«honrar NO da nada, a proposito: sin
+     * recompensa no hay incentivo de multicuenta (B-004)»</i>. <b>El usuario lo
+     * ha cambiado</b> (2026-09-09), asi que la regla cae -- pero el motivo por
+     * el que existia sigue vivo y hay que taparlo por otro lado:
+     *
+     * <ul>
+     *   <li>el premio va a <b>quien honra</b>, no al nicho, asi que
+     *       <b>el contador del memorial sigue significando lo mismo</b>: nadie
+     *       gana nada por que le honren;</li>
+     *   <li>y hay que honrar <b>diez nichos DISTINTOS</b> --el tope de honores
+     *       es 1 por nicho y dia-- asi que no se puede farmear sobre uno
+     *       propio.</li>
+     * </ul>
+     *
+     * <p>&#9888; Lo que si queda abierto: con 341 nichos y una cuenta nueva
+     * gratis (B-004), diez honores al dia son faciles. El precio de eso es
+     * <b>una Ultra Ball</b>, que se compra en la tienda: el techo del abuso es
+     * el valor de una Ultra Ball al dia por cuenta, y eso se acepto a sabiendas.
+     *
+     * <p>&#9888;&#9888; <b>LA CLAVE PRIMARIA ES QUIEN CORTA EL DOBLE COBRO</b>,
+     * no un {@code if}: la fila de {@code santuario_premio} es por jugador, y se
+     * escribe con la condicion de que lo cobrado sea viejo. Dos clics rapidos,
+     * un cliente modificado o un reintento fallan en la base.
+     *
+     * @return {@code null} si se cobro, o el motivo por el que no
+     */
+    public String cobrarPremio(long playerId) {
+        long ahora = System.currentTimeMillis();
+        long desde = ahora - VENTANA_PASEO_MS;
+        try (Connection c = db.connection()) {
+            c.setAutoCommit(false);
+            try {
+                var p = paseo(c, playerId, ahora, desde);
+                if (p.honradosHoy() < HONORES_PREMIO) {
+                    c.rollback();
+                    return "faltan_honores";
+                }
+                // ⚠ El UPDATE lleva la condicion dentro: si otra peticion cobro
+                //   entre el `paseo` y esto, afecta a CERO filas y se rechaza.
+                int filas;
+                try (PreparedStatement ps = c.prepareStatement(
+                        "INSERT INTO santuario_premio (player_id, ultimo_ms, cobrados) "
+                                + "VALUES (?,?,1) ON DUPLICATE KEY UPDATE "
+                                + "ultimo_ms = IF(ultimo_ms <= ?, ?, ultimo_ms), "
+                                + "cobrados = cobrados + IF(ultimo_ms <= ?, 1, 0)")) {
+                    ps.setLong(1, playerId);
+                    ps.setLong(2, ahora);
+                    ps.setLong(3, desde);
+                    ps.setLong(4, ahora);
+                    ps.setLong(5, desde);
+                    filas = ps.executeUpdate();
+                }
+                // ⚠⚠ MariaDB devuelve 1 al insertar y 2 al actualizar de verdad;
+                //    0 significa «no cambio nada», o sea que ya estaba cobrado.
+                if (filas == 0) {
+                    c.rollback();
+                    return "ya_cobrado";
+                }
+                // Y si el IF no movio la fecha, tampoco toca.
+                long ahoraGuardado = 0;
+                try (PreparedStatement ps = c.prepareStatement(
+                        "SELECT ultimo_ms FROM santuario_premio WHERE player_id = ?")) {
+                    ps.setLong(1, playerId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        rs.next();
+                        ahoraGuardado = rs.getLong(1);
+                    }
+                }
+                if (ahoraGuardado != ahora) {
+                    c.rollback();
+                    return "ya_cobrado";
+                }
+                c.commit();
+                return null;
+            } catch (SQLException e) {
+                c.rollback();
+                throw e;
+            } finally {
+                c.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            LunaEternal.LOG.error("No se pudo cobrar el premio del santuario", e);
+            return "error";
+        }
+    }
+
     public static java.nio.file.Path carpetaFotos() {
         return net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
                 .resolve("lunaeternal/fotos");
@@ -1229,6 +1521,10 @@ public final class SantuarioService {
                 ps.setString(3, nichoId);
                 ps.executeUpdate();
             }
+            // ⚠⚠ La foto cambia, los honores vuelven a cero: la gente honra LO
+            //    QUE VE. Va DENTRO de la misma transaccion que el cambio, o
+            //    habria un instante con la foto nueva y los honores viejos.
+            reiniciarHonores(c, nichoId);
             c.commit();
             return null;
         } catch (SQLException e) {
@@ -1290,6 +1586,9 @@ public final class SantuarioService {
                 ps.setString(2, nichoId);
                 ps.executeUpdate();
             }
+            // ⚠ Quitar tambien es cambiar: si no, el camino «quitar y poner
+            //   otra» conservaria los honores y seria el hueco que esto cierra.
+            reiniciarHonores(c, nichoId);
             c.commit();
             return null;
         } catch (SQLException e) {

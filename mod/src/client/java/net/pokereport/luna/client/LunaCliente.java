@@ -203,6 +203,9 @@ public class LunaCliente implements ClientModInitializer {
         //   honor ajeno cambia el total que tu pantalla dibuja, y el servidor
         //   lo reenvia. Aqui solo se guarda; la pantalla, si esta abierta, lo
         //   relee al refrescarse.
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoPaseo.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
+
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoSantuario.ID,
                 (carga, ctx) -> {
                     EstadoCliente.guardar(carga);

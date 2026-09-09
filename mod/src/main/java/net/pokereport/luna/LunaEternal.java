@@ -477,6 +477,15 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                         int n = santuario.caducar();
                         if (n > 0) {
                             LOG.info("Santuario: {} alquileres vencidos liberados", n);
+                            // ⚠⚠⚠ Y SE AVISA A TODO EL MUNDO, que es lo que
+                            //    faltaba: `caducar` borraba al dueño, la foto y
+                            //    los honores EN LA BASE, y el holograma seguia
+                            //    flotando en la pantalla de todos hasta que
+                            //    reabrieran el PokePad. Un alquiler que vence y
+                            //    no se ve vencer es un alquiler que parece no
+                            //    haber vencido. Es la leccion de los clanes, y
+                            //    aqui se me habia escapado el barrido.
+                            net.pokereport.luna.net.Red.enviarSantuarioATodos(server);
                         }
                         net.pokereport.luna.santuario.SantuarioProteccion.recargar();
                     } catch (Exception e) {

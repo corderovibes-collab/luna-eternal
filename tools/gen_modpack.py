@@ -274,6 +274,62 @@ SUBIR = {
         "Version 1.8.0-fabric-1.32.0 compatible con Cobblemon 1.8.0.",
     "cobblemon-capture-xp":
         "Version 1.8.0-fabric-1.3.0 compatible con Cobblemon 1.8.0.",
+    # ⚠⚠⚠ SE QUEDO FUERA DE LA RONDA DE COBBLEMON 1.8.0 (2026-09-08) Y TIRO EL
+    #    SERVIDOR TRES VECES EL 09-09. El pack fijaba la 2.3.3, de ABRIL, o sea
+    #    anterior a 1.8.0: su mixin `saveSpawnData` llama a
+    #    `SpawnDetail.getBucket()`, que 1.8.0 ya no tiene.
+    #
+    #      java.lang.NoSuchMethodError: ...SpawnDetail.getBucket()
+    #        at PokemonSpawnAction.handler$zmk000$cobblenav$saveSpawnData
+    #
+    #    ⚠⚠ Y ESTUVO UN DIA ENTERO SIN VERSE, porque solo revienta cuando un
+    #       Pokemon salvaje INTENTA APARECER cerca de un jugador. Quien probaba
+    #       estaba en la ciudadela y en el lobby --dimensiones de vacio, donde no
+    #       aparece nada-- asi que el pack parecia sano. Lo destapo la primera
+    #       cuenta nueva que piso un mundo con spawns.
+    #    ⚠ Es la misma familia que `cobblemonraiddens` con GraalVM: un addon sin
+    #      recompilar contra 1.8.0. La diferencia es que aquel se vio al arrancar
+    #      y este espera a que haya alguien jugando.
+    #    ⚠⚠ Y LA CLAVE ES "cobblemon-pokenav", NO "cobblenav": el jar se llama
+    #       cobblenav-fabric-2.3.3.jar pero SU SLUG EN MODRINTH ES OTRO. Escrito
+    #       mal, esta entrada NO HACE NADA Y NO AVISA -- es la trampa que ya
+    #       estaba documentada con repurposed-structures-fabric, y volvio a
+    #       morder aqui en el primer intento de este mismo arreglo.
+    "cobblemon-pokenav":
+        "Version 2.4.0+ compatible con Cobblemon 1.8.0. La 2.3.3 que fijaba el "
+        "pack es de ABRIL y crashea el servidor al aparecer un Pokemon salvaje.",
+
+    # ⚠⚠⚠ LOS CUATRO DE ABAJO SALIERON DE `comprobar_mods.py`, NO DE ACORDARSE.
+    #    Al arreglar cobblenav se pregunto por TODOS los addons de Cobblemon del
+    #    pack, y habia CUATRO MAS atrasados -- tres de ellos publicaron version
+    #    nueva el 6, el 7 y el 8 de septiembre, o sea LA MISMA SEMANA en que
+    #    salio Cobblemon 1.8.0. Son exactamente la misma mina que cobblenav:
+    #    cargan bien, no dan error al arrancar, y esperan a que alguien juegue.
+    #    ⚠ Y sus slugs NO son sus nombres de jar, otra vez: `catchrate-display`
+    #      es `catch-rate-display`, `catchindicator` es `catch-indicator` y
+    #      `MoreCobblemonTweaks` es `more-cobblemon-tweaks`. Por eso la guarda
+    #      de mas abajo aborta si una clave no casa con nada.
+    # ⚠⚠⚠ cobblemon-additions SE QUEDA EN LA 4.1.6 A PROPOSITO, y NO es un
+    #    descuido: su 4.3.0 EXIGE cobbledollars, que el usuario mando quitar
+    #    el 2026-09-04 --«ganas dinero y eso con el sistema de economia que
+    #    tenemos no debe de estar»--. Subirlo reintroduciria una SEGUNDA
+    #    economia por la puerta de atras, que es justo lo que D-040 y la
+    #    exclusion de CobbleDollars evitan.
+    #    Lo caza la comprobacion de dependencias: «necesita cobbledollars y NO
+    #    esta en el pack».
+    #    ⚠⚠ QUEDA UNA DECISION ABIERTA PARA EL USUARIO, y las dos opciones
+    #       quitan algo: o se excluye  --que ademas mete
+    #       spawns de Gen 3-8 que el datapack de generaciones tiene que apagar
+    #       uno a uno (D-017)-- o se acepta CobbleDollars de vuelta.
+    #       Mientras tanto se queda como estaba: es lo unico que no cambia nada
+    #       sin permiso.
+    "catch-rate-display":
+        "2.11.0, publicada el 2026-09-06 -- el mismo dia que Cobblemon 1.8.0.",
+    "catch-indicator":
+        "3.0, publicada el 2026-09-07. Salto de version MAYOR justo despues de "
+        "Cobblemon 1.8.0, que es la señal de que la anterior no vale.",
+    "more-cobblemon-tweaks":
+        "1.3.4, publicada el 2026-09-08 para Cobblemon 1.8.0.",
 }
 
 # Overrides de la base que NO se copian.
@@ -478,6 +534,10 @@ def loader_estable():
 # la unica forma de servir un mod cuyo proyecto desaparece de Modrinth, y
 # `fijado()` comprueba la URL en cada publicacion porque un manifiesto que
 # apunta a un 404 deja tirado a todo el que actualice.
+# Lo que SUBIR y EXCLUIDOS han llegado a casar de verdad. Ver la guarda.
+_SUBIR_VISTOS: set[str] = set()
+_EXCLUIDOS_VISTOS: set[str] = set()
+
 FIJADOS = {}
 
 # ---------------------------------------------------------------------------
@@ -630,16 +690,21 @@ def base():
         for f in por_id[p["id"]]:
             f["slug"] = p["slug"]
 
+    _SUBIR_VISTOS.clear()
+    _EXCLUIDOS_VISTOS.clear()
     ficheros = []
     for f in idx["files"]:
         slug = f.get("slug")
         if MARCA_DESACTIVADO in f["path"]:
             continue
+        if slug in EXCLUIDOS:
+            _EXCLUIDOS_VISTOS.add(slug)
         motivo = EXCLUIDOS.get(slug)
         if motivo:
             print(f"  FUERA  {slug:<22} {motivo[:64]}...")
             continue
         if slug in SUBIR:
+            _SUBIR_VISTOS.add(slug)
             v = version_de(slug)
             nuevo = v["files"][0]
             if nuevo["filename"] != f["path"].split("/")[-1]:
@@ -651,6 +716,51 @@ def base():
                      "env": f["env"], "downloads": [nuevo["url"]],
                      "fileSize": nuevo["size"], "slug": slug}
         ficheros.append(f)
+
+    # ⚠⚠⚠ UNA CLAVE QUE NO CASA CON NADA ES UN ARREGLO QUE NO EXISTE, Y HASTA
+    #    HOY NO AVISABA. La primera version del arreglo de cobblenav escribio
+    #    "cobblenav" --el nombre del JAR-- y su slug de Modrinth es
+    #    "cobblemon-pokenav": la entrada se quedo ahi sin hacer NADA, el
+    #    generador dijo que todo bien, y el servidor habria seguido crasheando.
+    #    Ya estaba documentado con `repurposed-structures-fabric` («sin el
+    #    sufijo la exclusion NO SURTE EFECTO Y NO AVISA») y aun asi volvio a
+    #    morder, porque un aviso escrito en un comentario no comprueba nada.
+    #    ⚠ Se ABORTA en vez de avisar: el caso real es alguien arreglando un
+    #      crasheo con prisa, y un aviso mas entre cincuenta lineas de salida es
+    #      un aviso que nadie lee.
+    # ⚠⚠ LOS DOS CASOS NO SON IGUALES, y confundirlos haria inutil la guarda.
+    #
+    #    SUBIR huerfano     = crees que actualizaste un mod y NO LO HICISTE. El
+    #                         mod se queda en la version vieja, el generador dice
+    #                         que todo bien, y el crasheo que ibas a arreglar
+    #                         sigue vivo. No hay ningun motivo legitimo para
+    #                         tener uno: SE ABORTA.
+    #    EXCLUIDOS huerfano = excluyes algo que la base de HOY no trae. Casi
+    #                         siempre es una RED DE SEGURIDAD deliberada --
+    #                         `stendhal` y `bisect-mod` son del pack oficial de
+    #                         Cobblemon, y CobbleVerse no los trae; si algun dia
+    #                         los trajera, la entrada los cortaria sola. Borrarla
+    #                         perderia esa proteccion. SE AVISA Y SE SIGUE.
+    #
+    #    ⚠ Pero se avisa igual, porque tambien puede ser un slug mal escrito, y
+    #      desde fuera los dos casos se ven idénticos.
+    sobran_excl = sorted(set(EXCLUIDOS) - _EXCLUIDOS_VISTOS)
+    if sobran_excl:
+        print("\n  EXCLUIDOS que no casan con nada de la base de hoy:")
+        for c in sobran_excl:
+            print(f"    {c}   (red de seguridad, o un slug mal escrito)")
+
+    sobran_subir = sorted(set(SUBIR) - _SUBIR_VISTOS)
+    if sobran_subir:
+        print("\n  *** HAY CLAVES DE `SUBIR` QUE NO CASAN CON NINGUN MOD ***")
+        for c in sobran_subir:
+            print(f"    {c}")
+        raise SystemExit(
+            "\n  No se genera nada. Una clave mal escrita NO HACE NADA y no se "
+            "queja:\n  el mod se queda en la version vieja y el fallo que ibas "
+            "a arreglar sigue vivo.\n  Es lo que paso al arreglar cobblenav: se "
+            "escribio el nombre del JAR y el slug\n  de Modrinth era otro.  "
+            "Comprueba el SLUG -- casi nunca es el nombre del jar.")
 
     overrides = [n for n in z.namelist()
                  if n.startswith("overrides/") and not n.endswith("/")

@@ -326,6 +326,56 @@ public final class Puerta {
         return LunaDimensions.LOBBY.equals(destino);
     }
 
+    /**
+     * QUIEN NO HA CRUZADO ESTA EN EL LOBBY. SIEMPRE, NO SOLO AL ENTRAR.
+     *
+     * <h2>&#9888;&#9888;&#9888; SIN ESTO, EASYAUTH SE SALTA LA PUERTA SIN
+     * QUERER</h2>
+     *
+     * EasyAuth con {@code hide-player-coords} activado <b>apunta donde estabas,
+     * te retiene en su spawn, y te devuelve a tu sitio al hacer
+     * {@code /login}</b>. Para un veterano es justo lo que se quiere. Para un
+     * jugador nuevo es un desastre silencioso: entra al mundo (spawn de
+     * vainilla, o sea el Hogar), la puerta lo manda al lobby, se registra... y
+     * <b>EasyAuth lo devuelve al Hogar</b>, que es «donde estaba». Sin ningun
+     * error, y sin haber pasado por el guardian.
+     *
+     * <p>No se arregla pidiendole a EasyAuth que avise --no expone nada para
+     * eso-- y tampoco habria que intentarlo: <b>encadenar nuestra puerta a los
+     * eventos de otro mod la rompe el dia que ese mod cambie</b>. Se arregla
+     * dejando de tratar la puerta como un momento y tratandola como <b>una
+     * verdad que se mantiene</b>: <i>si no has cruzado, estas en el lobby</i>.
+     *
+     * <p>&#9888;&#9888; Y de propina cubre todo lo demas que puede sacar a
+     * alguien de ahi sin pasar por {@code Traslado}: un operador con
+     * {@code /tp}, otro mod, una cama, un portal. La lista de formas de mover a
+     * un jugador <b>no se puede enumerar</b>; el estado correcto, si.
+     *
+     * <p>&#9888; Cuesta un recorrido de la lista de conectados por segundo y una
+     * lectura de un mapa en memoria por cabeza. Con 200 dentro eso es ruido.
+     */
+    public static void vigilar(net.minecraft.server.MinecraftServer servidor) {
+        if (!activa) {
+            return;
+        }
+        var svc = LunaEternal.puerta();
+        if (svc == null) {
+            return;
+        }
+        for (ServerPlayerEntity j : servidor.getPlayerManager().getPlayerList()) {
+            Boolean cruzada = svc.cruzadaEnCache(j.getUuid());
+            // ⚠ `null` es «aun no lo se» y se deja en paz: mover a un veterano
+            //   porque su consulta iba lenta es el error caro.
+            if (cruzada == null || cruzada) {
+                continue;
+            }
+            if (enElLobby(j)) {
+                continue;
+            }
+            TravelService.travel(j, LunaDimensions.LOBBY, "el Lobby");
+        }
+    }
+
     // ------------------------------------------------------------ cruzar
 
     /**

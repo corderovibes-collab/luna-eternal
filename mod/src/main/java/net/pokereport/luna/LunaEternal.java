@@ -510,6 +510,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // cambia cuando la gente se mueve, y cuando se mueve vanilla vuelve
             // a preguntar por su cuenta.
             net.pokereport.luna.world.VisibilidadJugadores.tick(server);
+            // La puerta no es un momento, es una verdad que se mantiene: quien
+            // no ha cruzado esta en el lobby. Ver `Puerta.vigilar`.
+            net.pokereport.luna.puerta.Puerta.vigilar(server);
             // El contador de conectados cambia con cada entrada y salida;
             // recalcularlo aquí evita tener que engancharlo a cada evento.
             Tablist.updateHeaderFooter(server);

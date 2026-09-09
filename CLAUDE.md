@@ -117,6 +117,45 @@ recompensas de temporada e interfaces completas en el PokePad. Autotest en vivo 
 > el maximo de un nombre de Minecraft. Por eso los otros se llaman `__autotest_1`
 > y `__autotest_2` y no algo descriptivo.
 >
+> ⚠⚠⚠ **EASYAUTH SE SALTABA LA PUERTA SIN QUERER, Y SOLO SE VIO LEYENDO SU
+> CONFIG.** Con `hide-player-coords=true`, EasyAuth **apunta donde estabas, te
+> retiene en su spawn, y te devuelve a tu sitio al hacer `/login`**. Para un
+> veterano es exactamente lo que se quiere. Para un jugador **nuevo** es un
+> desastre mudo: entra (spawn de vainilla = el Hogar), la puerta lo manda al
+> lobby, se registra... y **EasyAuth lo devuelve al Hogar**, que es «donde
+> estaba». Sin error, y sin haber pasado por el guardian.
+> **La puerta deja de ser un momento y pasa a ser un INVARIANTE**: *si no has
+> cruzado, estas en el lobby*, comprobado **cada segundo**. No se arregla
+> pidiendole a EasyAuth que avise --no expone nada para eso, y encadenar nuestra
+> puerta a los eventos de otro mod la rompe el dia que ese mod cambie--.
+> ⚠⚠ Y de propina cubre **todo lo demas que puede sacar a alguien de ahi sin
+> pasar por `Traslado`**: un operador con `/tp`, otro mod, una cama, un portal.
+> **La lista de formas de mover a un jugador no se puede enumerar; el estado
+> correcto, si.**
+>
+> **LA CONFIG DE EASYAUTH (2026-09-09), con el servidor PARADO:**
+> ```
+> session-timeout    86400 -> 900      15 min (peticion del usuario)
+> hide-player-coords false -> true     sin esto `world-spawn` no se usa PARA NADA
+> world-spawn        overworld -> lunaeternal:lobby 0.5 64 0.5
+> ```
+> ⚠⚠ **PARAR, SUBIR, ARRANCAR.** EasyAuth carga su config al arrancar y la
+> reescribe al apagarse: subirla en caliente y reiniciar hace que la parada
+> vuelque su copia vieja encima. **No da ningun error -- gana el que escribe el
+> ultimo.** Ya mordio dos veces con ClaimBlocks. Verificado byte a byte **despues**
+> del arranque, que es la unica comprobacion que vale.
+> ⚠⚠ **Las coordenadas del lobby estan en DOS SITIOS** --`TravelService.SPAWN_LOBBY`
+> y la config de EasyAuth-- y **no hay nada que las obligue a coincidir**. Si
+> dejaran de hacerlo, EasyAuth soltaria al jugador en un punto del lobby y la
+> puerta en otro: no daria error, daria gente apareciendo fuera de la
+> construccion. Al mover el lobby hay que tocar **los dos**.
+> ⚠ `vanish-until-auth=true` pide el mod **Vanish**, que no esta instalado, asi
+> que hoy no hace nada -- **y no hace falta**: el recorte de visibilidad ya deja
+> el lobby a cero jugadores visibles.
+>
+> ✅ **EN VIVO (2026-09-09, 14:02):** `Done (30,397 s)` · **AUTOTEST 695/695** ·
+> EasyAuth 3.4.4 con la config nueva verificada tras el arranque.
+>
 > ✅ **EN VIVO (2026-09-09, 13:49):** `Done (29,816 s)` · V036 aplicada ·
 > **AUTOTEST 695/695** · manifiesto `4832a971ef` · **la puerta ARRANCA APAGADA**.
 > ⚠ **FALTA, y es de la mano del usuario, EN ESTE ORDEN:** construir el lobby ·

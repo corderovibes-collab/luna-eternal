@@ -1555,14 +1555,32 @@ Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031)
                  ⚠ solo hizo falta PUBLICAR: la altura la dibuja el cliente y el
                    servidor manda la misma posicion, asi que no se reinicio a
                    nadie -- manifiesto efe8e0d6d6
-              ⚠⚠⚠ Y CON 341 NICHOS LA PANTALLA SON 86 PAGINAS DE CUATRO FILAS.
-                 No es un fallo --pagina bien, y `filasCaben` ya se calcula--
-                 pero elegir nicho a base de 86 clics de flecha no es elegir. Lo
-                 que hace falta es lo que ya resolvio la tienda con 620
-                 articulos: UN BUSCADOR que filtre EN EL CLIENTE (un servidor no
-                 tiene idioma) y que EL CLIC RECORRA LO FILTRADO, no la lista
-                 entera -- si leyera la completa, con el filtro puesto se
-                 alquilaria OTRO nicho del que se ve, y cobrado
+              CON 341 NICHOS HAY BUSCADOR (2026-09-08, manifiesto dd485a5880)
+                 elegir eran 86 PAGINAS de cuatro filas. Se escribe y se filtra,
+                 igual que la tienda al pasar de 9 articulos a 620
+              ⚠⚠⚠ Y LO QUE DE VERDAD HABIA QUE ARREGLAR ERA QUE LA LISTA SE
+                 CONSTRUIA EN CINCO SITIOS: dibujado, clic y contador de
+                 paginas, por duplicado entre las dos vistas. Mientras el filtro
+                 era solo «no tiene dueño» daba igual --los cinco decian lo
+                 mismo--. EN CUANTO ENTRA EL BUSCADOR DEJA DE DAR IGUAL: si el
+                 dibujado filtrara y el clic no, con texto escrito ALQUILARIAS UN
+                 NICHO DISTINTO DEL QUE VES, Y COBRADO
+                 no se arregla con una comprobacion: se arregla haciendo que NO
+                 HAYA DOS LISTAS (`libres()` y `ocupados()`), y de paso se lleva
+                 el NPE de `clicNichos` -- una lista vacia no es nula
+              ⚠⚠ EL CONTADOR DE PAGINAS CUENTA LO FILTRADO: con el total, el
+                 buscador dejaria paginas vacias detras -- flechas que se
+                 encienden y no llevan a ningun sitio
+              ⚠⚠ Y ESCRIBIR VUELVE A LA PAGINA 1. Sin eso, teclear con la pagina
+                 40 abierta deja LA PANTALLA EN BLANCO, y eso no da ningun error:
+                 da una lista vacia que parece «no hay ninguno»
+              ⚠⚠ «NO HAY LIBRES» Y «TU BUSQUEDA NO ENCUENTRA NINGUNO» SON COSAS
+                 DISTINTAS y se dicen distinto: con el segundo, borrar el texto
+                 arregla el problema; con el primero no hay nada que hacer
+              ⚠ busca por nombre, id, DUEÑO y titulo --«?donde esta el de
+                fulano?» es la pregunta que recibe un memorial-- y normaliza
+                acentos. Y enseña «12 / 341»: saber que la lista esta recortada
+                es la diferencia entre «no hay» y «no encuentro»
               ⚠ el paquete de estado pasa a ~15 KB con los 341: el 1,5 % del tope
                 de un custom payload, asi que ahi no hay problema
               ---- el despliegue anterior del mismo dia -----------------

@@ -122,6 +122,42 @@ EXCLUIDOS = {
         "dependencia de cobbledollars y sin generacion de estructuras. Viaja "
         "por PROPIOS, igual que cobblemon-cards",
 
+    # --- viaje rapido: el del servidor es NUESTRO ---------------------------
+    #
+    # Peticion del usuario, 2026-09-09. Y encaja con una decision que este
+    # proyecto ya ha tomado tres veces: NO DOS SISTEMAS PARA LO MISMO.
+    # Waystones es viaje rapido por bloques que el jugador coloca y craftea
+    # (45 bloques, 54 recetas). Aqui el viaje ya existe y esta disenado:
+    #   Viajes    las paradas de la ciudadela, y SOLO dentro de ella -- «si se
+    #             pudieran usar desde el salvaje serian un volver a casa
+    #             instantaneo, y salir a explorar dejaria de tener riesgo»
+    #   Explorar  el cambio de mundo
+    # Waystones se salta esa regla entera: pones una en el salvaje y ya tienes
+    # el regreso instantaneo que Viajes evita a proposito. Es el mismo motivo
+    # por el que se quito CobbleDollars (dos economias) y por el que D-040 no
+    # adopto un mod de clanes: lo que el servidor decide, lo decide el servidor.
+    #
+    # ⚠⚠ REGISTRA 45 BLOQUES, asi que la retirada va SERVIDOR PRIMERO. Al reves
+    #    el servidor manda entradas de registro que el cliente ya no conoce y
+    #    NADIE PUEDE ENTRAR.
+    # ⚠ Y lo que este colocado en el mundo SE CONVIERTE EN AIRE. Es la unica
+    #   perdida real de quitarlo, y es irreversible para esos bloques.
+    "waystones":
+        "Viaje rapido paralelo al nuestro. Viajes solo funciona DENTRO de la "
+        "ciudadela a proposito --fuera seria un regreso instantaneo y explorar "
+        "dejaria de tener riesgo-- y una waystone en el salvaje se salta esa "
+        "regla. Peticion del usuario (2026-09-09)",
+
+    # LO SERVIMOS NOSOTROS, MAS NUEVO, Y TIENE QUE SER ASI (D-030): Euphoria
+    # solo se puede obtener ejecutando SU parcheador, no copiando el resultado.
+    # CobbleVerse acabo metiendolo en su pack (1.9.3) y nosotros lo añadimos por
+    # EXTRA (1.10.0): sin esta exclusion el cliente se llevaba LOS DOS y Fabric
+    # no arranca con dos ids iguales. Lo caza la guarda de `construir`.
+    "euphoria-patches":
+        "Lo añadimos nosotros por EXTRA y mas nuevo (D-030: tiene que venir por "
+        "su canal oficial, como parcheador). Con el de la base tambien, el "
+        "cliente tendria DOS jars del mismo mod",
+
     "huge-structure-blocks":
         "Solo existe para colocar las estructuras gigantes de Legendary "
         "Monuments. Sin ellas no pinta nada",
@@ -1014,10 +1050,35 @@ def construir(nombre_pack, extra, sufijo, resumen):
     ficheros_base, overrides, z = base()
     ficheros, total = [], 0
 
+    # LO QUE TRAE LA BASE, PARA NO AÑADIRLO DOS VECES. Ver la guarda de abajo.
+    slugs_base = {f.get("slug") for f in ficheros_base if f.get("slug")}
+
     for f in ficheros_base:
         total += f["fileSize"]
         ficheros.append({k: f[k] for k in
                          ("path", "hashes", "env", "downloads", "fileSize")})
+
+    # UN EXTRA QUE YA ESTA EN LA BASE SON DOS JARS DEL MISMO MOD, Y FABRIC
+    # NO ARRANCA CON DOS IDS IGUALES: "Duplicate mod id".
+    #
+    # Paso de verdad con `euphoria-patches`: lo añadimos nosotros por D-030 --y
+    # tiene que seguir viniendo por su canal oficial-- pero CobbleVerse acabo
+    # metiendolo tambien en su pack. El manifiesto salio con la 1.9.3 de ellos Y
+    # la 1.10.0 nuestra, las dos activas.
+    #
+    # No se resuelve solo --ni quitando el extra ni pisando la base a ciegas--
+    # porque las dos salidas son decisiones: quiza queremos SU version, o quiza
+    # la nuestra. Se para y se elige, que es lo que hace EXCLUIDOS.
+    chocan = sorted(set(extra) & slugs_base)
+    if chocan:
+        print("\n  *** UN EXTRA YA VIENE EN LA BASE ***")
+        for c in chocan:
+            print(f"    {c}")
+        raise SystemExit(
+            "\n  No se genera nada. El cliente recibiria DOS JARS del "
+            "mismo mod\n  y Fabric no arranca con dos ids iguales.\n"
+            "  Decide: si vale la version de la base, quita el slug de "
+            "EXTRA;\n  si quieres la nuestra, mete el slug en EXCLUIDOS.")
 
     for slug in extra:
         v = version_de(slug)

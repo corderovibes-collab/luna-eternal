@@ -3553,12 +3553,26 @@ public final class AutoTest {
         //       `main`, el dibujado en `client`) y nada les obliga a cuadrar.
         //       Aqui se cruzan: si alguien sube el tamaño de la foto o el
         //       pedestal, esto se pone rojo antes de que salga en una captura.
-        double centroFoto = net.pokereport.luna.santuario.NichoEditor.ALTURA_PROYECTOR + 1.75;
-        double medioAlto = 2.4 / 2;
+        //    ⚠⚠⚠ Y ESTOS NUMEROS SE LEEN, NO SE COPIAN. La primera version de
+        //       esta prueba tenia el 1,75 y el 2,4 ESCRITOS A MANO aqui mientras
+        //       el dibujado los tenia en el cliente: al bajar la foto un dia
+        //       despues, la prueba habria seguido midiendo la altura vieja y
+        //       habria dicho «cabe» sobre una foto que ya no esta ahi. Una
+        //       comprobacion que mide otra cosa da CONFIANZA FALSA, que es peor
+        //       que no tenerla -- es la leccion del autotest de los gimnasios
+        //       que comparaba dos ejes distintos.
         check("HOLOGRAFICA: LA FOTO CABE ENTERA DENTRO DE SU NICHO",
-                centroFoto - medioAlto >= 0
-                        && centroFoto + medioAlto
+                net.pokereport.luna.santuario.Holograma.bordeInferior() >= 0
+                        && net.pokereport.luna.santuario.Holograma.bordeSuperior()
                                 <= net.pokereport.luna.santuario.NichoEditor.ALTO - 1);
+
+        // ⚠ Y que no quede pegada al suelo ni al dintel: centrada en el hueco es
+        //   lo que el usuario pidio mirando la captura. Con medio bloque de aire
+        //   por arriba y por abajo, «un poquito mas» ya no cabe sin avisar.
+        check("holografica: la foto deja aire arriba y abajo",
+                net.pokereport.luna.santuario.Holograma.bordeInferior() >= 0.5
+                        && net.pokereport.luna.santuario.Holograma.bordeSuperior()
+                                <= net.pokereport.luna.santuario.NichoEditor.ALTO - 1.2);
 
         // ⚠ Y `recolocar` deja el proyector donde lo pondria una captura nueva:
         //   es lo que hace que los nichos viejos se puedan arreglar sin volver a

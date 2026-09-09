@@ -48,48 +48,14 @@ import net.pokereport.luna.net.Red;
  */
 public final class HologramaSantuario {
 
-    /**
-     * CUANTO MIDE DE ALTO LA FOTO, en bloques.
-     *
-     * <h2>&#9888;&#9888; ERA 1,6 Y SE VEIA PEQUEÑA (peticion del usuario)</h2>
-     *
-     * Un nicho construido es un hueco de 3 de ancho: una foto de 1,6 dejaba
-     * medio hueco vacio alrededor y desde el pasillo no se distinguia de que
-     * era. A 2,4 llena el nicho sin tocar sus paredes -- una apaisada 16:9 mide
-     * 4,27 de ancho, asi que <b>se sale del 3x3 a proposito</b>: sobresalir por
-     * delante es lo que la hace visible desde lejos, y por detras no hay nada
-     * que tapar porque la pared queda a su espalda.
-     */
-    private static final float ALTO = 2.4f;
-
-    /**
-     * A que altura sobre el proyector flota su CENTRO.
-     *
-     * <p>&#9888; Sube de 1,55 a 1,75 para que, al crecer la foto, <b>el borde de
-     * abajo se quede donde estaba</b> (0,75 sobre el pedestal) y todo lo que
-     * gana lo gane hacia arriba. Bajar el centro con una foto mas alta la
-     * habria metido dentro del pedestal.
-     */
-    private static final float ALTURA = 1.75f;
-
-    /**
-     * CUANTO SE SEPARA DE LA PARED DEL FONDO.
-     *
-     * <h2>&#9888;&#9888;&#9888; ESTO ES «LOS HOLOGRAMAS ESTAN MAL POSICIONADOS»</h2>
-     *
-     * El quad se dibujaba <b>centrado en el bloque del proyector</b>, y el
-     * proyector de un nicho esta pegado a su pared del fondo. Como la foto
-     * <b>gira para mirar a la camara</b>, en cuanto uno se pone de lado la mitad
-     * del quad barre hacia dentro del muro y <b>desaparece dentro de la pared</b>:
-     * se ve un trozo de foto recortado, y parece un fallo de dibujado.
-     *
-     * <p>La foto se adelanta 0,8 hacia donde el nicho se abre, asi que gira en
-     * el aire del hueco y no dentro de la piedra. <b>La direccion la manda el
-     * servidor</b> ({@code PosNicho.frente}), medida en bloques: aqui no se
-     * deduce nada, porque el teletransporte usa esa misma direccion y las dos
-     * tienen que estar de acuerdo.
-     */
-    private static final double SALIENTE = 0.8;
+    // ⚠⚠⚠ LAS MEDIDAS VIVEN EN `santuario/Holograma`, EN `main`, Y NO AQUI.
+    //    Estaban aqui, y su copia estaba TAMBIEN en el autotest escrita a mano.
+    //    Eso es la forma del fallo de las tres listas de medallas: al bajar la
+    //    foto --lo que pidio el usuario al dia siguiente-- la prueba habria
+    //    seguido midiendo la altura vieja y habria dicho «cabe» sobre una foto
+    //    que ya no esta ahi, sin dar ningun error. Se puede compartir porque
+    //    cliente y servidor acaban EN EL MISMO JAR.
+    private static final float ALTO = net.pokereport.luna.santuario.Holograma.ALTO;
 
     private HologramaSantuario() {}
 
@@ -107,9 +73,11 @@ public final class HologramaSantuario {
     private static Vec3d centroDe(Red.PosNicho pos) {
         var frente = net.pokereport.luna.santuario.Orientacion.porIndice(pos.frente());
         return new Vec3d(
-                pos.x() + 0.5 + frente.getOffsetX() * SALIENTE,
-                pos.y() + ALTURA,
-                pos.z() + 0.5 + frente.getOffsetZ() * SALIENTE);
+                pos.x() + 0.5
+                        + frente.getOffsetX() * net.pokereport.luna.santuario.Holograma.SALIENTE,
+                pos.y() + net.pokereport.luna.santuario.Holograma.ALTURA,
+                pos.z() + 0.5
+                        + frente.getOffsetZ() * net.pokereport.luna.santuario.Holograma.SALIENTE);
     }
 
     /** True si el boton de usar estaba pulsado en el tick anterior: el flanco

@@ -126,6 +126,32 @@ public class SantuarioScreen extends Screen {
     private boolean compraPermanente = false;
     private TextFieldWidget campoTitulo;
     private TextFieldWidget campoHistoria;
+
+    /**
+     * EL BUSCADOR DE LAS LISTAS DE NICHOS.
+     *
+     * <h2>&#9888;&#9888;&#9888; CON 341 NICHOS, ELEGIR ERAN 86 PAGINAS</h2>
+     *
+     * La paginacion funcionaba --y {@code filasCaben} se calcula-- pero cuatro
+     * filas por pagina sobre 341 nichos es <b>ochenta y seis clics de flecha</b>
+     * para llegar al ultimo. Es el mismo problema que tuvo la tienda al pasar de
+     * 9 articulos a 620, y se arregla igual: se escribe y se filtra.
+     *
+     * <p>&#9888;&#9888; <b>EL FILTRO ES DEL CLIENTE Y EL TEXTO NO VIAJA</b>, como
+     * en el mercado y en la tienda: un servidor no tiene idioma, y el nombre que
+     * el jugador lee lo pone su cliente.
+     */
+    private TextFieldWidget campoBuscar;
+
+    /**
+     * Lo que decia el buscador la ultima vez que se dibujo.
+     *
+     * <p>&#9888;&#9888; Sin esto, escribir con la pagina 40 abierta deja
+     * <b>la pantalla en blanco</b>: el filtro reduce la lista a dos paginas y
+     * {@code pagina} se queda en 40, o sea mas alla del final. No da ningun
+     * error -- da una lista vacia que parece «no hay ninguno».
+     */
+    private String filtroAnterior = "";
     private String rellenado = "";
     private String vistoSubida = "";
 
@@ -139,8 +165,10 @@ public class SantuarioScreen extends Screen {
         recalcular();
         campoTitulo = campo(32, textoDe(campoTitulo));
         campoHistoria = campo(320, textoDe(campoHistoria));
+        campoBuscar = campo(24, textoDe(campoBuscar));
         addSelectableChild(campoTitulo);
         addSelectableChild(campoHistoria);
+        addSelectableChild(campoBuscar);
         ClientPlayNetworking.send(new Red.PedirSantuario());
         ClientPlayNetworking.send(new Red.PedirFotos());
         ClientPlayNetworking.send(new Red.PedirPendientes());
@@ -470,9 +498,7 @@ public class SantuarioScreen extends Screen {
             centrado(ctx, "pokepad.lunaeternal.cargando", 24, TEXTO_SUAVE, 0);
             return;
         }
-        var libres = e.nichos().stream()
-                .filter(n -> n.estado().dueno().isEmpty())
-                .toList();
+        var libres = libres();
 
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
 
@@ -481,9 +507,24 @@ public class SantuarioScreen extends Screen {
                         : "pokepad.lunaeternal.santuario.elige_alquiler"),
                 ax + 8, PANT_Y + MARGEN - 4, 24, TEXTO_BLANCO, false, CONTORNO_OSCURO);
 
+        int totalLibres = (int) e.nichos().stream()
+                .filter(n -> n.estado().dueno().isEmpty()).count();
+        dibujarBuscador(ctx, rx, ry, ax, aw, libres.size(), totalLibres);
+
         if (libres.isEmpty()) {
-            centrado(ctx, "pokepad.lunaeternal.santuario.sin_libres", 24, TEXTO_BLANCO, -26);
-            centrado(ctx, "pokepad.lunaeternal.santuario.sin_libres2", 18, TEXTO_SUAVE, 14);
+            // ⚠ «No hay libres» y «tu busqueda no encuentra ninguno» son cosas
+            //   DISTINTAS: con el segundo mensaje, borrar el texto arregla el
+            //   problema; con el primero, no hay nada que hacer. Decir el
+            //   equivocado manda al jugador a esperar a que se libere uno.
+            if (totalLibres > 0) {
+                centrado(ctx, "pokepad.lunaeternal.santuario.sin_resultados",
+                        24, TEXTO_BLANCO, -26);
+                centrado(ctx, "pokepad.lunaeternal.santuario.sin_resultados2",
+                        18, TEXTO_SUAVE, 14);
+            } else {
+                centrado(ctx, "pokepad.lunaeternal.santuario.sin_libres", 24, TEXTO_BLANCO, -26);
+                centrado(ctx, "pokepad.lunaeternal.santuario.sin_libres2", 18, TEXTO_SUAVE, 14);
+            }
             return;
         }
 
@@ -524,13 +565,15 @@ public class SantuarioScreen extends Screen {
             centrado(ctx, "pokepad.lunaeternal.cargando", 24, TEXTO_SUAVE, 0);
             return;
         }
-        var lista = e.nichos().stream()
-                .filter(n -> !n.estado().dueno().isEmpty())
-                .toList();
+        var lista = ocupados();
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
 
         texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.menu_nichos"),
                 ax + 8, PANT_Y + MARGEN - 4, 24, TEXTO_BLANCO, false, CONTORNO_OSCURO);
+
+        int totalOcupados = (int) e.nichos().stream()
+                .filter(n -> !n.estado().dueno().isEmpty()).count();
+        dibujarBuscador(ctx, rx, ry, ax, aw, lista.size(), totalOcupados);
 
         int desde = pagina * filasCaben();
         for (int n = 0; n < filasCaben(); n++) {
@@ -926,12 +969,12 @@ public class SantuarioScreen extends Screen {
     }
 
     private boolean clicCompraLista(int rx, int ry) {
+        if (clicBuscador(rx, ry)) return true;
         if (clicPaginacion(rx, ry)) return true;
-        var e = EstadoCliente.santuario();
-        if (e == null) return false;
-        var libres = e.nichos().stream()
-                .filter(n -> n.estado().dueno().isEmpty())
-                .toList();
+        // ⚠⚠ LA MISMA LISTA QUE DIBUJA, no una copia: con el buscador puesto,
+        //    recorrer la lista completa aqui alquilaria un nicho DISTINTO del
+        //    que se ve, y cobrado.
+        var libres = libres();
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
         int desde = pagina * filasCaben();
         for (int n = 0; n < filasCaben(); n++) {
@@ -956,18 +999,13 @@ public class SantuarioScreen extends Screen {
     }
 
     private boolean clicNichos(int rx, int ry) {
+        if (clicBuscador(rx, ry)) return true;
         if (clicPaginacion(rx, ry)) return true;
-        var e = EstadoCliente.santuario();
-        // ⚠⚠ SIN ESTA LINEA, UN CLIC ANTES DE QUE LLEGUE EL ESTADO REVIENTA.
-        //    De los diez sitios que leen `EstadoCliente.santuario()` este era el
-        //    UNICO sin la comprobacion --su hermano `clicCompraLista` la tiene
-        //    dos metodos mas arriba-- y el dibujado ya contempla el caso: pinta
-        //    «cargando». O sea que la pantalla SI se puede estar viendo con el
-        //    estado a nulo, y ahi un clic era un NullPointerException.
-        if (e == null) return false;
-        var lista = e.nichos().stream()
-                .filter(n -> !n.estado().dueno().isEmpty())
-                .toList();
+        // ⚠⚠ `ocupados()` devuelve lista vacia si el estado aun no ha llegado,
+        //    asi que de paso se va el NullPointerException que tenia este metodo
+        //    --era el unico de los diez accesos al estado sin comprobar el nulo,
+        //    y el dibujado si contempla el caso: pinta «cargando»--.
+        var lista = ocupados();
         if (lista.isEmpty()) return false;
         int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
         int bx = ax + aw - 16;
@@ -1039,6 +1077,25 @@ public class SantuarioScreen extends Screen {
         return false;
     }
 
+    /**
+     * El foco del buscador.
+     *
+     * <p>&#9888; Se comprueba por rectangulo y no con {@code mouseClicked} del
+     * widget: el campo se COLOCA en el dibujado, asi que antes del primer
+     * fotograma de esta vista sus coordenadas son las de la vista anterior --y
+     * un clic ahi robaria el foco desde otro sitio de la pantalla.
+     */
+    private boolean clicBuscador(int rx, int ry) {
+        int ax = PANT_X + MARGEN, aw = PANT_W - 2 * MARGEN;
+        int bw = 300, bh = 30;
+        if (dentro(rx, ry, px(ax + aw - bw), py(PANT_Y + MARGEN - 8), pl(bw), pl(bh))) {
+            setFocused(campoBuscar);
+            campoBuscar.setFocused(true);
+            return true;
+        }
+        return false;
+    }
+
     private boolean clicMio(int rx, int ry, double mx, double my, int boton) {
         var nicho = elAbierto();
         if (nicho == null) return false;
@@ -1092,7 +1149,7 @@ public class SantuarioScreen extends Screen {
             setFocused(null);
             return true;
         }
-        for (var c : new TextFieldWidget[] {campoTitulo, campoHistoria}) {
+        for (var c : new TextFieldWidget[] {campoTitulo, campoHistoria, campoBuscar}) {
             if (getFocused() == c && c.keyPressed(tecla, escaneo, mods)) {
                 return true;
             }
@@ -1102,7 +1159,7 @@ public class SantuarioScreen extends Screen {
 
     @Override
     public boolean charTyped(char c, int mods) {
-        for (var f : new TextFieldWidget[] {campoTitulo, campoHistoria}) {
+        for (var f : new TextFieldWidget[] {campoTitulo, campoHistoria, campoBuscar}) {
             if (getFocused() == f) {
                 return f.charTyped(c, mods);
             }
@@ -1239,6 +1296,117 @@ public class SantuarioScreen extends Screen {
         RenderSystem.disableBlend();
     }
 
+    /**
+     * LOS NICHOS LIBRES QUE HAY QUE ENSEÑAR, YA FILTRADOS.
+     *
+     * <h2>&#9888;&#9888;&#9888; ESTA LISTA SE CONSTRUIA EN TRES SITIOS</h2>
+     *
+     * El dibujado, el clic y el contador de paginas tenian cada uno su copia del
+     * {@code filter}. Mientras el filtro era solo «no tiene dueño» daba igual
+     * -- las tres decian lo mismo--. <b>En cuanto entra el buscador, deja de dar
+     * igual:</b> si el dibujado filtrara y el clic no, con texto escrito
+     * <b>alquilarias un nicho DISTINTO del que ves, y cobrado</b>.
+     *
+     * <p>Es exactamente la averia que la tienda tiene documentada
+     * --<i>«el clic recorre lo filtrado, lo mismo que el dibujado»</i>-- y no se
+     * arregla con una comprobacion: se arregla haciendo que <b>no haya dos
+     * listas</b>.
+     */
+    private java.util.List<Red.NichoSantuario> libres() {
+        var e = EstadoCliente.santuario();
+        if (e == null) {
+            return java.util.List.of();
+        }
+        return filtrar(e.nichos().stream()
+                .filter(n -> n.estado().dueno().isEmpty())
+                .toList());
+    }
+
+    /** Los nichos reclamados que hay que enseñar, ya filtrados. Ver {@link #libres()}. */
+    private java.util.List<Red.NichoSantuario> ocupados() {
+        var e = EstadoCliente.santuario();
+        if (e == null) {
+            return java.util.List.of();
+        }
+        return filtrar(e.nichos().stream()
+                .filter(n -> !n.estado().dueno().isEmpty())
+                .toList());
+    }
+
+    /**
+     * Aplica el texto del buscador.
+     *
+     * <p>&#9888; Busca en el <b>nombre</b>, en el <b>identificador</b> y en el
+     * <b>dueño</b>: los tres son cosas que alguien puede recordar de un nicho, y
+     * el que mas se va a usar es el tercero -- «¿donde esta el de fulano?» es la
+     * pregunta que un memorial recibe.
+     *
+     * <p>&#9888; Sin acentos y en minusculas, para que «Anton» encuentre
+     * «Antón»: quien busca no sabe como lo escribio el otro.
+     */
+    private java.util.List<Red.NichoSantuario> filtrar(
+            java.util.List<Red.NichoSantuario> lista) {
+        String q = normalizar(textoDe(campoBuscar));
+        if (q.isEmpty()) {
+            return lista;
+        }
+        var salida = new java.util.ArrayList<Red.NichoSantuario>();
+        for (var n : lista) {
+            if (normalizar(n.nombre()).contains(q)
+                    || normalizar(n.id()).contains(q)
+                    || normalizar(n.estado().dueno()).contains(q)
+                    || normalizar(n.memorial().titulo()).contains(q)) {
+                salida.add(n);
+            }
+        }
+        return salida;
+    }
+
+    private static String normalizar(String t) {
+        if (t == null || t.isEmpty()) {
+            return "";
+        }
+        return java.text.Normalizer.normalize(t, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(java.util.Locale.ROOT)
+                .trim();
+    }
+
+    /**
+     * Dibuja el buscador y, si el texto cambio, vuelve a la primera pagina.
+     *
+     * <p>&#9888; La vuelta a la pagina 1 se hace AQUI, en el dibujado, y no al
+     * teclear: el campo lo gestiona vanilla y no avisa de sus cambios. Comparar
+     * contra lo que habia es lo que convierte «escribir» en un evento.
+     */
+    private void dibujarBuscador(DrawContext ctx, int rx, int ry,
+                                 int ax, int aw, int cuantos, int total) {
+        int bw = 300, bh = 30;
+        int bx = ax + aw - bw, by = PANT_Y + MARGEN - 8;
+        colocar(campoBuscar, bx + 6, by + 7, bw - 12, bh - 12);
+
+        ctx.fill(px(bx), py(by), px(bx + bw), py(by + bh), CARD_SUBFONDO);
+        marco(ctx, px(bx), py(by), pl(bw), pl(bh),
+                getFocused() == campoBuscar ? CARD_BORDE_ENCIMA : CARD_BORDE,
+                Math.max(1, pl(2)));
+        if (textoDe(campoBuscar).isEmpty() && getFocused() != campoBuscar) {
+            texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.buscar"),
+                    bx + 10, by + 8, 16, TEXTO_MUTED, false, 0);
+        }
+        campoBuscar.render(ctx, rx, ry, 0);
+
+        // ⚠ «12 de 341» y no solo «12»: con el buscador puesto, saber que la
+        //   lista esta recortada es la diferencia entre «no hay» y «no encuentro».
+        texto(ctx, Text.literal(cuantos + " / " + total),
+                bx - 70, by + 8, 16, TEXTO_SUAVE, false, 0);
+
+        String ahora = textoDe(campoBuscar);
+        if (!ahora.equals(filtroAnterior)) {
+            filtroAnterior = ahora;
+            pagina = 0;
+        }
+    }
+
     private int filaY(int n) {
         return PANT_Y + MARGEN + 26 + n * (FILA_ALTO + FILA_AIRE);
     }
@@ -1269,11 +1437,11 @@ public class SantuarioScreen extends Screen {
     private int paginas() {
         var e = EstadoCliente.santuario();
         if (e == null) return 1;
+        // ⚠ Cuenta LO FILTRADO. Con el total, el buscador dejaria paginas
+        //   vacias detras: flechas que se encienden y no llevan a ningun sitio.
         int total = switch (vista) {
-            case COMPRA_LISTA -> (int) e.nichos().stream()
-                    .filter(n -> n.estado().dueno().isEmpty()).count();
-            case NICHOS -> (int) e.nichos().stream()
-                    .filter(n -> !n.estado().dueno().isEmpty()).count();
+            case COMPRA_LISTA -> libres().size();
+            case NICHOS -> ocupados().size();
             default -> 0;
         };
         return Math.max(1, (total + filasCaben() - 1) / filasCaben());

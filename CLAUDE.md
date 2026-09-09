@@ -3,13 +3,129 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-09-08
+**Última actualización:** 2026-09-09
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela) ·
 PHASE 4 — Gimnasios y Torre de Batalla · PHASE 10 — Pase de Batalla
 **Estado:** Cobblemon 1.8.0 («Make Your Move») integrado y desplegado. Torre de Batalla
 y Santuario construidos. Decisiones D-001 a D-046. **El mod está desplegado y funcionando
 contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Batalla con
 recompensas de temporada e interfaces completas en el PokePad. Autotest en vivo 636/636.
+
+> **2026-09-09 — LA PUERTA: EL LOBBY ES LA UNICA ENTRADA. Y hasta hoy NO HABIA
+> NINGUNA.**
+>
+> ⚠⚠⚠ **UN JUGADOR NUEVO NO PODIA EMPEZAR A JUGAR, Y NO DABA NINGUN ERROR.**
+> Aparecia en el **Mundo Hogar** --`HOGAR` es `World.OVERWORLD`, o sea el spawn
+> de vainilla-- y recibia por el chat un mensaje mandandole al laboratorio de
+> Oak, **que esta en la ciudadela**. Y no habia forma de llegar:
+>   - `Explorar` solo ofrece **hogar** y **salvaje**
+>   - `Viajes` solo funciona **dentro** de la ciudadela
+>   - `/luna ir ciudadela` es `hasPermissionLevel(2)`, o sea operador
+>
+> Los unicos tres caminos a la ciudadela que existian eran **vueltas**: salir de
+> una arena de gimnasio, salir de la Torre, o ser operador. Todos asumen que ya
+> estabas alli. **Sin inicial no arranca ninguna cadena de misiones**, asi que
+> el recorrido entero estaba cerrado -- y el servidor se comportaba como debe,
+> que es lo que despista.
+>
+> **HOY:** quien no ha cruzado empieza en el lobby, se registra, y un guardian
+> --un Pokemon enorme con su cartel-- le suelta en la ciudadela.
+>
+> ⚠⚠⚠ **LO QUE ESTA CAPA NO HACE, Y CONVIENE NO CONFUNDIRLO:**
+>   - **No autentica.** Eso es de EasyAuth, que ya congela al no autenticado en
+>     su spawn y lo devuelve a su sitio al hacer `/login`. Montar un segundo
+>     control serian **dos sistemas peleandose por donde esta el jugador**.
+>   - **No comprueba «todos los mods».** Eso ya lo hace **Fabric** al sincronizar
+>     los registros, y **echa al cliente descuadrado en la puerta**, antes de que
+>     exista como jugador (el `Registry remapping failed` de siempre). Quien
+>     falla ahi **no llega nunca al lobby**. Lo que si mira la puerta es lo que
+>     Fabric **no**: que tenga NUESTRO jar y al dia.
+>
+> ⚠⚠⚠ **EL CANDADO VA EN `Traslado.ir`, NO EN LOS RECEPTORES.** Hay **mas de
+> treinta** paquetes que acaban moviendo a alguien --explorar, viajes,
+> gimnasios, torre, nichos--; en cada uno serian treinta sitios que un dia dejan
+> de estar de acuerdo, y **el trigesimo primero, el que alguien añada el mes que
+> viene, nacera sin el**. `Traslado` es el unico camino por el que se mueve a un
+> jugador (quedo unificado el 30-ago), asi que es el unico sitio donde la regla
+> no se elude por olvido. **Sin esto el lobby es decoracion**: un cliente
+> modificado manda `AccionExplorar("hogar")` y se planta en el mundo -- y el
+> viaje funciona perfectamente, que es el problema.
+>
+> ⚠⚠⚠ **NO SE COMPARA LA VERSION DEL MOD, SE COMPARA UN PROTOCOLO.**
+> `mod_version` lleva en `0.1.0` desde el primer dia --lo que distingue un jar es
+> la **huella del NOMBRE DEL FICHERO**, que el mod no puede leerse a si mismo--
+> asi que comparar «0.1.0 contra 0.1.0» habria dicho **siempre** que todo el
+> mundo esta al dia: una comprobacion que no comprueba nada, que es peor que no
+> tenerla. `Puerta.PROTOCOLO` se sube **a mano y solo cuando el cliente TIENE que
+> actualizarse**.
+> ⚠⚠ Y **la AUSENCIA del saludo es la señal**: un jar viejo no sabe mandarlo, asi
+> que no hace falta esperar una respuesta que nunca va a llegar.
+>
+> ⚠⚠⚠ **LA PUERTA NACE APAGADA, y eso salio de darse cuenta de que desplegarla
+> ENCERRABA A LA GENTE.** El lobby es una dimension **vacia**: la construccion y
+> el guardian se ponen a mano, dentro del juego. Con la puerta encendida desde el
+> primer arranque, cada jugador nuevo apareceria en un vacio sin nada que tocar y
+> **`Traslado` le impediria salir** -- que es justo lo que la hace funcionar. Y de
+> esa dimension no se sale andando.
+> `/luna puerta activar` **comprueba que el guardian esta puesto** en vez de
+> fiarse, y exige estar **dentro del lobby**: un barrido solo ve entidades en
+> chunks cargados, asi que desde fuera un cero significaria «no lo estoy mirando»
+> y no «no hay guardian» (la leccion de los cuatro diagnosticos con `@e`).
+>
+> **VISIBILIDAD: lobby 0 · ciudadela 30 · mundo abierto sin tope** (decision del
+> usuario). Es el **primer mixin del proyecto**.
+> ⚠⚠⚠ **ESTO NO BAJA EL LAG DEL SERVIDOR.** Quita **ancho de banda y FPS del
+> cliente** --dibujar 200 muñecos con armadura y cosmeticos es trabajo de quien
+> mira-- pero el servidor **sigue tickeando a los 200** y cargando sus chunks. Es
+> la misma leccion ya escrita para las dimensiones. Para 200 de verdad el paso es
+> **un proxy (Velocity) con el lobby en otra maquina**, que D-009 ya deja posible.
+> ⚠⚠ **Hace falta un mixin**, y se miraron las alternativas: `EntityTrackingEvents`
+> de Fabric **avisa, no decide** (no se puede cancelar), y
+> `entity-broadcast-range-percentage` es **global y para todas las entidades** --
+> recortarlo haria que los decorativos y los lideres aparecieran de golpe delante
+> de la cara, y no distingue lobby de ciudadela.
+> ⚠⚠ **Se llama a `stopTracking`, no solo se cancela**: cancelar a secas solo
+> impide EMPEZAR a ver a alguien, y a quien ya estuviera dibujado se le quedaria
+> el muñeco plantado para siempre. **Jugadores fantasma serian peor** que no
+> recortar.
+> ⚠⚠ **COMPILAR NO ES APLICAR, y no se puede comprobar en el autotest**: lo
+> natural seria `Class.forName` sobre la clase objetivo, pero **en produccion las
+> clases de Minecraft llevan nombres `intermediary` y en desarrollo los de
+> Yarn**, asi que esa comprobacion pasaria aqui y fallaria alli. El mixin se marca
+> vivo al correr y `/luna puerta` lo enseña -- **mirado CON GENTE DENTRO**, que es
+> cuando la respuesta significa algo.
+> ⚠ La firma se verifico con `javap` **contra el jar de Yarn 1.21.1 que compila
+> este servidor**: `ServerChunkLoadingManager$EntityTracker` es una clase interna
+> de paquete y **cambio de nombre en 1.20.5** (antes `ThreadedAnvilChunkStorage`).
+>
+> ⚠⚠⚠ **Y LA V036 TIRO EL SERVIDOR.** `Column 'player_id' in field list is
+> ambiguous`: en un `INSERT ... SELECT`, la clausula `ON DUPLICATE KEY UPDATE` ve
+> **las dos tablas a la vez** y `player_id` existe en ambas. Con un INSERT de
+> valores literales el mismo patron funciona --es el de las otras diez
+> migraciones-- y por eso estaba escrito asi. Hoy usa un `LEFT JOIN`.
+> ⚠⚠ **NO se tapo con `INSERT IGNORE`**, que era la salida corta: IGNORE se traga
+> **todos** los errores y dejaria el relleno a medias en silencio, que es
+> exactamente el fallo que la migracion existe para evitar.
+> ⚠⚠ **UNA MIGRACION NO LA CUBRE EL AUTOTEST: CORRE ANTES.** Es la segunda vez
+> (V034 fue la primera, por otro motivo). Y deja el proceso colgado: **kill y
+> luego start**.
+> ⚠⚠ **LA MIGRACION RELLENA**, y sin el relleno rompe a todo el mundo: con la
+> tabla vacia, TODOS los que ya juegan serian «nuevos» y apareceria cada uno en el
+> lobby, lejos de su casa, sin un solo error. Es lo de los trajes en V028.
+> ⚠ Y el autotest cazo el siguiente: `Data too long for column 'username'` -- mi
+> jugador de prueba media **17 caracteres** y la columna es `VARCHAR(16)`, que es
+> el maximo de un nombre de Minecraft. Por eso los otros se llaman `__autotest_1`
+> y `__autotest_2` y no algo descriptivo.
+>
+> ✅ **EN VIVO (2026-09-09, 13:49):** `Done (29,816 s)` · V036 aplicada ·
+> **AUTOTEST 695/695** · manifiesto `4832a971ef` · **la puerta ARRANCA APAGADA**.
+> ⚠ **FALTA, y es de la mano del usuario, EN ESTE ORDEN:** construir el lobby ·
+> `/luna ir lobby` · `/luna puerta npc` · `/luna puerta activar`. Y **EasyAuth**:
+> `/auth setSpawn` en el lobby y la sesion a 15 min.
+> ⚠⚠ **Y HAY QUE REABRIR EL LAUNCHER**: el saludo del cliente y el candado del
+> PokePad son de CLIENTE. Un jar viejo **no saluda**, asi que en cuanto se
+> encienda la puerta **no podra cruzarla** -- que es exactamente lo que la puerta
+> tiene que hacer, pero conviene saberlo antes de encenderla.
 
 > **2026-09-08 (tarde) — COBBLEMON 1.8.0 («MAKE YOUR MOVE») INTEGRADO Y EN VIVO.**
 >

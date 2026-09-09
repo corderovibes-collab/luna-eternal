@@ -166,7 +166,12 @@ CONTENIDO = {
     "cobblemon-additions": "bloques de Cobblemon",
     "sophisticatedstorage": "almacenamiento",
     "pokeblocks":        "bloques decorativos",
-    "waystones":         "piedras de viaje",
+    # FUERA (2026-09-09, peticion del usuario). Viaje rapido PARALELO al
+    # nuestro: Viajes solo funciona DENTRO de la ciudadela a proposito
+    # --fuera seria un regreso instantaneo y explorar dejaria de tener
+    # riesgo-- y una waystone en el salvaje se salta esa regla entera.
+    # Mismo motivo que CobbleDollars (dos economias) y que D-040 con los
+    # clanes. Se retiro SERVIDOR PRIMERO: registra 45 bloques.
     # ⚠ FUERA (2026-08-26). La mochila del servidor es NUESTRA y se
     #   desbloquea por rango (V021). Este mod repartia mochilas por TRES
     #   vias --receta, cofre y mob que la lleva puesta-- o sea

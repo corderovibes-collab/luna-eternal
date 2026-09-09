@@ -366,6 +366,84 @@ SUBIR = {
         "Cobblemon 1.8.0, que es la señal de que la anterior no vale.",
     "more-cobblemon-tweaks":
         "1.3.4, publicada el 2026-09-08 para Cobblemon 1.8.0.",
+
+    # =====================================================================
+    # LOS 27 QUE SE HABIAN QUEDADO ATRAS (2026-09-09)
+    # =====================================================================
+    # Salieron de `comprobar_mods.py`, que le pregunta a Modrinth por CADA mod
+    # del manifiesto en vez de fiarse de una lista escrita a mano. Ninguno
+    # depende de Cobblemon --esos se arreglaron antes, y eran los que
+    # crashean-- asi que aqui lo que se gana son parches y correcciones.
+    #
+    # ⚠ Los slugs salen del informe, NO del nombre del jar. Media docena no se
+    #   parecen en nada (`toms_storage` -> `toms-storage`, `defaultoptions` ->
+    #   `default-options`, `EuphoriaPatcher` -> `euphoria-patches`), y una clave
+    #   mal escrita no hace nada y no se queja. Hoy la guarda de claves
+    #   huerfanas lo caza.
+    #
+    # ⚠⚠ `version_de` prefiere RELEASE sobre beta y alfa, asi que meter aqui un
+    #    proyecto que solo tiene alfas para 1.21.1 NO lo sube a una alfa: se
+    #    queda en su ultima estable. Por eso `scalablelux` y `owo-lib` pueden
+    #    estar en la lista sin riesgo.
+    "sodium":
+        "rendimiento del cliente",
+    "immediatelyfast":
+        "rendimiento del cliente",
+    "moreculling":
+        "rendimiento del cliente",
+    "scalablelux":
+        "rendimiento del cliente (luz)",
+    "entitytexturefeatures":
+        "texturas de entidad",
+    "entity-model-features":
+        "modelos de entidad",
+    "fusion-connected-textures":
+        "texturas conectadas",
+    "particular-reforged":
+        "particulas",
+    # ⚠⚠⚠ `particle-rain` NO VA AQUI, Y ESO ES UN HALLAZGO: meterlo lo BAJABA.
+    #    El pack fija `4.0.0-beta.10` y la ultima RELEASE es la `3.0.5`, de una
+    #    rama anterior. Como `version_de` prefiere release sobre beta --que es lo
+    #    correcto casi siempre-- subirlo retrocedia una version mayor.
+    #    Lo caza la guarda de fechas de mas abajo; sin ella el pack habria salido
+    #    con un mod DEGRADADO y nadie lo habria mirado dos veces, porque en la
+    #    salida pone «SUBIDO».
+    "music-notification":
+        "aviso de cancion",
+    "no-chat-restrictions":
+        "chat",
+    "mobsbegone":
+        "aparicion de mobs",
+    "carved-wood":
+        "bloques decorativos",
+    "rechiseled":
+        "bloques decorativos",
+    "toms-storage":
+        "almacenamiento",
+    "xaeros-world-map":
+        "mapa",
+    "default-options":
+        "opciones por defecto",
+    # zfastnoise NO SE SUBE: su 1.0.14 estrena una dependencia entera
+    # (`zconfig`) que el pack no trae. Lo cazo la comprobacion de
+    # dependencias. Es una libreria de ruido y el salto es un parche: no
+    # merece arrastrar un mod mas al cliente por eso.
+    "midnightlib":
+        "libreria: la nuestra era 1.7.5 y cobblemon-cards pide 1.9.2 -- se salvaba SOLO por el jar anidado (JiJ)",
+    "balm":
+        "libreria",
+    "architectury-api":
+        "libreria",
+    "supermartijn642s-core-lib":
+        "libreria",
+    "owo-lib":
+        "libreria",
+    "cobblemon-playerxp":
+        "XP por jugar",
+    "pokeblocks":
+        "de aqui salen los 146 PELUCHES de la tienda",
+    "fabric-language-kotlin":
+        "Kotlin, por debajo de Cobblemon",
 }
 
 # Overrides de la base que NO se copian.
@@ -645,6 +723,24 @@ def fijado(slug):
     return v
 
 
+def _fecha_de(slug, fichero):
+    """Cuando se publico la version cuyo jar se llama asi. `None` si no se sabe.
+
+    ⚠ Se busca POR NOMBRE DE FICHERO porque es lo unico que el indice del pack
+      ajeno nos da: no trae ni el id de version ni la fecha.
+    """
+    try:
+        d = api(f"https://api.modrinth.com/v2/project/{slug}/version"
+                f"?game_versions=%5B%22{MC}%22%5D")
+    except Exception:                                        # noqa: BLE001
+        return None
+    for v in d:
+        for f in v.get("files", []):
+            if f.get("filename") == fichero:
+                return v.get("date_published")
+    return None
+
+
 def version_de(slug, loader="fabric"):
     """La ultima version de un proyecto para nuestro Minecraft.
 
@@ -742,6 +838,29 @@ def base():
         if slug in SUBIR:
             _SUBIR_VISTOS.add(slug)
             v = version_de(slug)
+            # ⚠⚠⚠ SUBIR NO PUEDE BAJAR, Y PUEDE: `version_de` prefiere RELEASE
+            #    sobre beta, asi que un mod cuyo pack fije una BETA reciente
+            #    retrocede a la ultima estable, que puede ser de una rama
+            #    anterior. Paso de verdad con `particle-rain`: 4.0.0-beta.10 ->
+            #    3.0.5, una version MAYOR hacia atras.
+            #    Y no se ve: la salida dice «SUBIDO» igual.
+            #    ⚠ Se compara por FECHA DE PUBLICACION y no por el numero de
+            #      version: los numeros de version de Modrinth son cadenas
+            #      libres --«mc1.21.1-0.8.13-fabric», «v4-beta.11», «1.9.8-B»--
+            #      y compararlos es inventarse un orden que no existe.
+            if v:
+                antes = _fecha_de(slug, f["path"].split("/")[-1])
+                if antes and v.get("date_published", "") < antes:
+                    raise SystemExit(
+                        f"\n  *** SUBIR BAJARIA {slug} ***\n"
+                        f"    el pack fija {f['path'].split('/')[-1]} "
+                        f"({antes[:10]})\n"
+                        f"    y la ultima release es {v['version_number']} "
+                        f"({v['date_published'][:10]})\n\n"
+                        f"  No se genera nada. Casi siempre significa que el "
+                        f"pack fija una BETA\n  mas nueva que la ultima "
+                        f"estable, y entonces lo correcto es NO subirlo:\n"
+                        f"  quita '{slug}' de SUBIR.")
             nuevo = v["files"][0]
             if nuevo["filename"] != f["path"].split("/")[-1]:
                 print(f"  SUBIDO {slug:<22} {v['version_number']} "

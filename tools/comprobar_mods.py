@@ -115,12 +115,16 @@ def main():
             actual = next((v for v in vs if v["id"] == version_actual), None)
             atrasados.append({
                 "jar": jar,
+                # El SLUG, que es lo que hay que escribir en SUBIR -- y casi
+                # nunca es el nombre del jar. Sin el, quien lea este informe
+                # tiene que ir a buscarlo a mano, y ahi es donde se equivoca:
+                # una clave mal escrita no hace nada y no se queja.
+                "slug": pedir(f"https://api.modrinth.com/v2/project/{proyecto}")["slug"],
                 "tengo": actual["version_number"] if actual else "?",
                 "fecha_tengo": actual["date_published"][:10] if actual else "?",
                 "hay": ultima["version_number"],
                 "fecha_hay": ultima["date_published"][:10],
                 "cobblemon": depende_cobblemon,
-                "slug": ultima.get("project_id"),
             })
         if i % 25 == 0:
             time.sleep(1)           # cortesia con la API
@@ -134,14 +138,14 @@ def main():
     if conc:
         print("  ⚠⚠⚠ ADDONS DE COBBLEMON ATRASADOS — son los que CRASHEAN")
         for a in conc:
-            print(f"    {a['jar']:<52} {a['tengo']} ({a['fecha_tengo']})"
-                  f"  ->  {a['hay']} ({a['fecha_hay']})")
+            print(f"    {a['slug']:<34} {a['tengo']} -> {a['hay']}"
+                  f"   ({a['fecha_hay']})")
         print()
     if resto:
         print("  Atrasados (no dependen de Cobblemon)")
         for a in resto:
-            print(f"    {a['jar']:<52} {a['tengo']} ({a['fecha_tengo']})"
-                  f"  ->  {a['hay']} ({a['fecha_hay']})")
+            print(f"    {a['slug']:<34} {a['tengo']} -> {a['hay']}"
+                  f"   ({a['fecha_hay']})")
         print()
     if fallos:
         print("  No se pudo comprobar")

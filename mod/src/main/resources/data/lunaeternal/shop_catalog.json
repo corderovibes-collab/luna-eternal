@@ -2558,6 +2558,16 @@
           "sell": 0
         },
         {
+          "item": "pokeblocks:pokedoll_charmeleon",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_clefairy",
+          "buy": 40,
+          "sell": 0
+        },
+        {
           "item": "pokeblocks:pokedoll_cloyster",
           "buy": 40,
           "sell": 0
@@ -2579,6 +2589,11 @@
         },
         {
           "item": "pokeblocks:pokedoll_cubchoo_animated",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_cyndaquil",
           "buy": 40,
           "sell": 0
         },
@@ -2658,12 +2673,27 @@
           "sell": 0
         },
         {
+          "item": "pokeblocks:pokedoll_igglybuff",
+          "buy": 40,
+          "sell": 0
+        },
+        {
           "item": "pokeblocks:pokedoll_ivysaur",
           "buy": 40,
           "sell": 0
         },
         {
+          "item": "pokeblocks:pokedoll_jigglypuff",
+          "buy": 40,
+          "sell": 0
+        },
+        {
           "item": "pokeblocks:pokedoll_kyogre",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_lechonk",
           "buy": 40,
           "sell": 0
         },
@@ -2838,6 +2868,16 @@
           "sell": 0
         },
         {
+          "item": "pokeblocks:pokedoll_shiny_charmeleon",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_clefairy",
+          "buy": 40,
+          "sell": 0
+        },
+        {
           "item": "pokeblocks:pokedoll_shiny_cloyster",
           "buy": 40,
           "sell": 0
@@ -2859,6 +2899,11 @@
         },
         {
           "item": "pokeblocks:pokedoll_shiny_cubchoo_animated",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_cyndaquil",
           "buy": 40,
           "sell": 0
         },
@@ -2938,12 +2983,27 @@
           "sell": 0
         },
         {
+          "item": "pokeblocks:pokedoll_shiny_igglybuff",
+          "buy": 40,
+          "sell": 0
+        },
+        {
           "item": "pokeblocks:pokedoll_shiny_ivysaur",
           "buy": 40,
           "sell": 0
         },
         {
+          "item": "pokeblocks:pokedoll_shiny_jigglypuff",
+          "buy": 40,
+          "sell": 0
+        },
+        {
           "item": "pokeblocks:pokedoll_shiny_kyogre",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shiny_lechonk",
           "buy": 40,
           "sell": 0
         },
@@ -3058,6 +3118,11 @@
           "sell": 0
         },
         {
+          "item": "pokeblocks:pokedoll_shiny_shuckle",
+          "buy": 40,
+          "sell": 0
+        },
+        {
           "item": "pokeblocks:pokedoll_shiny_smoliv",
           "buy": 40,
           "sell": 0
@@ -3113,6 +3178,11 @@
           "sell": 0
         },
         {
+          "item": "pokeblocks:pokedoll_shiny_venonat",
+          "buy": 40,
+          "sell": 0
+        },
+        {
           "item": "pokeblocks:pokedoll_shiny_venusaur",
           "buy": 40,
           "sell": 0
@@ -3134,6 +3204,11 @@
         },
         {
           "item": "pokeblocks:pokedoll_shiny_wooper",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_shuckle",
           "buy": 40,
           "sell": 0
         },
@@ -3194,6 +3269,11 @@
         },
         {
           "item": "pokeblocks:pokedoll_tropius",
+          "buy": 40,
+          "sell": 0
+        },
+        {
+          "item": "pokeblocks:pokedoll_venonat",
           "buy": 40,
           "sell": 0
         },

@@ -7,9 +7,10 @@
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela) ·
 PHASE 4 — Gimnasios y Torre de Batalla · PHASE 10 — Pase de Batalla
 **Estado:** Cobblemon 1.8.0 («Make Your Move») integrado y desplegado. Torre de Batalla
-y Santuario construidos. Decisiones D-001 a D-046. **El mod está desplegado y funcionando
+y Santuario construidos. Decisiones D-001 a D-050. **El mod está desplegado y funcionando
 contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Batalla con
-recompensas de temporada e interfaces completas en el PokePad. Autotest en vivo 636/636.
+recompensas de temporada e interfaces completas en el PokePad. **El lobby es la
+unica entrada al mundo** (D-050). Autotest en vivo 695/695.
 
 > **2026-09-09 — LA PUERTA: EL LOBBY ES LA UNICA ENTRADA. Y hasta hoy NO HABIA
 > NINGUNA.**
@@ -499,7 +500,14 @@ Cobblemon     1.7.3 instalado · Done (7,2 s) · 4,34 GiB de 8 GB
 Mod           lunaeternal 0.1.0 · migraciones V001 a V009 aplicadas
               compila contra la API de Cobblemon 1.7.3
 BD            MariaDB s11945_luna · 3 monedas · 5 vías
-Autotest      /luna autotest -> 589 EN VIVO (2026-09-05)
+Autotest      /luna autotest -> 695 EN VIVO (2026-09-09)
+              +10 de LA PUERTA y la visibilidad, y los dos que
+              importan son mudos y catastroficos: que la ESPECIE
+              DEL GUARDIAN exista --sin el, nadie puede salir del
+              lobby, y no da ningun error-- y que EL RELLENO DE LA
+              V036 CORRIERA, porque sin el TODOS los que ya juegan
+              apareceria cada uno en el lobby, lejos de su casa
+              antes 589 (2026-09-05)
               +11 con las cartas: sus sobres, la habilidad de
               aparicion, EL ARTE DE CADA TRAJE Y EL ICONO DE CADA
               APLICACION DEL POKEPAD. Los dos ultimos se pueden
@@ -1801,6 +1809,65 @@ Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031)
                  de Viajes son CLIENTE. Sin bajarse el jar nuevo se sigue viendo
                  «Monumentos» -- y eso se comporta como debe, que es lo que
                  despista
+
+Puerta        EL LOBBY ES LA UNICA ENTRADA (2026-09-09, V036, D-050)
+              detalle completo en docs/world/puerta.md
+              APAGADA hasta que se construya el lobby y se ponga el NPC
+              /luna puerta                  estado y diagnostico
+              /luna puerta npc [especie]    el guardian, solo en el lobby
+              /luna puerta activar          exige que el guardian este puesto
+              ⚠⚠⚠ HASTA HOY UN JUGADOR NUEVO NO PODIA EMPEZAR A JUGAR.
+                 Aparecia en el Mundo Hogar --HOGAR es el OVERWORLD-- y el
+                 chat le mandaba al laboratorio de Oak, EN LA CIUDADELA. Y
+                 no habia forma de llegar: Explorar solo ofrece hogar y
+                 salvaje, Viajes solo funciona DENTRO, y /luna ir es de
+                 operador. Sin inicial no arranca ninguna mision, o sea
+                 que el recorrido entero estaba cerrado SIN DAR ERROR
+              ⚠⚠ NO AUTENTICA (eso es EasyAuth) NI COMPRUEBA "todos los
+                 mods" (eso ya lo hace Fabric al sincronizar registros, y
+                 echa al descuadrado ANTES de que exista como jugador).
+                 Lo que si mira es que tenga NUESTRO jar y al dia
+              ⚠⚠⚠ EL CANDADO VA EN Traslado.ir, NO EN LOS RECEPTORES. Hay
+                 mas de treinta paquetes que acaban moviendo a alguien; en
+                 cada uno serian treinta sitios que un dia dejan de estar
+                 de acuerdo, y el que alguien añada el mes que viene
+                 nacera sin el. Sin esto el lobby es DECORACION: un
+                 cliente modificado manda el paquete de Explorar y se
+                 planta en el mundo, y el viaje funciona perfectamente
+              ⚠⚠⚠ Y ES UN INVARIANTE, NO UN EVENTO: EasyAuth con
+                 hide-player-coords te DEVUELVE A TU SITIO al hacer
+                 /login, asi que a un jugador nuevo lo sacaba del lobby
+                 despues de registrarse. Se comprueba cada segundo que
+                 quien no ha cruzado esta en el lobby -- y de propina
+                 cubre el /tp de un operador, otro mod, una cama o un
+                 portal. LA LISTA DE FORMAS DE MOVER A UN JUGADOR NO SE
+                 PUEDE ENUMERAR; EL ESTADO CORRECTO, SI
+              ⚠⚠ NO SE COMPARA LA VERSION DEL MOD: mod_version lleva en
+                 0.1.0 desde el primer dia --lo que distingue un jar es la
+                 huella del NOMBRE DEL FICHERO-- asi que habria dicho
+                 siempre que todo el mundo esta al dia. Se compara un
+                 PROTOCOLO, y la AUSENCIA del saludo es la señal
+              ⚠⚠ NACE APAGADA: el lobby es una dimension VACIA hasta que
+                 alguien la construya, y con la puerta encendida cada
+                 jugador nuevo apareceria en un vacio del que Traslado le
+                 impide salir. `activar` COMPRUEBA el guardian
+              VISIBILIDAD: lobby 0 . ciudadela 30 . mundo abierto sin tope
+              ⚠⚠⚠ NO BAJA EL LAG DEL SERVIDOR: quita ancho de banda y FPS
+                 del cliente, pero el servidor sigue tickeando a los 200.
+                 Para 200 de verdad el paso es un PROXY con el lobby en
+                 otra maquina, que D-009 ya deja posible
+              ⚠⚠ es el PRIMER MIXIN del proyecto, y compilar NO es
+                 aplicar: no se puede comprobar en el autotest porque en
+                 produccion las clases llevan nombres intermediary y en
+                 desarrollo los de Yarn. Se mira con /luna puerta Y CON
+                 GENTE DENTRO
+              ⚠ EasyAuth: session-timeout 900 (15 min), hide-player-coords
+                true, world-spawn lunaeternal:lobby 0.5/64/0.5. PARAR,
+                SUBIR, ARRANCAR -- reescribe su config al apagarse
+              ⚠⚠ LAS COORDENADAS DEL LOBBY ESTAN EN DOS SITIOS
+                 (TravelService y la config de EasyAuth) y nada las obliga
+                 a coincidir: divergir da gente apareciendo FUERA de la
+                 construccion, sin error. Al mover el lobby, los dos
 
 Rangos        ENTRENADOR . ELITE . CAMPEON . MAESTRO . LEYENDA (V020, V025)
               y encima ADMIN . DEV . MODERADOR, que son de equipo
@@ -4355,7 +4422,15 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 > clan, comerciar Pokémon y objetos, y seguir el árbol de misiones. **Ya no
 > queda ninguna misión que no se pueda completar** — `t5_gts` era la última.
 
-### ⏭ POR AQUÍ SE SIGUE (2026-09-08)
+### ⏭ POR AQUÍ SE SIGUE (2026-09-09)
+
+| | |
+|---|---|
+| **0. CONSTRUIR EL LOBBY Y ENCENDER LA PUERTA** | Es lo único que hoy separa a un jugador nuevo de poder jugar. Los prompts de Gemini y Meshy están en `docs/ui/prompts-lobby.md`; el procedimiento, en `docs/world/puerta.md` §6. **En orden: reabrir el launcher · construir alrededor de `0.5/64/0.5` · `/luna ir lobby` · `/luna puerta npc` · `/luna puerta activar`.** ⚠ El launcher va **primero**: el saludo del cliente es nuevo, y un jar viejo **no saluda** — la puerta te rechazaría a ti el primero |
+| **0-bis. Colocar a Oak** | `/luna inicial oak` en el laboratorio. **Sigue pendiente desde el 8-sep**, y sin él la puerta lleva al jugador a una ciudadela donde no hay de quién coger inicial |
+| **0-ter. El Santuario** | `/luna santuario npc` (la Mew) y `/luna santuario nicho recolocar` para los 341 nichos, que tienen los proyectores a la altura vieja |
+
+Y lo del Pase, que sigue sin mirarse:
 
 | | |
 |---|---|
@@ -4681,6 +4756,7 @@ documentación · migración · rollback.
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
 | D-037 | 2026-08-17 | **La base del pack pasa a ser COBBLEVERSE, quitandole la generacion de estructuras y la musica.** Revoca D-031 | **Orden del usuario, dada despues de que le enseñara las licencias** — `cobbleverse` es All Rights Reserved y `cobbleverse-badges` es CC-BY-NC-ND-4.0, que es la clausula por la que D-006 lo habia descartado. Queda escrito aqui para que quien lo lea dentro de seis meses vea **el dato y la decision**, no solo la decision. **Lo que si se hace bien:** el manifiesto guarda URL y hash y nunca el jar, asi que cada mod se descarga del CDN de Modrinth — no redistribuimos nada suyo, igual que con los shaders (D-030). Se les quita lo que el usuario no queria: **generacion de estructuras** (4 mods) y **421 MB de musica**, que multiplicaba por cinco la descarga de un jugador nuevo (P10). El pack pasa de 185 a **434 MB**. Tres cosas que solo se ven haciendolo: **el slug de Modrinth no es el nombre del jar** y una exclusion mal escrita no surte efecto *sin avisar*; **su configuracion son 155 ficheros** y sueltos eran 155 peticiones a `raw`, o sea el 429 de D-036 otra vez (van en un zip por carpeta con `keepExisting`); y **`continuity:default` cambia 42 bloques de construir** — lo reporto el usuario en vivo con la ciudadela ya empezada, y se apaga |
 | D-038 | 2026-08-17 | **El PokePad enseña datos de sesion —Plata, LunaCoins, Clan, Trabajo, Division y Medallas— en vez de la tarjeta de entrenador** | **Decision del usuario.** La tarjeta enseñaba el nivel de las cinco Vias en estrellas; lo que el queria bajo la cara es lo que se mira a diario. Dos cosas quedan escritas porque no son obvias: **las 16 medallas se referencian por identificador al mod de CobbleVerse y NO se copian sus texturas** — el mod va instalado en el cliente, asi que apuntarlas cuesta cero bytes, no redistribuye nada de un CC-BY-NC-ND y el dibujo lo sigue mandando su autor; y **clan, trabajo y division viajan en el paquete aunque no exista el sistema**, mandando cadena vacia para que el Pad pinte un guion. Un «Sin clan» diria «ya funciona y no tienes ninguno», que no es verdad; y tenerlos ya en el protocolo hace que encenderlos sea rellenar tres lineas en vez de tocar paquete, codec, cache y dibujado |
+| D-050 | 2026-09-09 | **El lobby es la unica entrada al mundo, y la visibilidad de jugadores se recorta por dimension (lobby 0, ciudadela 30)** | **Peticion del usuario**, con el recorrido dentro: *«una persona que entra inicialmente empieza en un lobby pequeño... ahi es donde se verifica si el jugador tiene todos los mods actualizados... primero tiene que registrarse y luego clic derecho en el npc y lo lleva a la ciudad»*. ⚠⚠⚠ **Lo primero que salio de la auditoria es que HASTA HOY UN JUGADOR NUEVO NO PODIA EMPEZAR A JUGAR, y no daba ningun error**: aparecia en el Mundo Hogar --`HOGAR` es `World.OVERWORLD`, el spawn de vainilla-- y el chat le mandaba al laboratorio de Oak, **en la ciudadela**, a la que **no habia forma de llegar** (`Explorar` solo ofrece hogar y salvaje, `Viajes` solo funciona DENTRO de la ciudadela, y `/luna ir` es de operador). Sin inicial no arranca ninguna cadena de misiones: **el recorrido entero estaba cerrado**. ⚠⚠⚠ **Dos cosas que el usuario pedia YA EXISTIAN y no habia que construir**, y decirlo ahorro el trabajo equivocado: **Fabric ya comprueba los mods** al sincronizar los registros y **echa al cliente descuadrado en la puerta**, antes de que exista como jugador (el `Registry remapping failed` de siempre) -- quien falla ahi **no llega nunca al lobby**; y **EasyAuth ya congela al no autenticado** y lo devuelve a su sitio al hacer `/login`, asi que montar autenticacion propia encima serian **dos sistemas peleandose por donde esta el jugador**. Lo que si faltaba, y es lo que se ha hecho, es comprobar **que tenga NUESTRO jar y al dia** -- el fallo real y repetido de este proyecto, el del cliente que entra bien y cuyas pantallas «no abren». ⚠⚠⚠ **El candado va en `Traslado.ir`, no en los receptores**: hay mas de treinta paquetes que acaban moviendo a alguien, y en cada uno serian treinta sitios que un dia dejan de estar de acuerdo -- **el trigesimo primero, el que alguien añada el mes que viene, naceria sin el**. Sin esto el lobby es **decoracion**: un cliente modificado manda `AccionExplorar("hogar")` y se planta en el mundo, y el viaje funciona perfectamente. ⚠⚠⚠ **Y es un INVARIANTE, no un evento.** EasyAuth con `hide-player-coords` **devuelve al jugador a su sitio al hacer `/login`**, asi que a uno nuevo lo sacaba del lobby justo despues de registrarse -- sin error, y saltandose el guardian. No se arregla pidiendole a EasyAuth que avise (no expone nada, y **encadenar nuestra puerta a los eventos de otro mod la rompe el dia que ese mod cambie**): se comprueba **cada segundo** que quien no ha cruzado esta en el lobby. De propina cubre el `/tp` de un operador, otro mod, una cama o un portal -- **la lista de formas de mover a un jugador no se puede enumerar; el estado correcto, si**. ⚠⚠ **No se compara la version del mod sino un PROTOCOLO**: `mod_version` lleva en `0.1.0` desde el primer dia --lo que distingue un jar es la huella del NOMBRE DEL FICHERO, que el mod no puede leerse a si mismo-- asi que comparar versiones habria dicho **siempre** que todo el mundo esta al dia: una comprobacion que no comprueba nada. Y **la ausencia del saludo es la señal**, porque un jar viejo no sabe mandarlo. ⚠⚠ **Nace apagada**, y salio de ver que desplegarla **encerraba a la gente**: el lobby es una dimension vacia hasta que alguien la construya, y con la puerta encendida cada jugador nuevo apareceria en un vacio del que `Traslado` le impide salir. `activar` **comprueba el guardian** en vez de fiarse, y exige estar dentro del lobby porque un barrido solo ve entidades en chunks cargados. ⚠⚠⚠ **La visibilidad NO baja el lag del servidor** (quita ancho de banda y FPS del cliente; el servidor sigue tickeando a los 200 y cargando sus chunks) y eso queda escrito para que nadie lo busque ahi: **para 200 de verdad el paso es un PROXY con el lobby en otra maquina**, que D-009 ya deja posible porque todo vive en MariaDB. Es el **primer mixin** del proyecto, y **compilar no es aplicar** -- no se puede comprobar en el autotest porque en produccion las clases de Minecraft llevan nombres `intermediary` y en desarrollo los de Yarn. ⚠ **La V036 tiro el servidor** con `Column 'player_id' in field list is ambiguous`: en un `INSERT ... SELECT`, el `ON DUPLICATE KEY` ve las dos tablas a la vez. Y **rellena**, porque sin relleno todos los que ya juegan serian «nuevos». Detalle en [puerta.md](docs/world/puerta.md) |
 | D-049 | 2026-09-08 | **La geometria de los nichos del Santuario se define desde el juego, con la posicion del jugador, y la parada «Monumentos» pasa a llamarse «Santuario»** | **Peticion del usuario, con el motivo dentro**: *«falta colocar el lugar de cada holografica y todo eso asi que es mejor con un comando y la posicion del jugador definir cada punto ya que son muchisimos»*. ⚠⚠⚠ **Lo primero que salio de la auditoria es que la holografica no tiene coordenada propia**: `HologramaSantuario` dibuja la foto a `proyector.y + 1,55`, asi que **colocar el proyector ES colocar el holograma** — un cuarto punto que declarar seria un cuarto punto que puede dejar de cuadrar con los otros tres. ⚠⚠⚠ **Y lo que hace peligroso un comando que escriba esa config es que la config REVIENTA EL ARRANQUE**: la guarda de `NichoCatalogo` es correcta y no se toca, pero con el comando nuevo **un operador colocando nichos podria dejar el servidor sin arrancar y no enterarse hasta el siguiente reinicio** — el peor momento posible, y la familia de fallo que ya mordio con `letmedespawn` y con la V034. Por eso se **valida antes de tocar el disco** (y si no pasa no se escribe nada) y se escribe a un **temporal que se mueve encima**, para que una caida a mitad no deje un JSON cortado. ⚠⚠ **La forma del nicho no se invento: se midio la que ya habia** — RADIO 1, ALTO 5 y ALTURA_PROYECTOR 3 salen de leer el `nicho_prueba` del servidor, asi que lo capturado tiene la misma forma que lo construido a mano. ⚠⚠ **El id lo genera el catalogo** porque con «muchisimos» nichos teclear uno cada vez es la friccion que hace que alguien repita, y **dos nichos con el mismo id comparten una sola fila**: alquilar uno cobraria dos sitios. ⚠⚠ **Y `ver` no es un extra**: un comando que captura coordenadas y no las enseña obliga a fiarse, y el nicho que quedo dos bloques corrido **no se ve** — su caja protege un sitio que no es el construido, y eso no da error. ⚠ El renombrado de la parada **no necesita migracion** (el id solo viaja en el paquete) pero si toca **cuatro sitios**, y el cuarto —el PNG— **no lo vigilaba nadie**: `ViajesScreen` compone la ruta pegando el identificador, asi que renombrar sin renombrar el arte deja la ficha **en magenta** sin un solo error. Hoy lo comprueba el autotest. Detalle en [santuario.md §3.7](docs/world/santuario.md) |
 | D-048 | 2026-09-08 | **El inicial se elige ante el Profesor Oak, y la pantalla deja de abrirse sola** | **Peticion del usuario**: *«colocar al npc Profesor Oak y cuando se le de clic derecho se abra la pestaña para seleccionar a un pokemon inicial»*, con confirmacion antes de entregar. ⚠⚠⚠ **Lo primero que salio de la auditoria es que la mitad ya existia**: `StarterService`, el protocolo y la pantalla en 3D llevan desde el 2026-08-23, y `/luna reiniciarinicial` tambien. Lo que se ha hecho no es la eleccion de inicial: es **ponerle una puerta**. ⚠⚠⚠ **Y no habia ninguna tecla que quitar**, comprobado en el jar de Cobblemon 1.8.0: sus seis keybinds no incluyen ninguna de inicial, `CobblemonStarterHandler.handleJoin` **esta vacio** --Cobblemon 1.8 no ofrece inicial al entrar-- y `/openstarterscreen` pide op 2. **Lo que abria la pantalla era nuestra propia apertura automatica**, y eso es lo que se ha retirado. ⚠⚠⚠ **Oak no se dibujo: ya viene dentro de rctmod** --tres pieles y tres entrenadores completos-- asi que cero arte y cero datapack. ⚠⚠ Pero **trae un Tauros de nivel 99**, y un TrainerMob con `forceBattleOnSight` a ocho bloques seria el jefe final del servidor plantado en la plaza: lo cortan `setAiDisabled(true)` antes del primer tick y el clic derecho atajado con `SUCCESS`. ⚠⚠⚠ **La pantalla ya se puede cerrar, y eso es consecuencia directa de la puerta**: no se podia cerrar porque **no habia forma de volver**, y hoy la hay. Con eso desaparece toda la familia de «me quede encerrado». ⚠⚠ **Lo que la apertura automatica hacia bien hay que seguir haciendolo**: era imposible no verla. Quitarla a secas deja a un jugador nuevo sin Pokemon y sin pista --el bloqueo original-- asi que la sustituyen Oak en la llegada, su cartel y un mensaje al entrar con 60 ticks de retraso. ⚠ **La rejilla pasa a significar algo**: fila = region, columna = tipo. ⚠ Y el fondo pasa a oscuro, con lo que se va el contorno de cuatro copias que este documento ya tenia fichado como «empasta». Detalle en `OakNpc.java` e `InicialScreen.java` |
 | D-047 | 2026-09-08 | **El pase baja a 1.500 LunaCoins, devuelve 100 en el nivel 50 y 100 en el 98, y la XP por mena baja de 4 a 1** | **Las tres son ordenes del usuario**, y la de la mena viene con el diagnostico dentro: *«la experiencia que da lo de la mena, que de a 1, eso es muy roto»*. ⚠⚠⚠ **Tenia razon y el numero que lo demuestra estaba escrito en nuestro propio fichero, mal**: el javadoc de `PaseXp` decia «mena comun 4, ~90 veces/hora, 360 XP/hora» y **las 90 veces/hora eran falsas** — un minero saca del orden de **400 menas a la hora**, porque el carbon y el cobre salen en **vetas de veinte y treinta bloques**, asi que lo de verdad eran **1.600 XP/hora**: el tope diario entero **en cuarenta y cinco minutos**, con el resto de la tabla de fuentes convertido en adorno. ⚠⚠ **Es la MISMA regla que ya justificaba que la piedra valga cero** («son 2.500 bloques a la hora, asi que el pase seria un temporizador»), un escalon mas arriba — **la regla estaba escrita y aun asi fallo, porque la estimacion vivia en un comentario y un comentario no se comprueba**. Hoy las tasas son constantes (`VECES_HORA_MENA`) y el autotest cruza XP x tasa contra el tope. ⚠ **La mena RARA no se toca**: lo roto era el volumen y un diamante no tiene volumen. ⚠ Y **cosecha y pesca tienen la misma forma de problema** con tasas sin volver a medir: quedan **fuera** del invariante a proposito, porque meterlas con una tasa inventada seria la confianza falsa de los gimnasios. ⚠⚠ **De la otra idea del usuario —«5 cada 10 menas»— se descarto el mecanismo, no la intencion**: es media XP por mena, y pagar por tandas obliga a **recordar cuantas lleva rotas entre pago y pago** (columna, migracion y una escritura por bloque picado) para ganar solo dividir por dos otra vez. Si hace falta bajar mas, la palanca sigue siendo el mismo numero. ⚠⚠⚠ **Las 200 LunaCoins que devuelve son la unica recompensa que no se entrega: se INGRESA**, y por eso va **dentro de la transaccion que apunta el cobro** (R3) en vez de despues del commit como los objetos — pagarlas fuera dejaria el nivel marcado como cobrado y el dinero sin ingresar. **No cruza D-014**: no convierte una moneda en otra, se compra con LunaCoins y devuelve LunaCoins, y **la Torre ya hacia lo mismo** (+50 cada 30 rondas). ⚠⚠ **Lo que hay que vigilar no es que devuelva sino CUANTO**: un pase que devuelve lo que cuesta **se paga solo para siempre** y el producto deja de venderse sin que nadie toque una linea de codigo — hoy son **200 sobre 1.500, el 13 %**, y el autotest exige que no llegue ni a la mitad. ⚠ **El precio sigue siendo provisional**, como todos los de este proyecto; lo unico que cambia con el 1.500 es que la exposicion a T4 que D-046 acepto a sabiendas **es diez veces mas barata de adquirir**, no que cambie de categoria. |

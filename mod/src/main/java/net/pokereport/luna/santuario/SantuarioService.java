@@ -1027,6 +1027,28 @@ public final class SantuarioService {
                 //    rapidos sobre dos memoriales distintos podrian leer los dos
                 //    «llevo 9» y cobrar los dos el decimo. Con FOR UPDATE sobre
                 //    la propia fila de visita, el segundo espera al primero.
+                // ⚠⚠⚠ QUE EL NICHO EXISTA SE COMPRUEBA AQUI, y no basta con
+                //    `nichoValido`: ese solo mira la FORMA del identificador.
+                //    Un id bien escrito pero inexistente pasaba el filtro y
+                //    llegaba al INSERT, donde reventaba con una violacion de
+                //    clave ajena -- o sea que UN CLIENTE MODIFICADO PODIA
+                //    PROVOCAR ESA EXCEPCION A VOLUNTAD mandando basura bien
+                //    formada. Lo cazo el autotest con «un nicho que no existe».
+                //    ⚠ Se mira la BASE y no el catalogo: lo que la clave ajena
+                //      exige es la fila, no la entrada de la config. Un nicho
+                //      recien capturado y aun sin fila daria el mismo problema.
+                boolean existe;
+                try (PreparedStatement ps = c.prepareStatement(
+                        "SELECT 1 FROM santuario WHERE nicho_id = ?")) {
+                    ps.setString(1, nichoId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        existe = rs.next();
+                    }
+                }
+                if (!existe) {
+                    c.rollback();
+                    return 0;
+                }
                 long visto = 0;
                 boolean habia = false;
                 try (PreparedStatement ps = c.prepareStatement(

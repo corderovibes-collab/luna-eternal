@@ -3429,14 +3429,27 @@ public final class AutoTest {
               net.pokereport.luna.santuario.SantuarioService.HONORES_DIA == 1);
 
         // ---- y que el camino funcione, no solo los numeros ---------------
+        //
+        // ⚠⚠ SU PROPIO NICHO, Y NO N1. La primera version reusaba N1 y FALLO en
+        //    vivo con una violacion de clave ajena: a estas alturas de
+        //    `testSantuario` esa fila ya no esta donde el bloque creia. Una
+        //    prueba que depende de lo que hicieron las anteriores no prueba lo
+        //    suyo: prueba el orden. Se crea aqui lo que se necesita aqui.
+        var N_VISITA = "__autotest_visita";
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "INSERT IGNORE INTO santuario (nicho_id) VALUES (?)")) {
+            ps.setString(1, N_VISITA);
+            ps.executeUpdate();
+        }
         long visitante = b;
         check("santuario: ver un nicho paga la primera vez",
-              svc.verNicho(visitante, N1)
+              svc.verNicho(visitante, N_VISITA)
                   == net.pokereport.luna.pase.PaseXp.VISITA_NICHO);
         // ⚠⚠ LA SEGUNDA VEZ NO PAGA, que es todo el sistema: sin esto, abrir y
         //    cerrar el mismo memorial seria XP infinita.
         check("SANTUARIO: EL MISMO NICHO NO PAGA DOS VECES EL MISMO DIA",
-              svc.verNicho(visitante, N1) == 0);
+              svc.verNicho(visitante, N_VISITA) == 0);
         check("santuario: y no cuenta un nicho que no existe",
               svc.verNicho(visitante, "__no_existe") == 0);
 
@@ -3458,10 +3471,26 @@ public final class AutoTest {
         // ⚠⚠ Y CAMBIAR LA FOTO REINICIA LOS HONORES (decision del usuario): la
         //    gente honra LO QUE VE. Sin esto, se reunen honores con una foto y
         //    despues se cambia por otra cosa.
-        //    Se comprueba sobre la BASE y no sobre el codigo: el reinicio vive
+        //    Se comprueba SOBRE LA BASE y no sobre el codigo: el reinicio vive
         //    dentro de la transaccion de la foto y es ahi donde puede caerse.
-        check("santuario: N1 tiene honores antes de tocar la foto",
-              svc.info(N1) != null);
+        //    ⚠⚠ La primera version de esta comprobacion decia
+        //       «N1 tiene honores antes de tocar la foto» y solo miraba que
+        //       `info` no fuera nulo -- o sea que NO PROBABA LO QUE DECIA SU
+        //       NOMBRE. Una comprobacion que mide otra cosa da confianza falsa,
+        //       que es peor que no tenerla.
+        check("santuario: se puede reclamar el nicho de la prueba",
+              svc.alquilar(N_VISITA, a, CAMPEON, key()).ok());
+        check("santuario: y honrarlo desde otra cuenta",
+              svc.honrar(N_VISITA, b, key()).ok());
+        long antesDeTocar = honoresDe(N_VISITA);
+        check("santuario: el nicho tiene un honor antes de tocar la foto",
+              antesDeTocar == 1);
+        // Quitar la foto es cambiarla: si no, «quitar y poner otra» conservaria
+        // los honores y seria el hueco que esto cierra.
+        check("santuario: quitar la foto va bien",
+              svc.quitarFoto(N_VISITA, a) == null);
+        check("SANTUARIO: TOCAR LA FOTO REINICIA LOS HONORES",
+              honoresDe(N_VISITA) == 0);
 
         testNichoEditor();
     }
@@ -5045,6 +5074,18 @@ public final class AutoTest {
               svc.ganar(jugador, 1).concedida() == 0);
 
         svc.reiniciar(jugador);
+    }
+
+    /** Los honores que tiene un nicho, leidos de la base. */
+    private long honoresDe(String nichoId) throws Exception {
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT honores FROM santuario WHERE nicho_id = ?")) {
+            ps.setString(1, nichoId);
+            try (var rs = ps.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : -1;
+            }
+        }
     }
 
     private void check(String name, boolean ok) {

@@ -367,6 +367,7 @@ public final class Puerta {
         if (svc == null) {
             return;
         }
+        boolean hayEncerrados = false;
         for (ServerPlayerEntity j : servidor.getPlayerManager().getPlayerList()) {
             Boolean cruzada = svc.cruzadaEnCache(j.getUuid());
             // ⚠ `null` es «aun no lo se» y se deja en paz: mover a un veterano
@@ -375,9 +376,76 @@ public final class Puerta {
                 continue;
             }
             if (enElLobby(j)) {
+                hayEncerrados = true;
                 continue;
             }
             TravelService.travel(j, LunaDimensions.LOBBY, "el Lobby");
+        }
+        if (hayEncerrados) {
+            comprobarGuardian(servidor);
+        }
+    }
+
+    /** Cada cuanto se comprueba que el guardian sigue ahi, en milisegundos. */
+    private static final long CADA_GUARDIAN_MS = 30_000L;
+
+    private static long ultimaComprobacion;
+
+    /**
+     * QUE EL GUARDIAN SIGA EXISTIENDO, O LA PUERTA SE APAGA SOLA.
+     *
+     * <h2>&#9888;&#9888;&#9888; SIN ESTO, PERDER AL GUARDIAN ENCIERRA A TODO EL
+     * QUE ENTRE, EN SILENCIO Y PARA SIEMPRE</h2>
+     *
+     * {@code /luna puerta activar} comprueba que este puesto, pero eso es <b>una
+     * foto del momento de encenderla</b>. Despues puede irse: un
+     * {@code /luna decorar quitar} con radio se lo lleva --lleva la marca de los
+     * decorativos--, o alguien lo borra al retocar el lobby. Y entonces el lobby
+     * <b>sigue siendo una carcel</b>: {@code Traslado} no deja salir, y la unica
+     * puerta ya no esta. No habria ningun error: habria jugadores nuevos dando
+     * vueltas dentro hasta que alguien se quejara.
+     *
+     * <p>&#9888;&#9888; <b>Se apaga la puerta en vez de avisar.</b> Apagada, un
+     * jugador nuevo va al Mundo Hogar --que es el comportamiento viejo, y es
+     * malo-- pero <b>puede jugar</b>. Atrapado no puede hacer nada. De los dos
+     * fallos, se elige el que no encierra a nadie.
+     *
+     * <p>&#9888; Solo se mira <b>cuando hay alguien esperando dentro</b>, y por
+     * eso la comprobacion es fiable: un barrido de entidades solo ve chunks
+     * cargados, y si hay un jugador en el lobby su chunk lo esta. Comprobarlo
+     * con el lobby vacio daria cero siempre y apagaria la puerta sin motivo --
+     * la leccion de los cuatro diagnosticos con {@code @e}.
+     */
+    private static void comprobarGuardian(net.minecraft.server.MinecraftServer servidor) {
+        long ahora = System.currentTimeMillis();
+        if (ahora - ultimaComprobacion < CADA_GUARDIAN_MS) {
+            return;
+        }
+        ultimaComprobacion = ahora;
+        var mundo = servidor.getWorld(LunaDimensions.LOBBY);
+        if (mundo == null) {
+            return;
+        }
+        // ⚠ Se busca alrededor del punto de llegada y no del jugador: el
+        //   guardian esta donde se planto, y alguien que se haya alejado no
+        //   deberia hacer creer que ha desaparecido.
+        int cuantos = PuertaNpc.contar(mundo, TravelService.spawnLobby(), 64.0);
+        if (cuantos > 0) {
+            return;
+        }
+        LunaEternal.LOG.error("PUERTA: NO HAY GUARDIAN en el lobby y hay gente "
+                + "esperando dentro. Se APAGA la puerta para no dejar a nadie "
+                + "encerrado: sin guardian, del lobby no se sale. "
+                + "Vuelve a colocarlo con /luna puerta npc y enciendela con "
+                + "/luna puerta activar.");
+        try {
+            activar(false);
+        } catch (java.io.IOException e) {
+            // ⚠ Aunque no se pueda escribir el fichero, se apaga EN MEMORIA:
+            //   lo que no puede pasar es que siga encerrando gente porque el
+            //   disco esta lleno.
+            activa = false;
+            LunaEternal.LOG.error("No se pudo guardar el apagado de la puerta", e);
         }
     }
 

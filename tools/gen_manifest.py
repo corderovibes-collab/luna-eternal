@@ -343,10 +343,19 @@ VERSION_PACK = "0.2.0"
 #    tiene que estar en los DOS lados-- mordiendo por el otro extremo: no por
 #    añadirlo al servidor, sino por QUITARLO del cliente. Lo que impide que
 #    vuelva a pasar es `comprobar_bajas()`, mas abajo.
+# cobblemon-additions VIAJA COMO NUESTRO POR EL MISMO MOTIVO QUE LAS CARTAS:
+# es una version PARCHEADA (tools/parchear_bca.py) y el jar de Modrinth NO
+# SIRVE -- su 4.3.0 exige cobbledollars, que el usuario mando quitar, y genera
+# construcciones por el mundo, que se rechazo cuatro veces. Parcheado deja de
+# poder servirse desde el CDN de Modrinth --seria otro fichero con el mismo
+# nombre-- asi que va a NUESTRA release, con su huella.
+# Y el de Modrinth esta en EXCLUIDOS: sin eso viajarian LOS DOS, y el jugador
+# tendria dos jars del mismo mod peleandose por el mismo id.
 PROPIOS = [
     {"carpeta": "neon", "prefijo": "lunaneon"},
     {"carpeta": "mod", "prefijo": "lunaeternal"},
     {"carpeta": "cards", "prefijo": "cobblemon-cards"},
+    {"carpeta": "bca", "prefijo": "cobblemon-additions"},
 ]
 
 

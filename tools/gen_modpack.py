@@ -108,6 +108,20 @@ EXCLUIDOS = {
     "biome-replacer":
         "Reemplaza biomas enteros. Cambia la generacion del mundo, que es lo "
         "que se quiere dejar quieto",
+    # SE QUITA EL DE MODRINTH PORQUE SERVIMOS EL NUESTRO, PARCHEADO
+    # (tools/parchear_bca.py). Decision del usuario, 2026-09-09: dejarlo
+    # actualizado a la 4.3.0 pero sin cobbledollars y sin generar nada.
+    #   - su 4.3.0 EXIGE cobbledollars, que el usuario mando quitar el 04-09
+    #   - y GENERA CONSTRUCCIONES, ya rechazado cuatro veces aqui mismo. Se
+    #     colo porque su nombre no dice "structures": son 298 piezas .nbt y
+    #     PISA los structure_set de VAINILLA (villages y swamp_huts)
+    # Nuestro jar conserva los cuadros, el libro de la Pokedex, los spawners,
+    # los NPCs y TODO EL CODIGO. Solo se va lo que genera mundo.
+    "cobblemon-additions":
+        "Servimos NUESTRA version parcheada (tools/parchear_bca.py): sin la "
+        "dependencia de cobbledollars y sin generacion de estructuras. Viaja "
+        "por PROPIOS, igual que cobblemon-cards",
+
     "huge-structure-blocks":
         "Solo existe para colocar las estructuras gigantes de Legendary "
         "Monuments. Sin ellas no pinta nada",
@@ -309,20 +323,6 @@ SUBIR = {
     #      es `catch-rate-display`, `catchindicator` es `catch-indicator` y
     #      `MoreCobblemonTweaks` es `more-cobblemon-tweaks`. Por eso la guarda
     #      de mas abajo aborta si una clave no casa con nada.
-    # ⚠⚠⚠ cobblemon-additions SE QUEDA EN LA 4.1.6 A PROPOSITO, y NO es un
-    #    descuido: su 4.3.0 EXIGE cobbledollars, que el usuario mando quitar
-    #    el 2026-09-04 --«ganas dinero y eso con el sistema de economia que
-    #    tenemos no debe de estar»--. Subirlo reintroduciria una SEGUNDA
-    #    economia por la puerta de atras, que es justo lo que D-040 y la
-    #    exclusion de CobbleDollars evitan.
-    #    Lo caza la comprobacion de dependencias: «necesita cobbledollars y NO
-    #    esta en el pack».
-    #    ⚠⚠ QUEDA UNA DECISION ABIERTA PARA EL USUARIO, y las dos opciones
-    #       quitan algo: o se excluye  --que ademas mete
-    #       spawns de Gen 3-8 que el datapack de generaciones tiene que apagar
-    #       uno a uno (D-017)-- o se acepta CobbleDollars de vuelta.
-    #       Mientras tanto se queda como estaba: es lo unico que no cambia nada
-    #       sin permiso.
     "catch-rate-display":
         "2.11.0, publicada el 2026-09-06 -- el mismo dia que Cobblemon 1.8.0.",
     "catch-indicator":

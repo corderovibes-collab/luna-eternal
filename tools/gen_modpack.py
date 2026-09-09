@@ -53,6 +53,28 @@ SERVIDOR = ("§6PokeReport §bNetwork", "s12.mia.us.tarohosting.lat:33043")
 # mano en 0.16.14 y el pack generado no arrancaba (2026-08-11).
 LOADER_MINIMO = (0, 17, 2)
 
+# EL LOADER QUE LA GENTE TIENE INSTALADO, QUE NO ES EL QUE DECLARA EL PACK.
+#
+# ESTA CONSTANTE EXISTE PORQUE UN MOD NUEVO DEJO EL JUEGO SIN ARRANCAR
+# (2026-09-09). `fabric-language-kotlin` 1.14.1 exige loader >= 0.19.5, el
+# manifiesto DECLARA 0.19.5, y aun asi el cliente murio con:
+#
+#   Incompatible mods found!
+#   ...requires version 0.19.5 or later of mod 'Fabric Loader',
+#   but only the wrong version is present: 0.19.3!
+#
+# LA COMPROBACION DE DEPENDENCIAS NO PODIA CAZARLO POR DOS MOTIVOS, y los dos
+# importan: `fabricloader` estaba EXENTO en LO_PONE_EL_JUEGO --razonable, lo
+# pone el launcher y no el pack-- y ademas la comprobacion mira lo que el pack
+# DECLARA, que cuadraba. Lo que no cuadra es la REALIDAD: el launcher NO
+# reinstala el loader de una instancia que ya existe, asi que subir el minimo
+# declarado no sube el de nadie -- solo deja tirado al que ya juega.
+#
+# SE SUBE A MANO, y solo cuando se sepa que la gente ya tiene ese loader (o
+# cuando el launcher aprenda a reinstalarlo). Subirlo por costumbre es
+# exactamente el fallo que esta linea evita.
+LOADER_INSTALADO = "0.19.3"
+
 # ---------------------------------------------------------------------------
 # LA BASE (D-031, sustituye a D-024)
 # ---------------------------------------------------------------------------
@@ -442,8 +464,18 @@ SUBIR = {
         "XP por jugar",
     "pokeblocks":
         "de aqui salen los 146 PELUCHES de la tienda",
-    "fabric-language-kotlin":
-        "Kotlin, por debajo de Cobblemon",
+    # fabric-language-kotlin NO SE SUBE, Y ESTO ROMPIO EL CLIENTE (2026-09-09).
+    # Su 1.14.1 exige Fabric Loader >= 0.19.5 y las instancias YA INSTALADAS
+    # tienen 0.19.3: el juego no arranca, "Incompatible mods found".
+    #
+    # La comprobacion de dependencias NO lo caza y no podia: el manifiesto
+    # DECLARA 0.19.5, asi que sobre el papel cuadra. Lo que no cuadra es la
+    # realidad -- el launcher no actualiza el loader de una instancia que ya
+    # existe, asi que subir el minimo deja tirado a todo el que ya juega.
+    # Hoy lo vigila LOADER_INSTALADO.
+    #
+    # Y el servidor lo ignoraba en silencio: corre loader 0.18.4 y cargaba un
+    # 1.13.6 ANIDADO en otro mod, con el 1.14.1 puesto en /mods sin usarse.
 }
 
 # Overrides de la base que NO se copian.
@@ -1115,6 +1147,19 @@ def verificar_dependencias(ficheros: list) -> None:
     for f in ficheros:
         for mid, version, depends in meta.get(_sha1(f)) or []:
             for dep, rango in (depends or {}).items():
+                # EL LOADER NO SE SALTA: SE COMPRUEBA CONTRA EL QUE HAY
+                # INSTALADO. Antes caia en la exencion de abajo y por eso un mod
+                # que pedia un loader mas nuevo pasaba el filtro y reventaba en
+                # la maquina del jugador.
+                if dep == "fabricloader":
+                    if not cumple(LOADER_INSTALADO, rango):
+                        problemas.append(
+                            f"{mid} {version} pide Fabric Loader {rango} y la "
+                            f"gente tiene {LOADER_INSTALADO}. El manifiesto "
+                            f"puede declarar el que quiera: el launcher NO lo "
+                            f"reinstala en una instancia que ya existe, asi que "
+                            f"quien ya juega veria 'Incompatible mods found'")
+                    continue
                 if dep in LO_PONE_EL_JUEGO:
                     continue
                 if dep not in presentes:

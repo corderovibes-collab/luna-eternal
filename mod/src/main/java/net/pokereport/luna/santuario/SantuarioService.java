@@ -1181,16 +1181,28 @@ public final class SantuarioService {
                 // ⚠ El UPDATE lleva la condicion dentro: si otra peticion cobro
                 //   entre el `paseo` y esto, afecta a CERO filas y se rechaza.
                 int filas;
+                // ⚠⚠⚠ EL ORDEN DE LAS DOS ASIGNACIONES NO ES INDIFERENTE, y la
+                //    primera version lo tenia al reves. En un
+                //    `ON DUPLICATE KEY UPDATE`, MariaDB evalua de IZQUIERDA A
+                //    DERECHA y lo de la derecha ve YA ACTUALIZADO lo de la
+                //    izquierda: con `ultimo_ms` primero, el `IF(ultimo_ms <= ?)`
+                //    del contador leia la fecha RECIEN ESCRITA --que nunca es
+                //    vieja-- y `cobrados` no subia JAMAS.
+                //    ⚠ No habria dado ningun error ni habria roto el premio: la
+                //      Ultra Ball se entregaba igual. Lo que se quedaba a cero
+                //      para siempre es el unico numero que dice cuanto se ha
+                //      cobrado, o sea el que haria falta el dia que alguien
+                //      pregunte si esto se esta abusando.
                 try (PreparedStatement ps = c.prepareStatement(
                         "INSERT INTO santuario_premio (player_id, ultimo_ms, cobrados) "
                                 + "VALUES (?,?,1) ON DUPLICATE KEY UPDATE "
-                                + "ultimo_ms = IF(ultimo_ms <= ?, ?, ultimo_ms), "
-                                + "cobrados = cobrados + IF(ultimo_ms <= ?, 1, 0)")) {
+                                + "cobrados = cobrados + IF(ultimo_ms <= ?, 1, 0), "
+                                + "ultimo_ms = IF(ultimo_ms <= ?, ?, ultimo_ms)")) {
                     ps.setLong(1, playerId);
                     ps.setLong(2, ahora);
                     ps.setLong(3, desde);
-                    ps.setLong(4, ahora);
-                    ps.setLong(5, desde);
+                    ps.setLong(4, desde);
+                    ps.setLong(5, ahora);
                     filas = ps.executeUpdate();
                 }
                 // ⚠⚠ MariaDB devuelve 1 al insertar y 2 al actualizar de verdad;

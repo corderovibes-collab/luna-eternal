@@ -86,6 +86,72 @@ public final class Puerta {
      */
     public static final int PROTOCOLO = 1;
 
+    /**
+     * &#9888;&#9888;&#9888; LA PUERTA NACE APAGADA, Y ESO NO ES PRUDENCIA: SIN
+     * ESTO, DESPLEGARLA ENCIERRA A TODO EL QUE ENTRE.
+     *
+     * <p>El dia que este codigo llegue al servidor, el lobby es una dimension
+     * <b>vacia</b>: no hay construccion y no hay guardian, porque las dos cosas
+     * se ponen a mano y dentro del juego. Con la puerta encendida desde el
+     * primer arranque, cada jugador nuevo apareceria en un vacio sin nada que
+     * tocar -- y {@code Traslado} le impediria salir, que es precisamente lo que
+     * la hace funcionar. Quedaria <b>atrapado</b>, y de la dimension del lobby
+     * no se sale andando.
+     *
+     * <p>&#9888;&#9888; Es la misma familia que «un provisional que funciona se
+     * queda»: aqui el peligro es el contrario --una funcion a medias que se
+     * enciende sola-- y se resuelve igual, haciendo que <b>encenderla sea un
+     * acto deliberado</b>: {@code /luna puerta activar}, cuando el lobby este
+     * construido y el guardian colocado.
+     *
+     * <p>&#9888; Vive en un fichero y no en la base porque se lee <b>al
+     * arrancar</b>, en el hilo del servidor, donde consultar la base esta
+     * prohibido. Mismo motivo que {@code luna-recepciones.properties}.
+     */
+    private static volatile boolean activa;
+
+    private static final java.nio.file.Path FICHERO =
+            java.nio.file.Path.of("config", "lunaeternal", "puerta.properties");
+
+    /** Lee el interruptor del disco. Se llama al arrancar. */
+    public static void cargarInterruptor() {
+        boolean valor = false;
+        try {
+            if (java.nio.file.Files.exists(FICHERO)) {
+                var props = new java.util.Properties();
+                try (var in = java.nio.file.Files.newInputStream(FICHERO)) {
+                    props.load(in);
+                }
+                valor = Boolean.parseBoolean(props.getProperty("activa", "false"));
+            }
+        } catch (Exception e) {
+            // ⚠ Ante un fichero ilegible, APAGADA. De las dos equivocaciones, la
+            //   que deja a la gente encerrada es la que no se puede permitir.
+            LunaEternal.LOG.warn("No se pudo leer {}: la puerta queda apagada",
+                    FICHERO, e);
+        }
+        activa = valor;
+        LunaEternal.LOG.info("Puerta: {}", valor
+                ? "ACTIVA (los jugadores nuevos empiezan en el lobby)"
+                : "apagada (nadie pasa por el lobby todavia)");
+    }
+
+    public static boolean activa() {
+        return activa;
+    }
+
+    /** Enciende o apaga, y lo deja escrito para el siguiente arranque. */
+    public static void activar(boolean valor) throws java.io.IOException {
+        java.nio.file.Files.createDirectories(FICHERO.getParent());
+        var props = new java.util.Properties();
+        props.setProperty("activa", Boolean.toString(valor));
+        try (var out = java.nio.file.Files.newOutputStream(FICHERO)) {
+            props.store(out, "La puerta del lobby. Encender solo con el "
+                    + "guardian ya colocado: sin el, nadie puede salir.");
+        }
+        activa = valor;
+    }
+
     /** Que protocolo dijo tener cada cliente. Sin entrada = no ha saludado. */
     private static final Map<UUID, Integer> SALUDOS = new ConcurrentHashMap<>();
 
@@ -181,7 +247,7 @@ public final class Puerta {
      */
     public static void alEntrar(ServerPlayerEntity jugador) {
         var svc = LunaEternal.puerta();
-        if (svc == null) {
+        if (svc == null || !activa) {
             return;
         }
         Boolean cruzada = svc.cruzadaEnCache(jugador.getUuid());
@@ -249,7 +315,7 @@ public final class Puerta {
                                    net.minecraft.registry.RegistryKey<
                                            net.minecraft.world.World> destino) {
         var svc = LunaEternal.puerta();
-        if (svc == null) {
+        if (svc == null || !activa) {
             return true;
         }
         Boolean cruzada = svc.cruzadaEnCache(jugador.getUuid());

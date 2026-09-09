@@ -93,6 +93,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.world.Decorativos.fueraDeLaPokedex();
         net.pokereport.luna.world.Decorativos.abrirViajesAlTocar();
         net.pokereport.luna.puerta.PuertaNpc.engancharClic();
+        net.pokereport.luna.puerta.Puerta.cargarInterruptor();
         // ⚠ Se registra AQUI y no en SERVER_STARTED por lo mismo que los tres
         //   de arriba: los eventos se suscriben una sola vez, y los nichos
         //   (geometria y reclamaciones) los lee el manejador cuando llega el

@@ -615,7 +615,13 @@ public final class LunaCommand {
                         .executes(ctx -> quitarGuardian(ctx.getSource())))
                     .then(argument("especie", StringArgumentType.word())
                         .executes(ctx -> colocarGuardian(ctx.getSource(),
-                                StringArgumentType.getString(ctx, "especie"))))))
+                                StringArgumentType.getString(ctx, "especie")))))
+                .then(literal("activar")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .executes(ctx -> activarPuerta(ctx.getSource(), true)))
+                .then(literal("desactivar")
+                    .requires(s -> s.hasPermissionLevel(4))
+                    .executes(ctx -> activarPuerta(ctx.getSource(), false))))
 
             .then(literal("inicial")
                 .requires(s -> s.hasPermissionLevel(3))
@@ -867,6 +873,47 @@ public final class LunaCommand {
         }
         src.sendFeedback(() -> Text.literal(
                 "\u00a7aGuardi\u00e1n colocado\u00a78 (" + especie + ")"), false);
+        return 1;
+    }
+
+    /**
+     * ⚠⚠⚠ ENCENDERLA SIN GUARDIAN ENCIERRA A TODO EL QUE ENTRE, asi que el
+     *    comando lo COMPRUEBA antes en vez de fiarse: la dimension del lobby no
+     *    se sale andando y el candado de {@code Traslado} es justo lo que
+     *    impide salir. Un aviso en la documentacion no habria evitado nada.
+     *    ⚠ El barrido solo ve entidades EN CHUNKS CARGADOS, asi que se exige
+     *      estar en el lobby --y por tanto tenerlo cargado-- para encenderla.
+     *      Es la leccion de los cuatro diagnosticos con {@code @e}.
+     */
+    private static int activarPuerta(ServerCommandSource src, boolean valor) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (valor) {
+            if (p == null || !net.pokereport.luna.world.LunaDimensions.LOBBY.equals(
+                    p.getServerWorld().getRegistryKey())) {
+                src.sendError(Text.literal("§cPara encenderla tienes que estar "
+                        + "EN EL LOBBY: hay que comprobar que el guardián "
+                        + "está puesto, y solo se ve si su chunk está cargado."));
+                return 0;
+            }
+            int guardianes = net.pokereport.luna.puerta.PuertaNpc.contar(
+                    p.getServerWorld(), p.getPos(), 64.0);
+            if (guardianes == 0) {
+                src.sendError(Text.literal("§cNO HAY GUARDIÁN cerca. "
+                        + "Si enciendes la puerta ahora, cada jugador nuevo se "
+                        + "queda ENCERRADO en el lobby. Colócalo primero con "
+                        + "§f/luna puerta npc§c."));
+                return 0;
+            }
+        }
+        try {
+            net.pokereport.luna.puerta.Puerta.activar(valor);
+        } catch (java.io.IOException e) {
+            src.sendError(Text.literal("§cNo se pudo guardar: " + e.getMessage()));
+            return 0;
+        }
+        src.sendFeedback(() -> Text.literal(valor
+                ? "§aPuerta ACTIVA§7: los jugadores nuevos empiezan en el lobby."
+                : "§7Puerta apagada: nadie pasa por el lobby."), true);
         return 1;
     }
 

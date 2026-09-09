@@ -122,6 +122,24 @@ public final class PuertaNpc {
     }
 
     /**
+     * Cuantos guardianes hay cerca.
+     *
+     * <h2>&#9888;&#9888; SOLO VE LO QUE ESTA EN UN CHUNK CARGADO</h2>
+     *
+     * Es una limitacion del propio Minecraft, no de esto, y en este proyecto ya
+     * costo <b>cuatro diagnosticos</b>: un selector no encuentra lo que esta en
+     * un chunk descargado, y la respuesta parece «no existe» cuando es «no lo
+     * estoy mirando». Por eso quien llama tiene que estar <b>dentro del
+     * lobby</b>: asi el chunk esta cargado por definicion y un cero significa
+     * de verdad que no hay guardian.
+     */
+    public static int contar(ServerWorld mundo, Vec3d centro, double radio) {
+        Box caja = Box.of(centro, radio * 2, radio * 2, radio * 2);
+        return mundo.getEntitiesByClass(Entity.class, caja,
+                x -> x.getCommandTags().contains(MARCA)).size();
+    }
+
+    /**
      * Borra los guardianes y sus carteles que haya cerca.
      *
      * @return cuantas entidades se quitaron

@@ -203,8 +203,26 @@ public class LunaCliente implements ClientModInitializer {
         //   honor ajeno cambia el total que tu pantalla dibuja, y el servidor
         //   lo reenvia. Aqui solo se guarda; la pantalla, si esta abierta, lo
         //   relee al refrescarse.
+        // ⚠⚠⚠ AQUI SE CONTESTA AL SALUDO, Y ESTO ES LO QUE HACE QUE LA PUERTA
+        //    SE PUEDA CRUZAR. El saludo tambien se manda al entrar (mas abajo),
+        //    pero eso es un DISPARO AL AIRE: sale una vez, en el instante en que
+        //    el cliente cree estar listo, y si se pierde --o si sale antes de
+        //    que el otro lado este preparado para oirlo-- el jugador se queda
+        //    con «tu version esta desfasada» PARA SIEMPRE y sin nada que pueda
+        //    hacer, porque nada lo reintenta.
+        //    Con esto el saludo pasa a ser una RESPUESTA: lo pide el servidor
+        //    --que manda `EstadoPuerta` a los dos segundos de entrar y cada vez
+        //    que cambia algo-- y quien tenga el mod contesta siempre. El
+        //    momento lo elige quien sabe que ya esta listo.
+        //    ⚠ Contestar de mas no cuesta nada: son cuatro bytes y ocurre un
+        //      puñado de veces por sesion. Contestar de menos deja a alguien
+        //      fuera del mundo.
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoPuerta.ID,
-                (carga, ctx) -> EstadoCliente.guardar(carga));
+                (carga, ctx) -> {
+                    EstadoCliente.guardar(carga);
+                    ClientPlayNetworking.send(new Red.Saludo(
+                            net.pokereport.luna.puerta.Puerta.PROTOCOLO));
+                });
 
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoPaseo.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));

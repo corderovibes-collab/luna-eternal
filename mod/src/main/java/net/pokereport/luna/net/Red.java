@@ -4128,8 +4128,16 @@ public class Red implements ModInitializer {
         // ⚠ El saludo NO toca la base ni el mundo: solo apunta un numero en
         //   memoria, asi que corre donde llega y no hace falta encolarlo.
         ServerPlayNetworking.registerGlobalReceiver(Saludo.ID, (carga, ctx) -> {
-            net.pokereport.luna.puerta.Puerta.saludar(
-                    ctx.player().getUuid(), carga.protocolo());
+            // ⚠ Se deja rastro la PRIMERA vez de cada jugador. Sin esto,
+            //   diagnosticar «no puedo cruzar la puerta» es adivinar: no hay
+            //   forma de distinguir «no llego el saludo» de «llego con otro
+            //   numero», y las dos se ven igual desde el juego.
+            if (net.pokereport.luna.puerta.Puerta.saludar(
+                    ctx.player().getUuid(), carga.protocolo())) {
+                LunaEternal.LOG.info("Puerta: {} saluda con protocolo {} (se exige {})",
+                        ctx.player().getGameProfile().getName(), carga.protocolo(),
+                        net.pokereport.luna.puerta.Puerta.PROTOCOLO);
+            }
         });
 
         ServerPlayNetworking.registerGlobalReceiver(VerNicho.ID, (carga, ctx) -> {
@@ -6345,6 +6353,11 @@ public class Red implements ModInitializer {
      * muerto en la ciudadela, y eso se comporta igual que un fallo.
      */
     public static void enviarPuerta(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        // ⚠⚠ La guarda de `canSend` se queda, pero el motivo es otro: mandarle
+        //    un canal que no conoce a un cliente sin el mod le TIRA la conexion
+        //    («Failed to decode packet»). Lo que NO puede hacer esta guarda es
+        //    ahorrarse la pregunta con un cliente que si lo tiene: es
+        //    precisamente esta pregunta la que le hace saludar.
         if (!ServerPlayNetworking.canSend(jugador, EstadoPuerta.ID)) {
             return;
         }

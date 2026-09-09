@@ -173,9 +173,14 @@ public final class Puerta {
 
     // ------------------------------------------------------------ saludo
 
-    /** Lo que dice el cliente al entrar. Llega por {@code Red.Saludo}. */
-    public static void saludar(UUID uuid, int protocolo) {
-        SALUDOS.put(uuid, protocolo);
+    /**
+     * Lo que dice el cliente. Llega por {@code Red.Saludo}.
+     *
+     * @return {@code true} si es la primera vez de este jugador, para que el
+     *         log no repita la misma linea cada vez que se le reenvia el estado
+     */
+    public static boolean saludar(UUID uuid, int protocolo) {
+        return SALUDOS.put(uuid, protocolo) == null;
     }
 
     public static void olvidar(UUID uuid) {

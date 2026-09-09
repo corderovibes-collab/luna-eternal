@@ -3555,8 +3555,18 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(ReclamarMision.ID, ReclamarMision.CODEC);
         PayloadTypeRegistry.playS2C().register(Misiones.ID, Misiones.CODEC);
 
-        ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) ->
-                enviarSaldo(ctx.player()));
+        // ⚠⚠ EN EL LOBBY NO SE MANDA LA FICHA, y con eso se cae TODO el PokePad:
+        //    el saldo, el rango, el clan y las medallas salen de aqui, asi que
+        //    un cliente modificado que abriera una pantalla en el lobby la veria
+        //    vacia. Es la mitad de servidor del candado (P6) -- la del cliente
+        //    es apagar la tecla, y sola no vale porque un cliente modificado no
+        //    dibuja nada y manda el paquete que quiere.
+        ServerPlayNetworking.registerGlobalReceiver(PedirSaldo.ID, (carga, ctx) -> {
+            if (net.pokereport.luna.puerta.Puerta.bloqueado(ctx.player())) {
+                return;
+            }
+            enviarSaldo(ctx.player());
+        });
 
 
         ServerPlayNetworking.registerGlobalReceiver(PedirCosmeticos.ID, (carga, ctx) -> {

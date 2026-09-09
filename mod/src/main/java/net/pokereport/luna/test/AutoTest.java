@@ -33,6 +33,22 @@ public final class AutoTest {
     private static final UUID T2 = UUID.fromString("00000000-0000-3000-8000-000000000002");
     private static final String N1 = "__autotest_1";
     private static final String N2 = "__autotest_2";
+    /**
+     * El tercero, solo para la puerta.
+     *
+     * <h2>&#9888;&#9888; HACE FALTA UNO PROPIO, Y NO VALEN T1 NI T2</h2>
+     *
+     * La comprobacion que importa es <b>«un jugador nuevo NO consta como
+     * cruzado»</b>, y T1 y T2 los usan otras veinte pruebas antes: cualquiera de
+     * ellas podria dejarles una fila. Un jugador que nace y muere dentro de este
+     * bloque es el unico del que se puede afirmar que esta limpio.
+     *
+     * <p>&#9888; Y va en {@code cleanup()} desde el primer dia: sin borrarlo, la
+     * SEGUNDA ejecucion lo encontraria ya cruzado y la prueba se pondria roja
+     * sin que nadie hubiera tocado nada -- una prueba que solo pasa una vez.
+     */
+    private static final UUID T3 = UUID.fromString("00000000-0000-3000-8000-000000000003");
+    private static final String N3 = "__autotest_puerta";
 
     private final Database db;
     private final PlayerService players;
@@ -3386,6 +3402,83 @@ public final class AutoTest {
         //    mismo nombre. El usuario lo fijo en 3 (2026-09-08) y aqui se
         //    comprueba EL NUMERO EXACTO: un «<= 99» habria dejado pasar el
         //    mismo problema sin decir nada.
+        // =================================================================
+        // LA PUERTA: el lobby es la unica entrada al mundo
+        // =================================================================
+
+        // ⚠⚠⚠ SI LA ESPECIE DEL GUARDIAN NO EXISTE, NADIE PUEDE SALIR DEL
+        //    LOBBY. `Decorativos.colocar` devuelve null ante una especie que no
+        //    existe, asi que el NPC no se coloca -- y sin NPC no hay forma de
+        //    entrar al mundo. NO daria ningun error al arrancar: daria un lobby
+        //    con jugadores nuevos dando vueltas dentro, para siempre.
+        //    Es el fallo de los 62 cosmeticos que no existian, puesto en la
+        //    puerta de entrada del servidor.
+        check("PUERTA: LA ESPECIE DEL GUARDIAN EXISTE EN COBBLEMON",
+                com.cobblemon.mod.common.api.pokemon.PokemonSpecies.INSTANCE
+                        .getByName(net.pokereport.luna.puerta.PuertaNpc.ESPECIE) != null);
+
+        // ⚠⚠ LA PUERTA TIENE QUE LLEVAR FUERA DEL LOBBY. Si el destino fuera el
+        //    propio lobby, cruzar no haria nada visible y el jugador se quedaria
+        //    encerrado pulsando un NPC que dice que funciona. Un bucle no da
+        //    error: da a alguien atrapado.
+        check("puerta: la salida no lleva al propio lobby",
+                !net.pokereport.luna.world.LunaDimensions.LOBBY.equals(
+                        net.pokereport.luna.world.LunaDimensions.CIUDADELA));
+
+        var puertaSvc = LunaEternal.puerta();
+        check("puerta: el servicio esta arrancado", puertaSvc != null);
+
+        if (puertaSvc != null) {
+            // ⚠⚠⚠ EL RELLENO DE V036, Y ES LO QUE IMPIDE QUE ESTA FUNCION ROMPA
+            //    A TODO EL MUNDO. La tabla decide quien empieza en el lobby: si
+            //    hubiera nacido vacia, TODOS los que llevan semanas jugando
+            //    serian «nuevos» y apareceria cada uno en el lobby, lejos de su
+            //    casa, sin un solo error en el log.
+            //    `cruzada_ms = 0` solo lo escribe la migracion, asi que contar
+            //    esas filas es la unica forma de comprobar que el relleno CORRIO
+            //    de verdad -- leer el fichero .sql solo diria que esta escrito.
+            //    Es lo que ya paso con los trajes en V028.
+            long heredados = 0;
+            long jugadores = 0;
+            try (Connection c = db.connection();
+                 PreparedStatement ps = c.prepareStatement(
+                         "SELECT (SELECT COUNT(*) FROM player_puerta WHERE cruzada_ms = 0), "
+                         + "(SELECT COUNT(*) FROM player)");
+                 java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    heredados = rs.getLong(1);
+                    jugadores = rs.getLong(2);
+                }
+            }
+            // ⚠ Solo se exige si habia gente ANTES de la migracion. En una base
+            //   recien creada no hay a quien heredar, y exigirlo ahi seria una
+            //   prueba que falla POR ESTAR LIMPIA -- la clase de rojo que enseña
+            //   a ignorar los rojos.
+            check("PUERTA: EL RELLENO DE LA MIGRACION CORRIO",
+                    jugadores <= 3 || heredados > 0);
+
+            // ⚠⚠ UN JUGADOR RECIEN CREADO **NO** CONSTA COMO CRUZADO, y en eso
+            //    consiste la funcion entera: si constara, el jugador nuevo se
+            //    saltaria el lobby y volveriamos al agujero de antes --aparecer
+            //    en el Mundo Hogar sin Pokemon, sin puerta y sin ninguna pista--.
+            //    Se lee de la BASE y no de la cache: la cache la rellena el
+            //    evento de conexion, que aqui no ha ocurrido.
+            long fresco = players.resolve(T3, N3);
+            check("PUERTA: UN JUGADOR NUEVO NO CONSTA COMO CRUZADO",
+                    contarPuerta(fresco) == 0);
+
+            // ⚠ Y cruzar DOS VECES no puede fallar ni duplicar: dos clics
+            //   rapidos al guardian son dos peticiones, y lo resuelve la CLAVE
+            //   PRIMARIA y no un `if` en Java -- asi falla en la base venga de
+            //   donde venga.
+            puertaSvc.cruzar(T3, fresco);
+            puertaSvc.cruzar(T3, fresco);
+            check("puerta: cruzar deja constancia", contarPuerta(fresco) == 1);
+            check("puerta: y la cache se entera sin volver a la base",
+                    Boolean.TRUE.equals(puertaSvc.cruzadaEnCache(T3)));
+            puertaSvc.olvidar(T3);
+        }
+
         check("SANTUARIO: NADIE PUEDE TENER MAS DE 3 NICHOS",
                 net.pokereport.luna.santuario.SantuarioService.tope(CAMPEON) == 3);
         check("santuario: por debajo de CAMPEON sigue siendo uno",
@@ -3953,7 +4046,8 @@ public final class AutoTest {
 
     /** Borra en orden inverso a las claves ajenas. */
     private void cleanup() throws Exception {
-        List<String> uuids = new ArrayList<>(List.of(T1.toString(), T2.toString()));
+        List<String> uuids = new ArrayList<>(List.of(
+                T1.toString(), T2.toString(), T3.toString()));
         try (Connection c = db.connection()) {
             c.setAutoCommit(false);
             try {
@@ -5084,6 +5178,18 @@ public final class AutoTest {
             ps.setString(1, nichoId);
             try (var rs = ps.executeQuery()) {
                 return rs.next() ? rs.getLong(1) : -1;
+            }
+        }
+    }
+
+    /** Cuantas filas de puerta tiene. Se lee de la base, no de la cache. */
+    private int contarPuerta(long playerId) throws java.sql.SQLException {
+        try (Connection c = db.connection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT COUNT(*) FROM player_puerta WHERE player_id = ?")) {
+            ps.setLong(1, playerId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
             }
         }
     }

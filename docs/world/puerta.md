@@ -73,6 +73,26 @@ Quien **ya cruzó** no pasa por nada de esto: entra donde lo dejó. Si su sesió
 EasyAuth caducó (15 min), EasyAuth lo retiene, se loguea, y **EasyAuth mismo lo
 devuelve a su sitio**.
 
+### 3-bis. Dos retenciones distintas en el mismo sitio
+
+⚠⚠ **Esto confundió al usuario en vivo y por eso está escrito.** El lobby lo usan
+**dos mecanismos que no tienen nada que ver**, y se parecen mucho desde dentro:
+
+| | A quién | Qué ve | Quién lo suelta |
+|---|---|---|---|
+| **Retención de EasyAuth** | Cualquiera **sin autenticar** | Aparece **congelado** en el punto del lobby | `/login <clave>` — y **EasyAuth le devuelve a donde estaba** |
+| **La puerta** | Solo quien **nunca ha cruzado** | Se queda en el lobby y **puede andar** | El **guardián** |
+
+Un veterano **no vuelve a ver la puerta jamás**: la migración le marcó como
+cruzado. Lo único que verá tras 15 minutos fuera es el lobby unos segundos
+mientras teclea la clave.
+
+⚠ **«Pasa el tiempo» no es «se desconecta».** La sesión dura 15 minutos: quien
+vuelva antes entra directo, sin login y sin lobby. Es lo que se pidió, pero de
+lejos parece que la retención «no funciona».
+
+⚠ Para probarla sin esperar: **`/logout`** mata la sesión al momento.
+
 ## 4. Las decisiones que no son obvias
 
 ### 4.1 El candado va en `Traslado.ir`, no en los receptores
@@ -123,6 +143,36 @@ subirlo cuando toca deja entrar a quien verá pantallas que «no abren».
 
 ⚠⚠ **Y la AUSENCIA del saludo es la señal**: un jar viejo no sabe mandarlo, así
 que no hay que esperar una respuesta que nunca va a llegar.
+
+⚠⚠⚠ **PERO EL SALUDO NO PUEDE SER UN DISPARO AL AIRE, Y LA PRIMERA VERSIÓN LO
+ERA.** Salía **una sola vez**, desde `ClientPlayConnectionEvents.JOIN`, en el
+instante en que **el cliente** cree estar listo. El usuario reabrió el launcher,
+entró con el jar nuevo puesto, tocó al guardián — y le salió *«tu versión está
+desfasada»*. Y **nada lo reintentaba**: reabrir el launcher no arregla algo que
+no depende del launcher, así que el jugador se queda fuera **para siempre**.
+
+Hoy el saludo es una **respuesta**: el servidor manda `EstadoPuerta` a los dos
+segundos de entrar —y cada vez que cambia algo— y quien tenga el mod contesta
+siempre. **El momento lo elige quien sabe que ya está listo**, en vez de
+adivinarlo. Contestar de más cuesta cuatro bytes un puñado de veces por sesión;
+contestar de menos deja a alguien fuera del mundo.
+
+⚠⚠ **Lo que hizo diagnosticable el fallo fue distinguir los dos rechazos.**
+`SIN_MOD` y `DESFASADO` parecen el mismo error con distinta redacción, y no lo
+son: salió `DESFASADO`, que significa que `canSend` era **cierto** — o sea que el
+cliente **sí** tenía el jar nuevo, porque `EstadoPuerta` y `Saludo` se añadieron
+en el mismo commit. Con un único mensaje de «no puedes pasar» habría sido
+imposible saber por dónde mirar.
+
+⚠ Y por eso **se deja rastro en el log** la primera vez que cada jugador saluda,
+con su protocolo y el exigido:
+
+```
+Puerta: TheJuanCE saluda con protocolo 1 (se exige 1)
+```
+
+Desde el juego, «no llegó el saludo» y «llegó con otro número» **se ven
+exactamente igual**.
 
 ### 4.4 Nace apagada
 
@@ -250,14 +300,36 @@ del todo es un trabajo deliberado, no un añadido al final.
 llegada `43.998 / 72 / 47.97` mirando al oeste, en los dos sitios y cruzado por
 el autotest.
 
-⚠ **La puerta sigue APAGADA**: falta rematar la construcción y encenderla con
-`/luna puerta activar`.
+✅ **El saludo llega**, verificado en el log en vivo:
+`Puerta: TheJuanCE saluda con protocolo 1 (se exige 1)`.
+
+⚠ **La puerta está APAGADA.** Se apagó para desplegar el arreglo del saludo —con
+el fallo vivo, un jugador nuevo entraba al lobby y **no podía cruzar**— y **no se
+ha vuelto a encender**. Se enciende con `/luna puerta activar`, estando dentro
+del lobby.
+
+⚠⚠ **El recorrido completo de un jugador nuevo NO se ha probado todavía**, y no
+se puede probar con la cuenta del operador: está marcada como cruzada por el
+relleno de la V036. Hace falta **una segunda cuenta**, o el comando del punto 2
+de aquí abajo.
 
 ## Last Decision
 D-050 — el lobby es la única entrada, y la visibilidad se recorta por dimensión.
 
 ## Next Actions
-1. Rematar el lobby y `/luna puerta activar` (usuario).
-2. Comprobar con **dos cuentas** que el recorte de visibilidad corre
-   (`/luna puerta` → «el recorte ha corrido: sí»).
-3. Pendiente y aparte: la guarda por acción del §8, y el proxy si se llega a 200.
+
+1. **Rematar el lobby y `/luna puerta activar`** (usuario). ⚠ Reabrir el launcher
+   antes: el jar cambió con el arreglo del saludo.
+2. **Escribir `/luna puerta reiniciar <jugador>`** — no existe, y hoy **la única
+   forma de probar el recorrido de un jugador nuevo es entrar con otra cuenta**.
+   Borra su fila de `player_puerta` y su entrada de la caché, y en el siguiente
+   segundo `Puerta.vigilar` lo devuelve al lobby. Es el hermano de
+   `/luna inicial reiniciar`, que hace lo mismo para el inicial.
+   ⚠ Y hay que **borrar también la caché**, no solo la fila: la fila la lee el
+   evento de conexión, así que sin tocar la memoria el jugador seguiría contando
+   como cruzado hasta que se desconecte — el fallo de `/luna reiniciarinicial`,
+   que «no servía» porque borraba la fila y el cliente seguía con su copia.
+3. **Comprobar el recorte de visibilidad con dos cuentas**
+   (`/luna puerta` → «el recorte ha corrido: sí»). Con el servidor vacío ese
+   «todavía no» no significa nada.
+4. Pendiente y aparte: la guarda por acción del §8, y el proxy si se llega a 200.

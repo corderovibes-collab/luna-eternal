@@ -1853,6 +1853,26 @@ Puerta        EL LOBBY ES LA UNICA ENTRADA (2026-09-09, V036, D-050)
                  huella del NOMBRE DEL FICHERO-- asi que habria dicho
                  siempre que todo el mundo esta al dia. Se compara un
                  PROTOCOLO, y la AUSENCIA del saludo es la señal
+              ⚠⚠⚠ Y EL SALUDO NO PUEDE SER UN DISPARO AL AIRE. La primera
+                 version lo mandaba UNA VEZ, desde el evento de conexion
+                 del CLIENTE, en el instante en que el cliente cree estar
+                 listo. El usuario reabrio el launcher, entro con el jar
+                 nuevo puesto, toco al guardian, y le salio «tu version
+                 esta desfasada» -- y NADA LO REINTENTABA: reabrir el
+                 launcher no arregla algo que no depende del launcher, asi
+                 que se queda fuera PARA SIEMPRE
+                 hoy es una RESPUESTA: el servidor manda EstadoPuerta a los
+                 dos segundos y quien tenga el mod contesta. EL MOMENTO LO
+                 ELIGE QUIEN SABE QUE YA ESTA LISTO
+                 ⚠⚠ lo que lo hizo diagnosticable fue DISTINGUIR LOS DOS
+                    RECHAZOS: SIN_MOD y DESFASADO parecen el mismo error con
+                    otra redaccion y no lo son -- salio DESFASADO, o sea que
+                    `canSend` era CIERTO y el cliente SI tenia el jar. Con un
+                    solo mensaje de «no puedes pasar» habria sido imposible
+                    saber por donde mirar
+                 ⚠ y por eso el saludo DEJA RASTRO EN EL LOG la primera vez
+                   de cada jugador: desde el juego, «no llego» y «llego con
+                   otro numero» se ven exactamente igual
               ⚠⚠ NACE APAGADA: el lobby es una dimension VACIA hasta que
                  alguien la construya, y con la puerta encendida cada
                  jugador nuevo apareceria en un vacio del que Traslado le
@@ -4432,7 +4452,8 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 
 | | |
 |---|---|
-| **0. CONSTRUIR EL LOBBY Y ENCENDER LA PUERTA** | Es lo único que hoy separa a un jugador nuevo de poder jugar. Los prompts de Gemini y Meshy están en `docs/ui/prompts-lobby.md`; el procedimiento, en `docs/world/puerta.md` §6. **En orden: reabrir el launcher · construir alrededor de `0.5/64/0.5` · `/luna ir lobby` · `/luna puerta npc` · `/luna puerta activar`.** ⚠ El launcher va **primero**: el saludo del cliente es nuevo, y un jar viejo **no saluda** — la puerta te rechazaría a ti el primero |
+| **0. ENCENDER LA PUERTA** | El lobby **ya está construido** y el guardián colocado (usuario, 09-09); falta rematarlo. La puerta está **APAGADA**: se apagó para desplegar el arreglo del saludo y **no se ha vuelto a encender**. `/luna ir lobby` → `/luna puerta activar`. ⚠ **Reabrir el launcher primero**: el jar cambió con ese arreglo. ✅ El saludo ya llega, verificado en el log (`Puerta: TheJuanCE saluda con protocolo 1`) |
+| **0-bis. `/luna puerta reiniciar <jugador>`** | **No existe, y hace falta**: hoy la única forma de probar el recorrido de un jugador nuevo es **entrar con otra cuenta**, porque la del operador está marcada como cruzada por el relleno de la V036. Tiene que borrar la fila **y la caché** — la fila la lee el evento de conexión, así que sin tocar la memoria el jugador seguiría contando como cruzado hasta desconectarse. Es el fallo de `/luna reiniciarinicial`, que «no servía» porque borraba la fila y el cliente seguía con su copia |
 | ~~**0-bis. Colocar a Oak**~~ | ✅ **Colocado** (usuario, 2026-09-09). Era lo que hacía falta para que la puerta llevara a alguna parte: sin él, cruzarla dejaba al jugador en una ciudadela donde no hay de quién coger inicial |
 | **0-ter. El Santuario** | `/luna santuario npc` (la Mew) y `/luna santuario nicho recolocar` para los 341 nichos, que tienen los proyectores a la altura vieja |
 

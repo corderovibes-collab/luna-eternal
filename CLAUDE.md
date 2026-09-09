@@ -1535,6 +1535,58 @@ Santuario     LOS NICHOS DE MONUMENTOS (2026-09-04, V031)
               las dos piezas, no mirar cada una por su lado. Y que el JSON que
               escribe sea el que lee el arranque, ida y vuelta POR EL TEXTO:
               comparar el objeto consigo mismo pasaria siempre
+              EL PASEO POR EL SANTUARIO (2026-09-09, V035, peticion del usuario)
+                ver un memorial da XP del pase (1 vez cada 24 h por nicho)
+                honrar 10 nichos -> 1 Ultra Ball, 1 vez cada 24 h
+                cambiar (o quitar) la foto REINICIA los honores del nicho
+              ⚠⚠⚠ VISITAR ES LA UNICA FUENTE DE XP DEL PASE QUE NO CRECE CON LO
+                 QUE JUEGA EL JUGADOR SINO CON LO QUE CONSTRUIMOS NOSOTROS. Hay
+                 341 nichos: sin techo, «una vez cada 24 h por nicho» son 341
+                 cobros al dia por hacer clic derecho, Y SUBE CADA VEZ QUE EL
+                 EQUIPO LEVANTA OTRO -- el pase se subiria paseando, sin que
+                 nadie tocara la tabla ni se enterara
+                 EL TECHO NO ESTA EN CUANTO PAGA CADA VISITA sino en CUANTAS
+                 CUENTAN (VISITAS_DIA = 10): asi, mil nichos mas no mueven ni
+                 una XP. Son 150 XP/dia, el 2,5 % del tope
+                 ⚠ si algun dia parece poco, la palanca SEGURA es VISITA_NICHO;
+                   la peligrosa es VISITAS_DIA
+              ⚠⚠ Y LA ULTRA BALL ROMPE UNA REGLA ESCRITA: santuario.md §3.3 decia
+                 «honrar NO da nada, a proposito: sin recompensa no hay incentivo
+                 de multicuenta». El usuario lo cambio, asi que cae -- pero el
+                 motivo sigue vivo y se tapa por otro lado: el premio va a QUIEN
+                 HONRA y no al nicho (el contador del memorial sigue significando
+                 lo mismo) y hacen falta DIEZ NICHOS DISTINTOS, porque el tope es
+                 1 honor por nicho y dia
+                 ⚠ lo que queda abierto: con cuentas gratis (B-004), el techo del
+                   abuso es UNA ULTRA BALL AL DIA POR CUENTA. A sabiendas
+              ⚠⚠ NI UN CONTADOR MAS DE LOS NECESARIOS: «cuantos he honrado hoy»
+                 NO se guarda, se CUENTA sobre `santuario_honor`, que ya lleva
+                 una fila por (nicho, jugador) con su ventana
+              ⚠⚠⚠ Y AL AUDITAR EL ALQUILER SALIERON DOS FALLOS DE ORIGEN:
+                 1) EL TIEMPO NO SE ENSEÑABA EN NINGUN SITIO. `EstadoNicho` lleva
+                    el campo `segundos` desde el primer dia y NADIE lo dibujaba:
+                    quien alquilaba por 24 h no tenia forma de saber cuanto le
+                    quedaba. No daba error -- daba un alquiler que se acaba sin
+                    avisar
+                    ⚠⚠ y CORRE DE VERDAD: el numero viaja YA RESTADO (correcto,
+                       como EstadoCura) pero un numero restado UNA VEZ SE QUEDA
+                       QUIETO. Se guarda CUANDO llego el paquete y se resta lo
+                       transcurrido
+                 2) EL BARRIDO DE VENCIDOS NO AVISABA A NADIE: `caducar()` borra
+                    dueño, foto y honores cada minuto y el holograma seguia en la
+                    pantalla de todos hasta reabrir el PokePad
+              ⚠⚠⚠ Y DOS FALLOS MIOS QUE CAZO EL AUTOTEST EN VIVO:
+                 `verNicho` con un id INEXISTENTE PERO BIEN FORMADO reventaba con
+                 violacion de clave ajena --`nichoValido` solo mira LA FORMA-- o
+                 sea que un cliente modificado podia provocar esa excepcion a
+                 voluntad mandando basura bien escrita
+                 y en el `ON DUPLICATE KEY UPDATE` del premio, MariaDB evalua de
+                 IZQUIERDA A DERECHA: con `ultimo_ms` primero, el contador leia
+                 la fecha RECIEN ESCRITA y no subia JAMAS. No rompia el premio --
+                 dejaba a cero el unico numero que diria si esto se esta abusando
+              ✅ EN VIVO (2026-09-09, 01:36): AUTOTEST 685/685 . V035 aplicada .
+                manifiesto 575e7db3bb
+              ---- el despliegue anterior ------------------------------
               ✅ DESPLEGADO Y EN VIVO (2026-09-08, 21:57), LOS DOS DESTINOS:
                 servidor  Done (27,253 s) . AUTOTEST 663/663
                           «Santuario: 341 NICHOS EN LA CONFIG»

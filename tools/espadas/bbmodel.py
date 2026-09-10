@@ -100,12 +100,28 @@ def construir(piezas, cubos, textura_png, nombre_textura, lado,
         "resolution": {"width": lado, "height": lado},
         "elements": elementos,
         "outliner": grupos,
+        # ⚠⚠⚠ LOS CAMPOS DE LA TEXTURA SE COPIAN DE LA REFERENCIA, UNO A UNO, Y
+        #    NO SE ELIGEN. La primera version escribia «los que hacen falta» y
+        #    se dejaba SEIS que Blockbench si escribe --`file_format`, `fps`,
+        #    `group`, `pbr_channel`, `scope` y `wrap_mode`--. El fichero se abria
+        #    igual y la textura se veia, asi que parecia bien; **lo que no hacia
+        #    era ANIMARSE**, porque `fps` es con lo que el editor la reproduce.
+        #    Un fichero al que le faltan campos no da error: da una funcion que
+        #    no aparece, y eso se lee como «la animacion no funciona».
+        #    ⚠ Se saco comparando los dos ficheros campo a campo, que es lo unico
+        #      que lo encuentra: mirando el mio, los seis que faltan no estan.
         "textures": [{
-            "path": "",
             "name": nombre_textura,
+            # ⚠ La referencia lo escribe SIN «./». Mio lo llevaba.
+            "relative_path": nombre_textura,
             "folder": "",
             "namespace": "",
             "id": "0",
+            "group": "",
+            "scope": 0,
+            "file_format": "png",
+            "wrap_mode": "limited",
+            "pbr_channel": "color",
             # ⚠⚠⚠ AQUI ESTA LA DIFERENCIA ENTRE LA QUIETA Y LA ANIMADA, Y SON
             #    DOS PARES DE NUMEROS DISTINTOS QUE ES FACIL CONFUNDIR:
             #      width/height        lo que MIDE la imagen (64 x 512 animada)
@@ -130,15 +146,21 @@ def construir(piezas, cubos, textura_png, nombre_textura, lado,
             #    `.mcmeta` al sacar la textura, asi que ponerlos aqui es lo que
             #    hace que el fichero se abra YA ANIMADO en vez de obligar a
             #    configurarlo a mano cada vez.
+            # ⚠⚠⚠ `fps` ES LO QUE REPRODUCE LA ANIMACION EN EL EDITOR, y
+            #    `frame_time` lo que se exporta al `.mcmeta` del juego. Son dos
+            #    relojes distintos para lo mismo, y por eso uno SE CALCULA del
+            #    otro: escritos a mano acabarian diciendo cosas distintas y la
+            #    animacion se juzgaria en Blockbench a una velocidad que no es la
+            #    del juego. 20 ticks por segundo / los ticks de cada fotograma.
+            "fps": max(1, round(20.0 / ticks)),
             "frame_time": ticks,
             "frame_order_type": "loop",
             "frame_order": "",
             "frame_interpolate": False,
             "visible": True,
             "internal": True,
-            "saved": False,
+            "saved": True,
             "uuid": str(_uuid.uuid4()),
-            "relative_path": "./" + nombre_textura,
             "source": "data:image/png;base64," + textura_png,
         }],
     }
@@ -300,6 +322,16 @@ def verificar(destino, piezas, cubos, lado, ruta_referencia=None, fotogramas=1):
         if d.get("meta") != ref.get("meta"):
             fallos.append("meta %s != la de la referencia %s"
                           % (d.get("meta"), ref.get("meta")))
+        # ⚠⚠⚠ Y LA TEXTURA LLEVA TODOS LOS CAMPOS QUE LLEVA LA SUYA. Esto existe
+        #    porque faltaban SEIS y el fichero se abria igual: la textura se veia
+        #    y no se animaba, o sea **una funcion que no aparece**, que se lee
+        #    como «la animacion esta rota» y manda a buscar el fallo al reves.
+        #    Un campo de mas no molesta; uno de menos apaga algo en silencio.
+        if ref.get("textures") and d.get("textures"):
+            faltan = sorted(set(ref["textures"][0]) - set(d["textures"][0]))
+            if faltan:
+                fallos.append("a la textura le faltan campos que Blockbench SI "
+                              "escribe: %s" % ", ".join(faltan))
 
     # 2 · LAS PIEZAS: las mismas, con el mismo nombre y la misma caja.
     el = d.get("elements", [])

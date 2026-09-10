@@ -36,6 +36,43 @@ unica entrada al mundo** (D-050). Autotest en vivo 696/696.
 >    cuando la operacion tiene identidad natural, como «reclamar la ronda N».
 > 5. **Carreras en topes diarios**: dos hilos de E/S pueden leer el mismo
 >    contador. Se busca `FOR UPDATE` dentro de una transaccion.
+> 6. **&#191;QUIEN PUEDE MANDAR ESTE PAQUETE?** Y tiene una forma MECANICA que
+>    lo hace barrible: **un receptor que MUTA llamando al servicio sin pasarle
+>    el id del jugador** no puede estar comprobando de quien es la accion --la
+>    informacion no ha entrado en el metodo--. De catorce receptores de
+>    mutacion, salio **exactamente uno**, y era el fallo de abajo.
+>
+> ⚠⚠⚠ **MODERAR UNA FOTO NO COMPROBABA EL NIVEL, Y EL JAVADOC DEL PAQUETE DECIA
+> QUE SI.** `ModerarFoto` llevaba escrito *«el servidor comprueba el nivel
+> (P6)»* y **no lo comprobaba nadie**: la guarda estaba en una frase. Lo unico
+> que protegia la moderacion era que la seccion no se dibuja para quien no es
+> staff -- o sea **dibujo**, que es justo lo que P6 dice que no es una regla.
+>
+> **Y no habia que adivinar nada para usarlo:** `subirFoto` le devuelve al
+> jugador **su propio `fotoId`** y `misFotos` se lo vuelve a dar. Con eso, un
+> cliente modificado **se aprueba su foto y la cuelga en el mundo para todos**,
+> que es lo unico que la moderacion existe para impedir. Y como `foto_id` es
+> **correlativo**, por el otro lado podia **RECHAZAR las de los demas contando**.
+>
+> ⚠⚠ **LO QUE HIZO QUE NO SE VIERA ES QUE LA OTRA MITAD SI ESTABA BIEN.**
+> `enviarPendientes` --la LECTURA-- comprueba el nivel y ademas lo explica.
+> Mirando esa mitad, el sistema parece cerrado. **Leer y escribir son dos
+> puertas**, y hay que mirar las dos.
+>
+> ⚠⚠ Y el nivel estaba **escrito a mano en TRES sitios** --ver la lista,
+> moderar, y dibujar el boton-- que tienen que decir lo mismo o la averia es
+> muda en las dos direcciones: o alguien ve la seccion y sus clics se rechazan
+> (parece el servidor roto), o modera sin ver lo que modera. Hoy es
+> `Red.esStaff`, un solo sitio. Es **las tres listas de medallas otra vez**.
+>
+> ⚠ Lo que se barrio ademas y esta bien: los **25 subcomandos** de `/luna`
+> (solo `saldo` y `constructor` quedan abiertos, y el segundo **es la puerta**
+> --clave comparada en tiempo constante, fallos al log y nivel **2** forzado a
+> mano, porque `addToOperators` daria 4--) · las acciones de **parcela**
+> (`no_es_tuya` sale de la base) · el **cobro de una caza** (LEFT JOIN por
+> jugador y `claimed_at IS NULL` con recuento de filas) · **`PedirFoto`**, que
+> exige 40 hex antes de mirar el disco · y **`TpNicho`**, que solo va desde la
+> ciudadela y pasa por `Traslado`, o sea por el candado del lobby.
 >
 > ⚠⚠⚠ **LA TORRE PAGABA LAS DIVISAS EN EL HILO DEL SERVIDOR.** `reclamar` y
 > `reclamarTodas` se llaman desde `server.execute` --hay que estar ahi para meter

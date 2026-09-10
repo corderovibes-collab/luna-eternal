@@ -218,7 +218,36 @@ comparten píxeles — *la cara de una pieza dibujada encima de otra*.
 | 4 | **Nada flotando** | una pieza suelta en el aire |
 | 5 | La **textura** no se pisa ni se sale | la cara de una pieza pintada encima de otra |
 | 6 | Ningún **papel muerto** en la paleta | promete una pieza que no existe |
-| 7 | Los **tramos** encajan sin hueco | una espada partida |
+| 7 | La textura **no usa ni un tono fuera de la paleta** | luz horneada: mosaico de tonos en un motor 3D (§5-bis) |
+| 8 | Los **tramos** encajan sin hueco | una espada partida |
+
+### 5-bis · La luz NO se hornea en la textura
+
+⚠⚠⚠ **Esto estuvo entregado y mal.** La textura pintaba cada cara con **una fila
+más clara arriba y una más oscura abajo**, y eso convertía 7 tonos en **21**. Lo
+destapó el usuario abriendo el modelo en Blockbench: la espada salía como un
+**mosaico**, cada cubo de un amarillo distinto.
+
+Dos cosas a la vez, y hacía falta que fallaran las dos:
+
+1. **El motor ya sombrea las caras.** Minecraft —y Blockbench— aclaran la de
+   arriba y oscurecen la de abajo por su cuenta. Hornearlo además en la textura
+   **lo aplica dos veces**.
+2. **A un texel por unidad, esa fila no es un borde: es media cara.** Muchas
+   caras de esta espada miden 2, 3 o 4 píxeles de alto, así que una fila clara y
+   otra oscura se comen del 25 % al 100 % — y cubos vecinos acaban con **tonos
+   medios distintos**.
+
+⚠⚠ **Y EL VISOR LO TAPABA.** Dibuja plano y encima aplica su propia luz, así que
+en la lámina se veía bien. **Una textura no se juzga en el visor: se juzga en un
+motor que la ilumine como la va a iluminar el juego.** Las cuatro pasadas de
+diseño (§6) miraron la **forma**, que era lo que tocaba; esto es de **color**, y
+ahí la lámina mentía.
+
+⚠⚠ **Ninguna de las otras comprobaciones podía cazarlo**, porque todas miran
+geometría — rejilla, simetría, huecos, solapes. El color no lo miraba nadie.
+**Contar los tonos es lo único que lo dice sin abrir Blockbench**, y hoy es la
+comprobación 7: **21 → 7**, exactamente la paleta.
 
 ⚠⚠⚠ **LA SIMETRÍA SE CONSTRUYE, NO SE COMPRUEBA DESPUÉS.** `_par()` crea la
 pieza **y su reflejo** de una vez. La comprobación existe igualmente, pero como

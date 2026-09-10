@@ -54,7 +54,7 @@ def main():
     #    `diseno.py` afirma, la espada seguiria pasando sus cinco pruebas y
     #    estaria dimensionada contra un personaje que ya no existe.
     fallos = referencia.comprobar()
-    f2, avisos = bbmodel.comprobar(piezas, cubos, LADO)
+    f2, avisos = bbmodel.comprobar(piezas, cubos, LADO, imagen=im)
     fallos += f2
     for a in avisos:
         print("     " + a)
@@ -67,8 +67,8 @@ def main():
         # ⚠ El resumen NOMBRA LAS SEIS. Un «todo en verde» que no dice que
         #   miro es lo que deja pasar una comprobacion que se quedo sin correr.
         print("     comprobaciones: referencia, rejilla, simetria, nada "
-              "flotando, textura sin solapes, ningun papel muerto y tramos "
-              "sin hueco -- TODO EN VERDE")
+              "flotando, textura sin solapes, ningun papel muerto, sin luz "
+              "horneada y tramos sin hueco -- TODO EN VERDE")
 
     BUILD.mkdir(parents=True, exist_ok=True)
     visor.lamina(cubos, BUILD / "espada.png", textura=im)
@@ -132,8 +132,18 @@ def main():
         print("     -> %s" % png)
         print("     -> %s" % meta)
         # El GIF NO es para el juego: es para poder juzgarlo sin entrar.
-        vistas = [visor.dibujar(cubos, 0, 0, ancho=190, alto=420, escala=13.0,
-                                textura=f).convert("RGB") for f in frames]
+        # ⚠ Van DOS vistas en el mismo fotograma --de frente y en 3/4-- porque
+        #   de frente se lee el rayo y en 3/4 se lee el volumen, y un fogonazo
+        #   que funcione tiene que verse en las dos.
+        from PIL import Image as _Im
+        vistas = []
+        for f in frames:
+            a = visor.dibujar(cubos, 0, 0, ancho=200, alto=440, escala=14.0, textura=f)
+            b = visor.dibujar(cubos, 35, 12, ancho=200, alto=440, escala=14.0, textura=f)
+            par = _Im.new("RGB", (400, 440))
+            par.paste(a.convert("RGB"), (0, 0))
+            par.paste(b.convert("RGB"), (200, 0))
+            vistas.append(par)
         gif = BUILD / "espada-animada.gif"
         vistas[0].save(gif, save_all=True, append_images=vistas[1:],
                        duration=animacion.TICKS * 50, loop=0, optimize=False)

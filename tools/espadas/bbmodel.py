@@ -190,7 +190,7 @@ def _solapan(a, b):
     return True
 
 
-def comprobar(piezas, cubos, lado):
+def comprobar(piezas, cubos, lado, imagen=None):
     fallos, avisos = [], []
 
     # 1 · REJILLA
@@ -277,7 +277,29 @@ def comprobar(piezas, cubos, lado):
         fallos.append("la paleta declara papeles que no usa nadie: %s"
                       % ", ".join(muertos))
 
-    # 6 · LOS TRAMOS ENCAJAN SIN HUECO
+    # 6 · LA TEXTURA NO USA NI UN TONO QUE NO ESTE EN LA PALETA.
+    # ⚠⚠⚠ Esta comprobacion nace de un fallo que estuvo entregado: la textura
+    #    horneaba luz --una fila clara y otra oscura por cara-- y eso convertia
+    #    7 tonos en **21**. En un motor 3D, que ya sombrea las caras por su
+    #    cuenta, salia un MOSAICO: cada cubo con un amarillo distinto.
+    #    ⚠⚠ Y NO LO CAZO NINGUNA DE LAS OTRAS SEIS, porque todas miran GEOMETRIA
+    #       --rejilla, simetria, huecos, solapes--. El color no lo miraba nadie,
+    #       y el visor lo tapaba porque dibuja plano. **Contar los tonos es lo
+    #       unico que lo dice sin abrir Blockbench.**
+    if imagen is not None:
+        paleta = {tuple(c) for c in diseno.PAPEL.values()}
+        vistos = {imagen.getpixel((x, y))[:3]
+                  for x in range(imagen.width) for y in range(imagen.height)
+                  if imagen.getpixel((x, y))[3]}
+        sobran = sorted(vistos - paleta)
+        if sobran:
+            fallos.append("la textura usa %d tonos que NO estan en la paleta "
+                          "(%s%s): eso es luz horneada, y el motor ya la pone"
+                          % (len(sobran),
+                             ", ".join("#%02X%02X%02X" % c for c in sobran[:4]),
+                             ", ..." if len(sobran) > 4 else ""))
+
+    # 7 · LOS TRAMOS ENCAJAN SIN HUECO
     tramos = [("pomo", diseno.POMO_Y), ("mango", diseno.MANGO_Y),
               ("guarda", diseno.GUARDA_Y), ("hoja", diseno.HOJA_Y)]
     for (n1, t1), (n2, t2) in zip(tramos, tramos[1:]):

@@ -3064,7 +3064,24 @@ Espada        COLMILLO DE TRUENO: LA ESPADA DE PIKACHU (2026-09-10)
                  prop de anime y a 20 un cuchillo
               ⚠⚠ EL VISOR DIBUJA A PIKACHU AL LADO, y esa es la mitad que importa:
                  flotando sola en negro, CUALQUIER escala parece correcta
-              ⚠⚠ 7 comprobaciones + la vuelta releyendo el .bbmodel de disco.
+              ⚠⚠⚠ LA LUZ NO SE HORNEA EN LA TEXTURA, Y ESTUVO ENTREGADO MAL.
+                 Se pintaba una fila clara arriba y otra oscura abajo POR
+                 CARA, y eso convertia 7 tonos en 21. Lo destapo el usuario
+                 abriendo el modelo en Blockbench: la espada salia como un
+                 MOSAICO, cada cubo de un amarillo distinto
+                 ⚠⚠ Hacian falta DOS cosas a la vez: el motor YA sombrea las
+                    caras (asi que se aplicaba dos veces) y A UN TEXEL POR
+                    UNIDAD esa fila NO ES UN BORDE, ES MEDIA CARA -- muchas
+                    caras miden 2 o 3 pixeles, asi que cubos vecinos acababan
+                    con tonos MEDIOS distintos
+                 ⚠⚠ Y EL VISOR LO TAPABA: dibuja plano y aplica su propia luz.
+                    UNA TEXTURA NO SE JUZGA EN EL VISOR, se juzga en un motor
+                    que la ilumine como la va a iluminar el juego. Las cuatro
+                    pasadas de diseño miraron la FORMA; esto es de COLOR
+                 ⚠⚠ NINGUNA de las otras comprobaciones podia cazarlo: todas
+                    miran GEOMETRIA. Contar los tonos es lo unico que lo dice
+                    sin abrir Blockbench. Hoy 21 -> 7, exactamente la paleta
+              ⚠⚠ 8 comprobaciones + la vuelta releyendo el .bbmodel de disco.
                  Con un solo fallo NO EXPORTA
               ⚠ SIN LLEVAR AL JUEGO: hay que decidir si es objeto (registro que
                 se sincroniza), cosmetico de Cobblemon o pieza decorativa

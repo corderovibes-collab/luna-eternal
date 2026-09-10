@@ -12,6 +12,64 @@ contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Bata
 recompensas de temporada e interfaces completas en el PokePad. **El lobby es la
 unica entrada al mundo** (D-050). Autotest en vivo 696/696.
 
+> **2026-09-10 (noche) — ANTI-AFK, Y LO QUE DE VERDAD CUESTA PRE-GENERAR CON
+> TERRALITH.**
+>
+> Peticion del usuario: *«si quedan quietos por 10 minutos te saca y te manda de
+> nuevo para el lobby que ahi no puedes hacer nada»*.
+>
+> ⚠⚠⚠ **NO ES UN EXPULSOR, ES UN APARCADERO, Y POR ESO SALIO CASI GRATIS.**
+> Echar del servidor obliga a reconectar, esperar la carga y --pasados 15
+> minutos-- volver a hacer `/login`. Mandar al lobby consigue lo mismo y cuesta
+> un clic, porque **el lobby YA apaga el PokePad, YA recorta la visibilidad a
+> cero y YA tiene un guardian que devuelve a la ciudadela**. No hubo que
+> construir nada de eso: `world/Afk` solo lo usa.
+>
+> ⚠⚠⚠ **LAS TRES EXENCIONES SON EL SISTEMA, no cortesias.** Sin cualquiera de
+> ellas esto es un fallo, no una funcion:
+>   1. **COMBATE.** Un combate de Cobblemon con alguien pensando pasa de diez
+>      minutos sin mover un pixel. Sacarlo seria **perder por estar jugando**, y
+>      en un gimnasio ademas se lleva su ranura y su viaje. Se le pregunta a
+>      `BattleRegistry`, que es quien lo sabe. ⚠ Y ante un fallo al preguntar se
+>      contesta **que SI esta combatiendo**: dejar a uno de mas en el mundo es
+>      infinitamente mas barato que sacar a alguien de un combate.
+>   2. **CREATIVO Y ESPECTADOR.** Un constructor se queda quieto mirando una
+>      fachada mucho mas de diez minutos: es su trabajo. Mismo filtro que el
+>      oficio MINERO y `Pase.ganar`.
+>   3. **EL PROPIO LOBBY**, y esta evita un **BUCLE**: el AFK del lobby
+>      dispararia un viaje al lobby, que cuenta como movimiento, que reinicia el
+>      contador, y vuelta a empezar.
+>
+> ⚠⚠ **SE MIRA LA POSICION, NO LA MIRADA** --misma decision que `world/Espera`--
+> porque si contara la rotacion, mover el raton un pixel valdria como «sigo
+> aqui», y eso lo hace un macro o el pulso de una mano apoyada. Lo que hay que
+> detectar es **una silla vacia**. Con margen de 0,25 bloques: parado en una
+> barca o en agua uno se mueve milesimas.
+> ⚠ Y **avisa un minuto antes**. Mover a alguien sin avisar es lo que hace que
+>   un sistema correcto parezca una averia.
+> ⚠ `/luna afk` dice a quien esta contando y cuanto lleva; `/luna afk probar` te
+>   deja a un segundo del aviso. **Sin eso, la unica forma de comprobarlo es
+>   quedarse quieto un cuarto de hora** -- y un sistema que solo se puede probar
+>   asi es un sistema que no se prueba.
+>
+> ⚠⚠⚠ **Y LA PRE-GENERACION DESMIENTE UNA CIFRA DE ESTE DOCUMENTO.** Aqui estaba
+> escrito «3000 -> 140.000 chunks -> 25-45 min/mundo», y eso era **con la
+> worldgen de vainilla**. Medido con Terralith y los dos mundos a la vez:
+>
+> ```
+> minecraft:overworld   2,1 chunks/s   ETA 18 h 45 min
+> lunaeternal:salvaje  10,0 chunks/s   ETA  3 h 56 min
+> CPU 238 % de los 300 % que da el plan
+> ```
+>
+> **La cifra vieja se queda corta en un orden de magnitud para el overworld.** Y
+> el trabajo total es fijo: lanzar los dos a la vez no lo acelera, solo reparte
+> los mismos tres nucleos -- si lo que importa es que el HOGAR este listo
+> primero (que es donde cae un jugador nuevo), va antes ir de uno en uno.
+> ⚠ Solo se pre-generan **dos** mundos y no siete: de los seis salvajes
+>   declarados **solo `salvaje` se usa hoy** (`LunaDimensions.SALVAJE`), porque
+>   el reparto entre varios sigue sin implementarse.
+
 > **2026-09-10 — TERRALITH, Y EL HOGAR Y LOS SEIS SALVAJES REGENERADOS DESDE
 > CERO.** Decision del usuario: *«el hogar no importa tambien lo puedes eliminar
 > y los mundos salvajes tambien eliminarlos y volverlos a generar con

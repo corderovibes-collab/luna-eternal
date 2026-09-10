@@ -604,6 +604,18 @@ public final class LunaCommand {
             // ⚠⚠ TODO LO DEL INICIAL, EN UN SITIO. `reiniciarinicial` se queda
             //    como atajo porque lleva semanas escrito en la documentacion y
             //    en los dedos de quien prueba, pero lo nuevo cuelga de aqui.
+            .then(literal("afk")
+                // ⚠ Nivel 3: es diagnostico, como `estado` y `economia`.
+                .requires(s -> s.hasPermissionLevel(3))
+                .executes(ctx -> afkEstado(ctx.getSource()))
+                // ⚠⚠ EXISTE PARA NO TENER QUE ESPERAR DIEZ MINUTOS. Sin esto, la
+                //    unica forma de comprobar que el aviso y el traslado
+                //    funcionan es quedarse quieto un cuarto de hora -- y un
+                //    sistema que solo se puede probar asi es un sistema que no
+                //    se prueba.
+                .then(literal("probar")
+                    .executes(ctx -> afkProbar(ctx.getSource()))))
+
             .then(literal("puerta")
                 .requires(s -> s.hasPermissionLevel(3))
                 .executes(ctx -> estadoPuerta(ctx.getSource()))
@@ -1032,6 +1044,51 @@ public final class LunaCommand {
      * de amigos, y cuesta una línea: comparar con {@code equals} filtra el
      * tiempo de respuesta y deja adivinar la clave carácter a carácter.
      */
+    /** Que esta vigilando el anti-AFK ahora mismo. */
+    private static int afkEstado(ServerCommandSource src) {
+        src.sendFeedback(() -> Text.literal(
+            "\u00a76Anti-AFK \u00a77\u00b7 limite "
+            + (net.pokereport.luna.world.Afk.LIMITE_MS / 60000L) + " min, aviso "
+            + (net.pokereport.luna.world.Afk.AVISO_MS / 1000L) + " s antes"), false);
+        src.sendFeedback(() -> Text.literal(
+            "\u00a77vigilados: \u00a7f" + net.pokereport.luna.world.Afk.vigilados()), false);
+        var server = src.getServer();
+        for (var j : server.getPlayerManager().getPlayerList()) {
+            long s = net.pokereport.luna.world.Afk.quietoSegundos(j.getUuid());
+            String linea = "  \u00a77" + j.getGameProfile().getName() + " \u00a78\u00b7 "
+                    + (s < 0 ? "\u00a78exento (creativo, combate o lobby)"
+                             : "\u00a7f" + s + " s quieto");
+            src.sendFeedback(() -> Text.literal(linea), false);
+        }
+        return 1;
+    }
+
+    /**
+     * Deja al que lo ejecuta a un segundo del aviso.
+     *
+     * <p>\u26a0 Si esta exento no hay nada que adelantar, y se DICE cual de las
+     * tres exenciones le aplica -- «no pasa nada» sin explicacion es lo que hace
+     * que alguien de por roto algo que funciona.
+     */
+    private static int afkProbar(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        if (!net.pokereport.luna.world.Afk.forzarCasi(p)) {
+            src.sendFeedback(() -> Text.literal(
+                "\u00a7eNo se te esta contando: estas en creativo, en combate o "
+                + "ya en el lobby. Ponte en supervivencia fuera del lobby y "
+                + "quedate quieto un segundo."), false);
+            return 0;
+        }
+        src.sendFeedback(() -> Text.literal(
+            "\u00a7aListo. No te muevas: el aviso llega en un segundo y el "
+            + "traslado un minuto despues."), false);
+        return 1;
+    }
+
     private static int altaConstructor(ServerCommandSource src, String clave) {
         ServerPlayerEntity p = src.getPlayer();
         if (p == null) {

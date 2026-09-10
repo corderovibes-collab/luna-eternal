@@ -484,6 +484,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.puerta.PuertaNpc.olvidar(player.getUuid());
             net.pokereport.luna.ui.Toque.olvidar(player.getUuid());
             net.pokereport.luna.world.VisibilidadJugadores.olvidar(player.getUuid());
+            net.pokereport.luna.world.Afk.olvidar(player.getUuid());
             // ⚠⚠ ANTES de `players.forget`: el volcado necesita resolver el
             //    id, y si ya se olvido tendria que volver a la base.
             net.pokereport.luna.crate.Actividad.alSalir(player);
@@ -557,6 +558,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // La puerta no es un momento, es una verdad que se mantiene: quien
             // no ha cruzado esta en el lobby. Ver `Puerta.vigilar`.
             net.pokereport.luna.puerta.Puerta.vigilar(server);
+            // Quien lleva diez minutos sin moverse se va al lobby. Lleva su
+            // propio corte de ticks por dentro, como ConstructorBuffs.
+            net.pokereport.luna.world.Afk.tick(server);
             // El contador de conectados cambia con cada entrada y salida;
             // recalcularlo aquí evita tener que engancharlo a cada evento.
             Tablist.updateHeaderFooter(server);

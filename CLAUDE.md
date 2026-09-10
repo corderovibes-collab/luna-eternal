@@ -12,6 +12,77 @@ contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Bata
 recompensas de temporada e interfaces completas en el PokePad. **El lobby es la
 unica entrada al mundo** (D-050). Autotest en vivo 696/696.
 
+> **2026-09-09 (noche) — AUDITORIA GENERAL. Y lo que vale de ella no son los
+> fallos: son LOS BARRIDOS, que se pueden repetir.**
+>
+> Leer sistema por sistema no escala: hay 25 pantallas y dos docenas de
+> servicios. Lo que si escala es **preguntarle al codigo por una regla concreta**
+> y mirar solo lo que se sale. Estos cinco barridos encontraron todo lo de abajo
+> en una tarde, y valen para la proxima:
+>
+> 1. **Mapas en memoria por jugador contra lo que se limpia al desconectar.**
+>    Se enumeran los `Map<UUID, ...>` estaticos y se cruzan con el manejador de
+>    DISCONNECT. De catorce, tres no estaban -- y uno era un fallo.
+> 2. **Receptores que MUTAN y no reenvian nada.** Es la regla que mas veces ha
+>    mordido aqui: *si el servidor cambia un estado que el cliente dibuja, el
+>    servidor lo reenvia*. Ojo: hay que seguir las llamadas, porque casi todos
+>    delegan en un ayudante que si reenvia.
+> 3. **Llamadas a servicios que tocan la base DENTRO de `server.execute` o del
+>    tick.** Es la regla numero uno del proyecto y **no da ningun error**: da un
+>    servidor parado el dia que la base tarde, y eso se lee como «lag».
+> 4. **Claves de idempotencia que no son deterministas** (`currentTimeMillis`,
+>    `randomUUID`). ⚠ No todas son fallo: una clave aleatoria esta BIEN cuando la
+>    operacion es repetible --comprar dos veces lo mismo es legitimo-- y esta MAL
+>    cuando la operacion tiene identidad natural, como «reclamar la ronda N».
+> 5. **Carreras en topes diarios**: dos hilos de E/S pueden leer el mismo
+>    contador. Se busca `FOR UPDATE` dentro de una transaccion.
+>
+> ⚠⚠⚠ **LA TORRE PAGABA LAS DIVISAS EN EL HILO DEL SERVIDOR.** `reclamar` y
+> `reclamarTodas` se llaman desde `server.execute` --hay que estar ahi para meter
+> objetos en el inventario-- y dentro hacian `economy().credit(...)`, que es una
+> transaccion de MariaDB. Es lo mismo que ya paso con `recargarSantuario`.
+> Hoy los **objetos se quedan en el tick y las divisas salen**, que no es
+> incoherencia: un inventario solo se puede tocar desde el hilo del servidor y
+> una transaccion solo se puede hacer fuera.
+>
+> ⚠⚠⚠ **Y SU CLAVE DE IDEMPOTENCIA LLEVABA `System.currentTimeMillis()`**, o sea
+> que cada intento era una clave nueva: **la proteccion estaba escrita y no
+> protegia nada**. No llego a pagar de mas porque lo tapaba OTRA cosa --el
+> `return` de arriba, que en el segundo intento no encuentra nada que
+> reclamar--. **Una red de seguridad que en realidad sostiene otra es una red que
+> nadie sabe que no esta puesta.**
+>
+> ⚠⚠ **LA SESION DE LA ENFERMERA SE QUEDABA COLGADA.** El bucle borra la sesion
+> cuando la enfermera vuelve a su sitio, pero esa linea vive DENTRO de un
+> `if (jugador != null)`: si el jugador se fue, la tarea termina bien --la
+> enfermera SI se libera-- y la sesion se queda para siempre.
+>
+> ⚠⚠ **EL DOBLE CLIC ESTABA EN LOS SIETE NPC.** Un solo clic derecho sobre una
+> entidad hace que el cliente mande **DOS paquetes** (`INTERACT_AT` e
+> `INTERACT`) y **en los dos la mano es la PRINCIPAL**: el
+> `if (mano != MAIN_HAND)` que este documento ya tenia escrito **no basta**. Solo
+> se vio en Oak porque escribe en el chat; en los demas, abrir dos veces la misma
+> pantalla se ve igual que abrirla una. El mas caro era el **gimnasio**: dos
+> retos al mismo lider por un clic, cada uno con su ranura y su viaje.
+> `ui/Toque` es el antirrebote compartido, y cuenta por **(jugador, sitio)** --con
+> una marca sola, tocar a Oak y correr a la Mew se comeria el segundo clic--.
+>
+> **LO QUE SE AUDITO Y ESTA BIEN, que tambien hay que escribirlo:**
+> las RANURAS de gimnasio (`soltar` es el embudo unico de ganar, perder y
+> desconectarse) · GTS y Mercado (refrescan comprador **y vendedor**, lista y
+> saldo) · el TOPE DIARIO del pase (`SELECT ... FOR UPDATE` en transaccion, con
+> el comentario explicando la carrera) · `enviarSaldo` (todo en `submit`, solo el
+> envio en el tick) · `Actividad` (puro memoria) · las claves aleatorias de
+> tienda, cofres, GTS y cartas (operaciones repetibles, y el estado de la fila es
+> quien protege).
+>
+> ⚠ **PENDIENTE DE ESCALA, medido y no arreglado a proposito:**
+> `TorreRecompensas.save()` escribe su JSON **sincrono en el tick**. Hoy el
+> fichero mide **331 bytes** y eso es ruido; crece con jugadores x rondas
+> reclamadas. Moverlo a asincrono abriria una ventana de perdida --un cierre
+> justo ahi permitiria reclamar los OBJETOS dos veces-- asi que **no se toca
+> hasta que el fichero pese**. Cuando pese, la senal sera esta linea.
+
 > **2026-09-09 (tarde) — UN MOD DE ABRIL TIRO EL SERVIDOR TRES VECES, Y AL
 > BUSCARLO SALIERON CUATRO MAS.**
 >

@@ -4759,8 +4759,8 @@ resuelto**; lo que falta hoy es la pantalla desde la que se usa:
 
 | | |
 |---|---|
-| **0. ENCENDER LA PUERTA** | El lobby **ya está construido** y el guardián colocado (usuario, 09-09); falta rematarlo. La puerta está **APAGADA**: se apagó para desplegar el arreglo del saludo y **no se ha vuelto a encender**. `/luna ir lobby` → `/luna puerta activar`. ⚠ **Reabrir el launcher primero**: el jar cambió con ese arreglo. ✅ El saludo ya llega, verificado en el log (`Puerta: TheJuanCE saluda con protocolo 1`) |
-| **0-bis. `/luna puerta reiniciar <jugador>`** | **No existe, y hace falta**: hoy la única forma de probar el recorrido de un jugador nuevo es **entrar con otra cuenta**, porque la del operador está marcada como cruzada por el relleno de la V036. Tiene que borrar la fila **y la caché** — la fila la lee el evento de conexión, así que sin tocar la memoria el jugador seguiría contando como cruzado hasta desconectarse. Es el fallo de `/luna reiniciarinicial`, que «no servía» porque borraba la fila y el cliente seguía con su copia |
+| ~~**0. ENCENDER LA PUERTA**~~ | ✅ **ENCENDIDA Y FUNCIONANDO**, verificado en vivo el 2026-09-10: `/luna puerta` contesta **activa: sí**, protocolo 1, y **el recorte de visibilidad ha corrido** (o sea que el mixin no solo compila: se esta aplicando, que es lo unico que no se podia comprobar desde el autotest). El lobby esta construido y el guardian colocado |
+| ~~**0-bis. `/luna puerta reiniciar <jugador>`**~~ | ✅ **YA EXISTE.** El arbol de `/luna puerta` tiene `npc`, `quitar`, `activar`, `desactivar`, `reiniciar` e `inicial`. ⚠ Esta entrada decia «no existe, y hace falta» y **era falsa**: se escribio antes de que se añadiera y nadie la volvio a mirar. Un «por aqui se sigue» que miente manda a rehacer algo que ya esta |
 | ~~**0-bis. Colocar a Oak**~~ | ✅ **Colocado** (usuario, 2026-09-09). Era lo que hacía falta para que la puerta llevara a alguna parte: sin él, cruzarla dejaba al jugador en una ciudadela donde no hay de quién coger inicial |
 | **0-ter. El Santuario** | `/luna santuario npc` (la Mew) y `/luna santuario nicho recolocar` para los 341 nichos, que tienen los proyectores a la altura vieja |
 

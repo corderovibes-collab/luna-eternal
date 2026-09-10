@@ -126,6 +126,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         // da Oak (D-048). Ver SinIniciales -- no es esconder la tecla, es que
         // no haya nada que repartir.
         net.pokereport.luna.starter.SinIniciales.instalar();
+        net.pokereport.luna.proteccion.SoloEnElHogar.enganchar();
         // ⚠ Se registra AQUI y no en SERVER_STARTED por lo mismo que los tres
         //   de arriba: los eventos se suscriben una sola vez, y los nichos
         //   (geometria y reclamaciones) los lee el manejador cuando llega el

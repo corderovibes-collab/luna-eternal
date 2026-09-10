@@ -67,6 +67,29 @@ public final class Modulos {
         }
     }
 
+    /** La etiqueta que ClaimBlocks mete dentro de la cabeza. */
+    private static final String CLAVE = "protectionstones:stone_type";
+
+    /**
+     * ¿Esta pila es un modulo de proteccion?
+     *
+     * <p>⚠⚠ SE MIRA LA ETIQUETA, NO EL OBJETO. Un modulo es un
+     * {@code minecraft:player_head} --ClaimBlocks es solo de servidor y no
+     * puede registrar objetos propios, porque el cliente no los conoceria--
+     * asi que comparar por id cazaria TODAS las cabezas, incluida la de
+     * cualquier jugador.
+     *
+     * <p>⚠ Y se lee de {@code CUSTOM_DATA}, que es donde vive el NBT libre en
+     * 1.21: en versiones anteriores estaba suelto en la raiz del objeto.
+     */
+    public static boolean esModulo(ItemStack pila) {
+        if (pila == null || pila.isEmpty()) {
+            return false;
+        }
+        var datos = pila.get(net.minecraft.component.DataComponentTypes.CUSTOM_DATA);
+        return datos != null && datos.contains(CLAVE);
+    }
+
     /** ¿Se puede entregar algo de ese proveedor? */
     public static boolean hay(String entrega) {
         if (entrega == null || !entrega.startsWith(PROVEEDOR)) {

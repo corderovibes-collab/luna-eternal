@@ -155,7 +155,11 @@ public final class Decorativos {
                     if (mano != net.minecraft.util.Hand.MAIN_HAND) {
                         return net.minecraft.util.ActionResult.SUCCESS;
                     }
-                    if (jugador instanceof net.minecraft.server.network.ServerPlayerEntity sp) {
+                    // ⚠ La guarda de la mano de arriba NO basta: un clic manda
+                    //   DOS paquetes (INTERACT_AT e INTERACT) y en los dos la
+                    //   mano es la principal. Ver `Toque`.
+                    if (jugador instanceof net.minecraft.server.network.ServerPlayerEntity sp
+                            && !net.pokereport.luna.ui.Toque.repetido(sp.getUuid(), "parada")) {
                         net.pokereport.luna.net.Red.enviarViajes(sp, true);
                     }
                     return net.minecraft.util.ActionResult.SUCCESS;

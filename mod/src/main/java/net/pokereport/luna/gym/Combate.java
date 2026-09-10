@@ -125,6 +125,14 @@ public final class Combate {
                     if (!(jugador instanceof ServerPlayerEntity sp)) {
                         return net.minecraft.util.ActionResult.SUCCESS;
                     }
+                    // ⚠⚠ UN CLIC MANDA DOS PAQUETES (INTERACT_AT e INTERACT) y
+                    //    en los dos la mano es la PRINCIPAL: la guarda de arriba
+                    //    no los distingue. Aqui eso era lo mas caro de todos los
+                    //    sitios donde estaba -- dos retos al mismo lider por un
+                    //    solo clic, con su reserva de ranura y su viaje.
+                    if (net.pokereport.luna.ui.Toque.repetido(sp.getUuid(), "lider")) {
+                        return net.minecraft.util.ActionResult.SUCCESS;
+                    }
                     var g = Lideres.gimnasioDe(entidad);
                     if (g == null) {
                         return net.minecraft.util.ActionResult.SUCCESS;

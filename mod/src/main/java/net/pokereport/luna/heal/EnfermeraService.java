@@ -110,7 +110,10 @@ public final class EnfermeraService {
             if (mano != Hand.MAIN_HAND) {
                 return ActionResult.SUCCESS;
             }
-            if (jugador instanceof ServerPlayerEntity sp) {
+            // ⚠ Un clic manda DOS paquetes y en los dos la mano es la
+            //   principal. Ver `Toque`.
+            if (jugador instanceof ServerPlayerEntity sp
+                    && !net.pokereport.luna.ui.Toque.repetido(sp.getUuid(), "enfermera")) {
                 if (TAREAS.containsKey(entidad.getUuid())) {
                     var tarea = TAREAS.get(entidad.getUuid());
                     if (!tarea.jugadorId.equals(sp.getUuid())) {

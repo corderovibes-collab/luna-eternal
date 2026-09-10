@@ -12,6 +12,108 @@ contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Bata
 recompensas de temporada e interfaces completas en el PokePad. **El lobby es la
 unica entrada al mundo** (D-050). Autotest en vivo 696/696.
 
+> **2026-09-10 — TERRALITH, Y EL HOGAR Y LOS SEIS SALVAJES REGENERADOS DESDE
+> CERO.** Decision del usuario: *«el hogar no importa tambien lo puedes eliminar
+> y los mundos salvajes tambien eliminarlos y volverlos a generar con
+> terralith»*.
+>
+> ⚠⚠⚠ **LO QUE DECIDIO LA ELECCION NO FUE UNA OPINION: FUE CONTAR DENTRO DEL JAR
+> DE COBBLEMON.** Sus 841 ficheros de aparicion **no nombran biomas: usan
+> ETIQUETAS**, y dentro de sus 58 etiquetas Cobblemon nombra mods concretos:
+>
+> ```
+> wythers  241 entradas en 45 etiquetas      biomesoplenty  96 en 25
+> terralith 157 entradas en 36 etiquetas     vainilla       77 en 45
+> ```
+>
+> **Un bioma que no este en esas etiquetas NO GENERA NI UN POKEMON.** Eso es lo
+> que significa «adaptado a Cobblemon», y no se configura: viene o no viene.
+>
+> ⚠⚠ **Y «TerraBlender vs BoP vs Terralith» era una pregunta mal planteada:
+> TerraBlender NO es un mod de biomas, es la LIBRERIA** que otros usan para
+> inyectar los suyos. No se elige; aparece sola si eliges BoP.
+>
+> ⚠⚠⚠ **NUESTROS SEIS SALVAJES HEREDAN TERRALITH SIN TOCAR UN SOLO JSON, y eso
+> habia que comprobarlo antes de prometer nada.** `salvaje*.json` genera con
+> `preset: minecraft:overworld` y `settings: minecraft:overworld`, y Terralith
+> **sobrescribe exactamente esos dos**:
+> `data/minecraft/worldgen/multi_noise_biome_source_parameter_list/overworld.json`
+> y `data/minecraft/worldgen/noise_settings/overworld.json`. Si hubiera
+> declarado un generador propio, habrian sido **siete ficheros nuestros que
+> reescribir**. Verificado en vivo con `locate biome`: `alpine_highlands` sale
+> en el HOGAR (101 ms) y en el SALVAJE (95 ms), y **NO** en la ciudadela.
+>
+> ⚠⚠⚠ **TRAE 22 ESTRUCTURAS, Y SE COLABA IGUAL QUE `cobblemon-additions`:
+> PORQUE SU NOMBRE NO DICE «STRUCTURES».** Torres de mago, aldeas fortificadas,
+> puestos del desierto, iglus. Es la QUINTA vez que este proyecto tiene que
+> quitar generacion de estructuras. **No hizo falta datapack**: el mod trae
+> modulos (`custom_structures`, `skylands`, `terrain_slabs`, `vanilla_stone_gen`,
+> `recipe_changes`, `intro_message`) y **carpetas `disable.<modulo>/` dentro del
+> jar** — su overlay de estructuras sustituye los 7 `structure_set` por
+> `"structures": []`, que es la misma tecnica que usamos nosotros, escrita por
+> su autor. `config/terralith.json`: `custom_structures: false`.
+> ⚠ Y `intro_message: false`: el mod se anuncia en el chat de todo el mundo al
+>   entrar. Mismo criterio que excluyo a `bisect-mod` por publicidad ajena.
+>
+> ⚠⚠⚠ **Y AL ARRANCAR SE CAYO EL SERVIDOR, POR LA MISMA FAMILIA DE FALLO QUE
+> `cobblemon-cards` EN SEPTIEMBRE:**
+> ```
+> Failed to read classTweaker file from mod lithostitched
+> Unsupported class tweaker format: v2
+> ```
+> `lithostitched 1.8.0+beta6` --que es lo que Modrinth da como ultima-- usa el
+> formato **class tweaker v2**, y el loader de ESTE SERVIDOR es **0.18.4**. Se
+> bajo a **1.7.13**, que usa el `accessWidener` de siempre y pide `>=0.18`, y
+> **se comprobo DENTRO DEL JAR antes de subirla** en vez de arrancar y ver.
+> **Terralith exige `>=1.7.7`, asi que 1.7.13 lo cumple.**
+> ⚠ Es el tercer aviso de lo mismo: **el loader del servidor va por detras del
+>   del cliente**, y muerde con el siguiente mod que pida uno nuevo.
+>
+> **SOLO SERVIDOR, y comprobado en el jar** (0 blockstates, 0 modelos, 0
+> registros estaticos, 24 assets y todos `lang/`). Lo unico que aporta son
+> **97 biomas**, y un bioma va en un registro **DINAMICO**: el servidor se lo
+> manda entero al cliente al entrar — por eso un datapack de biomas funciona en
+> un cliente vainilla. Van en `INTOCABLES` de `mods_servidor.py`, misma
+> categoria que EasyAuth, WorldEdit y Chunky.
+> ⚠ **La contrapartida es real y es cosmetica:** sin el mod, el cliente no tiene
+>   sus `lang`, asi que en el F3 y en el minimapa vera
+>   `biome.terralith.yellowstone` en vez del nombre. Publicarlo al cliente son
+>   2,7 MB sobre 506 si algun dia molesta.
+>
+> ⚠⚠ **CERO SPAWNS PROPIOS**, contado en el jar: `spawn_pool_world` = 0 y
+> `data/cobblemon` = 0. O sea que **D-017 no se toca y el datapack de
+> generaciones NO hay que regenerarlo** — que es justo lo que se escapo con
+> `mega_showdown` (24 spawns) y `cobblemon-additions` (1).
+>
+> **LO QUE SE BORRO Y LO QUE NO.** El Hogar **es el overworld**, asi que lo que
+> se borra es `/world/region`, `/world/entities` y `/world/poi` — **nunca
+> `/world`**, que dentro lleva la ciudadela (78,9 MB), el lobby (9,5), los
+> gimnasios (150), la torre, el `playerdata` de 25 jugadores, los Pokemon, la
+> Pokedex y los datapacks. Equivocarse ahi se lleva la ciudad.
+> Fuera tambien los seis `salvaje*`. **Backup verificado por hash antes de
+> tocar nada**: 157 MB en Drive, `2026-09-09_miercoles`.
+>
+> ⚠⚠ **Y HUBO QUE BORRAR `world_return` (9 filas).** Guarda «donde te dejaste»
+> por mundo: sin borrarlas, esos nueve entrarian **en las coordenadas viejas
+> dentro de terreno nuevo** — posiblemente dentro de una montaña. Vaciarla hace
+> que vuelva a correr el «primera vez, aleatorio en 2.000 de radio» de V022, que
+> es lo que se quiere.
+> ⚠ **Lo que NO cubre eso:** la posicion que Minecraft guarda en
+>   `playerdata/<uuid>.dat`. Quien se desconecto EN EL HOGAR reaparece en sus
+>   coordenadas viejas. La salida limpia es `/luna puerta reiniciar <jugador>`:
+>   lo marca como no-cruzado y el invariante de la puerta lo lleva al lobby.
+> ⚠ Las 5 parcelas de ClaimBlocks estan en la CIUDADELA (junto al Santuario), no
+>   en el Hogar: no se perdio ninguna.
+>
+> ⚠⚠ **PRE-GENERAR PASA DE PENDIENTE A OBLIGATORIO.** Chunky lleva instalado sin
+> usar desde agosto, y ahora hay **siete mundos vacios** que generar con una
+> worldgen mas cara sobre 3 nucleos. El primero que camine por terreno virgen
+> paga la generacion con su lag.
+>
+> ✅ **EN VIVO (2026-09-10, 00:52):** `Done (53,3 s)` · **AUTOTEST 700/700** ·
+> «Applied 3233 biome modifications to 164 of 164 new biomes» · las tres
+> estructuras de Terralith contestan «Could not find».
+
 > **2026-09-10 — LAS SIETE RECLAMACIONES DEL GTS NO ERAN SIETE: ERA QUE
 > COMPRAR UN POKEMON NUNCA ENTREGO NADA.**
 >
@@ -5090,6 +5192,7 @@ documentación · migración · rollback.
 | D-017 | 2026-08-11 | **Arranque con Kanto y Johto (251 especies)**, generaciones después | Con 1 025 ninguna especie importa y la Pokédex es inalcanzable. Se apagan por datapack (`enabled: false`), que es reversible |
 | D-037 | 2026-08-17 | **La base del pack pasa a ser COBBLEVERSE, quitandole la generacion de estructuras y la musica.** Revoca D-031 | **Orden del usuario, dada despues de que le enseñara las licencias** — `cobbleverse` es All Rights Reserved y `cobbleverse-badges` es CC-BY-NC-ND-4.0, que es la clausula por la que D-006 lo habia descartado. Queda escrito aqui para que quien lo lea dentro de seis meses vea **el dato y la decision**, no solo la decision. **Lo que si se hace bien:** el manifiesto guarda URL y hash y nunca el jar, asi que cada mod se descarga del CDN de Modrinth — no redistribuimos nada suyo, igual que con los shaders (D-030). Se les quita lo que el usuario no queria: **generacion de estructuras** (4 mods) y **421 MB de musica**, que multiplicaba por cinco la descarga de un jugador nuevo (P10). El pack pasa de 185 a **434 MB**. Tres cosas que solo se ven haciendolo: **el slug de Modrinth no es el nombre del jar** y una exclusion mal escrita no surte efecto *sin avisar*; **su configuracion son 155 ficheros** y sueltos eran 155 peticiones a `raw`, o sea el 429 de D-036 otra vez (van en un zip por carpeta con `keepExisting`); y **`continuity:default` cambia 42 bloques de construir** — lo reporto el usuario en vivo con la ciudadela ya empezada, y se apaga |
 | D-038 | 2026-08-17 | **El PokePad enseña datos de sesion —Plata, LunaCoins, Clan, Trabajo, Division y Medallas— en vez de la tarjeta de entrenador** | **Decision del usuario.** La tarjeta enseñaba el nivel de las cinco Vias en estrellas; lo que el queria bajo la cara es lo que se mira a diario. Dos cosas quedan escritas porque no son obvias: **las 16 medallas se referencian por identificador al mod de CobbleVerse y NO se copian sus texturas** — el mod va instalado en el cliente, asi que apuntarlas cuesta cero bytes, no redistribuye nada de un CC-BY-NC-ND y el dibujo lo sigue mandando su autor; y **clan, trabajo y division viajan en el paquete aunque no exista el sistema**, mandando cadena vacia para que el Pad pinte un guion. Un «Sin clan» diria «ya funciona y no tienes ninguno», que no es verdad; y tenerlos ya en el protocolo hace que encenderlos sea rellenar tres lineas en vez de tocar paquete, codec, cache y dibujado |
+| D-051 | 2026-09-10 | **Terralith entra como generador del overworld, solo en el servidor y con sus estructuras apagadas; el Hogar y los seis salvajes se borran y se regeneran** | **Decision del usuario**, dada sin rodeos: *«el hogar no importa tambien lo puedes eliminar y los mundos salvajes tambien»*. ⚠⚠⚠ **La eleccion la decidio contar dentro del jar de Cobblemon, no una opinion:** sus 841 ficheros de aparicion usan **etiquetas de bioma**, y Cobblemon nombra mods concretos dentro de ellas -- terralith 157 entradas en 36 de 58 etiquetas, frente a 96 en 25 de Biomes O' Plenty. **Un bioma que no este en esas etiquetas no genera ni un Pokemon.** ⚠⚠ Y «TerraBlender vs BoP vs Terralith» estaba mal planteado: **TerraBlender no es un mod de biomas, es la libreria** que usan otros. ⚠⚠⚠ **Lo que hizo viable el plan tal cual** es que nuestros `salvaje*.json` generan con `preset`/`settings` = `minecraft:overworld` y Terralith **sobrescribe exactamente esos dos registros**: los seis salvajes heredan Terralith **sin reescribir un solo JSON nuestro**. ⚠⚠⚠ **Las 22 estructuras van fuera** (quinta vez que se quita generacion de estructuras aqui) y no hizo falta datapack: el mod trae `disable.custom_structures` dentro del jar. ⚠⚠ **Solo servidor**, comprobado en el jar: 0 blockstates, 0 modelos, 0 registros estaticos; sus 97 biomas van en un registro **dinamico**, que el servidor sincroniza -- por eso un datapack de biomas funciona en un cliente vainilla. El precio es cosmetico: sin el mod el cliente ve la clave cruda del bioma en el F3. ⚠ **Cero spawns propios**, asi que D-017 no se toca. ⚠ La ultima `lithostitched` **tiro el servidor** por class tweaker **v2** contra nuestro loader **0.18.4**; se bajo a 1.7.13 comprobandolo dentro del jar antes de subirla. Detalle en el bloque del 2026-09-10 |
 | D-050 | 2026-09-09 | **El lobby es la unica entrada al mundo, y la visibilidad de jugadores se recorta por dimension (lobby 0, ciudadela 30)** | **Peticion del usuario**, con el recorrido dentro: *«una persona que entra inicialmente empieza en un lobby pequeño... ahi es donde se verifica si el jugador tiene todos los mods actualizados... primero tiene que registrarse y luego clic derecho en el npc y lo lleva a la ciudad»*. ⚠⚠⚠ **Lo primero que salio de la auditoria es que HASTA HOY UN JUGADOR NUEVO NO PODIA EMPEZAR A JUGAR, y no daba ningun error**: aparecia en el Mundo Hogar --`HOGAR` es `World.OVERWORLD`, el spawn de vainilla-- y el chat le mandaba al laboratorio de Oak, **en la ciudadela**, a la que **no habia forma de llegar** (`Explorar` solo ofrece hogar y salvaje, `Viajes` solo funciona DENTRO de la ciudadela, y `/luna ir` es de operador). Sin inicial no arranca ninguna cadena de misiones: **el recorrido entero estaba cerrado**. ⚠⚠⚠ **Dos cosas que el usuario pedia YA EXISTIAN y no habia que construir**, y decirlo ahorro el trabajo equivocado: **Fabric ya comprueba los mods** al sincronizar los registros y **echa al cliente descuadrado en la puerta**, antes de que exista como jugador (el `Registry remapping failed` de siempre) -- quien falla ahi **no llega nunca al lobby**; y **EasyAuth ya congela al no autenticado** y lo devuelve a su sitio al hacer `/login`, asi que montar autenticacion propia encima serian **dos sistemas peleandose por donde esta el jugador**. Lo que si faltaba, y es lo que se ha hecho, es comprobar **que tenga NUESTRO jar y al dia** -- el fallo real y repetido de este proyecto, el del cliente que entra bien y cuyas pantallas «no abren». ⚠⚠⚠ **El candado va en `Traslado.ir`, no en los receptores**: hay mas de treinta paquetes que acaban moviendo a alguien, y en cada uno serian treinta sitios que un dia dejan de estar de acuerdo -- **el trigesimo primero, el que alguien añada el mes que viene, naceria sin el**. Sin esto el lobby es **decoracion**: un cliente modificado manda `AccionExplorar("hogar")` y se planta en el mundo, y el viaje funciona perfectamente. ⚠⚠⚠ **Y es un INVARIANTE, no un evento.** EasyAuth con `hide-player-coords` **devuelve al jugador a su sitio al hacer `/login`**, asi que a uno nuevo lo sacaba del lobby justo despues de registrarse -- sin error, y saltandose el guardian. No se arregla pidiendole a EasyAuth que avise (no expone nada, y **encadenar nuestra puerta a los eventos de otro mod la rompe el dia que ese mod cambie**): se comprueba **cada segundo** que quien no ha cruzado esta en el lobby. De propina cubre el `/tp` de un operador, otro mod, una cama o un portal -- **la lista de formas de mover a un jugador no se puede enumerar; el estado correcto, si**. ⚠⚠ **No se compara la version del mod sino un PROTOCOLO**: `mod_version` lleva en `0.1.0` desde el primer dia --lo que distingue un jar es la huella del NOMBRE DEL FICHERO, que el mod no puede leerse a si mismo-- asi que comparar versiones habria dicho **siempre** que todo el mundo esta al dia: una comprobacion que no comprueba nada. Y **la ausencia del saludo es la señal**, porque un jar viejo no sabe mandarlo. ⚠⚠ **Nace apagada**, y salio de ver que desplegarla **encerraba a la gente**: el lobby es una dimension vacia hasta que alguien la construya, y con la puerta encendida cada jugador nuevo apareceria en un vacio del que `Traslado` le impide salir. `activar` **comprueba el guardian** en vez de fiarse, y exige estar dentro del lobby porque un barrido solo ve entidades en chunks cargados. ⚠⚠⚠ **La visibilidad NO baja el lag del servidor** (quita ancho de banda y FPS del cliente; el servidor sigue tickeando a los 200 y cargando sus chunks) y eso queda escrito para que nadie lo busque ahi: **para 200 de verdad el paso es un PROXY con el lobby en otra maquina**, que D-009 ya deja posible porque todo vive en MariaDB. Es el **primer mixin** del proyecto, y **compilar no es aplicar** -- no se puede comprobar en el autotest porque en produccion las clases de Minecraft llevan nombres `intermediary` y en desarrollo los de Yarn. ⚠ **La V036 tiro el servidor** con `Column 'player_id' in field list is ambiguous`: en un `INSERT ... SELECT`, el `ON DUPLICATE KEY` ve las dos tablas a la vez. Y **rellena**, porque sin relleno todos los que ya juegan serian «nuevos». Detalle en [puerta.md](docs/world/puerta.md) |
 | D-049 | 2026-09-08 | **La geometria de los nichos del Santuario se define desde el juego, con la posicion del jugador, y la parada «Monumentos» pasa a llamarse «Santuario»** | **Peticion del usuario, con el motivo dentro**: *«falta colocar el lugar de cada holografica y todo eso asi que es mejor con un comando y la posicion del jugador definir cada punto ya que son muchisimos»*. ⚠⚠⚠ **Lo primero que salio de la auditoria es que la holografica no tiene coordenada propia**: `HologramaSantuario` dibuja la foto a `proyector.y + 1,55`, asi que **colocar el proyector ES colocar el holograma** — un cuarto punto que declarar seria un cuarto punto que puede dejar de cuadrar con los otros tres. ⚠⚠⚠ **Y lo que hace peligroso un comando que escriba esa config es que la config REVIENTA EL ARRANQUE**: la guarda de `NichoCatalogo` es correcta y no se toca, pero con el comando nuevo **un operador colocando nichos podria dejar el servidor sin arrancar y no enterarse hasta el siguiente reinicio** — el peor momento posible, y la familia de fallo que ya mordio con `letmedespawn` y con la V034. Por eso se **valida antes de tocar el disco** (y si no pasa no se escribe nada) y se escribe a un **temporal que se mueve encima**, para que una caida a mitad no deje un JSON cortado. ⚠⚠ **La forma del nicho no se invento: se midio la que ya habia** — RADIO 1, ALTO 5 y ALTURA_PROYECTOR 3 salen de leer el `nicho_prueba` del servidor, asi que lo capturado tiene la misma forma que lo construido a mano. ⚠⚠ **El id lo genera el catalogo** porque con «muchisimos» nichos teclear uno cada vez es la friccion que hace que alguien repita, y **dos nichos con el mismo id comparten una sola fila**: alquilar uno cobraria dos sitios. ⚠⚠ **Y `ver` no es un extra**: un comando que captura coordenadas y no las enseña obliga a fiarse, y el nicho que quedo dos bloques corrido **no se ve** — su caja protege un sitio que no es el construido, y eso no da error. ⚠ El renombrado de la parada **no necesita migracion** (el id solo viaja en el paquete) pero si toca **cuatro sitios**, y el cuarto —el PNG— **no lo vigilaba nadie**: `ViajesScreen` compone la ruta pegando el identificador, asi que renombrar sin renombrar el arte deja la ficha **en magenta** sin un solo error. Hoy lo comprueba el autotest. Detalle en [santuario.md §3.7](docs/world/santuario.md) |
 | D-048 | 2026-09-08 | **El inicial se elige ante el Profesor Oak, y la pantalla deja de abrirse sola** | **Peticion del usuario**: *«colocar al npc Profesor Oak y cuando se le de clic derecho se abra la pestaña para seleccionar a un pokemon inicial»*, con confirmacion antes de entregar. ⚠⚠⚠ **Lo primero que salio de la auditoria es que la mitad ya existia**: `StarterService`, el protocolo y la pantalla en 3D llevan desde el 2026-08-23, y `/luna reiniciarinicial` tambien. Lo que se ha hecho no es la eleccion de inicial: es **ponerle una puerta**. ⚠⚠⚠ **Y no habia ninguna tecla que quitar**, comprobado en el jar de Cobblemon 1.8.0: sus seis keybinds no incluyen ninguna de inicial, `CobblemonStarterHandler.handleJoin` **esta vacio** --Cobblemon 1.8 no ofrece inicial al entrar-- y `/openstarterscreen` pide op 2. **Lo que abria la pantalla era nuestra propia apertura automatica**, y eso es lo que se ha retirado. ⚠⚠⚠ **Oak no se dibujo: ya viene dentro de rctmod** --tres pieles y tres entrenadores completos-- asi que cero arte y cero datapack. ⚠⚠ Pero **trae un Tauros de nivel 99**, y un TrainerMob con `forceBattleOnSight` a ocho bloques seria el jefe final del servidor plantado en la plaza: lo cortan `setAiDisabled(true)` antes del primer tick y el clic derecho atajado con `SUCCESS`. ⚠⚠⚠ **La pantalla ya se puede cerrar, y eso es consecuencia directa de la puerta**: no se podia cerrar porque **no habia forma de volver**, y hoy la hay. Con eso desaparece toda la familia de «me quede encerrado». ⚠⚠ **Lo que la apertura automatica hacia bien hay que seguir haciendolo**: era imposible no verla. Quitarla a secas deja a un jugador nuevo sin Pokemon y sin pista --el bloqueo original-- asi que la sustituyen Oak en la llegada, su cartel y un mensaje al entrar con 60 ticks de retraso. ⚠ **La rejilla pasa a significar algo**: fila = region, columna = tipo. ⚠ Y el fondo pasa a oscuro, con lo que se va el contorno de cuatro copias que este documento ya tenia fichado como «empasta». Detalle en `OakNpc.java` e `InicialScreen.java` |

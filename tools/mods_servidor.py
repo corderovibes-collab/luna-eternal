@@ -213,6 +213,23 @@ INTOCABLES = ("lunaeternal", "lunaneon", "cobblemon-cards",
               #   Pre-genera chunks: `/chunky world <mundo>`, `/chunky radius 3000`,
               #   `/chunky start`. TODAVIA NO SE HA PRE-GENERADO NADA.
               "Chunky",
+              # ⚠⚠⚠ TERRALITH Y SU LIBRERIA VAN SOLO EN EL SERVIDOR, Y ESTA
+              #    COMPROBADO EN EL JAR, no supuesto (D-051):
+              #      0 blockstates . 0 modelos de bloque u objeto
+              #      0 registros estaticos en su codigo
+              #      sus assets son 24 ficheros y TODOS son `lang/`
+              #    Lo unico que aporta son 97 BIOMAS, y un bioma va en un
+              #    registro DINAMICO: el servidor se lo manda entero al cliente
+              #    al entrar. Por eso un datapack de biomas funciona en un
+              #    cliente vainilla, y por eso Modrinth lo declara
+              #    `client_side: optional`. Misma categoria que EasyAuth,
+              #    WorldEdit y Chunky.
+              #    ⚠ LA CONTRAPARTIDA, y es real: sin el mod, el cliente no
+              #      tiene sus `lang`, asi que en el F3 y en el minimapa ve la
+              #      clave cruda (`biome.terralith.yellowstone`) en vez del
+              #      nombre. Es cosmetico. Si algun dia molesta, la solucion es
+              #      publicarlo tambien al cliente -- 2,7 MB sobre 506.
+              "Terralith", "lithostitched",
               # ⚠ LIBRERIAS YA INSTALADAS: NO SE BORRAN AUNQUE PAREZCAN SOBRAR.
               #
               # Desde que `aporta()` mira dentro de los jars anidados, estas dos

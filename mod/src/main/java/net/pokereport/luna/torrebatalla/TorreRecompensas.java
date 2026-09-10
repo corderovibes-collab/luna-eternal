@@ -224,6 +224,69 @@ public class TorreRecompensas {
         ));
     }
 
+    /**
+     * PAGA LAS DIVISAS DE LA TORRE, FUERA DEL HILO DEL SERVIDOR.
+     *
+     * <h2>&#9888;&#9888;&#9888; ESTO SE COBRABA EN EL TICK, Y ES LA REGLA NUMERO
+     * UNO DE ESTE PROYECTO</h2>
+     *
+     * {@code reclamar} y {@code reclamarTodas} se llaman desde
+     * {@code server.execute(...)} --hay que estar en el hilo del servidor para
+     * meterle objetos al inventario-- y ahi dentro se hacia
+     * {@code economy().credit(...)}, que es una <b>transaccion de MariaDB</b>.
+     *
+     * <p>No daba ningun error, y eso es lo peor: lo que da es <b>un servidor
+     * parado</b> el dia que la base tarde, y desde fuera eso se lee como «lag»
+     * y no como este fallo. Es exactamente lo que ya paso con
+     * {@code recargarSantuario}.
+     *
+     * <p>&#9888;&#9888; <b>Los objetos SI se quedan en el tick y las divisas
+     * no</b>, y no es incoherencia: un inventario solo se puede tocar desde el
+     * hilo del servidor, y una transaccion solo se puede hacer fuera. Cada cosa
+     * en el sitio donde se puede hacer.
+     *
+     * <p>&#9888; Y se puede mover sin miedo porque el cobro lleva <b>clave de
+     * idempotencia</b> (R4): que ocurra un instante despues no lo duplica.
+     *
+     * <p>&#9888; Al terminar se reenvia la ficha. El saldo lo dibuja el PokePad
+     * desde ella, asi que sin esto el jugador cobraba y <b>seguia viendo el
+     * numero de antes</b> hasta que otra cosa lo refrescara -- y entonces el
+     * dinero «aparecia» de golpe, que parece un fallo distinto.
+     */
+    private static void pagar(ServerPlayerEntity jugador, long plata, long lunacoins,
+                              String clave, String motivo) {
+        if (plata <= 0 && lunacoins <= 0) {
+            return;
+        }
+        var uuid = jugador.getUuid();
+        var nombre = jugador.getName().getString();
+        var servidor = jugador.getServer();
+        LunaEternal.submit(() -> {
+            try {
+                long playerId = LunaEternal.players().resolve(uuid, nombre);
+                if (plata > 0) {
+                    LunaEternal.economy().credit(playerId, Currency.POKEDOLLAR,
+                            plata, motivo, clave + ":plata");
+                }
+                if (lunacoins > 0) {
+                    LunaEternal.economy().credit(playerId, Currency.REPORTCOIN,
+                            lunacoins, motivo, clave + ":coins");
+                }
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("Error acreditando divisas de Torre ({}): {}",
+                        clave, e.getMessage());
+                return;
+            }
+            if (servidor != null) {
+                servidor.execute(() -> {
+                    if (!jugador.isRemoved()) {
+                        net.pokereport.luna.net.Red.enviarSaldo(jugador);
+                    }
+                });
+            }
+        });
+    }
+
     public static InfoRecompensa obtenerInfo(int ronda) {
         if (ronda < 1) return new InfoRecompensa(ronda, List.of(), 0, 0, null);
 
@@ -366,21 +429,9 @@ public class TorreRecompensas {
         }
 
         // 2. Acreditar divisas si corresponde
-        if (info.plata() > 0 || info.lunacoins() > 0) {
-            try {
-                long playerId = LunaEternal.players().resolve(uuid, jugador.getName().getString());
-                if (info.plata() > 0) {
-                    String keyPlata = "torre:ronda:" + temporadaActual + ":" + ronda + ":" + uuid + ":plata";
-                    LunaEternal.economy().credit(playerId, Currency.POKEDOLLAR, info.plata(), "torre_recompensa", keyPlata);
-                }
-                if (info.lunacoins() > 0) {
-                    String keyCoins = "torre:ronda:" + temporadaActual + ":" + ronda + ":" + uuid + ":coins";
-                    LunaEternal.economy().credit(playerId, Currency.REPORTCOIN, info.lunacoins(), "torre_recompensa", keyCoins);
-                }
-            } catch (Exception e) {
-                LunaEternal.LOG.warn("Error acreditando divisas de Torre R{}: {}", ronda, e.getMessage());
-            }
-        }
+        pagar(jugador, info.plata(), info.lunacoins(),
+                "torre:ronda:" + temporadaActual + ":" + ronda + ":" + uuid,
+                "torre_recompensa");
 
         // 3. Sonido y mensaje
         jugador.getServerWorld().playSound(null, jugador.getX(), jugador.getY(), jugador.getZ(),
@@ -427,21 +478,18 @@ public class TorreRecompensas {
         }
 
         // 2. Acreditar economías
-        if (totalPlata > 0 || totalCoins > 0) {
-            try {
-                long playerId = LunaEternal.players().resolve(uuid, jugador.getName().getString());
-                if (totalPlata > 0) {
-                    String keyPlata = "torre:batch:" + temporadaActual + ":" + max + ":" + uuid + ":plata:" + System.currentTimeMillis();
-                    LunaEternal.economy().credit(playerId, Currency.POKEDOLLAR, totalPlata, "torre_recompensa_batch", keyPlata);
-                }
-                if (totalCoins > 0) {
-                    String keyCoins = "torre:batch:" + temporadaActual + ":" + max + ":" + uuid + ":coins:" + System.currentTimeMillis();
-                    LunaEternal.economy().credit(playerId, Currency.REPORTCOIN, totalCoins, "torre_recompensa_batch", keyCoins);
-                }
-            } catch (Exception e) {
-                LunaEternal.LOG.warn("Error acreditando batch de divisas Torre: {}", e.getMessage());
-            }
-        }
+        //
+        // ⚠⚠⚠ LA CLAVE LLEVABA `System.currentTimeMillis()` DENTRO, Y ESO ANULA
+        //    LA IDEMPOTENCIA. R4 existe para que un reintento no pague dos
+        //    veces, y con la hora dentro CADA INTENTO ES UNA CLAVE NUEVA: la
+        //    proteccion estaba escrita y no protegia nada.
+        //    Hoy la clave la forman temporada + ronda maxima + jugador, que es
+        //    lo que de verdad identifica este cobro. Hoy lo tapaba el `return`
+        //    de mas arriba --el segundo intento no encuentra nada que reclamar--
+        //    o sea que la red de seguridad la sostenia OTRA cosa.
+        pagar(jugador, totalPlata, totalCoins,
+                "torre:batch:" + temporadaActual + ":" + max + ":" + uuid,
+                "torre_recompensa_batch");
 
         // 3. Notificación
         jugador.getServerWorld().playSound(null, jugador.getX(), jugador.getY(), jugador.getZ(),

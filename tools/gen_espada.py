@@ -61,8 +61,11 @@ def main():
         for f in fallos:
             print("     x " + f)
     else:
-        print("     comprobaciones: rejilla, simetria, nada flotando, "
-              "textura sin solapes y tramos sin hueco -- TODO EN VERDE")
+        # ⚠ El resumen NOMBRA LAS SEIS. Un «todo en verde» que no dice que
+        #   miro es lo que deja pasar una comprobacion que se quedo sin correr.
+        print("     comprobaciones: referencia, rejilla, simetria, nada "
+              "flotando, textura sin solapes, ningun papel muerto y tramos "
+              "sin hueco -- TODO EN VERDE")
 
     BUILD.mkdir(parents=True, exist_ok=True)
     visor.lamina(cubos, BUILD / "espada.png", textura=im)

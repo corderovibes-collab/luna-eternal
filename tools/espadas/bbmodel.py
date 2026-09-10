@@ -228,7 +228,19 @@ def comprobar(piezas, cubos, lado):
                                       % (p.nombre, lado, lado))
                         return fallos, avisos
 
-    # 5 · LOS TRAMOS ENCAJAN SIN HUECO
+    # 5 · NINGUN PAPEL MUERTO EN LA PALETA.
+    # ⚠⚠ Un papel que nadie usa es una promesa sin cumplir, y aqui aparecieron
+    #    DOS solos: `pua` y `chispa` sobrevivieron a las piezas que los usaban.
+    #    No dan ningun error --nadie los pide-- pero le dicen al siguiente que
+    #    la espada tiene puas y chispas, y no las tiene. La direccion contraria
+    #    ya estaba cubierta sola: pedir un papel inexistente revienta al pintar.
+    usados_papel = {p.papel for p in piezas}
+    muertos = sorted(set(diseno.PAPEL) - usados_papel)
+    if muertos:
+        fallos.append("la paleta declara papeles que no usa nadie: %s"
+                      % ", ".join(muertos))
+
+    # 6 · LOS TRAMOS ENCAJAN SIN HUECO
     tramos = [("pomo", diseno.POMO_Y), ("mango", diseno.MANGO_Y),
               ("guarda", diseno.GUARDA_Y), ("hoja", diseno.HOJA_Y)]
     for (n1, t1), (n2, t2) in zip(tramos, tramos[1:]):

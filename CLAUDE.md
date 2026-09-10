@@ -3,7 +3,7 @@
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 
-**Última actualización:** 2026-09-09
+**Última actualización:** 2026-09-10
 **Fase actual:** PHASE 2 — Core progression · PHASE 7 — Mundo (ciudadela) ·
 PHASE 4 — Gimnasios y Torre de Batalla · PHASE 10 — Pase de Batalla
 **Estado:** Cobblemon 1.8.0 («Make Your Move») integrado y desplegado. Torre de Batalla
@@ -11,6 +11,79 @@ y Santuario construidos. Decisiones D-001 a D-050. **El mod está desplegado y f
 contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Batalla con
 recompensas de temporada e interfaces completas en el PokePad. **El lobby es la
 unica entrada al mundo** (D-050). Autotest en vivo 696/696.
+
+> **2026-09-10 — LA ESPADA DE PIKACHU, Y LAS CUATRO CORRECCIONES QUE NINGUNA
+> REVISION DE CODIGO HABRIA VISTO.**
+>
+> Encargo del usuario con su modelo delante y catorce fases: *«primero ANALIZA,
+> despues DISEÑA... NO entregues la primera version sin revisarla»*, y dos
+> lineas rojas -- **no tocar su fichero** y **«NO QUIERO UNA ESPADA GENÉRICA»**.
+> Detalle entero en [espada-pikachu.md](docs/ui/espada-pikachu.md).
+>
+> ⚠⚠⚠ **«EXTRAE REGLAS, NO COPIES PIEZAS» ES LO QUE DECIDE EL DISEÑO ENTERO.**
+> La salida facil era sacarle las orejas y las mejillas a la referencia y
+> pegarlas sobre una espada de vainilla: eso cumple la letra del encargo y
+> **ninguna de sus dos prohibiciones**. Lo que se hizo es medir la referencia,
+> sacarle cuatro reglas --finura, densidad de textura, paleta y escala-- y
+> construir una pieza que **no comparte ni un cubo** con el original.
+> Las señas entran como ARQUITECTURA, no como adorno: **la guarda no lleva una
+> cara, la guarda ES la cara** (barra oscura + mejillas + orejas), y **el rayo
+> es el NUCLEO de la hoja**, no un dibujo encima.
+>
+> ⚠⚠⚠ **EL VISOR ES LA PIEZA QUE IMPORTA, y la leccion ya estaba pagada con los
+> trajes.** Las CUATRO correcciones salieron de MIRAR LA LAMINA; **ninguna de
+> leer el codigo**:
+>   1. el nucleo media 1,0 sobre una hoja de 2,0: la espada se leia **BLANCA**
+>      con borde amarillo, o sea que el color de Pikachu dejaba de mandar
+>   2. las alas de la guarda y las puas de la hoja quedaban **a la misma
+>      altura**: cuatro brazos, silueta de **CANDELABRO**.
+>      ⚠⚠ La salida no fue quitar el rayo: fue **sacarlo de la silueta** y
+>         meterlo en el nucleo, donde zigzaguea sin tocar el contorno. Se gana
+>         por los dos lados -- el perfil se limpia y el rayo se ve mas
+>   3. las orejas no se leian como orejas: una oreja hace **tres cosas** (sale,
+>      se estrecha y acaba en negro) y el negro tiene que ser **un tercio del
+>      largo** o desaparece a tamaño de juego
+>   4. ⚠⚠⚠ **y la cuarta no se vio: se MIDIO.** El perfil de la vista de frente
+>      decia `1,5 · 2,5 · 4,0 · 2,5 · 1,5`, y **ese 1,5 de abajo era identico en
+>      ancho Y en color al mango**: lo que asomaba bajo el pomo no era un pomo,
+>      era **una espiga sin rematar**. El ojo lo perdonaba; el perfil en numeros
+>      no. **La tecnica vale para la proxima**: recortar la vista de frente y
+>      listar el ancho de la silueta fila a fila
+>
+> ⚠⚠⚠ **Y LA REFERENCIA DESMINTIO DOS AFIRMACIONES MIAS QUE SONABAN
+> COMPROBADAS**, escritas en el docstring como si fueran medidas:
+>   - *«el disfraz va en una rejilla de U = 0,75*raiz(2) cuantizada a U/4»* --
+>     **FALSO**: de sus **144 coordenadas, 18** caen en U/4. Ni en U, ni en U/2,
+>     ni en U/4. ⚠ Y eso **refuerza** definir la nuestra (0,25) en vez de
+>     heredar el artefacto de una importacion
+>   - *«ningun elemento tiene rotacion»* -- **FALSO**: doce rotan. Los doce son
+>     `locator`; de los 59 CUBOS, cero. Cierta de los cubos y falsa como estaba
+>     escrita, **que es la peor forma de estar equivocado**
+>   Y un tercer texto habia sobrevivido a su pieza: seguia describiendo unas
+>   PUAS que la segunda pasada retiro.
+> ⚠⚠ Por eso existe `tools/espadas/referencia.py`: de esas frases salen **la
+>    ESCALA** (26 sobre una coronilla de 32) y el **maniqui** contra el que se
+>    juzga, asi que hoy se cruzan contra el fichero **en cada pasada** -- y sin
+>    el, la exportacion **SE NIEGA** (probado escondiendolo: rojo y codigo 1).
+>    ⚠ Sus cubos se llaman **EN ESPAÑOL** (`cabeza`, `torso`, `brazo derecho`):
+>      buscar `head` devuelve CERO, y **una comprobacion que no encuentra nada
+>      pasa sola**.
+>
+> ⚠⚠ **LA SIMETRIA SE CONSTRUYE, NO SE COMPRUEBA DESPUES** (`_par()` crea la
+>    pieza y su reflejo), y **las 18 asimetricas se DECLARAN y se imprimen** en
+>    vez de apagar la comprobacion: *una excepcion que no se ve deja de ser
+>    excepcion y pasa a ser un agujero*.
+> ⚠⚠ **Y SE VUELVE A LEER EL FICHERO ESCRITO**, no el diccionario en memoria --
+>    comparar el objeto consigo mismo pasaria siempre. Un uuid repetido o un
+>    cubo sin grupo **no dan error**: dan un fichero que abre y no es el que se
+>    prometio.
+> ⚠ De contar las piezas para documentarlo salio otro: `PAPEL` declaraba dos
+>   papeles (`pua`, `chispa`) que **ya no usaba nadie** -- prometian una espada
+>   con puas. Hoy lo caza la sexta comprobacion.
+>
+> ⚠ **NO ESTA EN EL JUEGO**, y meterla no es gratis: un objeto es **una entrada
+>   mas en un registro que se sincroniza**, o sea otra razon para echar a quien
+>   no se actualice. Es el mismo motivo por el que los trajes no son objetos.
 
 > **2026-09-10 (noche) — ANTI-AFK, Y LO QUE DE VERDAD CUESTA PRE-GENERAR CON
 > TERRALITH.**
@@ -2934,6 +3007,29 @@ Blockbench    DE UN .bbmodel DEL USUARIO AL JUEGO (2026-09-01)
                 su dibujo -- que ademas conserva el arte del autor
               ⚠ y el visor tenia la cara de ARRIBA volteada. Casi no se ve --hay
                 que mirar al jugador desde el techo-- asi que se habria quedado
+
+Espada        COLMILLO DE TRUENO: LA ESPADA DE PIKACHU (2026-09-10)
+              detalle completo en docs/ui/espada-pikachu.md
+              45 cuboides . 5 grupos . rejilla 0,25 . textura 64x64
+              arte/espadas/pikachu_electric_sword.bbmodel + .png
+              arte/espadas/referencia/pikachu-skin.bbmodel  <- COPIA. El
+                original del usuario NO se toca: solo se lee
+              python tools/gen_espada.py --ver | --generar | --verificar
+              ⚠⚠⚠ LAS SEÑAS DE PIKACHU ENTRAN COMO ARQUITECTURA, no pegadas: la
+                 guarda NO lleva una cara, LA GUARDA ES LA CARA (barra oscura,
+                 mejillas rojas por delante Y por detras, y las orejas como
+                 alas); el RAYO es el NUCLEO de la hoja, en zigzag, para que no
+                 compita con la silueta; y las bandas del mango son las rayas
+                 de la cola
+              ⚠⚠⚠ LA ESCALA SALE DE LA REFERENCIA: coronilla en 32 y mano en 12,
+                 asi que 26 pone la punta justo sobre la cabeza. A 32 seria un
+                 prop de anime y a 20 un cuchillo
+              ⚠⚠ EL VISOR DIBUJA A PIKACHU AL LADO, y esa es la mitad que importa:
+                 flotando sola en negro, CUALQUIER escala parece correcta
+              ⚠⚠ 7 comprobaciones + la vuelta releyendo el .bbmodel de disco.
+                 Con un solo fallo NO EXPORTA
+              ⚠ SIN LLEVAR AL JUEGO: hay que decidir si es objeto (registro que
+                se sincroniza), cosmetico de Cobblemon o pieza decorativa
 
 EL ARTE       tools/gen_trajes.py . tools/trajes/ . docs/ui/prompts-trajes.md
               ⚠⚠⚠ EL VISOR ES LA PIEZA QUE IMPORTA, NO UN EXTRA. Sin el, un traje

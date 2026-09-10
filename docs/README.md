@@ -42,6 +42,7 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`ui/interfaz-luna.md`](ui/interfaz-luna.md) | ✅ | **La interfaz de azul luna**: 323 texturas, y qué lo pinta el código |
 | [`ui/prompts-arte-pokepad.md`](ui/prompts-arte-pokepad.md) | ✅ | **Los prompts para el arte del PokePad**, y las 3 condiciones que debe cumplir |
 | [`ui/prompts-lobby.md`](ui/prompts-lobby.md) | ✅ | **El lobby**: los prompts de Gemini y Meshy, y el % de relleno como criterio de aceptacion |
+| [`ui/espada-pikachu.md`](ui/espada-pikachu.md) | ✅ | **Cómo se diseñó la espada de Pikachu**: qué se midió de la referencia, las 4 pasadas que enseñó la lámina, y las 2 afirmaciones que el fichero desmintió |
 
 ✅ escrito · 🟡 en curso · ⬜ pendiente
 

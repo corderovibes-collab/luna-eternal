@@ -101,14 +101,12 @@ PAPEL = {
     "hoja":      AMARILLO_BASE,
     "filo":      AMARILLO_ALTO,
     "punta":     AMARILLO_ALTO,
-    "pua":       AMARILLO,
-    # ⚠⚠⚠ EL NUCLEO ALTERNA DOS TONOS, y eso sustituye a un truco de textura
-    #    que no podia funcionar: a un texel por unidad, una tira de 0,5 de
-    #    ancho ocupa UN pixel, asi que cualquier dibujo dentro de ella se
-    #    pierde. La chispa se hace con GEOMETRIA -- tramos que se turnan-- que
-    #    ademas es lo que hace Minecraft.
+    # ⚠⚠⚠ EL NUCLEO ES BLANCO ENTERO Y LO QUE ZIGZAGUEA ES SU FORMA. Aqui
+    #    hubo dos intentos peores: pintarle una chispa EN LA TEXTURA --que a un
+    #    texel por unidad es imposible, porque una tira de 0,5 de ancho ocupa
+    #    UN pixel-- y despues alternarle dos tonos por tramos, que a tamaño de
+    #    juego se lee como suciedad. Lo que hace el rayo es la GEOMETRIA.
     "nucleo":    BLANCO,
-    "chispa":    AMARILLO_ALTO,
     "guarda":    CARBON,
     "ala":       AMARILLO_BASE,
     "ala_punta": NEGRO,

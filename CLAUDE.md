@@ -113,6 +113,34 @@ unica entrada al mundo** (D-050). Autotest en vivo 696/696.
 > tienda, cofres, GTS y cartas (operaciones repetibles, y el estado de la fila es
 > quien protege).
 >
+> ⚠⚠⚠ **Y AL DESPLEGARLO SALIO LO MEJOR DE LA RONDA: EL AUTOTEST SOLO PASABA
+> LA PRIMERA VEZ POR ARRANQUE.** Se ejecuto dos veces seguidas --sin querer, la
+> primera se lanzo y lo que reviento fue el `print` de Python-- y la segunda se
+> puso roja:
+>
+> ```
+> Cannot add or update a child row: a foreign key constraint fails
+>   (player_puerta, fk_puerta_player)
+> 1 FALLOS de 574. NO desplegar.
+> ```
+>
+> **`cleanup()` borra filas de `player` y `PlayerService` CACHEA uuid -> id.**
+> Sin olvidarlos, la segunda ejecucion recibe de `resolve` un id **que ya no
+> existe**, y el primer INSERT que cuelgue de el revienta por clave ajena. La
+> puerta salio primero por orden, no por culpa suya.
+>
+> ⚠⚠ **Y no se veia porque nadie lo ejecuta dos veces**: el procedimiento es
+> *reiniciar y pasar el autotest*, o sea **siempre la primera**. Las decenas de
+> «696/696» de este documento son todas primeras ejecuciones. **Estaba roto en
+> la segunda, que es peor que un rojo cualquiera: es un rojo que aparece justo
+> cuando quieres comprobar algo OTRA VEZ** -- depurando, o despues de tocar
+> algo-- que es cuando mas te fias de la prueba.
+>
+> ⚠ Es la leccion de `/luna reiniciarinicial`, que «no servia» porque **borraba
+> la fila y el cliente seguia con su copia**. Aqui el «cliente» es la cache del
+> propio servidor. Hoy `cleanup()` olvida **exactamente los tres** ids cuyas
+> filas borra, y se comprobo pasandolo **tres veces seguidas**: 696, 696, 696.
+>
 > ⚠ **PENDIENTE DE ESCALA, medido y no arreglado a proposito:**
 > `TorreRecompensas.save()` escribe su JSON **sincrono en el tick**. Hoy el
 > fichero mide **331 bytes** y eso es ruido; crece con jugadores x rondas

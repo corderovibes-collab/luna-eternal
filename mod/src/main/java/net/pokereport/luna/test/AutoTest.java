@@ -4116,7 +4116,37 @@ public final class AutoTest {
         }
     }
 
-    /** Borra en orden inverso a las claves ajenas. */
+    /**
+     * Borra en orden inverso a las claves ajenas.
+     *
+     * <h2>&#9888;&#9888;&#9888; Y OLVIDA LOS IDS: SIN ESO EL AUTOTEST SOLO PASA
+     * LA PRIMERA VEZ POR ARRANQUE</h2>
+     *
+     * Esto borra filas de {@code player}, y {@code PlayerService} <b>cachea</b>
+     * uuid -&gt; id. Sin olvidarlos, la SEGUNDA ejecucion de
+     * {@code /luna autotest} en el mismo arranque recibe de {@code resolve} un
+     * id que <b>ya no existe en la base</b>, y el primer INSERT que cuelgue de
+     * el revienta por clave ajena:
+     *
+     * <blockquote>{@code Cannot add or update a child row: a foreign key
+     * constraint fails (player_puerta, fk_puerta_player)}</blockquote>
+     *
+     * <p>&#9888;&#9888; <b>Y no se veia porque nadie lo ejecutaba dos veces.</b>
+     * El procedimiento de despliegue es reiniciar y pasar el autotest, o sea
+     * SIEMPRE la primera vez: las decenas de «696/696» de este documento son
+     * todas primeras ejecuciones. La prueba estaba rota <b>en la segunda</b>, y
+     * eso es peor que un rojo -- es un rojo que aparece cuando quieres
+     * comprobar algo <i>otra vez</i>, que es justo cuando mas te fias de ella.
+     *
+     * <p>&#9888; Es la leccion de {@code /luna reiniciarinicial}, que «no
+     * servia» porque <b>borraba la fila y el cliente seguia con su copia</b>.
+     * Aqui el «cliente» es la cache del propio servidor.
+     *
+     * <p>&#9888; Se olvidan <b>exactamente los tres cuyas filas se borran</b>.
+     * Los otros jugadores de prueba ({@code __autotest_n1}, {@code _admin},
+     * {@code _visita}) NO se borran de {@code player}, asi que sus ids siguen
+     * siendo validos y olvidarlos solo costaria una consulta de mas.
+     */
     private void cleanup() throws Exception {
         List<String> uuids = new ArrayList<>(List.of(
                 T1.toString(), T2.toString(), T3.toString()));
@@ -4196,6 +4226,15 @@ public final class AutoTest {
             } finally {
                 c.setAutoCommit(true);
             }
+        }
+        // ⚠⚠⚠ DESPUES del commit, y solo si las bajas salieron bien: si el
+        //    borrado peta, estos ids SIGUEN siendo validos y olvidarlos seria
+        //    tirar la cache sin motivo. Ver el javadoc.
+        var jugadores = LunaEternal.players();
+        if (jugadores != null) {
+            jugadores.forget(T1);
+            jugadores.forget(T2);
+            jugadores.forget(T3);
         }
     }
 

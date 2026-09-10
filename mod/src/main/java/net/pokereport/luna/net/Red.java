@@ -5560,27 +5560,12 @@ public class Red implements ModInitializer {
      */
     private static net.minecraft.text.Text entregarPila(
             net.minecraft.server.network.ServerPlayerEntity jugador, byte[] datos) {
-        try {
-            String s = new String(datos, java.nio.charset.StandardCharsets.UTF_8);
-            int corte = s.indexOf((char) 0);
-            if (corte < 0) {
-                return null;
-            }
-            var item = net.pokereport.luna.market.Inventarios
-                    .objeto(s.substring(0, corte));
-            int cantidad = Integer.parseInt(s.substring(corte + 1).trim());
-            if (item == null || cantidad <= 0) {
-                return null;
-            }
-            net.pokereport.luna.market.Inventarios.meter(jugador, item, cantidad);
-            // ⚠ Se devuelve un Text SIN RESOLVER. Llamar a `.getString()` aquí
-            //   lo resolvería en `en_us` y perderíamos justo lo que buscamos.
-            return new net.minecraft.item.ItemStack(item).getName().copy()
-                    .append(net.minecraft.text.Text.literal(" x" + cantidad));
-        } catch (Exception e) {
-            LunaEternal.LOG.warn("Payload de listado ilegible: {}", e.toString());
-            return null;
-        }
+        // ⚠⚠ DELEGA, no repite. Este metodo tenia su propia copia del formato
+        //    y la entrega diferida tenia otra idea distinta -- que es
+        //    exactamente el fallo que CLAUDE.md tiene fichado desde el 25-ago:
+        //    «dos sitios con su propia idea del formato», el unico de esta
+        //    mitad que se come mercancia en silencio. Hoy hay UN lector.
+        return net.pokereport.luna.gts.Entrega.objeto(jugador, datos);
     }
 
     /** El precio que el servicio metió en su mensaje. Solo para reescribirlo. */

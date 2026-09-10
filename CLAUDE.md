@@ -12,6 +12,70 @@ contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Bata
 recompensas de temporada e interfaces completas en el PokePad. **El lobby es la
 unica entrada al mundo** (D-050). Autotest en vivo 696/696.
 
+> **2026-09-10 — LAS SIETE RECLAMACIONES DEL GTS NO ERAN SIETE: ERA QUE
+> COMPRAR UN POKEMON NUNCA ENTREGO NADA.**
+>
+> Llevaban desde el 8-sep en este documento como «pendiente de investigar», con
+> dos errores que parecian dos problemas distintos. **Son uno, y las filas de la
+> base lo dijeron antes de tocar una linea de codigo:**
+>
+> ```
+> id    kind     state      payload   1os bytes
+> 145   POKEMON  CANCELLED     731 B  1F8B0800   <- gzip
+> 161   ITEM     CANCELLED      37 B  6D696E65   <- "mine..." en TEXTO
+> 206   POKEMON  SOLD          716 B  1F8B0800
+> ```
+>
+> ⚠⚠⚠ **`GtsDelivery` DECODIFICABA TODO CON `ItemCodec`, Y ESE NO ES EL FORMATO
+> DE NINGUNA DE LAS DOS COSAS QUE EL GTS GUARDA HOY.** Peor: `pendingClaims`
+> **ni siquiera leia la columna `kind`**, asi que la entrega recibia un monton
+> de bytes sin saber que estaba mirando. Con eso se explican los dos errores
+> enteros:
+>   - **Pokemon** -> es gzip, asi que `readCompressed` PASA; despues busca
+>     `root.get("item")`, que ese NBT no tiene -> **`Not a map: null`**
+>   - **Objeto** -> es texto plano (`id` + NUL + cantidad, D-042) -> no es gzip
+>     -> **`ZipException: Not in GZIP format`**
+>
+> ⚠⚠⚠ **Y LO QUE ESO SIGNIFICA ES MUCHO MAS GRANDE QUE SIETE FILAS: comprar un
+> Pokemon delega la entrega en `GtsDelivery.claimAll`** --con un comentario que
+> decia «el camino de siempre, que ya sabe que hacer si el equipo esta lleno»--
+> y ese camino **no sabia leer un Pokemon**. El dinero cambiaba de manos, el
+> listado se marcaba SOLD, y el comprador **no recibia nada**. La mitad Pokemon
+> del GTS no ha entregado un solo Pokemon desde que existe.
+> ⚠ **No se perdio nada**, y eso es merito del diseño: una reclamacion ilegible
+> **no se marca entregada**. En cuanto esto funciona se entregan solas al entrar.
+>
+> ⚠⚠⚠ **LO QUE LO DEJO PASAR FUE UNA PRUEBA QUE MIRABA AL LADO.** El autotest
+> partia el payload **en la propia prueba** y comprobaba que *«lleva el
+> separador que espera la entrega»* -- o sea validaba el formato **contra su
+> propia descripcion**, sin llamar jamas a quien tiene que leerlo. **Una prueba
+> asi pasa siempre.** Es la leccion de `testProtocoloNulos`, que existe justo
+> porque un repaso a ojo encuentra lo que buscas y no lo que no sabias que
+> existia: **lo que caza esto es EJERCITAR EL CAMINO.**
+> Hoy el autotest hace el viaje entero en los dos formatos --crear, guardar,
+> comprimir, descomprimir, reconstruir, comparar la especie-- y ademas exige que
+> **un Pokemon NO se pueda leer como si fuera un objeto**: si alguien vuelve a
+> mandarlo todo por un solo lector, se pone rojo en vez de comerse la mercancia.
+> 696 -> **700**.
+>
+> ⚠⚠ **Y habia DOS lectores del formato de objetos** --`Red.entregarPila` y la
+> entrega diferida-- que es exactamente el fallo que este documento tiene
+> fichado desde el 25-ago: *«dos sitios con su propia idea del formato... el
+> unico de esta mitad que se come mercancia en silencio»*. Hoy los dos entran
+> por `gts/Entrega`, que es **el unico sitio que sabe leer lo que hay en
+> custodia**.
+> ⚠ `ItemCodec` **no se borra**: sigue siendo el formato de la MOCHILA, que si
+> guarda pilas enteras con encantamientos. Lo que se corrige es que el GTS lo
+> usara para algo que nunca escribio.
+>
+> ⚠ La firma de `loadFromNBT` se saco con **javap contra el jar de Cobblemon
+> 1.8.0 que corre este servidor**, no de `vendor/`, que es HEAD: es un metodo
+> **de instancia** que devuelve el Pokemon cargado.
+>
+> ✅ **EN VIVO (2026-09-10, 00:03):** **AUTOTEST 700/700**, dos veces seguidas.
+> ⚠ **Las siete son de TheJuanCE** --cuatro Pokemon y un panel retirados, y un
+> Totodile y una linterna COMPRADOS Y PAGADOS-- asi que se entregan al entrar.
+
 > **2026-09-09 (noche) — AUDITORIA GENERAL. Y lo que vale de ella no son los
 > fallos: son LOS BARRIDOS, que se pueden repetir.**
 >

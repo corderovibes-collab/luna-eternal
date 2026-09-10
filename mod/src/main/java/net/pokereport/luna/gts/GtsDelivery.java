@@ -61,21 +61,31 @@ public final class GtsDelivery {
                 server.execute(() -> {
                     int entregados = 0;
                     for (var claim : claims) {
-                        var stack = ItemCodec.decode(claim.payload(),
-                                                     player.getRegistryManager());
-                        if (stack.isEmpty()) {
+                        // ⚠⚠⚠ SE ENTREGA SEGUN EL `kind`, Y ESO ES EL ARREGLO.
+                        //    Aqui se llamaba a `ItemCodec.decode` para TODO, y
+                        //    ese no es el formato de ninguna de las dos cosas
+                        //    que el GTS guarda hoy: un Pokemon es NBT de
+                        //    Cobblemon en la raiz y un objeto es texto plano.
+                        //    Ver el javadoc de `Entrega`.
+                        var nombre = Entrega.entregar(
+                                player, claim.kind(), claim.payload());
+                        if (nombre == null) {
                             avisarIlegible(player, claim.listingId(),
                                            claim.displayName());
                             continue;   // se reintentará al volver a conectar
                         }
-                        // Primero el objeto, después la marca. Al revés, un
-                        // fallo aquí lo haría desaparecer para siempre.
-                        player.getInventory().offerOrDrop(stack);
+                        // Primero la mercancía, después la marca. Al revés, un
+                        // fallo aquí la haría desaparecer para siempre.
                         entregados++;
 
+                        // ⚠ El nombre lo pone `Entrega` y viaja SIN RESOLVER,
+                        //   asi que el jugador lo lee en su idioma. El
+                        //   `display_name` de la fila es el que escribio el
+                        //   servidor y esta congelado en ingles.
                         player.sendMessage(Text.literal(
-                            "§8[§6GTS§8] §7Recibido §f" + claim.displayName()
-                            + " §8(" + claim.reason() + ")"), false);
+                            "§8[§6GTS§8] §7Recibido §f").append(nombre)
+                            .append(Text.literal(
+                                " §8(" + claim.reason() + ")")), false);
 
                         long id = claim.listingId();
                         LunaEternal.submit(() -> {

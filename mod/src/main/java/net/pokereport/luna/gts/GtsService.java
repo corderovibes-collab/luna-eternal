@@ -860,7 +860,17 @@ public final class GtsService {
     // ------------------------------------------------------- entrega diferida
 
     /** Algo que el jugador tiene pendiente de recibir. */
-    public record Claim(long listingId, String displayName, byte[] payload, String reason) {}
+    /**
+     * Una reclamacion pendiente.
+     *
+     * <p>&#9888;&#9888;&#9888; <b>{@code kind} FALTABA, Y ESE ERA EL FALLO.</b>
+     * La consulta no leia la columna, asi que la entrega recibia un monton de
+     * bytes <b>sin saber de que tipo eran</b> y los pasaba todos por
+     * {@code ItemCodec} -- que no es el formato de ninguno de los dos que se
+     * escriben hoy. Ver {@link Entrega}.
+     */
+    public record Claim(long listingId, String displayName, byte[] payload,
+                        String reason, String kind) {}
 
     /**
      * Lo que el jugador tiene pendiente de recibir.
@@ -879,7 +889,7 @@ public final class GtsService {
         List<Claim> out = new ArrayList<>();
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement("""
-                SELECT listing_id, display_name, payload, state, seller_id
+                SELECT listing_id, display_name, payload, state, seller_id, kind
                 FROM gts_listing
                 WHERE delivered_at IS NULL
                   AND (   (state = 'SOLD'      AND buyer_id  = ?)
@@ -899,7 +909,8 @@ public final class GtsService {
                             case "SOLD"      -> "compra";
                             case "CANCELLED" -> "listado retirado";
                             default          -> "listado caducado";
-                        }));
+                        },
+                        rs.getString("kind")));
                 }
             }
         }

@@ -1378,17 +1378,68 @@ public final class AutoTest {
         var comprada = gts.buy(comprador, oferta.id());
         check("otro jugador puede comprar la oferta", comprada.ok());
         check("la compra devuelve el payload", comprada.payload() != null);
+        // ⚠⚠⚠ ESTO SE LEIA A MANO AQUI, Y POR ESO NO CAZO NADA DURANTE MESES.
+        //    La version anterior partia la cadena EN LA PROPIA PRUEBA y
+        //    comprobaba que «lleva el separador que espera la entrega» -- o sea
+        //    validaba el formato contra SU PROPIA DESCRIPCION. La entrega de
+        //    verdad no lo leia asi: pasaba TODO por `ItemCodec`, y se comia
+        //    cada compra en silencio. Una prueba que no llama a quien tiene que
+        //    leer el dato pasa siempre.
+        //    Hoy se llama a `Entrega.leerObjeto`, que es EXACTAMENTE la que usa
+        //    la entrega diferida y la compra en vivo.
         if (comprada.payload() != null) {
-            String s = new String(comprada.payload(),
-                    java.nio.charset.StandardCharsets.UTF_8);
-            int corte = s.indexOf((char) 0);
-            check("el payload lleva el separador que espera la entrega", corte > 0);
-            if (corte > 0) {
+            var leido = net.pokereport.luna.gts.Entrega.leerObjeto(comprada.payload());
+            check("LA ENTREGA SABE LEER LO QUE SE PUBLICO", leido != null);
+            if (leido != null) {
                 check("el payload devuelve EL MISMO objeto",
-                      item.equals(s.substring(0, corte)));
+                      item.equals(net.minecraft.registry.Registries.ITEM
+                              .getId(leido.item()).toString()));
                 check("el payload devuelve LA MISMA cantidad",
-                      Integer.parseInt(s.substring(corte + 1).trim()) == cantidad);
+                      leido.cantidad() == cantidad);
             }
+        }
+
+        // ⚠⚠⚠ Y EL POKEMON, QUE ES LA MITAD QUE ESTUVO ROTA DE PUNTA A PUNTA.
+        //    Publicar comprime el NBT de Cobblemon CON LA RAIZ EN EL POKEMON;
+        //    la entrega lo descomprime y lo reconstruye. Son dos ficheros
+        //    distintos y nada les obliga a estar de acuerdo, asi que se cruzan
+        //    aqui haciendo el viaje ENTERO: crear -> guardar -> comprimir ->
+        //    descomprimir -> reconstruir -> comparar la especie.
+        //    Sin esto, comprar un Pokemon volvia a no entregar nada y el unico
+        //    aviso era un ERROR en el log que ademas se silencia tras el primero.
+        try {
+            var props = com.cobblemon.mod.common.api.pokemon.PokemonProperties
+                    .Companion.parse("pikachu");
+            var original = props.create();
+            var nbt = original.saveToNBT(registros, new net.minecraft.nbt.NbtCompound());
+            var salida = new java.io.ByteArrayOutputStream();
+            net.minecraft.nbt.NbtIo.writeCompressed(nbt, salida);
+            byte[] custodia = salida.toByteArray();
+
+            check("el payload de un Pokemon va COMPRIMIDO",
+                  custodia.length > 2 && (custodia[0] & 0xFF) == 0x1F
+                                      && (custodia[1] & 0xFF) == 0x8B);
+
+            var vuelta = net.minecraft.nbt.NbtIo.readCompressed(
+                    new java.io.ByteArrayInputStream(custodia),
+                    net.minecraft.nbt.NbtSizeTracker.ofUnlimitedBytes());
+            var rehecho = net.pokereport.luna.gts.Entrega.leerPokemon(vuelta, registros);
+            check("LA ENTREGA SABE RECONSTRUIR UN POKEMON EN CUSTODIA",
+                  rehecho != null);
+            if (rehecho != null) {
+                check("y es LA MISMA especie que se publico",
+                      original.getSpecies().getName().equals(
+                              rehecho.getSpecies().getName()));
+            }
+
+            // ⚠⚠ Y que NO se pueda leer como si fuera un objeto: si algun dia
+            //    alguien vuelve a mandar todo por el mismo lector, esto se
+            //    pone rojo en vez de comerse la mercancia.
+            check("un Pokemon NO se lee como si fuera un objeto",
+                  net.pokereport.luna.gts.Entrega.leerObjeto(custodia) == null);
+        } catch (Throwable t) {
+            check("el viaje de ida y vuelta de un Pokemon no revienta ("
+                  + t + ")", false);
         }
         check("una oferta comprada ya no sale en el escaparate",
               gts.buscarObjetos("Roca", "NUEVO", 50).stream()

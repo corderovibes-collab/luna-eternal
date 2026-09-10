@@ -2844,7 +2844,13 @@ public class Red implements ModInitializer {
         }
     }
 
-    /** «Aprueba o rechaza esta foto». El servidor comprueba el nivel (P6). */
+    /**
+     * «Aprueba o rechaza esta foto».
+     *
+     * <p>&#9888;&#9888; <b>El nivel se comprueba EN EL RECEPTOR</b>, y esta
+     * frase estuvo aqui prometiendolo mientras no lo hacia nadie. Si algun dia
+     * se mueve el manejador, la comprobacion se mueve con el.
+     */
     public record ModerarFoto(long fotoId, boolean aprobar) implements CustomPayload {
         public static final Id<ModerarFoto> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "moderar_foto"));
@@ -4094,6 +4100,32 @@ public class Red implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(ModerarFoto.ID, (carga, ctx) -> {
             var jugador = ctx.player();
             var server = jugador.getServer();
+            // ⚠⚠⚠ SIN ESTO, CUALQUIERA APRUEBA SU PROPIA FOTO.
+            //
+            //    El javadoc de `ModerarFoto` decia «el servidor comprueba el
+            //    nivel (P6)» y NADIE lo comprobaba: la guarda estaba escrita en
+            //    una frase. Lo unico que protegia la moderacion era que la
+            //    seccion no se dibuja para quien no es staff -- o sea DIBUJO, y
+            //    el dibujo no es una regla.
+            //
+            //    Y no hacia falta adivinar nada para explotarlo: `subirFoto` le
+            //    devuelve al jugador SU PROPIO `fotoId`, y `misFotos` se lo
+            //    vuelve a dar. Con eso, un cliente modificado se aprueba la
+            //    foto y la cuelga en el mundo para TODOS -- que es exactamente
+            //    lo unico que la moderacion existe para impedir.
+            //    Y por el otro lado, `foto_id` es correlativo: tambien podia
+            //    RECHAZAR las de los demas a ciegas, contando.
+            //
+            //    ⚠ La lectura (`enviarPendientes`) SI estaba protegida, y eso es
+            //      lo que hizo que no se viera: mirando esa mitad, el sistema
+            //      parecia cerrado. La regla es que se comprueba en LAS DOS --
+            //      leer y escribir son dos puertas.
+            if (!esStaff(jugador)) {
+                LunaEternal.LOG.warn("Santuario: {} ha intentado moderar la foto "
+                        + "{} sin ser staff. Rechazado.",
+                        jugador.getGameProfile().getName(), carga.fotoId());
+                return;
+            }
             LunaEternal.submit(() -> {
                 final String motivo;
                 try {
@@ -6236,6 +6268,28 @@ public class Red implements ModInitializer {
     }
 
     /**
+     * &#191;ESTE JUGADOR MODERA?
+     *
+     * <h2>&#9888;&#9888; EL NUMERO ESTABA ESCRITO A MANO EN TRES SITIOS</h2>
+     *
+     * Y los tres tienen que decir lo mismo, porque son las tres caras de la
+     * misma regla: <b>quien ve</b> la lista de pendientes
+     * ({@code enviarPendientes}), <b>quien modera</b> ({@code ModerarFoto}) y
+     * <b>a quien se le dibuja el boton</b> (el campo del estado del santuario).
+     *
+     * <p>Si dejaran de coincidir no habria ningun error, habria una averia
+     * muda y de las dos formas posibles: o alguien ve la seccion y sus clics
+     * se rechazan --que parece el servidor roto-- o alguien puede moderar sin
+     * ver lo que modera. Es la familia de las tres listas de medallas.
+     *
+     * <p>&#9888; Nivel 3 y no 2 a proposito: <b>el 2 son los constructores</b>
+     * (D-028), que son bastantes y no son moderadores.
+     */
+    public static boolean esStaff(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        return jugador.hasPermissionLevel(3);
+    }
+
+    /**
      * Las fotos pendientes de moderar, SOLO si quien pide es staff.
      *
      * <p>⚠⚠ EL NIVEL SE COMPRUEBA AQUI, en el servidor: que la pantalla
@@ -6245,7 +6299,7 @@ public class Red implements ModInitializer {
      */
     public static void enviarPendientes(
             net.minecraft.server.network.ServerPlayerEntity jugador) {
-        if (!jugador.hasPermissionLevel(3)) {
+        if (!esStaff(jugador)) {
             ServerPlayNetworking.send(jugador, new EstadoPendientes(List.of()));
             return;
         }
@@ -6465,7 +6519,7 @@ public class Red implements ModInitializer {
                         List.copyOf(lista), catalogo.hay(),
                         net.pokereport.luna.santuario.SantuarioService.PRECIO_ALQUILER,
                         net.pokereport.luna.santuario.SantuarioService.PRECIO_PERMANENTE,
-                        jugador.hasPermissionLevel(3)));
+                        esStaff(jugador)));
             });
         });
     }

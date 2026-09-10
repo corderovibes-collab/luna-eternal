@@ -5,6 +5,7 @@ LA ESPADA DE PIKACHU: mirarla, comprobarla y exportarla.
     python tools/gen_espada.py --ver         solo dibuja, no escribe nada
     python tools/gen_espada.py --generar     .bbmodel + textura + laminas
     python tools/gen_espada.py --verificar   relee el .bbmodel ya exportado
+    python tools/gen_espada.py --animar      la textura animada + su .mcmeta
 
 ⚠ `--ver` NO toca ningun fichero de salida a proposito: mirar tiene que ser
   barato, o se deja de mirar.
@@ -21,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from espadas import bbmodel, diseno, referencia, textura, visor  # noqa: E402
+from espadas import animacion, bbmodel, diseno, referencia, textura, visor  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parent.parent
 SALIDA = RAIZ / "arte" / "espadas"
@@ -36,8 +37,10 @@ def main():
     ap.add_argument("--generar", action="store_true", help="escribe el .bbmodel")
     ap.add_argument("--verificar", action="store_true",
                     help="relee el .bbmodel exportado y lo cruza con el diseño")
+    ap.add_argument("--animar", action="store_true",
+                    help="la tira de fotogramas y su .mcmeta, mas un GIF de muestra")
     args = ap.parse_args()
-    if not (args.ver or args.generar or args.verificar):
+    if not (args.ver or args.generar or args.verificar or args.animar):
         args.ver = True
 
     piezas = diseno.piezas()
@@ -104,6 +107,37 @@ def main():
             return 1
         print("     vuelta por el fichero: formato, 45 piezas, arbol, UV y "
               "textura incrustada -- TODO EN VERDE")
+
+    if args.animar:
+        frames = animacion.fotogramas(piezas, cubos, im)
+        a = animacion.comprobar(piezas, cubos, im, frames, LADO)
+        if a:
+            print()
+            print("  %d FALLO(S) EN LA ANIMACION:" % len(a))
+            for f in a:
+                print("     x " + f)
+            return 1
+        # ⚠⚠ EL PNG SE LLAMA IGUAL QUE EL QUIETO, Y VA EN SU PROPIA CARPETA. Asi
+        #    instalarlo es copiar dos ficheros encima de la textura y NO TOCAR EL
+        #    MODELO: el `.json` de Blockbench sigue apuntando al mismo nombre.
+        #    Con otro nombre habria que editar el modelo, y editar un modelo
+        #    exportado a mano es justo lo que este flujo existe para evitar.
+        png, meta = animacion.escribir(frames, SALIDA / "animada" / NOMBRE_TEX)
+        print("     animacion: %d fotogramas x %d ticks (%.1f s de vuelta) · "
+              "tira %dx%d" % (len(frames), animacion.TICKS,
+                              len(frames) * animacion.TICKS / 20.0,
+                              LADO, LADO * len(frames)))
+        print("     comprobado: fuera de la hoja no cambia un pixel, sin "
+              "fotogramas repetidos y el bucle cierra sin tiron")
+        print("     -> %s" % png)
+        print("     -> %s" % meta)
+        # El GIF NO es para el juego: es para poder juzgarlo sin entrar.
+        vistas = [visor.dibujar(cubos, 0, 0, ancho=190, alto=420, escala=13.0,
+                                textura=f).convert("RGB") for f in frames]
+        gif = BUILD / "espada-animada.gif"
+        vistas[0].save(gif, save_all=True, append_images=vistas[1:],
+                       duration=animacion.TICKS * 50, loop=0, optimize=False)
+        print("     -> %s  (muestra, NO va al juego)" % gif)
     return 0
 
 

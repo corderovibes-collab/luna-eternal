@@ -383,7 +383,80 @@ pomo       #E0A226      pomo_rayo  #FFDE4C
 
 ---
 
-## 9. Next Actions
+## 9. La animación de electricidad
+
+`python tools/gen_espada.py --animar`
+
+```
+arte/espadas/animada/pikachu_electric_sword.png         tira 64×512 (8 fotogramas)
+arte/espadas/animada/pikachu_electric_sword.png.mcmeta  8 × 2 ticks = 0,8 s de vuelta
+build/espada/espada-animada.gif                         muestra. NO va al juego
+```
+
+⚠⚠⚠ **MINECRAFT ANIMA TEXTURAS DE SERIE, así que esto no lleva ni una línea de
+Java ni un cubo más.** Una textura animada es **una tira vertical** de N
+fotogramas con un `.mcmeta` al lado, y el juego la cicla solo. **El modelo no se
+toca**: sigue apuntando al mismo nombre de textura y sus UV siguen siendo las del
+primer fotograma. Por eso el `.json` exportado de Blockbench vale tal cual.
+
+⚠⚠⚠ **EL `.mcmeta` SE VA CON LA TEXTURA O DEJA DE ESTARLO.** Minecraft lo busca
+**en el mismo pack que sirvió el PNG**, no en el de debajo. Esta lección ya está
+pagada con el **ítem de la Pokédex**: sin él, una tira de 8 fotogramas no da
+ningún error — pasa a ser *una* imagen alta y estrecha, y el objeto sale con la
+textura estirada. Por eso los dos ficheros se escriben juntos y se comprueban
+juntos.
+
+⚠⚠ **Y el PNG se llama IGUAL que el quieto, en su propia carpeta.** Instalarlo es
+copiar dos ficheros encima de la textura. Con otro nombre habría que editar el
+modelo, y editar a mano un modelo exportado es justo lo que este flujo evita.
+
+### Qué se anima, y las dos versiones que se tiraron
+
+⚠⚠⚠ **LO QUE IDENTIFICA NO SE ANIMA.** Los dos primeros intentos animaban **el
+rayo**, y los dos lo estropeaban por lo mismo: **le cambiaban el reposo**.
+
+| Intento | Qué pasaba |
+|---|---|
+| rayo blanco → amarillo | el rayo **se borraba** al pasar la onda |
+| rayo amarillo de base | **desaparecía dentro de la hoja**: ese amarillo *es* el del filo |
+
+En los dos, la seña de identidad de la espada se perdía media vuelta de cada
+vuelta. Hoy **el rayo se queda blanco y quieto**, y lo que viaja es un
+**fogonazo por el alma de la hoja**: identidad quieta, energía en movimiento.
+
+⚠⚠ **Y hubo una tercera que era demasiado.** La banda llegaba a **blanco** en la
+hoja, y entonces el blanco se comía la hoja entera y **el rayo desaparecía dentro
+de él** — los dos son blancos — así que se leía como un agujero abriéndose y
+cerrándose. **Es exactamente el fallo de la v1 de la espada** (§6), repetido.
+**La regla: el blanco es del rayo y de nadie más.**
+
+⚠⚠ **El ancho empezó en 0,9/2,4 y era invisible a tamaño de juego.** Misma
+lección que la punta negra de la oreja: en la lámina ampliada se ve todo; **lo
+que se juzga es el tamaño al que se va a ver**. Hoy 2,0 y 3,8.
+
+⚠⚠ **El fogonazo viaja EN EL MODELO, no en el atlas.** Las caras del núcleo las
+coloca el empaquetador por toda la textura, así que recorrer la imagen de abajo
+arriba daría una onda sin sentido. Cada píxel se traduce a **su altura en la
+espada**.
+
+### Lo que se comprueba
+
+| # | Comprueba | Si fallara |
+|---|---|---|
+| 1 | **Fuera de la hoja, todos los fotogramas son idénticos** | la animación es de la **textura entera**: un píxel del mango que cambie hace parpadear la empuñadura 10 veces/s — se lee como fallo de render |
+| 2 | La tira mide `64 × 64·N` y el `.mcmeta` nombra esos N | Minecraft cortaría por donde no es y la animación saldría desplazada media espada |
+| 3 | No hay fotogramas repetidos | N fotogramas iguales **no dan error**: dan una espada quieta, que se lee como «el `.mcmeta` no funciona» y manda a buscar el fallo al sitio equivocado |
+| 4 | El bucle cierra sin tirón | el primero y el último son vecinos: si se parecen menos que dos vecinos cualquiera, se ve un salto una vez por vuelta |
+
+⚠ `interpolate` va **apagado**: interpolar inventa tonos intermedios y eso
+convierte pixel art en un degradado sucio. La electricidad tiene que **saltar**.
+
+⚠ Son **dos números**: `FOTOGRAMAS` y `TICKS`. Subir `TICKS` la calma, bajarlo la
+pone nerviosa.
+
+---
+
+## 10. Next Actions
 
 **Lo que existe hoy es arte y herramienta.** Para que un jugador la vea hay que
 decidir *qué es*, y ninguna de las tres opciones es gratis:

@@ -3014,7 +3014,32 @@ Espada        COLMILLO DE TRUENO: LA ESPADA DE PIKACHU (2026-09-10)
               arte/espadas/pikachu_electric_sword.bbmodel + .png
               arte/espadas/referencia/pikachu-skin.bbmodel  <- COPIA. El
                 original del usuario NO se toca: solo se lee
-              python tools/gen_espada.py --ver | --generar | --verificar
+              python tools/gen_espada.py --ver | --generar | --verificar | --animar
+              ANIMACION DE ELECTRICIDAD (2026-09-10): tira de 8 fotogramas
+                64x512 + su .mcmeta, 0,8 s de vuelta
+              ⚠⚠⚠ MINECRAFT ANIMA TEXTURAS DE SERIE: cero Java, cero cubos, y
+                 EL MODELO NO SE TOCA -- sigue apuntando al mismo nombre de
+                 textura. El PNG se llama igual que el quieto a proposito
+              ⚠⚠⚠ EL .mcmeta SE VA CON LA TEXTURA O DEJA DE ESTARLO, y esta
+                 leccion ya se pago con el ITEM DE LA POKEDEX: Minecraft lo
+                 busca EN EL MISMO PACK que sirvio el PNG. Sin el no da
+                 error: la tira pasa a ser UNA imagen alta y estrecha
+              ⚠⚠⚠ LO QUE IDENTIFICA NO SE ANIMA. Dos intentos animaban EL RAYO
+                 y los dos le cambiaban el REPOSO: uno lo borraba al pasar la
+                 onda y el otro lo hacia desaparecer dentro de la hoja --su
+                 amarillo ES el del filo--. Hoy el rayo se queda blanco y
+                 quieto y lo que viaja es un fogonazo por el alma
+                 ⚠⚠ y una tercera version llegaba a BLANCO en la hoja: el
+                    blanco se comia la hoja y el rayo desaparecia dentro. Es
+                    el fallo de la v1 otra vez. EL BLANCO ES DEL RAYO Y DE
+                    NADIE MAS
+              ⚠⚠ EMPEZO INVISIBLE A TAMAÑO DE JUEGO (banda 0,9/2,4). Misma
+                 leccion que la punta negra de la oreja: LO QUE SE JUZGA ES EL
+                 TAMAÑO AL QUE SE VA A VER, no la lamina ampliada
+              ⚠⚠ 4 comprobaciones, y la que manda: FUERA DE LA HOJA NINGUN
+                 FOTOGRAMA CAMBIA UN PIXEL -- la animacion es de la TEXTURA
+                 ENTERA, asi que un pixel del mango haria parpadear la
+                 empuñadura diez veces por segundo
               ⚠⚠⚠ LAS SEÑAS DE PIKACHU ENTRAN COMO ARQUITECTURA, no pegadas: la
                  guarda NO lleva una cara, LA GUARDA ES LA CARA (barra oscura,
                  mejillas rojas por delante Y por detras, y las orejas como

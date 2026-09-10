@@ -34,7 +34,8 @@ def _uv_por_cara(cubo, indice_textura):
     return salida
 
 
-def construir(piezas, cubos, textura_png, nombre_textura, lado):
+def construir(piezas, cubos, textura_png, nombre_textura, lado,
+              fotogramas=1, ticks=1):
     elementos = []
     por_grupo = {g: [] for g in diseno.ORDEN_GRUPOS}
 
@@ -105,8 +106,17 @@ def construir(piezas, cubos, textura_png, nombre_textura, lado):
             "folder": "",
             "namespace": "",
             "id": "0",
+            # ⚠⚠⚠ AQUI ESTA LA DIFERENCIA ENTRE LA QUIETA Y LA ANIMADA, Y SON
+            #    DOS PARES DE NUMEROS DISTINTOS QUE ES FACIL CONFUNDIR:
+            #      width/height        lo que MIDE la imagen (64 x 512 animada)
+            #      uv_width/uv_height  el espacio en el que caen las UV, que es
+            #                          SIEMPRE UN FOTOGRAMA (64 x 64)
+            #    Si `uv_height` siguiera a la altura real, las UV se repartirian
+            #    entre los ocho fotogramas y cada cara de la espada dibujaria un
+            #    trozo de un fotograma distinto. No daria error: daria una
+            #    espada con las caras descolocadas.
             "width": lado,
-            "height": lado,
+            "height": lado * fotogramas,
             "uv_width": lado,
             "uv_height": lado,
             "particle": False,
@@ -115,7 +125,12 @@ def construir(piezas, cubos, textura_png, nombre_textura, lado):
             "sync_to_project": "",
             "render_mode": "default",
             "render_sides": "auto",
-            "frame_time": 1,
+            # ⚠⚠ ESTOS CUATRO SON EL `.mcmeta` DE MINECRAFT, CON OTRO NOMBRE.
+            #    Blockbench los guarda en el propio .bbmodel y los exporta como
+            #    `.mcmeta` al sacar la textura, asi que ponerlos aqui es lo que
+            #    hace que el fichero se abra YA ANIMADO en vez de obligar a
+            #    configurarlo a mano cada vez.
+            "frame_time": ticks,
             "frame_order_type": "loop",
             "frame_order": "",
             "frame_interpolate": False,
@@ -274,7 +289,7 @@ def escribir(datos, destino):
 #    `meta` tiene que decir exactamente lo mismo que dice el fichero del
 #    usuario, porque es el unico formato del que consta que Blockbench abre.
 
-def verificar(destino, piezas, cubos, lado, ruta_referencia=None):
+def verificar(destino, piezas, cubos, lado, ruta_referencia=None, fotogramas=1):
     """Lee el .bbmodel escrito y comprueba que dice lo que tenia que decir."""
     fallos = []
     d = json.loads(Path(destino).read_text(encoding="utf-8"))
@@ -359,8 +374,17 @@ def verificar(destino, piezas, cubos, lado, ruta_referencia=None):
         t = tex[0]
         if not str(t.get("source", "")).startswith("data:image/png;base64,"):
             fallos.append("la textura no viaja incrustada en el .bbmodel")
-        for clave in ("width", "height", "uv_width", "uv_height"):
-            if t.get(clave) != lado:
+        # ⚠⚠ LA ALTURA CRECE CON LOS FOTOGRAMAS Y `uv_height` NO. Es justo el
+        #    par que se confunde, asi que se comprueban por separado en vez de
+        #    en un bucle que los trate igual -- que es como estaba y como habria
+        #    dejado pasar una tira con las UV repartidas entre ocho fotogramas.
+        esperado = {"width": lado, "height": lado * fotogramas,
+                    "uv_width": lado, "uv_height": lado}
+        for clave, valor in esperado.items():
+            if t.get(clave) != valor:
                 fallos.append("textura: %s=%s y esperabamos %d"
-                              % (clave, t.get(clave), lado))
+                              % (clave, t.get(clave), valor))
+        if fotogramas > 1 and not t.get("frame_time"):
+            fallos.append("la textura tiene %d fotogramas y ningun frame_time: "
+                          "Blockbench la abriria quieta" % fotogramas)
     return fallos

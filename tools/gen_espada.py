@@ -138,6 +138,29 @@ def main():
         vistas[0].save(gif, save_all=True, append_images=vistas[1:],
                        duration=animacion.TICKS * 50, loop=0, optimize=False)
         print("     -> %s  (muestra, NO va al juego)" % gif)
+
+        # ⚠⚠⚠ Y UN .bbmodel QUE YA SE ABRE ANIMADO. Sin esto, ver la animacion
+        #    en Blockbench obliga a cargar la tira a mano y rellenar sus ajustes
+        #    de fotograma CADA VEZ -- y un paso manual que hay que repetir es un
+        #    paso que un dia se hace mal y se juzga el arte con la animacion
+        #    apagada, o con un frame_time que no es el del juego.
+        buf = io.BytesIO()
+        animacion.tira(frames).save(buf, format="PNG")
+        datos = bbmodel.construir(piezas, cubos,
+                                  base64.b64encode(buf.getvalue()).decode("ascii"),
+                                  NOMBRE_TEX, LADO,
+                                  fotogramas=len(frames), ticks=animacion.TICKS)
+        destino = SALIDA / "pikachu_electric_sword_animada.bbmodel"
+        bbmodel.escribir(datos, destino)
+        v = bbmodel.verificar(destino, piezas, cubos, LADO, referencia.RUTA,
+                              fotogramas=len(frames))
+        if v:
+            print()
+            print("  %d FALLO(S) EN EL .bbmodel ANIMADO:" % len(v))
+            for f in v:
+                print("     x " + f)
+            return 1
+        print("     -> %s  (abrelo y ya se mueve)" % destino)
     return 0
 
 

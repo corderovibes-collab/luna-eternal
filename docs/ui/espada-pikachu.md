@@ -390,8 +390,36 @@ pomo       #E0A226      pomo_rayo  #FFDE4C
 ```
 arte/espadas/animada/pikachu_electric_sword.png         tira 64×512 (8 fotogramas)
 arte/espadas/animada/pikachu_electric_sword.png.mcmeta  8 × 2 ticks = 0,8 s de vuelta
+arte/espadas/pikachu_electric_sword_animada.bbmodel     para ABRIR en Blockbench
 build/espada/espada-animada.gif                         muestra. NO va al juego
 ```
+
+### Verla en Blockbench
+
+Se abre `pikachu_electric_sword_animada.bbmodel` y **ya se mueve**: lleva la tira
+incrustada y sus ajustes de fotograma puestos.
+
+⚠⚠⚠ **NO CONFUNDIR CON LA PESTAÑA *ANIMATE* DE BLOCKBENCH.** Eso son animaciones
+de **huesos** (keyframes), y **un modelo de objeto Java no las reproduce en
+vainilla** — para eso hace falta GeckoLib o formato Bedrock. Lo único que un
+`.json` de objeto anima de serie es **la textura**, que es esto.
+
+⚠⚠ **Y en el `.bbmodel` hay DOS PARES DE NÚMEROS que es fácil confundir:**
+
+| | |
+|---|---|
+| `width` / `height` | lo que **mide la imagen** — 64 × **512** |
+| `uv_width` / `uv_height` | el espacio donde caen las UV, que es **un fotograma** — 64 × 64 |
+
+Si `uv_height` siguiera a la altura real, las UV se repartirían entre los ocho
+fotogramas y **cada cara de la espada dibujaría un trozo de un fotograma
+distinto**. No daría error: daría una espada con las caras descolocadas. Por eso
+la vuelta los comprueba **por separado** en vez de en un bucle que los trate
+igual — probado en las dos direcciones (leer el animado como quieto y al revés,
+y las dos saltan).
+
+⚠ Los cuatro campos `frame_*` del `.bbmodel` **son el `.mcmeta` con otro nombre**:
+Blockbench los exporta como `.mcmeta` al sacar la textura.
 
 ⚠⚠⚠ **MINECRAFT ANIMA TEXTURAS DE SERIE, así que esto no lleva ni una línea de
 Java ni un cubo más.** Una textura animada es **una tira vertical** de N

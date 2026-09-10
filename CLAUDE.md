@@ -3017,6 +3017,19 @@ Espada        COLMILLO DE TRUENO: LA ESPADA DE PIKACHU (2026-09-10)
               python tools/gen_espada.py --ver | --generar | --verificar | --animar
               ANIMACION DE ELECTRICIDAD (2026-09-10): tira de 8 fotogramas
                 64x512 + su .mcmeta, 0,8 s de vuelta
+              arte/espadas/pikachu_electric_sword_animada.bbmodel se abre
+                YA ANIMADO en Blockbench
+              ⚠⚠⚠ NO ES LA PESTAÑA «ANIMATE» DE BLOCKBENCH: eso son huesos, y
+                 UN MODELO DE OBJETO JAVA NO LOS REPRODUCE EN VAINILLA (haria
+                 falta GeckoLib o Bedrock). Lo unico que un .json de objeto
+                 anima de serie es LA TEXTURA
+              ⚠⚠ Y EN EL .bbmodel HAY DOS PARES QUE SE CONFUNDEN:
+                 width/height son lo que MIDE la imagen (64x512) y
+                 uv_width/uv_height el espacio de las UV, que es UN FOTOGRAMA
+                 (64x64). Igualarlos repartiria las UV entre los ocho y cada
+                 cara dibujaria un trozo de un fotograma distinto -- sin dar
+                 error. Se comprueban POR SEPARADO, probado en las dos
+                 direcciones
               ⚠⚠⚠ MINECRAFT ANIMA TEXTURAS DE SERIE: cero Java, cero cubos, y
                  EL MODELO NO SE TOCA -- sigue apuntando al mismo nombre de
                  textura. El PNG se llama igual que el quieto a proposito

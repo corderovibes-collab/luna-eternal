@@ -355,6 +355,15 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                     var perfilO = player.getGameProfile();
                     long id = players.resolve(perfilO.getId(), perfilO.getName());
                     if (net.pokereport.luna.starter.StarterService.yaEligio(id)) {
+                        // Su inicial se lo dio Oak, asi que Cobblemon tiene que
+                        // saberlo: si no, le sigue diciendo que pulse «C».
+                        // Ver `SinIniciales.marcarComoElegido`.
+                        server.execute(() -> {
+                            if (!player.isRemoved()) {
+                                net.pokereport.luna.starter.SinIniciales
+                                        .marcarComoElegido(player);
+                            }
+                        });
                         return;
                     }
                     // ⚠ `Programador` y no un hilo: corre en el TICK del

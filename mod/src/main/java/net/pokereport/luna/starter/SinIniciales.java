@@ -74,6 +74,58 @@ public final class SinIniciales implements StarterHandler {
     }
 
     /**
+     * LE DICE A COBBLEMON QUE ESTE JUGADOR YA TIENE SU INICIAL.
+     *
+     * <h2>&#9888;&#9888;&#9888; APAGAR EL REPARTIDOR NO CALLA A COBBLEMON</h2>
+     *
+     * Con el repartidor apagado seguia saliendo su mensaje:
+     *
+     * <blockquote>«Aun no has seleccionado a tu inicial, pero ya recibiste un
+     * Pokemon. Para seleccionar tu inicial, coloca todos tus Pokemon en el PC y
+     * pulsa "C".»</blockquote>
+     *
+     * Y no lo dice nuestro handler: lo dice {@code RequestStarterScreenHandler}
+     * <b>antes</b> de llegar a el, mirando SU propia marca
+     * ({@code GeneralPlayerData.starterSelected}). Como el inicial se lo dio
+     * Oak, esa marca sigue en {@code false} -- <b>desde el punto de vista de
+     * Cobblemon el jugador no ha elegido nunca</b>.
+     *
+     * <p>&#9888;&#9888; <b>Y el arreglo no es callar el mensaje: es que deje de
+     * ser mentira.</b> El jugador SI tiene su inicial. Poner la marca dice la
+     * verdad, y de paso apaga el aviso, el bloqueo y cualquier otra cosa que
+     * Cobblemon cuelgue de ella el dia de mañana. Taparlo con un mixin habria
+     * dejado la marca mintiendo y el siguiente sitio que la mire volveria a
+     * fallar.
+     *
+     * <p>&#9888; <b>Se llama en CADA entrada</b>, no solo al conceder. Es
+     * idempotente y cuesta nada, y asi tambien queda arreglado todo el que ya
+     * cogio su inicial antes de que esto existiera -- que hoy son todos.
+     *
+     * <p>&#9888; No se guarda a mano: el propio Cobblemon persiste sus datos por
+     * su tarea programada y al desconectar. Buscar su constante de tipo de
+     * almacen para forzar un guardado seria adivinar una API interna para no
+     * ganar nada; y si algun dia no persistiera, la siguiente entrada lo vuelve
+     * a poner.
+     */
+    public static void marcarComoElegido(ServerPlayerEntity jugador) {
+        try {
+            var datos = Cobblemon.INSTANCE.getPlayerDataManager()
+                    .getGenericData(jugador);
+            if (datos.getStarterSelected()) {
+                return;
+            }
+            datos.setStarterPrompted(true);
+            datos.setStarterSelected(true);
+        } catch (Throwable t) {
+            // ⚠ Nunca revienta la entrada de un jugador por esto: lo peor que
+            //   pasa si falla es que Cobblemon le siga ofreciendo una pantalla
+            //   que no reparte nada.
+            LunaEternal.LOG.warn("No se pudo marcar el inicial de {} en Cobblemon: {}",
+                    jugador.getGameProfile().getName(), t.toString());
+        }
+    }
+
+    /**
      * &#9888; Lista vacia y no {@code null}: quien la lea espera una lista, y un
      * nulo aqui seria cambiar «no hay iniciales» por una excepcion en mitad de
      * su codigo.

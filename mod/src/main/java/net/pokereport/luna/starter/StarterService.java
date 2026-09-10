@@ -138,6 +138,10 @@ public final class StarterService {
                 }
 
                 server.execute(() -> {
+                    // Cobblemon tiene que enterarse en el acto: si no, hasta la
+                    // siguiente entrada le seguiria diciendo que pulse «C»
+                    // justo despues de darle su Pokemon.
+                    SinIniciales.marcarComoElegido(player);
                     boolean entregado = false;
                     try {
                         var props = PokemonProperties.Companion.parse(

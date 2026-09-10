@@ -469,6 +469,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             players.forget(player.getUuid());
             PlayerCache.forget(player);
             net.pokereport.luna.heal.HealService.olvidar(player);
+            net.pokereport.luna.heal.EnfermeraService.olvidar(player.getUuid());
             net.pokereport.luna.pokedex.ScanListener.olvidar(player);
             // ⚠⚠ ANTES de `players.forget`: guardar necesita resolver el id,
             //    y si ya se ha olvidado hay que volver a la base a buscarlo.

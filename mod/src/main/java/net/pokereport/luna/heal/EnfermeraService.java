@@ -197,6 +197,24 @@ public final class EnfermeraService {
         });
     }
 
+    /**
+     * Al desconectar.
+     *
+     * <p>⚠⚠ SIN ESTO SE QUEDA UNA ENTRADA POR CADA JUGADOR QUE SE VAYA A MITAD
+     * DE UNA CURA. El bucle de ticks borra la sesion cuando la enfermera vuelve
+     * a su sitio, pero esa linea vive DENTRO de un {@code if (jugador != null)}:
+     * si el jugador ya no esta, la tarea termina bien --la enfermera se libera--
+     * y la sesion se queda colgada para siempre.
+     *
+     * <p>⚠ No llegaba a bloquear a nadie: al volver a tocar una enfermera la
+     * entrada se sobrescribe. Pero deja un hueco raro --{@code confirmar} sin
+     * haber tocado a nadie usaria la enfermera vieja-- y una fuga pequeña sigue
+     * siendo una fuga.
+     */
+    public static void olvidar(java.util.UUID jugador) {
+        SESION_JUGADOR.remove(jugador);
+    }
+
     public static void confirmar(ServerPlayerEntity jugador) {
         UUID enfermeraId = SESION_JUGADOR.get(jugador.getUuid());
         if (enfermeraId == null) {

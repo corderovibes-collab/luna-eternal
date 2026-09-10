@@ -112,9 +112,29 @@ public final class Salvaje {
      * Cuántos de los seis están abiertos a la vez. <b>Decisión del usuario:
      * tres activos y tres de reserva.</b>
      *
-     * <p>⚠ Los otros tres NO están vacíos esperando: están <b>pre-generados</b>
-     * para que el día de la rotación no haya que generar nada. Es lo que
-     * convierte el reinicio semanal en cambiar tres números.
+     * <h2>⚠⚠⚠ AQUÍ PONÍA QUE LOS OTROS TRES ESTABAN PRE-GENERADOS. ERA FALSO
+     * (2026-09-10)</h2>
+     *
+     * Decía: <i>«los otros tres NO están vacíos esperando: están pre-generados,
+     * y eso convierte el reinicio semanal en cambiar tres números»</i>.
+     * <b>Nunca se pre-generó ninguno</b> — Chunky lleva instalado sin usar desde
+     * agosto, y está escrito en CLAUDE.md desde entonces. Un comentario que
+     * describe una intención en presente de indicativo se lee como un hecho, y
+     * este mandaba a rotar mundos contando con un trabajo que no estaba hecho.
+     *
+     * <p>⚠⚠ Y ESTE NÚMERO CUESTA HORAS. Cada mundo activo es un mundo que hay
+     * que pre-generar, y con Terralith (D-051) eso se mide en <b>horas de CPU
+     * saturada</b>, no en los «25-45 min» que este proyecto tenía apuntados para
+     * la worldgen de vainilla. Subir {@code ACTIVOS} sin pre-generar antes es
+     * mandar al tercer jugador a terreno virgen: <b>paga la generación con su
+     * propio lag</b>, que es justo lo que la pre-generación evita.
+     *
+     * <p>⚠⚠ Y OJO CON LA DIRECCIÓN DEL REPARTO: {@link #llevar} manda al
+     * <b>menos poblado</b>. Con tres activos y cuatro personas conectadas, las
+     * separa 2/1/1 — cada uno solo. El motivo escrito para tener varios era
+     * «40 personas peleándose por el mismo legendario» ({@link #LLENO}), y con
+     * una comunidad pequeña el reparto trabaja <b>en contra</b>: reparte gente
+     * que se querría encontrar.
      */
     public static final int ACTIVOS = 3;
 

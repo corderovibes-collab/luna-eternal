@@ -66,9 +66,45 @@ unica entrada al mundo** (D-050). Autotest en vivo 696/696.
 > el trabajo total es fijo: lanzar los dos a la vez no lo acelera, solo reparte
 > los mismos tres nucleos -- si lo que importa es que el HOGAR este listo
 > primero (que es donde cae un jugador nuevo), va antes ir de uno en uno.
-> ⚠ Solo se pre-generan **dos** mundos y no siete: de los seis salvajes
->   declarados **solo `salvaje` se usa hoy** (`LunaDimensions.SALVAJE`), porque
->   el reparto entre varios sigue sin implementarse.
+> ⚠⚠⚠ **Y AQUI ESCRIBI QUE «SOLO `salvaje` SE USA HOY», Y ERA FALSO.** El
+>   reparto **si esta implementado**: `Salvaje.llevar` manda al **menos poblado**
+>   de `Salvaje.activos()`, y `ACTIVOS = 3` -- o sea `salvaje`, `salvaje2` y
+>   `salvaje3`. Lo dijo el usuario preguntando (*«solo se esta haciendo en una
+>   dimension salvaje?»*), no una revision.
+>   **Salio de buscar `SALVAJE` en vez de buscar QUIEN DECIDE**: el grep encontro
+>   la constante y no el metodo, y CLAUDE.md ya decia «seis declaradas, TRES en
+>   uso» -- lo cite y despues me contradije. Es la leccion del protocolo, otra
+>   vez: *un repaso a ojo encuentra lo que buscas y no lo que no sabias que
+>   existia*.
+>   ⚠⚠ **La consecuencia es real:** `salvaje2` y `salvaje3` se borraron con los
+>      demas y estan **vacios del todo**. En cuanto haya tres personas a la vez,
+>      el reparto manda a la tercera a terreno virgen con Terralith, y **paga la
+>      generacion con su lag** -- justo lo que la pre-generacion evita.
+>   ⚠⚠ **Y `ACTIVOS = 3` esta dimensionado para una poblacion que no existe.**
+>      Hay **14 jugadores registrados** y `LLENO = 40`: caben todos en uno. Pero
+>      el reparto manda al MENOS poblado, asi que con tres activos y cuatro
+>      conectados los separa 2/1/1 -- cada uno solo, que es lo contrario de lo
+>      que se quiere. El motivo escrito para tener varios era «40 personas
+>      peleandose por el mismo legendario», y ese problema todavia no lo hay.
+>      **Con `ACTIVOS = 1` son dos mundos que pre-generar en vez de cuatro**, y
+>      subirlo el dia que haga falta es cambiar un numero -- pero **ese dia hay
+>      que pre-generar ANTES**. Decision del usuario pendiente.
+>
+> ⚠⚠⚠ **EL PROGRESO DE CHUNKY NO SE GUARDA SOLO, Y ESO IMPORTA CUANDO SON HORAS.**
+> `config/chunky/config.json` trae `continueOnRestart: false` y la carpeta
+> `tasks/` **nace vacia**: el estado se escribe **al pausar o al parar
+> ordenadamente**, no periodicamente. O sea:
+>   - parada limpia -> se guarda, y se sigue con `/chunky continue`
+>   - **muerte a lo bruto (OOM) -> se pierde TODO lo generado desde el ultimo
+>     punto de guardado**
+> ⚠ Y el punto de guardado es **gratis y en caliente**: `/chunky pause` seguido
+>   de `/chunky continue` escribe las tareas a disco en segundos y sigue.
+>   Comprobado en vivo: tras el `pause` aparecen `tasks/minecraft` y
+>   `tasks/lunaeternal`, y el `continue` reanuda las dos.
+> ⚠⚠ Importa **porque la RAM va al limite mientras se pre-genera**: medido,
+>    **7,3 GB de 8** con dos tareas y la CPU al 300 % de 300. Este servidor ya
+>    tiene historia con el OOM-killer (corria por encima del limite con 4 GB), y
+>    ahi lo que se pierde no son megas: son horas.
 
 > **2026-09-10 — TERRALITH, Y EL HOGAR Y LOS SEIS SALVAJES REGENERADOS DESDE
 > CERO.** Decision del usuario: *«el hogar no importa tambien lo puedes eliminar

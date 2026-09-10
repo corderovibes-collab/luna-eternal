@@ -28,7 +28,11 @@ public class TorreNpc {
                 return ActionResult.PASS;
             }
 
-            if (jugador instanceof ServerPlayerEntity sp) {
+            // Un clic manda DOS paquetes (INTERACT_AT e INTERACT) y en los
+            // dos la mano es la PRINCIPAL. Ver `Toque`.
+            if (jugador instanceof ServerPlayerEntity sp
+                    && !net.pokereport.luna.ui.Toque.repetido(
+                            sp.getUuid(), "torre")) {
                 Red.enviarAbrirTorreBatalla(sp);
             }
             return ActionResult.SUCCESS; // Corta la interacción por defecto

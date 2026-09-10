@@ -104,7 +104,12 @@ public final class OakNpc {
             if (mano != Hand.MAIN_HAND) {
                 return ActionResult.SUCCESS;
             }
-            if (jugador instanceof ServerPlayerEntity sp) {
+            // ⚠⚠ UN CLIC MANDA DOS PAQUETES (INTERACT_AT e INTERACT) y en los
+            //    dos la mano es la PRINCIPAL, asi que la guarda de arriba no los
+            //    distingue: el usuario veia el mensaje de Oak DOS VECES.
+            //    Ver `Toque`.
+            if (jugador instanceof ServerPlayerEntity sp
+                    && !net.pokereport.luna.ui.Toque.repetido(sp.getUuid(), "oak")) {
                 atender(sp);
             }
             return ActionResult.SUCCESS;

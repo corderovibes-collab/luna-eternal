@@ -122,6 +122,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                 .AFTER_PLAYER_CHANGE_WORLD.register((jugador, origen, destino) ->
                         net.pokereport.luna.net.Red.enviarPuerta(jugador));
         net.pokereport.luna.puerta.Puerta.cargarInterruptor();
+        // El repartidor de iniciales de Cobblemon, apagado: aqui el inicial lo
+        // da Oak (D-048). Ver SinIniciales -- no es esconder la tecla, es que
+        // no haya nada que repartir.
+        net.pokereport.luna.starter.SinIniciales.instalar();
         // ⚠ Se registra AQUI y no en SERVER_STARTED por lo mismo que los tres
         //   de arriba: los eventos se suscriben una sola vez, y los nichos
         //   (geometria y reclamaciones) los lee el manejador cuando llega el
@@ -467,6 +471,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             }
             net.pokereport.luna.puerta.Puerta.olvidar(player.getUuid());
             net.pokereport.luna.puerta.PuertaNpc.olvidar(player.getUuid());
+            net.pokereport.luna.ui.Toque.olvidar(player.getUuid());
             net.pokereport.luna.world.VisibilidadJugadores.olvidar(player.getUuid());
             // ⚠⚠ ANTES de `players.forget`: el volcado necesita resolver el
             //    id, y si ya se olvido tendria que volver a la base.

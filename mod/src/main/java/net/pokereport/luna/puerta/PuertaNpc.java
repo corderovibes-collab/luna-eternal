@@ -77,7 +77,6 @@ public final class PuertaNpc {
      */
     private static final long ESPERA_MS = 2_000L;
 
-    private static final Map<UUID, Long> ULTIMO = new ConcurrentHashMap<>();
 
     // ------------------------------------------------------------ colocar
 
@@ -206,16 +205,17 @@ public final class PuertaNpc {
         if (!(jugador instanceof ServerPlayerEntity sp)) {
             return;
         }
-        long ahora = System.currentTimeMillis();
-        Long ultimo = ULTIMO.get(sp.getUuid());
-        if (ultimo != null && ahora - ultimo < ESPERA_MS) {
+        // Por `Toque`, que es de donde sale ahora el antirrebote de TODOS los
+        // NPC. Tenia su copia privada aqui, y este proyecto ya sabe como acaba
+        // eso: `recalcular()` estaba copiado en ONCE pantallas y al medirlo
+        // habia SEIS variantes distintas.
+        if (net.pokereport.luna.ui.Toque.repetido(sp.getUuid(), "puerta", ESPERA_MS)) {
             return;
         }
-        ULTIMO.put(sp.getUuid(), ahora);
         Puerta.cruzar(sp);
     }
 
     public static void olvidar(UUID uuid) {
-        ULTIMO.remove(uuid);
+        net.pokereport.luna.ui.Toque.olvidar(uuid);
     }
 }

@@ -65,7 +65,11 @@ public final class SantuarioNpc {
             if (mano != Hand.MAIN_HAND) {
                 return ActionResult.SUCCESS;
             }
-            if (jugador instanceof ServerPlayerEntity sp) {
+            // Un clic manda DOS paquetes (INTERACT_AT e INTERACT) y en los
+            // dos la mano es la PRINCIPAL. Ver `Toque`.
+            if (jugador instanceof ServerPlayerEntity sp
+                    && !net.pokereport.luna.ui.Toque.repetido(
+                            sp.getUuid(), "mew")) {
                 net.pokereport.luna.net.Red.enviarAbrirSantuario(sp);
             }
             return ActionResult.SUCCESS;

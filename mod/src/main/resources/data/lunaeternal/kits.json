@@ -704,7 +704,7 @@
       "once": true,
       "items": [
         {
-          "item": "minecraft:netherite_helmet",
+          "item": "magikarparmor:magikarp_helmet",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -714,7 +714,7 @@
           }
         },
         {
-          "item": "minecraft:netherite_chestplate",
+          "item": "magikarparmor:magikarp_chestplate",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -724,7 +724,7 @@
           }
         },
         {
-          "item": "minecraft:netherite_leggings",
+          "item": "magikarparmor:magikarp_leggings",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -734,7 +734,7 @@
           }
         },
         {
-          "item": "minecraft:netherite_boots",
+          "item": "magikarparmor:magikarp_boots",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -861,7 +861,7 @@
       "once": true,
       "items": [
         {
-          "item": "minecraft:netherite_helmet",
+          "item": "pikachuarmor:pikachu_helmet",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -871,7 +871,7 @@
           }
         },
         {
-          "item": "minecraft:netherite_chestplate",
+          "item": "pikachuarmor:pikachu_chestplate",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -881,7 +881,7 @@
           }
         },
         {
-          "item": "minecraft:netherite_leggings",
+          "item": "pikachuarmor:pikachu_leggings",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -891,7 +891,7 @@
           }
         },
         {
-          "item": "minecraft:netherite_boots",
+          "item": "pikachuarmor:pikachu_boots",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -1018,7 +1018,7 @@
       "once": true,
       "items": [
         {
-          "item": "minecraft:netherite_helmet",
+          "item": "eeveelution:eeveelution_helmet",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -1028,7 +1028,7 @@
           }
         },
         {
-          "item": "minecraft:netherite_chestplate",
+          "item": "eeveelution:eeveelution_chestplate",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -1038,7 +1038,7 @@
           }
         },
         {
-          "item": "minecraft:netherite_leggings",
+          "item": "eeveelution:eeveelution_leggings",
           "count": 1,
           "value": 0,
           "enchants": {
@@ -1048,7 +1048,7 @@
           }
         },
         {
-          "item": "minecraft:netherite_boots",
+          "item": "eeveelution:eeveelution_boots",
           "count": 1,
           "value": 0,
           "enchants": {

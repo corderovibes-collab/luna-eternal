@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "pikachuarmor",
+  "version": "${version}",
+  "name": "Pikachu Animated Armor",
+  "description": "Armadura Pikachu separada en cuatro piezas, con boca, colas y aletas animadas.",
+  "authors": ["PokeReport"],
+  "license": "ARR",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["net.pokereport.pikachuarmor.PikachuArmorMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "geckolib": ">=4.7.6"
+  }
+}
+

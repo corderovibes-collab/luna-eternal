@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "eeveelution",
+  "version": "${version}",
+  "name": "Eeveelution Armor",
+  "description": "Armadura Eeveelution en cuatro piezas con textura flipbook.",
+  "authors": ["PokeReport"],
+  "license": "ARR",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["net.pokereport.eeveelutionarmor.EeveelutionArmorMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "geckolib": ">=4.7.6"
+  }
+}

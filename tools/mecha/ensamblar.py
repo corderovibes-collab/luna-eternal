@@ -2,9 +2,15 @@
 """
 EL GEO FINAL: el Charizard oficial, tal cual, mas cuatro huesos con el casco.
 
-⚠⚠⚠ EL CUERPO SE COPIA DEL JAR Y NO SE TOCA NI UN CUBO. Los 130 huesos, los
-   123 cubos, los 26 localizadores, las rotaciones y los pivotes salen del
-   `charizard.geo.json` que corre en este servidor. El poser oficial
+⚠⚠⚠ EL CUERPO SE COPIA DEL JAR Y NO SE TOCA NI UN CUBO -- CON UNA EXCEPCION,
+   Y ES DEL USUARIO: LOS CUERNOS. Los 130 huesos, los 26 localizadores, las
+   rotaciones y los pivotes salen del `charizard.geo.json` que corre en este
+   servidor, y de sus 123 cubos van 117: los seis de `horn_right` y
+   `horn_left` se quitan (`QUITAR`), porque los escapes del casco hacen de
+   cuernos y los oficiales asomaban por debajo («ahi seria quitarle al
+   modelo... esos cuernos»). Los HUESOS se quedan: cuelgan de ellos dos
+   localizadores y un hueso que el poser nombre y no exista revienta al
+   cargar; un hueso vacio es normal (`head`, `eyes`, `horns` ya lo son). El poser oficial
    (`cobblemon:charizard`) y sus 34 animaciones se aplican POR NOMBRE DE
    HUESO, asi que un hueso nuevo que cuelgue de uno oficial hereda su
    movimiento entero sin escribir una animacion. Es lo mismo que hace
@@ -61,6 +67,13 @@ DESTINO = {
     ("Cheek_Jaw_Armor", "Throat_"): "luna_casco",
 }
 
+# ⚠⚠ Huesos oficiales cuyos CUBOS se quitan. Solo los cuernos, y solo porque lo
+#    pidio el usuario: cualquier otro nombre aqui es una decision que no es
+#    mia. La comprobacion 9 exige que sea EXACTAMENTE esto y nada mas, y que
+#    esos huesos no tengan animacion (si la tuvieran, quitarles los cubos no
+#    romperia nada, pero convendria saberlo).
+QUITAR = ("horn_right", "horn_left")
+
 # hueso nuestro -> hueso oficial del que cuelga
 PADRE = {
     "luna_casco": "head_angle",
@@ -107,6 +120,8 @@ def ensamblar(geo_oficial: dict, cubos_casco: list[fuentes.Cubo]) -> dict:
     g["description"]["identifier"] = "geometry." + fuentes.NOMBRE
     g["description"]["texture_height"] = TEXTURA_ALTO
     oficiales = {b["name"]: b for b in g["bones"]}
+    for nombre in QUITAR:
+        oficiales[nombre].pop("cubes", None)
 
     por_hueso = {h: [] for h in PADRE}
     for c in cubos_casco:

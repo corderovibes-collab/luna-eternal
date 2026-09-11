@@ -72,6 +72,13 @@ unica entrada al mundo** (D-050). Autotest en vivo 696/696.
 > es un mixin de cliente; las megas son *species features*, y
 > `updateAspects()` suma proveedores + forzados.
 >
+> ⚠⚠ **Y LOS CUERNOS OFICIALES SE QUITAN, decision del usuario con la lamina
+>    delante** (*«ahi seria quitarle al modelo... esos cuernos»*): los escapes
+>    del casco hacen de cuernos y los del jar asomaban por debajo. Es la UNICA
+>    pieza del cuerpo que no es del jar: va en una lista (`QUITAR`) con su
+>    comprobacion --el geo final tiene que ser el oficial menos exactamente
+>    eso mas el casco--, y los huesos se quedan vacios porque cuelgan de ellos
+>    localizadores y un hueso que el poser nombre y no exista revienta.
 > ⚠⚠ **LA COMPROBACION «NADA FLOTA» MINTIO EN SU PRIMERA VERSION**: exigia que
 >    cada cubo tocara la cabeza y puso en rojo los escapes de los cuernos, una
 >    cadena de nueve piezas soldadas que acaba a 2,0 de la cabeza a proposito.
@@ -3099,6 +3106,8 @@ mecha         detalle en docs/pokemon/charizard-mecha.md
               geo = el oficial del jar + 4 huesos (casco/hocico/menton/gola),
               cada uno colgado del hueso que se mueve con la pieza;
               el menton de `jaw2` con la rotacion INVERSA a su estatica
+              SIN LOS CUERNOS OFICIALES (peticion del usuario): los escapes
+              del casco hacen de cuernos. `ensamblar.QUITAR`, y se comprueba
               ⚠⚠⚠ BLOCKBENCH REDONDEA EL BOX-UV HACIA ARRIBA Y EL JUEGO NO:
                  133/133 cubos fraccionarios -> se REPINTA la textura al
                  reparto del juego (1.907 texels movidos). Un modelo con

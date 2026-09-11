@@ -67,8 +67,9 @@ def main():
     capas = {r: texturas.rellenar(fuentes.textura_del_jar(jar, r)) for r in sorted(del_jar)
              if not r.endswith("/charizard.png") and not r.endswith("/charizard_shiny.png")}
 
-    print("  CHARIZARD MECHA · %d cubos del casco en %d huesos nuevos · textura 256x%d"
-          % (len(cubos), len(ensamblar.PADRE), ensamblar.TEXTURA_ALTO))
+    print("  CHARIZARD MECHA · %d cubos del casco en %d huesos nuevos · sin %s · "
+          "textura 256x%d" % (len(cubos), len(ensamblar.PADRE),
+                              " ni ".join(ensamblar.QUITAR), ensamblar.TEXTURA_ALTO))
     print("     repintado al reparto del juego: %d texels movidos, %d en su sitio"
           % (cuentas["movidos"], cuentas["en_su_sitio"]))
 
@@ -84,8 +85,8 @@ def main():
     else:
         print("     comprobaciones: cuerpo == jar, 133 cubos y todos con hueso, UV "
               "dentro y sin pisar el cuerpo, todas las caras pintadas, nada flota, "
-              "el menton gira en un eje, resolver completo, megas == mega_showdown "
-              "-- TODO EN VERDE")
+              "el menton gira en un eje, resolver completo, megas == mega_showdown, "
+              "geo == oficial menos %s -- TODO EN VERDE" % " y ".join(ensamblar.QUITAR))
 
     # Las laminas van siempre, con fallos o sin ellos: son lo que permite verlos.
     fuentes.BUILD.mkdir(parents=True, exist_ok=True)

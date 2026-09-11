@@ -210,9 +210,16 @@ un parámetro `prefijo` para esto) y se cachean por huella. Nada depende de
 
 ### 4.1 El geo: el oficial tal cual, más cuatro huesos
 
-El `charizard.geo.json` del jar **no se toca**: se copia y se le añaden
-cuatro huesos al final, cada uno colgado del hueso oficial **que se mueve con
-esa pieza**. El `.bbmodel` del usuario lo traía **todo** bajo `head_angle`; con
+El `charizard.geo.json` del jar se copia y se le añaden cuatro huesos al
+final, cada uno colgado del hueso oficial **que se mueve con esa pieza**. Del
+cuerpo oficial se quita **una sola cosa, y la pidió el usuario**: los seis
+cubos de `horn_right` y `horn_left` (*«ahí sería quitarle al modelo... esos
+cuernos»*), porque los escapes del casco hacen de cuernos y los oficiales
+asomaban por debajo. Los huesos se quedan vacíos —cuelgan de ellos dos
+localizadores, y un hueso que el poser nombre y no exista revienta al
+cargar; un hueso sin cubos es normal en este modelo (`head`, `eyes`, `horns`
+ya lo son)—. La lista está en `ensamblar.QUITAR` y la comprobación 9 exige
+que sea exactamente esa. El `.bbmodel` del usuario lo traía **todo** bajo `head_angle`; con
 eso la barbilla se quedaría clavada mientras la mandíbula se abre 85,8° por
 debajo.
 
@@ -236,7 +243,8 @@ un día animara otro eje se pondría rojo.
 ⚠ Los escapes de los cuernos van rectos en `head_angle` y no en `horn_right`
 /`horn_left`: los cuernos tienen rotación estática y **cero** animaciones, así
 que da lo mismo dónde cuelguen y en `head_angle` quedan donde el usuario los
-vio. Si un día el jar animara los cuernos, la comprobación 6 lo dice.
+vio. Si un día el jar animara los cuernos, la comprobación 6 lo dice — y
+entonces sí importaría que los escapes no cuelguen de ellos.
 
 Los cubos llevan `name` (el que les puso el usuario). Bedrock no lo usa y
 Cobblemon lo ignora (Gson descarta campos que `Cube` no tiene); hace legible
@@ -357,6 +365,10 @@ el suyo y se regenera; este es una vista.
   cabeza) estando soldados al anterior. Hoy exige que cada **racimo de cubos
   conectados** toque la cabeza: lo que de verdad es un fallo es una pieza que
   no toque nada.
+- Los cuernos oficiales se dejaron primero (§6 decía «se deja como está y se
+  dice»). El usuario, con la lámina delante, pidió quitarlos. Es la única
+  pieza del cuerpo que no es del jar, y por eso tiene su lista (`QUITAR`) y
+  su comprobación en vez de un `pop` suelto.
 - El primer `.bbmodel` de vista asignaba la primera casilla del box-UV a la
   cara `west`. Es `east`: Blockbench enseña el geo espejado en X, y su propio
   fichero lo dice (el `torso` del usuario lleva `u..u+d` en `east`). Se
@@ -380,10 +392,10 @@ mirando de lado (los máximos de `q.look`).
   la lengua queda entre el respirador y el mentón; la placa de la garganta
   (en `head_angle`) no se separa. Es la lámina que responde a «si abre la
   boca eso también».
-- **Los escapes de los cuernos** no envuelven los cuernos: van rectos hacia
-  atrás desde la nuca y los cuernos oficiales asoman por debajo, hacia
-  arriba y afuera. Es como el usuario lo modeló mirando el modelo con los
-  cuernos ya girados en Blockbench; se deja como está y se dice.
+- **Los escapes de los cuernos** no envolvían los cuernos: van rectos hacia
+  atrás desde la nuca, y los cuernos oficiales asomaban por debajo, hacia
+  arriba y afuera. Se dijo, y el usuario decidió: **los cuernos oficiales se
+  quitan** y los escapes son los cuernos (§4.1).
 - **Cabeza arriba, abajo y de lado**: todo lo de `head_angle` se mueve en
   bloque; la gola se queda con el cuello y la cabeza gira dentro del aro, que
   es lo que hace el cubo oficial de `neck4` con el de la cabeza (los modelos de
@@ -413,6 +425,9 @@ Con un solo fallo **no se exporta**; con `--verificar` se relee lo escrito.
    las seis megas **iguales campo a campo** a las de mega_showdown; cada
    modelo, poser y textura nombrados existen
 8. **El aspecto está en Java** — `"luna_mecha"` escrito en `Recompensa.java`
+9. **El geo es el oficial menos los cuernos más el casco** — cada hueso del
+   jar sigue con su pivote, rotación, padre y localizadores; faltan
+   exactamente los cubos de `QUITAR` y ninguno más; el recuento cuadra
 
 Y la vuelta por el pack: geo y resolver releídos iguales, las 7 texturas
 píxel a píxel, y el `.bbmodel` de vista con los 133 cubos por nombre y sus

@@ -25,6 +25,9 @@ Cada una existe por un fallo que NO daria ningun error en el juego:
   8. EL ASPECTO ESTA EN JAVA la cadena `luna_mecha` tiene que estar escrita
                           igual en Recompensa.java, o el nivel 100 entregaria
                           un shiny sin casco
+  9. EL GEO ES EL OFICIAL MENOS LOS CUERNOS MAS EL CASCO  cada hueso oficial
+                          sigue con su pivote, rotacion, padre y localizadores;
+                          faltan EXACTAMENTE los cubos de `QUITAR` y ninguno mas
 
 ⚠ Ninguna compara un objeto consigo mismo: las que miran el pack (`escrito`)
   releen los ficheros de disco.
@@ -430,6 +433,54 @@ def aspecto_en_java():
     return []
 
 
+# --------------------------------------- 9. el geo es el oficial menos los cuernos
+
+def geo_es_el_oficial(oficial, geo, animaciones):
+    """
+    Cruza el geo FINAL con el del jar: lo unico que puede faltar son los cubos
+    de `ensamblar.QUITAR`, y lo unico que puede sobrar son nuestros huesos.
+
+    ⚠ La comprobacion 1 mira el .bbmodel del usuario contra el jar; esta mira
+      lo que se va a ESCRIBIR contra el jar. Sin ella, un `pop` de mas en
+      ensamblar dejaria un Charizard sin cola y todo lo demas en verde.
+    """
+    fallos = []
+    a = {b["name"]: b for b in oficial["minecraft:geometry"][0]["bones"]}
+    b = {x["name"]: x for x in geo["minecraft:geometry"][0]["bones"]}
+    for nombre, hueso in a.items():
+        mio = b.get(nombre)
+        if mio is None:
+            fallos.append("el geo final ha perdido el hueso oficial «%s»" % nombre)
+            continue
+        for campo in ("pivot", "rotation", "parent", "locators"):
+            if hueso.get(campo) != mio.get(campo):
+                fallos.append("«%s»: el campo «%s» no es el del jar" % (nombre, campo))
+        cubos_jar = hueso.get("cubes") or []
+        cubos_mios = mio.get("cubes") or []
+        if nombre in ensamblar.QUITAR:
+            if cubos_mios:
+                fallos.append("«%s» esta en QUITAR y sigue con %d cubos" % (nombre, len(cubos_mios)))
+            if not cubos_jar:
+                fallos.append("«%s» esta en QUITAR y en el jar no tiene cubos: sobra de la lista"
+                              % nombre)
+        elif cubos_jar != cubos_mios:
+            fallos.append("los cubos de «%s» no son los del jar" % nombre)
+    for nombre in b:
+        if nombre not in a and nombre not in ensamblar.PADRE:
+            fallos.append("el geo final tiene un hueso que no es ni del jar ni nuestro: " + nombre)
+    ejes = _ejes_animados(animaciones)
+    for nombre in ensamblar.QUITAR:
+        if nombre in ejes:
+            fallos.append("«%s» se anima en el jar y se le quitan los cubos: revisar que no "
+                          "haga falta que se vea" % nombre)
+    quitados = sum(len(a[n].get("cubes") or []) for n in ensamblar.QUITAR if n in a)
+    total = sum(len(x.get("cubes") or []) for x in b.values())
+    esperado = sum(len(x.get("cubes") or []) for x in a.values()) - quitados         + sum(len(x["cubes"]) for x in ensamblar.huesos_nuestros(geo))
+    if total != esperado:
+        fallos.append("el geo final tiene %d cubos y tendria que tener %d" % (total, esperado))
+    return fallos
+
+
 # ------------------------------------------------------------------- todo
 
 def todo(bb, cubos, oficial, geo, res, textura, png_usuario, jar, jar_mega, animaciones):
@@ -446,6 +497,7 @@ def todo(bb, cubos, oficial, geo, res, textura, png_usuario, jar, jar_mega, anim
     fallos += huesos_padre(oficial, animaciones)
     fallos += resolver_completo(res, jar, jar_mega, fuentes.resolvers_mega(jar_mega))
     fallos += aspecto_en_java()
+    fallos += geo_es_el_oficial(oficial, geo, animaciones)
     g = geo["minecraft:geometry"][0]["description"]
     if textura.size != (g["texture_width"], g["texture_height"]):
         fallos.append("la textura mide %s y el geo declara %s"

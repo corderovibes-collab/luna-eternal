@@ -31,14 +31,22 @@ propia, o retocar este.
 
 ## Current Status
 
-**Generado, comprobado, compilado en los dos jars y SIN DESPLEGAR** (2026-09-10).
-`python tools/gen_charizard_mecha.py --generar` lo rehace entero.
+**DESPLEGADO Y EN VIVO** (2026-09-10, 20:59): manifiesto `fc7426cbbf`
+publicado y sirviéndose, servidor `Done (37,466 s)`, **autotest 712/712** con
+los 12 del mecha en verde. `python tools/gen_charizard_mecha.py --generar` lo
+rehace entero.
 
 ⚠ **SIN VERIFICAR EN EL JUEGO.** Lo que sí está verificado: el visor con seis
-poses de las animaciones reales (§6), las ocho comprobaciones y la vuelta por
-el pack (§7), y el autotest de compilación. Falta entrar, subir a alguien al
-nivel 100 (`/luna pase nivel <jugador> 100`), reclamar, mirar, sacar el
-Charizard, hacerle abrir la boca en combate, megaevolucionarlo y volver.
+poses de las animaciones reales (§6), las nueve comprobaciones y la vuelta por
+el pack (§7), y el autotest en vivo (que lee el resolver desde `lunaneon.jar`).
+Falta entrar **con el launcher reabierto** (el casco es cliente), subir a
+alguien al nivel 100 (`/luna pase nivel <jugador> 100`), reclamar, mirar,
+sacar el Charizard, hacerle abrir la boca en combate, megaevolucionarlo y
+volver.
+
+⚠⚠ **Al publicar, el manifiesto se negó, y tenía razón** (§8): tres mods
+ajenos habrían subido de versión en el cliente sin que nadie lo pidiera.
+Quedan clavados al servidor; subirlos es una ronda propia.
 
 ---
 
@@ -437,11 +445,24 @@ UV iguales a las del juego.
 
 ## 8. Lo que falta y lo que hay que saber
 
-- **Desplegar, y en este orden**: `python tools/gen_manifest.py --publicar`
-  (lunaneon nuevo a los clientes) **y después** `python tools/desplegar.py mod
-  --reiniciar`. Nada de esto registra bloques ni objetos, así que un cliente
-  viejo entra igual: solo vería un shiny sin casco hasta reabrir el launcher.
-  ⚠ Avisar antes de reiniciar.
+- **Desplegado** en ese orden: `gen_manifest.py --publicar` (clientes) y
+  después `desplegar.py neon mod --reiniciar` (los DOS jars al servidor: el
+  autotest lee el resolver del `lunaneon.jar` del servidor). Nada de esto
+  registra bloques ni objetos, así que un cliente viejo entra igual: solo ve
+  un shiny sin casco hasta reabrir el launcher.
+- ⚠⚠⚠ **El manifiesto se negó a publicar la primera vez, y estuvo bien.** Entre
+  el 09-09 y el 10-09 Modrinth publicó mega_showdown 1.1.2, zamega 1.8.1 y
+  xaeros-world-map 1.46.0; `SUBIR` resuelve «la última», así que una
+  publicación que solo iba a subir nuestros jars los habría actualizado en el
+  cliente con el servidor en 1.0.2 / 1.7.7 / 1.45 — un mod que registra
+  objetos, en dos versiones a cada lado. `comprobar_bajas` lo cazó porque
+  cambia el nombre del jar. Y para el mecha es peor: **el resolver copia
+  identificadores del jar de mega_showdown 1.0.2**; si 1.1.2 renombrara un
+  modelo, Cobblemon no cargaría el resolver de Charizard entero. Los tres
+  quedan en `gen_modpack.CLAVADOS` (que ahora admite `{version, motivo}`).
+  **Subirlos es una ronda propia, pendiente**: servidor + cliente +
+  `gen_charizard_mecha.py --generar` contra el jar nuevo + comprobar que
+  siguen siendo para Cobblemon 1.8.0.
 - **Verificar en el juego** (§Current Status). Lo primero que mirar: que en la
   tarjeta del nivel 100 del PokePad salga el casco (es lo más barato de
   comprobar), después la entrega, el mundo, el combate y la mega.

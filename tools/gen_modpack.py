@@ -726,6 +726,26 @@ FIJADOS = {}
 #   `MixinSodiumRenderSectionManager` sigue nombrando `prepareRender`.
 CLAVADOS = {
     "axiom": "5.4.2",
+    # ⚠⚠⚠ CLAVADOS AL ESTADO DEL SERVIDOR (2026-09-10), NO PORQUE ESTEN ROTOS.
+    #    Entre el 09-09 y el 10-09 Modrinth publico mega_showdown 1.1.2, zamega
+    #    1.8.1 y el mapa 1.46.0, y una publicacion que solo iba a subir NUESTROS
+    #    jars (el Charizard mecha) los habria actualizado en el CLIENTE con el
+    #    servidor en 1.0.2 / 1.7.7: un mod que registra objetos, en dos
+    #    versiones distintas a cada lado. Lo cazo `comprobar_bajas` porque el
+    #    nombre del jar cambia, y estuvo bien que lo cazara.
+    #    ⚠⚠ Y HAY UN MOTIVO MAS: el resolver del Charizard mecha COPIA los
+    #       identificadores de modelo y textura DEL JAR de mega_showdown 1.0.2.
+    #       Si 1.1.2 renombrara uno, Cobblemon no cargaria el resolver de
+    #       Charizard entero (docs/pokemon/charizard-mecha.md §4.4).
+    #    Subirlos es una ronda propia: servidor + cliente + regenerar el mecha
+    #    contra el jar nuevo (`gen_charizard_mecha.py --generar`) + comprobar
+    #    que 1.1.2 sigue siendo para Cobblemon 1.8.0. Se quitan de aqui ese dia.
+    "cobblemon-mega-showdown": {"version": "1.0.2+1.8+1.21.1-release",
+                                "motivo": "clavado al servidor; ver CLAVADOS"},
+    "navas-zamega": {"version": "1.7.7+1.8",
+                     "motivo": "clavado al servidor; ver CLAVADOS"},
+    "xaeros-world-map": {"version": "fabric-1.21.1-1.45.0",
+                         "motivo": "clavado al servidor; ver CLAVADOS"},
 }
 
 
@@ -795,12 +815,19 @@ def version_de(slug, loader="fabric"):
             raise
         return fijado(slug)
     # ⚠ Una version clavada manda sobre todo lo demas. Ver CLAVADOS.
+    #   El valor es la version a secas (motivo: la ultima esta rota) o un
+    #   diccionario con `version` y `motivo`, para los que se clavan por otra
+    #   razon -- y esa razon se imprime, que es lo que hace que no parezca un
+    #   mod roto cuando no lo esta.
     clavada = CLAVADOS.get(slug)
+    motivo = "la ultima esta rota; ver CLAVADOS en gen_modpack.py"
+    if isinstance(clavada, dict):
+        motivo = clavada["motivo"]
+        clavada = clavada["version"]
     if clavada:
         for v in d:
             if v.get("version_number") == clavada:
-                print(f"  CLAVADO {slug:<25} {clavada:<22} la ultima esta rota; "
-                      f"ver CLAVADOS en gen_modpack.py")
+                print(f"  CLAVADO {slug:<25} {clavada:<22} {motivo}")
                 return v
         # ⚠ Si la version clavada desaparece, se PARA. Seguir con la ultima
         #   volveria a publicar justo la que rompe el cliente, y el aviso se

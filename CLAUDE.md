@@ -10,7 +10,7 @@ PHASE 4 — Gimnasios y Torre de Batalla · PHASE 10 — Pase de Batalla
 y Santuario construidos. Decisiones D-001 a D-050. **El mod está desplegado y funcionando
 contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Batalla con
 recompensas de temporada e interfaces completas en el PokePad. **El lobby es la
-unica entrada al mundo** (D-050). Autotest en vivo 696/696.
+unica entrada al mundo** (D-050). Autotest en vivo 712/712.
 
 > **2026-09-10 (noche) — EL CHARIZARD MECHA DEL NIVEL 100: UN ASPECTO SOBRE
 > UN SHINY DE VERDAD, Y EL BOX-UV QUE BLOCKBENCH Y EL JUEGO REPARTEN DISTINTO.**
@@ -97,9 +97,25 @@ unica entrada al mundo** (D-050). Autotest en vivo 696/696.
 > ⚠⚠ **EL PACK QUEDA ATADO A mega_showdown**: Cobblemon carga al arrancar todo
 >    modelo que nombre cualquier variacion. Sin el, el resolver de Charizard
 >    entero reventaria. Hoy viaja en todos los clientes (D-037).
-> ⚠ **SIN DESPLEGAR Y SIN VERIFICAR EN EL JUEGO.** Compilan los dos jars. El
->   orden: manifiesto PRIMERO (lunaneon) y despues el mod. Nada se registra:
->   un cliente viejo entra y ve un shiny sin casco hasta reabrir el launcher.
+> ⚠⚠⚠ **Y AL PUBLICAR, EL MANIFIESTO SE NEGO -- Y TENIA RAZON.** Una
+>    publicacion que solo iba a subir NUESTROS jars habria actualizado en el
+>    cliente **mega_showdown 1.0.2 -> 1.1.2, zamega 1.7.7 -> 1.8.1 y el mapa
+>    1.45 -> 1.46** (Modrinth los publico entre el 09-09 y el 10-09, y `SUBIR`
+>    resuelve «la ultima»), con el servidor en las viejas: un mod que
+>    registra objetos, en dos versiones a cada lado. `comprobar_bajas` lo vio
+>    porque cambia el nombre del jar. **Y hay un motivo mas para no subirlos
+>    de tapadillo: el resolver del mecha copia identificadores DEL JAR de
+>    mega_showdown 1.0.2** -- si 1.1.2 renombrara un modelo, Cobblemon no
+>    cargaria el resolver de Charizard entero. Los tres van CLAVADOS al
+>    servidor en `gen_modpack.CLAVADOS` (que ahora admite un motivo distinto
+>    de «la ultima esta rota»). **Subirlos es una ronda propia y esta
+>    PENDIENTE**: servidor + cliente + regenerar el mecha contra el jar nuevo.
+> ✅ **EN VIVO (2026-09-10, 20:59):** manifiesto `fc7426cbbf` publicado y
+>   sirviendose · `Done (37,466 s)` · **AUTOTEST 712/712** (los 12 del mecha
+>   en verde, el resolver leido desde lunaneon.jar). Se aviso en el juego 60 s
+>   antes de reiniciar (3 admins dentro). ⚠ **SIN VERIFICAR EN EL JUEGO**:
+>   falta abrir la tarjeta del nivel 100, reclamar, sacarlo, combate y mega.
+>   ⚠ Y HAY QUE REABRIR EL LAUNCHER: el casco es CLIENTE (lunaneon).
 
 > **2026-09-10 — LA ESPADA DE PIKACHU, Y LAS CUATRO CORRECCIONES QUE NINGUNA
 > REVISION DE CODIGO HABRIA VISTO.**
@@ -3097,7 +3113,10 @@ Blockbench    DE UN .bbmodel DEL USUARIO AL JUEGO (2026-09-01)
               ⚠ y el visor tenia la cara de ARRIBA volteada. Casi no se ve --hay
                 que mirar al jugador desde el techo-- asi que se habria quedado
 
-Charizard     EL MECHA DEL NIVEL 100 DEL PASE (2026-09-10) . SIN DESPLEGAR
+Charizard     EL MECHA DEL NIVEL 100 DEL PASE (2026-09-10) . EN VIVO 20:59
+              autotest 712/712 . manifiesto fc7426cbbf . SIN VERIFICAR EN EL JUEGO
+              ⚠ mega_showdown, zamega y xaeros-world-map CLAVADOS al servidor
+                en gen_modpack.py: subirlos es una ronda propia (PENDIENTE)
 mecha         detalle en docs/pokemon/charizard-mecha.md
               python tools/gen_charizard_mecha.py --ver | --generar | --verificar
               aspecto forzado `luna_mecha` (Recompensa.ASPECTO_MECHA) sobre un

@@ -531,8 +531,15 @@ public class KitsScreen extends Screen {
                     case "magikarp" -> "magikarparmor";
                     case "pikachu" -> "pikachuarmor";
                     case "eevee" -> "eeveelution";
-                    default -> "";
+                    default -> null;
                 };
+                // «Mis kits» puede contener entradas propias que no son uno
+                // de los tres addons GeckoLib de este panel. No se intenta
+                // construir un Identifier vacío: se deja la tarjeta con su
+                // fondo y se evita otro recurso negro/morado o una excepción.
+                if (ns == null) {
+                    continue;
+                }
                 String prefijo = f.id().equals("eevee") ? "eeveelution" : f.id();
                 for (int s = 0; s < slots.length; s++) {
                     anteriores[s] = jugador.getEquippedStack(slots[s]).copy();

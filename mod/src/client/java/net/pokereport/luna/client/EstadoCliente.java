@@ -45,6 +45,7 @@ public final class EstadoCliente {
     private static Red.EstadoViajes viajes;
     private static Red.EstadoGimnasio gimnasio;
     private static Red.EstadoTrajes trajes;
+    private static Red.EstadoKits kits;
     /**
      * ¿Esta en el lobby? Mientras lo este, no hay PokePad ni teclas.
      *
@@ -253,6 +254,9 @@ public final class EstadoCliente {
     public static Red.EstadoTrajes trajes() {
         return trajes;
     }
+
+    public static void guardar(Red.EstadoKits nuevo) { kits = nuevo; }
+    public static Red.EstadoKits kits() { return kits; }
 
     public static void guardar(Red.EstadoViajes nuevo) {
         viajes = nuevo;

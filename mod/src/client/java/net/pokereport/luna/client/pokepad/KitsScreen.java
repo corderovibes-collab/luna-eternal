@@ -92,6 +92,7 @@ public class KitsScreen extends Screen {
     private int elegido = -1;
     private long pulsado;
     private Red.EstadoTrajes estado;
+    private int kitElegido;
 
     public KitsScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.kits"));
@@ -206,7 +207,7 @@ public class KitsScreen extends Screen {
         if (pestana == 0) {
             dibujarRango(ctx, rx, ry);
         } else {
-            dibujarVacia(ctx);
+            dibujarKits(ctx, rx, ry);
         }
 
         // ⚠ SEGUNDA PASADA: lo 3D va después de vaciar lo 2D. Regla 2 de
@@ -390,6 +391,11 @@ public class KitsScreen extends Screen {
                 colorPie = 0xFF9FB6D8;
             }
             texto(ctx, pie, listaX() + 24, y + 30, 14, colorPie, false, 0);
+            var kitRango = kitRango(t.id());
+            if (kitRango != null) texto(ctx, Text.literal(kitRango.disponible() ? "RECLAMAR" :
+                    (kitRango.espera().isBlank() ? "BLOQUEADO" : kitRango.espera())),
+                    listaX() + w - 118, y + 19, 12,
+                    kitRango.disponible() ? 0xFF7EF0A0 : 0xFF9CA6BC, false, 0);
         }
 
         // ---- el botón --------------------------------------------------
@@ -469,6 +475,40 @@ public class KitsScreen extends Screen {
                 0xFF6E7899, false, 0);
     }
 
+    private List<Red.FichaKit> kitsVisibles() {
+        var e = EstadoCliente.kits();
+        if (e == null) return List.of();
+        return e.fichas().stream().filter(f -> pestana == 1 ? f.tipo() == 1 : f.propio()).toList();
+    }
+
+    private void dibujarKits(DrawContext ctx, int rx, int ry) {
+        var lista = kitsVisibles();
+        if (lista.isEmpty()) { dibujarVacia(ctx); return; }
+        kitElegido = Math.min(kitElegido, lista.size() - 1);
+        int w = (PANT_W - 2 * MARGEN - 24) / 3;
+        for (int i = 0; i < lista.size(); i++) {
+            var f = lista.get(i); int x=PANT_X+MARGEN+i*(w+12), y=PANT_Y+54;
+            boolean sel=i==kitElegido;
+            ctx.fill(px(x),py(y),px(x+w),py(y+265),sel?0xFF2B5580:0xFF287BB0);
+            marco(ctx,px(x),py(y),pl(w),pl(265),sel?ORO:0xFF65BCE8,pl(sel?4:2));
+            texto(ctx,Text.literal(nombreKit(f.id())),x+w/2,y+24,18,0xFFFFFFFF,true,CONTORNO_OSCURO);
+            texto(ctx,Text.literal(f.propio()?"ADQUIRIDO":String.format("%,d LunaCoins",f.precio())),x+w/2,y+196,15,f.propio()?0xFF7EF0A0:ORO,true,CONTORNO_OSCURO);
+            if(!f.espera().isBlank()) texto(ctx,Text.literal(f.espera()),x+w/2,y+224,12,0xFFFFC6A0,true,0);
+        }
+        var f=lista.get(kitElegido);
+        boton(ctx,rx,ry,PANT_X+MARGEN,PANT_Y+PANT_H-68,PANT_W-2*MARGEN,52,
+                Text.literal(f.propio()?"ADQUIRIDO":"COMPRAR"),pestana==1&&f.disponible()&&!esperando(),VERDE);
+    }
+
+    private static String nombreKit(String id) {
+        return switch(id){case "magikarp"->"MAGIKARP TIDAL";case "pikachu"->"PIKACHU THUNDERFORGE";case "eevee"->"EEVEELUTION LEGACY";default->id.toUpperCase(java.util.Locale.ROOT);};
+    }
+
+    private Red.FichaKit kitRango(String id) {
+        var e=EstadoCliente.kits(); if(e==null)return null;
+        return e.fichas().stream().filter(f->f.tipo()==0&&f.id().equals(id)).findFirst().orElse(null);
+    }
+
     // ---- interacción -------------------------------------------------------
 
     @Override
@@ -494,6 +534,7 @@ public class KitsScreen extends Screen {
         for (int i = 0; i < PESTANAS.length; i++) {
             if (dentro(rx, ry, px(PANEL_X + 28), py(pestanaY(i)), pl(w), pl(72))) {
                 pestana = i;
+                kitElegido = 0;
                 sonar();
                 return true;
             }
@@ -503,6 +544,10 @@ public class KitsScreen extends Screen {
             var f = fichas();
             for (int i = 0; i < f.size(); i++) {
                 if (dentro(rx, ry, px(listaX()), py(filaY(i)), pl(listaW()), pl(52))) {
+                    var kr=kitRango(f.get(i).id());
+                    if(kr!=null&&kr.disponible()&&rx-px(listaX())>pl(listaW()-125)){
+                        pulsado=System.currentTimeMillis();sonar();ClientPlayNetworking.send(new Red.ReclamarKit(kr.id()));return true;
+                    }
                     // ⚠ Un clic ELIGE y enseña; ponérselo es el botón. Con la
                     //   acción en la fila, un clic despistado te cambia de ropa.
                     elegido = i;
@@ -529,6 +574,12 @@ public class KitsScreen extends Screen {
                     ClientPlayNetworking.send(new Red.AccionTraje(llevo ? "" : sel.id()));
                 }
                 return true;
+            }
+        } else {
+            var lista=kitsVisibles(); int cardW=(PANT_W-2*MARGEN-24)/3;
+            for(int i=0;i<lista.size();i++){int x=PANT_X+MARGEN+i*(cardW+12),y=PANT_Y+54;if(dentro(rx,ry,px(x),py(y),pl(cardW),pl(265))){kitElegido=i;sonar();return true;}}
+            if(pestana==1&&kitElegido<lista.size()) { var f=lista.get(kitElegido);
+                if(f.disponible()&&!esperando()&&dentro(rx,ry,px(PANT_X+MARGEN),py(PANT_Y+PANT_H-68),pl(PANT_W-2*MARGEN),pl(52))){pulsado=System.currentTimeMillis();sonar();ClientPlayNetworking.send(new Red.ReclamarKit(f.id()));return true;}
             }
         }
         return super.mouseClicked(mx, my, boton);

@@ -15,6 +15,9 @@ import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.pokereport.luna.LunaEternal;
+import net.pokereport.luna.economy.Currency;
+import net.pokereport.luna.economy.EconomyException;
+import net.pokereport.luna.economy.EconomyService;
 
 /**
  * Reclamación de kits, con el cooldown en la base de datos.
@@ -255,6 +258,47 @@ public final class KitService {
             return "no se pudo entregar; vuelve a intentarlo";
         }
         return null;
+    }
+
+    /** Compra y propiedad del exclusivo en una sola transacción. */
+    public String comprar(ServerPlayerEntity jugador, long playerId,
+                          KitCatalog.Kit kit, EconomyService economy)
+            throws SQLException {
+        if (!"exclusive".equals(kit.category()) || !kit.once() || kit.lunaPrice() <= 0) {
+            return "kit exclusivo inválido";
+        }
+        int libres = 0;
+        for (var pila : jugador.getInventory().main) if (pila.isEmpty()) libres++;
+        if (libres < kit.items().size()) return "necesitas " + kit.items().size() + " huecos libres";
+
+        try (Connection c = db.connection()) {
+            c.setAutoCommit(false);
+            try (PreparedStatement ps = c.prepareStatement(
+                    "INSERT IGNORE INTO kit_claim (player_id,kit_id,last_claimed,times_claimed) "
+                  + "VALUES (?,?,CURRENT_TIMESTAMP(3),1)")) {
+                ps.setLong(1, playerId); ps.setString(2, "exclusive:" + kit.id());
+                if (ps.executeUpdate() == 0) { c.rollback(); return "ya lo compraste"; }
+                economy.applyInTransaction(c, playerId, Currency.REPORTCOIN, -kit.lunaPrice(),
+                        "exclusive_kit", "kit", null,
+                        "exclusive_kit:" + playerId + ":" + kit.id());
+                c.commit();
+            } catch (EconomyException e) {
+                c.rollback(); return "no tienes suficientes LunaCoins";
+            } catch (Exception e) {
+                c.rollback(); throw e;
+            } finally { c.setAutoCommit(true); }
+        }
+        try {
+            for (var it : kit.items()) jugador.getInventory().offerOrDrop(pila(it, jugador.getServer()));
+        } catch (Exception e) {
+            LunaEternal.LOG.error("Compra cobrada pero entrega fallida de {} a {}", kit.id(), playerId, e);
+            return "compra guardada; contacta a un administrador para la entrega";
+        }
+        return null;
+    }
+
+    public boolean posee(long playerId, KitCatalog.Kit kit) throws SQLException {
+        return hasClaimed(playerId, "exclusive:" + kit.id());
     }
 
     /**

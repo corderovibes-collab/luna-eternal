@@ -45,6 +45,7 @@ public final class KitCatalog {
     }
 
     public record Kit(String id, String name, Item icon, String description,
+                      String category, long lunaPrice,
                       int cooldownHours, boolean once, String requiredRank,
                       List<KitItem> items) {
 
@@ -54,7 +55,7 @@ public final class KitCatalog {
 
         /** Valor que inyecta al día. Los de una sola vez no cuentan. */
         public long dailyValue() {
-            if (once || cooldownHours <= 0) return 0;
+            if (once || cooldownHours <= 0 || "exclusive".equals(category)) return 0;
             return value() * 24 / cooldownHours;
         }
     }
@@ -121,6 +122,8 @@ public final class KitCatalog {
                     k.get("name").getAsString(),
                     resolveOr(k.get("icon").getAsString(), Items.CHEST),
                     k.has("description") ? k.get("description").getAsString() : "",
+                    k.has("category") ? k.get("category").getAsString() : "rank",
+                    k.has("lunaPrice") ? k.get("lunaPrice").getAsLong() : 0,
                     k.get("cooldownHours").getAsInt(),
                     k.has("once") && k.get("once").getAsBoolean(),
                     k.has("requiredRank") ? k.get("requiredRank").getAsString() : null,
@@ -144,6 +147,12 @@ public final class KitCatalog {
         List<String> problemas = new ArrayList<>();
 
         for (Kit k : kits) {
+            if (!(k.category().equals("rank") || k.category().equals("exclusive"))) {
+                problemas.add(k.id() + ": categoria desconocida");
+            }
+            if (k.category().equals("exclusive") && (!k.once() || k.lunaPrice() <= 0)) {
+                problemas.add(k.id() + ": exclusivo sin compra unica o precio valido");
+            }
             if (k.cooldownHours() < 0) {
                 problemas.add(k.id() + ": cooldown negativo");
             }

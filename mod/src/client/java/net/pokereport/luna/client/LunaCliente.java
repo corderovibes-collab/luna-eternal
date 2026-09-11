@@ -345,6 +345,8 @@ public class LunaCliente implements ClientModInitializer {
         //   asi que añadir capas es una linea en este switch.
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoTrajes.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoKits.ID,
+                (carga, ctx) -> EstadoCliente.guardar(carga));
 
         // ⚠ Quien lleva que. Es un paquete DISTINTO del estado de la pantalla:
         //   aquel es tuyo y este es de todos.

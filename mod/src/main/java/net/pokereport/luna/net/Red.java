@@ -1264,6 +1264,21 @@ public class Red implements ModInitializer {
         }
     }
 
+    public record FichaKit(String id, int tipo, long precio, boolean propio,
+                           boolean disponible, String espera) {
+        public static final PacketCodec<RegistryByteBuf, FichaKit> CODEC = PacketCodec.tuple(
+                CADENA, FichaKit::id, PacketCodecs.VAR_INT, FichaKit::tipo,
+                PacketCodecs.VAR_LONG, FichaKit::precio, PacketCodecs.BOOL, FichaKit::propio,
+                PacketCodecs.BOOL, FichaKit::disponible, CADENA, FichaKit::espera, FichaKit::new);
+    }
+
+    public record EstadoKits(List<FichaKit> fichas) implements CustomPayload {
+        public static final Id<EstadoKits> ID = new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_kits"));
+        public static final PacketCodec<RegistryByteBuf, EstadoKits> CODEC = PacketCodec.tuple(
+                FichaKit.CODEC.collect(PacketCodecs.toList()), EstadoKits::fichas, EstadoKits::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
     public record AccionTraje(String traje) implements CustomPayload {
         public static final Id<AccionTraje> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_traje"));
@@ -3526,6 +3541,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(AccionTraje.ID, AccionTraje.CODEC);
         PayloadTypeRegistry.playC2S().register(ReclamarKit.ID, ReclamarKit.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoTrajes.ID, EstadoTrajes.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoKits.ID, EstadoKits.CODEC);
         PayloadTypeRegistry.playS2C().register(TrajeDe.ID, TrajeDe.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirViajes.ID, PedirViajes.CODEC);
         PayloadTypeRegistry.playC2S().register(
@@ -3620,7 +3636,7 @@ public class Red implements ModInitializer {
                 enviarExplorar(ctx.player()));
 
         ServerPlayNetworking.registerGlobalReceiver(PedirTrajes.ID, (carga, ctx) ->
-                enviarTrajes(ctx.player()));
+                { enviarTrajes(ctx.player()); enviarKits(ctx.player()); });
 
         ServerPlayNetworking.registerGlobalReceiver(ReclamarKit.ID, (carga, ctx) -> {
             var jugador = ctx.player();
@@ -3631,15 +3647,15 @@ public class Red implements ModInitializer {
                     //   ademas tiene que ser un traje marcado como kit: asi un
                     //   cliente modificado no puede pedir el «diario» desde esta
                     //   pantalla (P6).
-                    var t = net.pokereport.luna.traje.Traje.de(carga.kit());
-                    var kit = t != null && t.esKit()
-                            ? LunaEternal.kits().byId(t.id()) : null;
+                    var kit = LunaEternal.kits().byId(carga.kit());
                     if (kit == null) {
                         return;
                     }
                     long id = LunaEternal.players().resolve(
                             jugador.getUuid(), jugador.getGameProfile().getName());
-                    fallo = LunaEternal.kitService().entregar(jugador, id, kit);
+                    fallo = "exclusive".equals(kit.category())
+                            ? LunaEternal.kitService().comprar(jugador, id, kit, LunaEternal.economy())
+                            : LunaEternal.kitService().entregar(jugador, id, kit);
                 } catch (Exception e) {
                     LunaEternal.LOG.error("No se pudo entregar el kit a {}",
                             jugador.getGameProfile().getName(), e);
@@ -3661,6 +3677,8 @@ public class Red implements ModInitializer {
                     //   arranca al entregar y el boton tiene que reflejarlo sin
                     //   que el jugador reabra la pantalla.
                     enviarTrajes(jugador);
+                    enviarKits(jugador);
+                    enviarSaldo(jugador);
                 });
             });
         });
@@ -7071,6 +7089,33 @@ public class Red implements ModInitializer {
                     ServerPlayNetworking.send(jugador, carga);
                 }
             });
+        });
+    }
+
+    public static void enviarKits(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        LunaEternal.submit(() -> {
+            try {
+                long pid = LunaEternal.players().resolve(jugador.getUuid(), jugador.getGameProfile().getName());
+                int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
+                var salida = new java.util.ArrayList<FichaKit>();
+                for (var kit : LunaEternal.kits().kits()) {
+                    boolean ex = "exclusive".equals(kit.category());
+                    boolean propio = ex && LunaEternal.kitService().posee(pid, kit);
+                    var st = ex ? null : LunaEternal.kitService().status(pid, kit);
+                    boolean rango = kit.requiredRank() == null || escalon >=
+                            net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank()).escalon;
+                    boolean disponible = ex ? !propio : rango && st.claimable();
+                    String espera = st == null || st.claimable() ? "" :
+                            (st.reason() != null ? st.reason() : st.remaining());
+                    salida.add(new FichaKit(kit.id(), ex ? 1 : 0, kit.lunaPrice(),
+                            propio, disponible, espera));
+                }
+                jugador.getServer().execute(() -> {
+                    if (!jugador.isRemoved()) ServerPlayNetworking.send(jugador, new EstadoKits(salida));
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudo enviar el catálogo de kits", e);
+            }
         });
     }
 

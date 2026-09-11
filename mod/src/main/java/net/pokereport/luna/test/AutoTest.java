@@ -2028,6 +2028,20 @@ public final class AutoTest {
         }
         check("los encantamientos de los kits existen", !encMal);
 
+        var exclusivos = catalogo.kits().stream()
+            .filter(k -> "exclusive".equals(k.category())).toList();
+        check("estan los tres kits exclusivos",
+              exclusivos.size() == 3
+              && catalogo.byId("magikarp") != null
+              && catalogo.byId("pikachu") != null
+              && catalogo.byId("eevee") != null);
+        check("los exclusivos tienen precio y son compra unica",
+              exclusivos.stream().allMatch(k -> k.lunaPrice() > 0 && k.once()));
+        check("los kits de rango se reclaman cada cinco dias",
+              catalogo.kits().stream()
+                  .filter(k -> k.requiredRank() != null)
+                  .allMatch(k -> !k.once() && k.cooldownHours() == 120));
+
         long inyeccionDiaria = catalogo.kits().stream()
             .mapToLong(net.pokereport.luna.kit.KitCatalog.Kit::dailyValue).sum();
         check("la inyeccion diaria de los kits esta bajo el tope",

@@ -5911,6 +5911,15 @@ public class Red implements ModInitializer {
      * <p>&#9888; Las propiedades las compone {@code Recompensa.propiedades()} y
      * no este metodo: si el formato viviera aqui y alli, un desacuerdo daria un
      * Charizard de nivel 1 sin shiny <b>sin ningun error</b>.
+     *
+     * <p>&#9888;&#9888;&#9888; EL ASPECTO SE FUERZA ANTES DE GUARDARLO. El casco del
+     * Charizard mecha es un {@code forcedAspect} ({@link
+     * net.pokereport.luna.pase.Recompensa#ASPECTO_MECHA}): {@code create()} no
+     * lo conoce, asi que se pone aqui, con el mismo patron que
+     * {@code CosmeticsService} usa en produccion --conservando lo que hubiera--
+     * y ANTES de meterlo en el equipo, para que la primera vez que se
+     * sincronice al cliente ya lleve el casco. Sin esto llegaria un shiny
+     * normal y no daria ningun error.
      */
     private static void entregarPokemonDelPase(
             net.minecraft.server.network.ServerPlayerEntity jugador,
@@ -5920,6 +5929,12 @@ public class Red implements ModInitializer {
                     .Companion.parse(r.propiedades());
             var almacen = com.cobblemon.mod.common.Cobblemon.INSTANCE.getStorage();
             var bicho = props.create();
+            if (!r.aspecto().isEmpty()) {
+                var aspectos = new java.util.HashSet<>(bicho.getForcedAspects());
+                aspectos.add(r.aspecto());
+                bicho.setForcedAspects(aspectos);
+                bicho.updateAspects();
+            }
             if (!almacen.getParty(jugador).add(bicho)) {
                 almacen.getPC(jugador).add(bicho);
                 jugador.sendMessage(net.minecraft.text.Text.literal(

@@ -13,10 +13,34 @@ package net.pokereport.luna.pase;
  * @param cantidad cuantos. En un Pokemon es siempre 1
  * @param nivel    solo Pokemon: a que nivel se entrega
  * @param shiny    solo Pokemon
+ * @param aspecto  solo Pokemon: un ASPECTO FORZADO que lo hace unico (el casco
+ *                 del Charizard mecha), o cadena vacia. Ver {@link #ASPECTO_MECHA}
  * @param rareza   lo que decide COMO SE DIBUJA la tarjeta. Ver {@link Rareza}
  */
 public record Recompensa(Tipo tipo, String id, int cantidad, int nivel,
-                         boolean shiny, Rareza rareza) {
+                         boolean shiny, String aspecto, Rareza rareza) {
+
+    /**
+     * EL ASPECTO DEL CHARIZARD MECHA DEL NIVEL 100.
+     *
+     * <p>&#9888;&#9888;&#9888; ESTA CADENA VIVE EN DOS SITIOS Y NADA LOS OBLIGA A
+     * COINCIDIR: aqui, y en el resolver del pack de cosmeticos
+     * ({@code resolvers/luna/60_charizard_luna_mecha.json}, generado por
+     * {@code tools/gen_charizard_mecha.py}). Cobblemon dibuja el casco cuando
+     * el Pokemon tiene el aspecto <b>con este nombre exacto</b>; si aqui dijera
+     * otra cosa, el nivel 100 entregaria un Charizard shiny NORMAL, sin un solo
+     * error. El generador comprueba que esta cadena esta escrita en este
+     * fichero, y el autotest lee el resolver del jar y la busca dentro.
+     *
+     * <p>&#9888;&#9888; ES UN {@code forcedAspect}, no una feature ni un objeto
+     * cosmetico: persiste con el Pokemon (PokemonP3), se sincroniza
+     * (ClientPokemonP3), viaja en el GTS y sobrevive a la megaevolucion, porque
+     * mega_showdown aplica sus formas por <i>species features</i> y no toca los
+     * forzados (leido en su bytecode). Al revertir la mega vuelve el casco solo.
+     * Y {@code CosmeticsService} conserva lo que no sea suyo, asi que ponerse un
+     * cosmetico tampoco lo quita.
+     */
+    public static final String ASPECTO_MECHA = "luna_mecha";
 
     public enum Tipo {
         /** Un objeto del juego. */
@@ -86,12 +110,26 @@ public record Recompensa(Tipo tipo, String id, int cantidad, int nivel,
     // ---- constructores comodos --------------------------------------------
 
     public static Recompensa objeto(String id, int cuantos, Rareza rareza) {
-        return new Recompensa(Tipo.OBJETO, id, cuantos, 0, false, rareza);
+        return new Recompensa(Tipo.OBJETO, id, cuantos, 0, false, "", rareza);
     }
 
     public static Recompensa pokemon(String especie, int nivel, boolean shiny,
                                      Rareza rareza) {
-        return new Recompensa(Tipo.POKEMON, especie, 1, nivel, shiny, rareza);
+        return new Recompensa(Tipo.POKEMON, especie, 1, nivel, shiny, "", rareza);
+    }
+
+    /**
+     * Un Pokemon con un aspecto forzado: el que lo hace UNICO.
+     *
+     * <p>&#9888; El aspecto no va en {@link #propiedades()} a proposito:
+     * {@code PokemonProperties.parse} no sabe de aspectos forzados, asi que
+     * quien entrega lo aplica con {@code setForcedAspects} despues de crear
+     * el Pokemon. Los dos datos salen de ESTE record, que es lo que impide
+     * que el formato viva en dos sitios.
+     */
+    public static Recompensa pokemonUnico(String especie, int nivel, boolean shiny,
+                                          String aspecto, Rareza rareza) {
+        return new Recompensa(Tipo.POKEMON, especie, 1, nivel, shiny, aspecto, rareza);
     }
 
     /**
@@ -102,7 +140,26 @@ public record Recompensa(Tipo tipo, String id, int cantidad, int nivel,
      * ahi para que una fila del catalogo se lea sola.
      */
     public static Recompensa luna(int cuantas, Rareza rareza) {
-        return new Recompensa(Tipo.MONEDA, "lunacoins", cuantas, 0, false, rareza);
+        return new Recompensa(Tipo.MONEDA, "lunacoins", cuantas, 0, false, "", rareza);
+    }
+
+    /**
+     * Los aspectos con los que se DIBUJA este Pokemon en el PokePad.
+     *
+     * <p>Son los mismos que tendra al entregarse: {@code shiny} lo pone
+     * Cobblemon por su bandera y el forzado lo pone la entrega. Si la pantalla
+     * compusiera los suyos por su cuenta, la tarjeta del nivel 100 podria
+     * enseñar un Charizard distinto del que llega.
+     */
+    public java.util.Set<String> aspectos() {
+        var s = new java.util.HashSet<String>();
+        if (shiny) {
+            s.add("shiny");
+        }
+        if (aspecto != null && !aspecto.isEmpty()) {
+            s.add(aspecto);
+        }
+        return s;
     }
 
     /**

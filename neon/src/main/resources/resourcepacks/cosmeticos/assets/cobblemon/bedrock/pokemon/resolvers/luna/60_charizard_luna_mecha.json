@@ -1,0 +1,198 @@
+{
+  "species": "cobblemon:charizard",
+  "order": 60,
+  "variations": [
+    {
+      "aspects": [
+        "luna_mecha"
+      ],
+      "poser": "cobblemon:charizard",
+      "model": "cobblemon:charizard_luna_mecha.geo",
+      "texture": "cobblemon:textures/pokemon/luna/charizard_luna_mecha.png",
+      "layers": [
+        {
+          "name": "flame",
+          "texture": {
+            "frames": [
+              "cobblemon:textures/pokemon/luna/charizard_luna_mecha_flame1.png",
+              "cobblemon:textures/pokemon/luna/charizard_luna_mecha_flame2.png",
+              "cobblemon:textures/pokemon/luna/charizard_luna_mecha_flame3.png",
+              "cobblemon:textures/pokemon/luna/charizard_luna_mecha_flame4.png"
+            ],
+            "fps": 10,
+            "loop": true
+          },
+          "emissive": true,
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "luna_mecha",
+        "shiny"
+      ],
+      "texture": "cobblemon:textures/pokemon/luna/charizard_luna_mecha_shiny.png",
+      "layers": [
+        {
+          "name": "flame",
+          "texture": {
+            "frames": [
+              "cobblemon:textures/pokemon/luna/charizard_luna_mecha_flame1.png",
+              "cobblemon:textures/pokemon/luna/charizard_luna_mecha_flame2.png",
+              "cobblemon:textures/pokemon/luna/charizard_luna_mecha_flame3.png",
+              "cobblemon:textures/pokemon/luna/charizard_luna_mecha_flame4.png"
+            ],
+            "fps": 10,
+            "loop": true
+          },
+          "emissive": true,
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "luna_mecha",
+        "alpha_eyes"
+      ],
+      "layers": [
+        {
+          "name": "alpha_eyes",
+          "texture": "cobblemon:textures/pokemon/luna/charizard_luna_mecha_alpha.png",
+          "emissive": true
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "luna_mecha",
+        "mega_y"
+      ],
+      "poser": "cobblemon:charizard_mega_y",
+      "model": "cobblemon:charizard_mega_y.geo",
+      "texture": "cobblemon:textures/pokemon/0006_charizard/charizard_mega_y.png",
+      "layers": [
+        {
+          "name": "eyes",
+          "texture": "cobblemon:textures/pokemon/0006_charizard/y_eyes_glow.png",
+          "emissive": true,
+          "translucent": false
+        },
+        {
+          "name": "flame",
+          "texture": {
+            "frames": [
+              "cobblemon:textures/pokemon/0006_charizard/y_glow.png",
+              "cobblemon:textures/pokemon/0006_charizard/y_glow2.png",
+              "cobblemon:textures/pokemon/0006_charizard/y_glow3.png",
+              "cobblemon:textures/pokemon/0006_charizard/y_glow4.png"
+            ],
+            "fps": 10,
+            "loop": true
+          },
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "luna_mecha",
+        "mega_y",
+        "shiny"
+      ],
+      "texture": "cobblemon:textures/pokemon/0006_charizard/charizard_mega_y_shiny.png",
+      "layers": [
+        {
+          "name": "eyes",
+          "texture": "cobblemon:textures/pokemon/0006_charizard/y_eyes_glow_shiny.png",
+          "emissive": true,
+          "translucent": false
+        },
+        {
+          "name": "flame",
+          "texture": {
+            "frames": [
+              "cobblemon:textures/pokemon/0006_charizard/y_glow.png",
+              "cobblemon:textures/pokemon/0006_charizard/y_glow2.png",
+              "cobblemon:textures/pokemon/0006_charizard/y_glow3.png",
+              "cobblemon:textures/pokemon/0006_charizard/y_glow4.png"
+            ],
+            "fps": 10,
+            "loop": true
+          },
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "luna_mecha",
+        "mega_x"
+      ],
+      "model": "cobblemon:charizard_mega_x.geo",
+      "texture": "cobblemon:textures/pokemon/0006_charizard/megacharizardx.png",
+      "layers": [
+        {
+          "name": "flame",
+          "texture": {
+            "frames": [
+              "cobblemon:textures/pokemon/0006_charizard/x_glow.png",
+              "cobblemon:textures/pokemon/0006_charizard/x_glow2.png",
+              "cobblemon:textures/pokemon/0006_charizard/x_glow3.png",
+              "cobblemon:textures/pokemon/0006_charizard/x_glow4.png"
+            ],
+            "fps": 10,
+            "loop": true
+          },
+          "emissive": true,
+          "translucent": false
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "luna_mecha",
+        "mega_x",
+        "shiny"
+      ],
+      "texture": "cobblemon:textures/pokemon/0006_charizard/megacharizardx_shiny.png"
+    },
+    {
+      "aspects": [
+        "luna_mecha",
+        "gmax"
+      ],
+      "poser": "cobblemon:charizard_gigantamax",
+      "model": "cobblemon:charizard_gigantamax.geo",
+      "texture": "cobblemon:textures/pokemon/0006_charizard/charizard_gigantamax.png",
+      "layers": [
+        {
+          "name": "flame",
+          "texture": {
+            "frames": [
+              "cobblemon:textures/pokemon/0006_charizard/gmaxflames/flames_1.png",
+              "cobblemon:textures/pokemon/0006_charizard/gmaxflames/flames_2.png",
+              "cobblemon:textures/pokemon/0006_charizard/gmaxflames/flames_3.png",
+              "cobblemon:textures/pokemon/0006_charizard/gmaxflames/flames_4.png"
+            ],
+            "fps": 10,
+            "loop": true
+          },
+          "emissive": true,
+          "translucent": true
+        }
+      ]
+    },
+    {
+      "aspects": [
+        "luna_mecha",
+        "gmax",
+        "shiny"
+      ],
+      "texture": "cobblemon:textures/pokemon/0006_charizard/charizard_gigantamax_shiny.png"
+    }
+  ]
+}

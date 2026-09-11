@@ -193,13 +193,27 @@ public final class Mascota3D {
     public static void dibujarEspecie(DrawContext ctx, Identifier especie, String clave,
                                       String aspecto, int x, int y, int ancho, int alto,
                                       float origenY, float delta, boolean animar) {
+        dibujarEspecie(ctx, especie, clave,
+                aspecto == null || aspecto.isEmpty() ? Set.of() : Set.of(aspecto),
+                x, y, ancho, alto, origenY, delta, animar);
+    }
+
+    /**
+     * Igual, con VARIOS aspectos a la vez.
+     *
+     * <p>&#9888; Hace falta porque un Pokemon puede llevar mas de uno --el
+     * Charizard del nivel 100 del pase es {@code shiny} Y {@code luna_mecha}--
+     * y el resolver de Cobblemon elige modelo y textura mirando el CONJUNTO:
+     * con uno solo se dibujaria o el shiny sin casco o el casco sin shiny.
+     */
+    public static void dibujarEspecie(DrawContext ctx, Identifier especie, String clave,
+                                      Set<String> aspectos, int x, int y, int ancho, int alto,
+                                      float origenY, float delta, boolean animar) {
         FloatingState estado = ESTADOS.computeIfAbsent(clave, k -> new FloatingState());
         // El aspecto es lo que convierte un Charizard en `charizard_knight`.
         // Se reasigna en cada fotograma a propósito: es barato, y así un cambio
         // de aspecto se ve sin tener que invalidar el estado.
-        estado.setCurrentAspects(aspecto == null || aspecto.isEmpty()
-                ? Set.of()
-                : Set.of(aspecto));
+        estado.setCurrentAspects(aspectos == null ? Set.of() : aspectos);
 
         // ⚠ RECORTE. Sin él, un modelo alto se sale de su celda y se dibuja
         // encima de la de al lado — y como el 3D no respeta el orden de dibujado

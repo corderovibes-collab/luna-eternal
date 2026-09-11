@@ -5147,6 +5147,74 @@ public final class AutoTest {
                   && "charizard".equals(ultimo.id()) && ultimo.nivel() == 50
                   && ultimo.shiny());
 
+        // ⚠⚠⚠ Y LLEVA EL CASCO MECHA, Y ES EL UNICO QUE LO LLEVA. El casco es un
+        //    ASPECTO FORZADO que el pack de cosmeticos (dentro de lunaneon.jar)
+        //    convierte en modelo y textura. Son DOS ficheros de dos jars --la
+        //    constante de Java y el resolver del pack-- y nada los obliga a
+        //    decir la misma cadena: si divergieran, el nivel 100 entregaria un
+        //    shiny normal SIN NINGUN ERROR. Aqui se lee el resolver DEL JAR
+        //    (todos los mods comparten classloader en Fabric) y se busca dentro.
+        String aspectoMecha = net.pokereport.luna.pase.Recompensa.ASPECTO_MECHA;
+        check("EL NIVEL 100 LLEVA EL ASPECTO DEL CASCO MECHA",
+              ultimo != null && aspectoMecha.equals(ultimo.aspecto()));
+        int conAspecto = 0;
+        for (int n = 1; n <= net.pokereport.luna.pase.PaseNivel.MAX; n++) {
+            var r = net.pokereport.luna.pase.PaseCatalogo.de(n);
+            if (r != null && !r.aspecto().isEmpty()) {
+                conAspecto++;
+            }
+        }
+        // «esto debe de ser unico»: un segundo nivel con casco lo dejaria de ser.
+        check("y es el UNICO nivel con aspecto", conAspecto == 1);
+        // El aspecto NO entra en las propiedades: `PokemonProperties.parse` no
+        // lo entiende, y si se colara ahi crearia un Pokemon sin nivel ni shiny.
+        check("sus propiedades siguen siendo las de un Charizard shiny de 50",
+              ultimo != null && "charizard level=50 shiny=true".equals(ultimo.propiedades()));
+        check("y la tarjeta lo dibuja con shiny Y casco",
+              ultimo != null
+                  && ultimo.aspectos().equals(java.util.Set.of("shiny", aspectoMecha)));
+
+        String pack = "/resourcepacks/cosmeticos/assets/cobblemon/";
+        String resolverMecha = recurso(pack
+                + "bedrock/pokemon/resolvers/luna/60_charizard_luna_mecha.json");
+        check("EL RESOLVER DEL CASCO ESTA EN EL PACK (lunaneon.jar)", resolverMecha != null);
+        check("y habla del mismo aspecto que Java",
+              resolverMecha != null && resolverMecha.contains("\"" + aspectoMecha + "\""));
+        // ⚠⚠ Las megas van REPETIDAS en nuestro resolver a proposito: mega_showdown
+        //    declara las suyas con `order` 1-3 y el nuestro es 60, asi que sin
+        //    repetirlas, al megaevolucionar mandaria el casco sobre la mega.
+        check("y repite las tres megas para que al megaevolucionar mande la mega",
+              resolverMecha != null && resolverMecha.contains("\"mega_x\"")
+                  && resolverMecha.contains("\"mega_y\"") && resolverMecha.contains("\"gmax\""));
+        int ordenMecha = -1;
+        try {
+            ordenMecha = resolverMecha == null ? -1
+                    : com.google.gson.JsonParser.parseString(resolverMecha)
+                            .getAsJsonObject().get("order").getAsInt();
+        } catch (RuntimeException e) {
+            ordenMecha = -1;
+        }
+        // 50 es charizard_knight: por debajo, un disfraz comprado taparia el casco
+        // y por encima de las megas (3) es lo que hace que las repetidas manden.
+        check("y su orden esta por encima de las megas y de charizard_knight", ordenMecha > 50);
+        check("el geo del casco esta en el pack", existe(pack
+                + "bedrock/pokemon/models/luna/charizard_luna_mecha.geo.json"));
+        check("y su textura shiny tambien",
+              existe(pack + "textures/pokemon/luna/charizard_luna_mecha_shiny.png"));
+        check("y la llama rellenada a 256x256",
+              existe(pack + "textures/pokemon/luna/charizard_luna_mecha_flame1.png"));
+        // ⚠⚠ Si un cosmetico del catalogo usara este aspecto, `CosmeticsService`
+        //    lo quitaria al poner otro de la misma especie (quita los del
+        //    catalogo, conserva el resto). El casco tiene que quedar FUERA del
+        //    catalogo para sobrevivir a un disfraz.
+        boolean enCatalogo = false;
+        for (var pieza : net.pokereport.luna.cosmetics.Catalogo.todas()) {
+            if (aspectoMecha.equals(pieza.aspecto())) {
+                enCatalogo = true;
+            }
+        }
+        check("NINGUN COSMETICO USA EL ASPECTO DEL MECHA (ponerse uno lo quitaria)", !enCatalogo);
+
         // ⚠ Los cinco tramos tienen que cubrir los cien niveles SIN HUECOS y sin
         //   solaparse: un hueco deja niveles sin categoria --y la cabecera del
         //   carril enseñaria la del tramo anterior, que es mentira--.

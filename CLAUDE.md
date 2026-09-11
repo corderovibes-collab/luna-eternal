@@ -12,6 +12,88 @@ contra MariaDB:** economía de tres monedas, vías de progresión, Torre de Bata
 recompensas de temporada e interfaces completas en el PokePad. **El lobby es la
 unica entrada al mundo** (D-050). Autotest en vivo 696/696.
 
+> **2026-09-10 (noche) — EL CHARIZARD MECHA DEL NIVEL 100: UN ASPECTO SOBRE
+> UN SHINY DE VERDAD, Y EL BOX-UV QUE BLOCKBENCH Y EL JUEGO REPARTEN DISTINTO.**
+>
+> Encargo del usuario con su casco en Blockbench: *«es el charizard shiny pero
+> con un casco... tiene que ser nuevo el pokemon con todo lo mismo de charizard
+> shiny... solo se da en el pase de batalla... si mega evoluciona evoluciona
+> normal y si se quita la mega vuelve a quedar con el casco, esto debe de ser
+> unico»*, y a mitad: *«revisa bien que cuando haga una animacion no se salga...
+> si abre la boca eso tambien, necesito algo bien hecho»*. Detalle entero en
+> [charizard-mecha.md](docs/pokemon/charizard-mecha.md).
+>
+> ⚠⚠⚠ **NO ES UNA ESPECIE, NI UNA FORMA, NI UN OBJETO: ES UN ASPECTO FORZADO.**
+> Cada condicion del encargo descarta una de las otras tres --una especie
+> nueva no «tiene todo lo de un shiny», una forma sale en spawns y Pokedex, y
+> un `cosmetic_item` se craftea y se regala--. Lo que queda es lo que ya usan
+> los disfraces desde el 22-ago: `luna_mecha` en `forcedAspects`, puesto por
+> UNA sola linea (la entrega del nivel 100) sobre un `charizard level=50
+> shiny=true` normal. Persiste, se sincroniza, viaja en el GTS.
+>
+> ⚠⚠⚠ **EL HALLAZGO QUE MANDA: BLOCKBENCH 5 REPARTE EL BOX-UV CON LOS TAMAÑOS
+> REDONDEADOS HACIA ARRIBA Y COBBLEMON CON LOS FLOTANTES EXACTOS.** Leido en
+> el bytecode de los dos: `Cube.uv` es `List<Integer>` y `ModelPart$Cuboid`
+> suma `u + sizeZ + sizeX` sin redondear. Con tamaños enteros da igual, **y
+> por eso nadie lo nota**: los 89 geos cosmeticos del pack tienen 16 cubos
+> fraccionarios entre ~10.000. El casco del usuario tiene **133 de 133**: en
+> el juego cada cara habria muestreado la pintura corrida hasta 1,8 texels,
+> sin un solo error. Ni UV por cara (Cobblemon no lo lee), ni redondear los
+> cubos (es su diseño), ni subir la resolucion (el box-UV es 1 texel por
+> unidad): **se REPINTA la textura al reparto del juego**, texel a texel, y se
+> entrega un `.bbmodel` de vista con UV por cara que enseña lo que el juego
+> dibuja. El visor muestrea con el reparto del juego, y `casco-sin-repintar.png`
+> es la prueba.
+>
+> ⚠⚠⚠ **Y LA MITAD DE ARRIBA DE SU PNG ERA ESCOMBRO** (1.632 pixeles sueltos
+> donde el shiny tiene 11.912): usado tal cual, un Charizard INVISIBLE con un
+> casco flotando. El cuerpo se pega del jar; del PNG solo vale el casco.
+>
+> ⚠⚠⚠ **CADA PIEZA VA AL HUESO QUE SE MUEVE CON ELLA**, medido en las 34
+> animaciones del jar: la mandibula abre **85,8 grados** y `jaw2` añade 7
+> propios; el hocico, los cuernos y los ojos, CERO. El `.bbmodel` lo traia
+> todo en `head_angle`; con eso la barbilla se quedaba clavada con la boca
+> abierta. Hoy son cuatro huesos nuevos --`luna_casco`, `luna_hocico`,
+> `luna_menton`, `luna_gola`-- y el cuerpo oficial NO se toca ni un cubo.
+> ⚠⚠ **El menton cuelga de `jaw2` con la ROTACION INVERSA a su estatica**
+>    (-7,5 -> +7,5): el usuario modelo la barbilla recta alrededor de la
+>    mandibula YA GIRADA que enseña Blockbench. Colgada sin mas saldria hundida
+>    en el labio; de `jaw`, se quedaria atras 7 grados. Vale porque `jaw2` gira
+>    en un eje, y se comprueba.
+>
+> ⚠⚠⚠ **LA TRAMPA DE LAS MEGAS ESTA EN EL ORDEN DEL RESOLVER.** Cobblemon
+> concatena los resolvers por `order` y gana LA ULTIMA variacion que encaje.
+> El nuestro es 60 --tiene que ganar a `charizard_knight` (50) o un disfraz
+> comprado taparia el casco-- pero mega_showdown declara las megas con 1, 2 y
+> 3: con `{luna_mecha, mega_x}` el casco volveria a mandar SOBRE la mega. Se
+> repiten las seis variaciones de las megas con `luna_mecha` delante,
+> **copiadas de su jar al generar**. Y «al volver queda con el casco» salio
+> gratis: en las 400 clases de mega_showdown la unica que toca `forcedAspects`
+> es un mixin de cliente; las megas son *species features*, y
+> `updateAspects()` suma proveedores + forzados.
+>
+> ⚠⚠ **LA COMPROBACION «NADA FLOTA» MINTIO EN SU PRIMERA VERSION**: exigia que
+>    cada cubo tocara la cabeza y puso en rojo los escapes de los cuernos, una
+>    cadena de nueve piezas soldadas que acaba a 2,0 de la cabeza a proposito.
+>    Hoy exige que cada RACIMO conectado toque la cabeza, que es lo que de
+>    verdad es un fallo.
+> ⚠ Y el primer `.bbmodel` de vista ponia la primera casilla del box-UV en
+>   `west`; es `east`, porque Blockbench enseña el geo espejado. Lo dijo su
+>   propio fichero al rehacer sus caras y compararlas: identicas.
+>
+> **+12 comprobaciones en el autotest**, y las que importan: el resolver se
+> lee DESDE EL JAR DE LUNANEON (mismo classloader) y tiene que decir la misma
+> cadena que `Recompensa.ASPECTO_MECHA` --dos ficheros de dos jars que nada
+> obliga a coincidir--, repetir las tres megas y estar por encima de 50; el
+> nivel 100 es el UNICO con aspecto; y NINGUN cosmetico usa ese aspecto,
+> porque `CosmeticsService` quita los del catalogo al poner otro.
+> ⚠⚠ **EL PACK QUEDA ATADO A mega_showdown**: Cobblemon carga al arrancar todo
+>    modelo que nombre cualquier variacion. Sin el, el resolver de Charizard
+>    entero reventaria. Hoy viaja en todos los clientes (D-037).
+> ⚠ **SIN DESPLEGAR Y SIN VERIFICAR EN EL JUEGO.** Compilan los dos jars. El
+>   orden: manifiesto PRIMERO (lunaneon) y despues el mod. Nada se registra:
+>   un cliente viejo entra y ve un shiny sin casco hasta reabrir el launcher.
+
 > **2026-09-10 — LA ESPADA DE PIKACHU, Y LAS CUATRO CORRECCIONES QUE NINGUNA
 > REVISION DE CODIGO HABRIA VISTO.**
 >
@@ -3007,6 +3089,29 @@ Blockbench    DE UN .bbmodel DEL USUARIO AL JUEGO (2026-09-01)
                 su dibujo -- que ademas conserva el arte del autor
               ⚠ y el visor tenia la cara de ARRIBA volteada. Casi no se ve --hay
                 que mirar al jugador desde el techo-- asi que se habria quedado
+
+Charizard     EL MECHA DEL NIVEL 100 DEL PASE (2026-09-10) . SIN DESPLEGAR
+mecha         detalle en docs/pokemon/charizard-mecha.md
+              python tools/gen_charizard_mecha.py --ver | --generar | --verificar
+              aspecto forzado `luna_mecha` (Recompensa.ASPECTO_MECHA) sobre un
+              `charizard level=50 shiny=true` normal: todo lo de un shiny,
+              solo lo pone la entrega del nivel 100, sobrevive a la mega
+              geo = el oficial del jar + 4 huesos (casco/hocico/menton/gola),
+              cada uno colgado del hueso que se mueve con la pieza;
+              el menton de `jaw2` con la rotacion INVERSA a su estatica
+              ⚠⚠⚠ BLOCKBENCH REDONDEA EL BOX-UV HACIA ARRIBA Y EL JUEGO NO:
+                 133/133 cubos fraccionarios -> se REPINTA la textura al
+                 reparto del juego (1.907 texels movidos). Un modelo con
+                 tamaños enteros no lo necesita; el ecosistema modela asi
+              ⚠⚠ la mitad de arriba del PNG del usuario era escombro: el
+                 cuerpo se pega del jar
+              ⚠⚠ resolver orden 60 con las SEIS megas repetidas (copiadas
+                 del jar de mega_showdown): sin ellas el casco taparia la mega
+              ⚠ el pack queda atado a mega_showdown (carga todo modelo nombrado)
+              ⚠ arte/charizard-mecha/charizard_luna_mecha.bbmodel es una VISTA
+                con UV por cara = el juego; el del usuario sigue siendo la fuente
+              8 comprobaciones + vuelta por el pack + 12 en el autotest
+              laminas en build/mecha: casco-poses.png tiene la boca a 85,8
 
 Espada        COLMILLO DE TRUENO: LA ESPADA DE PIKACHU (2026-09-10)
               detalle completo en docs/ui/espada-pikachu.md

@@ -32,6 +32,7 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`world/worlds.md`](world/worlds.md) | ✅ | Hogar permanente vs Salvaje que reinicia; lobby y modpack |
 | [`pokemon/generations.md`](pokemon/generations.md) | ✅ | Kanto + Johto primero, despliegue progresivo. ⚠️ **§3-ter: los mods también meten spawns** |
 | [`pokemon/voces-pokedex.md`](pokemon/voces-pokedex.md) | ✅ | **Las 256 voces de la Pokédex**: el pipeline y sus cinco trampas |
+| [`pokemon/charizard-mecha.md`](pokemon/charizard-mecha.md) | ✅ | **El Charizard mecha del nivel 100 del pase**: un aspecto forzado sobre un shiny de verdad, el casco repintado al box-UV del juego, y las megas repetidas en el resolver |
 | [`economy/treasures.md`](economy/treasures.md) | ⚠️ | Cofres y llaves — **con una objeción abierta sobre legendarios** |
 | [`ui/interfaces-catalog.md`](ui/interfaces-catalog.md) | ✅ | Las 22 pantallas, prioridad y patrones comunes |
 | [`technical/launcher.md`](technical/launcher.md) | ✅ | **El launcher**: se autoactualiza él y el pack, perfiles, reparar, diagnóstico |

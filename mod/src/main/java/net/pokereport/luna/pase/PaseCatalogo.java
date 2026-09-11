@@ -260,8 +260,14 @@ public final class PaseCatalogo {
         /*  97 */ o("pp_max", 2, Rareza.LEGENDARIA),
         /*  98 */ luna(100, Rareza.LEGENDARIA),
         /*  99 */ o("master_ball", 1, Rareza.LEGENDARIA),
-        // ⚠⚠ EL PREMIO MAYOR, y es orden directa del usuario.
-        /* 100 */ p("charizard", 50, true),
+        // ⚠⚠ EL PREMIO MAYOR, y es orden directa del usuario: un Charizard shiny
+        //    de nivel 50 CON EL CASCO MECHA, que solo se da aqui. No es una
+        //    especie ni una forma nueva: es un Charizard shiny con todo lo que
+        //    tiene un Charizard shiny --habilidades, megas, crianza-- mas un
+        //    aspecto forzado que el pack de cosmeticos dibuja como casco.
+        //    ⚠ Es la UNICA fila con aspecto; el autotest lo exige.
+        /* 100 */ Recompensa.pokemonUnico("charizard", 50, true,
+                                          Recompensa.ASPECTO_MECHA, Rareza.LEGENDARIA),
     };
 
     /** La recompensa de ese nivel. Nunca {@code null} entre 1 y 100. */

@@ -842,9 +842,13 @@ public class PaseScreen extends Screen {
             //   dibujen la misma especie con la misma clave comparten el estado
             //   de animacion y se pisan la orientacion. Aqui hay DOS Charizard
             //   (niveles 1 y 100), asi que la clave lleva el nivel.
+            // ⚠ Los aspectos los da la recompensa (`aspectos()`): shiny Y el casco
+            //   del nivel 100. Componerlos aqui seria un segundo sitio donde
+            //   decidir que se dibuja, y la tarjeta podria enseñar un Charizard
+            //   distinto del que se entrega.
             Mascota3D.dibujarEspecie(ctx,
                     Identifier.of("cobblemon", r.id()), "pase:" + lvl,
-                    r.shiny() ? "shiny" : "",
+                    r.aspectos(),
                     pxd(hx), py(hy), pl(hueco), pl(hueco), 0.16f, delta, true);
             return;
         }

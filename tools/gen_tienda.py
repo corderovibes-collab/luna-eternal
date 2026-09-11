@@ -346,9 +346,15 @@ def _manifiesto() -> dict:
     return json.loads(urllib.request.urlopen(puntero["manifest"], timeout=120).read())
 
 
-def jar_de(namespace: str, manifiesto: dict) -> Path:
-    """Baja (o reutiliza) el jar de ese mod. Se cachea por SU HUELLA."""
-    prefijo = FUENTES[namespace]
+def jar_de(namespace: str, manifiesto: dict, prefijo: str = None) -> Path:
+    """
+    Baja (o reutiliza) el jar de ese mod. Se cachea por SU HUELLA.
+
+    ⚠ `prefijo` explicito para quien necesite un jar que NO es de la tienda
+      (`tools/mecha/fuentes.py` lee el de mega_showdown): asi la tabla
+      `FUENTES` sigue diciendo solo de donde salen los objetos que se venden.
+    """
+    prefijo = prefijo or FUENTES[namespace]
     for f in manifiesto["files"]:
         nombre = f["path"].rsplit("/", 1)[-1]
         if f["path"].startswith("mods/") and nombre.lower().startswith(prefijo.lower()):

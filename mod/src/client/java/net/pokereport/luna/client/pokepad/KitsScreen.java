@@ -215,6 +215,8 @@ public class KitsScreen extends Screen {
         ctx.draw();
         if (pestana == 0) {
             dibujarPrevisualizador(ctx, rx, ry);
+        } else {
+            dibujarPrevisualizadoresKits(ctx);
         }
 
         if (pestana == 0) {
@@ -486,18 +488,72 @@ public class KitsScreen extends Screen {
         if (lista.isEmpty()) { dibujarVacia(ctx); return; }
         kitElegido = Math.min(kitElegido, lista.size() - 1);
         int w = (PANT_W - 2 * MARGEN - 24) / 3;
+        int cardH = 350;
         for (int i = 0; i < lista.size(); i++) {
             var f = lista.get(i); int x=PANT_X+MARGEN+i*(w+12), y=PANT_Y+54;
             boolean sel=i==kitElegido;
-            ctx.fill(px(x),py(y),px(x+w),py(y+265),sel?0xFF2B5580:0xFF287BB0);
-            marco(ctx,px(x),py(y),pl(w),pl(265),sel?ORO:0xFF65BCE8,pl(sel?4:2));
+            ctx.fill(px(x),py(y),px(x+w),py(y+cardH),sel?0xFF2B5580:0xFF287BB0);
+            marco(ctx,px(x),py(y),pl(w),pl(cardH),sel?ORO:0xFF65BCE8,pl(sel?4:2));
             texto(ctx,Text.literal(nombreKit(f.id())),x+w/2,y+24,18,0xFFFFFFFF,true,CONTORNO_OSCURO);
-            texto(ctx,Text.literal(f.propio()?"ADQUIRIDO":String.format("%,d LunaCoins",f.precio())),x+w/2,y+196,15,f.propio()?0xFF7EF0A0:ORO,true,CONTORNO_OSCURO);
-            if(!f.espera().isBlank()) texto(ctx,Text.literal(f.espera()),x+w/2,y+224,12,0xFFFFC6A0,true,0);
+            // El hueco central se pinta en la segunda pasada con la pieza real
+            // equipada temporalmente en el jugador, para que el recuadro no
+            // sea solo texto y el modelo respete sus proporciones GeckoLib.
+            ctx.fill(px(x+8),py(y+44),px(x+w-8),py(y+286),0xFF182033);
+            marco(ctx,px(x+8),py(y+44),pl(w-16),pl(242),0xFF4C82A8,pl(2));
+            texto(ctx,Text.literal(f.propio()?"ADQUIRIDO":String.format("%,d LunaCoins",f.precio())),x+w/2,y+307,15,f.propio()?0xFF7EF0A0:ORO,true,CONTORNO_OSCURO);
+            if(!f.espera().isBlank()) texto(ctx,Text.literal(f.espera()),x+w/2,y+329,12,0xFFFFC6A0,true,0);
         }
         var f=lista.get(kitElegido);
         boton(ctx,rx,ry,PANT_X+MARGEN,PANT_Y+PANT_H-68,PANT_W-2*MARGEN,52,
                 Text.literal(f.propio()?"ADQUIRIDO":"COMPRAR"),pestana==1&&f.disponible()&&!esperando(),VERDE);
+    }
+
+    /** Renderiza cada exclusivo con sus cuatro piezas reales, sin dejar equipo
+     * temporal en el jugador aunque falle el dibujado de una tarjeta. */
+    private void dibujarPrevisualizadoresKits(DrawContext ctx) {
+        if (client == null || client.player == null) return;
+        var lista = kitsVisibles();
+        int w = (PANT_W - 2 * MARGEN - 24) / 3;
+        for (int i = 0; i < lista.size(); i++) {
+            var f = lista.get(i);
+            int x = px(PANT_X + MARGEN + i * (w + 12) + 8);
+            int y = py(PANT_Y + 54 + 44);
+            int ww = pl(w - 16), hh = pl(242);
+            var jugador = client.player;
+            var slots = new net.minecraft.entity.EquipmentSlot[] {
+                    net.minecraft.entity.EquipmentSlot.HEAD,
+                    net.minecraft.entity.EquipmentSlot.CHEST,
+                    net.minecraft.entity.EquipmentSlot.LEGS,
+                    net.minecraft.entity.EquipmentSlot.FEET};
+            var anteriores = new net.minecraft.item.ItemStack[slots.length];
+            try {
+                String ns = switch (f.id()) {
+                    case "magikarp" -> "magikarparmor";
+                    case "pikachu" -> "pikachuarmor";
+                    case "eevee" -> "eeveelution";
+                    default -> "";
+                };
+                String prefijo = f.id().equals("eevee") ? "eeveelution" : f.id();
+                for (int s = 0; s < slots.length; s++) {
+                    anteriores[s] = jugador.getEquippedStack(slots[s]).copy();
+                    var item = net.minecraft.registry.Registries.ITEM.get(
+                            Identifier.of(ns, prefijo + "_" + switch (s) {
+                                case 0 -> "helmet";
+                                case 1 -> "chestplate";
+                                case 2 -> "leggings";
+                                default -> "boots";
+                            }));
+                    jugador.equipStack(slots[s], new net.minecraft.item.ItemStack(item));
+                }
+                net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
+                        ctx, x, y, x + ww, y + hh, Math.round(Math.min(ww, hh) * 0.38f),
+                        0.0f, x + ww / 2, y + hh / 2, jugador);
+            } finally {
+                for (int s = 0; s < slots.length; s++) {
+                    jugador.equipStack(slots[s], anteriores[s]);
+                }
+            }
+        }
     }
 
     private static String nombreKit(String id) {
@@ -577,7 +633,7 @@ public class KitsScreen extends Screen {
             }
         } else {
             var lista=kitsVisibles(); int cardW=(PANT_W-2*MARGEN-24)/3;
-            for(int i=0;i<lista.size();i++){int x=PANT_X+MARGEN+i*(cardW+12),y=PANT_Y+54;if(dentro(rx,ry,px(x),py(y),pl(cardW),pl(265))){kitElegido=i;sonar();return true;}}
+            for(int i=0;i<lista.size();i++){int x=PANT_X+MARGEN+i*(cardW+12),y=PANT_Y+54;if(dentro(rx,ry,px(x),py(y),pl(cardW),pl(350))){kitElegido=i;sonar();return true;}}
             if(pestana==1&&kitElegido<lista.size()) { var f=lista.get(kitElegido);
                 if(f.disponible()&&!esperando()&&dentro(rx,ry,px(PANT_X+MARGEN),py(PANT_Y+PANT_H-68),pl(PANT_W-2*MARGEN),pl(52))){pulsado=System.currentTimeMillis();sonar();ClientPlayNetworking.send(new Red.ReclamarKit(f.id()));return true;}
             }

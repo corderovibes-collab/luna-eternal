@@ -16,30 +16,39 @@
       },
       "bones": [
         {
-          "name": "bipedHead",
+          "name": "root",
           "pivot": [
             0,
-            24.25,
+            0,
             0
           ]
-        },
-        {
-          "name": "pikachu",
-          "pivot": [
-            0,
-            23.25,
-            -6
-          ],
-          "parent": "bipedHead"
         },
         {
           "name": "head",
           "pivot": [
             0,
+            24.25,
+            0
+          ],
+          "parent": "root"
+        },
+        {
+          "name": "armorHead",
+          "pivot": [
+            0,
+            23.25,
+            -6
+          ],
+          "parent": "head"
+        },
+        {
+          "name": "pikachu_head",
+          "pivot": [
+            0,
             26.75,
             1
           ],
-          "parent": "pikachu",
+          "parent": "armorHead",
           "cubes": [
             {
               "origin": [
@@ -129,7 +138,7 @@
             31.75,
             1.5
           ],
-          "parent": "head"
+          "parent": "pikachu_head"
         },
         {
           "name": "ear_right",
@@ -498,7 +507,7 @@
             29,
             3
           ],
-          "parent": "head",
+          "parent": "pikachu_head",
           "rotation": [
             42.5,
             0,

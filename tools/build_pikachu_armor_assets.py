@@ -112,6 +112,60 @@ def convert(part: str, filename: str) -> None:
         if isinstance(node, dict):
             walk(node)
 
+    # Los .bbmodel de Pikachu nacieron de una plantilla de entidad. GeckoLib
+    # no los puede tratar como armadura si conserva esos anclajes: el renderer
+    # solo hace visibles y sigue los huesos `armor*` que define su contrato.
+    # Normalizamos nombres y padres sin tocar origen, tamaño, UV ni pivotes.
+    # Así la corrección no rediseña la skin: solo la vuelve una armadura
+    # GeckoLib válida y simétrica.
+    def nombre_normalizado(name: str) -> str:
+        if part == "helmet":
+            if name == "bipedHead":
+                return "head"
+            if name == "pikachu":
+                return "armorHead"
+            if name == "head":
+                return "pikachu_head"
+        elif part == "chestplate":
+            return {
+                "bipedBody": "body",
+                "bipedRightArm": "rightArm",
+                "bipedLeftArm": "leftArm",
+            }.get(name, name)
+        elif part == "leggings":
+            return {
+                "bipedLeftLeg2": "leftLeg",
+                "bipedRightLeg2": "rightLeg",
+                "armorLeftLeg2": "armorLeftLeg",
+                "armorRightLeg2": "armorRightLeg",
+                "armorLeftBoot2": "armorLeftBoot",
+                "armorRightBoot2": "armorRightBoot",
+            }.get(name, name)
+        elif part == "boots":
+            return {"bipedLeftLeg": "leftLeg", "bipedRightLeg": "rightLeg"}.get(name, name)
+        return name
+
+    for bone in bones:
+        old_name = bone["name"]
+        bone["name"] = nombre_normalizado(old_name)
+        if "parent" in bone:
+            bone["parent"] = nombre_normalizado(bone["parent"])
+
+    # La cola es parte del peto. Si queda colgando del ancla `body`, el
+    # filtrado por ranura del GeoArmorRenderer la oculta junto con el ancla.
+    if part == "chestplate":
+        for bone in bones:
+            if bone["name"] == "tail":
+                bone["parent"] = "armorBody"
+
+    # Cada fichero es independiente; añade el root que la plantilla de
+    # armadura espera y cuelga de él los anclajes superiores.
+    if not any(b["name"] == "root" for b in bones):
+        for bone in bones:
+            if "parent" not in bone:
+                bone["parent"] = "root"
+        bones.insert(0, {"name": "root", "pivot": [0, 0, 0]})
+
     description = {
         "identifier": f"geometry.pikachu_{part}",
         "texture_width": width,
@@ -161,8 +215,10 @@ def main() -> None:
         f"item.pikachuarmor.pikachu_{p}": n for p, n in names.items()
     }, indent=2, ensure_ascii=False), encoding="utf-8")
     for part in PARTS:
+        # `builtin/entity` deja que la implementación GeoItem de la pieza
+        # dibuje su modelo GeckoLib en inventario, mano y previsualizadores.
         (models / f"pikachu_{part}.json").write_text(
-            '{"parent":"minecraft:item/generated"}', encoding="utf-8")
+            '{"parent":"builtin/entity"}', encoding="utf-8")
     print("Pikachu: 4 piezas GeckoLib y 4 flipbooks generados")
 
 

@@ -21,7 +21,8 @@
     ]
   },
   "mixins": [
-    "lunaeternal.mixins.json"
+    "lunaeternal.mixins.json",
+    "lunaeternal.client.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.16.0",

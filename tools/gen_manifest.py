@@ -356,6 +356,11 @@ PROPIOS = [
     {"carpeta": "mod", "prefijo": "lunaeternal"},
     {"carpeta": "cards", "prefijo": "cobblemon-cards"},
     {"carpeta": "bca", "prefijo": "cobblemon-additions"},
+    # Las armaduras GeckoLib registran items en el servidor y sus renderers,
+    # geo, texturas y flipbooks deben llegar juntos al cliente.
+    {"carpeta": "addons/magikarp-armor", "prefijo": "magikarp-animated-armor"},
+    {"carpeta": "addons/pikachu-armor", "prefijo": "pikachu-animated-armor"},
+    {"carpeta": "addons/eeveelution-armor", "prefijo": "eeveelution-armor"},
 ]
 
 

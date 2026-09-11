@@ -1,5 +1,7 @@
 {
   "animation": {
+    "width": 272,
+    "height": 128,
     "frametime": 2,
     "interpolate": false,
     "frames": [

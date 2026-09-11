@@ -186,7 +186,11 @@ def convert(part: str, filename: str) -> None:
     (geo_dir / f"pikachu_{part}.geo.json").write_text(
         json.dumps(geo, indent=2), encoding="utf-8")
     strip.save(tex_dir / f"pikachu_{part}.png")
-    meta = {"animation": {"frametime": 2, "interpolate": False,
+    # El atlas no siempre es cuadrado (el peto, por ejemplo, mide 272x1024).
+    # Minecraft toma el ancho como tamaño de cuadro si no se declara esto y
+    # entonces descarta fotogramas o muestra avisos de índices inválidos.
+    meta = {"animation": {"width": width, "height": height,
+            "frametime": 2, "interpolate": False,
             "frames": [{"index": 0, "time": 5}, 1, 2, 3, 4, 5, 6, 7,
                        6, 5, 4, 3, 2, 1]}}
     (tex_dir / f"pikachu_{part}.png.mcmeta").write_text(

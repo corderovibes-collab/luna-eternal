@@ -724,7 +724,7 @@
           ]
         },
         {
-          "name": "rightArm",
+          "name": "leftArm",
           "pivot": [
             5,
             22,
@@ -733,13 +733,13 @@
           "parent": "root"
         },
         {
-          "name": "armorRightArm",
+          "name": "armorLeftArm",
           "pivot": [
             5,
             22,
             0
           ],
-          "parent": "rightArm",
+          "parent": "leftArm",
           "cubes": [
             {
               "origin": [
@@ -894,7 +894,7 @@
           ]
         },
         {
-          "name": "leftArm",
+          "name": "rightArm",
           "pivot": [
             -5,
             22,
@@ -903,13 +903,13 @@
           "parent": "root"
         },
         {
-          "name": "armorLeftArm",
+          "name": "armorRightArm",
           "pivot": [
             -5,
             22,
             0
           ],
-          "parent": "leftArm",
+          "parent": "rightArm",
           "cubes": [
             {
               "origin": [

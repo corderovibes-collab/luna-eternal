@@ -1138,7 +1138,7 @@
           ]
         },
         {
-          "name": "rightArm",
+          "name": "leftArm",
           "pivot": [
             5,
             22,
@@ -1147,13 +1147,13 @@
           "parent": "root"
         },
         {
-          "name": "armorRightArm",
+          "name": "armorLeftArm",
           "pivot": [
             5,
             22,
             0
           ],
-          "parent": "rightArm",
+          "parent": "leftArm",
           "cubes": [
             {
               "origin": [
@@ -1314,7 +1314,7 @@
             18,
             -3.25
           ],
-          "parent": "armorRightArm",
+          "parent": "armorLeftArm",
           "cubes": [
             {
               "origin": [
@@ -1577,7 +1577,7 @@
             18,
             2.5
           ],
-          "parent": "armorRightArm",
+          "parent": "armorLeftArm",
           "cubes": [
             {
               "origin": [
@@ -1840,7 +1840,7 @@
             18,
             1.5
           ],
-          "parent": "armorRightArm",
+          "parent": "armorLeftArm",
           "rotation": [
             0,
             -90,
@@ -2108,7 +2108,7 @@
             18,
             1.5
           ],
-          "parent": "armorRightArm",
+          "parent": "armorLeftArm",
           "rotation": [
             0,
             -90,
@@ -2376,7 +2376,7 @@
             21.1816,
             -3
           ],
-          "parent": "armorRightArm"
+          "parent": "armorLeftArm"
         },
         {
           "name": "RightShoulder_Crest_Lower_Front",
@@ -2921,7 +2921,7 @@
             21.1816,
             3
           ],
-          "parent": "armorRightArm",
+          "parent": "armorLeftArm",
           "rotation": [
             0,
             165,
@@ -3465,7 +3465,7 @@
           ]
         },
         {
-          "name": "leftArm",
+          "name": "rightArm",
           "pivot": [
             -5,
             22,
@@ -3474,13 +3474,13 @@
           "parent": "root"
         },
         {
-          "name": "armorLeftArm",
+          "name": "armorRightArm",
           "pivot": [
             -5,
             22,
             0
           ],
-          "parent": "leftArm",
+          "parent": "rightArm",
           "cubes": [
             {
               "origin": [

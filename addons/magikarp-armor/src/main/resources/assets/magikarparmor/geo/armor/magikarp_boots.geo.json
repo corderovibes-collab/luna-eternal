@@ -24,7 +24,7 @@
           ]
         },
         {
-          "name": "leftLeg",
+          "name": "rightLeg",
           "pivot": [
             -2,
             12.5,
@@ -33,22 +33,22 @@
           "parent": "root"
         },
         {
-          "name": "armorLeftLeg",
+          "name": "armorRightLeg",
           "pivot": [
             -2,
             12.5,
             0
           ],
-          "parent": "leftLeg"
+          "parent": "rightLeg"
         },
         {
-          "name": "armorLeftBoot",
+          "name": "armorRightBoot",
           "pivot": [
             -2,
             12.5,
             0
           ],
-          "parent": "leftLeg",
+          "parent": "rightLeg",
           "cubes": [
             {
               "origin": [
@@ -429,7 +429,7 @@
             -3.75,
             2.5
           ],
-          "parent": "armorLeftBoot",
+          "parent": "armorRightBoot",
           "cubes": [
             {
               "origin": [
@@ -518,7 +518,7 @@
           ]
         },
         {
-          "name": "rightLeg",
+          "name": "leftLeg",
           "pivot": [
             2,
             12.5,
@@ -527,22 +527,22 @@
           "parent": "root"
         },
         {
-          "name": "armorRightLeg",
+          "name": "armorLeftLeg",
           "pivot": [
             2,
             12.5,
             0
           ],
-          "parent": "rightLeg"
+          "parent": "leftLeg"
         },
         {
-          "name": "armorRightBoot",
+          "name": "armorLeftBoot",
           "pivot": [
             2,
             12.5,
             0
           ],
-          "parent": "rightLeg",
+          "parent": "leftLeg",
           "cubes": [
             {
               "origin": [
@@ -923,7 +923,7 @@
             -3.75,
             2.5
           ],
-          "parent": "armorRightBoot",
+          "parent": "armorLeftBoot",
           "cubes": [
             {
               "origin": [

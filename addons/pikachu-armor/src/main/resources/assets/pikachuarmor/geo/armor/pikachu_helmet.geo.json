@@ -27,7 +27,7 @@
           "name": "head",
           "pivot": [
             0,
-            24.25,
+            24,
             0
           ],
           "parent": "root"
@@ -36,8 +36,8 @@
           "name": "armorHead",
           "pivot": [
             0,
-            23.25,
-            -6
+            24,
+            0
           ],
           "parent": "head"
         },

@@ -23,6 +23,7 @@ PARTS = {
     "boots": "pikachu_thunder_boots.bbmodel",
 }
 FRAMES = 8
+PULSE = (0.0, 0.06, 0.12, 0.18, 0.12, 0.06, 0.0, -0.04)
 
 
 def image(texture: dict) -> Image.Image:
@@ -46,11 +47,37 @@ def atlas(textures: list[dict]) -> tuple[Image.Image, dict[int, int], int, int]:
         for index, (src, width, height) in enumerate(zip(sources, widths, heights)):
             canvas.paste(src.crop((0, frame * height, width, (frame + 1) * height)),
                          (offsets[index], 0))
-        frames.append(canvas)
+        # Las tiras originales del BBModel contienen ocho copias del mismo
+        # fotograma.  Mantenerlas tal cual hace que el `.mcmeta` sea valido,
+        # pero visualmente no hay flipbook.  Pulsamos solo amarillos/cianes de
+        # la paleta original para crear un brillo eléctrico pequeño y limpio;
+        # el primer fotograma sigue siendo idéntico al arte fuente.
+        frames.append(pulse_frame(canvas, PULSE[frame]))
     strip = Image.new("RGBA", (total_w, frame_h * FRAMES), (0, 0, 0, 0))
     for index, frame in enumerate(frames):
         strip.paste(frame, (0, index * frame_h))
     return strip, offsets, total_w, frame_h
+
+
+def pulse_frame(image: Image.Image, amount: float) -> Image.Image:
+    if amount == 0:
+        return image
+    out = image.copy()
+    pixels = out.load()
+    factor = 1.0 + amount
+    for y in range(out.height):
+        for x in range(out.width):
+            r, g, b, a = pixels[x, y]
+            yellow = a and r > 160 and g > 90 and b < 150 and r > b * 1.4
+            cyan = a and r < 150 and g > 100 and b > 120
+            if yellow or cyan:
+                pixels[x, y] = (
+                    min(255, max(0, round(r * factor))),
+                    min(255, max(0, round(g * factor))),
+                    min(255, max(0, round(b * factor))),
+                    a,
+                )
+    return out
 
 
 def convert(part: str, filename: str) -> None:
@@ -151,6 +178,16 @@ def convert(part: str, filename: str) -> None:
         if "parent" in bone:
             bone["parent"] = nombre_normalizado(bone["parent"])
 
+    # El grupo original `pikachu` estaba seis unidades detrás del jugador
+    # porque era una plantilla de entidad completa.  Como `armorHead` es el
+    # ancla que sigue la cabeza de BipedEntityModel, debe compartir su pivote
+    # estándar; así la cara y los ojos quedan delante de la cabeza del jugador
+    # y las orejas permanecen centradas.
+    if part == "helmet":
+        for bone in bones:
+            if bone["name"] in {"head", "armorHead"}:
+                bone["pivot"] = [0, 24, 0]
+
     # La cola es parte del peto. Si queda colgando del ancla `body`, el
     # filtrado por ranura del GeoArmorRenderer la oculta junto con el ancla.
     if part == "chestplate":
@@ -218,11 +255,51 @@ def main() -> None:
     (lang / "es_es.json").write_text(json.dumps({
         f"item.pikachuarmor.pikachu_{p}": n for p, n in names.items()
     }, indent=2, ensure_ascii=False), encoding="utf-8")
+    item_display = {
+        "gui": {
+            "rotation": [20, 145, 0],
+            "translation": [0, -8, 0],
+            "scale": [0.45, 0.45, 0.45],
+        },
+        "ground": {
+            "rotation": [0, 0, 0],
+            "translation": [0, 2, 0],
+            "scale": [0.38, 0.38, 0.38],
+        },
+        "fixed": {
+            "rotation": [0, 180, 0],
+            "translation": [0, -4, 0],
+            "scale": [0.42, 0.42, 0.42],
+        },
+        "thirdperson_righthand": {
+            "rotation": [0, 90, 0],
+            "translation": [0, 1.5, 0],
+            "scale": [0.38, 0.38, 0.38],
+        },
+        "thirdperson_lefthand": {
+            "rotation": [0, 90, 0],
+            "translation": [0, 1.5, 0],
+            "scale": [0.38, 0.38, 0.38],
+        },
+        "firstperson_righthand": {
+            "rotation": [0, 135, 0],
+            "translation": [0, 1, 0],
+            "scale": [0.36, 0.36, 0.36],
+        },
+        "firstperson_lefthand": {
+            "rotation": [0, 135, 0],
+            "translation": [0, 1, 0],
+            "scale": [0.36, 0.36, 0.36],
+        },
+    }
     for part in PARTS:
         # `builtin/entity` deja que la implementación GeoItem de la pieza
-        # dibuje su modelo GeckoLib en inventario, mano y previsualizadores.
+        # dibuje su modelo GeckoLib.  Las transformaciones explícitas centran
+        # estas piezas de armadura, cuyo origen está en coordenadas de jugador,
+        # dentro del recuadro del inventario.
+        model_json = {"parent": "builtin/entity", "textures": {"particle": "minecraft:item/gold_ingot"}, "display": item_display}
         (models / f"pikachu_{part}.json").write_text(
-            '{"parent":"builtin/entity"}', encoding="utf-8")
+            json.dumps(model_json, indent=2), encoding="utf-8")
     print("Pikachu: 4 piezas GeckoLib y 4 flipbooks generados")
 
 

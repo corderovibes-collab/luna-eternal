@@ -218,8 +218,13 @@ final dentro del juego.
    usa `.png.mcmeta`; la segunda usa `.animation.json` y controladores Java.
 6. Revisar cada lado por separado. Simetría de anclajes no implica copiar
    piezas artísticas ni borrar asimetrías intencionales.
-7. No usar MCreator para reconvertir estas armaduras; ya están implementadas
-   como addons Fabric/GeckoLib independientes.
+7. MCreator sí puede utilizarse como interfaz de autoría para importar y
+   organizar armaduras, herramientas, modelos y animaciones. Como el servidor
+   actual es Fabric 1.21.1, no se debe sustituir directamente el addon Fabric
+   por un JAR NeoForge generado por MCreator. La ruta segura es usar un
+   workspace MCreator de autoría y trasladar sus recursos al addon Fabric, o
+   verificar primero una combinación exacta de MCreator, generador Fabric y
+   plugin GeckoLib que soporte armadura animada en 1.21.1.
 8. No regenerar todos los recursos si cambia una sola pieza. Reconstruir y
    publicar únicamente los JAR afectados.
 9. Los avisos `No data fixer registered` y el mensaje existente
@@ -228,6 +233,45 @@ final dentro del juego.
    ítem real, sin atribuirlo automáticamente a estas armaduras.
 10. Consultar la guía oficial de ítems GeckoLib antes de cambiar el sistema de
     render: https://github.com/bernie-g/geckolib/wiki/Geckolib-Items-%28Geckolib4%29
+
+## RUTA MCREATOR RECOMENDADA
+
+En el PC Windows del usuario ya está instalado MCreator `2026.2.33518` en
+`C:\Program Files\Pylo\MCreator\mcreator.exe`. También existe el workspace
+`C:\Users\JUAN\MCreatorWorkspaces\armaduraspokereport`, configurado con el
+generador `fabric-1.21.1` y todavía sin elementos.
+
+En `C:\Users\JUAN\.mcreator\plugins` están instalados los generadores Fabric
+para 1.21.8, 26.1.2 y un `Plugin.Fabric.1.21.1.zip`. La inspección del último
+confirma que solo aporta definiciones de bloque, ítem y pestaña; no contiene
+definiciones de armadura, GUI ni código. Por ello sirve para herramientas e
+ítems básicos, pero no expone por sí solo armadura GeckoLib avanzada en la UI.
+
+MCreator 2024.4 soporta oficialmente NeoForge 1.21.1. La versión final del
+plugin Nerdy's GeckoLib para esa edición añade elementos de armadura e ítems
+animados. Esta combinación es útil para diseñar y configurar los elementos en
+una interfaz gráfica, pero su JAR de salida es NeoForge y no puede colocarse
+directamente en este servidor Fabric.
+
+Para mantener Fabric 1.21.1:
+
+1. Crear una copia de autoría en MCreator 2024.4.
+2. Instalar el plugin GeckoLib compatible con MCreator 2024.4.
+3. Importar desde Blockbench el modelo GeckoLib de armadura, su textura y su
+   archivo de animación.
+4. Crear cuatro elementos de armadura y cada herramienta desde la interfaz.
+5. Usar el workspace para editar propiedades, nombres, iconos y animaciones.
+6. Llevar los `.geo.json`, `.animation.json`, PNG, `.png.mcmeta` y modelos de
+   ítem resultantes a los addons Fabric actuales.
+7. Conservar las clases Java Fabric existentes para registro y render, o portar
+   de forma explícita el código generado; nunca copiar clases NeoForge sin
+   adaptación.
+
+Existe un generador Fabric comunitario para MCreator, pero la versión de
+Minecraft, la versión de MCreator y las funciones de armadura animada deben
+coincidir exactamente. No usar el antiguo generador experimental 1.21.1 para
+2024.2: su publicación declaraba soporte básico de ítems y recetas, insuficiente
+para estas armaduras avanzadas.
 
 ## CONDICIÓN DE ACEPTACIÓN PENDIENTE
 

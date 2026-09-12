@@ -28,11 +28,16 @@ public abstract class HumanoidModelArmorCoverageMixin<T extends LivingEntity> {
         }
 
         BipedEntityModel<?> model = (BipedEntityModel<?>) (Object) this;
+        boolean customHelmet = isOurArmor(entity.getEquippedStack(EquipmentSlot.HEAD));
         boolean customChest = isOurArmor(entity.getEquippedStack(EquipmentSlot.CHEST));
         boolean customLeggings = isOurArmor(entity.getEquippedStack(EquipmentSlot.LEGS));
         boolean customBoots = isOurArmor(entity.getEquippedStack(EquipmentSlot.FEET));
         boolean customLowerBody = customLeggings && customBoots;
 
+        // Los cascos GeckoLib dibujan la cabeza completa. Dejar la cabeza o
+        // el gorro vanilla visibles produce la cara/skin atravesando el casco.
+        model.head.visible = !customHelmet;
+        model.hat.visible = !customHelmet;
         model.body.visible = !customChest;
         model.leftLeg.visible = !customLowerBody;
         model.rightLeg.visible = !customLowerBody;

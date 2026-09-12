@@ -1,26 +1,26 @@
-﻿{
+{
     "parent":  "builtin/entity",
     "textures":  {
                      "particle":  "minecraft:item/gold_ingot"
                  },
     "display":  {
-                    "gui":  {
-                                "translation":  [
-                                                    0,
-                                                    -27.5,
-                                                    0
-                                                ],
-                                "rotation":  [
-                                                 0,
-                                                 -180,
-                                                 0
-                                             ],
-                                "scale":  [
-                                              0.6,
-                                              0.6,
-                                              0.6
-                                          ]
-                            },
+        "gui": {
+            "translation": [
+                0,
+                -33.0,
+                0
+            ],
+            "rotation": [
+                15,
+                -160,
+                0
+            ],
+            "scale": [
+                0.50,
+                0.50,
+                0.50
+            ]
+        },
                     "ground":  {
                                    "translation":  [
                                                        0,

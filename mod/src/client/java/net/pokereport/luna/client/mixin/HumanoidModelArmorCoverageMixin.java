@@ -35,9 +35,10 @@ public abstract class HumanoidModelArmorCoverageMixin<T extends LivingEntity> {
         boolean customLowerBody = customLeggings && customBoots;
 
         // El cuerpo se oculta si lleva peto; las piernas si lleva pantalones y botas.
-        // La cabeza y gorro vanilla permanecen visibles para que la cara/skin del jugador
-        // se vea dentro de cascos abiertos como Magikarp, Pikachu o Eeveelution,
-        // igual que en Diosesmon (ArmorBodyCoverage.java).
+        // La cabeza vanilla (model.head) permanece visible para mostrar la cara y piel
+        // del jugador dentro de los cascos, pero el gorro/capa exterior (model.hat) se
+        // oculta bajo cascos custom para evitar Z-fighting (titileo) con la geometría 3D.
+        model.hat.visible = !customHelmet;
         model.body.visible = !customChest;
         model.leftLeg.visible = !customLowerBody;
         model.rightLeg.visible = !customLowerBody;

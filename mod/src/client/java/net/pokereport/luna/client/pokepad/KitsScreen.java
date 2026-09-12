@@ -514,7 +514,7 @@ public class KitsScreen extends Screen {
         if (lista.isEmpty()) { dibujarVacia(ctx); return; }
         kitElegido = Math.min(kitElegido, lista.size() - 1);
         int w = (PANT_W - 2 * MARGEN - 24) / 3;
-        int cardH = 350;
+        int cardH = 368;
         for (int i = 0; i < lista.size(); i++) {
             var f = lista.get(i); int x=PANT_X+MARGEN+i*(w+12), y=PANT_Y+54;
             boolean sel=i==kitElegido;
@@ -524,11 +524,11 @@ public class KitsScreen extends Screen {
             // El hueco central se pinta en la segunda pasada con la pieza real
             // equipada temporalmente en el jugador, para que el recuadro no
             // sea solo texto y el modelo respete sus proporciones GeckoLib.
-            ctx.fill(px(x+8),py(y+44),px(x+w-8),py(y+286),0xFF182033);
-            marco(ctx,px(x+8),py(y+44),pl(w-16),pl(242),0xFF4C82A8,pl(2));
-            texto(ctx,Text.literal("▶ CLIC PARA DETALLES ◀"),x+w/2,y+268,11,0xFF65BCE8,true,CONTORNO_OSCURO);
-            texto(ctx,Text.literal(f.propio()?"ADQUIRIDO":String.format("%,d LunaCoins",f.precio())),x+w/2,y+307,15,f.propio()?0xFF7EF0A0:ORO,true,CONTORNO_OSCURO);
-            if(!f.espera().isBlank()) texto(ctx,Text.literal(f.espera()),x+w/2,y+329,12,0xFFFFC6A0,true,0);
+            ctx.fill(px(x+8),py(y+40),px(x+w-8),py(y+306),0xFF182033);
+            marco(ctx,px(x+8),py(y+40),pl(w-16),pl(266),0xFF4C82A8,pl(2));
+            texto(ctx,Text.literal("▶ CLIC PARA DETALLES ◀"),x+w/2,y+288,11,0xFF65BCE8,true,CONTORNO_OSCURO);
+            texto(ctx,Text.literal(f.propio()?"ADQUIRIDO":String.format("%,d LunaCoins",f.precio())),x+w/2,y+324,15,f.propio()?0xFF7EF0A0:ORO,true,CONTORNO_OSCURO);
+            if(!f.espera().isBlank()) texto(ctx,Text.literal(f.espera()),x+w/2,y+346,12,0xFFFFC6A0,true,0);
         }
         var f=lista.get(kitElegido);
         boton(ctx,rx,ry,PANT_X+MARGEN,PANT_Y+PANT_H-68,PANT_W-2*MARGEN,52,
@@ -544,8 +544,8 @@ public class KitsScreen extends Screen {
         for (int i = 0; i < lista.size(); i++) {
             var f = lista.get(i);
             int x = px(PANT_X + MARGEN + i * (w + 12) + 8);
-            int y = py(PANT_Y + 54 + 44);
-            int ww = pl(w - 16), hh = pl(242);
+            int y = py(PANT_Y + 54 + 40);
+            int ww = pl(w - 16), hh = pl(266);
             var jugador = client.player;
             var slots = new EquipmentSlot[] {
                     EquipmentSlot.HEAD,
@@ -587,9 +587,29 @@ public class KitsScreen extends Screen {
                     var swordItem = Registries.ITEM.get(Identifier.of("armaduraspokereport", swordName));
                     jugador.equipStack(EquipmentSlot.MAINHAND, new ItemStack(swordItem));
                 }
+
+                Quaternionf rot = new Quaternionf()
+                        .rotateZ((float) Math.PI)
+                        .rotateX((float) Math.toRadians(4.0))
+                        .rotateY((float) Math.PI + (float) Math.toRadians(18.0));
+
+                int cx = x + ww / 2;
+                int cy = y + (int) (hh * 0.53f);
+                int size = Math.round(Math.min(ww, hh) * 0.42f);
+
+                ctx.enableScissor(x, y, x + ww, y + hh - pl(24));
+                net.minecraft.client.render.DiffuseLighting.enableGuiDepthLighting();
                 net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
-                        ctx, x, y, x + ww, y + hh, Math.round(Math.min(ww, hh) * 0.38f),
-                        0.0f, x + ww / 2, y + hh / 2, jugador);
+                        ctx,
+                        (float) cx,
+                        (float) cy,
+                        (float) size,
+                        new Vector3f(0f, jugador.getHeight() / 2f + 0.05f, 0f),
+                        rot,
+                        null,
+                        jugador);
+                net.minecraft.client.render.DiffuseLighting.enableGuiDepthLighting();
+                ctx.disableScissor();
             } finally {
                 for (int s = 0; s < slots.length; s++) {
                     if (anteriores[s] != null) {
@@ -858,6 +878,7 @@ public class KitsScreen extends Screen {
             int size = Math.round(Math.min(vw, vh) * 0.44f);
 
             ctx.enableScissor(vx, vy, vx + vw, vy + vh - pl(38));
+            net.minecraft.client.render.DiffuseLighting.enableGuiDepthLighting();
             net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
                     ctx,
                     (float) cx,
@@ -867,6 +888,7 @@ public class KitsScreen extends Screen {
                     rot,
                     null,
                     jugador);
+            net.minecraft.client.render.DiffuseLighting.enableGuiDepthLighting();
             ctx.disableScissor();
         } finally {
             for (int s = 0; s < slots.length; s++) {

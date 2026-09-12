@@ -20,6 +20,8 @@ import net.pokereport.luna.client.EstadoCliente;
 import net.pokereport.luna.client.Trajes;
 import net.pokereport.luna.kit.KitCatalog;
 import net.pokereport.luna.net.Red;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * KITS: los trajes de rango, los exclusivos y los tuyos.
@@ -101,6 +103,8 @@ public class KitsScreen extends Screen {
     private int kitElegido;
     private String kitDetalleId;
     private boolean rotando360;
+    private float rotacionYaw;
+    private float rotacionPitch;
     private ItemStack stackHover;
     private KitCatalog catalogoKits;
     private String idKitCache;
@@ -531,7 +535,7 @@ public class KitsScreen extends Screen {
                 Text.literal(f.propio()?"ADQUIRIDO":"COMPRAR"),pestana==1&&f.disponible()&&!esperando(),VERDE);
     }
 
-    /** Renderiza cada exclusivo con sus cuatro piezas reales, sin dejar equipo
+    /** Renderiza cada exclusivo con sus cuatro piezas reales y su arma, sin dejar equipo
      * temporal en el jugador aunque falle el dibujado de una tarjeta. */
     private void dibujarPrevisualizadoresKits(DrawContext ctx) {
         if (client == null || client.player == null) return;
@@ -547,7 +551,8 @@ public class KitsScreen extends Screen {
                     EquipmentSlot.HEAD,
                     EquipmentSlot.CHEST,
                     EquipmentSlot.LEGS,
-                    EquipmentSlot.FEET};
+                    EquipmentSlot.FEET,
+                    EquipmentSlot.MAINHAND};
             var anteriores = new ItemStack[slots.length];
             try {
                 String ns = switch (f.id()) {
@@ -560,7 +565,7 @@ public class KitsScreen extends Screen {
                     continue;
                 }
                 String prefijo = f.id().equals("eevee") ? "eeveelution" : f.id();
-                for (int s = 0; s < slots.length; s++) {
+                for (int s = 0; s < 4; s++) {
                     anteriores[s] = jugador.getEquippedStack(slots[s]).copy();
                     var item = Registries.ITEM.get(
                             Identifier.of(ns, prefijo + "_" + switch (s) {
@@ -571,12 +576,25 @@ public class KitsScreen extends Screen {
                             }));
                     jugador.equipStack(slots[s], new ItemStack(item));
                 }
+                anteriores[4] = jugador.getEquippedStack(EquipmentSlot.MAINHAND).copy();
+                String swordName = switch (f.id()) {
+                    case "magikarp" -> "magikarp_tidal_sword";
+                    case "pikachu" -> "pikachu_volttail_sword";
+                    case "eevee" -> "eevee_flareon_vaporeon_sword";
+                    default -> null;
+                };
+                if (swordName != null) {
+                    var swordItem = Registries.ITEM.get(Identifier.of("armaduraspokereport", swordName));
+                    jugador.equipStack(EquipmentSlot.MAINHAND, new ItemStack(swordItem));
+                }
                 net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
                         ctx, x, y, x + ww, y + hh, Math.round(Math.min(ww, hh) * 0.38f),
                         0.0f, x + ww / 2, y + hh / 2, jugador);
             } finally {
                 for (int s = 0; s < slots.length; s++) {
-                    jugador.equipStack(slots[s], anteriores[s]);
+                    if (anteriores[s] != null) {
+                        jugador.equipStack(slots[s], anteriores[s]);
+                    }
                 }
             }
         }
@@ -618,6 +636,34 @@ public class KitsScreen extends Screen {
             if (kit != null) {
                 for (var it : kit.items()) {
                     lista.add(crearPila(it));
+                }
+            }
+        }
+        // Salvaguarda: garantizar que las 4 piezas de armadura estén al inicio de la lista
+        String ns = switch (id) {
+            case "magikarp" -> "magikarparmor";
+            case "pikachu" -> "pikachuarmor";
+            case "eevee" -> "eeveelution";
+            default -> null;
+        };
+        if (ns != null) {
+            String prefijo = id.equals("eevee") ? "eeveelution" : id;
+            String[] tipos = {"helmet", "chestplate", "leggings", "boots"};
+            for (int p = 0; p < tipos.length; p++) {
+                Identifier itemId = Identifier.of(ns, prefijo + "_" + tipos[p]);
+                boolean yaEsta = lista.stream().anyMatch(st -> Registries.ITEM.getId(st.getItem()).equals(itemId));
+                if (!yaEsta) {
+                    var item = Registries.ITEM.get(itemId);
+                    if (item != null && item != net.minecraft.item.Items.AIR) {
+                        var stack = new ItemStack(item);
+                        if (client != null && client.world != null) {
+                            var wrapper = client.world.getRegistryManager().getWrapperOrThrow(RegistryKeys.ENCHANTMENT);
+                            wrapper.getOptional(RegistryKey.of(RegistryKeys.ENCHANTMENT, Identifier.ofVanilla("protection"))).ifPresent(e -> stack.addEnchantment(e, 5));
+                            wrapper.getOptional(RegistryKey.of(RegistryKeys.ENCHANTMENT, Identifier.ofVanilla("unbreaking"))).ifPresent(e -> stack.addEnchantment(e, 6));
+                            wrapper.getOptional(RegistryKey.of(RegistryKeys.ENCHANTMENT, Identifier.ofVanilla("mending"))).ifPresent(e -> stack.addEnchantment(e, 1));
+                        }
+                        lista.add(p, stack);
+                    }
                 }
             }
         }
@@ -697,8 +743,8 @@ public class KitsScreen extends Screen {
 
         // Cuadrícula de items
         var items = itemsDelKit(f.id());
-        int cols = 6;
-        int slotW = 46, slotH = 46, gap = 8;
+        int cols = 7;
+        int slotW = 54, slotH = 54, gap = 8;
         int gridTotalW = cols * slotW + (cols - 1) * gap;
         int gx0 = cx + (cw - gridTotalW) / 2;
         int gy0 = cy + 40;
@@ -708,16 +754,30 @@ public class KitsScreen extends Screen {
             int row = i / cols;
             int sx = gx0 + col * (slotW + gap);
             int sy = gy0 + row * (slotH + gap);
-            boolean enc = dentro(rx, ry, px(sx), py(sy), pl(slotW), pl(slotH));
+
+            int boxX = px(sx);
+            int boxY = py(sy);
+            int boxW = pl(slotW);
+            int boxH = pl(slotH);
+
+            boolean enc = dentro(rx, ry, boxX, boxY, boxW, boxH);
             ItemStack stack = items.get(i);
 
-            ctx.fill(px(sx), py(sy), px(sx + slotW), py(sy + slotH), enc ? 0xFF283650 : 0xFF192030);
-            marco(ctx, px(sx), py(sy), pl(slotW), pl(slotH), enc ? ORO : 0xFF364463, pl(enc ? 2 : 1));
+            ctx.fill(boxX, boxY, boxX + boxW, boxY + boxH, enc ? 0xFF283650 : 0xFF192030);
+            marco(ctx, boxX, boxY, boxW, boxH, enc ? ORO : 0xFF364463, pl(enc ? 2 : 1));
 
-            int ix = px(sx + (slotW - 16) / 2);
-            int iy = py(sy + (slotH - 16) / 2);
-            ctx.drawItem(stack, ix, iy);
-            ctx.drawItemInSlot(textRenderer, stack, ix, iy);
+            float targetSize = Math.max(16f, Math.min(boxW - 6, boxH - 6));
+            float scale = targetSize / 16.0f;
+            float ix = boxX + (boxW - 16f * scale) / 2f;
+            float iy = boxY + (boxH - 16f * scale) / 2f;
+
+            MatrixStack matrices = ctx.getMatrices();
+            matrices.push();
+            matrices.translate(ix, iy, 0);
+            matrices.scale(scale, scale, 1.0f);
+            ctx.drawItem(stack, 0, 0);
+            ctx.drawItemInSlot(textRenderer, stack, 0, 0);
+            matrices.pop();
 
             if (enc) {
                 stackHover = stack;
@@ -736,10 +796,10 @@ public class KitsScreen extends Screen {
 
     private void dibujarPrevisualizadorDetalle(DrawContext ctx, int rx, int ry) {
         if (client == null || client.player == null || kitDetalleId == null) return;
-        int vx = px(PANT_X + MARGEN + 8);
-        int vy = py(PANT_Y + 48 + 8);
-        int vw = pl(240 - 16);
-        int vh = pl(PANT_H - MARGEN - 48 - 56 - 44);
+        int vx = px(PANT_X + MARGEN);
+        int vy = py(PANT_Y + 48);
+        int vw = pl(240);
+        int vh = pl(PANT_H - MARGEN - 48 - 56);
 
         var jugador = client.player;
         var slots = new EquipmentSlot[] {
@@ -749,9 +809,6 @@ public class KitsScreen extends Screen {
                 EquipmentSlot.FEET,
                 EquipmentSlot.MAINHAND};
         var anteriores = new ItemStack[slots.length];
-        float prevYaw = jugador.getYaw();
-        float prevHead = jugador.headYaw;
-        float prevBody = jugador.bodyYaw;
 
         try {
             String ns = switch (kitDetalleId) {
@@ -787,32 +844,36 @@ public class KitsScreen extends Screen {
                 }
             }
 
-            int lookX, lookY;
             if (rotando360) {
-                float angle = ((System.currentTimeMillis() % 4000L) / 4000f) * 360f - 180f;
-                jugador.setYaw(angle);
-                jugador.headYaw = angle;
-                jugador.bodyYaw = angle;
-                lookX = vx + vw / 2 + (int) (-Math.sin(Math.toRadians(angle)) * 60.0);
-                lookY = vy + vh / 2;
-            } else {
-                lookX = rx;
-                lookY = ry;
+                rotacionYaw = (rotacionYaw + 1.2f) % 360f;
             }
 
+            Quaternionf rot = new Quaternionf()
+                    .rotateZ((float) Math.PI)
+                    .rotateX((float) Math.toRadians(rotacionPitch))
+                    .rotateY((float) Math.toRadians(180f + rotacionYaw));
+
+            int cx = vx + vw / 2;
+            int cy = vy + vh / 2 - pl(12);
+            int size = Math.round(Math.min(vw, vh) * 0.44f);
+
+            ctx.enableScissor(vx, vy, vx + vw, vy + vh - pl(38));
             net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
-                    ctx, vx, vy, vx + vw, vy + vh,
-                    Math.round(Math.min(vw, vh) * 0.44f),
-                    0.0f, lookX, lookY, jugador);
+                    ctx,
+                    (float) cx,
+                    (float) cy,
+                    (float) size,
+                    new Vector3f(0f, jugador.getHeight() / 2f, 0f),
+                    rot,
+                    null,
+                    jugador);
+            ctx.disableScissor();
         } finally {
             for (int s = 0; s < slots.length; s++) {
                 if (anteriores[s] != null) {
                     jugador.equipStack(slots[s], anteriores[s]);
                 }
             }
-            jugador.setYaw(prevYaw);
-            jugador.headYaw = prevHead;
-            jugador.bodyYaw = prevBody;
         }
     }
 
@@ -853,6 +914,8 @@ public class KitsScreen extends Screen {
                 kitElegido = 0;
                 kitDetalleId = null;
                 rotando360 = false;
+                rotacionYaw = 0f;
+                rotacionPitch = 0f;
                 sonar();
                 return true;
             }
@@ -900,6 +963,8 @@ public class KitsScreen extends Screen {
             if (dentro(rx, ry, px(PANT_X + MARGEN), py(navY), pl(btnAtrasW), pl(btnAtrasH))) {
                 kitDetalleId = null;
                 rotando360 = false;
+                rotacionYaw = 0f;
+                rotacionPitch = 0f;
                 sonar();
                 return true;
             }
@@ -936,6 +1001,8 @@ public class KitsScreen extends Screen {
                     kitElegido=i;
                     kitDetalleId=lista.get(i).id();
                     rotando360=false;
+                    rotacionYaw = 0f;
+                    rotacionPitch = 0f;
                     sonar();
                     return true;
                 }
@@ -948,11 +1015,29 @@ public class KitsScreen extends Screen {
     }
 
     @Override
+    public boolean mouseDragged(double mx, double my, int boton, double dx, double dy) {
+        if (kitDetalleId != null) {
+            int vx = px(PANT_X + MARGEN);
+            int vy = py(PANT_Y + 48);
+            int vw = pl(240);
+            int vh = pl(PANT_H - MARGEN - 48 - 56);
+            if (dentro((int) mx, (int) my, vx, vy, vw, vh)) {
+                rotacionYaw = (rotacionYaw + (float) dx * 1.5f) % 360f;
+                rotacionPitch = Math.max(-35f, Math.min(35f, rotacionPitch + (float) dy * 1.0f));
+                return true;
+            }
+        }
+        return super.mouseDragged(mx, my, boton, dx, dy);
+    }
+
+    @Override
     public boolean keyPressed(int tecla, int escaneo, int mods) {
         if (tecla == 256) {
             if (kitDetalleId != null) {
                 kitDetalleId = null;
                 rotando360 = false;
+                rotacionYaw = 0f;
+                rotacionPitch = 0f;
                 sonar();
                 return true;
             }

@@ -39,6 +39,7 @@ PROYECTOS = {
     "magikarp": ("addons/magikarp-armor", "magikarp-animated-armor"),
     "pikachu": ("addons/pikachu-armor", "pikachu-animated-armor"),
     "eeveelution": ("addons/eeveelution-armor", "eeveelution-armor"),
+    "armaduras": ("tools/armaduras_export", "armaduraspokereport-kits-completo"),
     # ⚠ NO ES NUESTRO, pero se despliega igual que si lo fuera: es una version
     #   PARCHEADA (CC0) que construye `cards/parchear.py`, asi que no se puede
     #   bajar de Modrinth ni en el servidor ni en el cliente. El porque, en la

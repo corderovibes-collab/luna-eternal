@@ -34,10 +34,10 @@ public abstract class HumanoidModelArmorCoverageMixin<T extends LivingEntity> {
         boolean customBoots = isOurArmor(entity.getEquippedStack(EquipmentSlot.FEET));
         boolean customLowerBody = customLeggings && customBoots;
 
-        // Los cascos GeckoLib dibujan la cabeza completa. Dejar la cabeza o
-        // el gorro vanilla visibles produce la cara/skin atravesando el casco.
-        model.head.visible = !customHelmet;
-        model.hat.visible = !customHelmet;
+        // El cuerpo se oculta si lleva peto; las piernas si lleva pantalones y botas.
+        // La cabeza y gorro vanilla permanecen visibles para que la cara/skin del jugador
+        // se vea dentro de cascos abiertos como Magikarp, Pikachu o Eeveelution,
+        // igual que en Diosesmon (ArmorBodyCoverage.java).
         model.body.visible = !customChest;
         model.leftLeg.visible = !customLowerBody;
         model.rightLeg.visible = !customLowerBody;

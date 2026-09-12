@@ -8,11 +8,17 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.pokereport.luna.client.EstadoCliente;
 import net.pokereport.luna.client.Trajes;
+import net.pokereport.luna.kit.KitCatalog;
 import net.pokereport.luna.net.Red;
 
 /**
@@ -93,6 +99,12 @@ public class KitsScreen extends Screen {
     private long pulsado;
     private Red.EstadoTrajes estado;
     private int kitElegido;
+    private String kitDetalleId;
+    private boolean rotando360;
+    private ItemStack stackHover;
+    private KitCatalog catalogoKits;
+    private String idKitCache;
+    private List<ItemStack> stacksKitDetalle;
 
     public KitsScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.kits"));
@@ -204,8 +216,12 @@ public class KitsScreen extends Screen {
         dibujarPestanas(ctx, rx, ry);
         dibujarSaldo(ctx, rx, ry);
 
+        stackHover = null;
+
         if (pestana == 0) {
             dibujarRango(ctx, rx, ry);
+        } else if (kitDetalleId != null) {
+            dibujarDetalleKit(ctx, rx, ry);
         } else {
             dibujarKits(ctx, rx, ry);
         }
@@ -215,12 +231,18 @@ public class KitsScreen extends Screen {
         ctx.draw();
         if (pestana == 0) {
             dibujarPrevisualizador(ctx, rx, ry);
+        } else if (kitDetalleId != null) {
+            dibujarPrevisualizadorDetalle(ctx, rx, ry);
         } else {
             dibujarPrevisualizadoresKits(ctx);
         }
 
         if (pestana == 0) {
             dibujarDetalle(ctx, rx, ry);
+        }
+
+        if (stackHover != null) {
+            ctx.drawItemTooltip(textRenderer, stackHover, rx, ry);
         }
     }
 
@@ -500,6 +522,7 @@ public class KitsScreen extends Screen {
             // sea solo texto y el modelo respete sus proporciones GeckoLib.
             ctx.fill(px(x+8),py(y+44),px(x+w-8),py(y+286),0xFF182033);
             marco(ctx,px(x+8),py(y+44),pl(w-16),pl(242),0xFF4C82A8,pl(2));
+            texto(ctx,Text.literal("▶ CLIC PARA DETALLES ◀"),x+w/2,y+268,11,0xFF65BCE8,true,CONTORNO_OSCURO);
             texto(ctx,Text.literal(f.propio()?"ADQUIRIDO":String.format("%,d LunaCoins",f.precio())),x+w/2,y+307,15,f.propio()?0xFF7EF0A0:ORO,true,CONTORNO_OSCURO);
             if(!f.espera().isBlank()) texto(ctx,Text.literal(f.espera()),x+w/2,y+329,12,0xFFFFC6A0,true,0);
         }
@@ -520,12 +543,12 @@ public class KitsScreen extends Screen {
             int y = py(PANT_Y + 54 + 44);
             int ww = pl(w - 16), hh = pl(242);
             var jugador = client.player;
-            var slots = new net.minecraft.entity.EquipmentSlot[] {
-                    net.minecraft.entity.EquipmentSlot.HEAD,
-                    net.minecraft.entity.EquipmentSlot.CHEST,
-                    net.minecraft.entity.EquipmentSlot.LEGS,
-                    net.minecraft.entity.EquipmentSlot.FEET};
-            var anteriores = new net.minecraft.item.ItemStack[slots.length];
+            var slots = new EquipmentSlot[] {
+                    EquipmentSlot.HEAD,
+                    EquipmentSlot.CHEST,
+                    EquipmentSlot.LEGS,
+                    EquipmentSlot.FEET};
+            var anteriores = new ItemStack[slots.length];
             try {
                 String ns = switch (f.id()) {
                     case "magikarp" -> "magikarparmor";
@@ -533,24 +556,20 @@ public class KitsScreen extends Screen {
                     case "eevee" -> "eeveelution";
                     default -> null;
                 };
-                // «Mis kits» puede contener entradas propias que no son uno
-                // de los tres addons GeckoLib de este panel. No se intenta
-                // construir un Identifier vacío: se deja la tarjeta con su
-                // fondo y se evita otro recurso negro/morado o una excepción.
                 if (ns == null) {
                     continue;
                 }
                 String prefijo = f.id().equals("eevee") ? "eeveelution" : f.id();
                 for (int s = 0; s < slots.length; s++) {
                     anteriores[s] = jugador.getEquippedStack(slots[s]).copy();
-                    var item = net.minecraft.registry.Registries.ITEM.get(
+                    var item = Registries.ITEM.get(
                             Identifier.of(ns, prefijo + "_" + switch (s) {
                                 case 0 -> "helmet";
                                 case 1 -> "chestplate";
                                 case 2 -> "leggings";
                                 default -> "boots";
                             }));
-                    jugador.equipStack(slots[s], new net.minecraft.item.ItemStack(item));
+                    jugador.equipStack(slots[s], new ItemStack(item));
                 }
                 net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
                         ctx, x, y, x + ww, y + hh, Math.round(Math.min(ww, hh) * 0.38f),
@@ -560,6 +579,240 @@ public class KitsScreen extends Screen {
                     jugador.equipStack(slots[s], anteriores[s]);
                 }
             }
+        }
+    }
+
+    private KitCatalog catalogo() {
+        if (catalogoKits == null) {
+            try {
+                catalogoKits = KitCatalog.load();
+            } catch (Exception e) {
+                catalogoKits = null;
+            }
+        }
+        return catalogoKits;
+    }
+
+    private ItemStack crearPila(KitCatalog.KitItem ki) {
+        ItemStack stack = new ItemStack(ki.item(), ki.count());
+        if (client != null && client.world != null && !ki.encantamientos().isEmpty()) {
+            var wrapper = client.world.getRegistryManager().getWrapperOrThrow(RegistryKeys.ENCHANTMENT);
+            for (var entry : ki.encantamientos().entrySet()) {
+                var key = RegistryKey.of(RegistryKeys.ENCHANTMENT, entry.getKey());
+                wrapper.getOptional(key).ifPresent(enc -> stack.addEnchantment(enc, entry.getValue()));
+            }
+        }
+        return stack;
+    }
+
+    private List<ItemStack> itemsDelKit(String id) {
+        if (id == null) return List.of();
+        if (id.equals(idKitCache) && stacksKitDetalle != null) {
+            return stacksKitDetalle;
+        }
+        idKitCache = id;
+        var lista = new ArrayList<ItemStack>();
+        var cat = catalogo();
+        if (cat != null) {
+            var kit = cat.byId(id);
+            if (kit != null) {
+                for (var it : kit.items()) {
+                    lista.add(crearPila(it));
+                }
+            }
+        }
+        stacksKitDetalle = lista;
+        return lista;
+    }
+
+    /** Interfaz detallada de kit con 3D 360, cuadrícula de items y tooltips (estilo Diosesmon). */
+    private void dibujarDetalleKit(DrawContext ctx, int rx, int ry) {
+        var lista = kitsVisibles();
+        var f = lista.stream().filter(k -> k.id().equals(kitDetalleId)).findFirst().orElse(null);
+        if (f == null && !lista.isEmpty()) {
+            f = lista.get(Math.min(kitElegido, lista.size() - 1));
+            kitDetalleId = f.id();
+        }
+        if (f == null) {
+            kitDetalleId = null;
+            return;
+        }
+
+        // 1. Cabecera con botón de volver y títulos
+        int navY = PANT_Y + 12;
+        int btnAtrasW = 100, btnAtrasH = 28;
+        boolean encAtras = dentro(rx, ry, px(PANT_X + MARGEN), py(navY), pl(btnAtrasW), pl(btnAtrasH));
+        ctx.fill(px(PANT_X + MARGEN), py(navY), px(PANT_X + MARGEN + btnAtrasW), py(navY + btnAtrasH),
+                encAtras ? 0xFF2B5580 : 0xFF1A2234);
+        marco(ctx, px(PANT_X + MARGEN), py(navY), pl(btnAtrasW), pl(btnAtrasH),
+                encAtras ? ORO : 0xFF3D4E70, pl(encAtras ? 2 : 1));
+        texto(ctx, Text.literal("← VOLVER"), PANT_X + MARGEN + btnAtrasW / 2, navY + 6, 15,
+                encAtras ? ORO : 0xFFD8E4F8, true, CONTORNO_OSCURO);
+
+        texto(ctx, Text.literal(nombreKit(f.id())), PANT_X + MARGEN + btnAtrasW + 14, navY + 2, 20,
+                ORO, false, CONTORNO_OSCURO);
+        var cat = catalogo();
+        var kitDef = cat != null ? cat.byId(f.id()) : null;
+        String desc = kitDef != null && !kitDef.description().isBlank()
+                ? kitDef.description()
+                : "Armadura GeckoLib, arsenal 3D y suministros competitivos exclusivos.";
+        texto(ctx, Text.literal(desc), PANT_X + MARGEN + btnAtrasW + 14, navY + 22, 12,
+                TEXTO_SUAVE, false, 0);
+
+        // 2. Columna izquierda: visor 3D
+        int vx = PANT_X + MARGEN;
+        int vy = PANT_Y + 48;
+        int vw = 240;
+        int vh = PANT_H - MARGEN - 48 - 56;
+        ctx.fill(px(vx), py(vy), px(vx + vw), py(vy + vh), 0xFF121724);
+        marco(ctx, px(vx), py(vy), pl(vw), pl(vh), 0xFF39415C, pl(2));
+
+        // Botón 360 al pie del visor
+        int b360X = vx + 14, b360Y = vy + vh - 34, b360W = vw - 28, b360H = 26;
+        boolean enc360 = dentro(rx, ry, px(b360X), py(b360Y), pl(b360W), pl(b360H));
+        ctx.fill(px(b360X), py(b360Y), px(b360X + b360W), py(b360Y + b360H),
+                rotando360 ? 0xFF287BB0 : (enc360 ? 0xFF2A344A : 0xFF1B2232));
+        marco(ctx, px(b360X), py(b360Y), pl(b360W), pl(b360H),
+                rotando360 ? ORO : (enc360 ? BORDE_ENCIMA : 0xFF3D4A6B), pl(rotando360 ? 2 : 1));
+        texto(ctx, Text.literal(rotando360 ? "ROTACIÓN 360° [ACTIVA]" : "VISTA 360°"),
+                b360X + b360W / 2, b360Y + 7, 12,
+                rotando360 ? 0xFFFFFFFF : (enc360 ? ORO : 0xFFB0C0DC), true, CONTORNO_OSCURO);
+
+        // 3. Columna derecha: panel de contenido y cuadrícula de slots
+        int cx = vx + vw + 14;
+        int cy = vy;
+        int cw = PANT_W - 2 * MARGEN - vw - 14;
+        int ch = vh;
+        ctx.fill(px(cx), py(cy), px(cx + cw), py(cy + ch), 0xFF121724);
+        marco(ctx, px(cx), py(cy), pl(cw), pl(ch), 0xFF39415C, pl(2));
+
+        // Cabecera interna del panel derecho
+        texto(ctx, Text.literal("CONTENIDO DEL KIT"), cx + 16, cy + 12, 16, 0xFF56C8D6, false, CONTORNO_OSCURO);
+        String estadoPrecio = f.propio() ? "ADQUIRIDO" : String.format("%,d LunaCoins", f.precio());
+        int colorPrecio = f.propio() ? 0xFF7EF0A0 : ORO;
+        texto(ctx, Text.literal(estadoPrecio), cx + cw - 16, cy + 12, 16, colorPrecio, true, CONTORNO_OSCURO);
+
+        // Línea divisoria
+        ctx.fill(px(cx + 12), py(cy + 30), px(cx + cw - 12), py(cy + 31), 0xFF2A344A);
+
+        // Cuadrícula de items
+        var items = itemsDelKit(f.id());
+        int cols = 6;
+        int slotW = 46, slotH = 46, gap = 8;
+        int gridTotalW = cols * slotW + (cols - 1) * gap;
+        int gx0 = cx + (cw - gridTotalW) / 2;
+        int gy0 = cy + 40;
+
+        for (int i = 0; i < items.size(); i++) {
+            int col = i % cols;
+            int row = i / cols;
+            int sx = gx0 + col * (slotW + gap);
+            int sy = gy0 + row * (slotH + gap);
+            boolean enc = dentro(rx, ry, px(sx), py(sy), pl(slotW), pl(slotH));
+            ItemStack stack = items.get(i);
+
+            ctx.fill(px(sx), py(sy), px(sx + slotW), py(sy + slotH), enc ? 0xFF283650 : 0xFF192030);
+            marco(ctx, px(sx), py(sy), pl(slotW), pl(slotH), enc ? ORO : 0xFF364463, pl(enc ? 2 : 1));
+
+            int ix = px(sx + (slotW - 16) / 2);
+            int iy = py(sy + (slotH - 16) / 2);
+            ctx.drawItem(stack, ix, iy);
+            ctx.drawItemInSlot(textRenderer, stack, ix, iy);
+
+            if (enc) {
+                stackHover = stack;
+            }
+        }
+
+        // 4. Botón inferior de acción
+        int btnY = PANT_Y + PANT_H - MARGEN - 50;
+        int btnW = PANT_W - 2 * MARGEN;
+        int btnH = 46;
+        boolean disp = pestana == 1 && f.disponible() && !esperando();
+        String lbl = f.propio() ? "ADQUIRIDO" : (disp ? "COMPRAR KIT EXCLUSIVO" : "NO DISPONIBLE");
+        boton(ctx, rx, ry, PANT_X + MARGEN, btnY, btnW, btnH,
+                Text.literal(lbl), !f.propio() && disp, f.propio() ? APAGADO : VERDE);
+    }
+
+    private void dibujarPrevisualizadorDetalle(DrawContext ctx, int rx, int ry) {
+        if (client == null || client.player == null || kitDetalleId == null) return;
+        int vx = px(PANT_X + MARGEN + 8);
+        int vy = py(PANT_Y + 48 + 8);
+        int vw = pl(240 - 16);
+        int vh = pl(PANT_H - MARGEN - 48 - 56 - 44);
+
+        var jugador = client.player;
+        var slots = new EquipmentSlot[] {
+                EquipmentSlot.HEAD,
+                EquipmentSlot.CHEST,
+                EquipmentSlot.LEGS,
+                EquipmentSlot.FEET,
+                EquipmentSlot.MAINHAND};
+        var anteriores = new ItemStack[slots.length];
+        float prevYaw = jugador.getYaw();
+        float prevHead = jugador.headYaw;
+        float prevBody = jugador.bodyYaw;
+
+        try {
+            String ns = switch (kitDetalleId) {
+                case "magikarp" -> "magikarparmor";
+                case "pikachu" -> "pikachuarmor";
+                case "eevee" -> "eeveelution";
+                default -> null;
+            };
+            if (ns != null) {
+                String prefijo = kitDetalleId.equals("eevee") ? "eeveelution" : kitDetalleId;
+                for (int s = 0; s < 4; s++) {
+                    anteriores[s] = jugador.getEquippedStack(slots[s]).copy();
+                    var item = Registries.ITEM.get(
+                            Identifier.of(ns, prefijo + "_" + switch (s) {
+                                case 0 -> "helmet";
+                                case 1 -> "chestplate";
+                                case 2 -> "leggings";
+                                default -> "boots";
+                            }));
+                    jugador.equipStack(slots[s], new ItemStack(item));
+                }
+
+                anteriores[4] = jugador.getEquippedStack(EquipmentSlot.MAINHAND).copy();
+                String swordName = switch (kitDetalleId) {
+                    case "magikarp" -> "magikarp_tidal_sword";
+                    case "pikachu" -> "pikachu_volttail_sword";
+                    case "eevee" -> "eevee_flareon_vaporeon_sword";
+                    default -> null;
+                };
+                if (swordName != null) {
+                    var swordItem = Registries.ITEM.get(Identifier.of("armaduraspokereport", swordName));
+                    jugador.equipStack(EquipmentSlot.MAINHAND, new ItemStack(swordItem));
+                }
+            }
+
+            int lookX, lookY;
+            if (rotando360) {
+                float angle = ((System.currentTimeMillis() % 4000L) / 4000f) * 360f - 180f;
+                jugador.setYaw(angle);
+                jugador.headYaw = angle;
+                jugador.bodyYaw = angle;
+                lookX = vx + vw / 2 + (int) (-Math.sin(Math.toRadians(angle)) * 60.0);
+                lookY = vy + vh / 2;
+            } else {
+                lookX = rx;
+                lookY = ry;
+            }
+
+            net.minecraft.client.gui.screen.ingame.InventoryScreen.drawEntity(
+                    ctx, vx, vy, vx + vw, vy + vh,
+                    Math.round(Math.min(vw, vh) * 0.44f),
+                    0.0f, lookX, lookY, jugador);
+        } finally {
+            for (int s = 0; s < slots.length; s++) {
+                if (anteriores[s] != null) {
+                    jugador.equipStack(slots[s], anteriores[s]);
+                }
+            }
+            jugador.setYaw(prevYaw);
+            jugador.headYaw = prevHead;
+            jugador.bodyYaw = prevBody;
         }
     }
 
@@ -598,6 +851,8 @@ public class KitsScreen extends Screen {
             if (dentro(rx, ry, px(PANEL_X + 28), py(pestanaY(i)), pl(w), pl(72))) {
                 pestana = i;
                 kitElegido = 0;
+                kitDetalleId = null;
+                rotando360 = false;
                 sonar();
                 return true;
             }
@@ -638,9 +893,53 @@ public class KitsScreen extends Screen {
                 }
                 return true;
             }
+        } else if (kitDetalleId != null) {
+            // Clic en Volver
+            int navY = PANT_Y + 12;
+            int btnAtrasW = 100, btnAtrasH = 28;
+            if (dentro(rx, ry, px(PANT_X + MARGEN), py(navY), pl(btnAtrasW), pl(btnAtrasH))) {
+                kitDetalleId = null;
+                rotando360 = false;
+                sonar();
+                return true;
+            }
+            // Clic en Botón 360
+            int vx = PANT_X + MARGEN;
+            int vy = PANT_Y + 48;
+            int vw = 240;
+            int vh = PANT_H - MARGEN - 48 - 56;
+            int b360X = vx + 14, b360Y = vy + vh - 34, b360W = vw - 28, b360H = 26;
+            if (dentro(rx, ry, px(b360X), py(b360Y), pl(b360W), pl(b360H))) {
+                rotando360 = !rotando360;
+                sonar();
+                return true;
+            }
+            // Clic en Botón de Comprar / Reclamar
+            var lista = kitsVisibles();
+            var f = lista.stream().filter(k -> k.id().equals(kitDetalleId)).findFirst().orElse(null);
+            int btnY = PANT_Y + PANT_H - MARGEN - 50;
+            int btnW = PANT_W - 2 * MARGEN;
+            int btnH = 46;
+            if (f != null && !f.propio() && pestana == 1 && f.disponible() && !esperando()
+                    && dentro(rx, ry, px(PANT_X + MARGEN), py(btnY), pl(btnW), pl(btnH))) {
+                pulsado = System.currentTimeMillis();
+                sonar();
+                ClientPlayNetworking.send(new Red.ReclamarKit(f.id()));
+                return true;
+            }
+            return true;
         } else {
             var lista=kitsVisibles(); int cardW=(PANT_W-2*MARGEN-24)/3;
-            for(int i=0;i<lista.size();i++){int x=PANT_X+MARGEN+i*(cardW+12),y=PANT_Y+54;if(dentro(rx,ry,px(x),py(y),pl(cardW),pl(350))){kitElegido=i;sonar();return true;}}
+            for(int i=0;i<lista.size();i++){
+                int x=PANT_X+MARGEN+i*(cardW+12),y=PANT_Y+54;
+                if(dentro(rx,ry,px(x),py(y),pl(cardW),pl(350))){
+                    kitElegido=i;
+                    kitDetalleId=lista.get(i).id();
+                    rotando360=false;
+                    sonar();
+                    return true;
+                }
+            }
             if(pestana==1&&kitElegido<lista.size()) { var f=lista.get(kitElegido);
                 if(f.disponible()&&!esperando()&&dentro(rx,ry,px(PANT_X+MARGEN),py(PANT_Y+PANT_H-68),pl(PANT_W-2*MARGEN),pl(52))){pulsado=System.currentTimeMillis();sonar();ClientPlayNetworking.send(new Red.ReclamarKit(f.id()));return true;}
             }
@@ -651,6 +950,12 @@ public class KitsScreen extends Screen {
     @Override
     public boolean keyPressed(int tecla, int escaneo, int mods) {
         if (tecla == 256) {
+            if (kitDetalleId != null) {
+                kitDetalleId = null;
+                rotando360 = false;
+                sonar();
+                return true;
+            }
             if (client != null) {
                 client.setScreen(anterior);
             }

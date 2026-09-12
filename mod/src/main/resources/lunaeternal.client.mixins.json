@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "net.pokereport.luna.client.mixin",
   "compatibilityLevel": "JAVA_21",
+  "refmap": "client-lunaeternal-refmap.json",
   "client": [
     "HumanoidModelArmorCoverageMixin"
   ],

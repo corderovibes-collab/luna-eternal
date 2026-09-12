@@ -28,20 +28,31 @@ public abstract class HumanoidModelArmorCoverageMixin<T extends LivingEntity> {
         }
 
         BipedEntityModel<?> model = (BipedEntityModel<?>) (Object) this;
-        boolean customHelmet = isOurArmor(entity.getEquippedStack(EquipmentSlot.HEAD));
+        ItemStack headStack = entity.getEquippedStack(EquipmentSlot.HEAD);
+        boolean customHelmet = isOurArmor(headStack);
+        boolean pikachuHelmet = isPikachuHelmet(headStack);
         boolean customChest = isOurArmor(entity.getEquippedStack(EquipmentSlot.CHEST));
         boolean customLeggings = isOurArmor(entity.getEquippedStack(EquipmentSlot.LEGS));
         boolean customBoots = isOurArmor(entity.getEquippedStack(EquipmentSlot.FEET));
         boolean customLowerBody = customLeggings && customBoots;
 
         // El cuerpo se oculta si lleva peto; las piernas si lleva pantalones y botas.
-        // La cabeza vanilla (model.head) permanece visible para mostrar la cara y piel
-        // del jugador dentro de los cascos, pero el gorro/capa exterior (model.hat) se
-        // oculta bajo cascos custom para evitar Z-fighting (titileo) con la geometría 3D.
+        // La cabeza vanilla (model.head) permanece visible para Eevee y Magikarp,
+        // pero se oculta con el casco completo de Pikachu para evitar que la cara humana atraviese las facciones.
+        // El gorro/capa exterior (model.hat) se oculta bajo cualquier casco custom para evitar Z-fighting.
+        model.head.visible = !pikachuHelmet;
         model.hat.visible = !customHelmet;
         model.body.visible = !customChest;
         model.leftLeg.visible = !customLowerBody;
         model.rightLeg.visible = !customLowerBody;
+    }
+
+    private static boolean isPikachuHelmet(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        Identifier id = Registries.ITEM.getId(stack.getItem());
+        return id != null && id.getNamespace().equals("pikachuarmor") && id.getPath().contains("helmet");
     }
 
     private static boolean isOurArmor(ItemStack stack) {

@@ -539,6 +539,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // Lo mismo: lleva su propio ritmo (ticks exactos), asi que va
             // ANTES del corte de 20.
             net.pokereport.luna.gym.Programador.tick(server);
+            // Partículas moradas ambientales en la zona de veneno del Gimnasio de Koga
+            net.pokereport.luna.gym.ZonaVenenoKoga.tick(server);
 
             if (server.getTicks() % 20 != 0) return;
             // ⚠ La cuenta atras de los viajes va AQUI, en el corte de 20 ticks:

@@ -25,7 +25,7 @@ import java.util.List;
 public final class Database implements AutoCloseable {
 
     /** Migraciones conocidas, en orden. Añadir aquí cada fichero nuevo. */
-    private static final String[] MIGRATIONS = {
+    static final String[] MIGRATIONS = {
         // ⚠️ AÑADIR AQUI CADA MIGRACION NUEVA.
         //
         // La lista es manual a proposito: el orden de aplicacion tiene que
@@ -141,40 +141,96 @@ public final class Database implements AutoCloseable {
                           + "probablemente de dos ramas. Renumera " + file
                           + " al siguiente numero libre (y su INSERT final).");
                     }
+                    String sha = computeSha256(sql);
+                    String shaApplied = checksumApplied(c, version);
+                    if (shaApplied != null && sha != null && !shaApplied.equalsIgnoreCase(sha)) {
+                        LunaEternal.LOG.warn("Migración {}: el contenido local difiere del aplicado (checksum actual={}, registrado={})",
+                                file, sha, shaApplied);
+                    }
                     continue;
                 }
 
                 LunaEternal.LOG.info("Aplicando migracion {}", file);
 
-                // Cada migración es atómica: o entera o ninguna.
-                boolean prev = c.getAutoCommit();
-                c.setAutoCommit(false);
+                long start = System.currentTimeMillis();
+                String sha = computeSha256(sql);
+                String desc = descriptionOf(sql);
+                if (desc == null) {
+                    desc = file;
+                }
+
+                // ⚠ MariaDB produce commits implícitos al ejecutar sentencias DDL (CREATE, ALTER, DROP).
+                // Por ello, una transacción JDBC estándar no puede revertir cambios de esquema intermedios.
+                // Se ejecutan las sentencias controlando idempotencia y capturando errores de objetos ya creados
+                // para garantizar re-entrancia segura ante caídas previas.
                 try (Statement st = c.createStatement()) {
                     for (String stmt : splitStatements(sql)) {
-                        st.execute(stmt);
+                        if (stmt.isBlank()) continue;
+                        try {
+                            st.execute(stmt);
+                        } catch (SQLException e) {
+                            // Si falla porque el objeto ya existe de una ejecución parcial interrumpida, advertir y continuar
+                            if (e.getErrorCode() == 1050 /* ER_TABLE_EXISTS_ERROR */
+                                    || e.getErrorCode() == 1060 /* ER_DUP_FIELDNAME */
+                                    || e.getErrorCode() == 1061 /* ER_DUP_KEYNAME */) {
+                                LunaEternal.LOG.warn("Sentencia DDL omitida en {} (el objeto ya existía): {}", file, e.getMessage());
+                                continue;
+                            }
+                            throw e;
+                        }
                     }
-                    c.commit();
                 } catch (SQLException e) {
-                    c.rollback();
-                    throw new SQLException("Fallo en la migracion " + file, e);
-                } finally {
-                    c.setAutoCommit(prev);
+                    throw new SQLException("Fallo en la migracion " + file + ": " + e.getMessage(), e);
                 }
-                // Cada migracion se registra a si misma con un INSERT final.
-                // Se COMPRUEBA que lo haya hecho: olvidarlo hace que la
-                // migracion se reaplique en cada arranque, y si contiene un
-                // DROP TABLE eso borra datos de produccion en silencio. Paso
-                // con V010 y solo se noto por casualidad.
-                if (!appliedVersions(c).contains(version)) {
-                    throw new SQLException(
-                        "La migracion " + file + " no se registro en "
-                      + "schema_version. Le falta el INSERT final: "
-                      + "INSERT INTO schema_version (version, description) "
-                      + "VALUES (" + version + ", '...') "
-                      + "ON DUPLICATE KEY UPDATE version = version;");
-                }
-                LunaEternal.LOG.info("Migracion {} aplicada", file);
+
+                long dur = System.currentTimeMillis() - start;
+                recordMigration(c, version, desc, sha, dur);
+                LunaEternal.LOG.info("Migracion {} aplicada con exito en {} ms (checksum={})", file, dur, sha);
             }
+        }
+    }
+
+    /** Calcula el hash SHA-256 del contenido del archivo de migración. */
+    public static String computeSha256(String content) {
+        if (content == null) return null;
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(content.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String checksumApplied(Connection c, int version) throws SQLException {
+        try (var ps = c.prepareStatement("SELECT checksum FROM schema_version WHERE version = ?")) {
+            ps.setInt(1, version);
+            try (var rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
+            }
+        }
+    }
+
+    private static void recordMigration(Connection c, int version, String description, String checksum, long execTimeMs) throws SQLException {
+        String sql = """
+            INSERT INTO schema_version (version, description, checksum, execution_time_ms, status, applied_at)
+            VALUES (?, ?, ?, ?, 'SUCCESS', CURRENT_TIMESTAMP(3))
+            ON DUPLICATE KEY UPDATE
+                description = VALUES(description),
+                checksum = COALESCE(VALUES(checksum), checksum),
+                execution_time_ms = VALUES(execution_time_ms),
+                status = 'SUCCESS'
+            """;
+        try (var ps = c.prepareStatement(sql)) {
+            ps.setInt(1, version);
+            ps.setString(2, description != null ? description : ("v" + version));
+            ps.setString(3, checksum);
+            ps.setLong(4, execTimeMs);
+            ps.executeUpdate();
         }
     }
 
@@ -204,11 +260,23 @@ public final class Database implements AutoCloseable {
         try (Statement st = c.createStatement()) {
             st.execute("""
                 CREATE TABLE IF NOT EXISTS schema_version (
-                    version     INT          NOT NULL PRIMARY KEY,
-                    description VARCHAR(191) NOT NULL,
-                    applied_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+                    version           INT          NOT NULL PRIMARY KEY,
+                    description       VARCHAR(191) NOT NULL,
+                    checksum          VARCHAR(64)  NULL,
+                    execution_time_ms BIGINT       NULL,
+                    status            VARCHAR(20)  NOT NULL DEFAULT 'SUCCESS',
+                    applied_at        DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """);
+            try {
+                st.execute("ALTER TABLE schema_version ADD COLUMN checksum VARCHAR(64) NULL");
+            } catch (SQLException ignored) {}
+            try {
+                st.execute("ALTER TABLE schema_version ADD COLUMN execution_time_ms BIGINT NULL");
+            } catch (SQLException ignored) {}
+            try {
+                st.execute("ALTER TABLE schema_version ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'SUCCESS'");
+            } catch (SQLException ignored) {}
         }
     }
 

@@ -14,11 +14,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.cobblemon.mod.common.Cobblemon;
+import com.cobblemon.mod.common.api.Priority;
+import com.cobblemon.mod.common.api.moves.MoveTemplate;
 import com.cobblemon.mod.common.api.pokemon.PokemonProperties;
 import com.cobblemon.mod.common.api.pokemon.egg.EggGroup;
 import com.cobblemon.mod.common.api.pokemon.stats.Stats;
 import com.cobblemon.mod.common.pokemon.Gender;
 import com.cobblemon.mod.common.pokemon.Pokemon;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtIo;
@@ -402,13 +407,174 @@ public final class CrianzaService {
         }
     }
 
-    private static Pokemon crearBebe(String baseEspecie, Pokemon madre, Pokemon padre, Pokemon principal) {
-        Pokemon baby = PokemonProperties.Companion.parse(baseEspecie).create();
-        baby.setLevel(1);
+    public static final Set<String> FORMAS_REGIONALES = CrianzaReglas.FORMAS_REGIONALES;
 
-        // Herencia de Naturaleza
+    public static String determinarAspectoRegional(
+            Set<String> aspectosMadre, boolean everMadre, boolean madreEsDitto,
+            Set<String> aspectosPadre, boolean everPadre, boolean padreEsDitto,
+            double rng) {
+        return CrianzaReglas.determinarAspectoRegional(
+                aspectosMadre, everMadre, madreEsDitto,
+                aspectosPadre, everPadre, padreEsDitto,
+                rng);
+    }
+
+    public static boolean puedeTransmitirHabilidadOculta(
+            boolean madreHO, boolean padreHO, boolean madreEsDitto, boolean padreEsDitto) {
+        return CrianzaReglas.puedeTransmitirHabilidadOculta(madreHO, padreHO, madreEsDitto, padreEsDitto);
+    }
+
+    public static boolean tieneHabilidadOculta(Pokemon pokemon) {
+        if (pokemon == null || pokemon.getAbility() == null) return false;
+        if (pokemon.getAbility().getPriority() == Priority.LOW) return true;
+        var template = pokemon.getAbility().getTemplate();
+        if (template == null) return false;
+        String nom = template.getName();
+        try {
+            var pool = pokemon.getForm().getAbilities();
+            if (pool != null) {
+                for (var pot : pool) {
+                    if (pot != null && pot.getTemplate() != null && nom.equalsIgnoreCase(pot.getTemplate().getName())) {
+                        return pot.getPriority() == Priority.LOW
+                                || pot.getClass().getSimpleName().toLowerCase(Locale.ROOT).contains("hidden");
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return false;
+    }
+
+    private static void asignarHabilidadOculta(Pokemon baby) {
+        try {
+            var pool = baby.getForm().getAbilities();
+            if (pool == null) return;
+            for (var pot : pool) {
+                if (pot != null && (pot.getPriority() == Priority.LOW
+                        || pot.getClass().getSimpleName().toLowerCase(Locale.ROOT).contains("hidden"))) {
+                    var template = pot.getTemplate();
+                    if (template != null) {
+                        baby.updateAbility(template.create(true, Priority.LOW));
+                        return;
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            LunaEternal.LOG.warn("No se pudo asignar habilidad oculta a la cria {}: {}", baby.getSpecies().getName(), t.getMessage());
+        }
+    }
+
+    private static void asignarHabilidadComun(Pokemon baby) {
+        try {
+            var pool = baby.getForm().getAbilities();
+            if (pool == null) return;
+            for (var pot : pool) {
+                if (pot != null && pot.getPriority() != Priority.LOW
+                        && !pot.getClass().getSimpleName().toLowerCase(Locale.ROOT).contains("hidden")) {
+                    var template = pot.getTemplate();
+                    if (template != null) {
+                        baby.updateAbility(template.create(true, pot.getPriority()));
+                        return;
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            LunaEternal.LOG.warn("No se pudo forzar habilidad comun a la cria {}: {}", baby.getSpecies().getName(), t.getMessage());
+        }
+    }
+
+    public static List<String> filtrarMovimientosHuevo(
+            List<String> movimientosMadre, List<String> movimientosPadre, Set<String> eggMovesValidos) {
+        return CrianzaReglas.filtrarMovimientosHuevo(movimientosMadre, movimientosPadre, eggMovesValidos);
+    }
+
+    private static void heredarMovimientosHuevo(Pokemon baby, Pokemon madre, Pokemon padre) {
+        try {
+            var formMoves = baby.getForm().getMoves();
+            var eggTemplates = formMoves != null ? formMoves.getEggMoves() : null;
+            if ((eggTemplates == null || eggTemplates.isEmpty()) && baby.getSpecies() != null && baby.getSpecies().getMoves() != null) {
+                eggTemplates = baby.getSpecies().getMoves().getEggMoves();
+            }
+            if (eggTemplates == null || eggTemplates.isEmpty()) return;
+
+            var padres = new ArrayList<Pokemon>();
+            if (padre != null) padres.add(padre);
+            if (madre != null) padres.add(madre);
+
+            var aHeredar = new ArrayList<MoveTemplate>();
+            var yaVistos = new HashSet<String>();
+
+            for (Pokemon p : padres) {
+                if (p.getMoveSet() == null) continue;
+                for (var mov : p.getMoveSet().getMoves()) {
+                    if (mov == null || mov.getTemplate() == null) continue;
+                    String nom = mov.getTemplate().getName();
+                    if (yaVistos.contains(nom.toLowerCase(Locale.ROOT))) continue;
+
+                    for (var eggT : eggTemplates) {
+                        if (eggT != null && eggT.getName().equalsIgnoreCase(nom)) {
+                            aHeredar.add(eggT);
+                            yaVistos.add(nom.toLowerCase(Locale.ROOT));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (aHeredar.isEmpty()) return;
+
+            int slotReemplazo = 0;
+            for (var eggMove : aHeredar) {
+                boolean yaTiene = false;
+                for (var actual : baby.getMoveSet().getMoves()) {
+                    if (actual != null && actual.getTemplate() != null && actual.getTemplate().getName().equalsIgnoreCase(eggMove.getName())) {
+                        yaTiene = true;
+                        break;
+                    }
+                }
+                if (yaTiene) continue;
+
+                if (baby.getMoveSet().hasSpace()) {
+                    baby.getMoveSet().add(eggMove.create());
+                } else if (slotReemplazo < 4) {
+                    baby.getMoveSet().setMove(slotReemplazo++, eggMove.create());
+                }
+            }
+        } catch (Throwable t) {
+            LunaEternal.LOG.warn("Error al heredar movimientos huevo en cria {}: {}", baby.getSpecies().getName(), t.getMessage());
+        }
+    }
+
+    private static Pokemon crearBebe(String baseEspecie, Pokemon madre, Pokemon padre, Pokemon principal) {
+        // Herencia de Aspecto Regional (Everstone)
         boolean everMadre = madre != null && tieneObjeto(madre, "everstone");
         boolean everPadre = padre != null && tieneObjeto(padre, "everstone");
+        boolean madreEsDitto = madre != null && madre.getSpecies().getName().equalsIgnoreCase("ditto");
+        boolean padreEsDitto = padre != null && padre.getSpecies().getName().equalsIgnoreCase("ditto");
+
+        Set<String> aspectosMadre = madre != null ? madre.getAspects() : Set.of();
+        Set<String> aspectosPadre = padre != null ? padre.getAspects() : Set.of();
+
+        String aspectoHeredado = determinarAspectoRegional(
+                aspectosMadre, everMadre, madreEsDitto,
+                aspectosPadre, everPadre, padreEsDitto,
+                Math.random()
+        );
+
+        String propsStr = baseEspecie;
+        if (aspectoHeredado != null) {
+            propsStr += " " + aspectoHeredado;
+        }
+        Pokemon baby = PokemonProperties.Companion.parse(propsStr).create();
+        baby.setLevel(1);
+        if (aspectoHeredado != null) {
+            var forced = new HashSet<>(baby.getForcedAspects());
+            forced.add(aspectoHeredado);
+            baby.setForcedAspects(forced);
+            baby.updateAspects();
+            baby.updateForm();
+        }
+
+        // Herencia de Naturaleza
         if (everMadre && !everPadre) {
             baby.setNature(madre.getNature());
         } else if (everPadre && !everMadre) {
@@ -416,6 +582,19 @@ public final class CrianzaService {
         } else if (everMadre && everPadre) {
             baby.setNature(Math.random() < 0.5 ? madre.getNature() : padre.getNature());
         }
+
+        // Herencia de Habilidad Oculta (60% si el progenitor válido tiene HO)
+        boolean madreHO = tieneHabilidadOculta(madre);
+        boolean padreHO = tieneHabilidadOculta(padre);
+        boolean puedeHO = puedeTransmitirHabilidadOculta(madreHO, padreHO, madreEsDitto, padreEsDitto);
+        if (puedeHO && Math.random() < 0.60) {
+            asignarHabilidadOculta(baby);
+        } else if (!puedeHO && tieneHabilidadOculta(baby)) {
+            asignarHabilidadComun(baby);
+        }
+
+        // Herencia de Movimientos Huevo
+        heredarMovimientosHuevo(baby, madre, padre);
 
         // Herencia de IVs (3 normales, o 5 con Lazo Destino)
         boolean destinyKnot = (madre != null && tieneObjeto(madre, "destiny_knot"))

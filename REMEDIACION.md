@@ -205,6 +205,41 @@ git revert cff93211
 
 ---
 
+# A06
+
+Estado:
+CORREGIDO
+
+Causa raíz:
+La configuración de EasyAuth (`main.conf`) tenía `premium-auto-login=true` a pesar de que el servidor opera con `online-mode=false` en `server.properties` (lo cual es mandatorio para preservar UUIDs offline, inventarios, economía y protecciones). Esto producía incoherencia en la validación de sesiones. Asimismo, tenía configurado `vanish-until-auth=true`, una opción que requiere estrictamente el mod de terceros `Vanish` de DrexHD (`https://github.com/DrexHD/Vanish`), el cual no está instalado en el servidor (Luna Eternal implementa su propio aislamiento del lobby en `lunaeternal:lobby` mediante `hide-player-coords=true` y `SoloEnElHogar`).
+
+Archivos modificados:
+- `build/auditoria-forense/snapshot/servidor/config/EasyAuth/main.conf`
+- `mod/src/test/java/net/pokereport/luna/auth/EasyAuthConfigTest.java`
+
+Cambio realizado:
+1. Se estableció `premium-auto-login=false` en `main.conf`, alineando EasyAuth con el modo offline del servidor para que todos los usuarios sigan el flujo homogéneo y seguro de autenticación sin fallos de sesiones inválidas ni bypass.
+2. Se estableció `vanish-until-auth=false` en `main.conf`, eliminando la dependencia rota del mod Vanish y apoyándose en los mecanismos nativos de Luna Eternal (`lunaeternal:lobby`, spawn en coordenadas protegidas y aislamiento del mundo).
+3. Se verificó que `online-mode` permanece estrictamente en `false` en `server.properties`.
+4. Se creó el test unitario automatizado `EasyAuthConfigTest` para asegurar que las directivas de seguridad se mantengan consistentes.
+
+Tests:
+- `EasyAuthConfigTest.testEasyAuthMainConfig`: PASS (Verifica `premium-auto-login=false`, `vanish-until-auth=false`, `hide-player-coords=true` y dimension de lobby)
+- Gradle `:compileJava`: PASS
+- Gradle `:test`: PASS (100% exitoso, 16 tests)
+
+Resultado:
+La configuración de autenticación de EasyAuth es 100% coherente con el entorno offline del servidor, sin dependencias de mods inexistentes y sin riesgo de suplantación o errores de sesión.
+
+Riesgos restantes:
+Ninguno. Las cuentas existentes y sus contraseñas en SQLite no se modifican.
+
+Rollback:
+git revert 903b00c0
+
+---
+
+
 
 
 

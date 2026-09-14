@@ -295,3 +295,50 @@ git revert 65d6c968
 
 ---
 
+# A10
+
+Estado:
+CORREGIDO
+
+Causa raíz:
+En Minecraft 1.21+, el codec de Mojang y DataFixerUpper para `ItemStack` (`ItemStack.fromNbt` / `CODEC.parse`) evalúa estrictamente la presencia del campo `id` dentro del `MapLike` del NBT deserializado. Cuando `ItemCodec.decode` o los cargadores de inventario procesaban datos vacíos, compuestos NBT `{}` sin elementos, o payloads donde la clave `"item"` no existía o estaba vacía, se pasaba un `NbtCompound` sin el atributo canónico `id` directamente a `ItemStack.fromNbt`. Al fallar el parseo en el DFU de Mojang, se emitía en el log a nivel ERROR:
+`Tried to load invalid item: 'No key id in MapLike[{}]'`
+Asimismo, `ItemCodec.encode` no validaba que el NBT generado por `stack.encode(registries)` fuera completo antes de almacenarlo en MariaDB, permitiendo potencialmente persistir compuestos defectuosos o vacíos.
+
+Archivos modificados:
+- `mod/src/main/java/net/pokereport/luna/gts/ItemCodec.java`
+- `mod/src/main/java/net/pokereport/luna/item/ItemNbtValidator.java`
+- `mod/src/test/java/net/pokereport/luna/item/ItemNbtValidationTest.java`
+
+Cambio realizado:
+1. Se implementó `ItemCodec.esNbtValido(NbtElement elem)`:
+   - Verifica que el elemento sea una instancia de `NbtCompound`.
+   - Rechaza compuestos vacíos (`cmp.isEmpty()`).
+   - Requiere explícitamente que contenga la clave `"id"` como string no vacío (`cmp.contains("id", NbtElement.STRING_TYPE) && !cmp.getString("id").isBlank()`).
+2. En `ItemCodec.decode`:
+   - Se añadieron guardas previas: si el compuesto raíz está vacío o no contiene una definición válida de ítem (ya sea en la clave `"item"` o directamente en la raíz), devuelve inmediatamente `ItemStack.EMPTY` sin invocar `ItemStack.fromNbt`.
+   - Esto evita de raíz que el codec de Mojang reciba un `MapLike[{}]` y emita el error en consola.
+3. En `ItemCodec.encode`:
+   - Se validó el resultado de `stack.encode(registries)` con `esNbtValido` antes de empaquetar y comprimir hacia la base de datos, garantizando que nunca se persistan registros defectuosos.
+4. Se creó `ItemNbtValidator.java` como validador de dominio desacoplado para inspeccionar estructuras `MapLike` / diccionarios NBT.
+5. Se implementó la suite de pruebas unitarias automatizadas `ItemNbtValidationTest` con 7 casos de prueba cubriendo elementos nulos, compuestos vacíos `Map.of()`, ausencia de clave `id`, `id` en blanco, ítems válidos vanilla y modded, y verificación de integridad del código fuente de `ItemCodec.java`.
+
+Tests:
+- `ItemNbtValidationTest.testNullMapReturnsFalse`: PASS
+- `ItemNbtValidationTest.testEmptyMapReturnsFalsePreventingMapLikeError`: PASS (Garantiza el rechazo de `{}` sin errores de Mojang)
+- `ItemNbtValidationTest.testMissingIdKeyReturnsFalse`: PASS
+- `ItemNbtValidationTest.testBlankIdReturnsFalse`: PASS
+- `ItemNbtValidationTest.testValidItemReturnsTrue`: PASS
+- `ItemNbtValidationTest.testCustomModdedItemReturnsTrue`: PASS
+- `ItemNbtValidationTest.testItemCodecSourceGuardsEmptyNbt`: PASS
+- Gradle `:compileJava`: PASS
+- Gradle `:test`: PASS (100% exitoso, 34 tests totales en la suite)
+
+Resultado:
+Se neutralizó el error `Tried to load invalid item: 'No key id in MapLike[{}]'` en la deserialización de ítems. Cualquier payload corrupto o vacío es filtrado preventivamente devolviendo `ItemStack.EMPTY` de forma limpia y silenciosa, y se impide la persistencia de compuestos incompletos en la base de datos.
+
+Riesgos restantes:
+Ninguno. Los ítems válidos existentes continúan serializándose y deserializándose con todos sus componentes NBT sin alteraciones.
+
+Rollback:
+git revert 042a48df

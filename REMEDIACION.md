@@ -237,9 +237,61 @@ Ninguno. Las cuentas existentes y sus contraseñas en SQLite no se modifican.
 Rollback:
 git revert 903b00c0
 
+# A09
+
+Estado:
+CORREGIDO
+
+Causa raíz:
+El método `CrianzaService.crearBebe` solo contemplaba la herencia básica de IVs, naturaleza canónica y Poké Ball. Omitía por completo las reglas canónicas de crianza de Pokémon y Cobblemon para:
+1. Variantes y aspectos regionales (`alolan`, `galarian`, `hisuian`, `paldean`): si un progenitor regional sostenía una Piedra Eterna (Everstone), la cría nacía siempre en su forma base estándar en vez de heredar la variante del progenitor.
+2. Habilidades Ocultas (Hidden Abilities): no se transmitían a la descendencia (60% de probabilidad canónica si la madre o progenitor con Ditto posee HO), generando siempre habilidades estándar o ignorando la genética parental.
+3. Movimientos Huevo (Egg Moves): la cría solo nacía con los movimientos estándar de nivel 1 sin heredar los movimientos huevo que conocían sus progenitores.
+
+Archivos modificados:
+- `mod/src/main/java/net/pokereport/luna/crianza/CrianzaReglas.java`
+- `mod/src/main/java/net/pokereport/luna/crianza/CrianzaService.java`
+- `mod/src/test/java/net/pokereport/luna/crianza/CrianzaVariantesTest.java`
+
+Cambio realizado:
+1. Se creó `CrianzaReglas.java` como módulo puro de dominio para desacoplar el motor de reglas de crianza (formas regionales, elegibilidad de HO y filtrado de movimientos huevo) del runtime de Cobblemon/Minecraft, permitiendo verificación determinista e independiente.
+2. Herencia de Formas Regionales:
+   - Se implementó `determinarAspectoRegional` comprobando `tieneObjeto(parent, "everstone")` y los aspectos `alolan`, `galarian`, `hisuian`, `paldean`.
+   - Si la madre (o el padre con Ditto) tiene aspecto regional y sostiene Piedra Eterna, la cría se instancia con dicho aspecto (`PokemonProperties.parse(baseEspecie + " " + aspecto)`), y se fija en `baby.setForcedAspects(...)`, actualizando aspectos y forma.
+   - Si no sostiene Piedra Eterna, la cría revierte a la forma base estándar del ecosistema nativo. Si ambos progenitores con distintas formas sostienen Piedra Eterna, se resuelve equitativamente 50/50.
+3. Herencia de Habilidad Oculta:
+   - Se implementó `puedeTransmitirHabilidadOculta` y `tieneHabilidadOculta` evaluando `Priority.LOW` o templates marcados como ocultos en Cobblemon.
+   - Si la hembra (o macho/género desconocido con Ditto) tiene HO, la cría tiene 60% de probabilidad de heredarla (`baby.updateAbility(...)` con `Priority.LOW`).
+   - Si ningún progenitor elegible posee HO, se asegura que la cría no reciba HO espuria (`asignarHabilidadComun`).
+4. Herencia de Movimientos Huevo:
+   - Se implementó `heredarMovimientosHuevo` y `filtrarMovimientosHuevo`.
+   - Se contrastan los movimientos aprendidos de ambos progenitores contra el conjunto de movimientos huevo legales de la cría (`form.getMoves().getEggMoves()`).
+   - Los movimientos huevo se transmiten a la cría sin duplicados, asignándolos a ranuras libres o sobreescribiendo los movimientos básicos de nivel 1 si el moveset está lleno.
+5. Se implementó la suite de pruebas automatizadas `CrianzaVariantesTest` con 11 casos de prueba cubriendo todos los escenarios de herencia regional, reversión a común, Ditto, 50/50, compatibilidad de HO y filtrado de movimientos huevo.
+
+Tests:
+- `CrianzaVariantesTest.testDeterminarAspectoRegionalMadreConEverstone`: PASS
+- `CrianzaVariantesTest.testDeterminarAspectoRegionalSinEverstoneRevierteAComun`: PASS
+- `CrianzaVariantesTest.testDeterminarAspectoRegionalPadreConDittoYEverstone`: PASS
+- `CrianzaVariantesTest.testDeterminarAspectoRegionalDittoNoTransmiteAspecto`: PASS
+- `CrianzaVariantesTest.testDeterminarAspectoRegionalAmbosConEverstone`: PASS
+- `CrianzaVariantesTest.testAspectosNoRegionalesNoHeredan`: PASS
+- `CrianzaVariantesTest.testHerenciaHabilidadOcultaMadre`: PASS
+- `CrianzaVariantesTest.testHerenciaHabilidadOcultaPadreSinDittoNoTransmite`: PASS
+- `CrianzaVariantesTest.testHerenciaHabilidadOcultaPadreConDittoTransmite`: PASS
+- `CrianzaVariantesTest.testHerenciaHabilidadOcultaNingunoNoTransmite`: PASS
+- `CrianzaVariantesTest.testFiltrarMovimientosHuevo`: PASS
+- Gradle `:compileJava`: PASS
+- Gradle `:test`: PASS (100% exitoso, 27 tests totales en la suite)
+
+Resultado:
+El sistema de crianza en el PokéPad ahora replica con exactitud las mecánicas canónicas competitivas: herencia de variantes regionales condicionada por Piedra Eterna, transmisión de habilidades ocultas al 60% por genética materna o Ditto, e incorporación de movimientos huevo en la descendencia.
+
+Riesgos restantes:
+Ninguno. La lógica de generación previa de IVs, naturalezas y Poké Balls permanece 100% intacta y retrocompatible.
+
+Rollback:
+git revert 65d6c968
+
 ---
-
-
-
-
 

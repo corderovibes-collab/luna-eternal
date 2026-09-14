@@ -77,6 +77,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.santuario.SantuarioService santuario;
     private static net.pokereport.luna.pase.PaseService pase;
     private static net.pokereport.luna.puerta.PuertaService puerta;
+    private static net.pokereport.luna.crianza.CrianzaService crianza;
     private static ExecutorService io;
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
     private static String builderKey = "";
@@ -141,6 +142,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.torrebatalla.TorreRanking.load();
         net.pokereport.luna.torrebatalla.TorreRecompensas.load();
         net.pokereport.luna.heal.EnfermeraService.registrar();
+        net.pokereport.luna.crianza.PastureInterceptor.registrarServidor();
         // ⚠⚠⚠ TODO LO DE GIMNASIOS VA DETRAS DE ESTA GUARDA, Y NO ES PARANOIA.
         //    El paquete `gym` toca clases de rctmod --TrainerMob, RCTMod-- que
         //    son `modCompileOnly`: existen al compilar y puede que no al
@@ -214,6 +216,26 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             //   lo cambie con un comando o restauremos un respaldo viejo.
             net.pokereport.luna.world.Salvaje.ponerBorde(server);
             Tablist.setup(server);
+            ServerTickEvents.END_SERVER_TICK.register(srv -> {
+                if (srv.getTicks() % 20 != 0) return;
+                for (var jugador : srv.getPlayerManager().getPlayerList()) {
+                    int esc = Tablist.escalonDe(jugador);
+                    for (var slot : net.minecraft.entity.EquipmentSlot.values()) {
+                        if (!slot.isArmorSlot()) continue;
+                        var stack = jugador.getEquippedStack(slot);
+                        if (stack.getItem() instanceof net.pokereport.luna.item.ArmaduraRangoItem ar) {
+                            if (esc < ar.rango().escalon) {
+                                jugador.equipStack(slot, net.minecraft.item.ItemStack.EMPTY);
+                                if (!jugador.getInventory().insertStack(stack)) {
+                                    jugador.dropItem(stack, false);
+                                }
+                                jugador.sendMessage(net.minecraft.text.Text.literal(
+                                        "§cNo tienes el rango " + ar.rango().tag + " §cpara equipar esta armadura."), true);
+                            }
+                        }
+                    }
+                }
+            });
             // Se suscribe cuando Cobblemon ya esta cargado del todo.
             net.pokereport.luna.pokedex.CaptureListener.register();
             // Los OFICIOS: mineria, pesca, cultivo y cria.
@@ -646,6 +668,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             santuario = new net.pokereport.luna.santuario.SantuarioService(database);
             pase = new net.pokereport.luna.pase.PaseService(database);
             puerta = new net.pokereport.luna.puerta.PuertaService(database);
+            crianza = new net.pokereport.luna.crianza.CrianzaService(database, economy);
             // ⚠ La config de nichos se lee al arrancar y REVIENTA el arranque
             //   si esta mal escrita: una coordenada mal puesta protege una zona
             //   que no es la construida, y eso no da error -- da un hueco que
@@ -735,6 +758,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.cosmetics.CosmeticsService cosmetics() { return cosmetics; }
     public static net.pokereport.luna.santuario.SantuarioService santuario() { return santuario; }
     public static net.pokereport.luna.puerta.PuertaService puerta() { return puerta; }
+    public static net.pokereport.luna.crianza.CrianzaService crianza() { return crianza; }
     public static net.pokereport.luna.pase.PaseService pase() { return pase; }
     public static net.pokereport.luna.gts.GtsService gts() { return gts; }
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }

@@ -69,6 +69,13 @@ dependencies {
     // MariaDB   LGPL-2.1          — enlace dinámico, sin modificar. Compatible
     include(implementation("com.zaxxer:HikariCP:${project.hikaricp_version}"))
     include(implementation("org.mariadb.jdbc:mariadb-java-client:${project.mariadb_version}"))
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 processResources {

@@ -2,6 +2,7 @@ package net.pokereport.luna.gts;
 
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtSizeTracker;
 import net.minecraft.registry.RegistryWrapper;
@@ -24,12 +25,28 @@ public final class ItemCodec {
 
     private ItemCodec() {}
 
-    /** Convierte un objeto en bytes. Devuelve {@code null} si está vacío. */
+    /**
+     * Valida si un elemento NBT representa una pila de objeto potencialmente válida
+     * (no nulo, de tipo NbtCompound, no vacío y con la clave obligatoria 'id' de Minecraft 1.21+).
+     *
+     * <p>Evita el error en log: {@code Tried to load invalid item: 'No key id in MapLike[{}]'}
+     * que dispara el codec de Mojang al intentar deserializar un NBT vacío o sin identificador.
+     */
+    public static boolean esNbtValido(NbtElement elem) {
+        if (!(elem instanceof NbtCompound cmp)) return false;
+        if (cmp.isEmpty()) return false;
+        return cmp.contains("id", NbtElement.STRING_TYPE) && !cmp.getString("id").isBlank();
+    }
+
+    /** Convierte un objeto en bytes. Devuelve {@code null} si está vacío o inválido. */
     public static byte[] encode(ItemStack stack, RegistryWrapper.WrapperLookup registries) {
         if (stack == null || stack.isEmpty()) return null;
         try {
+            NbtElement encoded = stack.encode(registries);
+            if (!esNbtValido(encoded)) return null;
+
             NbtCompound root = new NbtCompound();
-            root.put("item", stack.encode(registries));
+            root.put("item", encoded);
 
             var out = new ByteArrayOutputStream();
             NbtIo.writeCompressed(root, out);
@@ -40,7 +57,7 @@ public final class ItemCodec {
     }
 
     /**
-     * Recupera un objeto. Devuelve vacío si los datos están corruptos o si el
+     * Recupera un objeto. Devuelve vacío si los datos están corruptos, vacíos o si el
      * objeto ya no existe — por ejemplo si se desinstaló el mod que lo añadía.
      */
     public static ItemStack decode(byte[] data, RegistryWrapper.WrapperLookup registries) {
@@ -48,7 +65,13 @@ public final class ItemCodec {
         try {
             NbtCompound root = NbtIo.readCompressed(
                 new ByteArrayInputStream(data), NbtSizeTracker.ofUnlimitedBytes());
-            return ItemStack.fromNbt(registries, root.get("item")).orElse(ItemStack.EMPTY);
+            if (root == null || root.isEmpty()) return ItemStack.EMPTY;
+
+            NbtElement itemElem = root.contains("item") ? root.get("item") : root;
+            if (!esNbtValido(itemElem)) {
+                return ItemStack.EMPTY;
+            }
+            return ItemStack.fromNbt(registries, itemElem).orElse(ItemStack.EMPTY);
         } catch (Exception e) {
             net.pokereport.luna.LunaEternal.LOG.error(
                 "Payload de GTS ilegible; el objeto no se puede entregar", e);

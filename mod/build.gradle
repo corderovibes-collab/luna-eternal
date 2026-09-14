@@ -71,6 +71,7 @@ dependencies {
     include(implementation("org.mariadb.jdbc:mariadb-java-client:${project.mariadb_version}"))
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'com.google.code.gson:gson:2.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

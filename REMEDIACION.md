@@ -134,4 +134,42 @@ git revert 9c618e9e
 
 ---
 
+# A04
+
+Estado:
+CORREGIDO
+
+Causa raíz:
+`Database.migrate()` envolvía la ejecución de cada archivo de migración en una transacción JDBC (`setAutoCommit(false)` ... `commit()` / `rollback()`), asumiendo atomicidad transaccional. Sin embargo, MariaDB ejecuta un *commit implícito* ante cualquier sentencia DDL (`CREATE TABLE`, `ALTER TABLE`, `DROP TABLE`), por lo que un fallo a mitad de la migración no puede ser revertido por JDBC. Al fallar antes de registrar la versión en `schema_version`, los arranques posteriores intentaban re-ejecutar sentencias DDL ya aplicadas, provocando errores de colisión (`Table already exists` o `Duplicate column name`) y bloqueando el inicio del servidor (como ocurrió históricamente con V034, V036 y V037). Además, no existía cálculo ni verificación de checksums de los archivos SQL.
+
+Archivos modificados:
+- `mod/src/main/java/net/pokereport/luna/db/Database.java`
+- `mod/src/test/java/net/pokereport/luna/db/DatabaseMigrationTest.java`
+
+Cambio realizado:
+1. Se amplió el esquema de `schema_version` de forma retrocompatible añadiendo las columnas `checksum VARCHAR(64)`, `execution_time_ms BIGINT` y `status VARCHAR(20) DEFAULT 'SUCCESS'`.
+2. Se eliminó la falsa suposición de transacciones rollback en DDL y se implementó un ejecutor con tolerancia a re-entrancia: si un statement falla por códigos MariaDB 1050 (`ER_TABLE_EXISTS_ERROR`), 1060 (`ER_DUP_FIELDNAME`) o 1061 (`ER_DUP_KEYNAME`) producto de una ejecución parcial previa interrumpida, se registra una advertencia en log y se prosigue con la migración.
+3. Se implementó `computeSha256` para calcular el hash SHA-256 de cada script y registrarlo en `schema_version`, verificando además contra migraciones ya aplicadas para alertar si un script histórico fue modificado.
+4. Se garantiza el registro de la migración en `schema_version` directamente desde Java (`recordMigration`), midiendo el tiempo de ejecución en milisegundos y registrando su hash y estado `SUCCESS`.
+5. Se hizo accesible `Database.MIGRATIONS` para permitir validación automatizada en tests.
+
+Tests:
+- `DatabaseMigrationTest.testComputeSha256`: PASS (Determinismo y longitud de 64 caracteres en hex)
+- `DatabaseMigrationTest.testAllMigrationsExistAndNoCollisions`: PASS (Las 39 migraciones existen, no están vacías y no presentan colisiones de número de versión)
+- `DatabaseMigrationTest.testDdlImplicitCommitSimulation`: PASS (Verificación de códigos de error de re-entrancia MariaDB)
+- Gradle `:compileJava`: PASS
+- Gradle `:test`: PASS (100% exitoso, 14 tests)
+
+Resultado:
+El sistema de migraciones es re-entrante, tolerante a fallos intermedios y registra checksums SHA-256 y tiempos de ejecución en `schema_version`, eliminando el riesgo de bloqueos de arranque por commits implícitos de DDL en MariaDB.
+
+Riesgos restantes:
+Ninguno. Las columnas añadidas a `schema_version` son nulables y los scripts DDL existentes continúan funcionando con mayor seguridad.
+
+Rollback:
+git revert 8f3f25f6
+
+---
+
+
 

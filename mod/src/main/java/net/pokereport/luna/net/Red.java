@@ -1272,10 +1272,12 @@ public class Red implements ModInitializer {
                 PacketCodecs.BOOL, FichaKit::disponible, CADENA, FichaKit::espera, FichaKit::new);
     }
 
-    public record EstadoKits(List<FichaKit> fichas) implements CustomPayload {
+    public record EstadoKits(List<FichaKit> fichas, long rotaEnEpochMs) implements CustomPayload {
         public static final Id<EstadoKits> ID = new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_kits"));
         public static final PacketCodec<RegistryByteBuf, EstadoKits> CODEC = PacketCodec.tuple(
-                FichaKit.CODEC.collect(PacketCodecs.toList()), EstadoKits::fichas, EstadoKits::new);
+                FichaKit.CODEC.collect(PacketCodecs.toList()), EstadoKits::fichas,
+                PacketCodecs.VAR_LONG, EstadoKits::rotaEnEpochMs,
+                EstadoKits::new);
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
 
@@ -2340,6 +2342,215 @@ public class Red implements ModInitializer {
         }
     }
 
+    // ======================= CRIANZA EN EL POKEPAD =======================
+
+    /** «Dame mis ranuras de crianza». Se pide al abrir la app. */
+    public record PedirCrianza() implements CustomPayload {
+        public static final Id<PedirCrianza> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_crianza"));
+        public static final PacketCodec<RegistryByteBuf, PedirCrianza> CODEC =
+                PacketCodec.unit(new PedirCrianza());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /**
+     * Accion sobre una ranura de crianza: asignar, retirar, comprar o reclamar.
+     */
+    public record AccionCrianza(String accion, int ranura, boolean esHembra, String pokemonUuid)
+            implements CustomPayload {
+        public static final Id<AccionCrianza> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_crianza"));
+        public static final PacketCodec<RegistryByteBuf, AccionCrianza> CODEC =
+                PacketCodec.tuple(
+                        CADENA, AccionCrianza::accion,
+                        PacketCodecs.VAR_INT, AccionCrianza::ranura,
+                        PacketCodecs.BOOL, AccionCrianza::esHembra,
+                        CADENA, AccionCrianza::pokemonUuid,
+                        AccionCrianza::new);
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    /** Una de las 7 ranuras de crianza del jugador. */
+    public record FichaRanuraCrianza(
+            int indice,
+            boolean desbloqueada,
+            boolean compradaMonedas,
+            int pideEscalon,
+            String madreUuid,
+            String madreEspecie,
+            String madreMote,
+            int madreNivel,
+            boolean madreShiny,
+            String madreGenero,
+            String padreUuid,
+            String padreEspecie,
+            String padreMote,
+            int padreNivel,
+            boolean padreShiny,
+            String padreGenero,
+            boolean compatible,
+            String motivoIncompatible,
+            long inicioMs,
+            long duracionMs,
+            boolean huevoListo
+    ) {
+        public static void escribir(RegistryByteBuf buf, FichaRanuraCrianza f) {
+            buf.writeVarInt(f.indice);
+            buf.writeBoolean(f.desbloqueada);
+            buf.writeBoolean(f.compradaMonedas);
+            buf.writeVarInt(f.pideEscalon);
+            buf.writeString(f.madreUuid != null ? f.madreUuid : "");
+            buf.writeString(f.madreEspecie != null ? f.madreEspecie : "");
+            buf.writeString(f.madreMote != null ? f.madreMote : "");
+            buf.writeVarInt(f.madreNivel);
+            buf.writeBoolean(f.madreShiny);
+            buf.writeString(f.madreGenero != null ? f.madreGenero : "");
+            buf.writeString(f.padreUuid != null ? f.padreUuid : "");
+            buf.writeString(f.padreEspecie != null ? f.padreEspecie : "");
+            buf.writeString(f.padreMote != null ? f.padreMote : "");
+            buf.writeVarInt(f.padreNivel);
+            buf.writeBoolean(f.padreShiny);
+            buf.writeString(f.padreGenero != null ? f.padreGenero : "");
+            buf.writeBoolean(f.compatible);
+            buf.writeString(f.motivoIncompatible != null ? f.motivoIncompatible : "");
+            buf.writeVarLong(f.inicioMs);
+            buf.writeVarLong(f.duracionMs);
+            buf.writeBoolean(f.huevoListo);
+        }
+
+        public static FichaRanuraCrianza leer(RegistryByteBuf buf) {
+            return new FichaRanuraCrianza(
+                    buf.readVarInt(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readVarInt(),
+                    buf.readString(),
+                    buf.readString(),
+                    buf.readString(),
+                    buf.readVarInt(),
+                    buf.readBoolean(),
+                    buf.readString(),
+                    buf.readString(),
+                    buf.readString(),
+                    buf.readString(),
+                    buf.readVarInt(),
+                    buf.readBoolean(),
+                    buf.readString(),
+                    buf.readBoolean(),
+                    buf.readString(),
+                    buf.readVarLong(),
+                    buf.readVarLong(),
+                    buf.readBoolean()
+            );
+        }
+    }
+
+    /** Estado completo de crianza enviado al cliente. */
+    public record EstadoCrianza(int escalon, long saldoLuna, List<FichaRanuraCrianza> ranuras)
+            implements CustomPayload {
+        public static final Id<EstadoCrianza> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_crianza"));
+        public static final PacketCodec<RegistryByteBuf, EstadoCrianza> CODEC =
+                PacketCodec.ofStatic(EstadoCrianza::escribir, EstadoCrianza::leer);
+
+        private static void escribir(RegistryByteBuf buf, EstadoCrianza e) {
+            buf.writeVarInt(e.escalon);
+            buf.writeVarLong(e.saldoLuna);
+            buf.writeVarInt(e.ranuras.size());
+            for (var r : e.ranuras) {
+                FichaRanuraCrianza.escribir(buf, r);
+            }
+        }
+
+        private static EstadoCrianza leer(RegistryByteBuf buf) {
+            int esc = buf.readVarInt();
+            long saldo = buf.readVarLong();
+            int n = buf.readVarInt();
+            var list = new ArrayList<FichaRanuraCrianza>(n);
+            for (int i = 0; i < n; i++) {
+                list.add(FichaRanuraCrianza.leer(buf));
+            }
+            return new EstadoCrianza(esc, saldo, list);
+        }
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
+    public record CandidatoCrianza(
+            String uuid,
+            String especie,
+            String mote,
+            int nivel,
+            boolean shiny,
+            String genero,
+            String donde,
+            int ranura
+    ) {
+        static void escribir(RegistryByteBuf buf, CandidatoCrianza c) {
+            cad(buf, c.uuid);
+            cad(buf, c.especie);
+            cad(buf, c.mote);
+            buf.writeVarInt(c.nivel);
+            buf.writeBoolean(c.shiny);
+            cad(buf, c.genero);
+            cad(buf, c.donde);
+            buf.writeVarInt(c.ranura);
+        }
+
+        static CandidatoCrianza leer(RegistryByteBuf buf) {
+            return new CandidatoCrianza(
+                    buf.readString(),
+                    buf.readString(),
+                    buf.readString(),
+                    buf.readVarInt(),
+                    buf.readBoolean(),
+                    buf.readString(),
+                    buf.readString(),
+                    buf.readVarInt()
+            );
+        }
+    }
+
+    public record EstadoCandidatosCrianza(List<CandidatoCrianza> candidatos)
+            implements CustomPayload {
+        public static final Id<EstadoCandidatosCrianza> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_candidatos_crianza"));
+        public static final PacketCodec<RegistryByteBuf, EstadoCandidatosCrianza> CODEC =
+                PacketCodec.ofStatic(EstadoCandidatosCrianza::escribir, EstadoCandidatosCrianza::leer);
+
+        private static void escribir(RegistryByteBuf buf, EstadoCandidatosCrianza e) {
+            buf.writeVarInt(e.candidatos.size());
+            for (var c : e.candidatos) {
+                CandidatoCrianza.escribir(buf, c);
+            }
+        }
+
+        private static EstadoCandidatosCrianza leer(RegistryByteBuf buf) {
+            int n = buf.readVarInt();
+            var list = new ArrayList<CandidatoCrianza>(n);
+            for (int i = 0; i < n; i++) {
+                list.add(CandidatoCrianza.leer(buf));
+            }
+            return new EstadoCandidatosCrianza(list);
+        }
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     /**
      * «ABRE LA ELECCION DE INICIAL». Lo manda OAK, y nadie mas.
      *
@@ -2352,6 +2563,18 @@ public class Red implements ModInitializer {
      * en {@link Iniciales} al entrar, como siempre; esto es solo la orden de
      * abrir. Meterlos aqui seria un segundo sitio donde vive la misma lista.
      */
+        public record AbrirCrianza() implements CustomPayload {
+        public static final Id<AbrirCrianza> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_crianza"));
+        public static final PacketCodec<RegistryByteBuf, AbrirCrianza> CODEC =
+                PacketCodec.unit(new AbrirCrianza());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return ID;
+        }
+    }
+
     public record AbrirInicial() implements CustomPayload {
         public static final Id<AbrirInicial> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_inicial"));
@@ -3466,6 +3689,7 @@ public class Red implements ModInitializer {
         //     error que no nombra la mochila -- la misma familia que los 5.687
         //     bloques de desfase que ya estan documentados.
         net.pokereport.luna.backpack.Registro.registrar();
+        net.pokereport.luna.item.LunaItems.init();
 
         PayloadTypeRegistry.playC2S().register(PedirParcela.ID, PedirParcela.CODEC);
         PayloadTypeRegistry.playS2C().register(DetalleParcela.ID, DetalleParcela.CODEC);
@@ -3484,6 +3708,11 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirRecompensasTorre.ID, PedirRecompensasTorre.CODEC);
         PayloadTypeRegistry.playC2S().register(ReclamarRecompensaTorre.ID, ReclamarRecompensaTorre.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoRecompensasTorre.ID, EstadoRecompensasTorre.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirCrianza.ID, PedirCrianza.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionCrianza.ID, AccionCrianza.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoCrianza.ID, EstadoCrianza.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoCandidatosCrianza.ID, EstadoCandidatosCrianza.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirCrianza.ID, AbrirCrianza.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirPase.ID, PedirPase.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionPase.ID, AccionPase.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoPase.ID, EstadoPase.CODEC);
@@ -3642,6 +3871,7 @@ public class Red implements ModInitializer {
             var jugador = ctx.player();
             LunaEternal.submit(() -> {
                 String fallo;
+                boolean fueCompra = false;
                 try {
                     // ⚠ El kit se busca POR IDENTIFICADOR en NUESTRO catalogo, y
                     //   ademas tiene que ser un traje marcado como kit: asi un
@@ -3653,25 +3883,40 @@ public class Red implements ModInitializer {
                     }
                     long id = LunaEternal.players().resolve(
                             jugador.getUuid(), jugador.getGameProfile().getName());
-                    fallo = "exclusive".equals(kit.category())
-                            ? LunaEternal.kitService().comprar(jugador, id, kit, LunaEternal.economy())
-                            : LunaEternal.kitService().entregar(jugador, id, kit);
+                    if ("exclusive".equals(kit.category())) {
+                        boolean posee = LunaEternal.kitService().posee(id, kit);
+                        if (!posee) {
+                            fallo = LunaEternal.kitService().comprar(jugador, id, kit, LunaEternal.economy());
+                            fueCompra = true;
+                        } else {
+                            fallo = LunaEternal.kitService().reclamarExclusivo(jugador, id, kit);
+                            fueCompra = false;
+                        }
+                    } else {
+                        fallo = LunaEternal.kitService().entregar(jugador, id, kit);
+                    }
                 } catch (Exception e) {
-                    LunaEternal.LOG.error("No se pudo entregar el kit a {}",
+                    LunaEternal.LOG.error("No se pudo procesar el kit a {}",
                             jugador.getGameProfile().getName(), e);
                     return;
                 }
                 final String razon = fallo;
+                final boolean compra = fueCompra;
                 jugador.getServer().execute(() -> {
                     if (jugador.isRemoved()) {
                         return;
                     }
                     if (razon == null) {
-                        jugador.sendMessage(net.minecraft.text.Text.translatable(
-                                "pokepad.lunaeternal.trajes.kit_entregado"), false);
+                        if (compra) {
+                            jugador.sendMessage(net.minecraft.text.Text.literal(
+                                    "§a¡Has adquirido el kit! Ve a 'Mis Kits' para reclamar su contenido."), false);
+                        } else {
+                            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                                    "pokepad.lunaeternal.trajes.kit_entregado"), false);
+                        }
                     } else {
                         jugador.sendMessage(net.minecraft.text.Text.literal(
-                                "§7No se pudo reclamar: " + razon), false);
+                                "§7No se pudo procesar: " + razon), false);
                     }
                     // ⚠ Se reenvia SIEMPRE, salga bien o mal: el reloj de 24 h
                     //   arranca al entregar y el boton tiene que reflejarlo sin
@@ -4693,6 +4938,36 @@ public class Red implements ModInitializer {
             });
         });
 
+        ServerPlayNetworking.registerGlobalReceiver(PedirCrianza.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            if (LunaEternal.crianza() != null) {
+                LunaEternal.crianza().recuperarEntregasPendientes(jugador);
+            }
+            enviarCrianza(jugador);
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionCrianza.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            LunaEternal.submit(() -> {
+                if (LunaEternal.crianza() == null) return;
+                LunaEternal.LOG.info("AccionCrianza: jugador={}, accion={}, ranura={}, esHembra={}, uuid={}",
+                        jugador.getName().getString(), carga.accion(), carga.ranura(), carga.esHembra(), carga.pokemonUuid());
+                switch (carga.accion()) {
+                    case "asignar" -> LunaEternal.crianza().asignarProgenitor(
+                            jugador, carga.ranura(), carga.esHembra(), carga.pokemonUuid());
+                    case "retirar" -> LunaEternal.crianza().retirarProgenitor(
+                            jugador, carga.ranura(), carga.esHembra());
+                    case "comprar_ranura" -> {
+                        if (LunaEternal.crianza().comprarRanura(jugador, carga.ranura())) {
+                            enviarSaldo(jugador);
+                        }
+                    }
+                    case "reclamar_huevo" -> LunaEternal.crianza().reclamarHuevo(
+                            jugador, carga.ranura());
+                }
+                enviarCrianza(jugador);
+            });
+        });
         ServerPlayNetworking.registerGlobalReceiver(PedirPase.ID, (carga, ctx) ->
                 enviarPase(ctx.player()));
 
@@ -5426,6 +5701,10 @@ public class Red implements ModInitializer {
         var item = net.pokereport.luna.market.Inventarios.objeto(carga.item());
         if (item == null) {
             aviso(jugador, "§cEse objeto no existe.");
+            return;
+        }
+        if (item instanceof net.pokereport.luna.item.ArmaduraRangoItem) {
+            aviso(jugador, "§cLas armaduras de rango no se pueden vender en el mercado.");
             return;
         }
         // ⚠ La cantidad SE ACOTA ANTES de tocar nada: llega del cliente, y un
@@ -7101,17 +7380,20 @@ public class Red implements ModInitializer {
                 for (var kit : LunaEternal.kits().kits()) {
                     boolean ex = "exclusive".equals(kit.category());
                     boolean propio = ex && LunaEternal.kitService().posee(pid, kit);
+                    boolean reclamado = propio && LunaEternal.kitService().haReclamado(pid, kit);
                     var st = ex ? null : LunaEternal.kitService().status(pid, kit);
                     boolean rango = kit.requiredRank() == null || escalon >=
                             net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank()).escalon;
-                    boolean disponible = ex ? !propio : rango && st.claimable();
-                    String espera = st == null || st.claimable() ? "" :
-                            (st.reason() != null ? st.reason() : st.remaining());
+                    boolean disponible = ex ? (!propio || !reclamado) : rango && st.claimable();
+                    String espera = ex ? (reclamado ? "reclamado" : (propio ? "pendiente" : "")) :
+                            (st == null || st.claimable() ? "" :
+                            (st.reason() != null ? st.reason() : st.remaining()));
                     salida.add(new FichaKit(kit.id(), ex ? 1 : 0, kit.lunaPrice(),
                             propio, disponible, espera));
                 }
+                long rotaEn = LunaEternal.kitService().rotacionEpochMs();
                 jugador.getServer().execute(() -> {
-                    if (!jugador.isRemoved()) ServerPlayNetworking.send(jugador, new EstadoKits(salida));
+                    if (!jugador.isRemoved()) ServerPlayNetworking.send(jugador, new EstadoKits(salida, rotaEn));
                 });
             } catch (Exception e) {
                 LunaEternal.LOG.error("No se pudo enviar el catálogo de kits", e);
@@ -7151,5 +7433,54 @@ public class Red implements ModInitializer {
                 ServerPlayNetworking.send(quienEntra, new TrajeDe(otro.getUuid(), puesto));
             }
         }
+    }
+
+    public static void enviarCrianza(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        if (LunaEternal.crianza() == null) return;
+        try {
+            var pc = com.cobblemon.mod.common.Cobblemon.INSTANCE.getStorage().getPC(jugador);
+            pc.sendTo(jugador);
+        } catch (Throwable ignored) {}
+        var miosRaw = net.pokereport.luna.market.PokemonMercado.disponibles(jugador);
+        LunaEternal.submit(() -> {
+            try {
+                int rawEsc = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
+                final int escalon = (jugador.hasPermissionLevel(2) || rawEsc < 0)
+                        ? Math.max(rawEsc, net.pokereport.luna.ui.Tablist.Rank.LEYENDA.escalon) : rawEsc;
+                long pid = LunaEternal.players().resolve(jugador.getUuid(), jugador.getName().getString());
+                long saldoLuna = LunaEternal.economy().balance(pid, net.pokereport.luna.economy.Currency.REPORTCOIN);
+                var ranurasRaw = LunaEternal.crianza().obtenerRanuras(jugador);
+                var ranuras = new ArrayList<FichaRanuraCrianza>(ranurasRaw.size());
+                for (var r : ranurasRaw) {
+                    ranuras.add(new FichaRanuraCrianza(
+                            r.indice(), r.desbloqueada(), r.compradaMonedas(), r.pideEscalon(),
+                            r.madreUuid(), r.madreEspecie(), r.madreMote(), r.madreNivel(), r.madreShiny(), r.madreGenero(),
+                            r.padreUuid(), r.padreEspecie(), r.padreMote(), r.padreNivel(), r.padreShiny(), r.padreGenero(),
+                            r.compatible(), r.motivoIncompatible(), r.inicioMs(), r.duracionMs(), r.huevoListo()
+                    ));
+                }
+                var candidatos = new ArrayList<CandidatoCrianza>(miosRaw.size());
+                for (var m : miosRaw) {
+                    candidatos.add(new CandidatoCrianza(
+                            m.uuid(), m.especie(), m.mote(), m.nivel(), m.shiny(),
+                            m.genero(), m.donde().name(), m.ranura()
+                    ));
+                }
+                jugador.getServer().execute(() -> {
+                    if (!jugador.isRemoved()) {
+                        ServerPlayNetworking.send(jugador, new EstadoCrianza(escalon, saldoLuna, ranuras));
+                        ServerPlayNetworking.send(jugador, new EstadoCandidatosCrianza(candidatos));
+                    }
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.error("Error al enviar estado de crianza", e);
+            }
+        });
+    }
+
+
+    public static void enviarAbrirCrianza(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        enviarCrianza(jugador);
+        ServerPlayNetworking.send(jugador, new AbrirCrianza());
     }
 }

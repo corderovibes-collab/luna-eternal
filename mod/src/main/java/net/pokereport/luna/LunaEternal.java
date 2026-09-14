@@ -310,6 +310,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                             }
                         }));
             }
+            if (crianza != null) {
+                crianza.recuperarEntregasPendientes(player);
+            }
             // ⚠⚠⚠ EL SANTUARIO SE EMPUJA AL ENTRAR, Y SIN ESTO NO SE VEIA UN
             //    SOLO HOLOGRAMA. `EstadoSantuario` es lo unico de lo que sale la
             //    foto flotante --el cliente no dibuja nada hasta recibirlo

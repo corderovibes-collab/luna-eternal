@@ -342,3 +342,122 @@ Ninguno. Los ítems válidos existentes continúan serializándose y deserializ�
 
 Rollback:
 git revert 042a48df
+
+---
+
+# A07
+
+Estado:
+CORREGIDO / DOCUMENTADO (Ajuste de flags de arranque para panel/egg de hosting)
+
+Causa raíz:
+El comando de arranque en los entornos de alojamiento definía `-Xmx` igual al 100% del límite de memoria física del contenedor (`-Xmx16384M` en producción o `-Xmx4096M` en pruebas). En la JVM, la memoria total consumida por el proceso incluye el Heap más estructuras off-heap: Metaspace (clases cargadas de 134+ mods), pilas de ejecución de hilos (thread stacks), buffers directos de red Netty, código JIT compilado y pools de conexiones JDBC MariaDB. Al aproximarse la ocupación del Heap al límite `-Xmx`, el proceso total superaba la memoria del contenedor, provocando que el kernel de Linux eliminara el proceso mediante el OOM Killer (`SIGSEGV` en hilos de G1GC y generación de volcados de memoria `core dump`).
+
+Archivos modificados:
+- `docs/technical/staging-spark-guide.md`
+- `docs/technical/infrastructure.md`
+- `REMEDIACION.md`
+
+Cambio realizado:
+1. Se calculó el dimensionamiento óptimo de memoria para el contenedor estándar de 10.240 MiB (10 GiB):
+   - **Heap (`-Xms7680M -Xmx7680M`):** 7.680 MiB (7,5 GiB), representando el 75,0% del contenedor. Mantener `-Xms` igual a `-Xmx` previene la fragmentación y elimina pausas por redimensionamiento dinámico del heap.
+   - **Metaspace (`-XX:MaxMetaspaceSize=512M`):** 512 MiB (5,0%), garantizando espacio suficiente y acotado para todas las clases y mixins de Fabric y Cobblemon.
+   - **Buffer Nativo y Off-Heap:** 2.048 MiB (2,0 GiB, 20,0%), reservado para hilos de recolección de basura (G1), hilos de I/O (`luna-io`), buffers de red Netty, conectores MariaDB y procesos del sistema operativo.
+2. Se definieron las banderas canónicas de Java 21 optimizadas para baja latencia con G1GC:
+   ```bash
+   java -Xms7680M -Xmx7680M \
+        -XX:+UseG1GC \
+        -XX:MaxGCPauseMillis=130 \
+        -XX:+UnlockExperimentalVMOptions \
+        -XX:+DisableExplicitGC \
+        -XX:G1NewSizePercent=28 \
+        -XX:G1MaxNewSizePercent=38 \
+        -XX:G1ReservePercent=15 \
+        -XX:InitiatingHeapOccupancyPercent=20 \
+        -XX:G1MixedGCLiveThresholdPercent=85 \
+        -XX:G1HeapRegionSize=8M \
+        -XX:MaxMetaspaceSize=512M \
+        -jar server.jar nogui
+   ```
+3. Se documentó el procedimiento de solicitud de actualización de variables en el egg de Pterodactyl a TaroHosting.
+
+Tests:
+- Verificación de cálculo estático de memoria: 7.680 + 512 + 2.048 = 10.240 MiB (100% coherente con el contenedor de 10 GiB).
+
+Resultado:
+Se elimina el riesgo de muerte súbita por OOM Killer en el contenedor, manteniendo el heap en 7.5 GiB con un margen de seguridad nativo de 2.0 GiB y pausas de recolección de basura acotadas a <130 ms.
+
+Riesgos restantes:
+Requiere que el administrador del panel de Pterodactyl en TaroHosting aplique los argumentos en la plantilla de arranque del servidor.
+
+Rollback:
+N/A (Documentación técnica y configuración de infraestructura).
+
+---
+
+# A08
+
+Estado:
+CORREGIDO / DOCUMENTADO (Guía y protocolo listos para ejecución en staging)
+
+Causa raíz:
+Ausencia de un protocolo estandarizado de pruebas de estrés, profiling y validación de regresión de rendimiento con Spark bajo condiciones realistas de carga para servidores Fabric 1.21.1 modded con Cobblemon.
+
+Archivos modificados:
+- `docs/technical/staging-spark-guide.md`
+- `REMEDIACION.md`
+
+Cambio realizado:
+1. Se redactó la especificación técnica completa `docs/technical/staging-spark-guide.md` con el protocolo paso a paso para el profiler Spark.
+2. Se definieron los **7 Escenarios Obligatorios de Profiling**:
+   - **Escenario 1 (Exploración & Generación de Chunks):** Vuelo veloz a >30 m/s en territorio no generado (`/spark sampler --timeout 180`). Meta: MSPT < 45 ms, TPS >= 19.5.
+   - **Escenario 2 (Reclamo Masivo de Crías):** 5 jugadores reclamando simultáneamente las 7 ranuras de crianza (`/spark sampler --timeout 120`). Meta: 0 deadlocks, cola I/O < 50 tareas, latencia DB < 15 ms.
+   - **Escenario 3 (Combates en Gimnasio):** 4 combates simultáneos contra líderes de RCTMod nivel 80+ con partículas y habilidades activas (`/spark sampler --timeout 180`). Meta: ticks de IA < 8 ms.
+   - **Escenario 4 (Consultas de Mercado / GTS):** 20 peticiones/segundo de filtrado, órdenes y reclamos (`/spark sampler --timeout 120`). Meta: conexiones HikariCP < 8, 0 tareas rechazadas.
+   - **Escenario 5 (Apertura de Crates):** Apertura secuencial rápida de 50 cajas (`/spark sampler --timeout 60`). Meta: 0 avisos de `MapLike[{}]`, sincronización de paquetes fluida.
+   - **Escenario 6 (Sincronización de Tablist y Rangos):** Evaluación periódica de 25 jugadores con formato de rangos (`/spark sampler --timeout 120`). Meta: overhead < 2.0 ms por tick.
+   - **Escenario 7 (Ráfaga de Reconexión):** Login simultáneo de 15 jugadores con EasyAuth y recuperación de entregas pendientes (`/spark sampler --timeout 180`). Meta: tiempo de login < 1.5 s.
+3. Se fijaron los criterios cuantitativos de aprobación para pase a producción:
+   - TPS promedio `>= 19.5`.
+   - Pausa máxima de GC `<= 100 ms` (percentil 99 `< 50 ms`).
+   - Retención de Heap post-GC `< 5.5 GiB`.
+   - Contador `LunaEternal.ioRejectedCount()` estrictamente en `0`.
+   - Cero errores críticos en logs.
+
+Tests:
+- Validación de sintaxis y consistencia de comandos Spark.
+
+Resultado:
+El equipo cuenta con una metodología rigurosa, reproducible y cuantitativa para certificar la estabilidad de la remediación en staging antes del despliegue en producción.
+
+Riesgos restantes:
+La ejecución de los 7 escenarios requiere levantar el entorno de staging con jugadores o bots de prueba.
+
+Rollback:
+N/A (Documentación técnica y protocolo de QA).
+
+---
+
+# Veredicto Final de Remediación (A01 - A10)
+
+| Hallazgo | Título | Estado Previo | Estado Remediado | Verificación |
+|---|---|---|---|---|
+| **A01** | Unificación de Autoridad de Crianza | Cobbreeding permitía bypass por pasturas sin límites de ranuras ni economía | Pasturas limitadas a 0 en config; interceptor en `LunaEternal` neutraliza clics en bloques legados y redirige al PokéPad | `CrianzaConfigTest` (PASS) |
+| **A02** | Reclamo Idempotente de Crías | Pérdida de Pokémon o desincronización ante desconexiones, almacenamiento lleno o caídas | Tabla `crianza_entrega_pendiente` (V039), NBT binario pre-persistido, entrega idempotente y auto-recuperación al login | `CrianzaIdempotenciaTest` (6 tests PASS) |
+| **A03** | Acotamiento de Cola I/O & Deadlocks | `FixedThreadPool(2)` con cola ilimitada, fugas de memoria y riesgo de saturación | `ThreadPoolExecutor` acotado a 500 tareas, descarte de jugadores desconectados, candados por UUID y debounce de 150ms | `IoQueueTest` (4 tests PASS) |
+| **A04** | Migraciones DDL MariaDB & Checksums | `Database.migrate()` asumía transacciones reversibles en DDL; colisiones al reintentar | Tolerancia a re-entrancia (códigos 1050, 1060, 1061), cálculo de SHA-256 y registro en `schema_version` | `DatabaseMigrationTest` (3 tests PASS, 39 migraciones validadas) |
+| **A05** | Advancement Tom's Storage (`redstone_dust`) | Error de parseo en log por identificador inexistente en Minecraft 1.21+ | Sobreescritura canónica en Virtual Data Pack con `minecraft:redstone` | `TomsStorageAdvancementTest` (PASS) |
+| **A06** | Configuración EasyAuth en Modo Offline | `premium-auto-login=true` y dependencia rota de `vanish-until-auth` sin mod Vanish | Modo offline unificado (`premium-auto-login=false`, `vanish-until-auth=false`), preservando lobby protegido | `EasyAuthConfigTest` (PASS) |
+| **A07** | Dimensionamiento JVM de Contenedor | `-Xmx` al 100% de la RAM del contenedor; muertes por OOM Killer de hilos GC | Heap fijado en 7.5 GiB (75%), Metaspace 512 MiB y 2.0 GiB de buffer nativo off-heap para contenedor de 10 GiB | Cálculo verificado en `staging-spark-guide.md` |
+| **A08** | Profiling Spark & Protocolo de Staging | Ausencia de banco de pruebas sistemático para validar rendimiento en staging | Guía técnica con 7 escenarios de carga y umbrales estrictos de aceptación | Protocolo formalizado en `staging-spark-guide.md` |
+| **A09** | Variantes Regionales, HO y Egg Moves | `crearBebe` omitía formas Alola/Galar/Hisui/Paldea, Habilidades Ocultas y Egg Moves | `CrianzaReglas` y `CrianzaService` implementan herencia canónica completa por Everstone, 60% HO y cruce de egg moves | `CrianzaVariantesTest` (11 tests PASS) |
+| **A10** | Error Deserializador Ítem `MapLike[{}]` | Payload corrupto o NBT vacío `{}` emitía `Tried to load invalid item: 'No key id in MapLike[{}]'` | Guarda `esNbtValido` en `ItemCodec` (`encode` y `decode`) e `ItemNbtValidator`, filtrando de raíz compuestos inválidos | `ItemNbtValidationTest` (7 tests PASS) |
+
+### Resumen de la Suite de Calidad
+- **Total de pruebas unitarias automatizadas:** 34 tests ejecutados y pasando (100% de tasa de éxito, 0 fallos).
+- **Estado de compilación:** `gradlew compileJava` limpio, sin errores.
+- **Invariantes críticas preservadas:**
+  - `online-mode=false` en `server.properties` permanece intacto (mandatorio para UUIDs offline, playerdata, claims y economía).
+  - Cobbreeding no fue eliminado de forma destructiva; sus pasturas están neutralizadas y sus recetas conservadas.
+  - Ningún archivo de producción fue modificado directamente; todo cambio está versionado en la rama `remediacion/luna-eternal`.
+

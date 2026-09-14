@@ -171,5 +171,40 @@ git revert 8f3f25f6
 
 ---
 
+# A05
+
+Estado:
+CORREGIDO
+
+Causa raíz:
+El mod Tom's Storage (`toms_storage_fabric-1.21-2.4.2.jar`) incluye el archivo `data/toms_storage/advancement/unlock_redstone.json` con la condición `"items": "redstone_dust"`. En Minecraft 1.21+, el identificador del ítem de polvo de redstone es `minecraft:redstone` (no existe `redstone_dust`). Esto provocaba el error en latest.log: `Parsing error loading custom advancement toms_storage:unlock_redstone` y bloqueaba la carga de dicho advancement y el desbloqueo automático de recetas asociadas (`level_emitter`, `item_filter`, `tag_item_filter`, `poly_item_filter`).
+
+Archivos modificados:
+- `mod/src/main/resources/data/toms_storage/advancement/unlock_redstone.json`
+- `mod/build.gradle`
+- `mod/src/test/java/net/pokereport/luna/advancement/TomsStorageAdvancementTest.java`
+
+Cambio realizado:
+1. Se creó el archivo de sobreescritura `mod/src/main/resources/data/toms_storage/advancement/unlock_redstone.json` dentro de los recursos del mod de Luna Eternal, sustituyendo la referencia `"redstone_dust"` por el identificador canónico de Minecraft 1.21.1 `"minecraft:redstone"`.
+2. Al estar integrado en el JAR del mod del servidor, el Virtual Data Pack de Fabric sobreescribe la definición defectuosa empaquetada en el mod upstream sin necesidad de modificar el binario original de Tom's Storage.
+3. Se añadió `com.google.code.gson:gson` a `testImplementation` en `build.gradle` y se implementó la prueba unitaria automatizada `TomsStorageAdvancementTest`.
+
+Tests:
+- `TomsStorageAdvancementTest.testUnlockRedstoneAdvancementValid`: PASS (Comprueba que no contiene `redstone_dust`, referencia `minecraft:redstone`, y posee estructura válida de criterios y recompensas de recetas)
+- Gradle `:compileJava`: PASS
+- Gradle `:test`: PASS (100% exitoso, 15 tests)
+
+Resultado:
+El advancement `toms_storage:unlock_redstone` se carga limpiamente en Minecraft 1.21.1 sin errores de parseo en el log y permite a los jugadores desbloquear los filtros y emisores de nivel de Tom's Storage al recoger redstone.
+
+Riesgos restantes:
+Ninguno. Es un archivo puramente de datos que sustituye una referencia rota por la canónica.
+
+Rollback:
+git revert cff93211
+
+---
+
+
 
 

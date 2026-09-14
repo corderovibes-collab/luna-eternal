@@ -15,9 +15,14 @@ import net.pokereport.luna.ui.Tablist;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Punto de entrada. Solo servidor.
@@ -78,7 +83,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.pase.PaseService pase;
     private static net.pokereport.luna.puerta.PuertaService puerta;
     private static net.pokereport.luna.crianza.CrianzaService crianza;
-    private static ExecutorService io;
+    private static ThreadPoolExecutor io;
+    private static final AtomicLong ioRejectedCount = new AtomicLong(0);
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
     private static String builderKey = "";
 
@@ -678,11 +684,29 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             //   alguien descubre rompiendo el memorial de otro.
             net.pokereport.luna.santuario.SantuarioProteccion.catalogo(
                     net.pokereport.luna.santuario.NichoCatalogo.load());
-            io = Executors.newFixedThreadPool(2, r -> {
-                Thread t = new Thread(r, "luna-io");
-                t.setDaemon(true);
-                return t;
-            });
+            io = new ThreadPoolExecutor(
+                    2,
+                    4,
+                    60L,
+                    TimeUnit.SECONDS,
+                    new ArrayBlockingQueue<>(500),
+                    new ThreadFactory() {
+                        private final AtomicInteger count = new AtomicInteger(1);
+                        @Override
+                        public Thread newThread(Runnable r) {
+                            Thread t = new Thread(r, "luna-io-" + count.getAndIncrement());
+                            t.setDaemon(true);
+                            t.setUncaughtExceptionHandler((thread, throwable) ->
+                                    LOG.error("Error no capturado en hilo de I/O {}", thread.getName(), throwable));
+                            return t;
+                        }
+                    },
+                    (runnable, executor) -> {
+                        ioRejectedCount.incrementAndGet();
+                        LOG.warn("Cola I/O saturada: tarea rechazada (pendientes en cola={}, activos={})",
+                                executor.getQueue().size(), executor.getActiveCount());
+                    }
+            );
 
             LOG.info("Luna Eternal — base de datos lista");
         } catch (Exception e) {
@@ -706,18 +730,52 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     }
 
     /**
-     * Ejecuta trabajo de base de datos fuera del hilo del servidor.
+     * Ejecuta trabajo de base de datos fuera del hilo del servidor con cola acotada y descarte seguro.
      * Nunca se consulta la base en el bucle de tick (data-model.md §4).
      */
     public static void submit(Runnable task) {
-        if (io == null) return;
-        io.submit(() -> {
-            try {
-                task.run();
-            } catch (Throwable t) {
-                LOG.error("Error en tarea de fondo", t);
-            }
+        if (io == null || io.isShutdown()) return;
+        try {
+            io.submit(() -> {
+                try {
+                    task.run();
+                } catch (Throwable t) {
+                    LOG.error("Error en tarea de fondo", t);
+                }
+            });
+        } catch (RejectedExecutionException ree) {
+            ioRejectedCount.incrementAndGet();
+            LOG.warn("Cola I/O saturada al enviar tarea: {}", ree.getMessage());
+        }
+    }
+
+    /**
+     * Ejecuta trabajo de base de datos para un jugador específico fuera del hilo del servidor.
+     * Si el jugador se desconecta antes de o durante la espera en la cola, el trabajo se cancela
+     * de inmediato evitando retención indebida en memoria.
+     */
+    public static void submit(ServerPlayerEntity player, Runnable task) {
+        if (player == null || player.isRemoved()) return;
+        submit(() -> {
+            if (player.isRemoved()) return;
+            task.run();
         });
+    }
+
+    public static int ioQueueSize() {
+        return io != null ? io.getQueue().size() : 0;
+    }
+
+    public static int ioActiveCount() {
+        return io != null ? io.getActiveCount() : 0;
+    }
+
+    public static long ioCompletedCount() {
+        return io != null ? io.getCompletedTaskCount() : 0;
+    }
+
+    public static long ioRejectedCount() {
+        return ioRejectedCount.get();
     }
 
     public static String builderKey() { return builderKey; }

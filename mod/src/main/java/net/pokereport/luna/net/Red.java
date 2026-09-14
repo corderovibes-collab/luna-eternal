@@ -4948,24 +4948,30 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(AccionCrianza.ID, (carga, ctx) -> {
             var jugador = ctx.player();
-            LunaEternal.submit(() -> {
-                if (LunaEternal.crianza() == null) return;
-                LunaEternal.LOG.info("AccionCrianza: jugador={}, accion={}, ranura={}, esHembra={}, uuid={}",
-                        jugador.getName().getString(), carga.accion(), carga.ranura(), carga.esHembra(), carga.pokemonUuid());
-                switch (carga.accion()) {
-                    case "asignar" -> LunaEternal.crianza().asignarProgenitor(
-                            jugador, carga.ranura(), carga.esHembra(), carga.pokemonUuid());
-                    case "retirar" -> LunaEternal.crianza().retirarProgenitor(
-                            jugador, carga.ranura(), carga.esHembra());
-                    case "comprar_ranura" -> {
-                        if (LunaEternal.crianza().comprarRanura(jugador, carga.ranura())) {
-                            enviarSaldo(jugador);
+            if (jugador == null || jugador.isRemoved()) return;
+            LunaEternal.submit(jugador, () -> {
+                if (LunaEternal.crianza() == null || jugador.isRemoved()) return;
+                synchronized (LunaEternal.crianza().candado(jugador.getUuid())) {
+                    if (jugador.isRemoved()) return;
+                    LunaEternal.LOG.info("AccionCrianza: jugador={}, accion={}, ranura={}, esHembra={}, uuid={}",
+                            jugador.getName().getString(), carga.accion(), carga.ranura(), carga.esHembra(), carga.pokemonUuid());
+                    switch (carga.accion()) {
+                        case "asignar" -> LunaEternal.crianza().asignarProgenitor(
+                                jugador, carga.ranura(), carga.esHembra(), carga.pokemonUuid());
+                        case "retirar" -> LunaEternal.crianza().retirarProgenitor(
+                                jugador, carga.ranura(), carga.esHembra());
+                        case "comprar_ranura" -> {
+                            if (LunaEternal.crianza().comprarRanura(jugador, carga.ranura())) {
+                                enviarSaldo(jugador);
+                            }
                         }
+                        case "reclamar_huevo" -> LunaEternal.crianza().reclamarHuevo(
+                                jugador, carga.ranura());
                     }
-                    case "reclamar_huevo" -> LunaEternal.crianza().reclamarHuevo(
-                            jugador, carga.ranura());
+                    if (!jugador.isRemoved()) {
+                        enviarCrianza(jugador);
+                    }
                 }
-                enviarCrianza(jugador);
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(PedirPase.ID, (carga, ctx) ->
@@ -7435,14 +7441,22 @@ public class Red implements ModInitializer {
         }
     }
 
+    private static final java.util.Map<java.util.UUID, Long> ultimosPedidosCrianza = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static void enviarCrianza(net.minecraft.server.network.ServerPlayerEntity jugador) {
-        if (LunaEternal.crianza() == null) return;
+        if (jugador == null || jugador.isRemoved() || LunaEternal.crianza() == null) return;
+        long ahora = System.currentTimeMillis();
+        Long previo = ultimosPedidosCrianza.put(jugador.getUuid(), ahora);
+        if (previo != null && ahora - previo < 150) {
+            return;
+        }
         try {
             var pc = com.cobblemon.mod.common.Cobblemon.INSTANCE.getStorage().getPC(jugador);
             pc.sendTo(jugador);
         } catch (Throwable ignored) {}
         var miosRaw = net.pokereport.luna.market.PokemonMercado.disponibles(jugador);
-        LunaEternal.submit(() -> {
+        LunaEternal.submit(jugador, () -> {
+            if (jugador.isRemoved()) return;
             try {
                 int rawEsc = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
                 final int escalon = (jugador.hasPermissionLevel(2) || rawEsc < 0)
@@ -7477,7 +7491,6 @@ public class Red implements ModInitializer {
             }
         });
     }
-
 
     public static void enviarAbrirCrianza(net.minecraft.server.network.ServerPlayerEntity jugador) {
         enviarCrianza(jugador);

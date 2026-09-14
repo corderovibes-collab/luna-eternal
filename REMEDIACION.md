@@ -89,3 +89,49 @@ git revert 3e7ce2fe
 
 ---
 
+# A03
+
+Estado:
+CORREGIDO
+
+Causa raíz:
+El ejecutor asíncrono de tareas de base de datos (`LunaEternal.submit`) utilizaba `Executors.newFixedThreadPool(2)`, el cual respalda las tareas con una cola ilimitada `LinkedBlockingQueue<Runnable>()` sin política de rechazo. Ante latencias de MariaDB o ráfagas de paquetes enviados por clientes maliciosos o macros, la cola podía crecer indefinidamente, reteniéndose referencias fuertes a `ServerPlayerEntity` desconectados y saturando la memoria JVM. Asimismo, las acciones concurrentes de crianza no contaban con candado de sincronización ni descarte de peticiones de jugadores desconectados, y las llamadas a `enviarCrianza` no filtraban ráfagas repetidas.
+
+Archivos modificados:
+- `mod/src/main/java/net/pokereport/luna/LunaEternal.java`
+- `mod/src/main/java/net/pokereport/luna/net/Red.java`
+- `mod/src/test/java/net/pokereport/luna/io/IoQueueTest.java`
+
+Cambio realizado:
+1. Se reemplazó `Executors.newFixedThreadPool(2)` por un `ThreadPoolExecutor` con:
+   - Core pool: 2 hilos.
+   - Max pool: 4 hilos (para absorber picos de I/O).
+   - Keep-alive: 60 segundos.
+   - Cola de trabajo: `ArrayBlockingQueue<>(500)` acotada a 500 tareas.
+   - `ThreadFactory` con hilos marcados como daemon con nomenclatura estándar `luna-io-%d` y manejador de excepciones no controladas.
+   - `RejectedExecutionHandler` personalizado que registra en log la advertencia de saturación con el tamaño de cola y tareas activas, e incrementa un contador atómico `ioRejectedCount` sin tirar excepciones no controladas al bucle del servidor.
+2. Se implementaron métodos de telemetría y monitoreo en `LunaEternal`: `ioQueueSize()`, `ioActiveCount()`, `ioCompletedCount()` e `ioRejectedCount()`.
+3. Se añadió el método sobrecargado `LunaEternal.submit(ServerPlayerEntity player, Runnable task)` que evalúa `player.isRemoved()` antes de encolar y justo antes de ejecutar, abortando inmediatamente si el jugador ya se desconectó y evitando retención de objetos en memoria.
+4. En `Red.java` (`AccionCrianza`), se aseguró la sincronización por jugador (`candado(uuid)`), verificación de `player.isRemoved()`, y envío de respuesta condicionado a la conexión activa del jugador.
+5. En `Red.java` (`enviarCrianza`), se implementó deduplicación y debounce (<150ms) por UUID de jugador para evitar spam de aperturas/consultas de crianza contra MariaDB.
+
+Tests:
+- `IoQueueTest.testBoundedQueueSaturation`: PASS (Verifica que al llenarse la cola a 10 tareas, las 5 excedentes se rechazan ordenadamente y se incrementa el contador de rechazadas sin exceder el límite)
+- `IoQueueTest.testThreadNamingAndDaemon`: PASS (Verifica nombres `luna-io-%d` y propiedad daemon)
+- `IoQueueTest.testTaskExceptionDoesNotBreakPool`: PASS (Verifica que un fallo de SQL o runtime exception no quiebra el pool ni interrumpe tareas subsiguientes)
+- `IoQueueTest.testDebounceRafagas`: PASS (Verifica el filtrado de ráfagas en ventana de 150ms)
+- Gradle `:compileJava`: PASS
+- Gradle `:test`: PASS (100% exitoso, 11 tests)
+
+Resultado:
+La cola de I/O está estrictamente acotada a 500 elementos con descarte seguro, telemetría en tiempo real, protección contra retención de jugadores desconectados y prevención de deadlocks o degradación por ráfagas.
+
+Riesgos restantes:
+Ninguno. El límite de 500 tareas en cola es holgado para la concurrencia objetivo (10-30 jugadores) y protege a la JVM de fallos de OOM por acumulación.
+
+Rollback:
+git revert 9c618e9e
+
+---
+
+

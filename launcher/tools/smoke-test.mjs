@@ -309,24 +309,25 @@ const AJUSTES_DEL_JUGADOR = [
 
 await test('ningún fichero del manifiesto pisa los ajustes del jugador', async () => {
   const manifiesto = await (await import('../src/main/core/pack.js'))
-    .fetchManifest('https://raw.githubusercontent.com/corderovibes-collab/'
-      + 'luna-eternal-pack/master/manifest.json');
+    .fetchManifest('https://github.com/corderovibes-collab/luna-eternal-pack/'
+      + 'releases/download/pack-manifest/latest.json');
 
   for (const f of manifiesto.files) {
     const esDelJugador = AJUSTES_DEL_JUGADOR.some(
       (p) => f.path === p || f.path.startsWith(p));
     if (!esDelJugador) continue;
-    // Se puede declarar, pero SOLO con una de las dos garantías:
+    // Se puede declarar, pero SOLO con una garantía o como regla administrada:
     //
     //   `once`         fichero suelto: se escribe si falta y no se toca más
     //   `keepExisting` carpeta en un zip: se extrae SIN pisar lo que ya exista
+    //   `managed`      regla del servidor que debe mantenerse sincronizada
     //
     // La segunda apareció al pasar la base a CobbleVerse: su configuración son
     // 155 ficheros, y sueltos eran 155 peticiones a raw.githubusercontent, que
     // contesta 429. Da la MISMA garantía fichero a fichero — y además arregla
     // lo que `once` hacía mal: un fichero de configuración NUEVO en una versión
     // posterior sí llega, porque todavía no existe.
-    assert.equal(f.once === true || f.keepExisting === true, true,
+    assert.equal(f.once === true || f.keepExisting === true || f.managed === true, true,
       `"${f.path}" es un ajuste del jugador y no está protegido: `
       + 'actualizar el pack se lo borraría');
   }

@@ -361,6 +361,7 @@ PROPIOS = [
     {"carpeta": "addons/magikarp-armor", "prefijo": "magikarp-animated-armor"},
     {"carpeta": "addons/pikachu-armor", "prefijo": "pikachu-animated-armor"},
     {"carpeta": "addons/eeveelution-armor", "prefijo": "eeveelution-armor"},
+    {"carpeta": "tools/armaduras_export", "prefijo": "armaduraspokereport-kits-completo"},
 ]
 
 
@@ -653,6 +654,10 @@ def construir() -> dict:
             "sha1": sha,
             "size": len(datos),
             "url": f"{BASE_ACTIVOS}/{tallo}-{sha[:10]}{punto}{ext}",
+            # Regla obligatoria del servidor, no preferencia personal. El
+            # launcher la actualiza para que Gen 1-2 y los boosts desactivados
+            # coincidan siempre con producción.
+            "managed": True,
         })
     print("  reglas          config/cobblemon-cards.json (se pisa siempre)")
 

@@ -46,7 +46,7 @@ MC = "1.21.1"
 #   nadie los servidores que se haya añadido el. Quien ya lo tenga seguira
 #   viendo el nombre viejo hasta que borre esa entrada, y es correcto: su
 #   lista de servidores es suya.
-SERVIDOR = ("§6PokeReport §bNetwork", "s12.mia.us.tarohosting.lat:33043")
+SERVIDOR = ("§6PokeReport §bNetwork", "play.pokereport.online:25565")
 
 # Version minima del cargador. Cobblemon 1.7.3 la exige y no arranca sin ella:
 # "requires version 0.17.2 or later of mod 'Fabric Loader'". Estaba escrita a
@@ -571,6 +571,10 @@ EXTRA_JUGADOR = [
     #   `mods_servidor.py` va el nombre del fichero, que no ha cambiado. Son
     #   dos cosas distintas y por eso solo hace falta tocar una.
     "lmd",
+    # Jade: HUD informativo de bloques, entidades y cofres
+    "jade",
+    # Image2Map: Convierte imágenes en mapas para carteles gigantes y marcos luminosos
+    "image2map",
 ]
 
 EXTRA_CONSTRUCTOR = [
@@ -746,6 +750,32 @@ CLAVADOS = {
                      "motivo": "clavado al servidor; ver CLAVADOS"},
     "xaeros-world-map": {"version": "fabric-1.21.1-1.45.0",
                          "motivo": "clavado al servidor; ver CLAVADOS"},
+    "cobblemon": {"version": "1.8.0",
+                  "motivo": "clavado a 1.8.0: el servidor y tmcraft exigen exactamente 1.8.0"},
+    "cobblemon-tim-core": {"version": "1.8.0-fabric-1.32.0",
+                           "motivo": "clavado a 1.8.0 compatible con Cobblemon 1.8.0"},
+    "cobblemon-capture-xp": {"version": "1.8.0-fabric-1.3.0",
+                             "motivo": "clavado a 1.8.0 compatible con Cobblemon 1.8.0"},
+    "euphoria-patches": {"version": "1.10.0-r5.9-fabric",
+                         "motivo": "clavado a 1.10.0-r5.9-fabric"},
+    "rctapi": {"version": "0.16.0-beta",
+               "motivo": "clavado al servidor; ver CLAVADOS"},
+    "cobblemonraiddens": {"version": "0.11.7+1.21.1",
+                           "motivo": "clavado al servidor; spawn natural desactivado"},
+    "tmcraft": {"version": "1.4.19+1.8.0",
+                 "motivo": "clavado al servidor y a Cobblemon 1.8.0"},
+    "rechiseled": {"version": "1.2.5-fabric-mc1.21",
+                   "motivo": "clavado al servidor; ver CLAVADOS"},
+    "catch-rate-display": {"version": "2.11.0+fabric",
+                           "motivo": "clavado a la version probada del pack"},
+    "immediatelyfast": {"version": "1.6.13+1.21.1-fabric",
+                        "motivo": "clavado a la version probada del pack"},
+    "entitytexturefeatures": {"version": "7.2.1-fabric-1.21",
+                              "motivo": "clavado a la version probada del pack"},
+    "entity-model-features": {"version": "3.3.5-fabric-1.21",
+                             "motivo": "clavado a la version probada del pack"},
+    "more-cobblemon-tweaks": {"version": "1.3.4-fabric",
+                             "motivo": "clavado a la version probada del pack"},
 }
 
 
@@ -1026,6 +1056,28 @@ def contenido(z, nombre: str) -> bytes:
     el fichero dentro de un ano le hara creer que esos packs deberian estar.
     """
     datos = z.read(nombre)
+    # Politica PokéReport: rctmod se conserva porque sirve los NPC colocados
+    # deliberadamente (gimnasios, Oak, enfermeria, menus), pero NUNCA debe
+    # poblar mundos con entrenadores de combate aleatorios. Estos topes en
+    # cero aplican a cualquier dimension, incluidas las que se anadan despues.
+    if nombre.endswith("config/rctmod-server.toml"):
+        texto = datos.decode("utf-8", "replace")
+        texto = re.sub(r"globalSpawnChance\s*=\s*[0-9.]+",
+                       "globalSpawnChance = 0.0", texto)
+        texto = re.sub(r"maxTrainersPerPlayer\s*=\s*[0-9]+",
+                       "maxTrainersPerPlayer = 0", texto)
+        texto = re.sub(r"maxTrainersTotal\s*=\s*[0-9]+",
+                       "maxTrainersTotal = 0", texto)
+        texto = re.sub(r"spawnTrainerAssociation\s*=\s*(true|false)",
+                       "spawnTrainerAssociation = false", texto)
+        return texto.encode("utf-8")
+    # Raid Dens permanece instalado por compatibilidad de registros y mundos
+    # ya generados, pero su generacion natural queda apagada en todo mundo.
+    if nombre.endswith("config/cobblemonraiddens/common.json5"):
+        texto = datos.decode("utf-8", "replace")
+        texto = re.sub(r'"enable_spawning"\s*:\s*(true|false)',
+                       '"enable_spawning": false', texto)
+        return texto.encode("utf-8")
     if nombre.endswith("immediatelyfast.json"):
         cfg = json.loads(datos)
         cfg["hud_batching"] = False
@@ -1319,7 +1371,7 @@ def construir(nombre_pack, extra, sufijo, resumen):
         salida.writestr("overrides/servers.dat", servers_dat(*SERVIDOR))
         salida.writestr("overrides/config/iris.properties", IRIS_PROPERTIES)
         for n in overrides:
-            salida.writestr(n, z.read(n))
+            salida.writestr(n, contenido(z, n))
         # Nuestros mods van DENTRO del zip, no por URL: no estan en Modrinth.
         # Es lo unico que este pack redistribuye, y es nuestro.
         for jar in propios():

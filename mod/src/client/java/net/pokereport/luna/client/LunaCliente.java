@@ -61,6 +61,16 @@ public class LunaCliente implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        migrarServidorOficial();
+
+        net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("lunaeternal").ifPresent(container -> {
+            net.fabricmc.fabric.api.resource.ResourceManagerHelper.registerBuiltinResourcePack(
+                    net.minecraft.util.Identifier.of("lunaeternal", "recursos"),
+                    container,
+                    net.minecraft.text.Text.literal("Recursos Luna"),
+                    net.fabricmc.fabric.api.resource.ResourcePackActivationType.ALWAYS_ENABLED);
+        });
+
         abrirPad = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.lunaeternal.pokepad",
                 InputUtil.Type.KEYSYM,
@@ -379,6 +389,13 @@ public class LunaCliente implements ClientModInitializer {
         Sombreros.registrarModelos();
         Sombreros.registrarDibujado();
         Trajes.registrarDibujado();
+        // builtin/entity necesita su renderizador también en inventarios y visores de kits.
+        var armadurasRango = new RankArmorRenderer();
+        var itemsRango = new RankItemRenderer();
+        for (var pieza : net.pokereport.luna.item.LunaItems.TODOS) {
+            net.fabricmc.fabric.api.client.rendering.v1.ArmorRenderer.register(armadurasRango, pieza);
+            net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry.INSTANCE.register(pieza, itemsRango);
+        }
 
         // Al salir del mundo se olvida: el saldo es de esa partida. Y se calla
         // la voz, que si no sigue sonando en la pantalla de servidores.
@@ -454,5 +471,44 @@ public class LunaCliente implements ClientModInitializer {
                 }
             }
         });
+    }
+
+    /**
+     * Conserva la lista personal del jugador y corrige solo la entrada antigua
+     * de PokéReport. El launcher no puede sobrescribir servers.dat en cada
+     * arranque sin borrar servidores que el usuario añadió por su cuenta.
+     */
+    private static void migrarServidorOficial() {
+        final String anterior = "s12.mia.us.tarohosting.lat:33043";
+        final String oficial = "play.pokereport.online:25565";
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        var servidores = new net.minecraft.client.option.ServerList(cliente);
+        servidores.loadFile();
+        boolean encontrado = false;
+        boolean cambiado = false;
+        for (int i = 0; i < servidores.size(); i++) {
+            var entrada = servidores.get(i);
+            if (oficial.equalsIgnoreCase(entrada.address)) {
+                encontrado = true;
+                continue;
+            }
+            if (anterior.equalsIgnoreCase(entrada.address)) {
+                entrada.address = oficial;
+                encontrado = true;
+                cambiado = true;
+            }
+        }
+        if (!encontrado) {
+            var entrada = new net.minecraft.client.network.ServerInfo(
+                    "§6PokeReport §bNetwork", oficial,
+                    net.minecraft.client.network.ServerInfo.ServerType.OTHER);
+            entrada.setResourcePackPolicy(
+                    net.minecraft.client.network.ServerInfo.ResourcePackPolicy.PROMPT);
+            servidores.add(entrada, false);
+            cambiado = true;
+        }
+        if (cambiado) {
+            servidores.saveFile();
+        }
     }
 }

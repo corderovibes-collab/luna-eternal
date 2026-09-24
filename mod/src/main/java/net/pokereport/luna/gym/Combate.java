@@ -145,6 +145,22 @@ public final class Combate {
                     }
                     return net.minecraft.util.ActionResult.SUCCESS;
                 });
+
+        // ⚠ Auto-liberación si el jugador muere y reaparece fuera
+        net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            if (Ranuras.asignacionDe(newPlayer.getUuid()) != null) {
+                soltar(newPlayer, null);
+            }
+        });
+
+        // ⚠ Auto-liberación si el jugador sale de la dimensión de gimnasios (/spawn, teleport, etc.)
+        net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((jugador, origen, destino) -> {
+            if (net.pokereport.luna.world.LunaDimensions.GIMNASIOS.equals(origen.getRegistryKey())
+                    && !net.pokereport.luna.world.LunaDimensions.GIMNASIOS.equals(destino.getRegistryKey())) {
+                soltar(jugador, null);
+            }
+        });
+
         LunaEternal.LOG.info("Gimnasios: el clic derecho en un líder responde");
     }
 

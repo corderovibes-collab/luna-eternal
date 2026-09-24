@@ -150,6 +150,23 @@ public final class Ranuras {
         LunaEternal.LOG.info("Gimnasios: las ranuras se volveran a clonar");
     }
 
+    /** Libera todas las reservas de un gimnasio concreto. */
+    public static void liberar(Gimnasio.Gimnasio_ g) {
+        if (g != null) {
+            var mapa = OCUPADAS.remove(g.id());
+            if (mapa != null) {
+                mapa.clear();
+            }
+            LunaEternal.LOG.info("Gimnasios: ranuras de {} liberadas", g.id());
+        }
+    }
+
+    /** Libera todas las reservas de todos los gimnasios. */
+    public static void liberarTodas() {
+        OCUPADAS.clear();
+        LunaEternal.LOG.info("Gimnasios: todas las reservas de ranuras liberadas");
+    }
+
     public static void olvidarTodo() {
         OCUPADAS.clear();
         CONSTRUIDAS.clear();

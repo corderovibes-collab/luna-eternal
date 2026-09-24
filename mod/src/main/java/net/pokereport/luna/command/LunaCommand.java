@@ -359,10 +359,25 @@ public final class LunaCommand {
                             if (net.pokereport.luna.gym.Gimnasio.tieneTarima(g)) {
                                 net.pokereport.luna.gym.Lideres.enArena(s.getServer(), g, 0);
                             }
+                            net.pokereport.luna.gym.Ranuras.liberar(g);
                             final int total = quitados;
                             s.sendFeedback(() -> Text.literal(
                                 "Gimnasio " + g.lider() + " purgado: " + total
-                                + " entidades/lideres limpiados. Tarima del maestro restablecida."), false);
+                                + " entidades/lideres limpiados. Salas liberadas (7/7 libres)."), false);
+                            return 1;
+                        }))
+                    .then(literal("liberar")
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            var g = net.pokereport.luna.gym.Gimnasio.de(
+                                    StringArgumentType.getString(ctx, "cual"));
+                            if (g == null) {
+                                s.sendError(Text.literal("§cNo existe ese gimnasio"));
+                                return 0;
+                            }
+                            net.pokereport.luna.gym.Ranuras.liberar(g);
+                            s.sendFeedback(() -> Text.literal(
+                                "§aTodas las salas de " + g.lider() + " han sido liberadas (7/7 libres)."), false);
                             return 1;
                         })))
                 // Los lideres de la CIUDADELA: los que reciben y abren el
@@ -461,6 +476,13 @@ public final class LunaCommand {
                         ctx.getSource().sendFeedback(() -> Text.literal(
                             "§7Las ranuras se volveran a clonar del maestro la "
                             + "proxima vez que alguien entre."), false);
+                        return 1;
+                    }))
+                .then(literal("liberar")
+                    .executes(ctx -> {
+                        net.pokereport.luna.gym.Ranuras.liberarTodas();
+                        ctx.getSource().sendFeedback(() -> Text.literal(
+                            "§aTodas las salas de todos los gimnasios han sido liberadas (7/7 libres)."), false);
                         return 1;
                     })))
 

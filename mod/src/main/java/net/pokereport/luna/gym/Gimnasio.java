@@ -406,7 +406,8 @@ public final class Gimnasio {
      */
     private static final java.util.Map<String, Punto> ENTRADAS = java.util.Map.of(
         "brock", new Punto(48.0, 14.0, 17.26, 0f),
-        "misty", new Punto(91.42, 27.0, 5.5, 90f));
+        "misty", new Punto(91.42, 27.0, 5.5, 90f),
+        "surge", new Punto(7.459, 4.0, 90.47, -90f));
 
     /**
      * La tarima del líder, medida en su maestro.
@@ -415,10 +416,13 @@ public final class Gimnasio {
      * origen en (0, 64, 0), o sea el desfase (48, 8, 40.45).
      * <p>⚠ Misty: en la cámara principal esperando en (1055.62, 71.0, 57.55)
      * mirando hacia Este (-90°) sobre un origen en (1024, 64, 0).
+     * <p>⚠ Surge: en la arena de combate esperando en (2093.501, 68.0, 55.536)
+     * mirando hacia Norte (180°) sobre un origen en (2048, 64, 0).
      */
     private static final java.util.Map<String, Punto> LIDERES = java.util.Map.of(
         "brock", new Punto(48.0, 8.0, 40.45, 180f),
-        "misty", new Punto(31.62, 7.0, 57.55, -90f));
+        "misty", new Punto(31.62, 7.0, 57.55, -90f),
+        "surge", new Punto(45.501, 4.0, 55.536, 180f));
 
     /**
      * DÓNDE ESPERA CADA LÍDER EN LA CIUDADELA, Y CON QUÉ POKÉMON AL LADO.

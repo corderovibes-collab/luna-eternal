@@ -127,9 +127,27 @@ public final class SantuarioProteccion {
 
     /** Se registra UNA vez, al arrancar (junto a los de Decorativos). */
     public static void registrar() {
+        // 0. Prohibir golpear / empezar a picar bloques en Ciudadela si no es su nicho
+        net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.register((jugador, mundo, mano, pos, direccion) -> {
+            if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)) {
+                return ActionResult.PASS;
+            }
+            if (sp.isCreative() && sp.hasPermissionLevel(2)) {
+                return ActionResult.PASS;
+            }
+            if (LunaDimensions.CIUDADELA.equals(mundo.getRegistryKey())) {
+                if (!puedeTocar(sp, pos)) {
+                    return ActionResult.FAIL;
+                }
+            }
+            return ActionResult.PASS;
+        });
+
         PlayerBlockBreakEvents.BEFORE.register((mundo, jugador, pos, estado, be) -> {
-            if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)
-                    || sp.hasPermissionLevel(2)) {
+            if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)) {
+                return true;
+            }
+            if (sp.isCreative() && sp.hasPermissionLevel(2)) {
                 return true;
             }
             return puedeTocar(sp, pos);
@@ -138,40 +156,66 @@ public final class SantuarioProteccion {
         // ⚠ Una sola mano: sin esto el evento llega dos veces y el aviso sale
         //   doble. Es la misma guarda que el clic en las paradas.
         UseBlockCallback.EVENT.register((jugador, mundo, mano, golpe) -> {
-            if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)
-                    || sp.hasPermissionLevel(2)) {
+            if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)) {
+                return ActionResult.PASS;
+            }
+            if (sp.isCreative() && sp.hasPermissionLevel(2)) {
+                return ActionResult.PASS;
+            }
+            if (!LunaDimensions.CIUDADELA.equals(mundo.getRegistryKey())) {
                 return ActionResult.PASS;
             }
             BlockPos pos = golpe.getBlockPos();
             var nicho = catalogo.en(pos);
-            if (nicho == null) {
+            if (nicho != null) {
+                // ⚠ El proyector SIEMPRE es nuestro: su clic abre el memorial,
+                //   sea quien sea quien lo toque. Sin este corte, el mod de cartas
+                //   abriria su menu de inventario encima del nuestro.
+                if (pos.equals(nicho.proyector())) {
+                    // ⚠ Solo si el nicho esta reclamado: el memorial de un nicho
+                    //   libre no existe, y la pantalla lo diria con un «cargando»
+                    //   eterno. La cache es la que sabe, y no toca la base.
+                    Claim c = CLAIMS.get(nicho.id());
+                    if (c != null && !c.libre(System.currentTimeMillis())) {
+                        net.pokereport.luna.net.Red.enviarAbrirMemorial(sp, nicho.id());
+                    }
+                    return ActionResult.SUCCESS;
+                }
+                if (mano != Hand.MAIN_HAND) {
+                    return ActionResult.SUCCESS;
+                }
+                if (!puedeTocar(sp, pos)) {
+                    return ActionResult.FAIL;
+                }
                 return ActionResult.PASS;
             }
-            // ⚠ El proyector SIEMPRE es nuestro: su clic abre el memorial,
-            //   sea quien sea quien lo toque. Sin este corte, el mod de cartas
-            //   abriria su menu de inventario encima del nuestro.
-            if (pos.equals(nicho.proyector())) {
-                // ⚠ Solo si el nicho esta reclamado: el memorial de un nicho
-                //   libre no existe, y la pantalla lo diria con un «cargando»
-                //   eterno. La cache es la que sabe, y no toca la base.
-                Claim c = CLAIMS.get(nicho.id());
-                if (c != null && !c.libre(System.currentTimeMillis())) {
-                    net.pokereport.luna.net.Red.enviarAbrirMemorial(sp, nicho.id());
+
+            // Fuera de nichos en la Ciudadela:
+            var stack = sp.getStackInHand(mano);
+            if (stack.getItem() instanceof BlockItem) {
+                if (!puedeTocar(sp, pos)) {
+                    return ActionResult.FAIL;
                 }
-                return ActionResult.SUCCESS;
             }
-            if (mano != Hand.MAIN_HAND) {
-                return ActionResult.SUCCESS;
-            }
-            if (!puedeTocar(sp, pos)) {
-                return ActionResult.SUCCESS;
+            var block = mundo.getBlockState(pos).getBlock();
+            if (block instanceof net.minecraft.block.DoorBlock
+                    || block instanceof net.minecraft.block.TrapdoorBlock
+                    || block instanceof net.minecraft.block.FenceGateBlock
+                    || block instanceof net.minecraft.block.ButtonBlock
+                    || block instanceof net.minecraft.block.LeverBlock) {
+                return ActionResult.PASS;
             }
             return ActionResult.PASS;
         });
 
         UseItemCallback.EVENT.register((jugador, mundo, mano) -> {
-            if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)
-                    || sp.hasPermissionLevel(2)) {
+            if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)) {
+                return TypedActionResult.pass(jugador.getStackInHand(mano));
+            }
+            if (sp.isCreative() && sp.hasPermissionLevel(2)) {
+                return TypedActionResult.pass(jugador.getStackInHand(mano));
+            }
+            if (!LunaDimensions.CIUDADELA.equals(mundo.getRegistryKey())) {
                 return TypedActionResult.pass(jugador.getStackInHand(mano));
             }
             // ⚠ Solo se corta COLOCAR: sin el filtro de BlockItem, comer una
@@ -181,7 +225,7 @@ public final class SantuarioProteccion {
                 return TypedActionResult.pass(jugador.getStackInHand(mano));
             }
             BlockPos pos = sp.getBlockPos();
-            if (catalogo.en(pos) != null && !puedeTocar(sp, pos)) {
+            if (!puedeTocar(sp, pos)) {
                 return TypedActionResult.fail(jugador.getStackInHand(mano));
             }
             return TypedActionResult.pass(jugador.getStackInHand(mano));
@@ -200,19 +244,25 @@ public final class SantuarioProteccion {
                 jugador.getServerWorld().getRegistryKey())) {
             return true;
         }
+        if (jugador.isCreative() && jugador.hasPermissionLevel(2)) {
+            return true;
+        }
         var nicho = catalogo.en(pos);
-        if (nicho == null) {
-            return true;
+        if (nicho != null) {
+            Claim c = CLAIMS.get(nicho.id());
+            if (c != null && !c.libre(System.currentTimeMillis()) && jugador.getUuid().equals(c.owner())) {
+                return true;
+            }
+            jugador.sendMessage(net.minecraft.text.Text.translatable(
+                    "pokepad.lunaeternal.santuario.protegido"), true);
+            return false;
         }
-        Claim c = CLAIMS.get(nicho.id());
-        if (c == null || c.libre(System.currentTimeMillis())) {
-            return true;
+        // Fuera de un nicho de Santuario, toda la Ciudadela (edificios de recepción de gimnasios,
+        // spawn, plazas, tiendas, etc.) está totalmente protegida contra modificación de bloques.
+        if (!net.pokereport.luna.ui.Toque.repetido(jugador.getUuid(), "ciudadela_protect")) {
+            jugador.sendMessage(net.minecraft.text.Text.literal(
+                    "§c§lCIUDADELA §r§7— No puedes modificar los bloques de la ciudadela."), true);
         }
-        if (jugador.getUuid().equals(c.owner())) {
-            return true;
-        }
-        jugador.sendMessage(net.minecraft.text.Text.translatable(
-                "pokepad.lunaeternal.santuario.protegido"), true);
         return false;
     }
 }

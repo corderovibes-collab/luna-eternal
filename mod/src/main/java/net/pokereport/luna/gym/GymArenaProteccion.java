@@ -30,19 +30,38 @@ public final class GymArenaProteccion {
 
     /**
      * Determina si la posición pertenece a las arenas de gimnasio
-     * tanto en el maestro como en todas las ranuras clonadas.
+     * tanto en el maestro como en todas las ranuras clonadas,
+     * o a dimensiones protegidas del servidor (torre, lobby).
      */
     public static boolean esZonaProtegida(World mundo, BlockPos pos) {
-        return LunaDimensions.GIMNASIOS.equals(mundo.getRegistryKey());
+        var key = mundo.getRegistryKey();
+        return LunaDimensions.GIMNASIOS.equals(key)
+                || LunaDimensions.TORRE.equals(key)
+                || LunaDimensions.LOBBY.equals(key);
     }
 
     public static void registrar() {
+        // 0. Prohibir golpear / empezar a picar bloques en la arena
+        net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.register((jugador, mundo, mano, pos, direccion) -> {
+            if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)) {
+                return ActionResult.PASS;
+            }
+            if (sp.isCreative() && sp.hasPermissionLevel(2)) {
+                return ActionResult.PASS;
+            }
+            if (esZonaProtegida(mundo, pos)) {
+                avisar(sp);
+                return ActionResult.FAIL;
+            }
+            return ActionResult.PASS;
+        });
+
         // 1. Prohibir romper bloques en la arena
         PlayerBlockBreakEvents.BEFORE.register((mundo, jugador, pos, estado, be) -> {
             if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)) {
                 return true;
             }
-            if (sp.hasPermissionLevel(2)) {
+            if (sp.isCreative() && sp.hasPermissionLevel(2)) {
                 return true;
             }
             if (esZonaProtegida(mundo, pos)) {
@@ -57,7 +76,7 @@ public final class GymArenaProteccion {
             if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)) {
                 return ActionResult.PASS;
             }
-            if (sp.hasPermissionLevel(2)) {
+            if (sp.isCreative() && sp.hasPermissionLevel(2)) {
                 return ActionResult.PASS;
             }
             BlockPos pos = golpe.getBlockPos();
@@ -83,11 +102,10 @@ public final class GymArenaProteccion {
             if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)) {
                 return TypedActionResult.pass(jugador.getStackInHand(mano));
             }
-            if (sp.hasPermissionLevel(2)) {
+            if (sp.isCreative() && sp.hasPermissionLevel(2)) {
                 return TypedActionResult.pass(jugador.getStackInHand(mano));
             }
-            if (LunaDimensions.GIMNASIOS.equals(mundo.getRegistryKey())
-                    && esZonaProtegida(mundo, sp.getBlockPos())) {
+            if (esZonaProtegida(mundo, sp.getBlockPos())) {
                 var stack = sp.getStackInHand(mano);
                 if (stack.getItem() instanceof BlockItem) {
                     avisar(sp);
@@ -97,12 +115,12 @@ public final class GymArenaProteccion {
             return TypedActionResult.pass(jugador.getStackInHand(mano));
         });
 
-        LunaEternal.LOG.info("Gimnasios: protección de bloques activa en arenas de Brock");
+        LunaEternal.LOG.info("Gimnasios: protección de bloques activa en arenas y zonas reservadas");
     }
 
     private static void avisar(ServerPlayerEntity sp) {
         if (!Toque.repetido(sp.getUuid(), "gym_protect")) {
-            sp.sendMessage(Text.literal("§c§lGIMNASIO §r§7— No puedes modificar los bloques de la arena."), true);
+            sp.sendMessage(Text.literal("§c§lGIMNASIO §r§7— No puedes modificar los bloques de esta zona."), true);
         }
     }
 }

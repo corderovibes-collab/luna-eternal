@@ -264,6 +264,20 @@ public class KitRankExclusivityTest {
         assertTrue(kitService.haReclamado(playerId, kitArmaduraMaestro));
     }
 
+    @Test
+    @DisplayName("KitCatalog validate() acepta categoría rank_armor con once=true y dailyValue=0")
+    void testKitCatalogValidationWithRankArmor() {
+        var catalog = new KitCatalog(List.of(
+                kitEntrenador, kitElite, kitCampeon, kitMaestro, kitLeyenda,
+                kitArmaduraElite, kitArmaduraCampeon, kitArmaduraMaestro
+        ), 250000L);
+
+        assertDoesNotThrow(catalog::validate, "KitCatalog validate no debe lanzar excepción con rank_armor");
+        assertEquals(0, kitArmaduraElite.dailyValue(), "Armadura elite debe tener dailyValue 0");
+        assertEquals(0, kitArmaduraCampeon.dailyValue(), "Armadura campeon debe tener dailyValue 0");
+        assertEquals(0, kitArmaduraMaestro.dailyValue(), "Armadura maestro debe tener dailyValue 0");
+    }
+
     // Helper method that replicates the validation logic from KitService.entregar
     private String validarReclamoRango(Tablist.Rank actual, KitCatalog.Kit kit) {
         if ("rank".equals(kit.category()) && !kit.once()) {

@@ -92,7 +92,7 @@ public final class KitCatalog {
 
         /** Valor que inyecta al día. Los de una sola vez no cuentan. */
         public long dailyValue() {
-            if (once || cooldownHours <= 0 || "exclusive".equals(category)) return 0;
+            if (once || cooldownHours <= 0 || "exclusive".equals(category) || "rank_armor".equals(category)) return 0;
             return value() * 24 / cooldownHours;
         }
     }
@@ -205,7 +205,7 @@ public final class KitCatalog {
         List<String> problemas = new ArrayList<>();
 
         for (Kit k : kits) {
-            if (!(k.category().equals("rank") || k.category().equals("exclusive"))) {
+            if (!(k.category().equals("rank") || k.category().equals("exclusive") || k.category().equals("rank_armor"))) {
                 problemas.add(k.id() + ": categoria desconocida");
             }
             if (k.category().equals("exclusive")) {
@@ -214,6 +214,11 @@ public final class KitCatalog {
                 }
                 if (k.lunaPrice() != PRECIO_KIT_EXCLUSIVO) {
                     problemas.add(k.id() + ": kit exclusivo debe costar exactamente " + PRECIO_KIT_EXCLUSIVO + " LunaCoins (tiene " + k.lunaPrice() + ")");
+                }
+            }
+            if (k.category().equals("rank_armor")) {
+                if (!k.once()) {
+                    problemas.add(k.id() + ": kit de armadura debe tener reclamo único (once=true)");
                 }
             }
             if (k.cooldownHours() < 0) {

@@ -2039,7 +2039,7 @@ public final class AutoTest {
               exclusivos.stream().allMatch(k -> k.lunaPrice() > 0 && k.once()));
         check("los kits de rango se reclaman cada cinco dias",
               catalogo.kits().stream()
-                  .filter(k -> k.requiredRank() != null)
+                  .filter(k -> "rank".equals(k.category()) && k.requiredRank() != null)
                   .allMatch(k -> !k.once() && k.cooldownHours() == 120));
 
         long inyeccionDiaria = catalogo.kits().stream()

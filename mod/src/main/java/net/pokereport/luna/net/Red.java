@@ -7401,18 +7401,60 @@ public class Red implements ModInitializer {
             try {
                 long pid = LunaEternal.players().resolve(jugador.getUuid(), jugador.getGameProfile().getName());
                 int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
+                var playerRank = net.pokereport.luna.ui.Tablist.rangoDe(jugador);
+                boolean esStaff = playerRank.equipo || jugador.hasPermissionLevel(2);
+                boolean elegibleLeyendaDirecto = esStaff || (playerRank == net.pokereport.luna.ui.Tablist.Rank.LEYENDA
+                        && LunaEternal.kitService().esElegibleArmadurasLeyenda(pid, jugador.getUuid()));
+
                 var salida = new java.util.ArrayList<FichaKit>();
                 for (var kit : LunaEternal.kits().kits()) {
                     boolean ex = "exclusive".equals(kit.category());
+                    boolean rankArmor = "rank_armor".equals(kit.category());
+
+                    if (rankArmor) {
+                        if (!elegibleLeyendaDirecto) {
+                            continue;
+                        }
+                        boolean reclamado = LunaEternal.kitService().haReclamado(pid, kit);
+                        boolean disponible = !reclamado;
+                        String espera = reclamado ? "reclamado" : "";
+                        salida.add(new FichaKit(kit.id(), 0, 0, true, disponible, espera));
+                        continue;
+                    }
+
                     boolean propio = ex && LunaEternal.kitService().posee(pid, kit);
                     boolean reclamado = propio && LunaEternal.kitService().haReclamado(pid, kit);
                     var st = ex ? null : LunaEternal.kitService().status(pid, kit);
-                    boolean rango = kit.requiredRank() == null || escalon >=
-                            net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank()).escalon;
+
+                    boolean rango;
+                    if ("rank".equals(kit.category()) && !kit.once()) {
+                        var reqRank = kit.requiredRank() != null ? net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank()) : null;
+                        if (reqRank == null || esStaff) {
+                            rango = true;
+                        } else if (playerRank.escalon < reqRank.escalon) {
+                            rango = false;
+                        } else if (playerRank.escalon > reqRank.escalon) {
+                            rango = false;
+                        } else {
+                            rango = true;
+                        }
+                    } else {
+                        rango = kit.requiredRank() == null || escalon >=
+                                net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank()).escalon;
+                    }
+
                     boolean disponible = ex ? (!propio || !reclamado) : rango && st.claimable();
-                    String espera = ex ? (reclamado ? "reclamado" : (propio ? "pendiente" : "")) :
-                            (st == null || st.claimable() ? "" :
-                            (st.reason() != null ? st.reason() : st.remaining()));
+                    String espera;
+                    if (ex) {
+                        espera = reclamado ? "reclamado" : (propio ? "pendiente" : "");
+                    } else if ("rank".equals(kit.category()) && !kit.once() && kit.requiredRank() != null
+                            && !esStaff && playerRank.escalon > net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank()).escalon) {
+                        espera = "rango superado";
+                    } else {
+                        espera = (st == null || st.claimable() ? "" :
+                                (st.reason() != null ? st.reason() : st.remaining()));
+                    }
+
                     salida.add(new FichaKit(kit.id(), ex ? 1 : 0, kit.lunaPrice(),
                             propio, disponible, espera));
                 }

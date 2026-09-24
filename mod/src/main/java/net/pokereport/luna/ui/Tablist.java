@@ -307,8 +307,12 @@ public final class Tablist {
      * <p>⚠ NO usa {@link #rankOf}, y esa es la diferencia importante: alli un
      * operador sale como ADMIN, que tiene escalon -1. Aqui manda lo guardado.
      */
+    public static Rank rangoDe(ServerPlayerEntity player) {
+        return net.pokereport.luna.rank.RankService.enCache(player.getUuid());
+    }
+
     public static int escalonDe(ServerPlayerEntity player) {
-        return net.pokereport.luna.rank.RankService.enCache(player.getUuid()).escalon;
+        return rangoDe(player).escalon;
     }
 
     /** Cabecera y pie. Se reenvía cuando cambia el número de conectados. */

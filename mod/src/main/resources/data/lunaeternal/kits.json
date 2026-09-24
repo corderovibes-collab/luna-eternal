@@ -1179,6 +1179,182 @@
       ]
     },
     {
+      "id": "armadura_elite",
+      "name": "§aArmadura Élite",
+      "category": "rank_armor",
+      "lunaPrice": 0,
+      "icon": "lunaeternal:elite_chestplate",
+      "description": "Armadura completa de rango Élite exclusiva por compra directa de Leyenda.",
+      "cooldownHours": 0,
+      "once": true,
+      "requiredRank": "LEYENDA",
+      "items": [
+        {
+          "item": "lunaeternal:elite_helmet",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 2,
+            "minecraft:unbreaking": 2,
+            "minecraft:mending": 1,
+            "minecraft:respiration": 1,
+            "minecraft:aqua_affinity": 1
+          }
+        },
+        {
+          "item": "lunaeternal:elite_chestplate",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 2,
+            "minecraft:unbreaking": 2,
+            "minecraft:mending": 1
+          }
+        },
+        {
+          "item": "lunaeternal:elite_leggings",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 2,
+            "minecraft:unbreaking": 2,
+            "minecraft:mending": 1
+          }
+        },
+        {
+          "item": "lunaeternal:elite_boots",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 2,
+            "minecraft:unbreaking": 2,
+            "minecraft:mending": 1,
+            "minecraft:feather_falling": 2,
+            "minecraft:depth_strider": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "armadura_campeon",
+      "name": "§bArmadura Campeón",
+      "category": "rank_armor",
+      "lunaPrice": 0,
+      "icon": "lunaeternal:campeon_chestplate",
+      "description": "Armadura completa de rango Campeón exclusiva por compra directa de Leyenda.",
+      "cooldownHours": 0,
+      "once": true,
+      "requiredRank": "LEYENDA",
+      "items": [
+        {
+          "item": "lunaeternal:campeon_helmet",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 3,
+            "minecraft:unbreaking": 3,
+            "minecraft:mending": 1,
+            "minecraft:respiration": 2,
+            "minecraft:aqua_affinity": 1
+          }
+        },
+        {
+          "item": "lunaeternal:campeon_chestplate",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 3,
+            "minecraft:unbreaking": 3,
+            "minecraft:mending": 1
+          }
+        },
+        {
+          "item": "lunaeternal:campeon_leggings",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 3,
+            "minecraft:unbreaking": 3,
+            "minecraft:mending": 1
+          }
+        },
+        {
+          "item": "lunaeternal:campeon_boots",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 3,
+            "minecraft:unbreaking": 3,
+            "minecraft:mending": 1,
+            "minecraft:feather_falling": 3,
+            "minecraft:depth_strider": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "armadura_maestro",
+      "name": "§5Armadura Maestro",
+      "category": "rank_armor",
+      "lunaPrice": 0,
+      "icon": "lunaeternal:maestro_chestplate",
+      "description": "Armadura completa de rango Maestro exclusiva por compra directa de Leyenda.",
+      "cooldownHours": 0,
+      "once": true,
+      "requiredRank": "LEYENDA",
+      "items": [
+        {
+          "item": "lunaeternal:maestro_helmet",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 4,
+            "minecraft:unbreaking": 4,
+            "minecraft:mending": 1,
+            "minecraft:respiration": 3,
+            "minecraft:aqua_affinity": 1,
+            "minecraft:thorns": 2
+          }
+        },
+        {
+          "item": "lunaeternal:maestro_chestplate",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 4,
+            "minecraft:unbreaking": 4,
+            "minecraft:mending": 1,
+            "minecraft:thorns": 2
+          }
+        },
+        {
+          "item": "lunaeternal:maestro_leggings",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 4,
+            "minecraft:unbreaking": 4,
+            "minecraft:mending": 1,
+            "minecraft:swift_sneak": 3,
+            "minecraft:thorns": 2
+          }
+        },
+        {
+          "item": "lunaeternal:maestro_boots",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 4,
+            "minecraft:unbreaking": 4,
+            "minecraft:mending": 1,
+            "minecraft:feather_falling": 4,
+            "minecraft:depth_strider": 3,
+            "minecraft:thorns": 2
+          }
+        }
+      ]
+    },
+    {
       "id": "magikarp",
       "name": "§6Magikarp Tidal",
       "category": "exclusive",

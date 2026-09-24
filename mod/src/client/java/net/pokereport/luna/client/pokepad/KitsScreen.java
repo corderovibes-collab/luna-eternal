@@ -668,12 +668,19 @@ public class KitsScreen extends Screen {
                     case "magikarp" -> "magikarparmor";
                     case "pikachu" -> "pikachuarmor";
                     case "eevee" -> "eeveelution";
+                    case "armadura_elite", "armadura_campeon", "armadura_maestro" -> "lunaeternal";
                     default -> null;
                 };
                 if (ns == null) {
                     continue;
                 }
-                String prefijo = f.id().equals("eevee") ? "eeveelution" : f.id();
+                String prefijo = switch (f.id()) {
+                    case "eevee" -> "eeveelution";
+                    case "armadura_elite" -> "elite";
+                    case "armadura_campeon" -> "campeon";
+                    case "armadura_maestro" -> "maestro";
+                    default -> f.id();
+                };
                 for (int s = 0; s < 4; s++) {
                     anteriores[s] = jugador.getEquippedStack(slots[s]).copy();
                     var item = Registries.ITEM.get(
@@ -893,7 +900,10 @@ public class KitsScreen extends Screen {
                 badge = "LISTO PARA RECLAMAR";
                 colBadge = 0xFF5CD68A;
             } else if (f.espera() != null && !f.espera().isBlank()) {
-                if (f.espera().toLowerCase().contains("rango") || f.espera().toLowerCase().contains("bloqueado")) {
+                if (f.espera().toLowerCase().contains("superado")) {
+                    badge = "BLOQUEADO (RANGO SUPERADO)";
+                    colBadge = 0xFFE07040;
+                } else if (f.espera().toLowerCase().contains("rango") || f.espera().toLowerCase().contains("bloqueado")) {
                     badge = "BLOQUEADO (REQUIERE RANGO)";
                     colBadge = 0xFFE07040;
                 } else {
@@ -1049,7 +1059,9 @@ public class KitsScreen extends Screen {
                     colorBtn = APAGADO;
                 }
             } else if (f.espera() != null && !f.espera().isBlank()) {
-                if (f.espera().toLowerCase().contains("rango") || f.espera().toLowerCase().contains("bloqueado")) {
+                if (f.espera().toLowerCase().contains("superado")) {
+                    lbl = "BLOQUEADO (RANGO SUPERADO)";
+                } else if (f.espera().toLowerCase().contains("rango") || f.espera().toLowerCase().contains("bloqueado")) {
                     lbl = f.espera().toUpperCase();
                 } else {
                     lbl = "DISPONIBLE EN: " + f.espera().toUpperCase();
@@ -1213,6 +1225,9 @@ public class KitsScreen extends Screen {
             case "campeon" -> "KIT CAMPEÓN";
             case "maestro" -> "KIT MAESTRO";
             case "leyenda" -> "KIT LEYENDA";
+            case "armadura_elite" -> "ARMADURA ÉLITE";
+            case "armadura_campeon" -> "ARMADURA CAMPEÓN";
+            case "armadura_maestro" -> "ARMADURA MAESTRO";
             default -> id.toUpperCase(java.util.Locale.ROOT);
         };
     }

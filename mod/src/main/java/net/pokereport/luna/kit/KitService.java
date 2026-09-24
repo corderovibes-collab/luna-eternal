@@ -212,11 +212,34 @@ public class KitService {
     }
 
     /**
-     * Entrega un kit de rango a un jugador conectado.
+     * Entrega un kit de rango o armadura a un jugador conectado.
      */
     public String entregar(ServerPlayerEntity jugador, long playerId,
                            KitCatalog.Kit kit) throws SQLException {
-        if (kit.requiredRank() != null) {
+        if ("rank".equals(kit.category()) && !kit.once()) {
+            if (kit.requiredRank() != null) {
+                var pide = net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank());
+                var actual = net.pokereport.luna.ui.Tablist.rangoDe(jugador);
+                if (!actual.equipo && !jugador.hasPermissionLevel(2)) {
+                    if (actual.escalon < pide.escalon) {
+                        return "te falta el rango " + kit.requiredRank();
+                    }
+                    if (actual.escalon > pide.escalon) {
+                        return "este kit ya no está disponible para tu rango actual";
+                    }
+                }
+            }
+        } else if ("rank_armor".equals(kit.category())) {
+            var actual = net.pokereport.luna.ui.Tablist.rangoDe(jugador);
+            if (actual != net.pokereport.luna.ui.Tablist.Rank.LEYENDA && !actual.equipo && !jugador.hasPermissionLevel(2)) {
+                return "requiere el rango LEYENDA";
+            }
+            if (!actual.equipo && !jugador.hasPermissionLevel(2)) {
+                if (!esElegibleArmadurasLeyenda(playerId, jugador.getUuid())) {
+                    return "solo disponible por compra directa de Leyenda sin upgrades previos";
+                }
+            }
+        } else if (kit.requiredRank() != null) {
             var pide = net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank());
             if (net.pokereport.luna.ui.Tablist.escalonDe(jugador) < pide.escalon) {
                 return "te falta el rango " + kit.requiredRank();
@@ -236,7 +259,7 @@ public class KitService {
         }
 
         if (!claim(playerId, kit)) {
-            return "todavia no toca";
+            return kit.once() ? "ya has reclamado este kit" : "todavia no toca";
         }
 
         var servidor = jugador.getServer();
@@ -250,7 +273,11 @@ public class KitService {
         } catch (Exception e) {
             LunaEternal.LOG.error("Fallo al entregar el kit {} a {}", kit.id(),
                     jugador.getGameProfile().getName(), e);
-            undo(playerId, kit);
+            if (kit.once()) {
+                undoOnce(playerId, kit.id());
+            } else {
+                undo(playerId, kit);
+            }
             return "no se pudo entregar; vuelve a intentarlo";
         }
         return null;
@@ -402,15 +429,81 @@ public class KitService {
         try (Connection c = getConnection();
              PreparedStatement ps = c.prepareStatement(
                  "SELECT 1 FROM exclusive_kit_purchase WHERE player_id = ? AND kit_id = ? AND purchase_status = 'COMPLETED' AND claim_status = 'CLAIMED' "
-               + "UNION SELECT 1 FROM kit_claim WHERE player_id = ? AND kit_id = ?")) {
+               + "UNION SELECT 1 FROM kit_claim WHERE player_id = ? AND (kit_id = ? OR kit_id = ?)")) {
             ps.setLong(1, playerId);
             ps.setString(2, kit.id());
             ps.setLong(3, playerId);
-            ps.setString(4, "exclusive_claim:" + kit.id());
+            ps.setString(4, kit.id());
+            ps.setString(5, "exclusive_claim:" + kit.id());
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }
         }
+    }
+
+    /**
+     * Comprueba si el jugador adquirió el rango LEYENDA por compra directa en Tebex (sin upgrades previos).
+     */
+    public boolean esElegibleArmadurasLeyenda(long playerId, UUID playerUuid) {
+        try (Connection c = getConnection()) {
+            return esElegibleArmadurasLeyenda(c, playerId, playerUuid);
+        } catch (Exception e) {
+            LunaEternal.LOG.warn("No se pudo verificar elegibilidad de armaduras Leyenda para pid={}: {}",
+                    playerId, e.toString());
+            return false;
+        }
+    }
+
+    public boolean esElegibleArmadurasLeyenda(Connection c, long playerId, UUID playerUuid) throws SQLException {
+        String uuidStr = playerUuid != null ? playerUuid.toString() : null;
+
+        // 1. Debe existir compra DELIVERED directa de rango LEYENDA (product_type = 'RANK' y product_value = 'LEYENDA')
+        boolean tieneLeyendaDirecto = false;
+        String sqlDirect = "SELECT 1 FROM tebex_fulfillment "
+                + "WHERE (player_id = ? OR (player_uuid = ? AND player_uuid IS NOT NULL)) "
+                + "AND status = 'DELIVERED' AND product_type = 'RANK' AND product_value = 'LEYENDA' LIMIT 1";
+        try (PreparedStatement ps = c.prepareStatement(sqlDirect)) {
+            ps.setLong(1, playerId);
+            ps.setString(2, uuidStr);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    tieneLeyendaDirecto = true;
+                }
+            }
+        }
+        if (!tieneLeyendaDirecto) {
+            return false;
+        }
+
+        // 2. NO debe haber ningún upgrade de rango registrado (ej: subió de Maestro a Leyenda)
+        String sqlUpgrade = "SELECT 1 FROM tebex_fulfillment "
+                + "WHERE (player_id = ? OR (player_uuid = ? AND player_uuid IS NOT NULL)) "
+                + "AND status = 'DELIVERED' AND product_type = 'RANK_UPGRADE' LIMIT 1";
+        try (PreparedStatement ps = c.prepareStatement(sqlUpgrade)) {
+            ps.setLong(1, playerId);
+            ps.setString(2, uuidStr);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return false;
+                }
+            }
+        }
+
+        // 3. NO debe haber compras de rangos comerciales inferiores previas
+        String sqlRangosPrevios = "SELECT 1 FROM tebex_fulfillment "
+                + "WHERE (player_id = ? OR (player_uuid = ? AND player_uuid IS NOT NULL)) "
+                + "AND status = 'DELIVERED' AND product_type = 'RANK' AND product_value IN ('ELITE', 'CAMPEON', 'MAESTRO') LIMIT 1";
+        try (PreparedStatement ps = c.prepareStatement(sqlRangosPrevios)) {
+            ps.setLong(1, playerId);
+            ps.setString(2, uuidStr);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**

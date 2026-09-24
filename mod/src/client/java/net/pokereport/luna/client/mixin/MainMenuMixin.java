@@ -72,7 +72,7 @@ public abstract class MainMenuMixin extends Screen {
     @Unique
     private static final String URL_DISCORD = "https://discord.gg/pokereport";
     @Unique
-    private static final String URL_TIENDA = "https://tienda.pokereport.net/";
+    private static final String URL_TIENDA = net.pokereport.luna.client.Enlaces.TIENDA;
     @Unique
     private static final String URL_WIKI = "https://wiki.pokereport.net/";
 
@@ -93,7 +93,20 @@ public abstract class MainMenuMixin extends Screen {
             if (element instanceof ClickableWidget widget) {
                 if (widget.getX() < 60 && widget.getY() < 60) {
                     toRemove.add(widget);
+                    continue;
                 }
+            }
+            // Flashback adds its replay button relative to the vanilla menu.
+            // Our compact PokéReport layout moves the vanilla rows afterwards,
+            // which used to leave Flashback directly on top of Accessibility:
+            // its icon was visible, but Accessibility received every click.
+            // Pin it beside the main Network button on every render because
+            // Flashback may recalculate its own position during the first tick.
+            if (element instanceof ButtonWidget button
+                    && button.getMessage().getContent() instanceof TranslatableTextContent translatable
+                    && "flashback.open_replays".equals(translatable.getKey())) {
+                int mainRowY = this.height / 4 + 48 + 20 + 4;
+                button.setPosition(this.width / 2 + 104, mainRowY);
             }
         }
         if (!toRemove.isEmpty()) {

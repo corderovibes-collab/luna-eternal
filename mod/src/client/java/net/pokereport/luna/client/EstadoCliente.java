@@ -46,6 +46,8 @@ public final class EstadoCliente {
     private static Red.EstadoGimnasio gimnasio;
     private static Red.EstadoTrajes trajes;
     private static Red.EstadoKits kits;
+    private static Red.EstadoCrianza crianza;
+    private static java.util.List<Red.CandidatoCrianza> candidatosCrianza;
     /**
      * ¿Esta en el lobby? Mientras lo este, no hay PokePad ni teclas.
      *
@@ -257,6 +259,7 @@ public final class EstadoCliente {
 
     public static void guardar(Red.EstadoKits nuevo) { kits = nuevo; }
     public static Red.EstadoKits kits() { return kits; }
+    public static long rotaEnEpochMs() { return kits != null ? kits.rotaEnEpochMs() : 0L; }
 
     public static void guardar(Red.EstadoViajes nuevo) {
         viajes = nuevo;
@@ -420,6 +423,22 @@ public final class EstadoCliente {
         return recompensasTorre;
     }
 
+    public static void guardar(Red.EstadoCrianza nuevo) {
+        crianza = nuevo;
+    }
+
+    public static Red.EstadoCrianza crianza() {
+        return crianza;
+    }
+
+    public static void guardar(Red.EstadoCandidatosCrianza nuevo) {
+        candidatosCrianza = nuevo != null ? nuevo.candidatos() : null;
+    }
+
+    public static java.util.List<Red.CandidatoCrianza> candidatosCrianza() {
+        return candidatosCrianza;
+    }
+
     /** Al salir del mundo se olvida: el saldo es de esa partida, no del cliente. */
     public static void olvidar() {
         tesoros = null;
@@ -445,6 +464,8 @@ public final class EstadoCliente {
         honor = null;
         pendientes = null;
         recompensasTorre = null;
+        crianza = null;
+        candidatosCrianza = null;
         // ⚠ El catalogo tambien se olvida al salir del servidor. Guardarlo
         // entre partidas enseñaria en el servidor B lo que se compro en el A.
         cosmeticos = null;

@@ -401,30 +401,24 @@ public final class Gimnasio {
      *
      * <p>⚠ Brock: medido por el usuario tras pegar el esquema (48, 78, 17.26)
      * sobre un origen en (0, 64, 0).
+     * <p>⚠ Misty: medido por el usuario (1115.42, 91.0, 5.5) mirando a Oeste (90°)
+     * sobre un origen en (1024, 64, 0).
      */
     private static final java.util.Map<String, Punto> ENTRADAS = java.util.Map.of(
-        "brock", new Punto(48.0, 14.0, 17.26, 0f));
+        "brock", new Punto(48.0, 14.0, 17.26, 0f),
+        "misty", new Punto(91.42, 27.0, 5.5, 90f));
 
     /**
      * La tarima del líder, medida en su maestro.
      *
      * <p>⚠ Brock: el usuario se puso encima y leyó (48, 72, 40.45) sobre un
-     * origen en (0, 64, 0), o sea el desfase (48, 8, 40.45). <b>Ya no es una
-     * suposición</b> — antes se usaba «24 bloques al fondo de la entrada», y un
-     * líder dentro de una pared no da ningún error: aparece, y no se le ve.
-     *
-     * <p>⚠⚠ Y está SEIS BLOQUES POR DEBAJO de la entrada (14 → 8). No es un
-     * error de medida: se entra por arriba y se combate abajo. Si algún día
-     * alguien «corrige» uno de los dos para que cuadren, el jugador aparecerá
-     * dentro del suelo.
-     *
-     * <p>⚠ El giro es 180: la entrada está al norte (z 17,26) y el líder al sur
-     * (z 40,45), así que mirar a quien llega es mirar hacia −Z. Sin fijarlo,
-     * Brock aparece mirando a donde mire el norte del mundo — que aquí es la
-     * pared del fondo.
+     * origen en (0, 64, 0), o sea el desfase (48, 8, 40.45).
+     * <p>⚠ Misty: en la cámara principal esperando en (1055.62, 71.0, 57.55)
+     * mirando hacia Este (-90°) sobre un origen en (1024, 64, 0).
      */
     private static final java.util.Map<String, Punto> LIDERES = java.util.Map.of(
-        "brock", new Punto(48.0, 8.0, 40.45, 180f));
+        "brock", new Punto(48.0, 8.0, 40.45, 180f),
+        "misty", new Punto(31.62, 7.0, 57.55, -90f));
 
     /**
      * DÓNDE ESPERA CADA LÍDER EN LA CIUDADELA, Y CON QUÉ POKÉMON AL LADO.
@@ -473,9 +467,27 @@ public final class Gimnasio {
      * cambiar esta palabra.
      */
     private static final java.util.Map<String, Recepcion> RECEPCIONES =
-        java.util.Map.of(
-            "brock", new Recepcion(-137.95, 69, 49.37, 0f,
-                                   -137.544, 69, 52, "onix"));
+        java.util.Map.ofEntries(
+            java.util.Map.entry("brock", new Recepcion(-137.95, 69.0, 49.37, 90f,
+                                                       -137.544, 69.0, 52.0, "onix")),
+            java.util.Map.entry("misty", new Recepcion(-137.55, 69.09, 58.85, 90f,
+                                                       -137.61, 69.09, 60.39, "starmie")),
+            java.util.Map.entry("surge", new Recepcion(-137.57, 69.0, 66.53, 90f,
+                                                       -137.92, 69.0, 68.02, "raichu")),
+            java.util.Map.entry("erika", new Recepcion(-150.543, 69.0, 49.50, -90f,
+                                                       -150.64, 69.0, 51.60, "vileplume")),
+            java.util.Map.entry("koga", new Recepcion(-150.76, 69.0, 59.51, -90f,
+                                                      -150.88, 69.0, 61.44, "weezing")),
+            java.util.Map.entry("sabrina", new Recepcion(-150.58, 69.0, 66.65, -90f,
+                                                         -150.661, 69.0, 68.495, "alakazam")),
+            java.util.Map.entry("blaine", new Recepcion(-145.206, 69.0, 66.93, 180f,
+                                                        -143.267, 69.0, 67.05, "arcanine")),
+            java.util.Map.entry("giovanni", new Recepcion(-145.84, 79.0, 71.27, 180f,
+                                                          -143.296, 79.0, 70.52, "mewtwo")),
+            java.util.Map.entry("campeon_kanto", new Recepcion(-145.22, 81.0, 47.52, 0f,
+                                                               -142.902, 81.0, 47.94, "pidgeot"))
+        );
+
 
     /** Dónde espera un líder en la ciudadela, o {@code null} si aún no tiene sitio. */
     public static Recepcion recepcion(Gimnasio_ g) {

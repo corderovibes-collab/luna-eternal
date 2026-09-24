@@ -337,7 +337,7 @@ SUBIR = {
     "tmcraft":
         "Version 1.4.19+1.8.0 compatible con Cobblemon 1.8.0.",
     "cobblemonraiddens":
-        "Version 0.11.7+1.21.1 compatible con Cobblemon 1.8.0.",
+        "Version 0.12.1+1.21.1 compatible oficialmente con Cobblemon 1.8.0.",
     "only-bottle-caps":
         "Version 1.5.0-fabric compatible con Cobblemon 1.8.0.",
     "navas-zamega":
@@ -520,6 +520,10 @@ OVERRIDES_FUERA = (
 # `iris`, `yacl`, `sodium`, `lithium`, `ferrite-core`, `entityculling` y
 # `modmenu` ya vienen en la base: no se repiten aqui.
 EXTRA_JUGADOR = [
+    # Cinematicas internas: el libro del Profesor Oak reproduce MP4 dentro de
+    # Minecraft. WaterMedia aporta la API y Binaries los FFmpeg nativos.
+    "watermedia",
+    "watermedia-binaries",
     # Genera Euphoria Patches en el PC del jugador a partir de Complementary.
     # Es la unica via que permite su licencia (§2.1, §2.2.a) — ver
     # docs/technical/client-pack.md §2-quater.
@@ -578,6 +582,9 @@ EXTRA_JUGADOR = [
 ]
 
 EXTRA_CONSTRUCTOR = [
+    # Editor de replays y camaras cinematograficas. Solo lo necesitan quienes
+    # producen videos; pesa mas de 200 MB y no aporta nada al jugador normal.
+    "flashback",
     # Dibuja la seleccion de WorldEdit. Sin el se construye a ciegas.
     "worldedit-cui",
     # Editor de construccion. docs/world/construccion.md §3-bis.
@@ -760,8 +767,8 @@ CLAVADOS = {
                          "motivo": "clavado a 1.10.0-r5.9-fabric"},
     "rctapi": {"version": "0.16.0-beta",
                "motivo": "clavado al servidor; ver CLAVADOS"},
-    "cobblemonraiddens": {"version": "0.11.7+1.21.1",
-                           "motivo": "clavado al servidor; spawn natural desactivado"},
+    "cobblemonraiddens": {"version": "0.12.1+1.21.1",
+                           "motivo": "compatibilidad oficial con Cobblemon 1.8; spawn natural desactivado"},
     "tmcraft": {"version": "1.4.19+1.8.0",
                  "motivo": "clavado al servidor y a Cobblemon 1.8.0"},
     "rechiseled": {"version": "1.2.5-fabric-mc1.21",

@@ -43,21 +43,25 @@ import net.pokereport.luna.world.LunaDimensions;
  */
 public final class SoloEnElHogar {
 
+    private static final net.minecraft.util.Identifier FASE_PRE =
+            net.minecraft.util.Identifier.of(LunaEternal.MOD_ID, "pre_protection");
+
     private SoloEnElHogar() {
     }
 
     /**
      * Engancha el corte. Se llama una vez al arrancar.
      *
-     * <p>&#9888; {@code UseBlockCallback} se dispara en <b>los dos lados</b> y
-     * con <b>las dos manos</b>. El corte del cliente evita que se vea el bloque
-     * puesto durante un fotograma antes de que el servidor lo quite; el
-     * antirrebote evita que el mensaje salga dos veces, que es el mismo fallo
-     * que se acaba de arreglar en Oak.
+     * <p>⚠ Se usa ordenamiento de fases de Fabric API para ejecutarse ANTES de
+     * ClaimBlocks (que se registra en {@code Event.DEFAULT_PHASE}). Devolver
+     * {@code FAIL} en una fase previa corta la cadena entera y evita que
+     * ClaimBlocks coloque la parcela fuera del Hogar.
      */
     public static void enganchar() {
-        UseBlockCallback.EVENT.register((jugador, mundo, mano, golpe) -> {
-            if (!Modulos.esModulo(jugador.getStackInHand(mano))) {
+        UseBlockCallback.EVENT.addPhaseOrdering(FASE_PRE, net.fabricmc.fabric.api.event.Event.DEFAULT_PHASE);
+        UseBlockCallback.EVENT.register(FASE_PRE, (jugador, mundo, mano, golpe) -> {
+            var pila = jugador.getStackInHand(mano);
+            if (!Modulos.esModulo(pila)) {
                 return ActionResult.PASS;
             }
             if (LunaDimensions.HOGAR.equals(mundo.getRegistryKey())) {
@@ -66,18 +70,13 @@ public final class SoloEnElHogar {
             if (jugador instanceof ServerPlayerEntity sp
                     && !net.pokereport.luna.ui.Toque.repetido(sp.getUuid(), "parcela")) {
                 sp.sendMessage(Text.literal(
-                        "§c§lAQUI NO §r§7— las parcelas solo se pueden poner en el "
-                        + "§fMundo Hogar§7."), false);
+                        "§c§lAQUÍ NO §r§7— Las parcelas de protección §fsolo se pueden colocar en el Mundo Hogar§7."), false);
                 sp.sendMessage(Text.literal(
-                        "§8El Salvaje se reinicia y la ciudadela la construimos "
-                        + "entre todos."), false);
+                        "§8El Salvaje se reinicia periódicamente y la Ciudadela es comunitaria."), false);
             }
-            // ⚠ FAIL y no SUCCESS: SUCCESS diria «ya lo he gestionado yo» y
-            //   ademas consumiria el uso. FAIL corta y deja el modulo en la
-            //   mano, que es lo que tiene que pasar -- el jugador no ha perdido
-            //   nada por equivocarse de sitio.
+            // ⚠ FAIL corta antes de que ClaimBlocks reciba el evento, dejando el módulo intacto en mano.
             return ActionResult.FAIL;
         });
-        LunaEternal.LOG.info("Protecciones: las parcelas solo se ponen en el Hogar");
+        LunaEternal.LOG.info("Protecciones: las parcelas solo se ponen en el Hogar (Fase PRE)");
     }
 }

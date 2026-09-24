@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,6 +91,39 @@ public final class MedallaService {
     /** Cuántas lleva. Es lo que abre el gimnasio siguiente. */
     public static int cuantas(UUID uuid) {
         return Integer.bitCount(enCache(uuid));
+    }
+
+    /**
+     * Comprueba si el jugador ha vencido a los 8 líderes de Kanto y al Campeón de Kanto.
+     * Requisito indispensable para acceder a cualquier modo de la Torre de Batalla.
+     */
+    public static boolean tieneKantoCompleto(UUID uuid) {
+        return tieneKantoCompleto(enCache(uuid));
+    }
+
+    /**
+     * Comprueba si una máscara de medallas contiene todos los líderes de Kanto y al Campeón.
+     */
+    public static boolean tieneKantoCompleto(int mascara) {
+        for (Gimnasio.Gimnasio_ g : Gimnasio.deRegion(Gimnasio.Region.KANTO)) {
+            if ((mascara & (1 << g.sala())) == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Devuelve la lista de retos de Kanto pendientes (líderes o campeón) que aún no han sido derrotados.
+     */
+    public static List<Gimnasio.Gimnasio_> kantoPendientes(int mascara) {
+        List<Gimnasio.Gimnasio_> pendientes = new ArrayList<>();
+        for (Gimnasio.Gimnasio_ g : Gimnasio.deRegion(Gimnasio.Region.KANTO)) {
+            if ((mascara & (1 << g.sala())) == 0) {
+                pendientes.add(g);
+            }
+        }
+        return pendientes;
     }
 
     /** Se olvida al salir: la caché es de los que están dentro. */

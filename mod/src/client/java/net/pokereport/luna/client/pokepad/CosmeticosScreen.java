@@ -658,6 +658,16 @@ public class CosmeticosScreen extends Screen {
             return true;
         }
 
+        // El mismo "+" que se dibuja junto al saldo: antes era decorativo.
+        int acy = PANEL_Y + PANEL_H - 40;
+        int mw = pl(58);
+        if (dentro(rx, ry, px(PANEL_X + PANEL_W - 22) - mw,
+                py(acy) - mw / 2, mw, mw)) {
+            sonar(true);
+            net.pokereport.luna.client.Enlaces.abrirTienda(client, this);
+            return true;
+        }
+
         // Pestañas
         int pw = (PANT_W - 2 * MARGEN) / categorias.size();
         for (int i = 0; i < categorias.size(); i++) {

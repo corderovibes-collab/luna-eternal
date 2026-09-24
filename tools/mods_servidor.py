@@ -130,6 +130,9 @@ QUEREMOS = {
     # (aqui estuvieron `accessories_compat_layer` y `trinkets`. Se resolvio al
     #  reves: se QUITARON DEL CLIENTE, porque de ese puente no dependia ningun
     #  mod del pack. Ver EXCLUIDOS en gen_modpack.py)
+    # Jade & Image2Map
+    "Jade":         "HUD informativo de bloques y entidades para jugadores y administradores",
+    "image2map":    "Renderizado de imagenes en mapas para carteles gigantes y marcos luminosos",
 }
 
 # ---------------------------------------------------------------------------
@@ -203,6 +206,8 @@ QUEREMOS.update({k: f"Registra bloques ({v}). Si esta solo en el cliente, las "
 # Lo que NO se toca aunque no este en QUEREMOS: es nuestro o es infraestructura.
 # Sin esta lista, `--aplicar` borraria el mod del servidor entero.
 INTOCABLES = ("lunaeternal", "lunaneon", "cobblemon-cards",
+              "armaduraspokereport-kits-completo", "eeveelution-armor",
+              "magikarp-animated-armor", "pikachu-animated-armor",
               "fabric-api", "Cobblemon",
               "EasyAuth", "worldedit", "Axiom",
               # ⚠ CHUNKY ES SOLO DE SERVIDOR Y ESTA COMPROBADO, no supuesto:

@@ -385,6 +385,9 @@ public final class MarketService {
         if (itemId == null || itemId.isBlank()) {
             return Resultado.no("Ese objeto no existe.");
         }
+        if (Inventarios.objeto(itemId) instanceof net.pokereport.luna.item.ArmaduraRangoItem) {
+            return Resultado.no("Las armaduras de rango no se pueden vender en el mercado.");
+        }
         final long precio = acotarPrecio(precioPedido);
         final int cantidad = acotarCantidad(cantidadPedida);
 

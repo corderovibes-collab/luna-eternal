@@ -25,6 +25,7 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`game-design/core-loop.md`](game-design/core-loop.md) | 🟡 | Tres bucles anidados — **propuesta** |
 | [`trading/gts.md`](trading/gts.md) | ✅ | Mercado: acceso por progresión, comisiones, anti-abuso |
 | [`progression/progression-model.md`](progression/progression-model.md) | ✅ | 5 vías, desbloqueos de dos factores, sin nivel de jugador |
+| [`beneficios-rangos-homes-tpa-2026-09-16.md`](beneficios-rangos-homes-tpa-2026-09-16.md) | ✅ | Rangos (Élite a Leyenda), comandos Cobblemon, MariaDB Homes/Pwarps, TPA y XP Leyenda |
 | [`ui/interfaz-cliente.md`](ui/interfaz-cliente.md) | ✅ | **Cómo se hace la interfaz**, y por qué nunca como menú de cofre |
 | [`ui/dibujado.md`](ui/dibujado.md) | ✅ | ⚠️ **Las 5 reglas de dibujado que cumple toda pantalla.** Leer ANTES de escribir una nueva |
 | [`world/puerta.md`](world/puerta.md) | ✅ | **La puerta**: el lobby como unica entrada, el guardian, y por que hasta hoy un jugador nuevo no podia empezar |
@@ -36,6 +37,7 @@ documento que necesitas, léelo, y sigue solo sus `Dependencies` declaradas.
 | [`economy/treasures.md`](economy/treasures.md) | ⚠️ | Cofres y llaves — **con una objeción abierta sobre legendarios** |
 | [`ui/interfaces-catalog.md`](ui/interfaces-catalog.md) | ✅ | Las 22 pantallas, prioridad y patrones comunes |
 | [`technical/launcher.md`](technical/launcher.md) | ✅ | **El launcher**: se autoactualiza él y el pack, perfiles, reparar, diagnóstico |
+| [`technical/cinematica-profesor-oak.md`](technical/cinematica-profesor-oak.md) | ✅ | Cinemática interna del Profesor Oak: video canónico, caché verificada, WaterMedia, despliegue y recuperación |
 | [`world/construccion.md`](world/construccion.md) | ✅ | Construir la ciudadela con Axiom, **entre varios a la vez** |
 | [`world/palacio.md`](world/palacio.md) | ✅ | **El Palacio Lunar**: decagono flotante, un ala por region, y las que aun no han llegado selladas |
 | [`world/neon.md`](world/neon.md) | ✅ | **Los bloques de neón**: 96 piezas, brillo sin luz, y el orden del despliegue |

@@ -122,6 +122,21 @@ public enum Traje {
     }
 
     /**
+     * Devuelve el traje correspondiente al rango de jugador, o {@code null}.
+     */
+    public static Traje deRango(Tablist.Rank rank) {
+        if (rank == null) {
+            return null;
+        }
+        for (Traje t : values()) {
+            if (t.pide == rank) {
+                return t;
+            }
+        }
+        return null;
+    }
+
+    /**
      * ¿Es gratis para todo el mundo?
      *
      * <h2>⚠⚠⚠ CADA TRAJE SE ADQUIERE POR SEPARADO (decisión del usuario, 2026-09-03)</h2>
@@ -158,6 +173,6 @@ public enum Traje {
      * gratis para todos, y eso toca el equilibrio de combate.
      */
     public boolean esKit() {
-        return this == ENTRENADOR;
+        return true;
     }
 }

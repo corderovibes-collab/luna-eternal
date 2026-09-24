@@ -390,6 +390,16 @@ public class ExplorarScreen extends Screen {
         for (int i = 0; i < 2; i++) {
             boolean salvaje = i == 1;
             if (dentro(rx, ry, px(tarjetaX(salvaje)), py(ty), pl(TARJETA_W), pl(TARJETA_H))) {
+                if (salvajeElegido == salvaje && !esperando()) {
+                    // Si ya estaba seleccionada la tarjeta y vuelve a pulsar, viaja directamente
+                    sonar();
+                    pulsado = System.currentTimeMillis();
+                    String destino = !salvajeElegido ? "hogar"
+                            : (companero.isEmpty() ? "salvaje" : companero);
+                    ClientPlayNetworking.send(new Red.AccionExplorar(destino));
+                    close();
+                    return true;
+                }
                 salvajeElegido = salvaje;
                 // ⚠ Elegir HOGAR borra el compañero elegido: si no, pulsar
                 //   VIAJAR mandaría al salvaje pese a decir «Hogar» arriba.
@@ -424,6 +434,7 @@ public class ExplorarScreen extends Screen {
             String destino = !salvajeElegido ? "hogar"
                     : (companero.isEmpty() ? "salvaje" : companero);
             ClientPlayNetworking.send(new Red.AccionExplorar(destino));
+            close();
             return true;
         }
         return super.mouseClicked(mx, my, boton);

@@ -101,6 +101,46 @@ public final class RankService {
     }
 
     /**
+     * Lee el rango del jugador bloqueando la fila para actualización dentro de una transacción.
+     */
+    public Rank leerParaUpdate(Connection c, long playerId) throws SQLException {
+        try (PreparedStatement ps = c.prepareStatement(
+                "SELECT rank_id FROM player WHERE player_id = ? FOR UPDATE")) {
+            ps.setLong(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? Rank.de(rs.getString(1)) : Rank.porDefecto();
+            }
+        }
+    }
+
+    /**
+     * Cambia el rango de un jugador dentro de una transacción SQL abierta.
+     * La actualización de la caché en memoria se debe realizar DESPUÉS del commit transaccional.
+     *
+     * @return true si se actualizó exactamente 1 fila, false en caso contrario
+     */
+    public boolean cambiarInTransaction(Connection c, long playerId, Rank nuevo) throws SQLException {
+        if (nuevo == null || nuevo.equipo) {
+            return false;
+        }
+        try (PreparedStatement ps = c.prepareStatement(
+                "UPDATE player SET rank_id = ? WHERE player_id = ?")) {
+            ps.setString(1, nuevo.name());
+            ps.setLong(2, playerId);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    /**
+     * Actualiza la caché en memoria tras confirmarse el commit en base de datos.
+     */
+    public static void actualizarCache(UUID uuid, Rank nuevo) {
+        if (uuid != null && nuevo != null) {
+            CACHE.put(uuid, nuevo);
+        }
+    }
+
+    /**
      * Cambia el rango de un jugador. <b>Va por el executor de E/S.</b>
      *
      * <p>⚠⚠ NO SE PUEDE PONER UN RANGO DE EQUIPO. ADMIN, DEV y MODERADOR son

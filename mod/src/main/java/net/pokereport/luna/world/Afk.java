@@ -27,23 +27,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * devuelve a la ciudadela</b>. No hubo que construir nada de eso; esto solo lo
  * usa.
  *
- * <h2>&#9888;&#9888;&#9888; LAS TRES EXENCIONES, Y LAS TRES SON FALLOS SI FALTAN</h2>
+     * <h2>SOLO EL LOBBY ESTA EXENTO</h2>
  *
- * <ol>
- *   <li><b>COMBATE.</b> Un combate de Cobblemon con alguien pensando su turno
- *       pasa de diez minutos sin que el jugador se mueva un pixel. Sacarlo a
- *       mitad seria <b>perder el combate por estar jugando</b>, y en un gimnasio
- *       ademas se lleva por delante su ranura y su viaje. Se pregunta a
- *       {@code BattleRegistry}, que es quien lo sabe.</li>
- *   <li><b>CREATIVO Y ESPECTADOR.</b> Un constructor se queda quieto mirando una
- *       fachada mucho mas de diez minutos: es su trabajo. Mandarlo al lobby a
- *       mitad de obra es exactamente el filtro que ya aplican el oficio MINERO y
- *       {@code Pase.ganar}, y por el mismo motivo.</li>
- *   <li><b>EL PROPIO LOBBY.</b> Sin esto habria un <b>bucle</b>: el AFK del
- *       lobby dispara un viaje al lobby, que cuenta como movimiento, que
- *       reinicia el contador... y vuelta a empezar. Ademas no tiene sentido:
- *       ya esta donde lo mandariamos.</li>
- * </ol>
+     * <p>La politica de produccion es global: combate, evento, creativo, OP y
+     * espectador no pueden quedarse farmeando horas. La unica excepcion es
+     * <b>el propio Lobby</b>. Sin ella habria un <b>bucle</b>: el AFK del
+     *       lobby dispara un viaje al lobby, que cuenta como movimiento, que
+     *       reinicia el contador... y vuelta a empezar. Ademas no tiene sentido:
+     *       ya esta donde lo mandariamos.
  *
  * <h2>&#9888;&#9888; SE MIRA LA POSICION, NO LA MIRADA</h2>
  *
@@ -145,30 +136,7 @@ public final class Afk {
      * tapa un fallo concreto, no son cortesias.
      */
     private static boolean exento(ServerPlayerEntity jugador) {
-        if (jugador.isCreative() || jugador.isSpectator()) {
-            return true;
-        }
-        if (LunaDimensions.LOBBY.equals(jugador.getServerWorld().getRegistryKey())) {
-            return true;
-        }
-        return enCombate(jugador);
-    }
-
-    /**
-     * &#9888; Va en un {@code try}: si Cobblemon cambiara esa firma, lo que NO
-     * puede pasar es que el tick del servidor reviente por esto. Ante la duda se
-     * contesta <b>que SI esta en combate</b> -- dejar a alguien de mas en el
-     * mundo es infinitamente mas barato que sacarlo de un combate.
-     */
-    private static boolean enCombate(ServerPlayerEntity jugador) {
-        try {
-            return com.cobblemon.mod.common.battles.BattleRegistry
-                    .getBattleByParticipatingPlayer(jugador) != null;
-        } catch (Throwable t) {
-            LunaEternal.LOG.warn("AFK: no se pudo preguntar por el combate de {}: {}",
-                    jugador.getGameProfile().getName(), t.toString());
-            return true;
-        }
+        return LunaDimensions.LOBBY.equals(jugador.getServerWorld().getRegistryKey());
     }
 
     /**
@@ -180,7 +148,18 @@ public final class Afk {
      * lobby es una dimension que puede estar fria del todo.
      */
     private static void aparcar(ServerPlayerEntity jugador) {
-        TravelService.travel(jugador, LunaDimensions.LOBBY, "el Lobby");
+        var puerta = LunaEternal.puerta();
+        if (puerta != null) {
+            // AFK es una nueva entrada funcional: no conserva el permiso del
+            // clic anterior, pero tampoco borra historial ni datos del jugador.
+            puerta.reiniciarSesion(jugador.getUuid());
+        }
+        boolean movido = TravelService.travel(jugador, LunaDimensions.LOBBY, "el Lobby");
+        if (!movido) {
+            LunaEternal.LOG.error("AFK_TRANSFER_FAILED jugador={}",
+                    jugador.getGameProfile().getName());
+            return;
+        }
         jugador.sendMessage(Text.literal(
                 "§b§lLOBBY §8» §7Estabas quieto, asi que te hemos aparcado aqui."), false);
         jugador.sendMessage(Text.literal(

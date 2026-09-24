@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "half=lower": {
+      "model": "lunaeternal:block/pokeparada_lunar_lower"
+    },
+    "half=upper": {
+      "model": "lunaeternal:block/pokeparada_lunar_upper"
+    }
+  }
+}

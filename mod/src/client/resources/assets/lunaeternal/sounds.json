@@ -1,4 +1,8 @@
 {
+  "buhonero.saludo": {
+    "subtitle": "subtitles.lunaeternal.buhonero",
+    "sounds": [{"name": "lunaeternal:buhonero/saludo", "stream": false}]
+  },
   "pokedex.bulbasaur": {
     "category": "voice",
     "subtitle": "subtitles.lunaeternal.pokedex.voz",

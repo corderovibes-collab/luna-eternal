@@ -36,13 +36,15 @@ public abstract class HumanoidModelArmorCoverageMixin<T extends LivingEntity> {
         boolean customBoots = isOurArmor(entity.getEquippedStack(EquipmentSlot.FEET));
         boolean customLowerBody = customLeggings && customBoots;
 
-        // El cuerpo se oculta si lleva peto; las piernas si lleva pantalones y botas.
-        // La cabeza vanilla (model.head) permanece visible para Eevee y Magikarp,
-        // pero se oculta con el casco completo de Pikachu para evitar que la cara humana atraviese las facciones.
-        // El gorro/capa exterior (model.hat) se oculta bajo cualquier casco custom para evitar Z-fighting.
-        model.head.visible = !pikachuHelmet;
+        // La cabeza vanilla (model.head) permanece siempre visible (incluyendo Pikachu, Magikarp y Eevee).
+        // El gorro/capa exterior de la skin vanilla (model.hat) se oculta bajo cualquier casco custom para evitar Z-fighting.
+        // El cuerpo y brazos vanilla se ocultan si lleva peto custom para evitar que atraviesen el modelo 3D.
+        // Las piernas se ocultan si lleva armadura inferior completa (pantalones + botas).
+        model.head.visible = true;
         model.hat.visible = !customHelmet;
         model.body.visible = !customChest;
+        model.leftArm.visible = !customChest;
+        model.rightArm.visible = !customChest;
         model.leftLeg.visible = !customLowerBody;
         model.rightLeg.visible = !customLowerBody;
     }

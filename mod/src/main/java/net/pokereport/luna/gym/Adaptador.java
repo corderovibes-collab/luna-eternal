@@ -200,34 +200,27 @@ public final class Adaptador {
             formatoDe(Gimnasio_ g) {
         // ⚠⚠⚠ SE COPIA, NO SE MUTA. `BattleFormat.GEN_9_SINGLES` de rctapi es
         //    un ENUM, así que su formato de Cobblemon es UNA instancia
-        //    compartida por todo el servidor. Llamar a `setAdjustLevel` sobre
-        //    ella le pondría el nivel del gimnasio a TODOS los combates --los
-        //    salvajes, los duelos, los entrenadores del mundo-- y no daría
-        //    ningún error: daría un servidor entero peleando a nivel 15.
+        //    compartida por todo el servidor.
         var base = com.gitlab.srcmc.rctapi.api.battle.BattleFormat
                 .GEN_9_SINGLES.getCobblemonBattleFormat();
-        // ⚠ El quinto parámetro ES `adjustLevel`, así que no hace falta el
-        //   setter: la copia nace ya con el nivel puesto y nadie puede
-        //   cambiárselo a medias.
+        // ⚠ adjustLevel = 0 para no forzar ajuste artificial de nivel:
+        //   los Pokémon combaten a sus niveles asignados (14/15 en Brock, 18/19 en Misty).
         var formato = new BattleFormat(base.getMod(), base.getBattleType(),
                 new java.util.HashSet<>(base.getRuleSet()), base.getGen(),
-                g.nivel());
-        // `BattleFormatProvider` tiene un solo método: vale una lambda.
+                0);
         return () -> formato;
     }
 
     /**
-     * ⚠ Los dos ajustes de nivel encendidos: {@code adjustLevel} solo se aplica
-     * al lado cuyo interruptor esté puesto. Con uno solo, el gimnasio bajaría a
-     * un lado y dejaría al otro como estaba — que es peor que no igualar nada.
+     * ⚠ Sin ajustes forzados de nivel: cada Pokémon combate con su nivel natural
+     * y el líder con su escala precisa (14 y 15 para Brock, 18 y 19 para Misty).
      *
-     * <p>⚠ Y {@code healPlayers}: se entra a la arena con el equipo curado. Si
-     * no, el reto lo decidiría lo que quedara del camino y no el combate.
+     * <p>⚠ Y {@code healPlayers}: se entra a la arena con el equipo curado.
      */
     private static BattleRules reglasDe(Gimnasio_ g) {
         return new BattleRules.Builder()
-                .withAdjustPlayerLevels(true)
-                .withAdjustNPCLevels(true)
+                .withAdjustPlayerLevels(false)
+                .withAdjustNPCLevels(false)
                 .withHealPlayers(true)
                 .withMaxItemUses(Repertorio.bolsa(g.id()).size())
                 .build();
@@ -291,7 +284,13 @@ public final class Adaptador {
         boolean rivalFisico = mayoriaFisica(rival);
         var salida = new ArrayList<PokemonModel>();
         for (int i = 0; i < cuantos && i < ordenado.size(); i++) {
-            salida.add(construir(ordenado.get(i), rival, nivel, rivalFisico));
+            var c = ordenado.get(i);
+            // El as / Pokémon firma o el último Pokémon del equipo se fija al nivel del gimnasio (ej. 15 Brock, 19 Misty),
+            // mientras que los integrantes de apoyo se configuran a nivel - 1 (ej. 14 Brock, 18 Misty).
+            int nivelPokemon = (cuantos == 1 || i == cuantos - 1 || c.firma())
+                    ? nivel
+                    : Math.max(1, nivel - 1);
+            salida.add(construir(c, rival, nivelPokemon, rivalFisico));
         }
         return salida;
     }
@@ -372,10 +371,23 @@ public final class Adaptador {
         var evs = rivalFisico
                 ? new PokemonModel.StatsModel(252, 0, 252, 0, 4, 0)
                 : new PokemonModel.StatsModel(252, 0, 4, 0, 252, 0);
+        List<String> items = (c.objeto() == null || c.objeto().isBlank())
+                ? List.of()
+                : List.of(c.objeto());
         return new PokemonModel(
-                c.especie(), null, nivel, c.naturaleza(), c.habilidad(),
+                c.especie(),
+                null,
+                null,
+                nivel,
+                c.naturaleza(),
+                c.habilidad(),
                 new java.util.LinkedHashSet<>(elegirAtaques(c, rival)),
-                ivs, evs, false, c.objeto(), java.util.Set.of());
+                ivs,
+                evs,
+                false,
+                items,
+                java.util.Set.of(),
+                new com.gitlab.srcmc.rctapi.api.models.Gimmicks());
     }
 
     /**
@@ -504,7 +516,10 @@ public final class Adaptador {
         for (int i = 0; i < ordenado.size(); i++) {
             var c = ordenado.get(i);
             boolean sale = i < cuantos;
-            salida.add((sale ? "§a  SALE  " : "§8  banca ")
+            int nivelPokemon = (cuantos == 1 || i == cuantos - 1 || c.firma())
+                    ? g.nivel()
+                    : Math.max(1, g.nivel() - 1);
+            salida.add((sale ? "§a  SALE  §e(Nv. " + nivelPokemon + ") " : "§8  banca ")
                     + "§f" + c.especie()
                     + "§7 nota §f"
                     + String.format(java.util.Locale.ROOT, "%.2f", puntuar(c, rival))

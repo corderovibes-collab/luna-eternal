@@ -34,6 +34,21 @@ import net.pokereport.luna.progression.Path;
  */
 public class Red implements ModInitializer {
 
+    /** Reproduce una cinematica dentro del cliente oficial. */
+    public record Cinematica(String url, int segundos, boolean puedeSalir)
+            implements CustomPayload {
+        public static final Id<Cinematica> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "cinematica"));
+        public static final PacketCodec<RegistryByteBuf, Cinematica> CODEC =
+                PacketCodec.tuple(
+                        CADENA, Cinematica::url,
+                        PacketCodecs.VAR_INT, Cinematica::segundos,
+                        PacketCodecs.BOOL, Cinematica::puedeSalir,
+                        Cinematica::new);
+
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
     /** El cliente pide su saldo. Sin datos: el servidor ya sabe quién pregunta. */
     public record PedirSaldo() implements CustomPayload {
         public static final Id<PedirSaldo> ID =
@@ -3681,6 +3696,7 @@ public class Red implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        net.pokereport.luna.buhonero.BuhoneroNet.registrar();
         // ⚠⚠⚠ EL TIPO DE CONTENEDOR DE LA MOCHILA VA AQUI, en el entrypoint
         //     `main`, que es el UNICO que corre en los dos lados. Vive en un
         //     registro QUE SE SINCRONIZA: el servidor abre el contenedor
@@ -3690,6 +3706,9 @@ public class Red implements ModInitializer {
         //     bloques de desfase que ya estan documentados.
         net.pokereport.luna.backpack.Registro.registrar();
         net.pokereport.luna.item.LunaItems.init();
+        net.pokereport.luna.pokestop.LunarStops.register();
+
+        PayloadTypeRegistry.playS2C().register(Cinematica.ID, Cinematica.CODEC);
 
         PayloadTypeRegistry.playC2S().register(PedirParcela.ID, PedirParcela.CODEC);
         PayloadTypeRegistry.playS2C().register(DetalleParcela.ID, DetalleParcela.CODEC);
@@ -6464,7 +6483,7 @@ public class Red implements ModInitializer {
             net.pokereport.luna.world.Regreso.apuntar(jugador);
             if (!net.pokereport.luna.world.Salvaje.llevar(jugador)) {
                 jugador.sendMessage(net.minecraft.text.Text.literal(
-                        "§cNo se encontró sitio. Inténtalo otra vez."), true);
+                        "§cNo se encontró sitio seguro en el salvaje. Inténtalo otra vez."), false);
             }
             enviarExplorar(jugador);
             return;
@@ -6475,20 +6494,20 @@ public class Red implements ModInitializer {
         var otro = servidor.getPlayerManager().getPlayer(destino);
         if (otro == null) {
             jugador.sendMessage(net.minecraft.text.Text.literal(
-                    "§cEse jugador ya no está conectado."), true);
+                    "§cEse jugador ya no está conectado."), false);
             return;
         }
         String miClan = net.pokereport.luna.ui.PlayerCache.clanDe(jugador);
         if (miClan == null || miClan.isBlank()
                 || !miClan.equals(net.pokereport.luna.ui.PlayerCache.clanDe(otro))) {
             jugador.sendMessage(net.minecraft.text.Text.literal(
-                    "§cSolo puedes ir con alguien de tu clan."), true);
+                    "§cSolo puedes ir con alguien de tu clan."), false);
             return;
         }
         net.pokereport.luna.world.Regreso.apuntar(jugador);
         if (!net.pokereport.luna.world.Salvaje.conJugador(jugador, otro)) {
             jugador.sendMessage(net.minecraft.text.Text.literal(
-                    "§cNo se pudo llegar hasta él."), true);
+                    "§cNo se pudo llegar hasta él."), false);
         }
         enviarExplorar(jugador);
     }

@@ -38,6 +38,12 @@ public final class LunaCommand {
             .then(literal("saldo")
                 .executes(ctx -> balance(ctx.getSource())))
 
+            // El libro de bienvenida ejecuta este botón silencioso. Diosesmon
+            // recibe el paquete y reproduce el MP4 dentro de Minecraft.
+            .then(literal("videooak")
+                .executes(ctx -> net.pokereport.luna.puerta.BienvenidaOak
+                        .reproducir(ctx.getSource().getPlayerOrThrow())))
+
             // Viaje entre dimensiones, para CONSTRUCTORES (nivel 2).
             //
             // Existe porque la Puerta del Mundo se fue con los menús (D-026) y
@@ -331,6 +337,33 @@ public final class LunaCommand {
                                 + "§f" + g.id() + "§7. Se volveran a clonar del "
                                 + "maestro."), false);
                             return 1;
+                        }))
+                    .then(literal("purgar")
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            var g = net.pokereport.luna.gym.Gimnasio.de(
+                                    StringArgumentType.getString(ctx, "cual"));
+                            if (g == null) {
+                                s.sendError(Text.literal("No existe ese gimnasio"));
+                                return 0;
+                            }
+                            var mundo = net.pokereport.luna.gym.Arenas.mundo(s.getServer());
+                            if (mundo == null) {
+                                s.sendError(Text.literal("La dimension de gimnasios no existe"));
+                                return 0;
+                            }
+                            int quitados = 0;
+                            for (int r = 0; r < net.pokereport.luna.gym.Gimnasio.RANURAS; r++) {
+                                quitados += net.pokereport.luna.gym.Lideres.quitarDeRanura(mundo, g, r);
+                            }
+                            if (net.pokereport.luna.gym.Gimnasio.tieneTarima(g)) {
+                                net.pokereport.luna.gym.Lideres.enArena(s.getServer(), g, 0);
+                            }
+                            final int total = quitados;
+                            s.sendFeedback(() -> Text.literal(
+                                "Gimnasio " + g.lider() + " purgado: " + total
+                                + " entidades/lideres limpiados. Tarima del maestro restablecida."), false);
+                            return 1;
                         })))
                 // Los lideres de la CIUDADELA: los que reciben y abren el
                 // dialogo. Van aparte de `<cual>` porque no son de un gimnasio
@@ -455,6 +488,24 @@ public final class LunaCommand {
                             "§e" + n + " §7decorativos quitados de las "
                             + "siete paradas."), false);
                         return n;
+                    }))
+                .then(literal("etiquetar")
+                    .executes(ctx -> {
+                        var mundo = ctx.getSource().getWorld();
+                        var pos = ctx.getSource().getPosition();
+                        int n = 0;
+                        for (var e : mundo.getEntitiesByClass(com.cobblemon.mod.common.entity.pokemon.PokemonEntity.class,
+                                new net.minecraft.util.math.Box(pos.x - 64, pos.y - 32, pos.z - 64,
+                                        pos.x + 64, pos.y + 32, pos.z + 64),
+                                net.pokereport.luna.world.Decorativos::esParada)) {
+                            if (e.addCommandTag(net.pokereport.luna.world.Decorativos.MARCA_PARADA)) {
+                                n++;
+                            }
+                        }
+                        final int total = n;
+                        ctx.getSource().sendFeedback(() -> Text.literal(
+                            "§a" + total + " §7Miraidon/paradas etiquetadas con luna_parada cerca."), false);
+                        return n;
                     })))
 
             .then(literal("decorar")
@@ -506,6 +557,31 @@ public final class LunaCommand {
                             StringArgumentType.getString(ctx, "jugador"),
                             StringArgumentType.getString(ctx, "rango"))))))
 
+            .then(literal("testrango")
+                .requires(s -> s.hasPermissionLevel(2))
+                .then(argument("rango", StringArgumentType.word())
+                    .suggests((c, b) -> {
+                        for (var r : net.pokereport.luna.ui.Tablist.Rank.values()) {
+                            b.suggest(r.name().toLowerCase());
+                        }
+                        b.suggest("mod");
+                        b.suggest("reset");
+                        return b.buildFuture();
+                    })
+                    .executes(ctx -> {
+                        var player = ctx.getSource().getPlayerOrThrow();
+                        String arg = StringArgumentType.getString(ctx, "rango");
+                        if (arg.equalsIgnoreCase("reset")) {
+                            net.pokereport.luna.ui.Tablist.setTestRank(player, null);
+                            ctx.getSource().sendFeedback(() -> Text.literal("§aRango de prueba restablecido al rango real."), false);
+                            return 1;
+                        }
+                        var r = net.pokereport.luna.ui.Tablist.Rank.de(arg);
+                        net.pokereport.luna.ui.Tablist.setTestRank(player, r);
+                        ctx.getSource().sendFeedback(() -> Text.literal("§aProbando rango: ").append(r.conNombre()), false);
+                        return 1;
+                    })))
+
             .then(literal("traje")
                 // ⚠ Nivel 4, como `rango`: esto es lo que Tebex ejecuta por
                 //   consola cuando alguien paga. Un traje es una compra.
@@ -537,6 +613,8 @@ public final class LunaCommand {
                             .executes(ctx -> darTraje(ctx.getSource(),
                                 StringArgumentType.getString(ctx, "jugador"),
                                 StringArgumentType.getString(ctx, "traje"), false))))))
+
+            .then(net.pokereport.luna.tebex.TebexCommand.buildSubtree())
 
             .then(literal("rotarcazas")
                 .requires(s -> s.hasPermissionLevel(3))
@@ -812,7 +890,8 @@ public final class LunaCommand {
             .then(literal("torre_batalla")
                 .requires(s -> s.hasPermissionLevel(4))
                 .then(literal("npc")
-                    .executes(ctx -> npcTorreBatalla(ctx.getSource())))
+                    .executes(ctx -> npcTorreBatalla(ctx.getSource()))
+                    .then(literal("quitar").executes(ctx -> quitarNpcTorre(ctx.getSource()))))
                 .then(literal("holograma")
                     .then(literal("1vs1").executes(ctx -> hologramaTorre(ctx.getSource(), "1vs1")))
                     .then(literal("2vs2").executes(ctx -> hologramaTorre(ctx.getSource(), "2vs2")))
@@ -837,7 +916,45 @@ public final class LunaCommand {
             .then(literal("autotest")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> autotest(ctx.getSource())))
+
+            .then(literal("kits")
+                .requires(s -> s.hasPermissionLevel(2))
+                .then(literal("rotacion")
+                    .then(literal("reset")
+                        .executes(ctx -> resetRotacionKits(ctx.getSource(), 60))
+                        .then(argument("dias", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 365))
+                            .executes(ctx -> resetRotacionKits(ctx.getSource(),
+                                    com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "dias")))))))
         );
+
+        d.register(literal("kits")
+            .requires(s -> s.hasPermissionLevel(2))
+            .then(literal("rotacion")
+                .then(literal("reset")
+                    .executes(ctx -> resetRotacionKits(ctx.getSource(), 60))
+                    .then(argument("dias", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 365))
+                        .executes(ctx -> resetRotacionKits(ctx.getSource(),
+                                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "dias")))))));
+    }
+
+    private static int resetRotacionKits(ServerCommandSource src, int dias) {
+        src.sendFeedback(() -> Text.literal("§7Reiniciando rotación de kits a §e" + dias + "§7 días..."), false);
+        LunaEternal.submit(() -> {
+            try {
+                LunaEternal.kitService().resetRotacion(dias);
+                for (ServerPlayerEntity p : src.getServer().getPlayerManager().getPlayerList()) {
+                    net.pokereport.luna.net.Red.enviarKits(p);
+                }
+                src.getServer().execute(() -> src.sendFeedback(() -> Text.literal(
+                        "§aRotación de kits exclusivos reiniciada a §f" + dias
+                        + " días§a. Clientes actualizados."), true));
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudo reiniciar la rotación de kits: {}", e.toString());
+                src.getServer().execute(() -> src.sendError(Text.literal(
+                        "§cError al reiniciar rotación: " + e.getMessage())));
+            }
+        });
+        return 1;
     }
 
     // ------------------------------------------------------------------
@@ -1694,8 +1811,8 @@ public final class LunaCommand {
                 var lineas = new java.util.ArrayList<String>();
                 lineas.add("§7— rangos de jugador, de mayor a menor —");
                 for (var r : net.pokereport.luna.ui.Tablist.Rank.deJugador()) {
-                    lineas.add("  " + r.tag + " §8" + r.name()
-                        + " §7· nivel §f" + r.escalon
+                    lineas.add("  " + r.titulo + " §8(" + r.name()
+                        + ") §7· nivel §f" + r.escalon
                         + " §7· §f" + reparto.getOrDefault(r, 0) + " §7jugadores");
                 }
                 lineas.add("§8/luna rango <jugador> <RANGO>");
@@ -1757,11 +1874,11 @@ public final class LunaCommand {
                         return;
                     }
                     src.sendFeedback(() -> Text.literal(
-                        "§a" + jugador + " §7ahora es " + puesto.tag), false);
+                        "§a" + jugador + " §7ahora es ").append(puesto.conNombre()), false);
                     if (conectado != null && !conectado.isRemoved()) {
                         net.pokereport.luna.ui.Tablist.refrescarClan(server, conectado);
                         conectado.sendMessage(Text.literal(
-                            "§7Tu rango ahora es " + puesto.tag), false);
+                            "§7Tu rango ahora es ").append(puesto.conNombre()), false);
                     }
                 });
             } catch (Exception e) {
@@ -1941,6 +2058,21 @@ public final class LunaCommand {
         net.pokereport.luna.torrebatalla.TorreNpc.colocarNpc(p);
         p.sendMessage(net.minecraft.text.Text.literal("¡NPC de la Torre de Batalla colocado. Quedó invulnerable y estático!"), false);
         return 1;
+    }
+
+    private static int quitarNpcTorre(ServerCommandSource src) {
+        ServerPlayerEntity p = src.getPlayer();
+        if (p == null) {
+            src.sendError(Text.literal("Solo desde el juego."));
+            return 0;
+        }
+        int quitados = net.pokereport.luna.torrebatalla.TorreNpc.quitarCercano(p);
+        if (quitados > 0) {
+            p.sendMessage(Text.literal("§aSe retiró el NPC de la Torre de Batalla cercano."), false);
+        } else {
+            p.sendMessage(Text.literal("§cNo hay ningún NPC de la Torre de Batalla cerca (a menos de 4 bloques)."), false);
+        }
+        return quitados;
     }
 
     private static int hologramaTorre(ServerCommandSource src, String modo) {

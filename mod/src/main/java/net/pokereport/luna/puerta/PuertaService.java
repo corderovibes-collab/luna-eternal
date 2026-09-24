@@ -43,6 +43,17 @@ public final class PuertaService {
      */
     private final Map<UUID, Boolean> cache = new ConcurrentHashMap<>();
 
+    /**
+     * Permiso de salida del lobby para la conexion actual.
+     *
+     * <p>La tabla {@code player_puerta} conserva el dato historico (auditoria y
+     * comandos administrativos), pero ya no autoriza una conexion nueva. Cada
+     * conexion empieza en {@code false}; solo el guardian, despues de validar el
+     * cliente, la cambia a {@code true}. Asi un veterano, un OP y un reconnect
+     * de cinco segundos recorren exactamente la misma puerta.
+     */
+    private final Map<UUID, Boolean> sesion = new ConcurrentHashMap<>();
+
     public PuertaService(Database db) {
         this.db = db;
     }
@@ -54,6 +65,15 @@ public final class PuertaService {
      */
     public Boolean cruzadaEnCache(UUID uuid) {
         return cache.get(uuid);
+    }
+
+    /**
+     * Estado de la puerta para esta conexion.
+     *
+     * @return {@code null} mientras la carga inicial no ha terminado
+     */
+    public Boolean sesionLista(UUID uuid) {
+        return sesion.get(uuid);
     }
 
     /** Lee de la base y avisa. El callback corre en el hilo de E/S. */
@@ -72,6 +92,8 @@ public final class PuertaService {
                         + "que ya cruzo para no moverlo de sitio", uuid, e);
                 cache.put(uuid, Boolean.TRUE);
             }
+            // La historia nunca equivale a una autorizacion de sesion.
+            sesion.put(uuid, Boolean.FALSE);
             if (cuandoEste != null) {
                 cuandoEste.run();
             }
@@ -106,6 +128,12 @@ public final class PuertaService {
             ps.executeUpdate();
         }
         cache.put(uuid, Boolean.TRUE);
+        sesion.put(uuid, Boolean.TRUE);
+    }
+
+    /** Revoca solo la salida de la conexion actual, sin borrar datos reales. */
+    public void reiniciarSesion(UUID uuid) {
+        sesion.put(uuid, Boolean.FALSE);
     }
 
     /**
@@ -134,10 +162,12 @@ public final class PuertaService {
             ps.executeUpdate();
         }
         cache.put(uuid, Boolean.FALSE);
+        sesion.put(uuid, Boolean.FALSE);
     }
 
     public void olvidar(UUID uuid) {
         cache.remove(uuid);
+        sesion.remove(uuid);
     }
 
     /** Cuantos hay en memoria. Lo usa el autotest. */

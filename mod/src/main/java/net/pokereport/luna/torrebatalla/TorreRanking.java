@@ -124,6 +124,26 @@ public class TorreRanking {
     }
 
     public static final int COLOR_FONDO_HOLOGRAMA = 0xF40A0E18; // ~96% opacidad, azul pizarra sólido
+    private static int ticksAutoActualizacion = 0;
+    private static final int TICKS_PERIODO_HOLOGRAMA = 6000; // 5 minutos a 20 TPS
+
+    /**
+     * Bucle de actualización periódica en tiempo real para todos los hologramas en mundos.
+     * Se invoca cada tick del servidor desde ServerTickEvents.END_SERVER_TICK.
+     */
+    public static void tick(MinecraftServer server) {
+        if (server == null) return;
+        if (++ticksAutoActualizacion >= TICKS_PERIODO_HOLOGRAMA) {
+            ticksAutoActualizacion = 0;
+            try {
+                load();
+                actualizarHologramasEnMundos(server);
+                LunaEternal.LOG.info("Torre de Batalla: hologramas de ranking actualizados automáticamente (periodo 5m)");
+            } catch (Throwable t) {
+                LunaEternal.LOG.error("Torre de Batalla: error auto-actualizando hologramas", t);
+            }
+        }
+    }
 
     public static void actualizarHologramasEnMundos(MinecraftServer server) {
         if (server == null) return;
@@ -135,6 +155,8 @@ public class TorreRanking {
                         modo = MODO_2VS2;
                     } else if (td.getCommandTags().contains(MARCA_ALEATORIO)) {
                         modo = MODO_ALEATORIO;
+                    } else if (td.getCommandTags().contains(MARCA_1VS1)) {
+                        modo = MODO_1VS1;
                     }
                     td.setText(generarTexto(modo));
                     td.setBackground(COLOR_FONDO_HOLOGRAMA);

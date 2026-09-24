@@ -75,6 +75,48 @@ public final class Salvaje {
      */
     private static final int INTENTOS = 24;
 
+    private static final java.nio.file.Path FICHERO =
+            java.nio.file.Path.of("config", "lunaeternal", "salvaje.properties");
+
+    /**
+     * Cuántos de los seis están abiertos a la vez. Por defecto 1, ya que solo
+     * lunaeternal:salvaje ha sido pre-generado con Chunky. Se puede configurar en
+     * config/lunaeternal/salvaje.properties.
+     */
+    public static int ACTIVOS = 1;
+
+    public static void cargarConfiguracion() {
+        int valor = 1;
+        try {
+            if (java.nio.file.Files.exists(FICHERO)) {
+                var props = new java.util.Properties();
+                try (var in = java.nio.file.Files.newInputStream(FICHERO)) {
+                    props.load(in);
+                }
+                valor = Math.max(1, Math.min(LunaDimensions.SALVAJES.size(),
+                        Integer.parseInt(props.getProperty("activos", "1"))));
+            } else {
+                guardarConfiguracion(1);
+            }
+        } catch (Exception e) {
+            LunaEternal.LOG.warn("No se pudo leer {}: se usa 1 salvaje activo", FICHERO, e);
+        }
+        ACTIVOS = valor;
+    }
+
+    public static void guardarConfiguracion(int n) {
+        try {
+            java.nio.file.Files.createDirectories(FICHERO.getParent());
+            var props = new java.util.Properties();
+            props.setProperty("activos", Integer.toString(n));
+            try (var out = java.nio.file.Files.newOutputStream(FICHERO)) {
+                props.store(out, "Configuracion de mundos salvajes activos (1..6). Por defecto 1.");
+            }
+        } catch (Exception e) {
+            LunaEternal.LOG.warn("No se pudo guardar {}", FICHERO, e);
+        }
+    }
+
     /**
      * Pone el borde. Se llama al arrancar, en cada arranque.
      *
@@ -83,6 +125,7 @@ public final class Salvaje {
      * un respaldo viejo. Aplicarlo siempre cuesta nada y lo deja fijo.
      */
     public static void ponerBorde(MinecraftServer servidor) {
+        cargarConfiguracion();
         int puestos = 0;
         // ⚠ A LOS SEIS, no solo a los activos. Un mundo de reserva se
         //   pre-genera antes de entrar en servicio, y pre-generar sin borde
@@ -105,38 +148,6 @@ public final class Salvaje {
         LunaEternal.LOG.info("Salvaje: {} mundos con borde de {} de radio · "
                 + "{} activos", puestos, RADIO, ACTIVOS);
     }
-
-    // ---- qué mundos están en servicio --------------------------------------
-
-    /**
-     * Cuántos de los seis están abiertos a la vez. <b>Decisión del usuario:
-     * tres activos y tres de reserva.</b>
-     *
-     * <h2>⚠⚠⚠ AQUÍ PONÍA QUE LOS OTROS TRES ESTABAN PRE-GENERADOS. ERA FALSO
-     * (2026-09-10)</h2>
-     *
-     * Decía: <i>«los otros tres NO están vacíos esperando: están pre-generados,
-     * y eso convierte el reinicio semanal en cambiar tres números»</i>.
-     * <b>Nunca se pre-generó ninguno</b> — Chunky lleva instalado sin usar desde
-     * agosto, y está escrito en CLAUDE.md desde entonces. Un comentario que
-     * describe una intención en presente de indicativo se lee como un hecho, y
-     * este mandaba a rotar mundos contando con un trabajo que no estaba hecho.
-     *
-     * <p>⚠⚠ Y ESTE NÚMERO CUESTA HORAS. Cada mundo activo es un mundo que hay
-     * que pre-generar, y con Terralith (D-051) eso se mide en <b>horas de CPU
-     * saturada</b>, no en los «25-45 min» que este proyecto tenía apuntados para
-     * la worldgen de vainilla. Subir {@code ACTIVOS} sin pre-generar antes es
-     * mandar al tercer jugador a terreno virgen: <b>paga la generación con su
-     * propio lag</b>, que es justo lo que la pre-generación evita.
-     *
-     * <p>⚠⚠ Y OJO CON LA DIRECCIÓN DEL REPARTO: {@link #llevar} manda al
-     * <b>menos poblado</b>. Con tres activos y cuatro personas conectadas, las
-     * separa 2/1/1 — cada uno solo. El motivo escrito para tener varios era
-     * «40 personas peleándose por el mismo legendario» ({@link #LLENO}), y con
-     * una comunidad pequeña el reparto trabaja <b>en contra</b>: reparte gente
-     * que se querría encontrar.
-     */
-    public static final int ACTIVOS = 3;
 
     /**
      * A partir de cuánta gente un mundo se considera lleno.
@@ -218,6 +229,8 @@ public final class Salvaje {
         for (int i = 0; i < INTENTOS; i++) {
             int x = azar.nextInt(-util, util + 1);
             int z = azar.nextInt(-util, util + 1);
+            // ⚠ Cargar el chunk pre-generado en memoria: getTopY devuelve getBottomY() si el chunk no está cargado.
+            mundo.getChunk(x >> 4, z >> 4);
             // ⚠ MOTION_BLOCKING_NO_LEAVES y no WORLD_SURFACE: con el segundo, la
             //   copa de un árbol cuenta como suelo y el jugador aparece encima
             //   de las hojas, que al romperse le deja caer.
@@ -227,8 +240,10 @@ public final class Salvaje {
             }
             var suelo = new BlockPos(x, y - 1, z);
             var pies = new BlockPos(x, y, z);
+            var cabeza = new BlockPos(x, y + 1, z);
             if (!mundo.getFluidState(suelo).isEmpty()
-                    || !mundo.getFluidState(pies).isEmpty()) {
+                    || !mundo.getFluidState(pies).isEmpty()
+                    || !mundo.getFluidState(cabeza).isEmpty()) {
                 continue;   // océano, río o lava
             }
             if (mundo.getBlockState(suelo).isAir()) {
@@ -237,7 +252,20 @@ public final class Salvaje {
             if (mundo.getFluidState(suelo).isIn(FluidTags.LAVA)) {
                 continue;
             }
+            if (!mundo.getBlockState(pies).getCollisionShape(mundo, pies).isEmpty()
+                    || !mundo.getBlockState(cabeza).getCollisionShape(mundo, cabeza).isEmpty()) {
+                continue;   // bloque sólido en pies o cabeza
+            }
             return pies;
+        }
+        // ⚠ Fallback: si tras 24 intentos no hubo suerte, usar el spawn del mundo
+        BlockPos spawn = mundo.getSpawnPos();
+        if (spawn != null) {
+            mundo.getChunk(spawn.getX() >> 4, spawn.getZ() >> 4);
+            int y = mundo.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, spawn.getX(), spawn.getZ());
+            if (y > mundo.getBottomY() + 1 && y < mundo.getTopY() - 2) {
+                return new BlockPos(spawn.getX(), y, spawn.getZ());
+            }
         }
         return null;
     }
@@ -316,6 +344,7 @@ public final class Salvaje {
         for (int i = 0; i < 12; i++) {
             int dx = azar.nextInt(-6, 7), dz = azar.nextInt(-6, 7);
             int x = destino.getBlockX() + dx, z = destino.getBlockZ() + dz;
+            mundo.getChunk(x >> 4, z >> 4);
             int y = mundo.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
             var suelo = new BlockPos(x, y - 1, z);
             if (y <= mundo.getBottomY() + 1 || mundo.getBlockState(suelo).isAir()

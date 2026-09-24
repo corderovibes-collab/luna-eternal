@@ -38,12 +38,28 @@ public final class HealService {
 
     private HealService() {}
 
+    public static int getCooldownMin(ServerPlayerEntity player) {
+        if (player.hasPermissionLevel(2)) return 0;
+        var rank = net.pokereport.luna.rank.RankService.enCache(player.getUuid());
+        if (rank.equipo) return 0;
+        return switch (rank) {
+            case LEYENDA, MAESTRO -> 0;
+            case CAMPEON -> 5;
+            case ELITE -> 15;
+            default -> COOLDOWN_MIN;
+        };
+    }
+
     /** Segundos que faltan para poder curar. 0 = ya se puede. */
     public static long restante(ServerPlayerEntity player) {
         Long t = ULTIMA.get(player.getUuid());
         if (t == null) return 0;
         long pasado = (System.currentTimeMillis() - t) / 1000;
-        return Math.max(0, COOLDOWN_MIN * 60L - pasado);
+        int cd = getCooldownMin(player);
+        if (cd <= 0) {
+            return Math.max(0, 5L - pasado); // 5s anti-spam
+        }
+        return Math.max(0, cd * 60L - pasado);
     }
 
     /** ¿Hay algo que curar? Evita gastar el cooldown para nada. */
@@ -64,8 +80,13 @@ public final class HealService {
 
     /** Cura el equipo si toca. Devuelve si se curó de verdad. */
     public static boolean curar(ServerPlayerEntity player) {
-        if (restante(player) > 0) {
-            player.sendMessage(Text.literal("§cTodavía no puedes curar."), false);
+        long faltan = restante(player);
+        if (faltan > 0) {
+            if (faltan < 60) {
+                player.sendMessage(Text.literal("§cEspera " + faltan + "s para volver a curar."), false);
+            } else {
+                player.sendMessage(Text.literal("§cEspera " + (faltan / 60 + 1) + "m para volver a curar."), false);
+            }
             return false;
         }
         try {

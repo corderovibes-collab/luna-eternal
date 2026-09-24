@@ -173,3 +173,63 @@ El acceso al sistema se realiza a través de la aplicación **Torre de Batalla**
 - `PedirRecompensasTorre` (C2S): El cliente solicita su estado de recompensas al abrir la pantalla.
 - `ReclamarRecompensaTorre(int ronda, boolean todas)` (C2S): Solicita reclamar una ronda específica o todas las acumuladas.
 - `EstadoRecompensasTorre(int temporada, int rondaMax, List<Integer> reclamadas, int pendientes)` (S2C): El servidor responde con la temporada actual, récord alcanzado, lista de rondas ya cobradas y total de premios pendientes.
+# Auditoría de ciclo de combate — 2026-09-20
+
+Las modalidades usan los identificadores `0=individual`, `1=dobles` y
+`2=aleatorio`. Todas crean enfrentamientos 6v6 a nivel 100; dobles selecciona
+`GEN_9_DOUBLES`, mientras individual y aleatorio usan `GEN_9_SINGLES`.
+
+Se corrigieron los siguientes fallos de estado:
+
+- aleatorio prestaba seis Pokémon antes de comprobar que la arena estuviera
+  libre y podía dejarlos permanentemente al rechazar la entrada;
+- una dimensión ausente dejaba una partida registrada que bloqueaba la arena;
+- callbacks retrasados de una ronda podían iniciar batalla sobre otro intento;
+- victoria/huida eliminaban la asociación RCT y el NPC dentro del callback de
+  Cobblemon, antes de terminar su cola visual, causando bloqueos especialmente
+  visibles en cambios de Pokémon de dobles;
+- los eventos no se vinculaban al UUID de la batalla y un evento tardío podía
+  cerrar una ronda nueva;
+- no existía recuperación ante una batalla desaparecida o sin avanzar;
+- al salir de aleatorio se borraba todo el equipo, no solo los préstamos.
+
+Cada jugador queda ahora vinculado a un `battleId`; la limpieza se difiere
+fuera del callback, los préstamos llevan marca propia y un watchdog revisa la
+batalla cada cinco segundos. Si el turno no progresa durante tres minutos, el
+intento se cierra de forma segura, se informa al jugador y se libera la arena.
+
+### Desconexión durante el modo aleatorio
+
+Se confirmó una carrera de estado entre el evento de desconexión y la
+restauración de equipo de RCT: los seis Pokémon prestados podían reaparecer en
+la party del jugador al reconectarse y quedar como propios. La limpieza ahora:
+
+- retira únicamente Pokémon con la marca persistente de préstamo de la Torre;
+- revisa tanto la party como la PC;
+- se ejecuta al salir/desconectarse y nuevamente al reconectar, de inmediato y
+  tras 20 ticks para cubrir la carga diferida del almacenamiento;
+- vuelve a ejecutarse antes de validar un nuevo intento.
+
+Los Pokémon legítimos de 1v1, 2v2 o de cualquier otro sistema no llevan esa
+marca y no son eliminados.
+
+### Sustituciones tras KO simultáneo en 2vs2
+
+Se confirmó un soft-lock específico de dobles cuando, en el mismo turno, cae
+un Pokémon del jugador y otro del NPC. Showdown solicita sustituciones
+forzadas para ambos lados, pero `StrongBattleAI` resuelve cada hueco de forma
+aislada y puede dejar incompleta la respuesta coordinada del NPC; mientras
+falta esa respuesta, el cliente del jugador no recibe/libera correctamente su
+selección y parece que el turno quedó congelado.
+
+La Torre usa ahora `TorreDoublesAI` únicamente en modo 2vs2:
+
+- conserva `StrongBattleAI` durante turnos normales;
+- deriva cambios forzados a `RCTBattleAI`, que evalúa la petición completa de
+  Showdown (`forceSwitch`, `wait`, `must` y los huecos simultáneos);
+- si la ruta de RCT falla, `RandomBattleAI` elige una sustitución válida como
+  mecanismo de emergencia;
+- registra cada sustitución del NPC y cualquier fallback para facilitar una
+  prueba real sin llenar el log durante ataques normales.
+
+Individual y Aleatorio permanecen en formato singles y no cambian de IA.

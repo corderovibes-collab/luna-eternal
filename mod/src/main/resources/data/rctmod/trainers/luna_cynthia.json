@@ -1,0 +1,10 @@
+{
+  "name": "Cynthia",
+  "team": [
+    {
+      "species": "garchomp",
+      "level": 100,
+      "moveset": ["dragon_claw", "earthquake", "swords_dance", "stone_edge"]
+    }
+  ]
+}

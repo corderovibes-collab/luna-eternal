@@ -53,7 +53,8 @@ public final class Inventarios {
      * <b>y</b> lo que define qué puede entrar en el libro.
      */
     public static boolean corriente(ItemStack pila, Item item) {
-        if (pila.isEmpty() || !pila.isOf(item)) {
+        if (pila.isEmpty() || !pila.isOf(item)
+                || item instanceof net.pokereport.luna.item.ArmaduraRangoItem) {
             return false;
         }
         return ItemStack.areItemsAndComponentsEqual(pila, new ItemStack(item));

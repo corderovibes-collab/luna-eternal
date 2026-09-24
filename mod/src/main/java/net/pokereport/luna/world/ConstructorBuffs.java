@@ -10,7 +10,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import java.util.List;
 
 /**
- * Visión nocturna, velocidad y salto para quien está construyendo la ciudadela.
+ * Efectos de movilidad de todos los jugadores dentro de la Ciudadela.
  *
  * <p><b>Por qué hace falta.</b> La ciudadela es de noche permanente
  * ({@code fixed_time 18000}) con luz ambiental de 0,45: es la estética que se
@@ -70,7 +70,8 @@ public final class ConstructorBuffs {
      * hace falta para recorrer una plaza de 56×56 es {@code SPEED}, que es la
      * de moverse. Se llaman parecido en español y hacen cosas distintas.
      */
-    private static final int NIVEL_VELOCIDAD = 1;
+    private static final int NIVEL_VELOCIDAD = 3;
+    private static final int NIVEL_SALTO = 2;
 
     /**
      * ⚠️ EFECTOS QUE DIMOS ALGUNA VEZ Y YA NO DAMOS. Hay que retirarlos.
@@ -111,7 +112,7 @@ public final class ConstructorBuffs {
 
     private static void dar(ServerPlayerEntity jugador) {
         for (RegistryEntry<StatusEffect> efecto : EFECTOS) {
-            int nivel = efecto == StatusEffects.SPEED ? NIVEL_VELOCIDAD : 0;
+            int nivel = nivel(efecto);
             StatusEffectInstance actual = jugador.getStatusEffect(efecto);
             // Solo se manda si falta o no es el nuestro. Reasignarlo cada cinco
             // segundos gastaria un paquete por jugador y efecto para nada, y
@@ -122,8 +123,8 @@ public final class ConstructorBuffs {
             jugador.addStatusEffect(new StatusEffectInstance(
                     efecto, INFINITO, nivel,
                     true,      // ambiental: el borde de pantalla no parpadea
-                    false,     // sin particulas: estorban al construir
-                    true));    // pero CON icono, para saber por que ve
+                    false,     // sin particulas
+                    false));   // sin icono/listado HUD
         }
     }
 
@@ -139,15 +140,38 @@ public final class ConstructorBuffs {
                                 List<RegistryEntry<StatusEffect>> cuales) {
         for (RegistryEntry<StatusEffect> efecto : cuales) {
             StatusEffectInstance actual = jugador.getStatusEffect(efecto);
-            if (actual != null && actual.isInfinite()) {
+            if (esGestionado(actual, nivel(efecto))) {
                 jugador.removeStatusEffect(efecto);
             }
         }
     }
 
-    /** ¿Está en la ciudadela y puede construir en ella? */
+    /**
+     * Firma de ownership del sistema: infinito, nivel exacto, ambiental y sin
+     * particulas ni icono. Una pocion o habilidad normal no comparte toda la
+     * firma y por tanto no se borra al salir de la Ciudadela.
+     */
+    private static boolean esGestionado(StatusEffectInstance actual, int nivel) {
+        return actual != null
+                && actual.isInfinite()
+                && actual.getAmplifier() == nivel
+                && actual.isAmbient()
+                && !actual.shouldShowParticles()
+                && !actual.shouldShowIcon();
+    }
+
+    private static int nivel(RegistryEntry<StatusEffect> efecto) {
+        if (efecto == StatusEffects.SPEED) {
+            return NIVEL_VELOCIDAD;
+        }
+        if (efecto == StatusEffects.JUMP_BOOST) {
+            return NIVEL_SALTO;
+        }
+        return 0;
+    }
+
+    /** Todos reciben exactamente el mismo comportamiento, incluido OP/staff. */
     private static boolean aplica(ServerPlayerEntity jugador) {
-        return jugador.getWorld().getRegistryKey() == LunaDimensions.CIUDADELA
-                && jugador.hasPermissionLevel(2);
+        return jugador.getWorld().getRegistryKey() == LunaDimensions.CIUDADELA;
     }
 }

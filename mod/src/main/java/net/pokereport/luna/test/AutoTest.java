@@ -4936,6 +4936,20 @@ public final class AutoTest {
                     || fuente.toLowerCase(java.util.Locale.ROOT).contains(escapado);
         }
         check("EL ICONO QUE ESCRIBE JAVA ES EL QUE DIBUJA LA FUENTE", mismoCaracter);
+
+        check("logo del tablist en el jar",
+              AutoTest.class.getResource("/assets/lunaeternal/textures/font/logo_tab.png") != null);
+        String glifoLogo = net.pokereport.luna.ui.Iconos.logoTab().getString();
+        check("el logo del tablist esta en la fuente", fuente != null && (fuente.contains(glifoLogo)
+                || fuente.toLowerCase(java.util.Locale.ROOT).contains(String.format("\\u%04x", (int) glifoLogo.charAt(0)))));
+
+        for (var r : net.pokereport.luna.ui.Tablist.Rank.values()) {
+            String badgePath = "/assets/lunaeternal/textures/font/ranks/badge_"
+                    + (r == net.pokereport.luna.ui.Tablist.Rank.MODERADOR ? "mod" : r.name().toLowerCase(java.util.Locale.ROOT)) + ".png";
+            check("textura insignia " + r.name(), AutoTest.class.getResource(badgePath) != null);
+            check("glifo insignia " + r.name() + " en fuente", fuente != null && (fuente.contains(r.tag)
+                    || fuente.toLowerCase(java.util.Locale.ROOT).contains(String.format("\\u%04x", (int) r.tag.charAt(0)))));
+        }
     }
 
     /** Lee un recurso del jar como texto, o {@code null} si no esta. */

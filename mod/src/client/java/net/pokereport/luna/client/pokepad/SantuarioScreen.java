@@ -366,10 +366,11 @@ public class SantuarioScreen extends Screen {
         //    jugador necesita saber al abrir el Santuario es si le queda algo
         //    por hacer hoy. Escondido detras de una pestaña, la Ultra Ball se
         //    cobraria el dia que alguien la descubriera por casualidad.
-        dibujarPaseo(ctx, rx, ry, ty + cardH + 16);
+        int paseoY = ty + cardH + 14;
+        dibujarPaseo(ctx, rx, ry, paseoY);
 
         if (e.modera()) {
-            int my = ty + cardH + 16 + PASEO_ALTO + 12;
+            int my = PANT_Y + PANT_H - MARGEN - 44;
             int mw = PANT_W - 22;
             int pendN = 0;
             var pend = EstadoCliente.pendientes();
@@ -430,23 +431,23 @@ public class SantuarioScreen extends Screen {
     // ---- COMPRA TU ESPACIO (2 tarjetas estilizadas) ------------------------
 
     /** Lo que ocupa la banda del paseo. */
-    private static final int PASEO_ALTO = 84;
+    private static final int PASEO_ALTO = 136;
 
     /** Donde cae el boton de cobrar la Ultra Ball, para dibujarlo y pulsarlo. */
     private int[] botonPremio(int y) {
-        return new int[] {PANT_X + PANT_W - 11 - 260, y + 20, 260, 46};
+        return new int[] {PANT_X + 11 + 502, y + 50, 250, 50};
     }
 
     /**
      * LA BANDA DEL PASEO: lo que llevas hoy y la Ultra Ball.
      *
-     * <h2>&#9888;&#9888; DOS BARRAS Y NO DOS NUMEROS</h2>
+     * <h2>⚠⚠ DOS BARRAS Y NO DOS NUMEROS</h2>
      *
      * «Memoriales vistos 7 de 10» dice lo mismo que una barra, pero hay que
      * LEERLO. La barra dice de un vistazo si merece la pena darse otra vuelta,
      * que es la unica decision que esta pantalla pide.
      *
-     * <p>&#9888; Los topes (10 visitas, 10 honores) <b>se leen de `main`</b>
+     * <p>⚠ Los topes (10 visitas, 10 honores) <b>se leen de `main`</b>
      * --{@code PaseXp.VISITAS_DIA} y {@code SantuarioService.HONORES_PREMIO}--
      * y no viajan ni se escriben aqui: dos copias del mismo numero acabarian
      * enseñando «8 de 10» mientras el servidor cuenta hasta doce.
@@ -459,45 +460,69 @@ public class SantuarioScreen extends Screen {
         marco(ctx, px(ax), py(y), pl(aw), pl(PASEO_ALTO), CARD_BORDE, Math.max(1, pl(2)));
         ctx.fill(px(ax), py(y), px(ax + 6), py(y + PASEO_ALTO), ORO);
 
+        // Cabecera: Título y pista de XP del pase
         texto(ctx, Text.translatable("pokepad.lunaeternal.santuario.paseo"),
-                ax + 20, y + 10, 20, TEXTO_BLANCO, false, CONTORNO_OSCURO);
+                ax + 20, y + 12, 20, TEXTO_BLANCO, false, CONTORNO_OSCURO);
+
+        texto(ctx, Text.literal("• ").append(Text.translatable("pokepad.lunaeternal.santuario.paseo_xp")),
+                ax + 175, y + 16, 14, TEXTO_SUAVE, false, 0);
+
+        String pillTexto = Text.translatable("pokepad.lunaeternal.santuario.recompensa_diaria").getString();
+        int pw = anchoArte(pillTexto, 13) + 16;
+        pill(ctx, pillTexto, ax + aw - pw - 20, y + 12, ORO);
+
+        // Separador sutil entre cabecera y barras/acción
+        int sepY = y + 38;
+        ctx.fill(px(ax + 16), py(sepY), px(ax + aw - 16), py(sepY + 1), 0x33283854);
 
         int topeV = net.pokereport.luna.pase.PaseXp.VISITAS_DIA;
         int topeH = net.pokereport.luna.santuario.SantuarioService.HONORES_PREMIO;
         int vistos = paseo == null ? 0 : Math.min(paseo.visitas(), topeV);
         int honrados = paseo == null ? 0 : Math.min(paseo.honrados(), topeH);
 
-        barraPaseo(ctx, ax + 20, y + 40, 300, vistos, topeV, AZUL_ZAFIRO,
-                Text.translatable("pokepad.lunaeternal.santuario.paseo_visitas",
-                        vistos, topeV));
-        barraPaseo(ctx, ax + 340, y + 40, 300, honrados, topeH, ROJO_CORAZON,
-                Text.translatable("pokepad.lunaeternal.santuario.paseo_honores",
-                        honrados, topeH));
+        // Columna 1: Visitas a memoriales
+        int x1 = ax + 20;
+        int w1 = 224;
+        String subV = vistos >= topeV ? "§a✓ Completado" : "§7Faltan " + (topeV - vistos) + " visitas";
+        barraPaseo(ctx, x1, y + 50, w1, vistos, topeV, AZUL_ZAFIRO,
+                Text.translatable("pokepad.lunaeternal.santuario.paseo_visitas", vistos, topeV),
+                subV);
 
+        // Columna 2: Honores otorgados
+        int x2 = x1 + w1 + 16;
+        int w2 = 224;
+        String subH = honrados >= topeH ? "§a✓ Requisito cumplido" : "§7Faltan " + (topeH - honrados) + " honores";
+        barraPaseo(ctx, x2, y + 50, w2, honrados, topeH, ROJO_CORAZON,
+                Text.translatable("pokepad.lunaeternal.santuario.paseo_honores", honrados, topeH),
+                subH);
+
+        // Columna 3: Botón de reclamación / estado diario
         int[] b = botonPremio(y);
         boolean listo = paseo != null && paseo.premioListo();
-        boton(ctx, rx, ry, b[0], b[1], b[2], b[3],
-                listo
-                        ? Text.translatable("pokepad.lunaeternal.santuario.paseo_premio")
-                        : (honrados >= topeH
-                                ? Text.translatable("pokepad.lunaeternal.santuario.paseo_hecho")
-                                : Text.translatable("pokepad.lunaeternal.santuario.paseo_falta",
-                                        topeH - honrados)),
-                listo, ORO);
+        Text etiquetaBoton = listo
+                ? Text.translatable("pokepad.lunaeternal.santuario.paseo_premio")
+                : (honrados >= topeH
+                        ? Text.translatable("pokepad.lunaeternal.santuario.paseo_hecho")
+                        : Text.translatable("pokepad.lunaeternal.santuario.paseo_falta", topeH - honrados));
+
+        boton(ctx, rx, ry, b[0], b[1], b[2], b[3], etiquetaBoton, listo, ORO);
     }
 
-    /** Una barra con su rotulo encima. */
+    /** Una barra con su rótulo encima y subtítulo de estado debajo. */
     private void barraPaseo(DrawContext ctx, int x, int y, int w, int hecho, int tope,
-                            int color, Text rotulo) {
-        texto(ctx, rotulo, x, y - 16, 15, TEXTO_SUAVE, false, 0);
-        ctx.fill(px(x), py(y), px(x + w), py(y + 14), CARD_SUBFONDO);
-        // ⚠ El ancho SE CALCULA sobre el tope, no sobre un 10 escrito aqui:
-        //   con el tope leido de `main`, cambiarlo mueve la barra sola.
-        int lleno = tope <= 0 ? 0 : (int) ((long) w * hecho / tope);
+                            int color, Text rotulo, String subtitulo) {
+        texto(ctx, rotulo, x, y, 14, TEXTO_CLARO, false, 0);
+        int barY = y + 18;
+        int barH = 14;
+        ctx.fill(px(x), py(barY), px(x + w), py(barY + barH), CARD_SUBFONDO);
+        int lleno = tope <= 0 ? 0 : (int) Math.min((long) w, ((long) w * hecho / tope));
         if (lleno > 0) {
-            ctx.fill(px(x), py(y), px(x + lleno), py(y + 14), color);
+            ctx.fill(px(x), py(barY), px(x + lleno), py(barY + barH), color);
         }
-        marco(ctx, px(x), py(y), pl(w), pl(14), CARD_BORDE, Math.max(1, pl(1)));
+        marco(ctx, px(x), py(barY), pl(w), pl(barH), CARD_BORDE, Math.max(1, pl(1)));
+        if (subtitulo != null && !subtitulo.isEmpty()) {
+            texto(ctx, Text.literal(subtitulo), x, barY + barH + 5, 12, TEXTO_MUTED, false, 0);
+        }
     }
 
     private void dibujarCompra(DrawContext ctx, int rx, int ry) {
@@ -972,15 +997,7 @@ public class SantuarioScreen extends Screen {
         int mw = pl(58);
         if (dentro(rx, ry, px(PANEL_X + PANEL_W - 22) - mw, py(acy) - mw / 2, mw, mw)) {
             sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);
-            if (client != null) {
-                client.setScreen(new ConfirmLinkScreen(
-                        confirmado -> {
-                            if (confirmado && client != null) {
-                                net.minecraft.util.Util.getOperatingSystem().open("https://tienda.lunaeternal.net");
-                            }
-                            if (client != null) client.setScreen(this);
-                        }, "https://tienda.lunaeternal.net", true));
-            }
+            net.pokereport.luna.client.Enlaces.abrirTienda(client, this);
             return true;
         }
 
@@ -1039,14 +1056,13 @@ public class SantuarioScreen extends Screen {
             return true;
         }
 
-        // ⚠ El paseo va ANTES que moderar: su boton esta encima en la pantalla,
-        //   y el orden del clic tiene que seguir al del dibujado.
-        if (clicPaseo(rx, ry, ty + cardH + 16)) {
+        int paseoY = ty + cardH + 14;
+        if (clicPaseo(rx, ry, paseoY)) {
             return true;
         }
 
         if (e.modera()) {
-            int my = ty + cardH + 16 + PASEO_ALTO + 12;
+            int my = PANT_Y + PANT_H - MARGEN - 44;
             int mw = PANT_W - 22;
             if (dentro(rx, ry, px(PANT_X + 11), py(my), pl(mw), pl(44))) {
                 sonar(SoundEvents.UI_BUTTON_CLICK.value(), 1.0f);

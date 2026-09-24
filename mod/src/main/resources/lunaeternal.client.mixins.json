@@ -5,7 +5,17 @@
   "compatibilityLevel": "JAVA_21",
   "refmap": "client-lunaeternal-refmap.json",
   "client": [
-    "HumanoidModelArmorCoverageMixin"
+    "HumanoidModelArmorCoverageMixin",
+    "PlayerTabOverlayTitleMixin",
+    "LobbyScreenGuardMixin",
+    "LobbyHudGuardMixin",
+    "MainMenuMixin",
+    "SplashOverlayMixin",
+    "SplashOverlayAccessor",
+    "SplashOverlayInvoker",
+    "MoveTooltipOverlayStateAccessor",
+    "CustomBattleControllerMixin",
+    "BattleMoveTileTooltipAuditMixin"
   ],
   "injectors": {
     "defaultRequire": 1

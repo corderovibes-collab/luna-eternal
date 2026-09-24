@@ -1,71 +1,106 @@
 package net.pokereport.luna.gym;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.pokereport.luna.LunaEternal;
 import net.pokereport.luna.gym.Gimnasio.Gimnasio_;
+import net.pokereport.luna.ui.Iconos;
 
 /**
- * EL CARTEL QUE FLOTA SOBRE CADA LÍDER.
+ * EL CARTEL FLOTANTE SOBRE CADA LÍDER DE GIMNASIO.
  *
- * <p>Petición del usuario: <i>«encima del NPC de cada entrenador debe ir un
- * texto flotante que diga la información del entrenador, nivel requerido…»</i>.
+ * <p>Muestra de forma clara y estilizada la información esencial del líder:
+ * nombre, medalla/tipo, rango de nivel de combate, medallas requeridas y el
+ * botón de interacción con glifo de clic derecho.
  *
- * <h2>⚠⚠ NO ES {@code setCustomName}, Y NO PODÍA SERLO</h2>
- *
- * El nombre de una entidad es <b>una línea</b>. Aquí hacen falta cuatro —
- * quién es, de qué tipo, a qué nivel se pelea y cuántas medallas pide — y
- * apretarlas en una sola daría un renglón ilegible de cuarenta caracteres
- * flotando sobre la cabeza.
- *
- * <p>Se usa un {@code TextDisplay}, que es de Minecraft desde 1.19.4: admite
- * saltos de línea, fondo propio, y <b>mira siempre al jugador</b>
- * ({@code BillboardMode.CENTER}), así que se lee igual desde cualquier lado de
- * la plaza.
- *
- * <h2>⚠⚠⚠ SE BORRA ANTES DE PONER, SIEMPRE</h2>
- *
- * Un {@code TextDisplay} es una entidad y se queda en el mundo. Sin borrar
- * primero, cada vez que se coloca un líder queda <b>un cartel más</b> en el
- * mismo sitio: dos, tres, ocho carteles superpuestos que se ven como un borrón.
- * Es exactamente lo que ya pasó con los tres Brocks apilados, y por el mismo
- * motivo — <b>colocar sin limpiar</b>.
- *
- * <p>⚠ Y se borran por MARCA, no por posición: si alguien mueve al líder un
- * bloque, el cartel viejo se queda donde estaba y ya nadie lo alcanza. Con la
- * marca se barre la zona entera y caen todos.
+ * <h2>Estilo visual unificado (Oak y Torre de Batalla)</h2>
+ * <ul>
+ *   <li>Fondo: negro azulado de alto contraste al 90 % ({@code 0xE6060B14}).
+ *       Legible frente a cualquier bloque, iluminación o sombreado.</li>
+ *   <li>Raíz vacía {@link Text#empty()} para que los colores no tiñan el glifo.</li>
+ *   <li>Icono {@link Iconos#clicDerecho()} con su texto acompañante.</li>
+ * </ul>
  */
 public final class Cartel {
 
     private Cartel() {}
 
-    /** La etiqueta que llevan todos los carteles nuestros. */
+    /** La etiqueta que llevan todos los carteles de gimnasio. */
     public static final String MARCA = "luna_cartel";
 
-    /** Y una por gimnasio, para poder rehacer solo el de uno. */
+    /** Fondo: negro azulado al 90 % de opacidad. */
+    private static final int FONDO = 0xE6060B14;
+
+    /** Ancho de línea antes de partir texto. */
+    private static final int ANCHO = 240;
+
+    /** Alcance visual relativo (multiplicador de 64): ~54 bloques. */
+    private static final float ALCANCE = 0.85f;
+
+    /** Cuánto por encima de los pies del líder flota el texto. */
+    private static final double ALTURA = 2.45;
+
+    /** El radio que se barre al limpiar (3.5 para no alcanzar líderes vecinos en Ciudadela). */
+    private static final double RADIO = 3.5;
+
+    /** Etiqueta específica por líder. */
     public static String marcaDe(Gimnasio_ g) {
         return "luna_cartel_" + g.id();
     }
 
-    /** Cuánto por encima de los pies del líder flota. */
-    private static final double ALTURA = 2.45;
-
-    /** El radio que se barre al limpiar. */
-    private static final double RADIO = 6.0;
-
     /**
-     * Pone el cartel de un líder, quitando antes el que hubiera.
-     *
-     * @param pies dónde está de pie el líder. El cartel va {@link #ALTURA}
-     *             encima, que es justo por encima de una cabeza
+     * Coloca el cartel para la recepción en la Ciudadela.
      */
     public static void poner(ServerWorld mundo, Gimnasio_ g, Vec3d pies) {
-        quitar(mundo, g, pies);
+        poner(mundo, g, pies, false);
+    }
+
+    /**
+     * Coloca el cartel estilizado sobre un líder, en recepción o arena.
+     */
+    /**
+     * Coloca el cartel estilizado sobre un líder, en recepción o arena.
+     */
+    public static void poner(ServerWorld mundo, Gimnasio_ g, Vec3d pies, boolean enArena) {
+        var caja = Box.of(new Vec3d(pies.x, pies.y + ALTURA, pies.z), 5.0, 5.0, 5.0);
+        String tagG = marcaDe(g);
+        String liderNom = g.lider().toLowerCase(java.util.Locale.ROOT);
+        DisplayEntity.TextDisplayEntity existente = null;
+
+        for (var text : mundo.getEntitiesByClass(DisplayEntity.TextDisplayEntity.class, caja, x -> true)) {
+            if (text.getCommandTags().contains(tagG) || text.getCommandTags().contains(MARCA)) {
+                if (existente == null && text.getCommandTags().contains(tagG)) {
+                    existente = text;
+                } else {
+                    text.discard();
+                }
+            } else {
+                try {
+                    Text txt = text.getText();
+                    if (txt != null && txt.getString().toLowerCase(java.util.Locale.ROOT).contains(liderNom)) {
+                        text.discard();
+                    }
+                } catch (Throwable ignored) {}
+            }
+        }
+
+        if (existente != null) {
+            existente.setPosition(pies.x, pies.y + ALTURA, pies.z);
+            existente.setText(texto(g, enArena));
+            existente.setBillboardMode(DisplayEntity.BillboardMode.CENTER);
+            existente.setBackground(FONDO);
+            existente.setLineWidth(ANCHO);
+            existente.setViewRange(ALCANCE);
+            existente.setNoGravity(true);
+            return;
+        }
 
         var cartel = EntityType.TEXT_DISPLAY.create(mundo);
         if (cartel == null) {
@@ -73,24 +108,11 @@ public final class Cartel {
             return;
         }
         cartel.setPosition(pies.x, pies.y + ALTURA, pies.z);
-        cartel.setText(texto(g));
+        cartel.setText(texto(g, enArena));
         cartel.setBillboardMode(DisplayEntity.BillboardMode.CENTER);
-        // ⚠ El fondo es negro a media transparencia (0x40 de alfa). Sin fondo,
-        //   el texto claro sobre una pared clara desaparece — y las salas de la
-        //   ciudadela son de piedra clara.
-        cartel.setBackground(0x40000000);
-        cartel.setLineWidth(220);
-        // ⚠ `setShadow(boolean)` NO EXISTE: la sombra del texto es un bit dentro
-        //   de `setDisplayFlags(byte)`. Se deja el valor por defecto (sin
-        //   sombra) en vez de tocar el byte entero, porque escribirlo a mano
-        //   apagaría de paso la alineación y el fondo.
-        // ⚠ 48 bloques de alcance: la plaza mide 56 de lado, así que el cartel
-        //   se ve desde cualquier punto de ella y no desde el otro extremo del
-        //   mundo. El valor es un MULTIPLICADOR de 64, no una distancia.
-        cartel.setViewRange(0.75f);
-        // ⚠⚠ SIN COLISIÓN Y SIN GRAVEDAD: un TextDisplay no tiene ninguna de las
-        //    dos, pero se marca igual para que un cambio de vainilla no deje un
-        //    cartel cayéndose al vacío de la ciudadela.
+        cartel.setBackground(FONDO);
+        cartel.setLineWidth(ANCHO);
+        cartel.setViewRange(ALCANCE);
         cartel.setNoGravity(true);
         cartel.addCommandTag(MARCA);
         cartel.addCommandTag(marcaDe(g));
@@ -99,56 +121,72 @@ public final class Cartel {
 
     /** Quita los carteles de ese líder que haya cerca de ese punto. */
     public static void quitar(ServerWorld mundo, Gimnasio_ g, Vec3d donde) {
-        var caja = new net.minecraft.util.math.Box(
-                donde.x - RADIO, donde.y - RADIO, donde.z - RADIO,
-                donde.x + RADIO, donde.y + RADIO, donde.z + RADIO);
-        for (var e : mundo.getEntitiesByClass(
-                DisplayEntity.TextDisplayEntity.class, caja,
-                x -> x.getCommandTags().contains(marcaDe(g)))) {
-            // ⚠⚠⚠ `discard` y no `kill`: a estas entidades el daño no les llega,
-            //    igual que a los decorativos. `/kill` diría «Killed 1 entity» y
-            //    no moriría ninguna -- la lección que ya nos costó tres Brocks.
-            e.discard();
+        var caja = Box.of(new Vec3d(donde.x, donde.y + ALTURA, donde.z), 5.0, 5.0, 5.0);
+        String tagG = marcaDe(g);
+        String liderNom = g.lider().toLowerCase(java.util.Locale.ROOT);
+
+        for (var text : mundo.getEntitiesByClass(DisplayEntity.TextDisplayEntity.class, caja, x -> true)) {
+            if (text.getCommandTags().contains(tagG) || text.getCommandTags().contains(MARCA)) {
+                text.discard();
+            } else {
+                try {
+                    Text txt = text.getText();
+                    if (txt != null && txt.getString().toLowerCase(java.util.Locale.ROOT).contains(liderNom)) {
+                        text.discard();
+                    }
+                } catch (Throwable ignored) {}
+            }
         }
     }
 
+
     /**
-     * QUÉ PONE.
-     *
-     * <pre>
-     *   Brock
-     *   Gimnasio de Roca
-     *   Combate a nivel 15
-     *   Medallas: ninguna
-     * </pre>
-     *
-     * <p>⚠⚠ «Combate a nivel 15» y no «nivel máximo 15», que es lo que primero
-     * escribí y era <b>mentira a medias</b>: {@code adjustLevel} no acota, iguala.
-     * Un jugador con un inicial de nivel 5 también pelea a 15 — le <b>sube</b>.
-     * Decir «máximo» le haría creer que su Pokémon de 5 va a entrar de 5.
-     *
-     * <p>⚠ El texto va ya compuesto y en español porque un {@code TextDisplay}
-     * guarda un {@code Text} en el mundo y lo pinta el cliente sin volver a
-     * preguntar: una clave de traducción aquí se resolvería al ponerlo, en el
-     * idioma del servidor, y se quedaría congelada para todos. Es la regla del
-     * idioma al revés — aquí el servidor <b>sí</b> tiene que decidir.
+     * Construye el texto estilizado del cartel del líder.
      */
-    private static MutableText texto(Gimnasio_ g) {
-        MutableText t = Text.literal(g.lider())
-                .formatted(Formatting.GOLD, Formatting.BOLD);
-        t.append(Text.literal("\n" + (g.campeon() ? "Campeón" : "Gimnasio de ")
-                              + (g.campeon() ? "" : g.medalla()))
-                     .formatted(Formatting.WHITE));
-        t.append(Text.literal("\nCombate a nivel " + g.nivel())
-                     .formatted(Formatting.AQUA));
-        t.append(Text.literal("\nMedallas: "
-                              + (g.medallas() == 0 ? "ninguna"
-                                                   : String.valueOf(g.medallas())))
-                     .formatted(g.medallas() == 0 ? Formatting.GREEN
-                                                  : Formatting.YELLOW));
-        if (!Gimnasio.construido(g)) {
-            t.append(Text.literal("\nPróximamente").formatted(Formatting.GRAY));
+    public static MutableText texto(Gimnasio_ g, boolean enArena) {
+        MutableText t = Text.empty();
+
+        // 1. Título principal: Nombre con adornos dorados
+        String titulo = g.campeon()
+                ? "✦ CAMPEÓN " + g.lider().toUpperCase(java.util.Locale.ROOT) + " ✦\n"
+                : "✦ LÍDER " + g.lider().toUpperCase(java.util.Locale.ROOT) + " ✦\n";
+        t.append(Text.literal(titulo).formatted(Formatting.GOLD, Formatting.BOLD));
+
+        // 2. Gimnasio y Medalla
+        String subtitulo = (g.campeon() ? "Liga " + g.region().nombre : "Gimnasio " + g.medalla()) + "\n";
+        t.append(Text.literal(subtitulo).formatted(Formatting.WHITE));
+
+        // 3. Nivel de combate (escala N-1 y N, ej: 14 - 15)
+        int nivelMin = Math.max(1, g.nivel() - 1);
+        t.append(Text.literal("⚔ Combate a Nv. " + nivelMin + " - " + g.nivel())
+                .formatted(Formatting.AQUA));
+        t.append(Text.literal(" §7(Tope Nv. " + g.nivel() + ")\n"));
+
+        // 4. Requisitos de medallas (en recepción)
+        if (!enArena) {
+            t.append(Text.literal("Requisito: ").formatted(Formatting.GRAY));
+            if (g.medallas() == 0) {
+                t.append(Text.literal("Sin medallas previas\n").formatted(Formatting.GREEN));
+            } else {
+                t.append(Text.literal(g.medallas() + (g.medallas() == 1 ? " medalla\n" : " medallas\n"))
+                        .formatted(Formatting.YELLOW));
+            }
         }
+
+        // 5. Estado de construcción
+        if (!Gimnasio.construido(g)) {
+            t.append(Text.literal("(Próximamente disponible)\n").formatted(Formatting.DARK_GRAY));
+        }
+
+        // 6. Indicador de clic con icono personalizado
+        if (enArena) {
+            t.append(Iconos.clicDerecho())
+             .append(Text.literal(" ¡Clic derecho para luchar!").formatted(Formatting.RED, Formatting.BOLD));
+        } else {
+            t.append(Iconos.clicDerecho())
+             .append(Text.literal(" Clic derecho para hablar").formatted(Formatting.AQUA));
+        }
+
         return t;
     }
 }

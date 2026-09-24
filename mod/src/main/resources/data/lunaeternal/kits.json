@@ -175,24 +175,44 @@
           }
         },
         {
-          "item": "minecraft:bow",
+          "item": "cobblemon:poke_rod",
           "count": 1,
-          "value": 400,
-          "enchants": {
-            "minecraft:power": 1,
-            "minecraft:unbreaking": 1,
-            "minecraft:mending": 1
-          }
+          "value": 0
+        },
+        {
+          "item": "minecraft:cooked_beef",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "minecraft:wheat_seeds",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:max_revive",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:revive",
+          "count": 3,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:hyper_potion",
+          "count": 2,
+          "value": 0
         },
         {
           "item": "cobblemon:poke_ball",
-          "count": 16,
-          "value": 40
+          "count": 10,
+          "value": 0
         },
         {
-          "item": "cobblemon:potion",
+          "item": "cobblemon:super_potion",
           "count": 6,
-          "value": 60
+          "value": 0
         }
       ]
     },
@@ -201,14 +221,26 @@
       "name": "§aKit Elite",
       "category": "rank",
       "lunaPrice": 0,
-      "icon": "minecraft:diamond_chestplate",
+      "icon": "lunaeternal:elite_chestplate",
       "description": "Equipo completo de rango elite.",
       "cooldownHours": 120,
       "once": false,
       "requiredRank": "ELITE",
       "items": [
         {
-          "item": "minecraft:diamond_helmet",
+          "item": "lunaeternal:elite_helmet",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 2,
+            "minecraft:unbreaking": 2,
+            "minecraft:mending": 1,
+            "minecraft:respiration": 1,
+            "minecraft:aqua_affinity": 1
+          }
+        },
+        {
+          "item": "lunaeternal:elite_chestplate",
           "count": 1,
           "value": 500,
           "enchants": {
@@ -218,7 +250,7 @@
           }
         },
         {
-          "item": "minecraft:diamond_chestplate",
+          "item": "lunaeternal:elite_leggings",
           "count": 1,
           "value": 500,
           "enchants": {
@@ -228,23 +260,15 @@
           }
         },
         {
-          "item": "minecraft:diamond_leggings",
+          "item": "lunaeternal:elite_boots",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:protection": 2,
             "minecraft:unbreaking": 2,
-            "minecraft:mending": 1
-          }
-        },
-        {
-          "item": "minecraft:diamond_boots",
-          "count": 1,
-          "value": 500,
-          "enchants": {
-            "minecraft:protection": 2,
-            "minecraft:unbreaking": 2,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:feather_falling": 2,
+            "minecraft:depth_strider": 1
           }
         },
         {
@@ -254,7 +278,10 @@
           "enchants": {
             "minecraft:sharpness": 2,
             "minecraft:unbreaking": 2,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:looting": 1,
+            "minecraft:sweeping_edge": 1,
+            "minecraft:fire_aspect": 1
           }
         },
         {
@@ -264,7 +291,8 @@
           "enchants": {
             "minecraft:efficiency": 2,
             "minecraft:unbreaking": 2,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:fortune": 1
           }
         },
         {
@@ -274,7 +302,8 @@
           "enchants": {
             "minecraft:efficiency": 2,
             "minecraft:unbreaking": 2,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:sharpness": 2
           }
         },
         {
@@ -294,7 +323,8 @@
           "enchants": {
             "minecraft:efficiency": 2,
             "minecraft:unbreaking": 2,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:fortune": 1
           }
         },
         {
@@ -304,18 +334,85 @@
           "enchants": {
             "minecraft:power": 2,
             "minecraft:unbreaking": 2,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:flame": 1,
+            "minecraft:punch": 1
           }
         },
         {
-          "item": "cobblemon:great_ball",
-          "count": 20,
-          "value": 70
+          "item": "minecraft:arrow",
+          "count": 16,
+          "value": 0
         },
         {
-          "item": "cobblemon:super_potion",
-          "count": 8,
-          "value": 100
+          "item": "minecraft:gold_ingot",
+          "count": 20,
+          "value": 0
+        },
+        {
+          "item": "minecraft:iron_ingot",
+          "count": 20,
+          "value": 0
+        },
+        {
+          "item": "minecraft:golden_apple",
+          "count": 3,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:poke_ball",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:great_ball",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:rare_candy",
+          "count": 5,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:destiny_knot",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:blank_tm",
+          "count": 2,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:protein",
+          "count": 2,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:iron",
+          "count": 2,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:calcium",
+          "count": 2,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:zinc",
+          "count": 2,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:hp_up",
+          "count": 2,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:carbos",
+          "count": 2,
+          "value": 0
         }
       ]
     },
@@ -324,14 +421,26 @@
       "name": "§bKit Campeón",
       "category": "rank",
       "lunaPrice": 0,
-      "icon": "minecraft:diamond_chestplate",
+      "icon": "lunaeternal:campeon_chestplate",
       "description": "Equipo completo de rango campeon.",
       "cooldownHours": 120,
       "once": false,
       "requiredRank": "CAMPEON",
       "items": [
         {
-          "item": "minecraft:diamond_helmet",
+          "item": "lunaeternal:campeon_helmet",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:protection": 3,
+            "minecraft:unbreaking": 3,
+            "minecraft:mending": 1,
+            "minecraft:respiration": 2,
+            "minecraft:aqua_affinity": 1
+          }
+        },
+        {
+          "item": "lunaeternal:campeon_chestplate",
           "count": 1,
           "value": 500,
           "enchants": {
@@ -341,7 +450,7 @@
           }
         },
         {
-          "item": "minecraft:diamond_chestplate",
+          "item": "lunaeternal:campeon_leggings",
           "count": 1,
           "value": 500,
           "enchants": {
@@ -351,23 +460,15 @@
           }
         },
         {
-          "item": "minecraft:diamond_leggings",
+          "item": "lunaeternal:campeon_boots",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:protection": 3,
             "minecraft:unbreaking": 3,
-            "minecraft:mending": 1
-          }
-        },
-        {
-          "item": "minecraft:diamond_boots",
-          "count": 1,
-          "value": 500,
-          "enchants": {
-            "minecraft:protection": 3,
-            "minecraft:unbreaking": 3,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:feather_falling": 3,
+            "minecraft:depth_strider": 2
           }
         },
         {
@@ -377,7 +478,10 @@
           "enchants": {
             "minecraft:sharpness": 3,
             "minecraft:unbreaking": 3,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:looting": 2,
+            "minecraft:sweeping_edge": 2,
+            "minecraft:fire_aspect": 1
           }
         },
         {
@@ -387,7 +491,8 @@
           "enchants": {
             "minecraft:efficiency": 3,
             "minecraft:unbreaking": 3,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:fortune": 2
           }
         },
         {
@@ -397,7 +502,8 @@
           "enchants": {
             "minecraft:efficiency": 3,
             "minecraft:unbreaking": 3,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:sharpness": 3
           }
         },
         {
@@ -417,7 +523,8 @@
           "enchants": {
             "minecraft:efficiency": 3,
             "minecraft:unbreaking": 3,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:fortune": 2
           }
         },
         {
@@ -427,18 +534,125 @@
           "enchants": {
             "minecraft:power": 3,
             "minecraft:unbreaking": 3,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:flame": 1,
+            "minecraft:punch": 1
           }
         },
         {
+          "item": "minecraft:arrow",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "minecraft:diamond",
+          "count": 30,
+          "value": 0
+        },
+        {
+          "item": "minecraft:gold_ingot",
+          "count": 30,
+          "value": 0
+        },
+        {
+          "item": "minecraft:iron_ingot",
+          "count": 30,
+          "value": 0
+        },
+        {
+          "item": "minecraft:golden_apple",
+          "count": 6,
+          "value": 0
+        },
+        {
+          "item": "minecraft:oak_log",
+          "count": 64,
+          "value": 0
+        },
+        {
+          "item": "minecraft:grass_block",
+          "count": 64,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:great_ball",
+          "count": 64,
+          "value": 0
+        },
+        {
           "item": "cobblemon:ultra_ball",
-          "count": 16,
-          "value": 130
+          "count": 64,
+          "value": 0
         },
         {
           "item": "cobblemon:rare_candy",
-          "count": 3,
-          "value": 350
+          "count": 10,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:power_bracer",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:power_band",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:power_belt",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:power_lens",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:everstone",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:ability_capsule",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:blank_tm",
+          "count": 5,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:protein",
+          "count": 4,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:iron",
+          "count": 4,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:calcium",
+          "count": 4,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:zinc",
+          "count": 4,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:hp_up",
+          "count": 4,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:carbos",
+          "count": 4,
+          "value": 0
         }
       ]
     },
@@ -447,64 +661,98 @@
       "name": "§5Kit Maestro",
       "category": "rank",
       "lunaPrice": 0,
-      "icon": "minecraft:netherite_chestplate",
+      "icon": "lunaeternal:maestro_chestplate",
       "description": "Equipo completo de rango maestro.",
       "cooldownHours": 120,
       "once": false,
       "requiredRank": "MAESTRO",
       "items": [
         {
-          "item": "minecraft:netherite_helmet",
+          "item": "lunaeternal:maestro_helmet",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:protection": 4,
             "minecraft:unbreaking": 4,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:respiration": 3,
+            "minecraft:aqua_affinity": 1,
+            "minecraft:thorns": 2
           }
         },
         {
-          "item": "minecraft:netherite_chestplate",
+          "item": "lunaeternal:maestro_chestplate",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:protection": 4,
             "minecraft:unbreaking": 4,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:thorns": 2
           }
         },
         {
-          "item": "minecraft:netherite_leggings",
+          "item": "lunaeternal:maestro_leggings",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:protection": 4,
             "minecraft:unbreaking": 4,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:swift_sneak": 3,
+            "minecraft:thorns": 2
           }
         },
         {
-          "item": "minecraft:netherite_boots",
+          "item": "lunaeternal:maestro_boots",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:protection": 4,
             "minecraft:unbreaking": 4,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:feather_falling": 4,
+            "minecraft:depth_strider": 3,
+            "minecraft:thorns": 2
           }
         },
         {
-          "item": "minecraft:netherite_sword",
+          "item": "minecraft:diamond_sword",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:sharpness": 4,
             "minecraft:unbreaking": 4,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:looting": 3,
+            "minecraft:sweeping_edge": 3,
+            "minecraft:fire_aspect": 2
           }
         },
         {
-          "item": "minecraft:netherite_pickaxe",
+          "item": "minecraft:diamond_pickaxe",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:efficiency": 4,
+            "minecraft:unbreaking": 4,
+            "minecraft:mending": 1,
+            "minecraft:fortune": 3
+          }
+        },
+        {
+          "item": "minecraft:diamond_axe",
+          "count": 1,
+          "value": 500,
+          "enchants": {
+            "minecraft:efficiency": 4,
+            "minecraft:unbreaking": 4,
+            "minecraft:mending": 1,
+            "minecraft:sharpness": 4
+          }
+        },
+        {
+          "item": "minecraft:diamond_shovel",
           "count": 1,
           "value": 500,
           "enchants": {
@@ -514,33 +762,14 @@
           }
         },
         {
-          "item": "minecraft:netherite_axe",
+          "item": "minecraft:diamond_hoe",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:efficiency": 4,
             "minecraft:unbreaking": 4,
-            "minecraft:mending": 1
-          }
-        },
-        {
-          "item": "minecraft:netherite_shovel",
-          "count": 1,
-          "value": 500,
-          "enchants": {
-            "minecraft:efficiency": 4,
-            "minecraft:unbreaking": 4,
-            "minecraft:mending": 1
-          }
-        },
-        {
-          "item": "minecraft:netherite_hoe",
-          "count": 1,
-          "value": 500,
-          "enchants": {
-            "minecraft:efficiency": 4,
-            "minecraft:unbreaking": 4,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:fortune": 3
           }
         },
         {
@@ -550,18 +779,121 @@
           "enchants": {
             "minecraft:power": 4,
             "minecraft:unbreaking": 4,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:flame": 1,
+            "minecraft:punch": 2
           }
         },
         {
+          "item": "minecraft:arrow",
+          "count": 64,
+          "value": 0
+        },
+        {
+          "item": "minecraft:totem_of_undying",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "minecraft:diamond",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "minecraft:gold_ingot",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "minecraft:iron_ingot",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "minecraft:ender_pearl",
+          "count": 16,
+          "value": 0
+        },
+        {
+          "item": "minecraft:golden_apple",
+          "count": 12,
+          "value": 0
+        },
+        {
           "item": "cobblemon:ultra_ball",
-          "count": 24,
-          "value": 130
+          "count": 64,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:great_ball",
+          "count": 64,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:quick_ball",
+          "count": 64,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:master_ball",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:ability_capsule",
+          "count": 2,
+          "value": 0
         },
         {
           "item": "cobblemon:rare_candy",
+          "count": 20,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:blank_tm",
+          "count": 8,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:protein",
+          "count": 8,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:iron",
+          "count": 8,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:calcium",
+          "count": 8,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:zinc",
+          "count": 8,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:hp_up",
+          "count": 8,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:carbos",
+          "count": 8,
+          "value": 0
+        },
+        {
+          "item": "cobblemon-cards:god_pack_ticket",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon-cards:booster_pack",
           "count": 5,
-          "value": 350
+          "value": 0,
+          "cardPackQuality": "LUNA"
         }
       ]
     },
@@ -570,50 +902,59 @@
       "name": "§6Kit Leyenda",
       "category": "rank",
       "lunaPrice": 0,
-      "icon": "minecraft:netherite_chestplate",
+      "icon": "lunaeternal:leyenda_chestplate",
       "description": "Equipo completo de rango leyenda.",
       "cooldownHours": 120,
       "once": false,
       "requiredRank": "LEYENDA",
       "items": [
         {
-          "item": "minecraft:netherite_helmet",
+          "item": "lunaeternal:leyenda_helmet",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:protection": 5,
             "minecraft:unbreaking": 5,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:respiration": 3,
+            "minecraft:aqua_affinity": 1,
+            "minecraft:thorns": 3
           }
         },
         {
-          "item": "minecraft:netherite_chestplate",
+          "item": "lunaeternal:leyenda_chestplate",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:protection": 5,
             "minecraft:unbreaking": 5,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:thorns": 3
           }
         },
         {
-          "item": "minecraft:netherite_leggings",
+          "item": "lunaeternal:leyenda_leggings",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:protection": 5,
             "minecraft:unbreaking": 5,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:swift_sneak": 3,
+            "minecraft:thorns": 3
           }
         },
         {
-          "item": "minecraft:netherite_boots",
+          "item": "lunaeternal:leyenda_boots",
           "count": 1,
           "value": 500,
           "enchants": {
             "minecraft:protection": 5,
             "minecraft:unbreaking": 5,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:feather_falling": 4,
+            "minecraft:depth_strider": 3,
+            "minecraft:thorns": 3
           }
         },
         {
@@ -623,7 +964,10 @@
           "enchants": {
             "minecraft:sharpness": 5,
             "minecraft:unbreaking": 5,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:looting": 3,
+            "minecraft:sweeping_edge": 3,
+            "minecraft:fire_aspect": 2
           }
         },
         {
@@ -633,7 +977,8 @@
           "enchants": {
             "minecraft:efficiency": 5,
             "minecraft:unbreaking": 5,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:fortune": 3
           }
         },
         {
@@ -643,7 +988,8 @@
           "enchants": {
             "minecraft:efficiency": 5,
             "minecraft:unbreaking": 5,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:sharpness": 5
           }
         },
         {
@@ -663,7 +1009,8 @@
           "enchants": {
             "minecraft:efficiency": 5,
             "minecraft:unbreaking": 5,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:fortune": 3
           }
         },
         {
@@ -673,23 +1020,161 @@
           "enchants": {
             "minecraft:power": 5,
             "minecraft:unbreaking": 5,
-            "minecraft:mending": 1
+            "minecraft:mending": 1,
+            "minecraft:flame": 1,
+            "minecraft:punch": 2
           }
+        },
+        {
+          "item": "minecraft:arrow",
+          "count": 64,
+          "value": 0
+        },
+        {
+          "item": "minecraft:totem_of_undying",
+          "count": 2,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:magmarizer",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:electirizer",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:dubious_disc",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:upgrade",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:peat_block",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:reaper_cloth",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:ability_capsule",
+          "count": 4,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:ability_patch",
+          "count": 1,
+          "value": 0
         },
         {
           "item": "cobblemon:master_ball",
           "count": 3,
-          "value": 2500
+          "value": 0
         },
         {
           "item": "cobblemon:ultra_ball",
-          "count": 32,
-          "value": 130
+          "count": 64,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:quick_ball",
+          "count": 64,
+          "value": 0
         },
         {
           "item": "cobblemon:rare_candy",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:blank_tm",
+          "count": 16,
+          "value": 0
+        },
+        {
+          "item": "minecraft:diamond",
+          "count": 64,
+          "value": 0
+        },
+        {
+          "item": "minecraft:netherite_ingot",
+          "count": 4,
+          "value": 0
+        },
+        {
+          "item": "minecraft:gold_ingot",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "minecraft:iron_ingot",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "minecraft:enchanted_golden_apple",
           "count": 8,
-          "value": 350
+          "value": 0
+        },
+        {
+          "item": "minecraft:golden_apple",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "minecraft:ender_pearl",
+          "count": 32,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:protein",
+          "count": 16,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:iron",
+          "count": 16,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:calcium",
+          "count": 16,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:zinc",
+          "count": 16,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:hp_up",
+          "count": 16,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:carbos",
+          "count": 16,
+          "value": 0
+        },
+        {
+          "item": "cobblemon-cards:god_pack_ticket",
+          "count": 2,
+          "value": 0
+        },
+        {
+          "item": "cobblemon-cards:booster_pack",
+          "count": 6,
+          "value": 0,
+          "cardPackQuality": "LUNA"
         }
       ]
     },
@@ -697,7 +1182,7 @@
       "id": "magikarp",
       "name": "§6Magikarp Tidal",
       "category": "exclusive",
-      "lunaPrice": 6750,
+      "lunaPrice": 2000,
       "icon": "minecraft:netherite_chestplate",
       "description": "Armadura, arsenal y suministros competitivos exclusivos.",
       "cooldownHours": 0,
@@ -827,18 +1312,28 @@
           "value": 0
         },
         {
+          "item": "cobblemon:exp_candy_xl",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:exp_share",
+          "count": 3,
+          "value": 0
+        },
+        {
           "item": "minecraft:experience_bottle",
           "count": 64,
           "value": 0
         },
         {
           "item": "minecraft:enchanted_golden_apple",
-          "count": 4,
+          "count": 10,
           "value": 0
         },
         {
           "item": "minecraft:golden_apple",
-          "count": 12,
+          "count": 32,
           "value": 0
         },
         {
@@ -855,6 +1350,26 @@
           "item": "minecraft:ender_pearl",
           "count": 16,
           "value": 0
+        },
+        {
+          "item": "cobblemon:full_restore",
+          "count": 4,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:max_potion",
+          "count": 8,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:max_revive",
+          "count": 3,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:revive",
+          "count": 5,
+          "value": 0
         }
       ]
     },
@@ -862,7 +1377,7 @@
       "id": "pikachu",
       "name": "§ePikachu Thunderforge",
       "category": "exclusive",
-      "lunaPrice": 8250,
+      "lunaPrice": 2000,
       "icon": "minecraft:netherite_chestplate",
       "description": "Armadura, arsenal y suministros competitivos exclusivos.",
       "cooldownHours": 0,
@@ -992,18 +1507,28 @@
           "value": 0
         },
         {
+          "item": "cobblemon:exp_candy_xl",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:exp_share",
+          "count": 3,
+          "value": 0
+        },
+        {
           "item": "minecraft:experience_bottle",
           "count": 64,
           "value": 0
         },
         {
           "item": "minecraft:enchanted_golden_apple",
-          "count": 4,
+          "count": 10,
           "value": 0
         },
         {
           "item": "minecraft:golden_apple",
-          "count": 12,
+          "count": 32,
           "value": 0
         },
         {
@@ -1020,6 +1545,26 @@
           "item": "minecraft:ender_pearl",
           "count": 16,
           "value": 0
+        },
+        {
+          "item": "cobblemon:full_restore",
+          "count": 4,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:max_potion",
+          "count": 8,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:max_revive",
+          "count": 3,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:revive",
+          "count": 5,
+          "value": 0
         }
       ]
     },
@@ -1027,7 +1572,7 @@
       "id": "eevee",
       "name": "§dEeveelution Legacy",
       "category": "exclusive",
-      "lunaPrice": 11000,
+      "lunaPrice": 2000,
       "icon": "minecraft:netherite_chestplate",
       "description": "Armadura, arsenal y suministros competitivos exclusivos.",
       "cooldownHours": 0,
@@ -1136,6 +1681,11 @@
           "value": 0
         },
         {
+          "item": "cobblemon:ultra_ball",
+          "count": 32,
+          "value": 0
+        },
+        {
           "item": "cobblemon:master_ball",
           "count": 1,
           "value": 0
@@ -1146,18 +1696,28 @@
           "value": 0
         },
         {
+          "item": "cobblemon:exp_candy_xl",
+          "count": 1,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:exp_share",
+          "count": 3,
+          "value": 0
+        },
+        {
           "item": "minecraft:experience_bottle",
           "count": 64,
           "value": 0
         },
         {
           "item": "minecraft:enchanted_golden_apple",
-          "count": 4,
+          "count": 10,
           "value": 0
         },
         {
           "item": "minecraft:golden_apple",
-          "count": 12,
+          "count": 32,
           "value": 0
         },
         {
@@ -1173,6 +1733,26 @@
         {
           "item": "minecraft:ender_pearl",
           "count": 16,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:full_restore",
+          "count": 4,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:max_potion",
+          "count": 8,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:max_revive",
+          "count": 3,
+          "value": 0
+        },
+        {
+          "item": "cobblemon:revive",
+          "count": 5,
           "value": 0
         }
       ]

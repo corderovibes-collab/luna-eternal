@@ -78,6 +78,7 @@ public class TorreScreen extends Screen {
     protected void init() {
         recalcular();
         ClientPlayNetworking.send(new Red.PedirRecompensasTorre());
+        ClientPlayNetworking.send(new Red.PedirSaldo());
     }
 
     private void recalcular() {
@@ -129,6 +130,11 @@ public class TorreScreen extends Screen {
         }
     }
 
+    private boolean tieneAccesoTorre() {
+        var ficha = net.pokereport.luna.client.EstadoCliente.ficha();
+        return ficha != null && net.pokereport.luna.gym.MedallaService.tieneKantoCompleto(ficha.medallas());
+    }
+
     /** Panel Izquierdo: Icono, título y reglas de la Torre. */
     private void dibujarPanel(DrawContext ctx, int rx, int ry) {
         int cx = PANEL_X + PANEL_W / 2;
@@ -169,14 +175,23 @@ public class TorreScreen extends Screen {
         }
 
         separador(ctx, y + 10);
-        y += 26;
+        y += 24;
 
-        // Información de ranking
-        texto(ctx, Text.literal("CLASIFICACIÓN"), cx, y, 17, ORO, true, false);
-        y += 22;
-        texto(ctx, Text.literal("¡Compite por el Top 10!"), cx, y, 14, TEXTO_SUAVE, true, false);
-        y += 18;
-        texto(ctx, Text.literal("Holograma en Ciudadela"), cx, y, 13, 0xFF8FA0C8, true, false);
+        boolean acceso = tieneAccesoTorre();
+        if (!acceso) {
+            texto(ctx, Text.literal("🔒 ACCESO BLOQUEADO"), cx, y, 15, 0xFFFF5555, true, false);
+            y += 18;
+            texto(ctx, Text.literal("Requiere 8 Medallas Kanto"), cx, y, 13, 0xFFFFAAAA, true, false);
+            y += 15;
+            texto(ctx, Text.literal("+ vencer al Campeón Blue"), cx, y, 13, 0xFFFFAAAA, true, false);
+        } else {
+            // Información de ranking
+            texto(ctx, Text.literal("CLASIFICACIÓN"), cx, y, 17, ORO, true, false);
+            y += 22;
+            texto(ctx, Text.literal("¡Compite por el Top 10!"), cx, y, 14, TEXTO_SUAVE, true, false);
+            y += 18;
+            texto(ctx, Text.literal("Holograma en Ciudadela"), cx, y, 13, 0xFF8FA0C8, true, false);
+        }
 
         // Botón de Recompensas de Temporada
         int btnRecX = PANEL_X + 22;
@@ -272,14 +287,20 @@ public class TorreScreen extends Screen {
             int btnH = 40;
             int btnY = ty + CARD_H - btnH - 16;
 
-            boolean btnHover = dentro(rx, ry, px(tx + btnPadX), py(btnY), pl(btnW), pl(btnH));
-            ctx.fill(px(tx + btnPadX), py(btnY), px(tx + btnPadX + btnW), py(btnY + btnH),
-                    btnHover ? VERDE_BOTON_ENCIMA : VERDE_BOTON);
-            marco(ctx, px(tx + btnPadX), py(btnY), pl(btnW), pl(btnH),
-                    btnHover ? 0xFFFFFFFF : 0xFF10331E, Math.max(1, pl(2)));
+            boolean acceso = tieneAccesoTorre();
+            boolean btnHover = acceso && dentro(rx, ry, px(tx + btnPadX), py(btnY), pl(btnW), pl(btnH));
+            int colorFondoBtn = !acceso ? 0xFF421D22 : (btnHover ? VERDE_BOTON_ENCIMA : VERDE_BOTON);
+            int colorBordeBtn = !acceso ? 0xFF7A2B33 : (btnHover ? 0xFFFFFFFF : 0xFF10331E);
+            String textoBtn = !acceso ? "BLOQUEADO" : "ENTRAR";
+            int colorTextoBtn = !acceso ? 0xFFFF8888 : 0xFFFFFFFF;
 
-            texto(ctx, Text.literal("ENTRAR"), tx + CARD_W / 2, btnY + 11, 20,
-                    0xFFFFFFFF, true, false);
+            ctx.fill(px(tx + btnPadX), py(btnY), px(tx + btnPadX + btnW), py(btnY + btnH),
+                    colorFondoBtn);
+            marco(ctx, px(tx + btnPadX), py(btnY), pl(btnW), pl(btnH),
+                    colorBordeBtn, Math.max(1, pl(2)));
+
+            texto(ctx, Text.literal(textoBtn), tx + CARD_W / 2, btnY + 11, 20,
+                    colorTextoBtn, true, false);
         }
     }
 
@@ -335,6 +356,15 @@ public class TorreScreen extends Screen {
     }
 
     private void seleccionarModo(int modo) {
+        if (!tieneAccesoTorre()) {
+            sonar(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), 0.8f);
+            if (client != null && client.player != null) {
+                client.player.sendMessage(Text.literal(
+                        "§c[Torre de Batalla] ¡Acceso restringido! Debes derrotar a los 8 Líderes de Gimnasio de Kanto y al Campeón de Kanto (Blue) para acceder a la Torre."),
+                        false);
+            }
+            return;
+        }
         sonar(SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value(), 1.2f);
         ClientPlayNetworking.send(new Red.EntrarTorreBatalla(modo));
         close();

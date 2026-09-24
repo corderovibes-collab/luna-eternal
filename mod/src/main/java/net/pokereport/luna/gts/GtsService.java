@@ -537,6 +537,10 @@ public final class GtsService {
     public Result publicarObjeto(long sellerId, String itemId, String nombre,
                                  int cantidad, long precio, int horas)
             throws SQLException {
+        if (net.pokereport.luna.market.Inventarios.objeto(itemId)
+                instanceof net.pokereport.luna.item.ArmaduraRangoItem) {
+            return Result.fail("§cLas armaduras de rango no se pueden vender en el mercado.");
+        }
         if (precio <= 0) {
             return Result.fail("§cEl precio debe ser positivo.");
         }

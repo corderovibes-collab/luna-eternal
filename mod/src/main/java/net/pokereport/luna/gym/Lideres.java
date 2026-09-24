@@ -1,8 +1,11 @@
 package net.pokereport.luna.gym;
 
+import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.gitlab.srcmc.rctmod.world.entities.TrainerMob;
 
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Box;
@@ -127,6 +130,10 @@ public final class Lideres {
         mob.setBodyYaw(giro);
         mob.setTrainerId(g.entrenador());
 
+        // ⚠ Se limpia el custom name de rctmod para que no duplique ni emborrone el cartel holográfico
+        mob.setCustomName(null);
+        mob.setCustomNameVisible(false);
+
         // ⚠⚠⚠ EL ORDEN DE ESTAS CUATRO NO ES INDIFERENTE EN UNA:
         //    `setAiDisabled` es la que impide que rete solo, y tiene que estar
         //    puesta antes de que corra el primer tick. Como todo esto pasa antes
@@ -169,6 +176,36 @@ public final class Lideres {
     }
 
     /**
+     * Borra únicamente el líder de un gimnasio concreto en un radio alrededor del centro.
+     */
+    public static int quitar(ServerWorld mundo, Gimnasio.Gimnasio_ g, Vec3d centro, double radio) {
+        Box caja = Box.of(centro, radio * 2, radio * 2, radio * 2);
+        int n = 0;
+        String gymTag = marcaDe(g);
+        String trainerId = g.entrenador();
+        java.util.function.Predicate<TrainerMob> esEsteLider = x ->
+                x.getCommandTags().contains(gymTag)
+                || (trainerId != null && trainerId.equals(x.getTrainerId()));
+
+        for (var e : mundo.getEntitiesByClass(TrainerMob.class, caja, esEsteLider)) {
+            e.discard();
+            n++;
+        }
+
+        try {
+            for (Entity e : mundo.iterateEntities()) {
+                if (e instanceof TrainerMob mob && !mob.isRemoved()) {
+                    if (caja.contains(mob.getPos()) && esEsteLider.test(mob)) {
+                        mob.discard();
+                        n++;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return n;
+    }
+
+    /**
      * Borra los líderes que haya cerca.
      *
      * <p>⚠ Se borra <b>antes</b> de poner, siempre. Sin eso, ejecutar el comando
@@ -179,11 +216,27 @@ public final class Lideres {
     public static int quitar(ServerWorld mundo, Vec3d centro, double radio) {
         Box caja = Box.of(centro, radio * 2, radio * 2, radio * 2);
         int n = 0;
-        for (var e : mundo.getEntitiesByClass(TrainerMob.class, caja,
-                x -> x.getCommandTags().contains(MARCA))) {
+        java.util.function.Predicate<TrainerMob> esLider = x ->
+                x.getCommandTags().contains(MARCA)
+                || x.getCommandTags().contains(MARCA_RECEPCION)
+                || x.getCommandTags().contains(MARCA_ARENA)
+                || (x.getTrainerId() != null && (x.getTrainerId().startsWith("kanto_") || x.getTrainerId().startsWith("luna_")));
+
+        for (var e : mundo.getEntitiesByClass(TrainerMob.class, caja, esLider)) {
             e.discard();
             n++;
         }
+
+        try {
+            for (Entity e : mundo.iterateEntities()) {
+                if (e instanceof TrainerMob mob && !mob.isRemoved()) {
+                    if (caja.contains(mob.getPos()) && esLider.test(mob)) {
+                        mob.discard();
+                        n++;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
         return n;
     }
 
@@ -201,52 +254,176 @@ public final class Lideres {
      * @param giro si no es {@code null}, sobrescribe hacia dónde mira el líder
      * @return cuántas recepciones se pusieron
      */
+    /**
+     * Escucha la carga de entidades para silenciar etiquetas de nombre y eliminar
+     * instantáneamente cualquier duplicado en la recepción de la Ciudadela.
+     */
+    public static void registrar() {
+        ServerEntityEvents.ENTITY_LOAD.register((entidad, mundo) -> {
+            if (entidad == null || entidad.isRemoved()) {
+                return;
+            }
+
+            // 1. Líderes de gimnasio (TrainerMob)
+            if (entidad instanceof TrainerMob mob && entidad.getCommandTags().contains(MARCA)) {
+                mob.setCustomName(null);
+                mob.setCustomNameVisible(false);
+                mob.setAiDisabled(true);
+                mob.setInvulnerable(true);
+                mob.setSilent(true);
+                mob.setPersistent(true);
+
+                if (entidad.getCommandTags().contains(MARCA_RECEPCION)
+                        && LunaDimensions.CIUDADELA.equals(mundo.getRegistryKey())) {
+                    Gimnasio.Gimnasio_ g = gimnasioDe(entidad);
+                    if (g != null) {
+                        String gymTag = marcaDe(g);
+                        var pos = entidad.getPos();
+                        Box box = Box.of(pos, 4.0, 4.0, 4.0);
+                        for (var otro : mundo.getEntitiesByClass(TrainerMob.class, box,
+                                x -> x != entidad && !x.isRemoved() && x.getCommandTags().contains(gymTag))) {
+                            entidad.discard();
+                            LunaEternal.LOG.info("Deduplicado: eliminado líder repetido de {} en {}", g.id(), pos);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // 2. Hologramas / Carteles de líderes
+            if (entidad instanceof DisplayEntity.TextDisplayEntity text
+                    && entidad.getCommandTags().contains(Cartel.MARCA)) {
+                for (String tag : entidad.getCommandTags()) {
+                    if (tag.startsWith("luna_cartel_") && !tag.equals(Cartel.MARCA)) {
+                        var pos = entidad.getPos();
+                        Box box = Box.of(pos, 4.0, 4.0, 4.0);
+                        for (var otro : mundo.getEntitiesByClass(DisplayEntity.TextDisplayEntity.class, box,
+                                x -> x != entidad && !x.isRemoved() && x.getCommandTags().contains(tag))) {
+                            entidad.discard();
+                            LunaEternal.LOG.info("Deduplicado: eliminado cartel repetido con tag {} en {}", tag, pos);
+                            return;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // 3. Pokémon decorativos en Ciudadela
+            if (entidad instanceof PokemonEntity poke
+                    && entidad.getCommandTags().contains(Decorativos.MARCA)
+                    && LunaDimensions.CIUDADELA.equals(mundo.getRegistryKey())) {
+                var pData = poke.getPokemon();
+                if (pData != null && pData.getSpecies() != null) {
+                    String esp = pData.getSpecies().getName();
+                    var pos = entidad.getPos();
+                    Box box = Box.of(pos, 4.0, 4.0, 4.0);
+                    for (var otro : mundo.getEntitiesByClass(PokemonEntity.class, box,
+                            x -> x != entidad && !x.isRemoved()
+                                    && x.getCommandTags().contains(Decorativos.MARCA)
+                                    && x.getPokemon() != null && x.getPokemon().getSpecies() != null
+                                    && esp.equalsIgnoreCase(x.getPokemon().getSpecies().getName()))) {
+                        entidad.discard();
+                        LunaEternal.LOG.info("Deduplicado: eliminado pokémon decorativo repetido ({}) en {}", esp, pos);
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
     public static int colocarRecepciones(MinecraftServer servidor, Float giro) {
         ServerWorld mundo = servidor.getWorld(LunaDimensions.CIUDADELA);
         if (mundo == null) {
             LunaEternal.LOG.error("No existe la ciudadela");
             return 0;
         }
-        int n = 0;
-        for (Gimnasio.Gimnasio_ g : Gimnasio.conRecepcion()) {
-            var r = Gimnasio.recepcion(g);
-            // ⚠⚠ EL GIRO SE GUARDA, no solo se aplica. Antes el número viajaba
-            //    como parámetro, giraba al líder, y se perdía al reiniciar: el
-            //    comando decía «hecho» y días después Brock «se había girado
-            //    solo». Ahora, si viene uno, se escribe; y si no, manda el que
-            //    haya guardado. Detalle en Orientacion.
-            float suGiro;
-            if (giro != null) {
-                Orientacion.poner(g.id(), giro);
-                suGiro = Orientacion.giro(g.id(), r.giro());
-            } else {
-                suGiro = Orientacion.giro(g.id(), r.giro());
+
+        java.util.List<net.minecraft.util.math.ChunkPos> chunksForzados = new java.util.ArrayList<>();
+        try {
+            for (Gimnasio.Gimnasio_ g : Gimnasio.conRecepcion()) {
+                var r = Gimnasio.recepcion(g);
+                int cx = ((int) Math.floor(r.x())) >> 4;
+                int cz = ((int) Math.floor(r.z())) >> 4;
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        var cp = new net.minecraft.util.math.ChunkPos(cx + dx, cz + dz);
+                        if (!chunksForzados.contains(cp)) {
+                            if (mundo.setChunkForced(cp.x, cp.z, true)) {
+                                chunksForzados.add(cp);
+                            }
+                            mundo.getChunk(cp.x, cp.z);
+                        }
+                    }
+                }
             }
 
-            // Primero limpiar: el radio es el mismo con el que se pone.
-            quitar(mundo, r.lider(), 4);
-            Decorativos.quitar(mundo, r.pokemon(), 4);
-            Cartel.quitar(mundo, g, r.lider());
+            int n = 0;
+            for (Gimnasio.Gimnasio_ g : Gimnasio.conRecepcion()) {
+                var r = Gimnasio.recepcion(g);
+                float suGiro;
+                if (giro != null) {
+                    Orientacion.poner(g.id(), giro);
+                    suGiro = Orientacion.giro(g.id(), r.giro());
+                } else {
+                    suGiro = Orientacion.giro(g.id(), r.giro());
+                }
 
-            var mob = colocar(mundo, g, r.lider(), suGiro, MARCA_RECEPCION);
-            if (mob == null) {
-                continue;
+                // 1. Líder: buscar si ya existe para reorientar sin duplicar
+                Box boxL = Box.of(r.lider(), 4.0, 4.0, 4.0);
+                TrainerMob existenteMob = null;
+                for (var mob : mundo.getEntitiesByClass(TrainerMob.class, boxL,
+                        x -> !x.isRemoved() && (x.getCommandTags().contains(marcaDe(g)) || x.getCommandTags().contains(MARCA_RECEPCION)))) {
+                    if (existenteMob == null) {
+                        existenteMob = mob;
+                    } else {
+                        mob.discard();
+                    }
+                }
+
+                if (existenteMob != null) {
+                    existenteMob.refreshPositionAndAngles(r.x(), r.y(), r.z(), suGiro, 0f);
+                    existenteMob.setHeadYaw(suGiro);
+                    existenteMob.setBodyYaw(suGiro);
+                    existenteMob.setCustomName(null);
+                    existenteMob.setCustomNameVisible(false);
+                } else {
+                    colocar(mundo, g, r.lider(), suGiro, MARCA_RECEPCION);
+                }
+
+                // 2. Pokémon decorativo: buscar si ya existe para reorientar sin duplicar
+                Box boxP = Box.of(r.pokemon(), 4.0, 4.0, 4.0);
+                PokemonEntity existentePoke = null;
+                for (var p : mundo.getEntitiesByClass(PokemonEntity.class, boxP,
+                        x -> !x.isRemoved() && x.getCommandTags().contains(Decorativos.MARCA))) {
+                    if (existentePoke == null) {
+                        existentePoke = p;
+                    } else {
+                        p.discard();
+                    }
+                }
+
+                if (existentePoke != null) {
+                    existentePoke.refreshPositionAndAngles(r.px(), r.py(), r.pz(), suGiro, 0f);
+                    existentePoke.setHeadYaw(suGiro);
+                    existentePoke.setBodyYaw(suGiro);
+                } else {
+                    Decorativos.colocar(mundo, r.especie(), Decorativos.Postura.QUIETO, r.pokemon(), suGiro);
+                }
+
+                // 3. Cartel holográfico
+                Cartel.poner(mundo, g, r.lider());
+                n++;
+                LunaEternal.LOG.info("Gimnasio {}: recepción en {} {} {} (giro {})",
+                        g.id(), r.x(), r.y(), r.z(), suGiro);
             }
-            var poke = Decorativos.colocar(mundo, r.especie(),
-                    Decorativos.Postura.QUIETO, r.pokemon(), suGiro);
-            if (poke == null) {
-                LunaEternal.LOG.warn("Gimnasio {}: no se pudo poner su {}",
-                        g.id(), r.especie());
+            return n;
+        } finally {
+            for (var cp : chunksForzados) {
+                try {
+                    mundo.setChunkForced(cp.x, cp.z, false);
+                } catch (Throwable ignored) {}
             }
-            // ⚠ El cartel va DESPUÉS del líder: si la colocación falla no se
-            //   queda un rótulo flotando sobre un sitio vacío, que es la clase
-            //   de resto que luego nadie sabe de dónde salió.
-            Cartel.poner(mundo, g, r.lider());
-            n++;
-            LunaEternal.LOG.info("Gimnasio {}: recepción en {} {} {} (giro {})",
-                    g.id(), r.x(), r.y(), r.z(), suGiro);
         }
-        return n;
     }
 
     /** Quita las recepciones de la ciudadela, líder y Pokémon. */
@@ -255,17 +432,40 @@ public final class Lideres {
         if (mundo == null) {
             return 0;
         }
-        int n = 0;
-        for (Gimnasio.Gimnasio_ g : Gimnasio.conRecepcion()) {
-            var r = Gimnasio.recepcion(g);
-            n += quitar(mundo, r.lider(), 4);
-            Decorativos.quitar(mundo, r.pokemon(), 4);
-            // ⚠ El cartel también. Es una entidad, se queda en el mundo, y a un
-            //   TextDisplay el daño NO le llega: `/kill` diría que lo ha matado
-            //   y seguiría ahí. La única forma es `discard`, que es lo que hace.
-            Cartel.quitar(mundo, g, r.lider());
+        java.util.List<net.minecraft.util.math.ChunkPos> chunksForzados = new java.util.ArrayList<>();
+        try {
+            for (Gimnasio.Gimnasio_ g : Gimnasio.conRecepcion()) {
+                var r = Gimnasio.recepcion(g);
+                int cx = ((int) Math.floor(r.x())) >> 4;
+                int cz = ((int) Math.floor(r.z())) >> 4;
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        var cp = new net.minecraft.util.math.ChunkPos(cx + dx, cz + dz);
+                        if (!chunksForzados.contains(cp)) {
+                            if (mundo.setChunkForced(cp.x, cp.z, true)) {
+                                chunksForzados.add(cp);
+                            }
+                            mundo.getChunk(cp.x, cp.z);
+                        }
+                    }
+                }
+            }
+
+            int n = 0;
+            for (Gimnasio.Gimnasio_ g : Gimnasio.conRecepcion()) {
+                var r = Gimnasio.recepcion(g);
+                n += quitar(mundo, g, r.lider(), 3.5);
+                Decorativos.quitar(mundo, r.especie(), r.pokemon(), 3.5);
+                Cartel.quitar(mundo, g, r.lider());
+            }
+            return n;
+        } finally {
+            for (var cp : chunksForzados) {
+                try {
+                    mundo.setChunkForced(cp.x, cp.z, false);
+                } catch (Throwable ignored) {}
+            }
         }
-        return n;
     }
 
     // ---- la arena ----------------------------------------------------------
@@ -294,9 +494,8 @@ public final class Lideres {
         if (mob != null) {
             // ⚠ El mismo cartel que en la ciudadela. Aquí sirve para otra cosa:
             //   el jugador ya aceptó el reto, así que lo que le recuerda es A
-            //   QUÉ NIVEL se pelea -- que es lo que explica por qué su Pokémon
-            //   de nivel 40 aparece de 15.
-            Cartel.poner(mundo, g, donde);
+            //   QUÉ NIVEL se pelea y el clic derecho para luchar.
+            Cartel.poner(mundo, g, donde, true);
         }
         if (mob != null && !Gimnasio.tieneTarima(g)) {
             // ⚠ Si la tarima no está medida, el sitio es una SUPOSICIÓN: 20
@@ -350,18 +549,25 @@ public final class Lideres {
     public static int quitarDeRanura(ServerWorld mundo, Gimnasio.Gimnasio_ g,
                                      int ranura) {
         var o = Gimnasio.origen(g, ranura);
-        // ⚠⚠⚠ LOS CHUNKS PRIMERO, Y ESTA ES LA MITAD QUE FALTABA.
-        //    `getEntitiesByClass` solo ve lo que esta CARGADO. Si la ranura
-        //    esta fria, la limpieza no encuentra nada, no borra nada, y el
-        //    lider que iba a sustituir aparece AL LADO del anterior.
-        //    Cuando ya estan cargados esto es una busqueda en una tabla, asi
-        //    que no cuesta nada en el caso normal.
-        for (int cx = o.getX() >> 4; cx <= (o.getX() + ANCHO_MAX) >> 4; cx++) {
-            for (int cz = o.getZ() >> 4;
-                 cz <= (o.getZ() + Gimnasio.PASO_RANURA) >> 4; cz++) {
-                mundo.getChunk(cx, cz);
+        // ⚠⚠⚠ FORZAR CARGA DE CHUNKS para que ServerEntityManager lea las entidades del disco
+        // si la ranura estaba fría o el líder fue teletransportado a un chunk lejano (ej. battle stand).
+        java.util.List<net.minecraft.util.math.ChunkPos> chunksForzados = new java.util.ArrayList<>();
+        int minCx = (o.getX() - 16) >> 4;
+        int maxCx = (o.getX() + ANCHO_MAX + 16) >> 4;
+        int minCz = (o.getZ() - 16) >> 4;
+        int maxCz = (o.getZ() + Gimnasio.PASO_RANURA + 16) >> 4;
+
+        try {
+            for (int cx = minCx; cx <= maxCx; cx++) {
+                for (int cz = minCz; cz <= maxCz; cz++) {
+                    if (mundo.setChunkForced(cx, cz, true)) {
+                        chunksForzados.add(new net.minecraft.util.math.ChunkPos(cx, cz));
+                    }
+                    mundo.getChunk(cx, cz);
+                }
             }
-        }
+        } catch (Throwable ignored) {}
+
         // ⚠ Un pelo por debajo del paso: un líder justo en el borde es de la
         //   ranura siguiente, no de esta.
         Box caja = new Box(
@@ -369,10 +575,49 @@ public final class Lideres {
                 o.getX() + ANCHO_MAX, o.getY() + 256,
                 o.getZ() + Gimnasio.PASO_RANURA - 0.01);
         int n = 0;
+        String gymTag = marcaDe(g);
+        String trainerId = g.entrenador();
+
+        // 1. Barrido espacial estándar en caja
         for (var e : mundo.getEntitiesByClass(TrainerMob.class, caja,
-                x -> x.getCommandTags().contains(MARCA))) {
+                x -> x.getCommandTags().contains(MARCA)
+                        || x.getCommandTags().contains(gymTag)
+                        || (trainerId != null && trainerId.equals(x.getTrainerId())))) {
             e.discard();
             n++;
+        }
+        // Limpieza de carteles (TextDisplay) en la misma ranura para evitar rótulos flotantes duplicados
+        String cartelGymTag = Cartel.marcaDe(g);
+        for (var e : mundo.getEntitiesByClass(DisplayEntity.TextDisplayEntity.class, caja,
+                x -> x.getCommandTags().contains(Cartel.MARCA) || x.getCommandTags().contains(cartelGymTag))) {
+            e.discard();
+        }
+
+        // 2. Barrido exhaustivo en iterador del mundo por si alguna sección no notificó a getEntitiesByClass
+        try {
+            for (Entity e : mundo.iterateEntities()) {
+                if (e != null && !e.isRemoved() && caja.contains(e.getPos())) {
+                    if (e instanceof TrainerMob mob) {
+                        if (mob.getCommandTags().contains(MARCA)
+                                || mob.getCommandTags().contains(gymTag)
+                                || (trainerId != null && trainerId.equals(mob.getTrainerId()))) {
+                            mob.discard();
+                            n++;
+                        }
+                    } else if (e instanceof DisplayEntity.TextDisplayEntity text) {
+                        if (text.getCommandTags().contains(Cartel.MARCA) || text.getCommandTags().contains(cartelGymTag)) {
+                            text.discard();
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        // Liberar tickets de chunks forzados
+        for (var cp : chunksForzados) {
+            try {
+                mundo.setChunkForced(cp.x, cp.z, false);
+            } catch (Throwable ignored) {}
         }
         if (n > 1) {
             // Si alguna vez sale más de uno, es que algo los estaba dejando
@@ -381,5 +626,10 @@ public final class Lideres {
                     g.id(), n, ranura);
         }
         return n;
+    }
+
+    /** Limpia líderes y carteles huérfanos o duplicados en la ranura 0 (maestro). */
+    public static int quitarDeMaestro(ServerWorld mundo, Gimnasio.Gimnasio_ g) {
+        return quitarDeRanura(mundo, g, 0);
     }
 }

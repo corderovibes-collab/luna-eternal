@@ -247,11 +247,35 @@ def _repisa_gema_central(t):
 
 # ----------------------------------------------------------------- CAMPEON
 
+def _reparto_campeon():
+    """
+    Reparto para Campeón.
+    En campeon-corona.bbmodel el autor intercambió los grupos/nombres de piernas y botas:
+    - Textura 5 (asdasdasd.png, pintada en y=29 en los pies) estaba asignada a 'left_leg'/'right_leg'.
+    - Textura 8 (asdasdas.png, pintada en y=22 en los muslos) estaba asignada a 'left_shoe'/'right_shoe'.
+    - Los cubos 'cube' de la aleta de cadera pertenecen a las piernas (pantalón).
+    Redirigimos las botas reales a 'bota' (armorLeftBoot/armorRightBoot) y los pantalones a 'pierna'.
+    """
+    base = _reparto_cuerpo(cabeza=("Corona2",))
+    def reparto(e):
+        if e.nombre in ("left_leg", "right_leg"):
+            izq, der = LADOS["bota"]
+            return izq if (e.f[0] + e.to[0]) / 2.0 < 0 else der
+        if e.nombre in ("left_shoe", "right_shoe"):
+            izq, der = LADOS["pierna"]
+            return izq if (e.f[0] + e.to[0]) / 2.0 < 0 else der
+        if e.nombre == "cube" and any(g in ("left_leg", "right_leg", "left_boot", "right_boot") for g in e.grupos):
+            izq, der = LADOS["pierna"]
+            return izq if (e.f[0] + e.to[0]) / 2.0 < 0 else der
+        return base(e)
+    return reparto
+
+
 def campeon():
     """La corona y su armadura. Un solo fichero, cuerpo entero."""
     doc = leer(CORONA)
     t, avisos = _traje("campeon", "Traje CAMPEON · Corona",
-                       [(doc, _reparto_cuerpo(cabeza=("Corona2",)), None)])
+                       [(doc, _reparto_campeon(), None)])
     avisos += _repisa_gema_central(t)
     return t, avisos
 

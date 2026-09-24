@@ -83,6 +83,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.pase.PaseService pase;
     private static net.pokereport.luna.puerta.PuertaService puerta;
     private static net.pokereport.luna.crianza.CrianzaService crianza;
+    private static net.pokereport.luna.homes.HomeService homes;
+    private static net.pokereport.luna.tebex.TebexService tebex;
+    private static net.minecraft.server.MinecraftServer serverInstance;
     private static ThreadPoolExecutor io;
     private static final AtomicLong ioRejectedCount = new AtomicLong(0);
     /** Clave de alta de constructor. Vacía = las altas están cerradas. */
@@ -91,6 +94,23 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     @Override
     public void onInitializeServer() {
         LOG.info("Luna Eternal — iniciando");
+        net.pokereport.luna.world.FaunaControl.registrar();
+        net.pokereport.luna.world.RaidDenPurgeService.registrar();
+
+        // Conservación de experiencia al morir para rango Leyenda
+        net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
+            if (!alive) {
+                var r = net.pokereport.luna.rank.RankService.enCache(oldPlayer.getUuid());
+                if (r == net.pokereport.luna.ui.Tablist.Rank.LEYENDA || oldPlayer.hasPermissionLevel(2) || r.equipo) {
+                    newPlayer.experienceLevel = oldPlayer.experienceLevel;
+                    newPlayer.experienceProgress = oldPlayer.experienceProgress;
+                    newPlayer.totalExperience = oldPlayer.totalExperience;
+                    newPlayer.networkHandler.sendPacket(new net.minecraft.network.packet.s2c.play.ExperienceBarUpdateS2CPacket(
+                        newPlayer.experienceProgress, newPlayer.experienceLevel, newPlayer.totalExperience
+                    ));
+                }
+            }
+        });
 
         // ⚠ AQUI Y NO EN SERVER_STARTED: `SERVER_STARTED` corre en cada
         //   arranque del servidor, y registrar un evento dos veces lo llama dos
@@ -100,6 +120,18 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.world.Decorativos.fueraDeLaPokedex();
         net.pokereport.luna.world.Decorativos.abrirViajesAlTocar();
         net.pokereport.luna.puerta.PuertaNpc.engancharClic();
+        // El bloque se registra desde el entrypoint comun (Red), pero su
+        // ejecutor, validacion de premios y cierre limpio son exclusivamente
+        // del servidor. Sin este hook las paradas ya colocadas siguen visibles
+        // y reciben el clic, pero claim() encuentra worker == null y no hace
+        // nada: un fallo silencioso especialmente facil de confundir con una
+        // parada perdida o un cliente desactualizado.
+        net.pokereport.luna.pokestop.LunarStops.serverHooks();
+        // Igual que las pokeparadas, registrar los payloads del Buhonero no
+        // inicia su worker ni sus receptores de servidor. Si se pierde esta
+        // llamada el NPC sigue visible y consume el clic, pero atender() sale
+        // silenciosamente porque io == null y nunca abre el Mercado Negro.
+        net.pokereport.luna.buhonero.BuhoneroService.registrar();
 
         // ⚠⚠⚠ EL CANDADO DEL LOBBY SE REFRESCA AL CAMBIAR DE MUNDO, Y SIN ESTO
         //    EL POKEPAD SE QUEDABA MUERTO DESPUES DE CADA LOGIN.
@@ -149,6 +181,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.torrebatalla.TorreRecompensas.load();
         net.pokereport.luna.heal.EnfermeraService.registrar();
         net.pokereport.luna.crianza.PastureInterceptor.registrarServidor();
+        net.pokereport.luna.gym.GymLevelCapService.registrar();
         // ⚠⚠⚠ TODO LO DE GIMNASIOS VA DETRAS DE ESTA GUARDA, Y NO ES PARANOIA.
         //    El paquete `gym` toca clases de rctmod --TrainerMob, RCTMod-- que
         //    son `modCompileOnly`: existen al compilar y puede que no al
@@ -161,6 +194,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // la arena. Va aqui --y no en SERVER_STARTED-- porque
             // `UseEntityCallback` se registra una vez, como los de arriba.
             net.pokereport.luna.gym.Combate.registrarClic();
+            net.pokereport.luna.gym.GymArenaProteccion.registrar();
+            net.pokereport.luna.gym.Lideres.registrar();
             // ⚠⚠⚠ OAK VA DENTRO DE ESTA GUARDA, Y ESO TIENE UNA CONSECUENCIA:
             //    es un `TrainerMob` de rctmod --su piel y su ficha vienen en ese
             //    mod-- asi que sin rctmod no hay Oak, y sin Oak NO HAY FORMA DE
@@ -213,8 +248,14 @@ public final class LunaEternal implements DedicatedServerModInitializer {
                     });
         }
 
-        ServerLifecycleEvents.SERVER_STARTING.register(server -> boot());
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> shutdown());
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+            serverInstance = server;
+            boot();
+        });
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            shutdown();
+            serverInstance = null;
+        });
 
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             // ⚠ El borde del salvaje SE APLICA EN CADA ARRANQUE. Se guarda en el
@@ -318,6 +359,19 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             }
             if (crianza != null) {
                 crianza.recuperarEntregasPendientes(player);
+            }
+            if (homes != null) {
+                var perfilH = player.getGameProfile();
+                submit(() -> {
+                    try {
+                        long idH = players.resolve(perfilH.getId(), perfilH.getName());
+                        homes.cargarJugador(idH, null);
+                    } catch (Exception ignored) {}
+                });
+            }
+            if (tebex != null) {
+                var perfilT = player.getGameProfile();
+                submit(() -> tebex.processPendingFulfillmentsOnJoin(server, perfilT.getId(), perfilT.getName()));
             }
             // ⚠⚠⚠ EL SANTUARIO SE EMPUJA AL ENTRAR, Y SIN ESTO NO SE VEIA UN
             //    SOLO HOLOGRAMA. `EstadoSantuario` es lo unico de lo que sale la
@@ -508,6 +562,13 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.world.Regreso.apuntar(player);
             net.pokereport.luna.backpack.Abiertas.guardarYOlvidar(player);
             net.pokereport.luna.rank.RankService.olvidar(player.getUuid());
+            if (homes != null) {
+                var perfilH = player.getGameProfile();
+                try {
+                    long idH = players.resolve(perfilH.getId(), perfilH.getName());
+                    homes.olvidar(idH);
+                } catch (Exception ignored) {}
+            }
             if (puerta != null) {
                 puerta.olvidar(player.getUuid());
             }
@@ -635,7 +696,11 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         });
 
         CommandRegistrationCallback.EVENT.register(
-            (dispatcher, registry, env) -> LunaCommand.register(dispatcher));
+            (dispatcher, registry, env) -> {
+                LunaCommand.register(dispatcher);
+                net.pokereport.luna.homes.HomeCommands.registrar(dispatcher);
+                net.pokereport.luna.command.RankCommands.registrar(dispatcher);
+            });
     }
 
     private void boot() {
@@ -678,6 +743,13 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             pase = new net.pokereport.luna.pase.PaseService(database);
             puerta = new net.pokereport.luna.puerta.PuertaService(database);
             crianza = new net.pokereport.luna.crianza.CrianzaService(database, economy);
+            homes = new net.pokereport.luna.homes.HomeService(database);
+            homes.cargarPwarps();
+
+            java.nio.file.Path configDir = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir();
+            net.pokereport.luna.tebex.PackageRegistry tebexPackages =
+                    net.pokereport.luna.tebex.PackageRegistry.load(configDir);
+            tebex = new net.pokereport.luna.tebex.TebexService(database, tebexPackages, players, economy, ranks, trajes);
             // ⚠ La config de nichos se lee al arrancar y REVIENTA el arranque
             //   si esta mal escrita: una coordenada mal puesta protege una zona
             //   que no es la construida, y eso no da error -- da un hueco que
@@ -828,6 +900,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.clan.ClanService clans() { return clans; }
     public static net.pokereport.luna.quest.QuestService quests() { return quests; }
     public static net.pokereport.luna.economy.EconomyStats stats() { return stats; }
+    public static net.pokereport.luna.homes.HomeService homes() { return homes; }
+    public static net.pokereport.luna.tebex.TebexService tebex() { return tebex; }
+    public static net.minecraft.server.MinecraftServer server() { return serverInstance; }
 
     /**
      * Carga el traje de quien entra y lo reparte.

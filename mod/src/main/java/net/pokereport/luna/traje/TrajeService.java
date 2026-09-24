@@ -204,6 +204,81 @@ public final class TrajeService {
     }
 
     /**
+     * Concede un traje dentro de una transacción SQL abierta mediante INSERT IGNORE.
+     * La actualización de la caché en memoria se debe realizar DESPUÉS del commit transaccional.
+     *
+     * @return true si se insertó la fila (no lo tenía), false si ya lo poseía o error
+     */
+    public boolean concederInTransaction(Connection c, long playerId, Traje t) throws SQLException {
+        if (t == null || t.gratis()) {
+            return false;
+        }
+        try (PreparedStatement ps = c.prepareStatement(
+                "INSERT IGNORE INTO player_suit_owned (player_id, suit) VALUES (?, ?)")) {
+            ps.setLong(1, playerId);
+            ps.setString(2, t.id());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Comprueba si el jugador ya posee un traje en la base de datos dentro de una transacción.
+     */
+    public boolean poseeInTransaction(Connection c, long playerId, Traje t) throws SQLException {
+        if (t == null || t.gratis()) {
+            return true;
+        }
+        try (PreparedStatement ps = c.prepareStatement(
+                "SELECT 1 FROM player_suit_owned WHERE player_id = ? AND suit = ?")) {
+            ps.setLong(1, playerId);
+            ps.setString(2, t.id());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /**
+     * Retira un traje dentro de una transacción SQL abierta.
+     * La actualización de caché se debe realizar DESPUÉS del commit transaccional.
+     *
+     * @return true si se eliminó la fila, false si no lo poseía o error
+     */
+    public boolean retirarInTransaction(Connection c, long playerId, Traje t) throws SQLException {
+        if (t == null || t.gratis()) {
+            return false;
+        }
+        try (PreparedStatement ps = c.prepareStatement(
+                "DELETE FROM player_suit_owned WHERE player_id = ? AND suit = ?")) {
+            ps.setLong(1, playerId);
+            ps.setString(2, t.id());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Actualiza la caché en memoria de trajes adquiridos tras confirmarse el commit en base de datos.
+     */
+    public static void actualizarCachePropiedad(UUID uuid, Traje t) {
+        if (uuid != null && t != null && !t.gratis()) {
+            TENGO.computeIfAbsent(uuid,
+                    k -> java.util.concurrent.ConcurrentHashMap.newKeySet()).add(t.id());
+        }
+    }
+
+    /**
+     * Invalida de la caché en memoria el traje retirado tras confirmarse el commit en base de datos.
+     */
+    public static void actualizarCacheRetiro(UUID uuid, Traje t) {
+        if (uuid != null && t != null) {
+            Set<String> suyos = TENGO.get(uuid);
+            if (suyos != null) {
+                suyos.remove(t.id());
+            }
+        }
+    }
+
+    /**
      * Le retira un traje (devolucion, contracargo).
      *
      * <p>⚠⚠ NO LE QUITA EL PUESTO. De eso se encarga {@link #revisar}, que corre

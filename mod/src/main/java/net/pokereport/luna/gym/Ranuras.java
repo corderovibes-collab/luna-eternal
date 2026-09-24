@@ -88,6 +88,20 @@ public final class Ranuras {
         return -1;
     }
 
+    public record Asignacion(String gymId, int ranura) {}
+
+    /** Encuentra qué gimnasio y qué ranura tiene asignados un jugador, o null si ninguno. */
+    public static Asignacion asignacionDe(UUID jugador) {
+        for (var e : OCUPADAS.entrySet()) {
+            for (var r : e.getValue().entrySet()) {
+                if (jugador.equals(r.getValue())) {
+                    return new Asignacion(e.getKey(), r.getKey());
+                }
+            }
+        }
+        return null;
+    }
+
     /** Cuántas quedan libres, para decirlo en la pantalla. */
     public static int libres(Gimnasio.Gimnasio_ g) {
         var mapa = OCUPADAS.get(g.id());

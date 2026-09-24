@@ -76,8 +76,17 @@ public final class Apps {
             case "protecciones" -> abrirProtecciones();
             case "santuario" -> abrirSantuario();
             case "pase" -> abrirPase();
+
+            case "crianza" -> abrirCrianza();
             default -> false;
         };
+    }
+
+    /** Crianza disponible para todos los jugadores. */
+    private static boolean abrirCrianza() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new CrianzaScreen(cliente.currentScreen));
+        return true;
     }
 
     /** El PASE DE BATALLA. Misma regla que las demas: NUESTRA pantalla. */

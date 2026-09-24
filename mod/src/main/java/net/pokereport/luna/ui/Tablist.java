@@ -4,8 +4,10 @@ import net.minecraft.network.packet.s2c.play.PlayerListHeaderS2CPacket;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 /**
  * La lista de jugadores: cabecera, pie y etiqueta de rango junto a cada nombre.
@@ -32,35 +34,24 @@ public final class Tablist {
     public enum Rank {
         // --- de equipo. NO se ganan jugando y no desbloquean nada del juego:
         //     un moderador no tiene mas mochila por ser moderador.
-        ADMIN     ("00_admin",  "§4§lADMIN", "§4", -1, true),
-        DEV       ("10_dev",    "§d§lDEV",   "§d", -1, true),
-        MODERADOR ("20_mod",    "§2§lMOD",   "§2", -1, true),
+        ADMIN     ("00_admin",     "\uE015", Formatting.DARK_RED,     "ADMIN",      -1, true),
+        DEV       ("10_dev",       "\uE016", Formatting.LIGHT_PURPLE, "DEV",        -1, true),
+        MODERADOR ("20_mod",       "\uE017", Formatting.DARK_GREEN,   "MOD",        -1, true),
 
         // --- de jugador, de mayor a menor (decision del usuario, 2026-08-26).
-        //
-        // ⚠ El `escalon` es lo que ORDENA, y es un numero explicito en vez del
-        //   `ordinal()`: con `ordinal()`, meter un rango en medio le cambia el
-        //   nivel a todos los de abajo -- que es exactamente lo que la leccion
-        //   del ENUM de MariaDB dice que no hagamos.
-        LEYENDA   ("30_leyenda", "§6§lLEYENDA", "§6", 5, false),
-        MAESTRO   ("40_maestro", "§5§lMAESTRO", "§5", 4, false),
-        CAMPEON   ("50_campeon", "§b§lCAMPEÓN", "§b", 3, false),
-        ELITE     ("60_elite",   "§a§lÉLITE",   "§a", 2, false),
-        // ⚠⚠ SE LLAMABA NOVATO Y HOY ES ENTRENADOR (decision del usuario,
-        //    2026-08-30). El renombrado NO ES GRATIS como lo fue el de V020:
-        //    entonces no habia ni un rango guardado, y hoy `player.rank_id`
-        //    lleva el NOMBRE dentro. Lo migra V025.
-        //
-        //    ⚠ Y hay OTRO ENTRENADOR en el juego: la Via `Path.ENTRENADOR`,
-        //      la que sube combatiendo. Son cosas distintas y no chocan en el
-        //      codigo, pero un jugador ve las dos palabras.
-        ENTRENADOR("90_entrenador", "§7ENTRENADOR", "§f", 1, false);
+        LEYENDA   ("30_leyenda",   "\uE014", Formatting.GOLD,         "LEYENDA",    5, false),
+        MAESTRO   ("40_maestro",   "\uE013", Formatting.DARK_PURPLE,  "MAESTRO",    4, false),
+        CAMPEON   ("50_campeon",   "\uE012", Formatting.AQUA,         "CAMPEÓN",    3, false),
+        ELITE     ("60_elite",     "\uE011", Formatting.GREEN,        "ÉLITE",      2, false),
+        ENTRENADOR("90_entrenador", "\uE010", Formatting.WHITE,        "ENTRENADOR", 1, false);
 
         public final String teamName;
-        /** Etiqueta visible antes del nombre. */
+        /** Glifo visible de la insignia antes del nombre. */
         public final String tag;
-        /** Color del propio nombre. */
-        public final String nameColor;
+        /** Color del propio nombre y del equipo. */
+        public final Formatting color;
+        /** Nombre legible del rango. */
+        public final String titulo;
         /**
          * Nivel de progresion, 1 el mas bajo. <b>-1 en los de equipo</b>: un
          * rango de staff no es «mas alto» que LEYENDA, es de otra clase.
@@ -68,13 +59,24 @@ public final class Tablist {
         public final int escalon;
         public final boolean equipo;
 
-        Rank(String teamName, String tag, String nameColor, int escalon,
+        Rank(String teamName, String tag, Formatting color, String titulo, int escalon,
              boolean equipo) {
             this.teamName = teamName;
             this.tag = tag;
-            this.nameColor = nameColor;
+            this.color = color;
+            this.titulo = titulo;
             this.escalon = escalon;
             this.equipo = equipo;
+        }
+
+        public MutableText badge() {
+            return Iconos.glifo(this.tag);
+        }
+
+        public MutableText conNombre() {
+            return Text.empty()
+                    .append(badge())
+                    .append(Text.literal(" " + this.titulo).formatted(this.color));
         }
 
         /** El rango por defecto. Todo el mundo empieza aqui. */
@@ -84,18 +86,17 @@ public final class Tablist {
 
         /**
          * El rango con ese nombre, o {@link #ENTRENADOR}.
-         *
-         * <p>⚠ Un nombre que no exista devuelve ENTRENADOR y <b>lo dice en el
-         * log</b>. Devolverlo en silencio convertiria un error de tecleo en
-         * «este jugador perdio su rango», que es la clase de fallo que nadie
-         * relaciona con su causa.
          */
         public static Rank de(String nombre) {
             if (nombre != null) {
+                String n = nombre.trim();
                 for (Rank r : values()) {
-                    if (r.name().equalsIgnoreCase(nombre.trim())) {
+                    if (r.name().equalsIgnoreCase(n)) {
                         return r;
                     }
+                }
+                if (n.equalsIgnoreCase("MOD")) {
+                    return MODERADOR;
                 }
             }
             if (nombre != null && !nombre.isBlank()) {
@@ -115,71 +116,109 @@ public final class Tablist {
             }
             return salida;
         }
+
+        /**
+         * Nivel comercial estricto para Tebex:
+         * NONE (ENTRENADOR) = 0, ELITE = 1, CAMPEON = 2, MAESTRO = 3, LEYENDA = 4.
+         * Devuelve -1 para rangos administrativos/staff (equipo = true).
+         */
+        public int nivelComercial() {
+            return switch (this) {
+                case ENTRENADOR -> 0;
+                case ELITE -> 1;
+                case CAMPEON -> 2;
+                case MAESTRO -> 3;
+                case LEYENDA -> 4;
+                default -> -1;
+            };
+        }
+
+        /** ¿Es un rango comercial de pago (Elite, Campeón, Maestro, Leyenda)? */
+        public boolean esComercial() {
+            return !this.equipo && this != ENTRENADOR;
+        }
+
+        /** ¿Es un rango de staff u operativo (Admin, Dev, Mod)? */
+        public boolean esStaff() {
+            return this.equipo;
+        }
+    }
+
+    public record ClanInfo(String etiqueta, char color) {}
+    private static final java.util.Map<java.util.UUID, ClanInfo> CLAN_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static ClanInfo clanDe(ServerPlayerEntity player) {
+        if (player == null) return null;
+        return CLAN_CACHE.get(player.getUuid());
     }
 
     private Tablist() {}
 
-    /** Crea los equipos una sola vez, al arrancar el servidor. */
+    /** Prefijo de equipo con el glifo de insignia en fuente Iconos.FUENTE y espacio. */
+    public static MutableText prefixOf(Rank rank) {
+        return Text.empty()
+                .append(Iconos.glifo(rank.tag))
+                .append(Text.literal(" "));
+    }
+
+    /** Registra el manejador de chat para que el clan solo aparezca en el chat. */
+    public static void initChat() {
+        net.fabricmc.fabric.api.message.v1.ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {
+            ClanInfo clan = clanDe(sender);
+            net.minecraft.text.MutableText chatMsg = net.minecraft.text.Text.empty();
+            if (clan != null && !clan.etiqueta().isEmpty()) {
+                chatMsg.append(net.minecraft.text.Text.literal("§" + clan.color() + "[" + clan.etiqueta() + "] "));
+            }
+            chatMsg.append(sender.getDisplayName())
+                   .append(net.minecraft.text.Text.literal("§7: §f"))
+                   .append(message.getContent());
+            sender.server.getPlayerManager().broadcast(chatMsg, false);
+            return false;
+        });
+    }
+
+    /** Crea los equipos ordenados una sola vez, al arrancar el servidor. */
     public static void setup(MinecraftServer server) {
         var scoreboard = server.getScoreboard();
+        // Limpiar antiguos equipos temporales luna<hash> si existieran
+        for (Team t : new java.util.ArrayList<>(scoreboard.getTeams())) {
+            if (t.getName().startsWith("luna")) {
+                scoreboard.removeTeam(t);
+            }
+        }
         for (Rank rank : Rank.values()) {
             Team team = scoreboard.getTeam(rank.teamName);
             if (team == null) team = scoreboard.addTeam(rank.teamName);
-            team.setPrefix(plain(rank.tag + " " + rank.nameColor));
-            team.setSuffix(plain(""));
+            team.setPrefix(prefixOf(rank));
+            team.setColor(rank.color);
+            team.setSuffix(Text.empty());
         }
     }
 
     /**
-     * Pone el prefijo del jugador: <b>rango + clan, juntos</b>.
-     *
-     * <h2>⚠⚠ Antes eran DOS funciones peleándose por el mismo hueco</h2>
-     *
-     * Un jugador solo puede estar en <b>un</b> equipo de marcador, y había dos
-     * sitios metiéndole en uno: {@code applyRank} en el equipo de su rango y
-     * {@code applyClanTag} en el suyo propio. Ganaba el último que corriera —
-     * que es una forma elegante de decir que dependía del orden de dos llamadas
-     * asíncronas. Si {@code applyRank} llegaba después, <b>la etiqueta del clan
-     * desaparecía sin que nada fallara</b>.
-     *
-     * <p>Hoy hay una sola función y un solo equipo <b>por jugador</b>, y el
-     * prefijo lleva las dos cosas. Un equipo por combinación de rango y clan
-     * multiplicaría los equipos por los clanes que haya, y habría que crearlos y
-     * borrarlos a mano cada vez que se funda o se disuelve uno.
-     *
-     * <p>Un equipo por jugador suena a mucho y no lo es: son diez jugadores como
-     * máximo en este servidor, y un equipo de marcador es una fila en memoria.
-     *
-     * <p>⚠ Se hace con marcador y no con un paquete nuestro porque el prefijo lo
-     * pinta <b>vanilla</b> en los tres sitios a la vez —chat, tablist y sobre la
-     * cabeza—. Un paquete propio solo lo verían los que tengan el mod.
-     *
-     * @param etiqueta la del clan, o cadena vacía si no tiene. <b>Vacía es un
-     *                 valor, no una ausencia</b>: es como se le quita a quien
-     *                 acaban de echar.
+     * Aplica el rango en el scoreboard (ordena la lista por rango y muestra solo la insignia y el nombre).
+     * El clan se guarda en cache para mostrarse exclusivamente en el chat.
      */
     public static void aplicarEtiqueta(MinecraftServer server, ServerPlayerEntity player,
                                        String etiqueta, char color) {
         var scoreboard = server.getScoreboard();
         String nombre = player.getGameProfile().getName();
 
-        // ⚠ El nombre del equipo va acotado a 16: es el máximo del marcador y
-        //   pasarse lanza. Un nombre de Minecraft ya son 16, así que no cabe
-        //   entero con un prefijo -- se usa un hash corto y estable.
-        String equipo = "luna" + Integer.toHexString(nombre.hashCode() & 0xFFFFFF);
-
-        Team team = scoreboard.getTeam(equipo);
-        if (team == null) {
-            team = scoreboard.addTeam(equipo);
-        }
         Rank rank = rankOf(server, player);
-        String prefijo = rank.tag + " ";
-        if (etiqueta != null && !etiqueta.isEmpty()) {
-            prefijo += "\u00a7" + color + "[" + etiqueta + "] ";
+        Team team = scoreboard.getTeam(rank.teamName);
+        if (team == null) {
+            team = scoreboard.addTeam(rank.teamName);
         }
-        team.setPrefix(plain(prefijo + rank.nameColor));
-        team.setSuffix(plain(""));
+        team.setPrefix(prefixOf(rank));
+        team.setColor(rank.color);
+        team.setSuffix(Text.empty());
         scoreboard.addScoreHolderToTeam(nombre, team);
+
+        if (etiqueta != null && !etiqueta.isEmpty()) {
+            CLAN_CACHE.put(player.getUuid(), new ClanInfo(etiqueta, color));
+        } else {
+            CLAN_CACHE.remove(player.getUuid());
+        }
     }
 
     /**
@@ -240,7 +279,22 @@ public final class Tablist {
      * cuenta el guardado ({@link #escalonDe}) -- si no, darle OP a alguien para
      * mirar una cosa le regalaria la mochila entera.
      */
+    private static final java.util.Map<java.util.UUID, Rank> TEST_RANKS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void setTestRank(ServerPlayerEntity player, Rank rank) {
+        if (rank == null) {
+            TEST_RANKS.remove(player.getUuid());
+        } else {
+            TEST_RANKS.put(player.getUuid(), rank);
+        }
+        refrescarClan(player.server, player);
+    }
+
     public static Rank rankOf(MinecraftServer server, ServerPlayerEntity player) {
+        Rank test = TEST_RANKS.get(player.getUuid());
+        if (test != null) {
+            return test;
+        }
         if (server.getPlayerManager().isOperator(player.getGameProfile())) {
             return Rank.ADMIN;
         }
@@ -260,21 +314,17 @@ public final class Tablist {
     /** Cabecera y pie. Se reenvía cuando cambia el número de conectados. */
     public static void updateHeaderFooter(MinecraftServer server) {
         int online = server.getCurrentPlayerCount();
-        int max = server.getMaxPlayerCount();
 
-        Text header = plain("""
-            §8§m                                        §r
-            §6§l✦ POKEREPORT §f§lLUNA ETERNAL §6§l✦
-            §7Hay §f%d §7de §f%d §7entrenadores conectados
-            §8§m                                        §r"""
-            .formatted(online, max));
+        MutableText header = Text.literal("¡Hay ").setStyle(Style.EMPTY.withColor(Formatting.WHITE).withItalic(false))
+                .append(Text.literal(String.valueOf(online)).setStyle(Style.EMPTY.withColor(Formatting.YELLOW).withItalic(false)))
+                .append(Text.literal(" usuario(s) jugando!\n").setStyle(Style.EMPTY.withColor(Formatting.WHITE).withItalic(false)));
 
-        // Sin "¡Cómpralo!" ni cuentas atrás de ofertas: el pie informa,
-        // no vende (diosesmon-analysis.md §0).
-        Text footer = plain("""
-            §8§m                                        §r
-            §7Abre §6El Almanaque §7con el libro de tu inventario
-            §8pokereport.net§r""");
+        MutableText footer = Text.literal("\n")
+                .append(Text.literal("Accede a nuestra ").setStyle(Style.EMPTY.withColor(Formatting.YELLOW).withItalic(false)))
+                .append(Text.literal("TIENDA").setStyle(Style.EMPTY.withColor(Formatting.GOLD).withBold(true).withItalic(false)))
+                .append(Text.literal(" desde\n").setStyle(Style.EMPTY.withColor(Formatting.YELLOW).withItalic(false)))
+                .append(Text.literal("TIENDA OFICIAL\n").setStyle(Style.EMPTY.withColor(Formatting.GOLD).withBold(true).withItalic(false)))
+                .append(Text.literal("pokereport.online").setStyle(Style.EMPTY.withColor(Formatting.YELLOW).withBold(true).withItalic(false)));
 
         var packet = new PlayerListHeaderS2CPacket(header, footer);
         for (ServerPlayerEntity p : server.getPlayerManager().getPlayerList()) {
@@ -284,21 +334,14 @@ public final class Tablist {
 
     /** Todo lo del tablist para un jugador que acaba de entrar. */
     public static void onJoin(MinecraftServer server, ServerPlayerEntity player) {
-        // ⚠ Se pone el prefijo SIN clan de entrada, y `refrescarClan` lo
-        //   completa cuando la base conteste. Así, entre que entra y que llega
-        //   la respuesta se ve su rango en vez de no verse nada -- y sobre todo
-        //   no se ve el prefijo que dejó otro jugador con el mismo hash.
         aplicarEtiqueta(server, player, "", 'b');
         updateHeaderFooter(server);
     }
 
     public static void onLeave(MinecraftServer server, ServerPlayerEntity player) {
+        TEST_RANKS.remove(player.getUuid());
+        CLAN_CACHE.remove(player.getUuid());
         server.getScoreboard().clearTeam(player.getGameProfile().getName());
-        // El jugador que se va todavía cuenta en getCurrentPlayerCount() en
-        // este instante, así que se recalcula en el tick siguiente.
-    }
-
-    private static Text plain(String s) {
-        return Text.literal(s).setStyle(Style.EMPTY.withItalic(false));
+        server.execute(() -> updateHeaderFooter(server));
     }
 }

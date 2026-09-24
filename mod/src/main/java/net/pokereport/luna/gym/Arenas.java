@@ -123,83 +123,95 @@ public final class Arenas {
             return null;
         }
         BlockPos o = Gimnasio.maestro(g);
-        int minX = 9999, minY = 9999;
-        int maxX = -9999, maxY = -9999;
+
+        // ⚠ Aseguramos que los chunks del área del maestro estén cargados.
+        //   Incluimos margen negativo porque estructuras como Misty empiezan en z = -2.
+        int oX = o.getX();
+        int oZ = o.getZ();
+        int minCzChunk = (oZ - 32) >> 4;
+        int maxCzChunk = (oZ + Gimnasio.PASO_RANURA) >> 4;
+        int minCxChunk = (oX - 32) >> 4;
+        int maxCxChunk = (oX + 144) >> 4;
+        for (int cz = minCzChunk; cz <= maxCzChunk; cz++) {
+            for (int cx = minCxChunk; cx <= maxCxChunk; cx++) {
+                mundo.getChunk(cx, cz);
+            }
+        }
+
         var pos = new BlockPos.Mutable();
-        // ⚠ Se barre un area GENEROSA (medio hueco de gimnasio) porque medir es
-        //   barato y quedarse corto al medir es el mismo fallo que se venia a
-        //   arreglar.
-        // ⚠⚠⚠ EL BARRIDO NO SE LIMITA CON `PASO_RANURA`, y la primera version
-        //    lo hacia: medi el gimnasio de Brock y salio «64 de fondo», que era
-        //    EXACTAMENTE el limite del barrido. Medir con la regla que estas
-        //    intentando validar solo te devuelve la regla.
-        int alcance = Gimnasio.SEPARACION / 2;
-        boolean[] ocupada = new boolean[alcance];
-        for (int dy = -16; dy < 120; dy++) {
-            for (int dz = 0; dz < alcance; dz++) {
-                for (int dx = 0; dx < alcance; dx++) {
+        int minDz = -16;
+        int maxDz = Gimnasio.PASO_RANURA - 16; // 112: nunca toca la ranura 1 que empieza en 126
+        int alcanceZ = maxDz - minDz;
+
+        boolean[] ocupada = new boolean[alcanceZ];
+        int[] minX_z = new int[alcanceZ];
+        int[] maxX_z = new int[alcanceZ];
+        int[] minY_z = new int[alcanceZ];
+        int[] maxY_z = new int[alcanceZ];
+        java.util.Arrays.fill(minX_z, 9999);
+        java.util.Arrays.fill(maxX_z, -9999);
+        java.util.Arrays.fill(minY_z, 9999);
+        java.util.Arrays.fill(maxY_z, -9999);
+
+        for (int dy = -16; dy < 115; dy++) {
+            for (int dz = minDz; dz < maxDz; dz++) {
+                int zIdx = dz - minDz;
+                for (int dx = -16; dx < 128; dx++) {
                     pos.set(o.getX() + dx, o.getY() + dy, o.getZ() + dz);
                     if (mundo.getBlockState(pos).isAir()) {
                         continue;
                     }
-                    ocupada[dz] = true;
-                    if (dx < minX) minX = dx;
-                    if (dy < minY) minY = dy;
-                    if (dx > maxX) maxX = dx;
-                    if (dy > maxY) maxY = dy;
+                    ocupada[zIdx] = true;
+                    if (dx < minX_z[zIdx]) minX_z[zIdx] = dx;
+                    if (dy < minY_z[zIdx]) minY_z[zIdx] = dy;
+                    if (dx > maxX_z[zIdx]) maxX_z[zIdx] = dx;
+                    if (dy > maxY_z[zIdx]) maxY_z[zIdx] = dy;
                 }
             }
         }
-        if (maxX < minX) {
+
+        int primeraIdx = 0;
+        while (primeraIdx < alcanceZ && !ocupada[primeraIdx]) {
+            primeraIdx++;
+        }
+        if (primeraIdx >= alcanceZ) {
             return null;
         }
-
-        // ⚠⚠⚠ Y AHORA LA PARTE QUE FALTABA, Y QUE COSTO UN «PELIGRO» EN VIVO.
-        //
-        //    Barrer ancho arreglo el fallo circular y creo otro: a partir de la
-        //    primera vez que se clona una ranura, EL BARRIDO SE COME LA COPIA.
-        //    El gimnasio de Brock mide 86 y la copia de la ranura 1 empieza en
-        //    128, asi que la medicion daba 214 -- «el maestro mas su copia».
-        //
-        //    Y eso no es un numero feo y ya: `clonar` MIDE ANTES DE COPIAR, o
-        //    sea que la siguiente copia habria sido de 214 de fondo y habria
-        //    escrito encima de las ranuras 1 y 2.
-        //
-        //    ⚠⚠ Las dos versiones anteriores estaban mal por el mismo motivo de
-        //       fondo: usaban un LIMITE en vez de mirar LO QUE HAY. Una sala
-        //       tiene suelo, asi que sus capas de Z estan todas ocupadas; entre
-        //       una copia y la siguiente hay AIRE. El aire es el dato, y no
-        //       depende de ningun numero que estemos intentando validar.
-        int primera = 0;
-        while (primera < alcance && !ocupada[primera]) {
-            primera++;
-        }
-        int fin = primera;
+        int finIdx = primeraIdx;
         int vacias = 0;
-        for (int dz = primera; dz < alcance; dz++) {
-            if (ocupada[dz]) {
-                fin = dz + 1;
+        for (int zIdx = primeraIdx; zIdx < alcanceZ; zIdx++) {
+            if (ocupada[zIdx]) {
+                finIdx = zIdx + 1;
                 vacias = 0;
             } else if (++vacias >= AIRE_QUE_CORTA) {
                 break;
             }
         }
-        // ¿Queda algo mas alla? Se dice, en vez de ignorarlo en silencio: casi
-        // siempre seran las copias de las ranuras, y saberlo evita la duda.
-        int masAlla = 0;
-        for (int dz = fin; dz < alcance; dz++) {
-            if (ocupada[dz]) {
-                masAlla++;
-            }
+
+        // ⚠⚠⚠ CRÍTICO: minX, minY, maxX, maxY se calculan ÚNICAMENTE dentro de
+        // la sala maestra [primeraIdx, finIdx).
+        int minX = 9999, minY = 9999;
+        int maxX = -9999, maxY = -9999;
+        for (int zIdx = primeraIdx; zIdx < finIdx; zIdx++) {
+            if (minX_z[zIdx] < minX) minX = minX_z[zIdx];
+            if (minY_z[zIdx] < minY) minY = minY_z[zIdx];
+            if (maxX_z[zIdx] > maxX) maxX = maxX_z[zIdx];
+            if (maxY_z[zIdx] > maxY) maxY = maxY_z[zIdx];
         }
-        if (masAlla > 0) {
-            LunaEternal.LOG.info("Gimnasio {}: medido hasta z={} ({} de fondo). "
-                    + "Hay {} capas mas alla, separadas por aire: son las copias "
-                    + "de las ranuras y NO se cuentan.",
-                    g.id(), fin, fin - primera, masAlla);
+        if (maxX < minX) {
+            return null;
         }
-        return new int[] {minX, minY, primera,
-                          maxX - minX + 1, maxY - minY + 1, fin - primera};
+
+        int minZ = minDz + primeraIdx;
+        int maxZ = minDz + finIdx - 1;
+        int ancho = maxX - minX + 1;
+        int alto = maxY - minY + 1;
+        int fondo = maxZ - minZ + 1;
+
+        LunaEternal.LOG.info("Gimnasio {}: medido [X: {}..{} (ancho {}), Y: {}..{} (alto {}), Z: {}..{} (fondo {})]",
+                g.id(), minX, maxX, ancho, minY, maxY, alto, minZ, maxZ, fondo);
+
+        return new int[] {minX, minY, minZ, ancho, alto, fondo};
     }
 
     public static ServerWorld mundo(MinecraftServer servidor) {
@@ -330,6 +342,29 @@ public final class Arenas {
                     g.id(), z0 + fondo, Gimnasio.PASO_RANURA);
             return;
         }
+
+        // ⚠ Aseguramos que los chunks del origen y del destino estén cargados
+        int minCX_s = (src.getX() + x0) >> 4;
+        int maxCX_s = (src.getX() + x0 + ancho) >> 4;
+        int minCZ_s = (src.getZ() + z0) >> 4;
+        int maxCZ_s = (src.getZ() + z0 + fondo) >> 4;
+
+        int minCX_d = (dst.getX() + x0) >> 4;
+        int maxCX_d = (dst.getX() + x0 + ancho) >> 4;
+        int minCZ_d = (dst.getZ() + z0) >> 4;
+        int maxCZ_d = (dst.getZ() + z0 + fondo) >> 4;
+
+        for (int cz = minCZ_s; cz <= maxCZ_s; cz++) {
+            for (int cx = minCX_s; cx <= maxCX_s; cx++) {
+                mundo.getChunk(cx, cz);
+            }
+        }
+        for (int cz = minCZ_d; cz <= maxCZ_d; cz++) {
+            for (int cx = minCX_d; cx <= maxCX_d; cx++) {
+                mundo.getChunk(cx, cz);
+            }
+        }
+
         int puestos = 0;
         var pos = new BlockPos.Mutable();
         var destino = new BlockPos.Mutable();
@@ -338,12 +373,28 @@ public final class Arenas {
                 for (int dx = x0; dx < x0 + ancho; dx++) {
                     pos.set(src.getX() + dx, src.getY() + dy, src.getZ() + dz);
                     var estado = mundo.getBlockState(pos);
-                    if (estado.isAir()) {
-                        continue;   // el vacío no se copia: la sala flota
-                    }
                     destino.set(dst.getX() + dx, dst.getY() + dy, dst.getZ() + dz);
-                    mundo.setBlockState(destino, estado, 2);
-                    puestos++;
+                    if (estado.isAir()) {
+                        // Si el maestro tiene aire, pero el destino tiene un bloque residual de un clonado anterior,
+                        // se limpia para que la copia sea 100% idéntica al original.
+                        if (!mundo.getBlockState(destino).isAir()) {
+                            mundo.setBlockState(destino, Blocks.AIR.getDefaultState(), 2);
+                        }
+                        continue;
+                    }
+                    if (!mundo.getBlockState(destino).equals(estado)) {
+                        mundo.setBlockState(destino, estado, 2);
+                        puestos++;
+                    }
+                    var be = mundo.getBlockEntity(pos);
+                    if (be != null) {
+                        var destBe = mundo.getBlockEntity(destino);
+                        if (destBe != null) {
+                            try {
+                                destBe.read(be.createNbtWithIdentifyingData(mundo.getRegistryManager()), mundo.getRegistryManager());
+                            } catch (Throwable ignored) {}
+                        }
+                    }
                 }
             }
         }
@@ -400,6 +451,15 @@ public final class Arenas {
             //      funcionando es /kill»). Era falso, y se descubrio intentando
             //      limpiar tres Brocks apilados.
             lideres += Lideres.quitarDeRanura(mundo, g, ranura);
+            int minCX_d = (dst.getX() + x0) >> 4;
+            int maxCX_d = (dst.getX() + x0 + ancho) >> 4;
+            int minCZ_d = (dst.getZ() + z0) >> 4;
+            int maxCZ_d = (dst.getZ() + z0 + fondo) >> 4;
+            for (int cz = minCZ_d; cz <= maxCZ_d; cz++) {
+                for (int cx = minCX_d; cx <= maxCX_d; cx++) {
+                    mundo.getChunk(cx, cz);
+                }
+            }
             for (int dy = y0; dy < y0 + alto; dy++) {
                 for (int dz = z0; dz < z0 + fondo; dz++) {
                     for (int dx = x0; dx < x0 + ancho; dx++) {

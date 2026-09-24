@@ -126,14 +126,56 @@ public final class Decorativos {
     }
 
     /**
+     * Comprueba si una entidad es una parada de viaje (moto-taxi Miraidon).
+     *
+     * <p>Identifica paradas por:
+     * <ul>
+     *   <li>Etiqueta {@link #MARCA_PARADA} ({@code "luna_parada"})</li>
+     *   <li>Especie Cobblemon {@code "miraidon"}</li>
+     *   <li>Etiquetas que contengan {@code "parada"}, {@code "taxi"} o {@code "miraidon"}</li>
+     *   <li>Nombre personalizado que contenga {@code "parada"}, {@code "taxi"} o {@code "miraidon"}</li>
+     * </ul>
+     */
+    public static boolean esParada(net.minecraft.entity.Entity entidad) {
+        if (entidad == null) {
+            return false;
+        }
+        if (entidad.getCommandTags().contains(MARCA_PARADA)) {
+            return true;
+        }
+        if (entidad instanceof PokemonEntity pe) {
+            var poke = pe.getPokemon();
+            if (poke != null && poke.getSpecies() != null
+                    && "miraidon".equalsIgnoreCase(poke.getSpecies().getName())) {
+                return true;
+            }
+        }
+        for (String tag : entidad.getCommandTags()) {
+            if (esTextoParada(tag)) {
+                return true;
+            }
+        }
+        var customName = entidad.getCustomName();
+        if (customName != null && esTextoParada(customName.getString())) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Evalúa si un texto (etiqueta o nombre personalizado) corresponde a una parada/taxi Miraidon.
+     */
+    public static boolean esTextoParada(String texto) {
+        return ParadaValidador.esTextoParada(texto);
+    }
+
+    /**
      * CLIC DERECHO EN UNA PARADA: abre Viajes.
      *
-     * <h2>⚠⚠ SOLO LOS QUE LLEVAN LA SEGUNDA ETIQUETA</h2>
+     * <h2>⚠⚠ MOTO-TAXI MIRAIDON Y ETIQUETA DE PARADA</h2>
      *
-     * {@link #MARCA} es «esto es decoración» y la llevan también el Kabutops y
-     * los tres iniciales del laboratorio. Si esto respondiera a esa, tocar un
-     * Squirtle abriría el moto taxi — que no lo ha pedido nadie. Responde a
-     * {@link #MARCA_PARADA}, que solo ponen las paradas.
+     * Abre Viajes al hacer clic derecho en cualquier Miraidon colocado como moto-taxi,
+     * o en cualquier entidad marcada con {@link #MARCA_PARADA}.
      *
      * <h2>⚠⚠ Y DEVUELVE `SUCCESS` PARA CORTAR LO DE DEBAJO</h2>
      *
@@ -146,7 +188,11 @@ public final class Decorativos {
     public static void abrirViajesAlTocar() {
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register(
                 (jugador, mundo, mano, entidad, golpe) -> {
-                    if (!entidad.getCommandTags().contains(MARCA_PARADA)) {
+                    if (!esParada(entidad)) {
+                        return net.minecraft.util.ActionResult.PASS;
+                    }
+                    // Permitir a administradores en creativo agachados interactuar o romper bloques detrás
+                    if (jugador.isCreative() && jugador.isSneaking()) {
                         return net.minecraft.util.ActionResult.PASS;
                     }
                     // ⚠ Una sola mano: sin esto el evento llega dos veces (mano
@@ -160,6 +206,8 @@ public final class Decorativos {
                     //   mano es la principal. Ver `Toque`.
                     if (jugador instanceof net.minecraft.server.network.ServerPlayerEntity sp
                             && !net.pokereport.luna.ui.Toque.repetido(sp.getUuid(), "parada")) {
+                        LunaEternal.LOG.info("Paradas: clic en moto-taxi recibido de {}, abriendo Viajes",
+                                sp.getName().getString());
                         net.pokereport.luna.net.Red.enviarViajes(sp, true);
                     }
                     return net.minecraft.util.ActionResult.SUCCESS;
@@ -274,6 +322,9 @@ public final class Decorativos {
         e.setPersistent();
         e.setNoGravity(postura.sinGravedad);
         e.addCommandTag(MARCA);
+        if ("miraidon".equalsIgnoreCase(especie)) {
+            e.addCommandTag(MARCA_PARADA);
+        }
         // ⚠⚠ Y EL POKEMON TAMBIEN, no solo la entidad. Los eventos de Pokédex
         //    reciben el <b>Pokémon</b>, no la entidad que lo lleva: sin marcar
         //    el objeto no hay forma de saber, desde ahí, que esto era
@@ -303,15 +354,44 @@ public final class Decorativos {
         return e;
     }
 
-    /** Cuántos decorativos hay cerca, y los borra. */
-    public static int quitar(ServerWorld mundo, Vec3d centro, double radio) {
+    /** Cuántos decorativos de esa especie hay cerca, y los borra. */
+    public static int quitar(ServerWorld mundo, String especie, Vec3d centro, double radio) {
         var caja = net.minecraft.util.math.Box.of(centro, radio * 2, radio * 2, radio * 2);
         int n = 0;
-        for (var e : mundo.getEntitiesByClass(PokemonEntity.class, caja,
-                x -> x.getCommandTags().contains(MARCA))) {
+        java.util.function.Predicate<PokemonEntity> esDeco = x -> {
+            if (!x.getCommandTags().contains(MARCA) && !x.getCommandTags().contains(MARCA_PARADA)) {
+                return false;
+            }
+            if (especie != null && !especie.isBlank()) {
+                var poke = x.getPokemon();
+                if (poke != null && poke.getSpecies() != null) {
+                    return especie.equalsIgnoreCase(poke.getSpecies().getName());
+                }
+            }
+            return true;
+        };
+
+        for (var e : mundo.getEntitiesByClass(PokemonEntity.class, caja, esDeco)) {
             e.discard();
             n++;
         }
+        try {
+            for (net.minecraft.entity.Entity e : mundo.iterateEntities()) {
+                if (e instanceof PokemonEntity poke && !poke.isRemoved()) {
+                    if (caja.contains(poke.getPos()) && esDeco.test(poke)) {
+                        poke.discard();
+                        n++;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
         return n;
     }
+
+    /** Cuántos decorativos hay cerca, y los borra. */
+    public static int quitar(ServerWorld mundo, Vec3d centro, double radio) {
+        return quitar(mundo, null, centro, radio);
+    }
 }
+
+

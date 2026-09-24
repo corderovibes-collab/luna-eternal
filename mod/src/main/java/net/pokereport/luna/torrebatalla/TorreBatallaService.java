@@ -23,6 +23,7 @@ import com.gitlab.srcmc.rctmod.api.RCTMod;
 import com.gitlab.srcmc.rctmod.world.entities.TrainerMob;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.registry.Registries;
@@ -34,6 +35,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.pokereport.luna.LunaEternal;
+import net.pokereport.luna.gym.MedallaService;
 import net.pokereport.luna.pokedex.ClaveEspecie;
 import net.pokereport.luna.world.LunaDimensions;
 import net.pokereport.luna.world.TravelService;
@@ -47,6 +49,12 @@ public class TorreBatallaService {
 
     private static final ConcurrentHashMap<UUID, Partida> partidasActivas = new ConcurrentHashMap<>();
     private static final Set<UUID> enCombate = ConcurrentHashMap.newKeySet();
+    /** Une cada intento con SU batalla; evita que un evento tardio cierre la siguiente. */
+    private static final ConcurrentHashMap<UUID, UUID> BATTLE_IDS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Integer> ULTIMO_TURNO = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Long> ULTIMO_PROGRESO = new ConcurrentHashMap<>();
+    private static final long TIMEOUT_SIN_PROGRESO_MS = 180_000L;
+    private static int ticksVigilancia;
     
     private static final String PREFIJO_NPC = "luna_ladder_";
     private static final Map<UUID, TrainerMob> MOB_ACTUAL = new ConcurrentHashMap<>();
@@ -58,8 +66,8 @@ public class TorreBatallaService {
     public static final Vec3d POS_NPC = new Vec3d(50.48, 117.0, 38.51);
     public static final float YAW_NPC = 0.0f; // Mira al sur (+Z)
 
-    public static final BlockPos POS_BLOCK_JUGADOR_STAND = new BlockPos(50, 116, 62);
-    public static final BlockPos POS_BLOCK_NPC_STAND = new BlockPos(50, 116, 38);
+    public static final BlockPos POS_BLOCK_JUGADOR_STAND = new BlockPos(50, 115, 62);
+    public static final BlockPos POS_BLOCK_NPC_STAND = new BlockPos(50, 115, 38);
     public static final BlockPos POS_BLOCK_JUGADOR_POKEMON = new BlockPos(50, 115, 54);
     public static final BlockPos POS_BLOCK_NPC_POKEMON = new BlockPos(50, 115, 46);
 
@@ -177,10 +185,49 @@ public class TorreBatallaService {
     // Inicia la escalera Mortal Kombat
     public static void iniciarCola(ServerPlayerEntity jugador, int modo) {
         UUID uuid = jugador.getUuid();
+        if (modo < 0 || modo > 2) {
+            jugador.sendMessage(Text.literal("§c[Torre de Batalla] Modalidad inválida."));
+            return;
+        }
+
+        // Requisito indispensable: 8 medallas de Kanto y Campeón de Kanto derrotados
+        if (!MedallaService.tieneKantoCompleto(uuid)) {
+            var pendientes = MedallaService.kantoPendientes(MedallaService.enCache(uuid));
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < pendientes.size(); i++) {
+                if (i > 0) sb.append(", ");
+                sb.append(pendientes.get(i).lider());
+            }
+            jugador.sendMessage(Text.literal("§c[Torre de Batalla] ¡Acceso restringido!"));
+            jugador.sendMessage(Text.literal("§cDebes derrotar a los 8 Líderes de Gimnasio de Kanto y al Campeón de Kanto (Blue) para acceder a la Torre de Batalla."));
+            if (!sb.isEmpty()) {
+                jugador.sendMessage(Text.literal("§7Te falta derrotar a: §e" + sb));
+            }
+            return;
+        }
+
         if (partidasActivas.containsKey(uuid)) {
             salir(jugador);
         }
 
+        // Se comprueba ANTES de prestar el equipo aleatorio. Antes, intentar
+        // entrar con la arena ocupada entregaba seis Pokemon y regresaba sin
+        // Partida; `salir` ya no tenia forma de retirarlos.
+        if (!partidasActivas.isEmpty()) {
+            jugador.sendMessage(Text.literal("§c[Torre de Batalla] La arena está ocupada por otro entrenador en este momento. Por favor espera a que termine su desafío."));
+            return;
+        }
+
+        ServerWorld mundoTorre = jugador.getServer().getWorld(LunaDimensions.TORRE);
+        if (mundoTorre == null) {
+            jugador.sendMessage(Text.literal("§c[Torre de Batalla] La arena no está disponible ahora mismo."));
+            LunaEternal.LOG.error("Torre de Batalla: dimensión ausente al iniciar para {}", jugador.getName().getString());
+            return;
+        }
+
+        // Recuperar cualquier prestamo que una desconexion anterior hubiese
+        // dejado antes de validar un nuevo intento.
+        limpiarPrestamosTorre(jugador, "inicio");
         var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
 
         // REGLAS ESTRICTAS DE EQUIPO:
@@ -218,15 +265,7 @@ public class TorreBatallaService {
             asignarEquipoAleatorio(jugador);
         }
 
-        if (!partidasActivas.isEmpty()) {
-            jugador.sendMessage(Text.literal("§c[Torre de Batalla] La arena está ocupada por otro entrenador en este momento. Por favor espera a que termine su desafío."));
-            return;
-        }
-
         partidasActivas.put(uuid, new Partida(0, modo, 1));
-        
-        ServerWorld mundoTorre = jugador.getServer().getWorld(LunaDimensions.TORRE);
-        if (mundoTorre == null) return;
 
         asegurarBloquesArena(mundoTorre);
         
@@ -280,6 +319,15 @@ public class TorreBatallaService {
         if (oldMob != null && !oldMob.isRemoved()) {
             oldMob.discard();
         }
+        // Ya estamos fuera del callback de final de Cobblemon. Ahora sí es
+        // seguro limpiar la asociación RCT de la ronda anterior.
+        try {
+            RCTMod.getInstance().getTrainerManager().removeBattle(jugador.getUuid());
+            ModCommon.RCT.getTrainerRegistry().unregisterById(PREFIJO_NPC + jugador.getUuid());
+        } catch (Exception e) {
+            LunaEternal.LOG.warn("Torre de Batalla: limpieza diferida de ronda para {}: {}",
+                    jugador.getName().getString(), e.getMessage());
+        }
 
         // Barrer la arena de cualquier TrainerMob residual
         for (TrainerMob m : mundoTorre.getEntitiesByClass(TrainerMob.class, ARENA_BOX, e -> true)) {
@@ -307,7 +355,9 @@ public class TorreBatallaService {
 
         // Esperamos 2 segundos antes de iniciar el combate para que el jugador vea al mob
         net.pokereport.luna.gym.Programador.en(40, () -> {
-            if (partidasActivas.containsKey(jugador.getUuid())) {
+            // Debe seguir siendo ESTA ronda. Un callback viejo no puede abrir
+            // un segundo combate encima de un intento nuevo del mismo jugador.
+            if (partida.equals(partidasActivas.get(jugador.getUuid()))) {
                 startLadderBattle(jugador, mob, bossTrainerName, Math.min(5, partida.ronda() / 2), opponentTeam);
             }
         });
@@ -322,15 +372,9 @@ public class TorreBatallaService {
         Partida partida = partidasActivas.get(uuid);
         if (partida == null) return;
         
-        // Limpiar INMEDIATAMENTE el mob derrotado de la arena
-        TrainerMob oldMob = MOB_ACTUAL.remove(uuid);
-        if (oldMob != null && !oldMob.isRemoved()) {
-            oldMob.discard();
-        }
-        try {
-            ModCommon.RCT.getTrainerRegistry().unregisterById(PREFIJO_NPC + uuid);
-            RCTMod.getInstance().getTrainerManager().removeBattle(uuid);
-        } catch (Exception ignored) {}
+        BATTLE_IDS.remove(uuid);
+        ULTIMO_TURNO.remove(uuid);
+        ULTIMO_PROGRESO.remove(uuid);
 
         jugador.sendMessage(Text.literal("§a¡Has superado la Ronda " + partida.ronda() + "!"));
         
@@ -352,7 +396,7 @@ public class TorreBatallaService {
         
         // Iniciar la siguiente ronda tras 2 segundos
         net.pokereport.luna.gym.Programador.en(40, () -> {
-            if (partidasActivas.containsKey(uuid)) {
+            if (nueva.equals(partidasActivas.get(uuid))) {
                 prepararRonda(jugador);
             }
         });
@@ -378,20 +422,16 @@ public class TorreBatallaService {
     public static void salir(ServerPlayerEntity jugador) {
         UUID uuid = jugador.getUuid();
         enCombate.remove(uuid);
+        BATTLE_IDS.remove(uuid);
+        ULTIMO_TURNO.remove(uuid);
+        ULTIMO_PROGRESO.remove(uuid);
         Partida partida = partidasActivas.remove(uuid);
         if (partida != null) {
-            // Si el modo era Aleatorio, retirar los 6 Pokémon prestados
+            // Si el modo era Aleatorio, retirar los 6 Pokémon prestados.
+            // Se revisan party y PC: al desconectar, RCT puede restaurar su
+            // copia del combate despues del primer callback de limpieza.
             if (partida.modo() == 2) {
-                var party = Cobblemon.INSTANCE.getStorage().getParty(jugador);
-                if (party != null) {
-                    List<Pokemon> viejos = new ArrayList<>();
-                    for (Pokemon p : party) {
-                        if (p != null) viejos.add(p);
-                    }
-                    for (Pokemon p : viejos) {
-                        party.remove(p);
-                    }
-                }
+                limpiarPrestamosTorre(jugador, "salida");
                 jugador.sendMessage(Text.literal("§e[Torre de Batalla] El equipo aleatorio prestado ha sido retirado."));
             }
             ServerWorld mundoTorre = jugador.getServer().getWorld(LunaDimensions.TORRE);
@@ -417,6 +457,54 @@ public class TorreBatallaService {
         if (jugador.getWorld().getRegistryKey().equals(LunaDimensions.TORRE)) {
             TravelService.travel(jugador, LunaDimensions.CIUDADELA, "la Ciudadela");
         }
+    }
+
+    /**
+     * Retira exclusivamente Pokemon marcados como prestamos de la Torre. La
+     * doble revision evita que los seis aleatorios queden apropiados cuando
+     * RCT restaura la batalla durante una desconexion.
+     */
+    private static void limpiarPrestamosTorre(ServerPlayerEntity jugador, String origen) {
+        int retiradosParty = 0;
+        int retiradosPc = 0;
+        try {
+            var storage = Cobblemon.INSTANCE.getStorage();
+            var party = storage.getParty(jugador);
+            if (party != null) {
+                List<Pokemon> retirar = new ArrayList<>();
+                for (Pokemon pokemon : party) {
+                    if (esPrestamoTorre(pokemon)) retirar.add(pokemon);
+                }
+                for (Pokemon pokemon : retirar) {
+                    party.remove(pokemon);
+                    retiradosParty++;
+                }
+            }
+
+            var pc = storage.getPC(jugador);
+            if (pc != null) {
+                List<Pokemon> retirar = new ArrayList<>();
+                for (Pokemon pokemon : pc) {
+                    if (esPrestamoTorre(pokemon)) retirar.add(pokemon);
+                }
+                for (Pokemon pokemon : retirar) {
+                    pc.remove(pokemon);
+                    retiradosPc++;
+                }
+            }
+
+            if (retiradosParty > 0 || retiradosPc > 0) {
+                LunaEternal.LOG.warn("Torre de Batalla: retirados prestamos residuales de {} (party={}, pc={}, origen={})",
+                        jugador.getName().getString(), retiradosParty, retiradosPc, origen);
+            }
+        } catch (Throwable error) {
+            LunaEternal.LOG.error("Torre de Batalla: error limpiando prestamos de {} (origen={})",
+                    jugador.getName().getString(), origen, error);
+        }
+    }
+
+    private static boolean esPrestamoTorre(Pokemon pokemon) {
+        return pokemon != null && pokemon.getPersistentData().getBoolean(TorreReglas.TAG_TORRE);
     }
 
     private static TrainerMob spawnOpponentMob(ServerWorld world, Vec3d pos, float yaw, String name, String skinId) {
@@ -451,9 +539,10 @@ public class TorreBatallaService {
         try {
             registry.unregisterById(npcId);
 
+            boolean dobles = partidasActivas.get(uuid).modo() == 1;
             TrainerModel model = new TrainerModel(
                     opponentName,
-                    JTO.of(() -> new StrongBattleAI(aiSkill)),
+                    JTO.of(() -> new TorreDoublesAI(aiSkill)),
                     new ArrayList<>(), opponentTeam
             );
 
@@ -468,7 +557,7 @@ public class TorreBatallaService {
                 return false;
             }
 
-            var base = (partidasActivas.get(uuid).modo() == 1)
+            var base = dobles
                     ? com.gitlab.srcmc.rctapi.api.battle.BattleFormat.GEN_9_DOUBLES.getCobblemonBattleFormat()
                     : com.gitlab.srcmc.rctapi.api.battle.BattleFormat.GEN_9_SINGLES.getCobblemonBattleFormat();
 
@@ -495,6 +584,10 @@ public class TorreBatallaService {
                     player.getName().getString(), partidasActivas.get(uuid).ronda());
             RCTMod.getInstance().getTrainerManager().addBattle(player, opponentMob);
             enCombate.add(player.getUuid());
+            BATTLE_IDS.put(uuid, battleId);
+            var battle = com.cobblemon.mod.common.battles.BattleRegistry.getBattle(battleId);
+            ULTIMO_TURNO.put(uuid, battle == null ? 0 : battle.getTurn());
+            ULTIMO_PROGRESO.put(uuid, System.currentTimeMillis());
             return true;
         } catch (Exception e) {
             LunaEternal.LOG.error("Torre de Batalla: error iniciando combate de escalera", e);
@@ -514,25 +607,78 @@ public class TorreBatallaService {
             }
             for (ServerPlayerEntity p : event.getBattle().getPlayers()) {
                 UUID u = p.getUuid();
-                if (partidasActivas.containsKey(u)) {
+                if (partidasActivas.containsKey(u)
+                        && event.getBattle().getBattleId().equals(BATTLE_IDS.get(u))) {
+                    // No desregistrar NPCs ni RCT desde dentro del callback de
+                    // Cobblemon. Se deja terminar su cola visual (incluidos los
+                    // cambios de Pokemon dobles) y se procesa al tick siguiente.
                     if (ganadores.contains(u)) {
-                        victoria(p);
+                        net.pokereport.luna.gym.Programador.en(1, () -> victoria(p));
                     } else {
-                        derrota(p);
+                        net.pokereport.luna.gym.Programador.en(1, () -> derrota(p));
                     }
                 }
             }
         });
         CobblemonEvents.BATTLE_FLED.subscribe(Priority.NORMAL, event -> {
             for (ServerPlayerEntity p : event.getBattle().getPlayers()) {
-                if (partidasActivas.containsKey(p.getUuid())) {
-                    derrota(p);
+                if (partidasActivas.containsKey(p.getUuid())
+                        && event.getBattle().getBattleId().equals(BATTLE_IDS.get(p.getUuid()))) {
+                    net.pokereport.luna.gym.Programador.en(1, () -> derrota(p));
                 }
             }
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             salir(handler.getPlayer());
         });
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerPlayerEntity jugador = handler.getPlayer();
+            // Una pasada inmediata y otra tras sincronizar el almacenamiento:
+            // RCT puede restaurar sus copias despues del evento DISCONNECT.
+            limpiarPrestamosTorre(jugador, "reconexion-inmediata");
+            net.pokereport.luna.gym.Programador.en(20,
+                    () -> limpiarPrestamosTorre(jugador, "reconexion-diferida"));
+        });
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            vigilarCombates(server);
+            TorreRanking.tick(server);
+        });
+    }
+
+    /** Recupera batallas desaparecidas o sin avanzar, en vez de esperar eternamente. */
+    private static void vigilarCombates(net.minecraft.server.MinecraftServer server) {
+        if (++ticksVigilancia < 100) return;
+        ticksVigilancia = 0;
+        long ahora = System.currentTimeMillis();
+        for (var entrada : new ArrayList<>(BATTLE_IDS.entrySet())) {
+            UUID jugadorId = entrada.getKey();
+            var battle = com.cobblemon.mod.common.battles.BattleRegistry.getBattle(entrada.getValue());
+            ServerPlayerEntity jugador = server.getPlayerManager().getPlayer(jugadorId);
+            if (jugador == null) continue;
+            if (battle == null) {
+                LunaEternal.LOG.error("Torre de Batalla: batalla {} desapareció para {}; recuperando intento",
+                        entrada.getValue(), jugador.getName().getString());
+                jugador.sendMessage(Text.literal("§c[Torre de Batalla] El combate se desincronizó y fue cerrado de forma segura."));
+                salir(jugador);
+                continue;
+            }
+            int turno = battle.getTurn();
+            Integer anterior = ULTIMO_TURNO.put(jugadorId, turno);
+            if (anterior == null || anterior != turno) {
+                ULTIMO_PROGRESO.put(jugadorId, ahora);
+                continue;
+            }
+            long ultimo = ULTIMO_PROGRESO.getOrDefault(jugadorId, ahora);
+            if (ahora - ultimo >= TIMEOUT_SIN_PROGRESO_MS) {
+                Partida partida = partidasActivas.get(jugadorId);
+                if (partida == null) continue;
+                LunaEternal.LOG.error("Torre de Batalla: watchdog sin progreso jugador={} modo={} ronda={} batalla={} turno={}",
+                        jugador.getName().getString(), partida.modo(),
+                        partida.ronda(), entrada.getValue(), turno);
+                jugador.sendMessage(Text.literal("§c[Torre de Batalla] El combate llevaba 3 minutos sin avanzar; se cerró para evitar un bloqueo permanente."));
+                salir(jugador);
+            }
+        }
     }
 
     private static PokemonModel buildModel(String species) {

@@ -6,9 +6,11 @@ import java.util.List;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ConfirmLinkScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.util.Util;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKey;
@@ -101,6 +103,7 @@ public class KitsScreen extends Screen {
     private long pulsado;
     private Red.EstadoTrajes estado;
     private int kitElegido;
+    private int paginaMisKits;
     private String kitDetalleId;
     private boolean rotando360;
     private float rotacionYaw;
@@ -109,6 +112,9 @@ public class KitsScreen extends Screen {
     private KitCatalog catalogoKits;
     private String idKitCache;
     private List<ItemStack> stacksKitDetalle;
+    private float scrollDetalle;
+    private float maxScrollDetalle;
+    private boolean arrastrandoScroll;
 
     public KitsScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.kits"));
@@ -160,6 +166,15 @@ public class KitsScreen extends Screen {
 
     private boolean esperando() {
         return pulsado > 0 && System.currentTimeMillis() - pulsado < 1500;
+    }
+
+    private int huecosLibres() {
+        if (client == null || client.player == null) return 0;
+        int libres = 0;
+        for (var stack : client.player.getInventory().main) {
+            if (stack.isEmpty()) libres++;
+        }
+        return libres;
     }
 
     /**
@@ -222,10 +237,10 @@ public class KitsScreen extends Screen {
 
         stackHover = null;
 
-        if (pestana == 0) {
-            dibujarRango(ctx, rx, ry);
-        } else if (kitDetalleId != null) {
+        if (kitDetalleId != null) {
             dibujarDetalleKit(ctx, rx, ry);
+        } else if (pestana == 0) {
+            dibujarRango(ctx, rx, ry);
         } else {
             dibujarKits(ctx, rx, ry);
         }
@@ -233,15 +248,15 @@ public class KitsScreen extends Screen {
         // ⚠ SEGUNDA PASADA: lo 3D va después de vaciar lo 2D. Regla 2 de
         //   dibujado.md -- mezclarlas deja el modelo debajo del panel.
         ctx.draw();
-        if (pestana == 0) {
-            dibujarPrevisualizador(ctx, rx, ry);
-        } else if (kitDetalleId != null) {
+        if (kitDetalleId != null) {
             dibujarPrevisualizadorDetalle(ctx, rx, ry);
+        } else if (pestana == 0) {
+            dibujarPrevisualizador(ctx, rx, ry);
         } else {
             dibujarPrevisualizadoresKits(ctx);
         }
 
-        if (pestana == 0) {
+        if (pestana == 0 && kitDetalleId == null) {
             dibujarDetalle(ctx, rx, ry);
         }
 
@@ -428,25 +443,8 @@ public class KitsScreen extends Screen {
 
         // ---- el botón --------------------------------------------------
         var sel = ficha(elegido);
-        boolean llevo = loLleva(sel);
-        Text etiqueta;
-        boolean activo;
-        int color;
-        if (esKit(sel)) {
-            activo = !esperando() && sel.espera() == 0;
-            etiqueta = sel.espera() == 0
-                    ? Text.translatable("pokepad.lunaeternal.trajes.reclamar")
-                    : cuanto(sel.espera());
-            color = VERDE;
-        } else {
-            activo = sel != null && !esperando()
-                    && (llevo || (sel.listo() && sel.puede()));
-            etiqueta = Text.translatable(llevo ? "pokepad.lunaeternal.trajes.quitar"
-                                               : "pokepad.lunaeternal.trajes.poner");
-            color = llevo ? ROJO : VERDE;
-        }
         boton(ctx, rx, ry, listaX(), PANT_Y + PANT_H - MARGEN - 56, listaW(), 50,
-                etiqueta, activo, color);
+                Text.literal("VER CONTENIDO Y DETALLES 360°"), sel != null, 0xFF287BB0);
     }
 
     /**
@@ -497,10 +495,18 @@ public class KitsScreen extends Screen {
     }
 
     private void dibujarVacia(DrawContext ctx) {
-        var et = Text.translatable("pokepad.lunaeternal.kits.proximamente");
-        int a = anchoArte(et.getString(), 22);
-        texto(ctx, et, PANT_X + PANT_W / 2 - a / 2, PANT_Y + PANT_H / 2 - 20, 22,
-                0xFF6E7899, false, 0);
+        var et = pestana == 2
+                ? Text.literal("AÚN NO HAS ADQUIRIDO NINGÚN KIT")
+                : Text.translatable("pokepad.lunaeternal.kits.proximamente");
+        int a = anchoArte(et.getString(), 20);
+        texto(ctx, et, PANT_X + PANT_W / 2 - a / 2, PANT_Y + PANT_H / 2 - 20, 20,
+                0xFFFFFFFF, false, CONTORNO_OSCURO);
+        if (pestana == 2) {
+            var sub = Text.literal("Visita la pestaña 'Kits Exclusivos' para reclamar o comprar trajes legendarios.");
+            int asub = anchoArte(sub.getString(), 13);
+            texto(ctx, sub, PANT_X + PANT_W / 2 - asub / 2, PANT_Y + PANT_H / 2 + 6, 13,
+                    TEXTO_SUAVE, false, 0);
+        }
     }
 
     private List<Red.FichaKit> kitsVisibles() {
@@ -512,37 +518,132 @@ public class KitsScreen extends Screen {
     private void dibujarKits(DrawContext ctx, int rx, int ry) {
         var lista = kitsVisibles();
         if (lista.isEmpty()) { dibujarVacia(ctx); return; }
-        kitElegido = Math.min(kitElegido, lista.size() - 1);
+
+        int totalPaginas = Math.max(1, (lista.size() + 2) / 3);
+        if (pestana != 2) paginaMisKits = 0;
+        if (paginaMisKits >= totalPaginas) paginaMisKits = 0;
+        int inicio = pestana == 2 ? paginaMisKits * 3 : 0;
+        int fin = Math.min(lista.size(), inicio + 3);
+        int totalEnPagina = fin - inicio;
+
+        if (kitElegido < inicio || kitElegido >= fin) {
+            kitElegido = inicio;
+        }
+
+        // Banner superior
+        if (pestana == 1) {
+            long rotaEn = EstadoCliente.rotaEnEpochMs();
+            long restanteMs = Math.max(0, rotaEn - System.currentTimeMillis());
+            long seg = restanteMs / 1000;
+            long dias = seg / 86400;
+            long horas = (seg % 86400) / 3600;
+            long minutos = (seg % 3600) / 60;
+            long segundos = seg % 60;
+            String tiempo = String.format("⏳ LOS KITS EXCLUSIVOS SE ACTUALIZARÁN EN: %dd %02dh %02dm %02ds", dias, horas, minutos, segundos);
+            int bx = PANT_X + MARGEN;
+            int by = PANT_Y + 14;
+            int bw = PANT_W - 2 * MARGEN;
+            int bh = 30;
+            ctx.fill(px(bx), py(by), px(bx + bw), py(by + bh), 0xFF10192A);
+            marco(ctx, px(bx), py(by), pl(bw), pl(bh), 0xFF2E6E8C, pl(1));
+            texto(ctx, Text.literal(tiempo), bx + bw / 2, by + 7, 13, ORO, true, CONTORNO_OSCURO);
+        } else if (pestana == 2) {
+            int bx = PANT_X + MARGEN;
+            int by = PANT_Y + 14;
+            int bw = PANT_W - 2 * MARGEN;
+            int bh = 30;
+            ctx.fill(px(bx), py(by), px(bx + bw), py(by + bh), 0xFF18152B);
+            marco(ctx, px(bx), py(by), pl(bw), pl(bh), 0xFF6B3FA0, pl(1));
+            texto(ctx, Text.literal("✦ COLECCIÓN DE KITS ADQUIRIDOS ✦"), bx + bw / 2, by + 7, 13, 0xFFD8B4F8, true, CONTORNO_OSCURO);
+        }
+
         int w = (PANT_W - 2 * MARGEN - 24) / 3;
         int cardH = 368;
-        for (int i = 0; i < lista.size(); i++) {
-            var f = lista.get(i); int x=PANT_X+MARGEN+i*(w+12), y=PANT_Y+54;
-            boolean sel=i==kitElegido;
-            ctx.fill(px(x),py(y),px(x+w),py(y+cardH),sel?0xFF2B5580:0xFF287BB0);
-            marco(ctx,px(x),py(y),pl(w),pl(cardH),sel?ORO:0xFF65BCE8,pl(sel?4:2));
-            texto(ctx,Text.literal(nombreKit(f.id())),x+w/2,y+24,18,0xFFFFFFFF,true,CONTORNO_OSCURO);
+        for (int i = 0; i < totalEnPagina; i++) {
+            int indice = inicio + i;
+            var f = lista.get(indice);
+            int x = PANT_X + MARGEN + i * (w + 12), y = PANT_Y + 54;
+            boolean sel = indice == kitElegido;
+            ctx.fill(px(x), py(y), px(x + w), py(y + cardH), sel ? 0xFF2B5580 : 0xFF287BB0);
+            marco(ctx, px(x), py(y), pl(w), pl(cardH), sel ? ORO : 0xFF65BCE8, pl(sel ? 4 : 2));
+            texto(ctx, Text.literal(nombreKit(f.id())), x + w / 2, y + 24, 18, 0xFFFFFFFF, true, CONTORNO_OSCURO);
             // El hueco central se pinta en la segunda pasada con la pieza real
-            // equipada temporalmente en el jugador, para que el recuadro no
-            // sea solo texto y el modelo respete sus proporciones GeckoLib.
-            ctx.fill(px(x+8),py(y+40),px(x+w-8),py(y+306),0xFF182033);
-            marco(ctx,px(x+8),py(y+40),pl(w-16),pl(266),0xFF4C82A8,pl(2));
-            texto(ctx,Text.literal("▶ CLIC PARA DETALLES ◀"),x+w/2,y+288,11,0xFF65BCE8,true,CONTORNO_OSCURO);
-            texto(ctx,Text.literal(f.propio()?"ADQUIRIDO":String.format("%,d LunaCoins",f.precio())),x+w/2,y+324,15,f.propio()?0xFF7EF0A0:ORO,true,CONTORNO_OSCURO);
-            if(!f.espera().isBlank()) texto(ctx,Text.literal(f.espera()),x+w/2,y+346,12,0xFFFFC6A0,true,0);
+            ctx.fill(px(x + 8), py(y + 40), px(x + w - 8), py(y + 306), 0xFF182033);
+            marco(ctx, px(x + 8), py(y + 40), pl(w - 16), pl(266), 0xFF4C82A8, pl(2));
+            if (pestana == 2) {
+                boolean reclamado = "reclamado".equals(f.espera()) || !f.disponible();
+                texto(ctx, Text.literal(reclamado ? "RECLAMADO" : "LISTO PARA RECLAMAR"),
+                        x + w / 2, y + 324, 14, reclamado ? 0xFF8892AC : 0xFF5CD68A, true, CONTORNO_OSCURO);
+            } else {
+                texto(ctx, Text.literal(f.propio() ? "ADQUIRIDO (EN MIS KITS)" : String.format("%,d LunaCoins", f.precio())),
+                        x + w / 2, y + 324, 14, f.propio() ? 0xFF7EF0A0 : ORO, true, CONTORNO_OSCURO);
+            }
         }
-        var f=lista.get(kitElegido);
-        boton(ctx,rx,ry,PANT_X+MARGEN,PANT_Y+PANT_H-68,PANT_W-2*MARGEN,52,
-                Text.literal(f.propio()?"ADQUIRIDO":"COMPRAR"),pestana==1&&f.disponible()&&!esperando(),VERDE);
+
+        var f = lista.get(kitElegido);
+        if (pestana == 1) {
+            var s = EstadoCliente.saldo();
+            long saldo = s == null ? 0 : s.reportcoins();
+            boolean tieneSaldo = saldo >= KitCatalog.PRECIO_KIT_EXCLUSIVO;
+            boolean disp = f.disponible() && !esperando();
+            String lbl;
+            boolean activo;
+            int colorBtn;
+            if (f.propio()) {
+                lbl = "ADQUIRIDO (EN MIS KITS)";
+                activo = false;
+                colorBtn = APAGADO;
+            } else if (!tieneSaldo) {
+                long faltan = KitCatalog.PRECIO_KIT_EXCLUSIVO - saldo;
+                lbl = "TE FALTAN " + String.format("%,d", faltan) + " LUNACOINS — CONSEGUIR LUNACOINS";
+                activo = true;
+                colorBtn = 0xFFD69A2E;
+            } else if (disp) {
+                lbl = "COMPRAR KIT EXCLUSIVO (" + String.format("%,d", f.precio()) + " LunaCoins)";
+                activo = true;
+                colorBtn = VERDE;
+            } else {
+                lbl = "NO DISPONIBLE";
+                activo = false;
+                colorBtn = APAGADO;
+            }
+            boton(ctx, rx, ry, PANT_X + MARGEN, PANT_Y + PANT_H - 68, PANT_W - 2 * MARGEN, 52,
+                    Text.literal(lbl), activo, colorBtn);
+        } else {
+            // Mis Kits: botón ver detalles + paginación si procede
+            int pagY = PANT_Y + PANT_H - 68;
+            int totalBtnW = (totalPaginas > 1) ? (PANT_W - 2 * MARGEN - 170) : (PANT_W - 2 * MARGEN);
+            boton(ctx, rx, ry, PANT_X + MARGEN, pagY, totalBtnW, 52,
+                    Text.literal("VER DETALLES Y CONTENIDO"), true, 0xFF6B3FA0);
+
+            if (totalPaginas > 1) {
+                int btnAtrasX = PANT_X + PANT_W - MARGEN - 150;
+                int btnSigX = PANT_X + PANT_W - MARGEN - 40;
+                boolean puedeAtras = paginaMisKits > 0;
+                boolean puedeSig = paginaMisKits < totalPaginas - 1;
+
+                boton(ctx, rx, ry, btnAtrasX, pagY, 40, 52, Text.literal("◀"), puedeAtras, 0xFF4A2D70);
+                texto(ctx, Text.literal((paginaMisKits + 1) + " / " + totalPaginas),
+                        btnAtrasX + 55, pagY + 18, 16, 0xFFE0D4FC, true, CONTORNO_OSCURO);
+                boton(ctx, rx, ry, btnSigX, pagY, 40, 52, Text.literal("▶"), puedeSig, 0xFF4A2D70);
+            }
+        }
     }
 
-    /** Renderiza cada exclusivo con sus cuatro piezas reales y su arma, sin dejar equipo
-     * temporal en el jugador aunque falle el dibujado de una tarjeta. */
+    /** Renderiza cada exclusivo con sus cuatro piezas reales y su arma, siempre mirando de frente fija. */
     private void dibujarPrevisualizadoresKits(DrawContext ctx) {
         if (client == null || client.player == null) return;
         var lista = kitsVisibles();
+        if (lista.isEmpty()) return;
+
+        int totalPaginas = Math.max(1, (lista.size() + 2) / 3);
+        int inicio = pestana == 2 ? paginaMisKits * 3 : 0;
+        int fin = Math.min(lista.size(), inicio + 3);
+        int totalEnPagina = fin - inicio;
+
         int w = (PANT_W - 2 * MARGEN - 24) / 3;
-        for (int i = 0; i < lista.size(); i++) {
-            var f = lista.get(i);
+        for (int i = 0; i < totalEnPagina; i++) {
+            var f = lista.get(inicio + i);
             int x = px(PANT_X + MARGEN + i * (w + 12) + 8);
             int y = py(PANT_Y + 54 + 40);
             int ww = pl(w - 16), hh = pl(266);
@@ -554,6 +655,14 @@ public class KitsScreen extends Screen {
                     EquipmentSlot.FEET,
                     EquipmentSlot.MAINHAND};
             var anteriores = new ItemStack[slots.length];
+            float oBodyYaw = jugador.bodyYaw;
+            float oPrevBodyYaw = jugador.prevBodyYaw;
+            float oHeadYaw = jugador.headYaw;
+            float oPrevHeadYaw = jugador.prevHeadYaw;
+            float oYaw = jugador.getYaw();
+            float oPrevYaw = jugador.prevYaw;
+            float oPitch = jugador.getPitch();
+            float oPrevPitch = jugador.prevPitch;
             try {
                 String ns = switch (f.id()) {
                     case "magikarp" -> "magikarparmor";
@@ -588,10 +697,17 @@ public class KitsScreen extends Screen {
                     jugador.equipStack(EquipmentSlot.MAINHAND, new ItemStack(swordItem));
                 }
 
-                Quaternionf rot = new Quaternionf()
-                        .rotateZ((float) Math.PI)
-                        .rotateX((float) Math.toRadians(4.0))
-                        .rotateY((float) Math.PI + (float) Math.toRadians(18.0));
+                jugador.bodyYaw = 180.0f;
+                jugador.prevBodyYaw = 180.0f;
+                jugador.headYaw = 180.0f;
+                jugador.prevHeadYaw = 180.0f;
+                jugador.setYaw(180.0f);
+                jugador.prevYaw = 180.0f;
+                jugador.setPitch(0.0f);
+                jugador.prevPitch = 0.0f;
+
+                Quaternionf rot = new Quaternionf().rotateZ((float) Math.PI);
+                Quaternionf rotOverride = new Quaternionf();
 
                 int cx = x + ww / 2;
                 int cy = y + (int) (hh * 0.53f);
@@ -606,11 +722,19 @@ public class KitsScreen extends Screen {
                         (float) size,
                         new Vector3f(0f, jugador.getHeight() / 2f + 0.05f, 0f),
                         rot,
-                        null,
+                        rotOverride,
                         jugador);
                 net.minecraft.client.render.DiffuseLighting.enableGuiDepthLighting();
                 ctx.disableScissor();
             } finally {
+                jugador.bodyYaw = oBodyYaw;
+                jugador.prevBodyYaw = oPrevBodyYaw;
+                jugador.headYaw = oHeadYaw;
+                jugador.prevHeadYaw = oPrevHeadYaw;
+                jugador.setYaw(oYaw);
+                jugador.prevYaw = oPrevYaw;
+                jugador.setPitch(oPitch);
+                jugador.prevPitch = oPrevPitch;
                 for (int s = 0; s < slots.length; s++) {
                     if (anteriores[s] != null) {
                         jugador.equipStack(slots[s], anteriores[s]);
@@ -632,7 +756,7 @@ public class KitsScreen extends Screen {
     }
 
     private ItemStack crearPila(KitCatalog.KitItem ki) {
-        ItemStack stack = new ItemStack(ki.item(), ki.count());
+        ItemStack stack = ki.pilaBase();
         if (client != null && client.world != null && !ki.encantamientos().isEmpty()) {
             var wrapper = client.world.getRegistryManager().getWrapperOrThrow(RegistryKeys.ENCHANTMENT);
             for (var entry : ki.encantamientos().entrySet()) {
@@ -693,11 +817,13 @@ public class KitsScreen extends Screen {
 
     /** Interfaz detallada de kit con 3D 360, cuadrícula de items y tooltips (estilo Diosesmon). */
     private void dibujarDetalleKit(DrawContext ctx, int rx, int ry) {
-        var lista = kitsVisibles();
-        var f = lista.stream().filter(k -> k.id().equals(kitDetalleId)).findFirst().orElse(null);
-        if (f == null && !lista.isEmpty()) {
-            f = lista.get(Math.min(kitElegido, lista.size() - 1));
-            kitDetalleId = f.id();
+        var f = fichaDe(kitDetalleId);
+        if (f == null) {
+            var lista = kitsVisibles();
+            if (!lista.isEmpty()) {
+                f = lista.get(Math.min(kitElegido, lista.size() - 1));
+                kitDetalleId = f.id();
+            }
         }
         if (f == null) {
             kitDetalleId = null;
@@ -721,7 +847,8 @@ public class KitsScreen extends Screen {
         var kitDef = cat != null ? cat.byId(f.id()) : null;
         String desc = kitDef != null && !kitDef.description().isBlank()
                 ? kitDef.description()
-                : "Armadura GeckoLib, arsenal 3D y suministros competitivos exclusivos.";
+                : (pestana == 0 ? "Armadura de rango 3D, arsenal de combate y suministros exclusivos."
+                                : "Armadura GeckoLib, arsenal 3D y suministros competitivos exclusivos.");
         texto(ctx, Text.literal(desc), PANT_X + MARGEN + btnAtrasW + 14, navY + 22, 12,
                 TEXTO_SUAVE, false, 0);
 
@@ -754,39 +881,93 @@ public class KitsScreen extends Screen {
 
         // Cabecera interna del panel derecho
         texto(ctx, Text.literal("CONTENIDO DEL KIT"), cx + 16, cy + 12, 16, 0xFF56C8D6, false, CONTORNO_OSCURO);
-        String estadoPrecio = f.propio() ? "ADQUIRIDO" : String.format("%,d LunaCoins", f.precio());
-        int colorPrecio = f.propio() ? 0xFF7EF0A0 : ORO;
-        texto(ctx, Text.literal(estadoPrecio), cx + cw - 16, cy + 12, 16, colorPrecio, true, CONTORNO_OSCURO);
+        if (pestana == 1) {
+            String badge = f.propio() ? "ADQUIRIDO (EN MIS KITS)" : String.format("%,d LunaCoins", f.precio());
+            int colBadge = f.propio() ? 0xFF7EF0A0 : ORO;
+            int bw = anchoArte(badge, 13);
+            texto(ctx, Text.literal(badge), cx + cw - 16 - bw, cy + 14, 13, colBadge, false, CONTORNO_OSCURO);
+        } else if (pestana == 0) {
+            String badge;
+            int colBadge;
+            if (f.disponible()) {
+                badge = "LISTO PARA RECLAMAR";
+                colBadge = 0xFF5CD68A;
+            } else if (f.espera() != null && !f.espera().isBlank()) {
+                if (f.espera().toLowerCase().contains("rango") || f.espera().toLowerCase().contains("bloqueado")) {
+                    badge = "BLOQUEADO (REQUIERE RANGO)";
+                    colBadge = 0xFFE07040;
+                } else {
+                    badge = "DISPONIBLE EN: " + f.espera().toUpperCase();
+                    colBadge = 0xFF9FB6D8;
+                }
+            } else {
+                badge = "BLOQUEADO (REQUIERE RANGO)";
+                colBadge = 0xFFE07040;
+            }
+            int bw = anchoArte(badge, 13);
+            texto(ctx, Text.literal(badge), cx + cw - 16 - bw, cy + 14, 13, colBadge, false, CONTORNO_OSCURO);
+        } else {
+            boolean yaReclamado = "reclamado".equals(f.espera()) || !f.disponible();
+            String badge = yaReclamado ? "RECLAMADO" : "LISTO PARA RECLAMAR";
+            int colBadge = yaReclamado ? 0xFF8892AC : 0xFF5CD68A;
+            int bw = anchoArte(badge, 13);
+            texto(ctx, Text.literal(badge), cx + cw - 16 - bw, cy + 14, 13, colBadge, false, CONTORNO_OSCURO);
+        }
 
         // Línea divisoria
         ctx.fill(px(cx + 12), py(cy + 30), px(cx + cw - 12), py(cy + 31), 0xFF2A344A);
 
-        // Cuadrícula de items
+        // Cuadrícula espaciosa de items grandes con desplazamiento vertical (scroll)
         var items = itemsDelKit(f.id());
-        int cols = 7;
-        int slotW = 54, slotH = 54, gap = 8;
-        int gridTotalW = cols * slotW + (cols - 1) * gap;
-        int gx0 = cx + (cw - gridTotalW) / 2;
-        int gy0 = cy + 40;
+        int cols = 5;
+        int slotW = 88;
+        int slotH = 64;
+        int gapX = 10;
+        int gapY = 10;
+        int paddingY = 8;
+        int viewH = ch - 39;
+        int rows = Math.max(1, (items.size() + cols - 1) / cols);
+        int totalGridH = rows * slotH + (rows - 1) * gapY;
+        maxScrollDetalle = Math.max(0f, (totalGridH + paddingY * 2) - viewH);
+        scrollDetalle = Math.max(0f, Math.min(scrollDetalle, maxScrollDetalle));
+
+        int gridTotalW = cols * slotW + (cols - 1) * gapX;
+        // Margen horizontal restando el hueco para la barra de scroll
+        int gx0 = cx + 8 + Math.max(0, ((cw - 22) - gridTotalW) / 2);
+        int gy0 = cy + 33 + paddingY + (maxScrollDetalle <= 0 ? Math.max(0, (viewH - totalGridH) / 2) : 0) - (int) scrollDetalle;
+
+        // Recorte scissor estricto para que absolutamente ningún item ni borde se salga del panel
+        int scissorX1 = px(cx + 4);
+        int scissorY1 = py(cy + 32);
+        int scissorX2 = px(cx + cw - 4);
+        int scissorY2 = py(cy + ch - 4);
+
+        ctx.enableScissor(scissorX1, scissorY1, scissorX2, scissorY2);
 
         for (int i = 0; i < items.size(); i++) {
             int col = i % cols;
             int row = i / cols;
-            int sx = gx0 + col * (slotW + gap);
-            int sy = gy0 + row * (slotH + gap);
+            int sx = gx0 + col * (slotW + gapX);
+            int sy = gy0 + row * (slotH + gapY);
 
             int boxX = px(sx);
             int boxY = py(sy);
             int boxW = pl(slotW);
             int boxH = pl(slotH);
 
-            boolean enc = dentro(rx, ry, boxX, boxY, boxW, boxH);
+            // Optimización: omitir dibujar celdas fuera del rango visible
+            if (boxY + boxH < scissorY1 || boxY > scissorY2) {
+                continue;
+            }
+
+            boolean enc = dentro(rx, ry, boxX, boxY, boxW, boxH)
+                    && dentro(rx, ry, scissorX1, scissorY1, scissorX2 - scissorX1, scissorY2 - scissorY1);
             ItemStack stack = items.get(i);
 
             ctx.fill(boxX, boxY, boxX + boxW, boxY + boxH, enc ? 0xFF283650 : 0xFF192030);
             marco(ctx, boxX, boxY, boxW, boxH, enc ? ORO : 0xFF364463, pl(enc ? 2 : 1));
 
-            float targetSize = Math.max(16f, Math.min(boxW - 6, boxH - 6));
+            float targetSize = Math.max(26f, Math.min(boxW - pl(12), boxH - pl(12)));
             float scale = targetSize / 16.0f;
             float ix = boxX + (boxW - 16f * scale) / 2f;
             float iy = boxY + (boxH - 16f * scale) / 2f;
@@ -796,22 +977,134 @@ public class KitsScreen extends Screen {
             matrices.translate(ix, iy, 0);
             matrices.scale(scale, scale, 1.0f);
             ctx.drawItem(stack, 0, 0);
-            ctx.drawItemInSlot(textRenderer, stack, 0, 0);
             matrices.pop();
+
+            if (stack.getCount() > 1) {
+                String countStr = String.valueOf(stack.getCount());
+                int strW = textRenderer.getWidth(countStr);
+                matrices.push();
+                matrices.translate(0, 0, 200);
+                ctx.drawText(textRenderer, countStr, boxX + boxW - strW - pl(5), boxY + boxH - textRenderer.fontHeight - pl(3), 0xFFFFFFFF, true);
+                matrices.pop();
+            } else if (stack.isDamaged()) {
+                int barW = boxW - pl(12);
+                int barX = boxX + pl(6);
+                int barY = boxY + boxH - pl(6);
+                float ratio = (float) (stack.getMaxDamage() - stack.getDamage()) / (float) stack.getMaxDamage();
+                ctx.fill(barX, barY, barX + barW, barY + pl(2), 0xFF000000);
+                ctx.fill(barX, barY, barX + Math.round(barW * ratio), barY + pl(1), 0xFF00FF00);
+            }
 
             if (enc) {
                 stackHover = stack;
             }
         }
 
-        // 4. Botón inferior de acción
+        ctx.disableScissor();
+
+        // Barra de desplazamiento estilizada (scrollbar) a la derecha
+        if (maxScrollDetalle > 0) {
+            int sbX = px(cx + cw - 13);
+            int sbY = py(cy + 35);
+            int sbW = pl(6);
+            int sbH = pl(ch - 42);
+
+            // Pista
+            ctx.fill(sbX, sbY, sbX + sbW, sbY + sbH, 0xFF141926);
+            marco(ctx, sbX, sbY, sbW, sbH, 0xFF28344A, 1);
+
+            // Control deslizante
+            int thumbH = Math.max(pl(28), Math.round((float) viewH / (float) (totalGridH + paddingY * 2) * sbH));
+            int thumbY = sbY + Math.round((sbH - thumbH) * (scrollDetalle / maxScrollDetalle));
+            boolean encThumb = dentro(rx, ry, sbX - 2, thumbY, sbW + 4, thumbH);
+            int colThumb = arrastrandoScroll ? ORO : (encThumb ? 0xFF65BCE8 : 0xFF3D5A80);
+            ctx.fill(sbX, thumbY, sbX + sbW, thumbY + thumbH, colThumb);
+            marco(ctx, sbX, thumbY, sbW, thumbH, arrastrandoScroll || encThumb ? ORO : 0xFF5278A6, 1);
+        }
+
+        // 4. Botón inferior de acción con comprobación estricta de inventario
         int btnY = PANT_Y + PANT_H - MARGEN - 50;
         int btnW = PANT_W - 2 * MARGEN;
         int btnH = 46;
-        boolean disp = pestana == 1 && f.disponible() && !esperando();
-        String lbl = f.propio() ? "ADQUIRIDO" : (disp ? "COMPRAR KIT EXCLUSIVO" : "NO DISPONIBLE");
+        int libres = huecosLibres();
+        int necesarios = Math.min(items.size(), 24);
+        boolean espacioSuficiente = libres >= necesarios;
+
+        String lbl;
+        boolean activo;
+        int colorBtn;
+        if (pestana == 0) {
+            if (f.disponible()) {
+                if (!espacioSuficiente) {
+                    lbl = "INVENTARIO LLENO (FALTAN " + (necesarios - libres) + " ESPACIOS LIBRES)";
+                    activo = false;
+                    colorBtn = ROJO;
+                } else if (!esperando()) {
+                    lbl = "RECLAMAR KIT DE RANGO";
+                    activo = true;
+                    colorBtn = VERDE;
+                } else {
+                    lbl = "PROCESANDO...";
+                    activo = false;
+                    colorBtn = APAGADO;
+                }
+            } else if (f.espera() != null && !f.espera().isBlank()) {
+                if (f.espera().toLowerCase().contains("rango") || f.espera().toLowerCase().contains("bloqueado")) {
+                    lbl = f.espera().toUpperCase();
+                } else {
+                    lbl = "DISPONIBLE EN: " + f.espera().toUpperCase();
+                }
+                activo = false;
+                colorBtn = APAGADO;
+            } else {
+                lbl = "NO DISPONIBLE (REQUIERE RANGO)";
+                activo = false;
+                colorBtn = APAGADO;
+            }
+        } else if (pestana == 1) {
+            var s = EstadoCliente.saldo();
+            long saldo = s == null ? 0 : s.reportcoins();
+            boolean tieneSaldo = saldo >= KitCatalog.PRECIO_KIT_EXCLUSIVO;
+            if (f.propio()) {
+                lbl = "ADQUIRIDO (EN MIS KITS)";
+                activo = false;
+                colorBtn = APAGADO;
+            } else if (!tieneSaldo) {
+                long faltan = KitCatalog.PRECIO_KIT_EXCLUSIVO - saldo;
+                lbl = "TE FALTAN " + String.format("%,d", faltan) + " LUNACOINS — CONSEGUIR LUNACOINS";
+                activo = true;
+                colorBtn = 0xFFD69A2E;
+            } else if (f.disponible() && !esperando()) {
+                lbl = "COMPRAR KIT EXCLUSIVO (" + String.format("%,d", f.precio()) + " LunaCoins)";
+                activo = true;
+                colorBtn = VERDE;
+            } else {
+                lbl = "NO DISPONIBLE";
+                activo = false;
+                colorBtn = APAGADO;
+            }
+        } else {
+            boolean yaReclamado = "reclamado".equals(f.espera()) || !f.disponible();
+            if (yaReclamado) {
+                lbl = "CONTENIDO YA RECLAMADO";
+                activo = false;
+                colorBtn = APAGADO;
+            } else if (!espacioSuficiente) {
+                lbl = "INVENTARIO LLENO (FALTAN " + (necesarios - libres) + " ESPACIOS LIBRES)";
+                activo = false;
+                colorBtn = ROJO;
+            } else if (!esperando()) {
+                lbl = "RECLAMAR CONTENIDO DEL KIT";
+                activo = true;
+                colorBtn = VERDE;
+            } else {
+                lbl = "PROCESANDO...";
+                activo = false;
+                colorBtn = APAGADO;
+            }
+        }
         boton(ctx, rx, ry, PANT_X + MARGEN, btnY, btnW, btnH,
-                Text.literal(lbl), !f.propio() && disp, f.propio() ? APAGADO : VERDE);
+                Text.literal(lbl), activo, colorBtn);
     }
 
     private void dibujarPrevisualizadorDetalle(DrawContext ctx, int rx, int ry) {
@@ -829,49 +1122,52 @@ public class KitsScreen extends Screen {
                 EquipmentSlot.FEET,
                 EquipmentSlot.MAINHAND};
         var anteriores = new ItemStack[slots.length];
+        float oBodyYaw = jugador.bodyYaw;
+        float oPrevBodyYaw = jugador.prevBodyYaw;
+        float oHeadYaw = jugador.headYaw;
+        float oPrevHeadYaw = jugador.prevHeadYaw;
+        float oYaw = jugador.getYaw();
+        float oPrevYaw = jugador.prevYaw;
+        float oPitch = jugador.getPitch();
+        float oPrevPitch = jugador.prevPitch;
 
         try {
-            String ns = switch (kitDetalleId) {
-                case "magikarp" -> "magikarparmor";
-                case "pikachu" -> "pikachuarmor";
-                case "eevee" -> "eeveelution";
-                default -> null;
-            };
-            if (ns != null) {
-                String prefijo = kitDetalleId.equals("eevee") ? "eeveelution" : kitDetalleId;
-                for (int s = 0; s < 4; s++) {
-                    anteriores[s] = jugador.getEquippedStack(slots[s]).copy();
-                    var item = Registries.ITEM.get(
-                            Identifier.of(ns, prefijo + "_" + switch (s) {
-                                case 0 -> "helmet";
-                                case 1 -> "chestplate";
-                                case 2 -> "leggings";
-                                default -> "boots";
-                            }));
-                    jugador.equipStack(slots[s], new ItemStack(item));
+            // El visor usa las mismas pilas encantadas que el contenido y la entrega.
+            var contenido = itemsDelKit(kitDetalleId);
+            for (int s = 0; s < slots.length; s++) {
+                anteriores[s] = jugador.getEquippedStack(slots[s]).copy();
+                ItemStack vista = ItemStack.EMPTY;
+                for (var pila : contenido) {
+                    boolean corresponde = slots[s] == EquipmentSlot.MAINHAND
+                            ? pila.getItem() instanceof net.minecraft.item.SwordItem
+                            : pila.getItem() instanceof net.minecraft.item.ArmorItem armadura
+                                && armadura.getSlotType() == slots[s];
+                    if (corresponde) {
+                        vista = pila.copy();
+                        vista.setCount(1);
+                        break;
+                    }
                 }
-
-                anteriores[4] = jugador.getEquippedStack(EquipmentSlot.MAINHAND).copy();
-                String swordName = switch (kitDetalleId) {
-                    case "magikarp" -> "magikarp_tidal_sword";
-                    case "pikachu" -> "pikachu_volttail_sword";
-                    case "eevee" -> "eevee_flareon_vaporeon_sword";
-                    default -> null;
-                };
-                if (swordName != null) {
-                    var swordItem = Registries.ITEM.get(Identifier.of("armaduraspokereport", swordName));
-                    jugador.equipStack(EquipmentSlot.MAINHAND, new ItemStack(swordItem));
-                }
+                jugador.equipStack(slots[s], vista);
             }
 
             if (rotando360) {
                 rotacionYaw = (rotacionYaw + 1.2f) % 360f;
             }
 
-            Quaternionf rot = new Quaternionf()
-                    .rotateZ((float) Math.PI)
-                    .rotateX((float) Math.toRadians(rotacionPitch))
-                    .rotateY((float) Math.toRadians(180f + rotacionYaw));
+            float yaw = 180.0f + rotacionYaw;
+            jugador.bodyYaw = yaw;
+            jugador.prevBodyYaw = yaw;
+            jugador.headYaw = yaw;
+            jugador.prevHeadYaw = yaw;
+            jugador.setYaw(yaw);
+            jugador.prevYaw = yaw;
+            jugador.setPitch(-rotacionPitch);
+            jugador.prevPitch = -rotacionPitch;
+
+            Quaternionf rot = new Quaternionf().rotateZ((float) Math.PI);
+            Quaternionf rotOverride = new Quaternionf().rotateX((float) Math.toRadians(rotacionPitch));
+            rot.mul(rotOverride);
 
             int cx = vx + vw / 2;
             int cy = vy + vh / 2 - pl(12);
@@ -886,11 +1182,19 @@ public class KitsScreen extends Screen {
                     (float) size,
                     new Vector3f(0f, jugador.getHeight() / 2f, 0f),
                     rot,
-                    null,
+                    rotOverride,
                     jugador);
             net.minecraft.client.render.DiffuseLighting.enableGuiDepthLighting();
             ctx.disableScissor();
         } finally {
+            jugador.bodyYaw = oBodyYaw;
+            jugador.prevBodyYaw = oPrevBodyYaw;
+            jugador.headYaw = oHeadYaw;
+            jugador.prevHeadYaw = oPrevHeadYaw;
+            jugador.setYaw(oYaw);
+            jugador.prevYaw = oPrevYaw;
+            jugador.setPitch(oPitch);
+            jugador.prevPitch = oPrevPitch;
             for (int s = 0; s < slots.length; s++) {
                 if (anteriores[s] != null) {
                     jugador.equipStack(slots[s], anteriores[s]);
@@ -900,12 +1204,41 @@ public class KitsScreen extends Screen {
     }
 
     private static String nombreKit(String id) {
-        return switch(id){case "magikarp"->"MAGIKARP TIDAL";case "pikachu"->"PIKACHU THUNDERFORGE";case "eevee"->"EEVEELUTION LEGACY";default->id.toUpperCase(java.util.Locale.ROOT);};
+        return switch (id) {
+            case "magikarp" -> "MAGIKARP TIDAL";
+            case "pikachu" -> "PIKACHU THUNDERFORGE";
+            case "eevee" -> "EEVEELUTION LEGACY";
+            case "entrenador" -> "KIT ENTRENADOR";
+            case "elite" -> "KIT ÉLITE";
+            case "campeon" -> "KIT CAMPEÓN";
+            case "maestro" -> "KIT MAESTRO";
+            case "leyenda" -> "KIT LEYENDA";
+            default -> id.toUpperCase(java.util.Locale.ROOT);
+        };
+    }
+
+    private Red.FichaKit fichaDe(String id) {
+        if (id == null) return null;
+        var e = EstadoCliente.kits();
+        if (e != null) {
+            for (var fk : e.fichas()) {
+                if (fk.id().equals(id)) return fk;
+            }
+        }
+        var fTraje = fichas();
+        for (var ft : fTraje) {
+            if (ft.id().equals(id)) {
+                return new Red.FichaKit(id, 0, 0, false, ft.puede(),
+                        ft.espera() > 0 ? cuanto(ft.espera()).getString() : (ft.puede() ? "" : "BLOQUEADO (REQUIERE RANGO)"));
+            }
+        }
+        return new Red.FichaKit(id, 0, 0, false, false, "");
     }
 
     private Red.FichaKit kitRango(String id) {
-        var e=EstadoCliente.kits(); if(e==null)return null;
-        return e.fichas().stream().filter(f->f.tipo()==0&&f.id().equals(id)).findFirst().orElse(null);
+        var e = EstadoCliente.kits();
+        if (e == null) return null;
+        return e.fichas().stream().filter(f -> f.tipo() == 0 && f.id().equals(id)).findFirst().orElse(null);
     }
 
     // ---- interacción -------------------------------------------------------
@@ -929,12 +1262,23 @@ public class KitsScreen extends Screen {
             return true;
         }
 
+        // Clic en botón MAS (+) de saldo: abrir tienda oficial
+        int sy = PANEL_Y + PANEL_H - 92, sx = PANEL_X + 28, sw = PANEL_W - 56;
+        int sbx = sx + sw - 52;
+        if (dentro(rx, ry, px(sbx), py(sy + 12), pl(40), pl(40))) {
+            abrirTiendaWeb();
+            return true;
+        }
+
         int w = PANEL_W - 56;
         for (int i = 0; i < PESTANAS.length; i++) {
             if (dentro(rx, ry, px(PANEL_X + 28), py(pestanaY(i)), pl(w), pl(72))) {
                 pestana = i;
                 kitElegido = 0;
+                paginaMisKits = 0;
                 kitDetalleId = null;
+                scrollDetalle = 0f;
+                arrastrandoScroll = false;
                 rotando360 = false;
                 rotacionYaw = 0f;
                 rotacionPitch = 0f;
@@ -943,47 +1287,14 @@ public class KitsScreen extends Screen {
             }
         }
 
-        if (pestana == 0) {
-            var f = fichas();
-            for (int i = 0; i < f.size(); i++) {
-                if (dentro(rx, ry, px(listaX()), py(filaY(i)), pl(listaW()), pl(52))) {
-                    var kr=kitRango(f.get(i).id());
-                    if(kr!=null&&kr.disponible()&&rx-px(listaX())>pl(listaW()-125)){
-                        pulsado=System.currentTimeMillis();sonar();ClientPlayNetworking.send(new Red.ReclamarKit(kr.id()));return true;
-                    }
-                    // ⚠ Un clic ELIGE y enseña; ponérselo es el botón. Con la
-                    //   acción en la fila, un clic despistado te cambia de ropa.
-                    elegido = i;
-                    sonar();
-                    return true;
-                }
-            }
-            var sel = ficha(elegido);
-            boolean llevo = loLleva(sel);
-            boolean puedePulsar = esKit(sel)
-                    ? sel.espera() == 0
-                    : (sel != null && (llevo || (sel.listo() && sel.puede())));
-            if (sel != null && !esperando() && puedePulsar
-                    && dentro(rx, ry, px(listaX()), py(PANT_Y + PANT_H - MARGEN - 56),
-                              pl(listaW()), pl(50))) {
-                sonar();
-                pulsado = System.currentTimeMillis();
-                // ⚠⚠ DOS PAQUETES DISTINTOS Y NO UNO QUE SIGNIFIQUE DOS COSAS.
-                //    Reutilizar `AccionTraje` mirando si el id es un kit se lee
-                //    bien el dia que se escribe y mal cualquier otro.
-                if (esKit(sel)) {
-                    ClientPlayNetworking.send(new Red.ReclamarKit(sel.id()));
-                } else {
-                    ClientPlayNetworking.send(new Red.AccionTraje(llevo ? "" : sel.id()));
-                }
-                return true;
-            }
-        } else if (kitDetalleId != null) {
+        if (kitDetalleId != null) {
             // Clic en Volver
             int navY = PANT_Y + 12;
             int btnAtrasW = 100, btnAtrasH = 28;
             if (dentro(rx, ry, px(PANT_X + MARGEN), py(navY), pl(btnAtrasW), pl(btnAtrasH))) {
                 kitDetalleId = null;
+                scrollDetalle = 0f;
+                arrastrandoScroll = false;
                 rotando360 = false;
                 rotacionYaw = 0f;
                 rotacionPitch = 0f;
@@ -1001,36 +1312,169 @@ public class KitsScreen extends Screen {
                 sonar();
                 return true;
             }
+            // Clic en Barra de Scroll
+            int cx = vx + vw + 14;
+            cy = vy;
+            int cw = PANT_W - 2 * MARGEN - vw - 14;
+            int ch = vh;
+            if (maxScrollDetalle > 0) {
+                int sbX = px(cx + cw - 18);
+                int sbY = py(cy + 35);
+                int sbW = pl(14);
+                int sbH = pl(ch - 42);
+                if (dentro(rx, ry, sbX, sbY, sbW, sbH)) {
+                    arrastrandoScroll = true;
+                    int viewH = ch - 39;
+                    int rows = Math.max(1, (itemsDelKit(kitDetalleId).size() + 5 - 1) / 5);
+                    int totalGridH = rows * 64 + (rows - 1) * 10;
+                    int thumbH = Math.max(pl(28), Math.round((float) viewH / (float) (totalGridH + 16) * sbH));
+                    float frac = Math.max(0f, Math.min(1f, (float)(ry - sbY - thumbH / 2) / (float)(sbH - thumbH)));
+                    scrollDetalle = frac * maxScrollDetalle;
+                    return true;
+                }
+            }
+
             // Clic en Botón de Comprar / Reclamar
-            var lista = kitsVisibles();
-            var f = lista.stream().filter(k -> k.id().equals(kitDetalleId)).findFirst().orElse(null);
+            var f = fichaDe(kitDetalleId);
             int btnY = PANT_Y + PANT_H - MARGEN - 50;
             int btnW = PANT_W - 2 * MARGEN;
             int btnH = 46;
-            if (f != null && !f.propio() && pestana == 1 && f.disponible() && !esperando()
-                    && dentro(rx, ry, px(PANT_X + MARGEN), py(btnY), pl(btnW), pl(btnH))) {
-                pulsado = System.currentTimeMillis();
-                sonar();
-                ClientPlayNetworking.send(new Red.ReclamarKit(f.id()));
-                return true;
+            int libres = huecosLibres();
+            int necesarios = f != null ? Math.min(itemsDelKit(f.id()).size(), 24) : 0;
+            boolean espacioSuficiente = libres >= necesarios;
+
+            if (pestana == 0) {
+                if (f != null && f.disponible() && !esperando() && espacioSuficiente
+                        && dentro(rx, ry, px(PANT_X + MARGEN), py(btnY), pl(btnW), pl(btnH))) {
+                    pulsado = System.currentTimeMillis();
+                    sonar();
+                    ClientPlayNetworking.send(new Red.ReclamarKit(f.id()));
+                    return true;
+                }
+            } else if (pestana == 1) {
+                if (f != null && !f.propio() && !esperando()
+                        && dentro(rx, ry, px(PANT_X + MARGEN), py(btnY), pl(btnW), pl(btnH))) {
+                    var s = EstadoCliente.saldo();
+                    long saldo = s == null ? 0 : s.reportcoins();
+                    if (saldo < KitCatalog.PRECIO_KIT_EXCLUSIVO) {
+                        abrirTiendaWeb();
+                    } else if (f.disponible()) {
+                        pulsado = System.currentTimeMillis();
+                        sonar();
+                        ClientPlayNetworking.send(new Red.ReclamarKit(f.id()));
+                    }
+                    return true;
+                }
+            } else if (pestana == 2) {
+                boolean yaReclamado = f != null && ("reclamado".equals(f.espera()) || !f.disponible());
+                if (f != null && f.propio() && !yaReclamado && !esperando() && espacioSuficiente
+                        && dentro(rx, ry, px(PANT_X + MARGEN), py(btnY), pl(btnW), pl(btnH))) {
+                    pulsado = System.currentTimeMillis();
+                    sonar();
+                    ClientPlayNetworking.send(new Red.ReclamarKit(f.id()));
+                    return true;
+                }
             }
             return true;
-        } else {
-            var lista=kitsVisibles(); int cardW=(PANT_W-2*MARGEN-24)/3;
-            for(int i=0;i<lista.size();i++){
-                int x=PANT_X+MARGEN+i*(cardW+12),y=PANT_Y+54;
-                if(dentro(rx,ry,px(x),py(y),pl(cardW),pl(350))){
-                    kitElegido=i;
-                    kitDetalleId=lista.get(i).id();
-                    rotando360=false;
+        } else if (pestana == 0) {
+            var f = fichas();
+            for (int i = 0; i < f.size(); i++) {
+                if (dentro(rx, ry, px(listaX()), py(filaY(i)), pl(listaW()), pl(52))) {
+                    elegido = i;
+                    kitDetalleId = f.get(i).id();
+                    scrollDetalle = 0f;
+                    arrastrandoScroll = false;
+                    rotando360 = false;
                     rotacionYaw = 0f;
                     rotacionPitch = 0f;
                     sonar();
                     return true;
                 }
             }
-            if(pestana==1&&kitElegido<lista.size()) { var f=lista.get(kitElegido);
-                if(f.disponible()&&!esperando()&&dentro(rx,ry,px(PANT_X+MARGEN),py(PANT_Y+PANT_H-68),pl(PANT_W-2*MARGEN),pl(52))){pulsado=System.currentTimeMillis();sonar();ClientPlayNetworking.send(new Red.ReclamarKit(f.id()));return true;}
+            var sel = ficha(elegido);
+            if (sel != null && dentro(rx, ry, px(listaX()), py(PANT_Y + PANT_H - MARGEN - 56),
+                    pl(listaW()), pl(50))) {
+                kitDetalleId = sel.id();
+                scrollDetalle = 0f;
+                arrastrandoScroll = false;
+                rotando360 = false;
+                rotacionYaw = 0f;
+                rotacionPitch = 0f;
+                sonar();
+                return true;
+            }
+        } else {
+            var lista = kitsVisibles();
+            int totalPaginas = Math.max(1, (lista.size() + 2) / 3);
+            int inicio = pestana == 2 ? paginaMisKits * 3 : 0;
+            int fin = Math.min(lista.size(), inicio + 3);
+            int cardW = (PANT_W - 2 * MARGEN - 24) / 3;
+
+            for (int i = 0; i < (fin - inicio); i++) {
+                int indice = inicio + i;
+                int x = PANT_X + MARGEN + i * (cardW + 12), y = PANT_Y + 54;
+                if (dentro(rx, ry, px(x), py(y), pl(cardW), pl(350))) {
+                    kitElegido = indice;
+                    kitDetalleId = lista.get(indice).id();
+                    scrollDetalle = 0f;
+                    arrastrandoScroll = false;
+                    rotando360 = false;
+                    rotacionYaw = 0f;
+                    rotacionPitch = 0f;
+                    sonar();
+                    return true;
+                }
+            }
+
+            // Mis Kits: flechas de paginación
+            if (pestana == 2 && totalPaginas > 1) {
+                int pagY = PANT_Y + PANT_H - 68;
+                int btnAtrasX = PANT_X + PANT_W - MARGEN - 150;
+                int btnSigX = PANT_X + PANT_W - MARGEN - 40;
+                if (dentro(rx, ry, px(btnAtrasX), py(pagY), pl(40), pl(52))) {
+                    if (paginaMisKits > 0) {
+                        paginaMisKits--;
+                        sonar();
+                        return true;
+                    }
+                }
+                if (dentro(rx, ry, px(btnSigX), py(pagY), pl(40), pl(52))) {
+                    if (paginaMisKits < totalPaginas - 1) {
+                        paginaMisKits++;
+                        sonar();
+                        return true;
+                    }
+                }
+            }
+
+            // Botón inferior
+            if (pestana == 1 && kitElegido < lista.size()) {
+                var f = lista.get(kitElegido);
+                if (!f.propio() && !esperando()
+                        && dentro(rx, ry, px(PANT_X + MARGEN), py(PANT_Y + PANT_H - 68), pl(PANT_W - 2 * MARGEN), pl(52))) {
+                    var s = EstadoCliente.saldo();
+                    long saldo = s == null ? 0 : s.reportcoins();
+                    if (saldo < KitCatalog.PRECIO_KIT_EXCLUSIVO) {
+                        abrirTiendaWeb();
+                    } else if (f.disponible()) {
+                        pulsado = System.currentTimeMillis();
+                        sonar();
+                        ClientPlayNetworking.send(new Red.ReclamarKit(f.id()));
+                    }
+                    return true;
+                }
+            } else if (pestana == 2 && kitElegido < lista.size()) {
+                int btnW = (totalPaginas > 1) ? (PANT_W - 2 * MARGEN - 170) : (PANT_W - 2 * MARGEN);
+                if (dentro(rx, ry, px(PANT_X + MARGEN), py(PANT_Y + PANT_H - 68), pl(btnW), pl(52))) {
+                    kitDetalleId = lista.get(kitElegido).id();
+                    scrollDetalle = 0f;
+                    arrastrandoScroll = false;
+                    rotando360 = false;
+                    rotacionYaw = 0f;
+                    rotacionPitch = 0f;
+                    sonar();
+                    return true;
+                }
             }
         }
         return super.mouseClicked(mx, my, boton);
@@ -1038,6 +1482,19 @@ public class KitsScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int boton, double dx, double dy) {
+        if (arrastrandoScroll && maxScrollDetalle > 0 && kitDetalleId != null) {
+            int cy = PANT_Y + 48;
+            int ch = PANT_H - MARGEN - 48 - 56;
+            int sbY = py(cy + 35);
+            int sbH = pl(ch - 42);
+            int viewH = ch - 39;
+            int rows = Math.max(1, (itemsDelKit(kitDetalleId).size() + 5 - 1) / 5);
+            int totalGridH = rows * 64 + (rows - 1) * 10;
+            int thumbH = Math.max(pl(28), Math.round((float) viewH / (float) (totalGridH + 16) * sbH));
+            float frac = Math.max(0f, Math.min(1f, (float)((int)my - sbY - thumbH / 2) / (float)(sbH - thumbH)));
+            scrollDetalle = frac * maxScrollDetalle;
+            return true;
+        }
         if (kitDetalleId != null) {
             int vx = px(PANT_X + MARGEN);
             int vy = py(PANT_Y + 48);
@@ -1053,10 +1510,35 @@ public class KitsScreen extends Screen {
     }
 
     @Override
+    public boolean mouseReleased(double mx, double my, int boton) {
+        arrastrandoScroll = false;
+        return super.mouseReleased(mx, my, boton);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double h, double v) {
+        if (kitDetalleId != null && maxScrollDetalle > 0) {
+            int vx = PANT_X + MARGEN;
+            int vw = 240;
+            int cx = vx + vw + 14;
+            int cy = PANT_Y + 48;
+            int cw = PANT_W - 2 * MARGEN - vw - 14;
+            int ch = PANT_H - MARGEN - 48 - 56;
+            if (dentro((int) mx, (int) my, px(cx), py(cy), pl(cw), pl(ch))) {
+                scrollDetalle = Math.max(0f, Math.min(scrollDetalle - (float) v * 28f, maxScrollDetalle));
+                return true;
+            }
+        }
+        return super.mouseScrolled(mx, my, h, v);
+    }
+
+    @Override
     public boolean keyPressed(int tecla, int escaneo, int mods) {
         if (tecla == 256) {
             if (kitDetalleId != null) {
                 kitDetalleId = null;
+                scrollDetalle = 0f;
+                arrastrandoScroll = false;
                 rotando360 = false;
                 rotacionYaw = 0f;
                 rotacionPitch = 0f;
@@ -1160,5 +1642,10 @@ public class KitsScreen extends Screen {
         RenderSystem.defaultBlendFunc();
         ctx.drawTexture(tex, x, y, w, h, 0f, 0f, natW, natH, natW, natH);
         RenderSystem.disableBlend();
+    }
+
+    private void abrirTiendaWeb() {
+        sonar();
+        net.pokereport.luna.client.Enlaces.abrirTienda(client, this);
     }
 }

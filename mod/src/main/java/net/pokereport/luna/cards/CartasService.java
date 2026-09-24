@@ -452,7 +452,7 @@ public final class CartasService {
      * <p>⚠ El nombre también se pone aquí: sin él los tres son el mismo icono
      * gris en el inventario y no hay forma de saber cuál es el dorado.
      */
-    private static ItemStack sobreDe(Sobre sobre) {
+    public static ItemStack sobreDe(Sobre sobre) {
         ItemStack pila = new ItemStack(item());
         var etiqueta = new net.minecraft.nbt.NbtCompound();
         etiqueta.putString("luna_calidad", sobre.name().toLowerCase(java.util.Locale.ROOT));

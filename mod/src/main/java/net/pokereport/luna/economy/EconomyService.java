@@ -17,7 +17,7 @@ import java.sql.SQLIntegrityConstraintViolationException;
  * {@code player_economy} <em>en la misma transacción</em>. Si alguna vez
  * {@code balance != SUM(delta)}, hay un fallo y se puede detectar.
  */
-public final class EconomyService {
+public class EconomyService {
 
     private final Database db;
 

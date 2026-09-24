@@ -77,7 +77,15 @@ public final class Database implements AutoCloseable {
         "V036__puerta.sql",
         "V037__kit_rotacion.sql",
         "V038__crianza.sql",
-        "V039__crianza_entrega_pendiente.sql"
+        "V039__crianza_entrega_pendiente.sql",
+        "V040__pokeparadas.sql",
+        "V041__mercado_negro.sql",
+        "V042__homes_pwarps.sql",
+        "V043__tebex.sql",
+        "V044__tebex_reversal.sql",
+        "V045__exclusive_kit_purchase.sql",
+        "V046__tebex_offline_username_resolution.sql",
+        "V047__expand_tebex_status_length.sql"
     };
 
     private final HikariDataSource ds;

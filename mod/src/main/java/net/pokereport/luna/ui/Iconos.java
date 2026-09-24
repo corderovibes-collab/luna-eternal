@@ -50,7 +50,10 @@ public final class Iconos {
             Identifier.of(LunaEternal.MOD_ID, "iconos");
 
     /** El raton con el boton derecho encendido. Zona de uso privado. */
-    private static final String CLIC_DERECHO = "";
+    public static final String CLIC_DERECHO = "";
+
+    /** Logo del servidor para el Tablist. */
+    public static final String LOGO_TAB = "";
 
     private Iconos() {
     }
@@ -67,11 +70,21 @@ public final class Iconos {
      * de algo que se lee.
      */
     public static MutableText clicDerecho() {
-        return Text.literal(CLIC_DERECHO).setStyle(Style.EMPTY
+        return glifo(CLIC_DERECHO);
+    }
+
+    /** Logo del servidor para la cabecera del Tablist. */
+    public static MutableText logoTab() {
+        return glifo(LOGO_TAB);
+    }
+
+    /**
+     * Construye un texto con un glifo de la fuente del mod, sin teñir (blanco)
+     * y sin negrita ni cursiva.
+     */
+    public static MutableText glifo(String caracter) {
+        return Text.literal(caracter).setStyle(Style.EMPTY
                 .withFont(FUENTE)
-                // ⚠ Blanco NO es «pintarlo de blanco»: es multiplicar por uno,
-                //   o sea dejar el arte como esta. Y la negrita se apaga a mano
-                //   porque un glifo en negrita se dibuja DOS VECES desplazado.
                 .withColor(Formatting.WHITE)
                 .withBold(false)
                 .withItalic(false));

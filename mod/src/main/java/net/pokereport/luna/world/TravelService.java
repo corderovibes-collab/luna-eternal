@@ -63,7 +63,7 @@ public final class TravelService {
      * coincidir</b>, y si divergieran no habria ningun error: habria gente
      * apareciendo fuera de la construccion. Lo vigila el autotest.
      */
-    private static final Vec3d SPAWN_LOBBY = new Vec3d(43.998, 72, 47.97);
+    private static final Vec3d SPAWN_LOBBY = new Vec3d(40.23, 72, 48);
 
     /**
      * Hacia donde mira quien llega al lobby: <b>al oeste</b> (peticion del

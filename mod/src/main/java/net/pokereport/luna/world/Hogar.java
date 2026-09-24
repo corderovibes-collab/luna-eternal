@@ -125,6 +125,7 @@ public final class Hogar {
         for (int i = 0; i < INTENTOS; i++) {
             int x = azar.nextInt(-RADIO_LLEGADA, RADIO_LLEGADA + 1);
             int z = azar.nextInt(-RADIO_LLEGADA, RADIO_LLEGADA + 1);
+            mundo.getChunk(x >> 4, z >> 4);
             int y = mundo.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
             if (y <= mundo.getBottomY() + 1 || y >= mundo.getTopY() - 2) {
                 continue;

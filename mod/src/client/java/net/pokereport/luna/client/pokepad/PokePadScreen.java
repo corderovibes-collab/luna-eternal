@@ -420,7 +420,7 @@ public class PokePadScreen extends Screen {
      * el enlace, y saltársela para «ahorrar un clic» es justo lo que enseña a la
      * gente a confiar en enlaces que aparecen solos.
      */
-    private static final String TIENDA = "";
+    private static final String TIENDA = net.pokereport.luna.client.Enlaces.TIENDA;
 
     /**
      * Cuántas páginas tiene la rejilla.
@@ -719,15 +719,7 @@ public class PokePadScreen extends Screen {
 
     /** Abre la tienda de LunaCoins, pasando por el aviso de Minecraft. */
     private void abrirTienda() {
-        if (client == null || TIENDA.isEmpty()) {
-            return;
-        }
-        client.setScreen(new ConfirmLinkScreen(abrir -> {
-            if (abrir) {
-                Util.getOperatingSystem().open(TIENDA);
-            }
-            client.setScreen(this);
-        }, TIENDA, false));
+        net.pokereport.luna.client.Enlaces.abrirTienda(client, this);
     }
 
     /**

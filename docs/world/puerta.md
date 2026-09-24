@@ -44,7 +44,22 @@ entero estaba cerrado.
 | La puerta | **`Puerta`** | ¿Has cruzado? Si no, estás en el lobby |
 | El guardián | **`PuertaNpc`** | Clic derecho **o** izquierdo → comprueba y suelta en la ciudadela |
 | Visibilidad | **`VisibilidadJugadores`** + mixin | A cuánta gente ves: lobby 0, ciudadela 30 |
-| El candado | **cliente y servidor** | Sin PokePad ni teclas en el lobby |
+| El candado | **cliente y servidor** | Solo movimiento, autenticación y clic al guardián en el lobby |
+
+### 2-bis. Modo cerrado del Lobby
+
+Mientras `Puerta.bloqueado` sea cierto, el jugador no puede usar chat ni
+comandos salvo `/login`, `/l`, `/register` y `/reg`; tampoco puede abrir
+inventario, creativo, PokePad, pantallas de Cobblemon u otras interfaces. El
+HUD completo queda oculto y los paquetes de Cobblemon se rechazan en el
+servidor, por lo que tampoco se pueden sacar Pokémon con un cliente modificado.
+
+Se conservan únicamente movimiento, clic derecho/izquierdo al guardián, la
+pantalla de chat como campo para autenticarse y Escape para poder desconectar.
+Al viajar a la Ciudadela, `EstadoPuerta(false)` retira automáticamente todos
+estos bloqueos. El protocolo de puerta vigente es **3**; además del modo cerrado,
+exige el cliente que unifica todos los accesos de LunaCoins con la tienda web
+oficial `https://pokereport.online/`.
 
 ⚠⚠ **NO SE CONSTRUYE UN SEGUNDO SISTEMA DE LOGIN.** EasyAuth ya hace su mitad.
 Montar autenticación propia encima serían **dos sistemas peleándose por dónde
@@ -298,7 +313,7 @@ funciona desde cualquier sitio.
 **El punto de llegada, medido en el juego (2026-09-09):**
 
 ```
-43.998 / 72 / 47.97     mirando al OESTE (yaw 90)
+40.23 / 72 / 48         mirando al OESTE (yaw 90)
 ```
 
 ⚠⚠ **En Minecraft el cero del yaw es el SUR, no el norte**: sur 0 · oeste 90 ·
@@ -322,7 +337,7 @@ rompe nada — pero es feo y desconcierta.
 ```
 session-timeout    86400 -> 900      15 min (decisión del usuario)
 hide-player-coords false -> true     sin esto world-spawn no se usa PARA NADA
-world-spawn        overworld -> lunaeternal:lobby  43.998 / 72 / 47.97  yaw 90
+world-spawn        overworld -> lunaeternal:lobby  40.23 / 72 / 48  yaw 90
 ```
 
 ⚠⚠ **PARAR, SUBIR, ARRANCAR.** EasyAuth carga su config al arrancar y **la
@@ -365,7 +380,7 @@ del todo es un trabajo deliberado, no un añadido al final.
 695/695** · EasyAuth 3.4.4 con la config nueva verificada tras el arranque.
 
 ✅ **El lobby está construido y el guardián colocado** (2026-09-09). Punto de
-llegada `43.998 / 72 / 47.97` mirando al oeste, en los dos sitios y cruzado por
+llegada `40.23 / 72 / 48` mirando al oeste, en los dos sitios y cruzado por
 el autotest.
 
 ✅ **El saludo llega**, verificado en el log en vivo:

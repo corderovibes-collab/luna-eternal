@@ -63,6 +63,13 @@ public class LunaCliente implements ClientModInitializer {
     public void onInitializeClient() {
         migrarServidorOficial();
 
+        // El codec del Mercado Negro se registra en el entrypoint comun, pero
+        // el receptor que anuncia al servidor que este cliente puede recibir
+        // `buhonero_oferta` vive en la pantalla. Sin esta llamada el JAR puede
+        // contener toda la UI y aun asi ServerPlayNetworking.canSend devuelve
+        // false, dejando al jugador en el aviso de "actualiza el launcher".
+        net.pokereport.luna.client.pokepad.BuhoneroScreen.registrar();
+
         net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("lunaeternal").ifPresent(container -> {
             net.fabricmc.fabric.api.resource.ResourceManagerHelper.registerBuiltinResourcePack(
                     net.minecraft.util.Identifier.of("lunaeternal", "recursos"),
@@ -97,6 +104,11 @@ public class LunaCliente implements ClientModInitializer {
         // compra: el servidor lo reenvia entero en vez de mandar cambios.
         ClientPlayNetworking.registerGlobalReceiver(Red.Cosmeticos.ID,
                 (carga, ctx) -> EstadoCliente.guardar(carga));
+
+        ClientPlayNetworking.registerGlobalReceiver(Red.Cinematica.ID,
+                (carga, ctx) -> ctx.client().execute(() ->
+                        ctx.client().setScreen(new CinematicaScreen(
+                                carga.url(), carga.segundos(), carga.puedeSalir()))));
 
         // Los LOGROS: suben a la esquina como un toast. Van aqui y no en una
         // pantalla porque tienen que verse ESTES DONDE ESTES -- picando, pescando
@@ -260,6 +272,20 @@ public class LunaCliente implements ClientModInitializer {
 
         ClientPlayNetworking.registerGlobalReceiver(Red.EstadoRecompensasTorre.ID,
                 (carga, ctx) -> ctx.client().execute(() -> EstadoCliente.guardar(carga)));
+
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoCrianza.ID,
+                (carga, ctx) -> ctx.client().execute(() -> EstadoCliente.guardar(carga)));
+
+        ClientPlayNetworking.registerGlobalReceiver(Red.EstadoCandidatosCrianza.ID,
+                (carga, ctx) -> ctx.client().execute(() -> EstadoCliente.guardar(carga)));
+
+        ClientPlayNetworking.registerGlobalReceiver(Red.AbrirCrianza.ID,
+                (carga, ctx) -> ctx.client().execute(() -> {
+                    var cliente = ctx.client();
+                    if (cliente.currentScreen == null) {
+                        cliente.setScreen(new net.pokereport.luna.client.pokepad.CrianzaScreen(null));
+                    }
+                }));
         
         // ⚠⚠⚠ LA ELECCION DE INICIAL YA NO SE ABRE SOLA: LA ABRE OAK.
         //

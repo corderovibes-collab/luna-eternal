@@ -188,10 +188,26 @@ public final class Combate {
         if (equipoVacio(jugador)) {
             return new Motivo("sin_pokemon", 0);
         }
+        // ⚠ Ningún Pokémon del equipo puede superar el nivel del gimnasio (ej. 15 para Brock, 19 para Misty)
+        int sobreNivel = primerSobreNivel(jugador, g.nivel());
+        if (sobreNivel > 0) {
+            return new Motivo("nivel_superado", g.nivel());
+        }
         if (Ranuras.libres(g) <= 0) {
             return new Motivo("lleno", 0);
         }
         return null;
+    }
+
+    private static int primerSobreNivel(ServerPlayerEntity jugador, int nivelMax) {
+        try {
+            for (var p : Cobblemon.INSTANCE.getStorage().getParty(jugador)) {
+                if (p != null && p.getLevel() > nivelMax) {
+                    return p.getLevel();
+                }
+            }
+        } catch (Throwable ignored) {}
+        return 0;
     }
 
     private static boolean equipoVacio(ServerPlayerEntity jugador) {
@@ -351,6 +367,13 @@ public final class Combate {
         if (mob.isInBattle() || RCTMod.getInstance().isInBattle(jugador)) {
             return;
         }
+        int sobreNivel = primerSobreNivel(jugador, g.nivel());
+        if (sobreNivel > 0) {
+            jugador.sendMessage(Text.literal(
+                    "§c§l¡COMBATE BLOQUEADO! §r§7Tu equipo contiene Pokémon por encima del §eNv. "
+                    + g.nivel() + "§7 (detectado Nv. " + sobreNivel + ")."), false);
+            return;
+        }
         try {
             // ⚠⚠⚠ PRIMERO SE INTENTA EL EQUIPO ADAPTADO, Y SI NO HAY, EL DE
             //    SIEMPRE. `Adaptador.pelear` compone el equipo del líder contra
@@ -481,6 +504,9 @@ public final class Combate {
                 // ningun error, que es como se descubren estas cosas tarde.
                 net.pokereport.luna.pase.Pase.ganar(jugador,
                         net.pokereport.luna.pase.PaseXp.MEDALLA, "medalla");
+                int nuevoCap = GymLevelCapService.nivelMaximo(jugador.getUuid());
+                jugador.sendMessage(Text.literal(
+                        "§a§l¡NUEVO LÍMITE DE NIVEL! §r§7Ahora puedes utilizar y entrenar Pokémon hasta el §eNv. " + nuevoCap + "§7."), false);
             }
             // ⚠⚠ EL ESTADO NO ES DE QUIEN LO MIRA, y aquí es literal: la ficha
             //    del PokePad la dibuja el cliente con lo que le mandaron la
@@ -567,17 +593,17 @@ public final class Combate {
         //    por combate en el registro de rctapi, y ese registro es un mapa que
         //    no se vacía solo: sin esta línea crecería con cada reto del
         //    servidor, para siempre, sin dar ningún error.
-        //    Va aquí porque este método es el ÚNICO embudo de los tres caminos
-        //    --ganar, perder y desconectarse--, que es justo la lista de tres
-        //    que ya tienen las ranuras.
         Adaptador.soltar(jugador.getUuid());
-        if (servidor != null && cual != null) {
-            var g = Gimnasio.de(cual);
-            if (g != null) {
-                int r = Ranuras.ranuraDe(g, jugador.getUuid());
-                if (r > 0) {
-                    Lideres.quitarDeArena(servidor, g, r);
-                }
+
+        // Identificar gimnasio y ranura antes de soltarla en Ranuras
+        var asig = Ranuras.asignacionDe(jugador.getUuid());
+        String gymId = (cual != null) ? cual : (asig != null ? asig.gymId() : null);
+        int r = (asig != null) ? asig.ranura() : (gymId != null ? Ranuras.ranuraDe(Gimnasio.de(gymId), jugador.getUuid()) : -1);
+
+        if (servidor != null && gymId != null) {
+            var g = Gimnasio.de(gymId);
+            if (g != null && r >= 0) {
+                Lideres.quitarDeArena(servidor, g, r);
             }
         }
         Ranuras.soltar(jugador.getUuid());

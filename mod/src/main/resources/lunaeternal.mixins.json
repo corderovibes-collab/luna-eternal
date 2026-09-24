@@ -4,7 +4,15 @@
   "package": "net.pokereport.luna.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "MixinRastreadorEntidades"
+    "MixinRastreadorEntidades",
+    "MixinArmorSlot",
+    "MixinRankEquipment",
+    "PlayerSaveInvoker",
+    "StoreManagerAccessor",
+    "FileStoreAccessor",
+    "FaunaSpawnMixin",
+    "MixinLeyendaDeath",
+    "LobbyNetworkGuardMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -58,6 +58,13 @@ dependencies {
     modCompileOnly "maven.modrinth:rctapi:${project.rctapi_version}"
     modCompileOnly "maven.modrinth:rctmod:${project.rctmod_version}"
 
+    // Reproductor multimedia del cliente. El JAR y sus binarios se descargan
+    // desde Modrinth por el launcher; aqui solo hace falta su API al compilar.
+    modCompileOnly "maven.modrinth:watermedia:FdCZ5Rxq"
+
+    // Cobblemon Battle Extras: API cliente para reparar tooltips y efectividad de combate
+    modCompileOnly files("${rootDir}/../build/cobblemon-battle-extras-fabric-1.13.45.jar")
+
     // Cobblemon esta escrito en Kotlin y sus firmas usan tipos de Kotlin
     // (Function1). Sin el stdlib, el compilador de Java no puede resolver
     // que sobrecarga de subscribe() estamos llamando.
@@ -77,6 +84,14 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // FontLoadingTest verifica recursos del cliente, separados por Loom de los del servidor.
+    dependsOn tasks.named('processClientResources')
+    classpath += files(sourceSets.client.output.resourcesDir)
+    classpath += sourceSets.main.compileClasspath
+}
+
+tasks.named('compileTestJava') {
+    classpath += sourceSets.main.compileClasspath
 }
 
 processResources {

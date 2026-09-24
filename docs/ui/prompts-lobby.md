@@ -44,7 +44,7 @@ separados** dan una construcción legible.
 ```
 huella      ~24 x 24 bloques      cabe holgado alrededor de la plataforma 9x9
 alto         16 bloques           --alto 16, que es el defecto del script
-llegada      43.998 / 72 / 47.97  mirando al OESTE (yaw 90)
+llegada      40.23 / 72 / 48      mirando al OESTE (yaw 90)
 suelo        y = 71               la casilla de debajo de los pies
 ```
 

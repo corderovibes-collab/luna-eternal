@@ -124,10 +124,10 @@ public final class Trajes {
             "rightLeg", new float[] {-1.9f, 12, 0},
             "leftLeg", new float[] {1.9f, 12, 0});
 
-    private record Pieza(String hueso, String ancla, ModelPart parte,
+    public record Pieza(String piezaTipo, String hueso, String ancla, ModelPart parte,
                          Identifier textura, boolean brillo) {}
 
-    private record Modelo(List<Pieza> piezas) {}
+    private record Modelo(List<Pieza> piezas, Map<String, float[]> encuadres) {}
 
     // ---- lo que dice el servidor -------------------------------------------
 
@@ -190,7 +190,7 @@ public final class Trajes {
                             "textures/armor/" + id + "/" + id + "_" + pieza + ".png");
                 boolean brillo = desc.has("glint")
                         && desc.get("glint").getAsBoolean();
-                piezas.addAll(desdeGeo(geo.getAsJsonArray("bones"), ancho, alto,
+                piezas.addAll(desdeGeo(pieza, geo.getAsJsonArray("bones"), ancho, alto,
                         textura, brillo));
             } catch (Exception e) {
                 LunaEternal.LOG.error("No se pudo leer el traje {} ({})", id, pieza, e);
@@ -207,7 +207,7 @@ public final class Trajes {
         } else {
             LunaEternal.LOG.info("Traje {}: {} huesos horneados", id, piezas.size());
         }
-        return new Modelo(piezas);
+        return new Modelo(piezas, new HashMap<>());
     }
 
     /**
@@ -241,7 +241,7 @@ public final class Trajes {
      * invierte el sentido de dos de los tres ejes:
      * {@code pitch = -rx}, {@code yaw = +ry}, {@code roll = -rz}.
      */
-    private static List<Pieza> desdeGeo(JsonArray huesos, int ancho, int alto,
+    private static List<Pieza> desdeGeo(String piezaTipo, JsonArray huesos, int ancho, int alto,
                                         Identifier textura, boolean brillo) {
         var porNombre = new LinkedHashMap<String, JsonObject>();
         var hijosDe = new LinkedHashMap<String, List<JsonObject>>();
@@ -283,7 +283,7 @@ public final class Trajes {
 
             var parte = TexturedModelData.of(datos, ancho, alto)
                     .createModel().getChild(par[0]);
-            salida.add(new Pieza(par[0], ancla, parte, textura, brillo));
+            salida.add(new Pieza(piezaTipo, par[0], ancla, parte, textura, brillo));
         }
         return salida;
     }
@@ -379,6 +379,123 @@ public final class Trajes {
         return new float[] {a.get(0).getAsFloat(), a.get(1).getAsFloat()};
     }
 
+    public static void renderizarPieza(MatrixStack m, VertexConsumerProvider vc, int luz,
+                                       String suitId, net.minecraft.entity.EquipmentSlot slot,
+                                       net.minecraft.client.render.entity.model.BipedEntityModel<?> contextModel,
+                                       boolean glint) {
+        if (suitId == null || suitId.isEmpty()) return;
+        var modelo = modelo(suitId);
+        if (modelo.piezas().isEmpty()) return;
+
+        String tipoEsperado = switch (slot) {
+            case HEAD -> "head";
+            case CHEST -> "body";
+            case LEGS -> "legs";
+            case FEET -> "boots";
+            default -> null;
+        };
+        if (tipoEsperado == null) return;
+
+        for (Pieza p : modelo.piezas()) {
+            if (!tipoEsperado.equals(p.piezaTipo())) continue;
+            switch (p.ancla()) {
+                case "head" -> p.parte().copyTransform(contextModel.head);
+                case "body" -> p.parte().copyTransform(contextModel.body);
+                case "rightArm" -> p.parte().copyTransform(contextModel.rightArm);
+                case "leftArm" -> p.parte().copyTransform(contextModel.leftArm);
+                case "rightLeg" -> p.parte().copyTransform(contextModel.rightLeg);
+                case "leftLeg" -> p.parte().copyTransform(contextModel.leftLeg);
+                default -> { }
+            }
+            var capa = RenderLayer.getEntityCutoutNoCull(p.textura());
+            p.parte().render(m, vc.getBuffer(capa), luz, OverlayTexture.DEFAULT_UV);
+            if (p.brillo() || glint) {
+                p.parte().render(m, vc.getBuffer(RenderLayer.getArmorEntityGlint()), luz, OverlayTexture.DEFAULT_UV);
+            }
+        }
+    }
+
+    public static void renderizarItemModel(MatrixStack m, VertexConsumerProvider vc, int luz,
+                                           String suitId, String piezaTipo,
+                                           net.minecraft.client.render.model.json.ModelTransformationMode mode,
+                                           boolean glint) {
+        if (suitId == null || suitId.isEmpty() || piezaTipo == null) return;
+        var modelo = modelo(suitId);
+        if (modelo.piezas().isEmpty()) return;
+
+        boolean isGui = (mode == net.minecraft.client.render.model.json.ModelTransformationMode.GUI);
+        for (Pieza p : modelo.piezas()) {
+            if (!piezaTipo.equals(p.piezaTipo())) continue;
+            p.parte().resetTransform();
+        }
+
+        float[] encuadre = modelo.encuadres().computeIfAbsent(piezaTipo + isGui,
+                clave -> encuadreItem(modelo, piezaTipo, isGui));
+        m.push();
+        m.translate(0.5f, 0.5f, 0.5f);
+        m.scale(encuadre[3], encuadre[3], encuadre[3]);
+        m.translate(-encuadre[0], -encuadre[1], -encuadre[2]);
+        orientarItem(m, isGui);
+
+        for (Pieza p : modelo.piezas()) {
+            if (!piezaTipo.equals(p.piezaTipo())) continue;
+            var capa = RenderLayer.getEntityCutoutNoCull(p.textura());
+            p.parte().render(m, vc.getBuffer(capa), luz, OverlayTexture.DEFAULT_UV);
+            if (p.brillo() || glint) {
+                var glintLayer = isGui ? RenderLayer.getGlint() : RenderLayer.getArmorEntityGlint();
+                p.parte().render(m, vc.getBuffer(glintLayer), luz, OverlayTexture.DEFAULT_UV);
+            }
+        }
+
+        m.pop();
+    }
+
+    private static void orientarItem(MatrixStack m, boolean gui) {
+        // La inversión Z de ModelPart ya coloca el frente hacia la cámara.
+        m.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_Y.rotationDegrees(gui ? -30f : 0f));
+        if (gui) m.multiply(net.minecraft.util.math.RotationAxis.POSITIVE_X.rotationDegrees(14f));
+        m.scale(1f, -1f, -1f);
+    }
+
+    /** Encuadra todos los cubos, incluidos hijos girados, alas, coronas y aros. */
+    private static float[] encuadreItem(Modelo modelo, String tipo, boolean gui) {
+        float[] min = {Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY};
+        float[] max = {Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY};
+        var matrices = new MatrixStack();
+        orientarItem(matrices, gui);
+        for (Pieza p : modelo.piezas()) {
+            if (!tipo.equals(p.piezaTipo())) continue;
+            p.parte().forEachCuboid(matrices, (entrada, ruta, indice, cubo) -> {
+                float cMinY = cubo.minY;
+                float cMaxY = cubo.maxY;
+                if ("boots".equals(tipo)) {
+                    // En Bedrock/Java las botas usan el cubo de pierna (12 de alto), pero
+                    // la textura solo ocupa los 5.5 px inferiores (Java Y=18.5..24).
+                    // Clampar cMinY centra y escala las botas en su contenido visible.
+                    cMinY = Math.max(cMinY, cMaxY - 5.5f);
+                }
+                for (int esquina = 0; esquina < 8; esquina++) {
+                    // ModelPart ya divide sus coordenadas entre 16 al dibujar.
+                    var v = new org.joml.Vector3f(
+                            ((esquina & 1) == 0 ? cubo.minX : cubo.maxX) / 16f,
+                            ((esquina & 2) == 0 ? cMinY : cMaxY) / 16f,
+                            ((esquina & 4) == 0 ? cubo.minZ : cubo.maxZ) / 16f);
+                    entrada.getPositionMatrix().transformPosition(v);
+                    for (int eje = 0; eje < 3; eje++) {
+                        min[eje] = Math.min(min[eje], v.get(eje));
+                        max[eje] = Math.max(max[eje], v.get(eje));
+                    }
+                }
+            });
+        }
+        if (!Float.isFinite(min[0])) {
+            throw new IllegalStateException("El traje no contiene geometría para " + tipo);
+        }
+        float dimension = Math.max(max[0] - min[0], Math.max(max[1] - min[1], max[2] - min[2]));
+        return new float[] {(min[0] + max[0]) / 2f, (min[1] + max[1]) / 2f,
+                (min[2] + max[2]) / 2f, 0.85f / Math.max(dimension, 0.01f)};
+    }
+
     // ---- dibujado -----------------------------------------------------------
 
     public static void registrarDibujado() {
@@ -439,15 +556,10 @@ public final class Trajes {
                 //   tiene zonas transparentes (lo que no ocupa ningún cubo), y
                 //   con la capa sólida saldrían como cuadros negros.
                 var capa = RenderLayer.getEntityCutoutNoCull(p.textura());
-                // ⚠ «Encantada al 1» es el BRILLO y solo el brillo: un traje no
-                //   es un objeto y no protege (D-007, D-014). Se vende
-                //   identidad, no poder.
-                var vertices = p.brillo()
-                        ? net.minecraft.client.render.VertexConsumers.union(
-                            vc.getBuffer(RenderLayer.getArmorEntityGlint()),
-                            vc.getBuffer(capa))
-                        : vc.getBuffer(capa);
-                p.parte().render(m, vertices, luz, OverlayTexture.DEFAULT_UV);
+                p.parte().render(m, vc.getBuffer(capa), luz, OverlayTexture.DEFAULT_UV);
+                if (p.brillo()) {
+                    p.parte().render(m, vc.getBuffer(RenderLayer.getArmorEntityGlint()), luz, OverlayTexture.DEFAULT_UV);
+                }
             }
         }
     }

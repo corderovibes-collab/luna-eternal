@@ -84,7 +84,7 @@ public final class Puerta {
      * que «no abren», que es el sintoma que mas veces ha despistado en este
      * proyecto.
      */
-    public static final int PROTOCOLO = 1;
+    public static final int PROTOCOLO = 3;
 
     /**
      * &#9888;&#9888;&#9888; LA PUERTA NACE APAGADA, Y ESO NO ES PRUDENCIA: SIN
@@ -132,7 +132,7 @@ public final class Puerta {
         }
         activa = valor;
         LunaEternal.LOG.info("Puerta: {}", valor
-                ? "ACTIVA (los jugadores nuevos empiezan en el lobby)"
+                ? "ACTIVA (todas las conexiones empiezan en el lobby)"
                 : "apagada (nadie pasa por el lobby todavia)");
     }
 
@@ -154,6 +154,12 @@ public final class Puerta {
 
     /** Que protocolo dijo tener cada cliente. Sin entrada = no ha saludado. */
     private static final Map<UUID, Integer> SALUDOS = new ConcurrentHashMap<>();
+
+    /** Ultimo reintento del saludo mientras EasyAuth mantiene al jugador cerrado. */
+    private static final Map<UUID, Long> REINTENTOS_SALUDO = new ConcurrentHashMap<>();
+
+    /** Cinco segundos: suficiente tras /login y sin producir trafico por tick. */
+    private static final long CADA_SALUDO_MS = 5_000L;
 
     /** Por que no se puede pasar. {@code null} en {@link Veredicto#pasa}. */
     public enum Fallo {
@@ -185,6 +191,7 @@ public final class Puerta {
 
     public static void olvidar(UUID uuid) {
         SALUDOS.remove(uuid);
+        REINTENTOS_SALUDO.remove(uuid);
     }
 
     /**
@@ -264,16 +271,22 @@ public final class Puerta {
         if (svc == null || !activa) {
             return;
         }
-        Boolean cruzada = svc.cruzadaEnCache(jugador.getUuid());
-        if (cruzada == null || cruzada) {
+        Boolean lista = svc.sesionLista(jugador.getUuid());
+        if (lista == null || lista) {
             return;
         }
+        LunaEternal.LOG.info("PLAYER_CONNECT jugador={} ruta=LOBBY sesion=nueva",
+                jugador.getGameProfile().getName());
         if (enElLobby(jugador)) {
             bienvenida(jugador);
+            LunaEternal.LOG.info("LOBBY_READY jugador={} auth=pendiente cliente=pendiente",
+                    jugador.getGameProfile().getName());
             return;
         }
         TravelService.travel(jugador, LunaDimensions.LOBBY, "el Lobby");
         bienvenida(jugador);
+        LunaEternal.LOG.info("LOBBY_READY jugador={} auth=pendiente cliente=pendiente",
+                jugador.getGameProfile().getName());
     }
 
     /**
@@ -288,7 +301,7 @@ public final class Puerta {
         jugador.sendMessage(Text.literal(
                 "§6§lPOKEREPORT §8» §fBienvenido. Estas en el §eLobby§f."), false);
         jugador.sendMessage(Text.literal(
-                "§71. Registrate con §e/register <clave> <clave>§7."), false);
+                "§71. Usa §e/login§7 o §e/register§7, segun corresponda."), false);
         jugador.sendMessage(Text.literal(
                 "§72. Habla con el §bguardian§7 para entrar al mundo. §8(")
                 .append(net.pokereport.luna.ui.Iconos.clicDerecho())
@@ -332,8 +345,8 @@ public final class Puerta {
         if (svc == null || !activa) {
             return true;
         }
-        Boolean cruzada = svc.cruzadaEnCache(jugador.getUuid());
-        if (cruzada == null || cruzada) {
+        Boolean lista = svc.sesionLista(jugador.getUuid());
+        if (Boolean.TRUE.equals(lista)) {
             return true;
         }
         // Entrar al lobby si; salir de el, no.
@@ -378,14 +391,18 @@ public final class Puerta {
         }
         boolean hayEncerrados = false;
         for (ServerPlayerEntity j : servidor.getPlayerManager().getPlayerList()) {
-            Boolean cruzada = svc.cruzadaEnCache(j.getUuid());
-            // ⚠ `null` es «aun no lo se» y se deja en paz: mover a un veterano
-            //   porque su consulta iba lenta es el error caro.
-            if (cruzada == null || cruzada) {
+            Boolean lista = svc.sesionLista(j.getUuid());
+            if (Boolean.TRUE.equals(lista)) {
+                continue;
+            }
+            // Antes de que termine la carga no se permite salir, pero tampoco se
+            // teletransporta desde el callback de conexion.
+            if (lista == null) {
                 continue;
             }
             if (enElLobby(j)) {
                 hayEncerrados = true;
+                reintentarSaludo(j);
                 continue;
             }
             TravelService.travel(j, LunaDimensions.LOBBY, "el Lobby");
@@ -393,6 +410,24 @@ public final class Puerta {
         if (hayEncerrados) {
             comprobarGuardian(servidor);
         }
+    }
+
+    /**
+     * EasyAuth puede bloquear el primer paquete C2S antes del login. El servidor
+     * vuelve a pedir el saludo con un limite estricto hasta recibirlo; despues
+     * no se manda ningun paquete periodico.
+     */
+    private static void reintentarSaludo(ServerPlayerEntity jugador) {
+        if (SALUDOS.containsKey(jugador.getUuid())) {
+            return;
+        }
+        long ahora = System.currentTimeMillis();
+        Long ultimo = REINTENTOS_SALUDO.get(jugador.getUuid());
+        if (ultimo != null && ahora - ultimo < CADA_SALUDO_MS) {
+            return;
+        }
+        REINTENTOS_SALUDO.put(jugador.getUuid(), ahora);
+        net.pokereport.luna.net.Red.enviarPuerta(jugador);
     }
 
     /** Cada cuanto se comprueba que el guardian sigue ahi, en milisegundos. */
@@ -511,11 +546,23 @@ public final class Puerta {
      * @return {@code true} si cruzo
      */
     public static boolean cruzar(ServerPlayerEntity jugador) {
+        LunaEternal.LOG.info("CITY_ENTRY_REQUEST jugador={}",
+                jugador.getGameProfile().getName());
+        // EasyAuth bloquea la interaccion con entidades antes de autenticar.
+        // Llegar a este callback es, por tanto, evidencia server-side de auth.
+        LunaEternal.LOG.info("AUTH_SUCCESS jugador={} evidencia=entity_interaction",
+                jugador.getGameProfile().getName());
         Veredicto v = veredicto(jugador);
         if (!v.pasa()) {
+            LunaEternal.LOG.warn("CLIENT_REJECTED jugador={} causa={}",
+                    jugador.getGameProfile().getName(), v.fallo());
             negar(jugador, v.fallo());
             return false;
         }
+        LunaEternal.LOG.info("CLIENT_VALIDATED jugador={} protocolo={}",
+                jugador.getGameProfile().getName(), PROTOCOLO);
+        LunaEternal.LOG.info("LOBBY_READY jugador={} auth=ok cliente=ok",
+                jugador.getGameProfile().getName());
         var svc = LunaEternal.puerta();
         var perfil = jugador.getGameProfile();
         var server = jugador.getServer();
@@ -535,7 +582,22 @@ public final class Puerta {
                 if (jugador.isRemoved()) {
                     return;
                 }
-                TravelService.travel(jugador, LunaDimensions.CIUDADELA, "la Ciudadela");
+                LunaEternal.LOG.info("TRANSFER_STARTED jugador={} destino={}",
+                        perfil.getName(), LunaDimensions.CIUDADELA.getValue());
+                boolean movido = TravelService.travel(
+                        jugador, LunaDimensions.CIUDADELA, "la Ciudadela");
+                if (!movido) {
+                    svc.reiniciarSesion(perfil.getId());
+                    jugador.sendMessage(Text.literal(
+                            "§cLa Ciudadela no esta disponible. Sigues seguro en el Lobby."),
+                            false);
+                    LunaEternal.LOG.error("TRANSFER_FAILED jugador={} destino={}",
+                            perfil.getName(), LunaDimensions.CIUDADELA.getValue());
+                    return;
+                }
+                LunaEternal.LOG.info("CITY_SPAWN_APPLIED jugador={} destino={}",
+                        perfil.getName(), LunaDimensions.CIUDADELA.getValue());
+                BienvenidaOak.darSiFalta(jugador);
                 net.pokereport.luna.net.Red.enviarPuerta(jugador);
             });
         });

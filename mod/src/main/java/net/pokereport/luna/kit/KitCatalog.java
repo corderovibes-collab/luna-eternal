@@ -11,6 +11,7 @@ import net.pokereport.luna.LunaEternal;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,6 +31,9 @@ import java.util.Map;
  */
 public final class KitCatalog {
 
+    /** Precio fijo e inmutable obligatorio para cualquier kit de categoría exclusiva. */
+    public static final long PRECIO_KIT_EXCLUSIVO = 2000L;
+
     /**
      * Un objeto de un kit.
      *
@@ -40,14 +44,47 @@ public final class KitCatalog {
      * mal escrito.
      */
     public record KitItem(Item item, int count, long unitValue,
-                          Map<Identifier, Integer> encantamientos) {
+                          Map<Identifier, Integer> encantamientos, String calidadSobre) {
+        public KitItem(Item item, int count, long unitValue, Map<Identifier, Integer> encantamientos) {
+            this(item, count, unitValue, encantamientos, null);
+        }
+
+        public net.minecraft.item.ItemStack pilaBase() {
+            if (calidadSobre == null) return new net.minecraft.item.ItemStack(item, count);
+            var sobre = net.pokereport.luna.cards.CartasService.Sobre.valueOf(calidadSobre);
+            var pila = net.pokereport.luna.cards.CartasService.sobreDe(sobre);
+            pila.setCount(count);
+            return pila;
+        }
+
         public long totalValue() { return count * unitValue; }
     }
 
     public record Kit(String id, String name, Item icon, String description,
                       String category, long lunaPrice,
                       int cooldownHours, boolean once, String requiredRank,
-                      List<KitItem> items) {
+                      List<KitItem> items,
+                      boolean enabled, Instant availableFrom, Instant availableUntil,
+                      int purchaseLimit) {
+
+        public Kit(String id, String name, Item icon, String description,
+                   String category, long lunaPrice,
+                   int cooldownHours, boolean once, String requiredRank,
+                   List<KitItem> items) {
+            this(id, name, icon, description, category, lunaPrice, cooldownHours, once, requiredRank, items,
+                 true, null, null, 1);
+        }
+
+        public boolean isAvailable() {
+            return isAvailable(Instant.now());
+        }
+
+        public boolean isAvailable(Instant now) {
+            if (!enabled) return false;
+            if (availableFrom != null && now.isBefore(availableFrom)) return false;
+            if (availableUntil != null && now.isAfter(availableUntil)) return false;
+            return true;
+        }
 
         public long value() {
             return items.stream().mapToLong(KitItem::totalValue).sum();
@@ -63,7 +100,7 @@ public final class KitCatalog {
     private final List<Kit> kits;
     private final long maxDailyValue;
 
-    private KitCatalog(List<Kit> kits, long maxDailyValue) {
+    public KitCatalog(List<Kit> kits, long maxDailyValue) {
         this.kits = kits;
         this.maxDailyValue = maxDailyValue;
     }
@@ -111,11 +148,28 @@ public final class KitCatalog {
                             ench.put(id, en.getValue().getAsInt());
                         }
                     }
+                    String calidad = o.has("cardPackQuality") ? o.get("cardPackQuality").getAsString() : null;
+                    if (calidad != null) {
+                        net.pokereport.luna.cards.CartasService.Sobre.valueOf(calidad);
+                        if (!"cobblemon-cards:booster_pack".equals(o.get("item").getAsString()))
+                            throw new IllegalArgumentException("cardPackQuality requiere un sobre de cartas");
+                    }
                     items.add(new KitItem(item, o.get("count").getAsInt(),
                                           o.get("value").getAsLong(),
-                                          Map.copyOf(ench)));
+                                          Map.copyOf(ench), calidad));
                 }
                 if (items.isEmpty()) continue;
+
+                boolean enabled = !k.has("enabled") || k.get("enabled").getAsBoolean();
+                Instant availableFrom = null;
+                if (k.has("availableFrom") && !k.get("availableFrom").isJsonNull()) {
+                    availableFrom = Instant.parse(k.get("availableFrom").getAsString());
+                }
+                Instant availableUntil = null;
+                if (k.has("availableUntil") && !k.get("availableUntil").isJsonNull()) {
+                    availableUntil = Instant.parse(k.get("availableUntil").getAsString());
+                }
+                int purchaseLimit = k.has("purchaseLimit") ? k.get("purchaseLimit").getAsInt() : 1;
 
                 kits.add(new Kit(
                     k.get("id").getAsString(),
@@ -127,7 +181,11 @@ public final class KitCatalog {
                     k.get("cooldownHours").getAsInt(),
                     k.has("once") && k.get("once").getAsBoolean(),
                     k.has("requiredRank") ? k.get("requiredRank").getAsString() : null,
-                    List.copyOf(items)));
+                    List.copyOf(items),
+                    enabled,
+                    availableFrom,
+                    availableUntil,
+                    purchaseLimit));
             }
 
             KitCatalog catalog = new KitCatalog(List.copyOf(kits), maxDaily);
@@ -142,7 +200,7 @@ public final class KitCatalog {
         }
     }
 
-    /** Comprueba que ningún kit periódico se pasa del tope diario. */
+    /** Comprueba que ningún kit periódico se pasa del tope diario y kits exclusivos cumplen precio y compra única. */
     public void validate() {
         List<String> problemas = new ArrayList<>();
 
@@ -150,8 +208,13 @@ public final class KitCatalog {
             if (!(k.category().equals("rank") || k.category().equals("exclusive"))) {
                 problemas.add(k.id() + ": categoria desconocida");
             }
-            if (k.category().equals("exclusive") && (!k.once() || k.lunaPrice() <= 0)) {
-                problemas.add(k.id() + ": exclusivo sin compra unica o precio valido");
+            if (k.category().equals("exclusive")) {
+                if (!k.once()) {
+                    problemas.add(k.id() + ": kit exclusivo debe tener compra única (once=true)");
+                }
+                if (k.lunaPrice() != PRECIO_KIT_EXCLUSIVO) {
+                    problemas.add(k.id() + ": kit exclusivo debe costar exactamente " + PRECIO_KIT_EXCLUSIVO + " LunaCoins (tiene " + k.lunaPrice() + ")");
+                }
             }
             if (k.cooldownHours() < 0) {
                 problemas.add(k.id() + ": cooldown negativo");

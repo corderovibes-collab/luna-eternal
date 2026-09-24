@@ -143,7 +143,7 @@ public class MochilaScreen extends HandledScreen<MochilaHandler> {
             // ⚠ La etiqueta del rango YA lleva su color en códigos §, así que
             //   se pasa como literal y Minecraft la pinta. Ponerle un color
             //   encima la dejaría toda de un tono.
-            lineas.add(Text.literal(rango.tag));
+            lineas.add(rango.conNombre());
             ctx.drawTooltip(textRenderer, lineas, mx, my);
             return;
         }

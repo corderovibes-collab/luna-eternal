@@ -40,6 +40,7 @@ public final class Modulos {
     private static boolean buscado;
     private static Object gestor;
     private static Method getStone;
+    private static Method getStoneType;
 
     private Modulos() {}
 
@@ -59,6 +60,9 @@ public final class Modulos {
             Class<?> c = Class.forName("com.f0cus.protectionstones.CBItemManager");
             gestor = c.getField("INSTANCE").get(null);
             getStone = c.getMethod("getStone", String.class);
+            try {
+                getStoneType = c.getMethod("getStoneType", ItemStack.class);
+            } catch (NoSuchMethodException ignored) {}
             LunaEternal.LOG.info("Protecciones: ClaimBlocks encontrado, la tienda "
                     + "puede entregar módulos");
         } catch (ReflectiveOperationException | RuntimeException e) {
@@ -87,7 +91,19 @@ public final class Modulos {
             return false;
         }
         var datos = pila.get(net.minecraft.component.DataComponentTypes.CUSTOM_DATA);
-        return datos != null && datos.contains(CLAVE);
+        if (datos != null && datos.contains(CLAVE)) {
+            return true;
+        }
+        localizar();
+        if (getStoneType != null && gestor != null) {
+            try {
+                Object r = getStoneType.invoke(gestor, pila);
+                if (r instanceof String s && !s.isEmpty()) {
+                    return true;
+                }
+            } catch (Exception ignored) {}
+        }
+        return false;
     }
 
     /** ¿Se puede entregar algo de ese proveedor? */

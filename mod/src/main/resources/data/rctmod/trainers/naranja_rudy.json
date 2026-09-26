@@ -1,0 +1,99 @@
+{
+  "name": {
+    "literal": "Rudy"
+  },
+  "ai": {
+    "type": "rct",
+    "data": {
+      "moveBias": 1,
+      "switchBias": 0.6,
+      "statMoveBias": 1,
+      "itemBias": 0.9,
+      "maxSelectMargin": 0.1
+    }
+  },
+  "battleRules": {
+    "maxItemUses": 3
+  },
+  "bag": [
+    {
+      "item": "cobblemon:full_restore",
+      "quantity": 3
+    }
+  ],
+  "team": [
+    {
+      "species": "raichu",
+      "level": 55,
+      "nature": "jolly",
+      "ability": "static",
+      "moveset": [
+        "thunderbolt",
+        "irontail",
+        "quickattack",
+        "thunderwave"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    },
+    {
+      "species": "magneton",
+      "level": 55,
+      "nature": "modest",
+      "ability": "magnetpull",
+      "moveset": [
+        "thunderbolt",
+        "flashcannon",
+        "thunderwave",
+        "lightscreen"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    },
+    {
+      "species": "electabuzz",
+      "level": 55,
+      "nature": "timid",
+      "ability": "static",
+      "moveset": [
+        "thunderbolt",
+        "thunderpunch",
+        "icepunch",
+        "psychic"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    }
+  ],
+  "battleFormat": "GEN_9_SINGLES"
+}

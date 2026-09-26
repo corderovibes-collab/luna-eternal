@@ -1,0 +1,171 @@
+{
+  "name": {
+    "literal": "Drake"
+  },
+  "ai": {
+    "type": "rct",
+    "data": {
+      "moveBias": 1,
+      "switchBias": 0.6,
+      "statMoveBias": 1,
+      "itemBias": 0.9,
+      "maxSelectMargin": 0.1
+    }
+  },
+  "battleRules": {
+    "maxItemUses": 3
+  },
+  "bag": [
+    {
+      "item": "cobblemon:full_restore",
+      "quantity": 3
+    }
+  ],
+  "team": [
+    {
+      "species": "onix",
+      "level": 62,
+      "nature": "impish",
+      "ability": "rockhead",
+      "moveset": [
+        "rockslide",
+        "earthquake",
+        "irontail",
+        "dragonbreath"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    },
+    {
+      "species": "gengar",
+      "level": 62,
+      "nature": "timid",
+      "ability": "cursedbody",
+      "moveset": [
+        "shadowball",
+        "sludgebomb",
+        "thunderbolt",
+        "hypnosis"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    },
+    {
+      "species": "venusaur",
+      "level": 62,
+      "nature": "bold",
+      "ability": "overgrow",
+      "moveset": [
+        "gigadrain",
+        "sludgebomb",
+        "sleeppowder",
+        "synthesis"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    },
+    {
+      "species": "electabuzz",
+      "level": 62,
+      "nature": "timid",
+      "ability": "static",
+      "moveset": [
+        "thunderbolt",
+        "thunderpunch",
+        "icepunch",
+        "psychic"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    },
+    {
+      "species": "machamp",
+      "level": 62,
+      "nature": "adamant",
+      "ability": "guts",
+      "moveset": [
+        "crosschop",
+        "earthquake",
+        "rockslide",
+        "bulkup"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    },
+    {
+      "species": "dragonite",
+      "level": 62,
+      "nature": "adamant",
+      "ability": "innerfocus",
+      "moveset": [
+        "outrage",
+        "dragondance",
+        "firepunch",
+        "extremespeed"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    }
+  ],
+  "battleFormat": "GEN_9_SINGLES"
+}

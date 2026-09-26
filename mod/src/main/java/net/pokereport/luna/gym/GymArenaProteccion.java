@@ -37,7 +37,8 @@ public final class GymArenaProteccion {
         var key = mundo.getRegistryKey();
         return LunaDimensions.GIMNASIOS.equals(key)
                 || LunaDimensions.TORRE.equals(key)
-                || LunaDimensions.LOBBY.equals(key);
+                || LunaDimensions.LOBBY.equals(key)
+                || LunaDimensions.ISLAS_NARANJA.equals(key);
     }
 
     public static void registrar() {
@@ -82,7 +83,7 @@ public final class GymArenaProteccion {
             BlockPos pos = golpe.getBlockPos();
             if (esZonaProtegida(mundo, pos)) {
                 var stack = sp.getStackInHand(mano);
-                if (stack.getItem() instanceof BlockItem) {
+                if (esItemPeligroso(stack.getItem())) {
                     avisar(sp);
                     return ActionResult.FAIL;
                 }
@@ -97,7 +98,7 @@ public final class GymArenaProteccion {
             return ActionResult.PASS;
         });
 
-        // 3. Prohibir colocar bloques en el aire dentro de la arena
+        // 3. Prohibir colocar bloques o usar items peligrosos en el aire dentro de la arena
         UseItemCallback.EVENT.register((jugador, mundo, mano) -> {
             if (mundo.isClient() || !(jugador instanceof ServerPlayerEntity sp)) {
                 return TypedActionResult.pass(jugador.getStackInHand(mano));
@@ -107,7 +108,7 @@ public final class GymArenaProteccion {
             }
             if (esZonaProtegida(mundo, sp.getBlockPos())) {
                 var stack = sp.getStackInHand(mano);
-                if (stack.getItem() instanceof BlockItem) {
+                if (esItemPeligroso(stack.getItem())) {
                     avisar(sp);
                     return TypedActionResult.fail(stack);
                 }
@@ -116,6 +117,16 @@ public final class GymArenaProteccion {
         });
 
         LunaEternal.LOG.info("Gimnasios: protección de bloques activa en arenas y zonas reservadas");
+    }
+
+    private static boolean esItemPeligroso(net.minecraft.item.Item item) {
+        return item instanceof BlockItem
+                || item instanceof net.minecraft.item.BucketItem
+                || item instanceof net.minecraft.item.BoatItem
+                || item instanceof net.minecraft.item.MinecartItem
+                || item instanceof net.minecraft.item.FlintAndSteelItem
+                || item instanceof net.minecraft.item.SpawnEggItem
+                || item instanceof net.minecraft.item.EndCrystalItem;
     }
 
     private static void avisar(ServerPlayerEntity sp) {

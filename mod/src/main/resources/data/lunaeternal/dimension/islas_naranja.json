@@ -1,0 +1,30 @@
+{
+  "type": "lunaeternal:islas_naranja",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "layers": [
+        {
+          "block": "minecraft:bedrock",
+          "height": 1
+        },
+        {
+          "block": "minecraft:deepslate",
+          "height": 63
+        },
+        {
+          "block": "minecraft:sand",
+          "height": 5
+        },
+        {
+          "block": "minecraft:water",
+          "height": 59
+        }
+      ],
+      "biome": "minecraft:warm_ocean",
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

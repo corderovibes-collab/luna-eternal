@@ -30,14 +30,49 @@ public final class FaunaControl {
         return LunaDimensions.HOGAR.equals(dim) || LunaDimensions.SALVAJES.contains(dim);
     }
 
+    public static boolean esGymOTorre(net.minecraft.registry.RegistryKey<net.minecraft.world.World> dim) {
+        return LunaDimensions.GIMNASIOS.equals(dim)
+                || LunaDimensions.ISLAS_NARANJA.equals(dim)
+                || LunaDimensions.TORRE.equals(dim);
+    }
+
+    public static boolean esPokemonDeBatalla(com.cobblemon.mod.common.entity.pokemon.PokemonEntity pe) {
+        if (pe == null) return false;
+        if (pe.getBattleId() != null || pe.isBattling() || pe.isBattleClone()) return true;
+        var p = pe.getPokemon();
+        return p != null && p.isBattleClone();
+    }
+
     public static boolean bloquear(Entity e) {
+        for (String tag : e.getCommandTags()) {
+            if (tag.startsWith("luna_") || tag.equals("custom_npc")) {
+                return false;
+            }
+        }
         if (e instanceof com.cobblemon.mod.common.entity.pokemon.PokemonEntity pe) {
             var p = pe.getPokemon();
+            if (Decorativos.esDecorativo(p)) {
+                return false;
+            }
+            // ⚠⚠ CRÍTICO: Jamás bloquear Pokémon de combate (NPCs de gimnasio, rivales, clones)
+            if (esPokemonDeBatalla(pe)) {
+                if (esGymOTorre(e.getWorld().getRegistryKey())) {
+                    LunaEternal.LOG.info("[ERIKA-TRACE] FaunaControl.bloquear PERMITIDO: Pokémon de batalla {} (uuid={}, battleId={})",
+                            (p != null ? p.getSpecies().getName() : "desconocido"), pe.getUuid(), pe.getBattleId());
+                }
+                return false;
+            }
+            var dim = e.getWorld().getRegistryKey();
+            if (esGymOTorre(dim)) {
+                LunaEternal.LOG.info("[ERIKA-TRACE] FaunaControl.bloquear PERMITIDO: dimensión gimnasio/torre {} (pokemon={})",
+                        dim.getValue(), (p != null ? p.getSpecies().getName() : "desconocido"));
+                return false;
+            }
             if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {
-                var dim = e.getWorld().getRegistryKey();
                 if (esHogarOSalvaje(dim)) {
                     return !pokemonPermitido(p, dim.getValue().toString());
                 }
+                return true;
             }
             return false;
         }
@@ -53,13 +88,17 @@ public final class FaunaControl {
         com.cobblemon.mod.common.api.events.CobblemonEvents.POKEMON_ENTITY_SPAWN.subscribe(event -> {
             var pe = event.getEntity();
             if (pe == null) return;
+            if (esPokemonDeBatalla(pe)) return;
+            var dim = pe.getWorld().getRegistryKey();
+            if (esGymOTorre(dim)) return;
             var p = pe.getPokemon();
             if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {
-                var dim = pe.getWorld().getRegistryKey();
                 if (esHogarOSalvaje(dim)) {
                     if (!pokemonPermitido(p, dim.getValue().toString())) {
                         event.cancel();
                     }
+                } else {
+                    event.cancel();
                 }
             }
         });
@@ -78,10 +117,24 @@ public final class FaunaControl {
             }
         });
         ServerEntityEvents.ENTITY_LOAD.register((e,w) -> {
+            for (String tag : e.getCommandTags()) {
+                if (tag.startsWith("luna_") || tag.equals("custom_npc")) {
+                    return;
+                }
+            }
             if (e instanceof com.cobblemon.mod.common.entity.pokemon.PokemonEntity pe) {
                 var p = pe.getPokemon();
+                if (Decorativos.esDecorativo(p)) {
+                    return;
+                }
+                if (esPokemonDeBatalla(pe)) {
+                    return;
+                }
+                var dim = w.getRegistryKey();
+                if (esGymOTorre(dim)) {
+                    return;
+                }
                 if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {
-                    var dim = w.getRegistryKey();
                     if (esHogarOSalvaje(dim)) {
                         if (!pokemonPermitido(p, dim.getValue().toString())) {
                             pe.discard();
@@ -120,8 +173,22 @@ public final class FaunaControl {
 
             List<Entity> descartar = null;
             for (var entity : world.iterateEntities()) {
+                boolean protegido = false;
+                for (String tag : entity.getCommandTags()) {
+                    if (tag.startsWith("luna_") || tag.equals("custom_npc")) {
+                        protegido = true;
+                        break;
+                    }
+                }
+                if (protegido) continue;
                 if (entity instanceof com.cobblemon.mod.common.entity.pokemon.PokemonEntity pe) {
+                    if (esPokemonDeBatalla(pe)) {
+                        continue;
+                    }
                     var p = pe.getPokemon();
+                    if (Decorativos.esDecorativo(p)) {
+                        continue;
+                    }
                     if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {
                         int dex = p.getSpecies().getNationalPokedexNumber();
                         if (!pokemonPermitido(p, dim.getValue().toString())) {

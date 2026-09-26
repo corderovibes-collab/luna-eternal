@@ -70,6 +70,7 @@ public final class LunaDimensions {
      */
     public static final RegistryKey<World> GIMNASIOS = key("gimnasios");
     public static final RegistryKey<World> TORRE = key("torre");
+    public static final RegistryKey<World> ISLAS_NARANJA = key("islas_naranja");
 
     private LunaDimensions() {}
 

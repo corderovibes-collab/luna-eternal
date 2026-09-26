@@ -1,0 +1,75 @@
+{
+  "name": {
+    "literal": "Luana"
+  },
+  "ai": {
+    "type": "rct",
+    "data": {
+      "moveBias": 1,
+      "switchBias": 0.6,
+      "statMoveBias": 1,
+      "itemBias": 0.9,
+      "maxSelectMargin": 0.1
+    }
+  },
+  "battleRules": {
+    "maxItemUses": 3
+  },
+  "bag": [
+    {
+      "item": "cobblemon:full_restore",
+      "quantity": 3
+    }
+  ],
+  "team": [
+    {
+      "species": "alakazam",
+      "level": 58,
+      "nature": "timid",
+      "ability": "synchronize",
+      "moveset": [
+        "psychic",
+        "shadowball",
+        "focusblast",
+        "recover"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    },
+    {
+      "species": "marowak",
+      "level": 58,
+      "nature": "adamant",
+      "ability": "rockhead",
+      "moveset": [
+        "earthquake",
+        "bonemerang",
+        "rockslide",
+        "firepunch"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    }
+  ],
+  "battleFormat": "GEN_9_DOUBLES"
+}

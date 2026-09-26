@@ -125,7 +125,7 @@ final class TorreDoublesAI implements BattleAI {
 
         if (candidatos.isEmpty()) {
             LunaEternal.LOG.info("Torre: sin Pokemon disponibles para cambio en slot={}", activo.getPNX());
-            return new DefaultActionResponse();
+            return PassActionResponse.INSTANCE;
         }
 
         BattlePokemon elegido = null;

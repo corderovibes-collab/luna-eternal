@@ -63,6 +63,42 @@ public final class PuertaNpc {
     /** La especie por defecto. Se cambia por comando. */
     public static final String ESPECIE = "lugia";
 
+    /** Posición exacta del guardián en el Lobby. */
+    public static final Vec3d POSICION_DEFAULT = new Vec3d(23.966, 73.0, 47.924);
+
+    /** Mirando hacia el Este (+X), de cara al jugador que entra al lobby. */
+    public static final float GIRO_DEFAULT = -90.0f;
+
+    /**
+     * Asegura que el guardián exista en el lobby sin duplicados.
+     */
+    public static boolean asegurarGuardian(ServerWorld lobby) {
+        if (lobby == null) {
+            return false;
+        }
+        int cuantos = contar(lobby, POSICION_DEFAULT, 32.0);
+        if (cuantos > 1) {
+            quitarDuplicados(lobby, POSICION_DEFAULT, 32.0);
+            return true;
+        }
+        if (cuantos == 0) {
+            boolean hayEnLobby = false;
+            for (var p : lobby.getPlayers()) {
+                if (!p.isDisconnected()) {
+                    hayEnLobby = true;
+                    break;
+                }
+            }
+            if (!hayEnLobby) {
+                return false;
+            }
+            LunaEternal.LOG.info("PuertaNpc: guardián ausente en el lobby con jugadores presentes. Colocando guardián en {}",
+                    POSICION_DEFAULT);
+            return colocar(lobby, POSICION_DEFAULT, GIRO_DEFAULT, ESPECIE);
+        }
+        return true;
+    }
+
     /**
      * Cuanto se ignora un segundo clic del mismo jugador, en milisegundos.
      *
@@ -133,9 +169,11 @@ public final class PuertaNpc {
      * de verdad que no hay guardian.
      */
     public static int contar(ServerWorld mundo, Vec3d centro, double radio) {
+        var bp = net.minecraft.util.math.BlockPos.ofFloored(centro);
+        mundo.getChunk(bp);
         Box caja = Box.of(centro, radio * 2, radio * 2, radio * 2);
         return mundo.getEntitiesByClass(Entity.class, caja,
-                x -> x.getCommandTags().contains(MARCA)).size();
+                x -> !x.isRemoved() && x.getCommandTags().contains(MARCA)).size();
     }
 
     /**
@@ -144,15 +182,51 @@ public final class PuertaNpc {
      * @return cuantas entidades se quitaron
      */
     public static int quitar(ServerWorld mundo, Vec3d centro, double radio) {
+        var bp = net.minecraft.util.math.BlockPos.ofFloored(centro);
+        mundo.getChunk(bp);
         Box caja = Box.of(centro, radio * 2, radio * 2, radio * 2);
         int n = 0;
         for (Entity e : mundo.getEntitiesByClass(Entity.class, caja,
-                x -> x.getCommandTags().contains(MARCA))) {
+                x -> !x.isRemoved() && x.getCommandTags().contains(MARCA))) {
             e.discard();
             n++;
         }
         n += Cartel.quitar(mundo, centro, radio, MARCA_CARTEL);
         return n;
+    }
+
+    /**
+     * Conserva exactamente un guardián y un cartel, eliminando cualquier copia duplicada.
+     */
+    public static int quitarDuplicados(ServerWorld mundo, Vec3d centro, double radio) {
+        var bp = net.minecraft.util.math.BlockPos.ofFloored(centro);
+        mundo.getChunk(bp);
+        Box caja = Box.of(centro, radio * 2, radio * 2, radio * 2);
+        int guardiasConservados = 0;
+        int quitados = 0;
+        for (Entity e : mundo.getEntitiesByClass(Entity.class, caja,
+                x -> !x.isRemoved() && x.getCommandTags().contains(MARCA))) {
+            if (guardiasConservados == 0) {
+                guardiasConservados++;
+            } else {
+                e.discard();
+                quitados++;
+            }
+        }
+        int cartelesConservados = 0;
+        for (Entity e : mundo.getEntitiesByClass(net.minecraft.entity.decoration.DisplayEntity.TextDisplayEntity.class, caja,
+                x -> !x.isRemoved() && x.getCommandTags().contains(MARCA_CARTEL))) {
+            if (cartelesConservados == 0) {
+                cartelesConservados++;
+            } else {
+                e.discard();
+                quitados++;
+            }
+        }
+        if (quitados > 0) {
+            LunaEternal.LOG.info("PuertaNpc: eliminadas {} entidades duplicadas del guardián/cartel en el lobby", quitados);
+        }
+        return quitados;
     }
 
     // ------------------------------------------------------------ el clic

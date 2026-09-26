@@ -5,13 +5,16 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.cobblemon.mod.common.Cobblemon;
+import com.cobblemon.mod.common.api.battles.model.actor.ActorType;
 import com.cobblemon.mod.common.api.events.CobblemonEvents;
+import com.cobblemon.mod.common.entity.pokemon.PokemonEntity;
 import com.gitlab.srcmc.rctmod.api.RCTMod;
 import com.gitlab.srcmc.rctmod.world.entities.TrainerMob;
 
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.pokereport.luna.LunaEternal;
@@ -155,8 +158,11 @@ public final class Combate {
 
         // ⚠ Auto-liberación si el jugador sale de la dimensión de gimnasios (/spawn, teleport, etc.)
         net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((jugador, origen, destino) -> {
-            if (net.pokereport.luna.world.LunaDimensions.GIMNASIOS.equals(origen.getRegistryKey())
-                    && !net.pokereport.luna.world.LunaDimensions.GIMNASIOS.equals(destino.getRegistryKey())) {
+            boolean eraGym = net.pokereport.luna.world.LunaDimensions.GIMNASIOS.equals(origen.getRegistryKey())
+                    || net.pokereport.luna.world.LunaDimensions.ISLAS_NARANJA.equals(origen.getRegistryKey());
+            boolean sigueGym = net.pokereport.luna.world.LunaDimensions.GIMNASIOS.equals(destino.getRegistryKey())
+                    || net.pokereport.luna.world.LunaDimensions.ISLAS_NARANJA.equals(destino.getRegistryKey());
+            if (eraGym && !sigueGym) {
                 soltar(jugador, null);
             }
         });
@@ -209,10 +215,29 @@ public final class Combate {
         if (sobreNivel > 0) {
             return new Motivo("nivel_superado", g.nivel());
         }
+        // ⚠ Luana y Giovanni combaten en formato doble (2v2): requieren al menos 2 Pokémon conscientes
+        if ("luana".equalsIgnoreCase(g.id()) && contarConscientes(jugador) < 2) {
+            return new Motivo("luana_necesita_dos", 2);
+        }
+        if ("giovanni".equalsIgnoreCase(g.id()) && contarConscientes(jugador) < 2) {
+            return new Motivo("doble_necesita_dos", 2);
+        }
         if (Ranuras.libres(g) <= 0) {
             return new Motivo("lleno", 0);
         }
         return null;
+    }
+
+    private static int contarConscientes(ServerPlayerEntity jugador) {
+        int count = 0;
+        try {
+            for (var p : Cobblemon.INSTANCE.getStorage().getParty(jugador)) {
+                if (p != null && !p.isFainted()) {
+                    count++;
+                }
+            }
+        } catch (Throwable ignored) {}
+        return count;
     }
 
     private static int primerSobreNivel(ServerPlayerEntity jugador, int nivelMax) {
@@ -263,7 +288,7 @@ public final class Combate {
             return no;
         }
         var servidor = jugador.getServer();
-        if (servidor == null || Arenas.mundo(servidor) == null) {
+        if (servidor == null || Arenas.mundo(servidor, g) == null) {
             return new Motivo("sin_dimension", 0);
         }
         int ranura = Ranuras.reservar(g, jugador.getUuid());
@@ -319,6 +344,7 @@ public final class Combate {
                         "gimnasio.lunaeternal.no.sin_dimension"), false);
                 return;
             }
+            mostrarObjetivoEntrada(jugador, g);
             // ⚠⚠⚠ EL LIDER SE PONE DESPUES DE QUE LLEGUE EL JUGADOR, Y ESTO NO
             //    ES ESTETICA: ES LO QUE HACE QUE LA LIMPIEZA FUNCIONE.
             //
@@ -363,6 +389,122 @@ public final class Combate {
                 g.id(), jugador.getName().getString(), ranura);
     }
 
+    /**
+     * Muestra un aviso de entrada elegante y compacto estilo RPG/MMO.
+     * <p>Título corto en el centro, subtítulo descriptivo limpio y barra de acción con la instrucción.
+     * <p>Tiempos: 10 ticks de fundido, 50 ticks visible, 15 ticks de salida.
+     */
+    public static void mostrarObjetivoEntrada(ServerPlayerEntity jugador, Gimnasio.Gimnasio_ g) {
+        if (jugador == null || g == null) {
+            return;
+        }
+        Text titulo;
+        Text sub;
+        Text actionbar;
+        switch (g.id()) {
+            case "brock" -> {
+                titulo = Text.literal("§6§lGIMNASIO ROCA");
+                sub = Text.literal("§fDesafía a Brock");
+                actionbar = Text.literal("§eAvanza por la arena y haz clic derecho en el Líder");
+            }
+            case "misty" -> {
+                titulo = Text.literal("§b§lGIMNASIO CASCADA");
+                sub = Text.literal("§fDesafía a Misty");
+                actionbar = Text.literal("§eCamina por la plataforma y reta a la Líder con clic derecho");
+            }
+            case "surge" -> {
+                titulo = Text.literal("§e§lGIMNASIO TRUENO");
+                sub = Text.literal("§fDesafía al Teniente Surge");
+                actionbar = Text.literal("§eAvanza por la arena eléctrica y reta al Líder con clic derecho");
+            }
+            case "erika" -> {
+                titulo = Text.literal("§a§lGIMNASIO ARCOÍRIS");
+                sub = Text.literal("§fSupera el laberinto vegetal");
+                actionbar = Text.literal("§eEncuentra el camino hacia Erika y haz clic derecho para combatir");
+            }
+            case "koga" -> {
+                titulo = Text.literal("§5§lGIMNASIO ALMA");
+                sub = Text.literal("§fSupera el laberinto invisible");
+                actionbar = Text.literal("§eEncuentra el camino hacia Koga y haz clic derecho para combatir");
+            }
+            case "sabrina" -> {
+                titulo = Text.literal("§d§lGIMNASIO PANTANO");
+                sub = Text.literal("§fSupera el desafío de parkour");
+                actionbar = Text.literal("§eSalta entre las plataformas sin caer para llegar hasta Sabrina");
+            }
+            case "blaine" -> {
+                titulo = Text.literal("§c§lGIMNASIO VOLCÁN");
+                sub = Text.literal("§fDesafía a Blaine");
+                actionbar = Text.literal("§eAvanza por la arena ardiente y reta al Líder con clic derecho");
+            }
+            case "giovanni" -> {
+                titulo = Text.literal("§8§lGIMNASIO TIERRA");
+                sub = Text.literal("§fCombate Doble 2v2");
+                actionbar = Text.literal("§ePrepárate con al menos 2 Pokémon conscientes y reta a Giovanni");
+            }
+            default -> {
+                titulo = Text.literal("§6§lGIMNASIO " + g.medalla().toUpperCase(java.util.Locale.ROOT));
+                sub = Text.literal("§fDesafía a " + g.lider());
+                actionbar = Text.literal("§eHaz clic derecho en el Líder para comenzar la batalla");
+            }
+        }
+
+        var red = jugador.networkHandler;
+        if (red != null) {
+            red.sendPacket(new net.minecraft.network.packet.s2c.play.TitleFadeS2CPacket(10, 50, 15));
+            red.sendPacket(new net.minecraft.network.packet.s2c.play.SubtitleS2CPacket(sub));
+            red.sendPacket(new net.minecraft.network.packet.s2c.play.TitleS2CPacket(titulo));
+            red.sendPacket(new net.minecraft.network.packet.s2c.play.OverlayMessageS2CPacket(actionbar));
+        }
+        jugador.playSoundToPlayer(net.minecraft.sound.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
+                net.minecraft.sound.SoundCategory.MASTER, 0.6f, 1.2f);
+    }
+
+    /**
+     * Limpia reservas huérfanas en el almacén de posiciones de batalla para que desconexiones
+     * o combates interrumpidos no dejen la arena bloqueada durante 6 horas.
+     */
+    public static void limpiarReservasDeRanura(Gimnasio.Gimnasio_ g, int ranura) {
+        if (g == null || ranura < 0) {
+            return;
+        }
+        try {
+            Class<?> storeClass = Class.forName("com.pokemon.battlepositions.battle.BattlePositionStore");
+            var field = storeClass.getDeclaredField("ARENA_RESERVATIONS");
+            field.setAccessible(true);
+            var map = (java.util.Map<?, ?>) field.get(null);
+            if (map != null && !map.isEmpty()) {
+                int zBase = ranura * Gimnasio.pasoRanura(g);
+                int zEnd = zBase + Gimnasio.pasoRanura(g);
+                map.entrySet().removeIf(entry -> {
+                    Object key = entry.getKey();
+                    if (key != null) {
+                        try {
+                            var pField = key.getClass().getDeclaredField("playerPokemonPos");
+                            pField.setAccessible(true);
+                            BlockPos bp = (BlockPos) pField.get(key);
+                            if (bp != null) {
+                                return bp.getZ() >= zBase && bp.getZ() < zEnd;
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                    return false;
+                });
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    public static void limpiarReservaBatalla(UUID combateId) {
+        if (combateId == null) {
+            return;
+        }
+        try {
+            Class<?> storeClass = Class.forName("com.pokemon.battlepositions.battle.BattlePositionStore");
+            var m = storeClass.getMethod("clearByBattleId", UUID.class);
+            m.invoke(null, combateId);
+        } catch (Throwable ignored) {}
+    }
+
     // ---------------------------------------------------------------- combatir
 
     /**
@@ -390,6 +532,12 @@ public final class Combate {
                     + g.nivel() + "§7 (detectado Nv. " + sobreNivel + ")."), false);
             return;
         }
+        if (("luana".equalsIgnoreCase(g.id()) || "giovanni".equalsIgnoreCase(g.id())) && contarConscientes(jugador) < 2) {
+            jugador.sendMessage(Text.literal(
+                    "§c§l¡COMBATE BLOQUEADO! §r§7El combate contra " + g.lider() + " es un combate doble (2v2). Necesitas al menos §e2 Pokémon conscientes§7 en tu equipo."), false);
+            return;
+        }
+        limpiarReservasDeRanura(g, mia);
         try {
             // ⚠⚠⚠ PRIMERO SE INTENTA EL EQUIPO ADAPTADO, Y SI NO HAY, EL DE
             //    SIEMPRE. `Adaptador.pelear` compone el equipo del líder contra
@@ -402,6 +550,7 @@ public final class Combate {
             //       sale andando. Un reto que no empieza lo deja encerrado.
             if (Adaptador.pelear(jugador, mob, g)) {
                 RCTMod.getInstance().getTrainerManager().addBattle(jugador, mob);
+                Lideres.quitarCartelDeRanura(Arenas.mundo(jugador.getServer(), g), g, mia);
                 return;
             }
             // ⚠⚠⚠ `makeBattle` Y NO `startBattleWith`. El motivo está entero en
@@ -419,6 +568,7 @@ public final class Combate {
             // acabar. `setOpponent` es suyo y no se puede llamar desde fuera,
             // así que esto es lo que hay — y basta, porque la IA está apagada.
             RCTMod.getInstance().getTrainerManager().addBattle(jugador, mob);
+            Lideres.quitarCartelDeRanura(Arenas.mundo(jugador.getServer(), g), g, mia);
         } catch (Throwable t) {
             LunaEternal.LOG.error("No se pudo empezar el combate de {} contra {}",
                     jugador.getName().getString(), g.id(), t);
@@ -440,7 +590,9 @@ public final class Combate {
     public static void escuchar() {
         CobblemonEvents.BATTLE_VICTORY.subscribe(evento -> {
             try {
-                // ⚠ Los jugadores salen de la BATALLA y no del actor: el actor
+                if (evento.getBattle() != null) {
+                    limpiarReservaBatalla(evento.getBattle().getBattleId());
+                }
                 //   solo da UUID, y para avisar a alguien hace falta su entidad.
                 //   Buscarla en el servidor obligaría a tener el servidor a mano
                 //   desde un evento que no lo trae.
@@ -460,7 +612,152 @@ public final class Combate {
                 LunaEternal.LOG.error("Error cerrando un combate de gimnasio", t);
             }
         });
+        CobblemonEvents.BATTLE_FLED.subscribe(evento -> {
+            try {
+                if (evento.getBattle() != null) {
+                    limpiarReservaBatalla(evento.getBattle().getBattleId());
+                }
+                for (ServerPlayerEntity p : evento.getBattle().getPlayers()) {
+                    terminar(p, false);
+                }
+            } catch (Throwable t) {
+                LunaEternal.LOG.error("Error gestionando huida de combate de gimnasio", t);
+            }
+        });
+
+        // ⚠⚠⚠ FIX P0 — POKÉMON DEL NPC NO APARECE (Vileplume invisible, Turn 0 bloqueado)
+        //
+        // CAUSA RAÍZ: cobblemon-battle-positions/SwitchInstructionMixin solo teletransporta
+        // el Pokémon al invocarla antes de que battle.getStarted() sea true. El Pokémon del
+        // JUGADOR (Charizard) llega a tiempo. El del NPC (Vileplume) llega DESPUÉS de que la
+        // batalla ya marcó started=true → el mixin sale sin hacer nada → Vileplume nace en
+        // la posición nativa de Cobblemon (cero absoluto, bajo el suelo, dentro del NPC, etc.)
+        // → la batalla queda atascada en Turn 0 esperando que el Pokémon sea visible.
+        //
+        // SOLUCIÓN: POKEMON_SENT_POST siempre llega después de que la entidad existe en el
+        // mundo. Si el Pokémon no tiene dueño (es de un NPC), tomamos la posición del lado
+        // del NPC en BattlePositionStore y setPosition() lo mueve al lugar correcto.
+        CobblemonEvents.POKEMON_SENT_POST.subscribe(evento -> {
+            try {
+                // Los del jugador ya los gestiona el mixin. Solo nos interesan NPC (sin dueño).
+                if (evento.getPokemon().getOwnerUUID() != null) {
+                    return;
+                }
+                PokemonEntity entidad = evento.getPokemonEntity();
+                if (entidad == null || entidad.isRemoved()) {
+                    return;
+                }
+                var batalla = entidad.getBattle();
+                if (batalla == null) {
+                    return;
+                }
+                UUID battleId = batalla.getBattleId();
+                Vec3d posNpc = obtenerPosicionNpc(battleId, batalla);
+                if (posNpc == null) {
+                    // Sin datos en BattlePositionStore: combate fuera de arena de gimnasio.
+                    return;
+                }
+                entidad.setPosition(posNpc);
+                String species = evento.getPokemon().getSpecies().getName();
+                UUID entityUuid = entidad.getUuid();
+                LunaEternal.LOG.info(
+                        "[ERIKA-TRACE] FIX P0: NPC Pokemon {} -> ({}, {}, {}) en batalla {}",
+                        species,
+                        String.format("%.2f", posNpc.getX()),
+                        String.format("%.2f", posNpc.getY()),
+                        String.format("%.2f", posNpc.getZ()),
+                        battleId);
+
+                // Auditoría P0 directiva 8: Verificar ciclo de vida en ticks +1, +5, +20
+                if (entidad.getWorld() instanceof net.minecraft.server.world.ServerWorld sw) {
+                    com.cobblemon.mod.common.api.scheduling.SchedulingFunctionsKt.afterOnServer(0.05f, () -> {
+                        var e = sw.getEntity(entityUuid);
+                        LunaEternal.LOG.info("[ERIKA-TRACE] Tick +1: NPC Pokemon {} (uuid={}) exists={}, isRemoved={}, reason={}, pos={}",
+                                species, entityUuid, (e != null), (e != null && e.isRemoved()),
+                                (e != null ? e.getRemovalReason() : "null"), (e != null ? e.getPos() : "null"));
+                        return kotlin.Unit.INSTANCE;
+                    });
+                    com.cobblemon.mod.common.api.scheduling.SchedulingFunctionsKt.afterOnServer(0.25f, () -> {
+                        var e = sw.getEntity(entityUuid);
+                        LunaEternal.LOG.info("[ERIKA-TRACE] Tick +5: NPC Pokemon {} (uuid={}) exists={}, isRemoved={}, reason={}, pos={}",
+                                species, entityUuid, (e != null), (e != null && e.isRemoved()),
+                                (e != null ? e.getRemovalReason() : "null"), (e != null ? e.getPos() : "null"));
+                        return kotlin.Unit.INSTANCE;
+                    });
+                    com.cobblemon.mod.common.api.scheduling.SchedulingFunctionsKt.afterOnServer(1.0f, () -> {
+                        var e = sw.getEntity(entityUuid);
+                        LunaEternal.LOG.info("[ERIKA-TRACE] Tick +20: NPC Pokemon {} (uuid={}) exists={}, isRemoved={}, reason={}, pos={}",
+                                species, entityUuid, (e != null), (e != null && e.isRemoved()),
+                                (e != null ? e.getRemovalReason() : "null"), (e != null ? e.getPos() : "null"));
+                        return kotlin.Unit.INSTANCE;
+                    });
+                }
+            } catch (Throwable t) {
+                LunaEternal.LOG.warn("[ERIKA-TRACE] Error en fix P0 POKEMON_SENT_POST: {}", t.getMessage());
+            }
+        });
+
         LunaEternal.LOG.info("Gimnasios: escuchando el final de los combates");
+    }
+
+    /**
+     * Obtiene la posición del lado del NPC para una batalla en BattlePositionStore.
+     *
+     * <p>⚠ Usa reflexión porque {@code BattlePositionStore} es un mod externo sin
+     * acceso en compilación. Devuelve {@code null} si la batalla no tiene datos de
+     * arena o si el call falla.
+     */
+    private static Vec3d obtenerPosicionNpc(UUID battleId,
+            com.cobblemon.mod.common.api.battles.model.PokemonBattle batalla) {
+        try {
+            Class<?> storeClass = Class.forName(
+                    "com.pokemon.battlepositions.battle.BattlePositionStore");
+            // ¿Hay datos para este battleId?
+            boolean hasData = (Boolean) storeClass
+                    .getMethod("hasPositionDataForBattle", UUID.class)
+                    .invoke(null, battleId);
+            if (!hasData) {
+                return null;
+            }
+            // Encontrar el lado del NPC en la batalla.
+            com.cobblemon.mod.common.battles.BattleSide ladoNpc = null;
+            for (var actor : batalla.getActors()) {
+                if (actor.getType() == ActorType.NPC) {
+                    ladoNpc = actor.getSide();
+                    break;
+                }
+            }
+            if (ladoNpc == null) {
+                return null;
+            }
+            // BattlePositionStore.getPokemonPosition(UUID, BattleSide) → Vec3d/class_243
+            Object vec = storeClass
+                    .getMethod("getPokemonPosition", UUID.class,
+                            com.cobblemon.mod.common.battles.BattleSide.class)
+                    .invoke(null, battleId, ladoNpc);
+            if (vec == null) {
+                return null;
+            }
+            if (vec instanceof Vec3d v) {
+                return v;
+            }
+            // Fallback por nombre de campo (intermediary): field_1352=x, field_1351=y, field_1350=z
+            var cls = vec.getClass();
+            double x, y, z;
+            try {
+                x = cls.getField("field_1352").getDouble(vec);
+                y = cls.getField("field_1351").getDouble(vec);
+                z = cls.getField("field_1350").getDouble(vec);
+            } catch (NoSuchFieldException e2) {
+                // Si ya está en named: x, y, z
+                x = cls.getField("x").getDouble(vec);
+                y = cls.getField("y").getDouble(vec);
+                z = cls.getField("z").getDouble(vec);
+            }
+            return new Vec3d(x, y, z);
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     private static void terminar(ServerPlayerEntity jugador, boolean gano) {
@@ -620,9 +917,11 @@ public final class Combate {
             var g = Gimnasio.de(gymId);
             if (g != null && r >= 0) {
                 Lideres.quitarDeArena(servidor, g, r);
+                limpiarReservasDeRanura(g, r);
             }
         }
         Ranuras.soltar(jugador.getUuid());
+        SabrinaParkourService.limpiar(jugador.getUuid());
     }
 
     // ------------------------------------------------------------ ciclo de vida

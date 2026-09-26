@@ -118,20 +118,28 @@ public final class Arenas {
     private static final int AIRE_QUE_CORTA = 8;
 
     public static int[] medir(MinecraftServer servidor, Gimnasio.Gimnasio_ g) {
-        ServerWorld mundo = mundo(servidor);
+        ServerWorld mundo = mundo(servidor, g);
         if (mundo == null) {
             return null;
         }
         BlockPos o = Gimnasio.maestro(g);
 
+        boolean esNaranja = g.region() == Gimnasio.Region.NARANJA;
+        int minDx = esNaranja ? -128 : -16;
+        int maxDx = esNaranja ? 144 : 128;
+        int minDz = esNaranja ? -112 : -16;
+        int maxDz = esNaranja ? 192 : Gimnasio.pasoRanura(g) - 16;
+        int minDy = esNaranja ? -16 : -16;
+        int maxDy = esNaranja ? 56 : 115;
+
         // ⚠ Aseguramos que los chunks del área del maestro estén cargados.
         //   Incluimos margen negativo porque estructuras como Misty empiezan en z = -2.
         int oX = o.getX();
         int oZ = o.getZ();
-        int minCzChunk = (oZ - 32) >> 4;
-        int maxCzChunk = (oZ + Gimnasio.PASO_RANURA) >> 4;
-        int minCxChunk = (oX - 32) >> 4;
-        int maxCxChunk = (oX + 144) >> 4;
+        int minCzChunk = (oZ + minDz) >> 4;
+        int maxCzChunk = (oZ + maxDz) >> 4;
+        int minCxChunk = (oX + minDx) >> 4;
+        int maxCxChunk = (oX + maxDx) >> 4;
         for (int cz = minCzChunk; cz <= maxCzChunk; cz++) {
             for (int cx = minCxChunk; cx <= maxCxChunk; cx++) {
                 mundo.getChunk(cx, cz);
@@ -139,8 +147,6 @@ public final class Arenas {
         }
 
         var pos = new BlockPos.Mutable();
-        int minDz = -16;
-        int maxDz = Gimnasio.PASO_RANURA - 16; // 112: nunca toca la ranura 1 que empieza en 126
         int alcanceZ = maxDz - minDz;
 
         boolean[] ocupada = new boolean[alcanceZ];
@@ -153,10 +159,10 @@ public final class Arenas {
         java.util.Arrays.fill(minY_z, 9999);
         java.util.Arrays.fill(maxY_z, -9999);
 
-        for (int dy = -16; dy < 115; dy++) {
+        for (int dy = minDy; dy < maxDy; dy++) {
             for (int dz = minDz; dz < maxDz; dz++) {
                 int zIdx = dz - minDz;
-                for (int dx = -16; dx < 128; dx++) {
+                for (int dx = minDx; dx < maxDx; dx++) {
                     pos.set(o.getX() + dx, o.getY() + dy, o.getZ() + dz);
                     if (mundo.getBlockState(pos).isAir()) {
                         continue;
@@ -215,6 +221,13 @@ public final class Arenas {
     }
 
     public static ServerWorld mundo(MinecraftServer servidor) {
+        return servidor.getWorld(LunaDimensions.GIMNASIOS);
+    }
+
+    public static ServerWorld mundo(MinecraftServer servidor, Gimnasio.Gimnasio_ g) {
+        if (g != null && g.region() == Gimnasio.Region.NARANJA) {
+            return servidor.getWorld(LunaDimensions.ISLAS_NARANJA);
+        }
         return servidor.getWorld(LunaDimensions.GIMNASIOS);
     }
 
@@ -296,6 +309,64 @@ public final class Arenas {
         mundo.getChunk(o);
     }
 
+    public record PosicionBloque(int x, int y, int z, String idBloque) {}
+
+    public static final java.util.Map<String, java.util.List<PosicionBloque>> POSICIONES_KANTO = java.util.Map.of(
+        "erika", java.util.List.of(
+            new PosicionBloque(3124, 71, 61, "trainer_stand_position"),
+            new PosicionBloque(3119, 71, 61, "trainer_pokemon_position"),
+            new PosicionBloque(3113, 71, 61, "player_pokemon_position"),
+            new PosicionBloque(3108, 71, 61, "player_stand_position")
+        ),
+        "koga", java.util.List.of(
+            new PosicionBloque(4142, 66, 38, "trainer_stand_position"),
+            new PosicionBloque(4142, 66, 42, "trainer_pokemon_position"),
+            new PosicionBloque(4142, 66, 50, "player_pokemon_position"),
+            new PosicionBloque(4142, 66, 54, "player_stand_position")
+        ),
+        "sabrina", java.util.List.of(
+            new PosicionBloque(5162, 70, 42, "trainer_stand_position"),
+            new PosicionBloque(5161, 69, 49, "trainer_pokemon_position"),
+            new PosicionBloque(5162, 69, 56, "player_pokemon_position"),
+            new PosicionBloque(5161, 70, 64, "player_stand_position")
+        ),
+        "blaine", java.util.List.of(
+            new PosicionBloque(6190, 67, 41, "trainer_stand_position"),
+            new PosicionBloque(6190, 67, 49, "trainer_pokemon_position"),
+            new PosicionBloque(6191, 67, 57, "player_pokemon_position"),
+            new PosicionBloque(6191, 67, 64, "player_stand_position")
+        ),
+        "giovanni", java.util.List.of(
+            new PosicionBloque(7214, 67, 44, "trainer_stand_position"),
+            new PosicionBloque(7214, 67, 50, "trainer_pokemon_position"),
+            new PosicionBloque(7214, 67, 58, "player_pokemon_position"),
+            new PosicionBloque(7214, 67, 64, "player_stand_position")
+        )
+    );
+
+    /**
+     * Asegura que los bloques de cobblemonbattlepositions estén colocados en el maestro.
+     */
+    public static int asegurarPosicionesMaestro(ServerWorld mundo, Gimnasio.Gimnasio_ g) {
+        if (g == null || mundo == null) return 0;
+        var lista = POSICIONES_KANTO.get(g.id());
+        if (lista == null) return 0;
+        int puestos = 0;
+        for (PosicionBloque pb : lista) {
+            var bId = net.minecraft.util.Identifier.of("cobblemonbattlepositions", pb.idBloque());
+            var bloque = net.minecraft.registry.Registries.BLOCK.get(bId);
+            if (bloque == null || bloque == Blocks.AIR) continue;
+            BlockPos pos = new BlockPos(pb.x(), pb.y(), pb.z());
+            mundo.getChunk(pos);
+            if (!mundo.getBlockState(pos).isOf(bloque)) {
+                mundo.setBlockState(pos, bloque.getDefaultState(), 2);
+                puestos++;
+                LunaEternal.LOG.info("Gimnasio {}: colocado bloque maestro {} en {}", g.id(), pb.idBloque(), pos);
+            }
+        }
+        return puestos;
+    }
+
     /**
      * Clona el maestro a una ranura, si no estaba ya.
      *
@@ -313,12 +384,24 @@ public final class Arenas {
         if (Ranuras.marcarConstruida(g, ranura)) {
             return;   // ya estaba
         }
-        ServerWorld mundo = mundo(servidor);
+        ServerWorld mundo = mundo(servidor, g);
         if (mundo == null) {
             return;
         }
+        asegurarPosicionesMaestro(mundo, g);
         BlockPos src = Gimnasio.maestro(g);
         BlockPos dst = Gimnasio.origen(g, ranura);
+
+        // Optimización rápida para Islas Naranja si la ranura ya fue pre-replicada
+        if (g.region() == Gimnasio.Region.NARANJA) {
+            var testPos = dst.add(-5, 6, 11); // (-5, 70, 11) relativo al suelo 64
+            var bloqueStand = net.minecraft.registry.Registries.BLOCK.get(
+                    net.minecraft.util.Identifier.of("cobblemonbattlepositions", "player_stand_position"));
+            if (bloqueStand != Blocks.AIR && mundo.getBlockState(testPos).isOf(bloqueStand)) {
+                return;
+            }
+        }
+
         // ⚠⚠ SE MIDE LO CONSTRUIDO EN VEZ DE SUPONERLO. Antes iba a ojo
         //    (96x48x56): de menos deja el gimnasio CORTADO --y eso no se ve
         //    hasta que alguien camina hasta el borde de su copia y se encuentra
@@ -335,11 +418,12 @@ public final class Arenas {
         //    ranura siguiente -- y eso no da ningun error: da dos gimnasios
         //    fundidos, y el segundo jugador aparece dentro de la pared del
         //    primero. Mejor negarse y decirlo.
-        if (z0 + fondo > Gimnasio.PASO_RANURA) {
+        int paso = Gimnasio.pasoRanura(g);
+        if (z0 + fondo > paso) {
             LunaEternal.LOG.error("Gimnasio {}: la sala mide {} de fondo y las "
                     + "ranuras van cada {}. NO SE CLONA: la copia pisaria la "
                     + "ranura siguiente. Sube PASO_RANURA.",
-                    g.id(), z0 + fondo, Gimnasio.PASO_RANURA);
+                    g.id(), z0 + fondo, paso);
             return;
         }
 
@@ -422,7 +506,7 @@ public final class Arenas {
      */
     public static int limpiarRanuras(MinecraftServer servidor,
                                      Gimnasio.Gimnasio_ g) {
-        ServerWorld mundo = mundo(servidor);
+        ServerWorld mundo = mundo(servidor, g);
         if (mundo == null) {
             return 0;
         }
@@ -539,7 +623,7 @@ public final class Arenas {
                     + "clonar no borra, solo escribe.");
             return;
         }
-        ServerWorld mundo = mundo(servidor);
+        ServerWorld mundo = mundo(servidor, g);
         if (mundo == null) {
             return;
         }
@@ -649,9 +733,9 @@ public final class Arenas {
         if (servidor == null) {
             return false;
         }
-        ServerWorld mundo = mundo(servidor);
+        ServerWorld mundo = mundo(servidor, g);
         if (mundo == null) {
-            LunaEternal.LOG.error("No existe la dimension de gimnasios");
+            LunaEternal.LOG.error("No existe la dimension del gimnasio {}", g.id());
             return false;
         }
         // ⚠ Un jugador que ya se ha ido no se mueve: entre que acepta el reto y

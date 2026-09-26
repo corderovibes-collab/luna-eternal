@@ -497,11 +497,14 @@ public final class Puerta {
         if (mundo == null) {
             return;
         }
-        // ⚠ Se busca alrededor del punto de llegada y no del jugador: el
-        //   guardian esta donde se planto, y alguien que se haya alejado no
-        //   deberia hacer creer que ha desaparecido.
-        int cuantos = PuertaNpc.contar(mundo, TravelService.spawnLobby(), 64.0);
-        if (cuantos > 0) {
+        // ⚠ Se busca directamente sobre la posición del guardián
+        int cuantos = PuertaNpc.contar(mundo, PuertaNpc.POSICION_DEFAULT, 32.0);
+        if (cuantos > 1) {
+            PuertaNpc.quitarDuplicados(mundo, PuertaNpc.POSICION_DEFAULT, 32.0);
+            fallosSeguidos = 0;
+            return;
+        }
+        if (cuantos == 1 || PuertaNpc.asegurarGuardian(mundo)) {
             // ⚠ Se reinicia la cuenta: lo que apaga la puerta es una ausencia
             //   CONTINUADA, no dos sustos sueltos separados por media hora.
             fallosSeguidos = 0;

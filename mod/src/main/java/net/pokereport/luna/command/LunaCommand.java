@@ -5,7 +5,9 @@ import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.Vec3d;
 import net.pokereport.luna.LunaEternal;
 import net.pokereport.luna.economy.Currency;
 import net.pokereport.luna.economy.EconomyException;
@@ -32,6 +34,14 @@ public final class LunaCommand {
     private LunaCommand() {}
 
     public static void register(CommandDispatcher<ServerCommandSource> d) {
+
+        d.register(literal("islasnaranja")
+            .requires(s -> s.hasPermissionLevel(2))
+            .executes(ctx -> viajar(ctx.getSource(), "naranja")));
+
+        d.register(literal("naranja")
+            .requires(s -> s.hasPermissionLevel(2))
+            .executes(ctx -> viajar(ctx.getSource(), "naranja")));
 
         d.register(literal("luna")
             .executes(ctx -> balance(ctx.getSource()))
@@ -70,6 +80,14 @@ public final class LunaCommand {
                 .then(argument("clave", StringArgumentType.word())
                     .executes(ctx -> altaConstructor(
                         ctx.getSource(), StringArgumentType.getString(ctx, "clave")))))
+
+            .then(literal("naranja")
+                .requires(s -> s.hasPermissionLevel(2))
+                .then(literal("plataforma")
+                    .executes(ctx -> generarPlataformaNaranja(ctx.getSource(), 50))
+                    .then(argument("radio", com.mojang.brigadier.arguments.IntegerArgumentType.integer(5, 150))
+                        .executes(ctx -> generarPlataformaNaranja(ctx.getSource(),
+                            com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "radio"))))))
 
             .then(literal("auditar")
                 .requires(s -> s.hasPermissionLevel(3))
@@ -304,22 +322,23 @@ public final class LunaCommand {
                                 s.sendError(Text.literal("§cNo existe"));
                                 return 0;
                             }
-                            net.pokereport.luna.gym.Arenas.comprobarRanuras(
-                                s.getServer(), g,
-                                linea -> {
-                                    // ⚠ El informe llega repartido en varios
-                                    //   ticks, asi que quien lo pidio puede
-                                    //   haberse ido. Al log siempre; al jugador
-                                    //   solo si sigue ahi.
-                                    LunaEternal.LOG.info(linea.replace("\u00a7", "&"));
-                                    try {
-                                        s.sendFeedback(() -> Text.literal(linea),
-                                                false);
-                                    } catch (Exception ignorado) {
-                                        // se fue: el log ya lo tiene
-                                    }
-                                });
-                            return 1;
+                            try {
+                                net.pokereport.luna.gym.Arenas.comprobarRanuras(
+                                    s.getServer(), g,
+                                    linea -> {
+                                        LunaEternal.LOG.info(linea.replace("\u00a7", "&"));
+                                        try {
+                                            s.sendFeedback(() -> Text.literal(linea),
+                                                    false);
+                                        } catch (Exception ignorado) {
+                                        }
+                                    });
+                                return 1;
+                            } catch (Throwable t) {
+                                LunaEternal.LOG.error("Error en comprobar " + g.id(), t);
+                                s.sendError(Text.literal("§cError en comprobar: " + t.getMessage()));
+                                return 0;
+                            }
                         }))
                     .then(literal("limpiarranuras")
                         .executes(ctx -> {
@@ -330,13 +349,19 @@ public final class LunaCommand {
                                 s.sendError(Text.literal("§cNo existe"));
                                 return 0;
                             }
-                            int n = net.pokereport.luna.gym.Arenas.limpiarRanuras(
-                                    s.getServer(), g);
-                            s.sendFeedback(() -> Text.literal(
-                                "§a" + n + " §7bloques quitados de las ranuras de "
-                                + "§f" + g.id() + "§7. Se volveran a clonar del "
-                                + "maestro."), false);
-                            return 1;
+                            try {
+                                int n = net.pokereport.luna.gym.Arenas.limpiarRanuras(
+                                        s.getServer(), g);
+                                s.sendFeedback(() -> Text.literal(
+                                    "§a" + n + " §7bloques quitados de las ranuras de "
+                                    + "§f" + g.id() + "§7. Se volveran a clonar del "
+                                    + "maestro."), false);
+                                return 1;
+                            } catch (Throwable t) {
+                                LunaEternal.LOG.error("Error en limpiarranuras " + g.id(), t);
+                                s.sendError(Text.literal("§cError en limpiarranuras: " + t.getMessage()));
+                                return 0;
+                            }
                         }))
                     .then(literal("purgar")
                         .executes(ctx -> {
@@ -378,6 +403,22 @@ public final class LunaCommand {
                             net.pokereport.luna.gym.Ranuras.liberar(g);
                             s.sendFeedback(() -> Text.literal(
                                 "§aTodas las salas de " + g.lider() + " han sido liberadas (7/7 libres)."), false);
+                            return 1;
+                        }))
+                    .then(literal("testadaptador")
+                        .executes(ctx -> {
+                            var s = ctx.getSource();
+                            var g = net.pokereport.luna.gym.Gimnasio.de(
+                                    StringArgumentType.getString(ctx, "cual"));
+                            if (g == null) {
+                                s.sendError(Text.literal("§cNo existe ese gimnasio"));
+                                return 0;
+                            }
+                            s.sendFeedback(() -> Text.literal("§6=== Test Adaptador: " + g.lider() + " (" + g.id() + ") ==="), false);
+                            var lineas = net.pokereport.luna.gym.Adaptador.verificarConversion(g);
+                            for (var l : lineas) {
+                                s.sendFeedback(() -> Text.literal(l), false);
+                            }
                             return 1;
                         })))
                 // Los lideres de la CIUDADELA: los que reciben y abren el
@@ -1030,24 +1071,36 @@ public final class LunaCommand {
     private static int colocarGuardian(ServerCommandSource src, String especie) {
         ServerPlayerEntity p = src.getPlayer();
         if (p == null) {
-            src.sendError(Text.literal("Solo desde el juego."));
-            return 0;
+            ServerWorld lobby = src.getServer().getWorld(net.pokereport.luna.world.LunaDimensions.LOBBY);
+            if (lobby == null) {
+                src.sendError(Text.literal("§cNo se pudo cargar el mundo LOBBY."));
+                return 0;
+            }
+            boolean ok = net.pokereport.luna.puerta.PuertaNpc.colocar(
+                    lobby, net.pokereport.luna.puerta.PuertaNpc.POSICION_DEFAULT,
+                    net.pokereport.luna.puerta.PuertaNpc.GIRO_DEFAULT, especie);
+            if (!ok) {
+                src.sendError(Text.literal("§cNo se pudo colocar: ¿existe la especie «" + especie + "»?"));
+                return 0;
+            }
+            src.sendFeedback(() -> Text.literal(
+                    "§aGuardián colocado en lobby§8 (" + especie + ") en " + net.pokereport.luna.puerta.PuertaNpc.POSICION_DEFAULT), true);
+            return 1;
         }
         if (!net.pokereport.luna.world.LunaDimensions.LOBBY.equals(
                 p.getServerWorld().getRegistryKey())) {
-            src.sendError(Text.literal("\u00a7cEl guardi\u00e1n va en el LOBBY. "
-                    + "Ve con \u00a7f/luna ir lobby\u00a7c y vuelve a intentarlo."));
+            src.sendError(Text.literal("§cEl guardián va en el LOBBY. "
+                    + "Ve con §f/luna ir lobby§c y vuelve a intentarlo."));
             return 0;
         }
         boolean ok = net.pokereport.luna.puerta.PuertaNpc.colocar(
                 p.getServerWorld(), p.getPos(), p.getYaw(), especie);
         if (!ok) {
-            src.sendError(Text.literal("\u00a7cNo se pudo colocar: \u00bfexiste la "
-                    + "especie \u00ab" + especie + "\u00bb?"));
+            src.sendError(Text.literal("§cNo se pudo colocar: ¿existe la especie «" + especie + "»?"));
             return 0;
         }
         src.sendFeedback(() -> Text.literal(
-                "\u00a7aGuardi\u00e1n colocado\u00a78 (" + especie + ")"), false);
+                "§aGuardián colocado§8 (" + especie + ")"), false);
         return 1;
     }
 
@@ -1063,21 +1116,26 @@ public final class LunaCommand {
     private static int activarPuerta(ServerCommandSource src, boolean valor) {
         ServerPlayerEntity p = src.getPlayer();
         if (valor) {
-            if (p == null || !net.pokereport.luna.world.LunaDimensions.LOBBY.equals(
+            ServerWorld lobby = p != null ? p.getServerWorld() : src.getServer().getWorld(net.pokereport.luna.world.LunaDimensions.LOBBY);
+            if (p != null && !net.pokereport.luna.world.LunaDimensions.LOBBY.equals(
                     p.getServerWorld().getRegistryKey())) {
                 src.sendError(Text.literal("§cPara encenderla tienes que estar "
                         + "EN EL LOBBY: hay que comprobar que el guardián "
                         + "está puesto, y solo se ve si su chunk está cargado."));
                 return 0;
             }
-            int guardianes = net.pokereport.luna.puerta.PuertaNpc.contar(
-                    p.getServerWorld(), p.getPos(), 64.0);
-            if (guardianes == 0) {
-                src.sendError(Text.literal("§cNO HAY GUARDIÁN cerca. "
-                        + "Si enciendes la puerta ahora, cada jugador nuevo se "
-                        + "queda ENCERRADO en el lobby. Colócalo primero con "
-                        + "§f/luna puerta npc§c."));
+            if (lobby == null) {
+                src.sendError(Text.literal("§cNo se pudo cargar el mundo LOBBY."));
                 return 0;
+            }
+            Vec3d centro = p != null ? p.getPos() : net.pokereport.luna.puerta.PuertaNpc.POSICION_DEFAULT;
+            int guardianes = net.pokereport.luna.puerta.PuertaNpc.contar(lobby, centro, 64.0);
+            if (guardianes == 0) {
+                if (!net.pokereport.luna.puerta.PuertaNpc.asegurarGuardian(lobby)) {
+                    src.sendError(Text.literal("§cNO HAY GUARDIÁN cerca. "
+                            + "Colócalo primero con §f/luna puerta npc§c."));
+                    return 0;
+                }
             }
         }
         try {
@@ -1095,20 +1153,20 @@ public final class LunaCommand {
     /**
      * Devuelve a alguien a la casilla de salida.
      *
-     * <p>&#9888;&#9888; HACE FALTA PARA PODER PROBAR NADA. La cuenta del
+     * <p>⚠⚠ HACE FALTA PARA PODER PROBAR NADA. La cuenta del
      * operador esta marcada como cruzada por el relleno de la V036 --y tiene que
      * estarlo: sin ese relleno, todos los que ya jugaban habrian aparecido en el
      * lobby-- asi que sin este comando la unica forma de recorrer la puerta como
      * un jugador nuevo es entrar con OTRA CUENTA.
      *
-     * <p>&#9888; No hace falta echarle ni pedirle que reconecte: {@code vigilar}
+     * <p>⚠ No hace falta echarle ni pedirle que reconecte: {@code vigilar}
      * corre cada segundo, ve que ya no consta como cruzado y lo lleva al lobby
      * solo. Si la puerta esta apagada no se movera nadie, y se dice.
      */
     private static int reiniciarPuerta(ServerCommandSource src, ServerPlayerEntity quien) {
         var svc = LunaEternal.puerta();
         if (svc == null) {
-            src.sendError(Text.literal("\u00a7cLa puerta no esta arrancada."));
+            src.sendError(Text.literal("§cLa puerta no esta arrancada."));
             return 0;
         }
         var perfil = quien.getGameProfile();
@@ -1122,10 +1180,10 @@ public final class LunaCommand {
                 return;
             }
             src.getServer().execute(() -> src.sendFeedback(() -> Text.literal(
-                    "\u00a7a" + perfil.getName() + " vuelve a ser un jugador nuevo"
+                    "§a" + perfil.getName() + " vuelve a ser un jugador nuevo"
                     + (net.pokereport.luna.puerta.Puerta.activa()
-                            ? "\u00a77: en un segundo estara en el lobby."
-                            : "\u00a7e, pero la puerta esta APAGADA: no se movera.")),
+                            ? "§7: en un segundo estara en el lobby."
+                            : "§e, pero la puerta esta APAGADA: no se movera.")),
                     true));
         });
         return 1;
@@ -1133,14 +1191,16 @@ public final class LunaCommand {
 
     private static int quitarGuardian(ServerCommandSource src) {
         ServerPlayerEntity p = src.getPlayer();
-        if (p == null) {
-            src.sendError(Text.literal("Solo desde el juego."));
+        ServerWorld mundo = p != null ? p.getServerWorld() : src.getServer().getWorld(net.pokereport.luna.world.LunaDimensions.LOBBY);
+        if (mundo == null) {
+            src.sendError(Text.literal("§cNo se pudo cargar el mundo LOBBY."));
             return 0;
         }
+        Vec3d centro = p != null ? p.getPos() : net.pokereport.luna.puerta.PuertaNpc.POSICION_DEFAULT;
         int n = net.pokereport.luna.puerta.PuertaNpc.quitar(
-                p.getServerWorld(), p.getPos(), 16.0);
-        src.sendFeedback(() -> Text.literal("\u00a77Quitadas \u00a7f" + n
-                + "\u00a77 entidades."), false);
+                mundo, centro, 32.0);
+        src.sendFeedback(() -> Text.literal("§7Quitadas §f" + n
+                + "§7 entidades."), true);
         return 1;
     }
 
@@ -1151,7 +1211,40 @@ public final class LunaCommand {
             put("lobby", net.pokereport.luna.world.LunaDimensions.LOBBY);
             put("hogar", net.pokereport.luna.world.LunaDimensions.HOGAR);
             put("salvaje", net.pokereport.luna.world.LunaDimensions.SALVAJE);
+            put("naranja", net.pokereport.luna.world.LunaDimensions.ISLAS_NARANJA);
+            put("islasnaranja", net.pokereport.luna.world.LunaDimensions.ISLAS_NARANJA);
         }};
+
+    private static int generarPlataformaNaranja(ServerCommandSource src, int radio) {
+        var server = src.getServer();
+        var mundo = server.getWorld(net.pokereport.luna.world.LunaDimensions.ISLAS_NARANJA);
+        if (mundo == null) {
+            src.sendError(Text.literal("El mundo Islas Naranja no está disponible."));
+            return 0;
+        }
+        int minChunkX = (-radio) >> 4;
+        int maxChunkX = radio >> 4;
+        int minChunkZ = (-radio) >> 4;
+        int maxChunkZ = radio >> 4;
+        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                mundo.getChunk(cx, cz);
+            }
+        }
+        var bloque = net.minecraft.block.Blocks.SMOOTH_STONE.getDefaultState();
+        int count = 0;
+        for (int x = -radio; x <= radio; x++) {
+            for (int z = -radio; z <= radio; z++) {
+                mundo.setBlockState(new net.minecraft.util.math.BlockPos(x, 63, z), bloque);
+                mundo.setBlockState(new net.minecraft.util.math.BlockPos(x, 64, z), bloque);
+                count += 2;
+            }
+        }
+        src.sendMessage(Text.literal(String.format(
+            "§aPlataforma generada en Islas Naranja: radio %d (tamaño %dx%d) a Y=64 (%d bloques).",
+            radio, radio * 2 + 1, radio * 2 + 1, count)));
+        return 1;
+    }
 
     private static int viajar(ServerCommandSource src, String destino) {
         ServerPlayerEntity p = src.getPlayer();
@@ -3013,6 +3106,7 @@ public final class LunaCommand {
             s.sendError(Text.literal("§cLa dimension de gimnasios no existe"));
             return 0;
         }
+        net.pokereport.luna.gym.Arenas.asegurarPosicionesMaestro(mundo, g);
         String[][] cuales = {
             {"player_pokemon_position",  "Pokemon del jugador", "OBLIGATORIO"},
             {"trainer_pokemon_position", "Pokemon del lider",   "OBLIGATORIO"},

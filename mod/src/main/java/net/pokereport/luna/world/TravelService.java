@@ -49,6 +49,7 @@ public final class TravelService {
      * esto pasará a leerse de la base de datos junto con los puntos de viaje.
      */
     private static final Vec3d SPAWN_CIUDADELA = new Vec3d(4.27, 70, 0.36);
+    private static final Vec3d SPAWN_ISLAS_NARANJA = new Vec3d(0.5, 65.0, 0.5);
     /**
      * Donde aterriza quien llega al lobby. <b>Medido por el usuario</b> de pie
      * en el juego, con la construccion ya levantada.
@@ -141,6 +142,11 @@ public final class TravelService {
         boolean isVoid = world.getRegistryKey().equals(LunaDimensions.LOBBY)
                       || world.getRegistryKey().equals(LunaDimensions.CIUDADELA);
 
+        if (world.getRegistryKey().equals(LunaDimensions.ISLAS_NARANJA)) {
+            ensurePlatform(world, BlockPos.ofFloored(SPAWN_ISLAS_NARANJA).down());
+            return SPAWN_ISLAS_NARANJA;
+        }
+
         if (isVoid) {
             Vec3d punto = world.getRegistryKey().equals(LunaDimensions.CIUDADELA)
                 ? SPAWN_CIUDADELA : SPAWN_LOBBY;
@@ -203,6 +209,7 @@ public final class TravelService {
         if (key.equals(LunaDimensions.CIUDADELA)) return "la Ciudadela";
         if (key.equals(LunaDimensions.SALVAJE)) return "el Mundo Salvaje";
         if (key.equals(LunaDimensions.HOGAR)) return "el Mundo Hogar";
+        if (key.equals(LunaDimensions.ISLAS_NARANJA)) return "las Islas Naranja";
         return key.getValue().toString();
     }
 }

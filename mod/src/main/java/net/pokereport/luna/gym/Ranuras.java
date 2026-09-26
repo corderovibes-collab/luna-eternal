@@ -128,8 +128,9 @@ public final class Ranuras {
      * existe. Sin esto se queda encerrado en una copia muerta.
      */
     public static boolean estabaEnArena(ServerPlayerEntity jugador) {
-        return net.pokereport.luna.world.LunaDimensions.GIMNASIOS
-                .equals(jugador.getServerWorld().getRegistryKey());
+        var key = jugador.getServerWorld().getRegistryKey();
+        return net.pokereport.luna.world.LunaDimensions.GIMNASIOS.equals(key)
+                || net.pokereport.luna.world.LunaDimensions.ISLAS_NARANJA.equals(key);
     }
 
     /**

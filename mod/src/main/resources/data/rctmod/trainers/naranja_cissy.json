@@ -1,0 +1,99 @@
+{
+  "name": {
+    "literal": "Cissy"
+  },
+  "ai": {
+    "type": "rct",
+    "data": {
+      "moveBias": 1,
+      "switchBias": 0.6,
+      "statMoveBias": 1,
+      "itemBias": 0.9,
+      "maxSelectMargin": 0.1
+    }
+  },
+  "battleRules": {
+    "maxItemUses": 3
+  },
+  "bag": [
+    {
+      "item": "cobblemon:full_restore",
+      "quantity": 3
+    }
+  ],
+  "team": [
+    {
+      "species": "seadra",
+      "level": 49,
+      "nature": "timid",
+      "ability": "poisonpoint",
+      "moveset": [
+        "hydropump",
+        "icebeam",
+        "dragonpulse",
+        "agility"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    },
+    {
+      "species": "starmie",
+      "level": 49,
+      "nature": "timid",
+      "ability": "illuminate",
+      "moveset": [
+        "surf",
+        "icebeam",
+        "psychic",
+        "recover"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    },
+    {
+      "species": "blastoise",
+      "level": 49,
+      "nature": "modest",
+      "ability": "torrent",
+      "moveset": [
+        "hydropump",
+        "icebeam",
+        "flashcannon",
+        "rapidspin"
+      ],
+      "ivs": {
+        "hp": 31,
+        "atk": 31,
+        "def": 31,
+        "spa": 31,
+        "spd": 31,
+        "spe": 31
+      },
+      "evs": {
+        "hp": 100,
+        "spe": 40
+      }
+    }
+  ],
+  "battleFormat": "GEN_9_SINGLES"
+}

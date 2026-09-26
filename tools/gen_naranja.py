@@ -66,9 +66,8 @@ EQUIPOS = {
         ("electabuzz", "static",     "timid",   ["thunderbolt", "thunderpunch", "icepunch", "psychic"]),
     ],
     "luana": [
-        ("ninetales", "flashfire",   "timid",   ["flamethrower", "confuseray", "willowisp", "energyball"]),
-        ("magmar",    "flamebody",   "modest",  ["flamethrower", "thunderpunch", "confuseray", "psychic"]),
-        ("arcanine",  "intimidate",  "adamant", ["flamethrower", "extremespeed", "crunch", "willowisp"]),
+        ("alakazam", "synchronize",  "timid",   ["psychic", "shadowball", "focusblast", "recover"]),
+        ("marowak",  "rockhead",     "adamant", ["earthquake", "bonemerang", "rockslide", "firepunch"]),
     ],
     # ⚠⚠ El campeon lleva SEIS: en el anime su combate es un 6 contra 6 completo.
     #    Falta Ditto, que es su primero en la serie: solo aprende Transformacion
@@ -123,7 +122,7 @@ def trainer(gid):
         "battleRules": {"maxItemUses": 3},
         "bag": [{"item": "cobblemon:full_restore", "quantity": 3}],
         "team": equipo(gid),
-        "battleFormat": "GEN_9_SINGLES",
+        "battleFormat": "GEN_9_DOUBLES" if gid == "luana" else "GEN_9_SINGLES",
     }
 
 

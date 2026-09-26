@@ -110,7 +110,8 @@ public final class Adaptador {
         }
         try {
             var rival = leerEquipo(jugador);
-            int cuantos = Math.max(1, Math.min(TOPE_EQUIPO, rival.size()));
+            int minCuantos = (g != null && ("luana".equalsIgnoreCase(g.id()) || "giovanni".equalsIgnoreCase(g.id()))) ? 2 : 1;
+            int cuantos = Math.max(minCuantos, Math.min(TOPE_EQUIPO, rival.size()));
             var equipo = componer(pool, rival, cuantos, g.nivel());
 
             var registro = ModCommon.RCT.getTrainerRegistry();
@@ -201,8 +202,9 @@ public final class Adaptador {
         // ⚠⚠⚠ SE COPIA, NO SE MUTA. `BattleFormat.GEN_9_SINGLES` de rctapi es
         //    un ENUM, así que su formato de Cobblemon es UNA instancia
         //    compartida por todo el servidor.
-        var base = com.gitlab.srcmc.rctapi.api.battle.BattleFormat
-                .GEN_9_SINGLES.getCobblemonBattleFormat();
+        var base = (g != null && ("luana".equalsIgnoreCase(g.id()) || "giovanni".equalsIgnoreCase(g.id())))
+                ? com.gitlab.srcmc.rctapi.api.battle.BattleFormat.GEN_9_DOUBLES.getCobblemonBattleFormat()
+                : com.gitlab.srcmc.rctapi.api.battle.BattleFormat.GEN_9_SINGLES.getCobblemonBattleFormat();
         // ⚠ adjustLevel = 0 para no forzar ajuste artificial de nivel:
         //   los Pokémon combaten a sus niveles asignados (14/15 en Brock, 18/19 en Misty).
         var formato = new BattleFormat(base.getMod(), base.getBattleType(),
@@ -374,10 +376,18 @@ public final class Adaptador {
         List<String> items = (c.objeto() == null || c.objeto().isBlank())
                 ? List.of()
                 : List.of(c.objeto());
+        String gender = "GENDERLESS";
+        try {
+            Species sp = PokemonSpecies.getByName(c.especie().toLowerCase());
+            if (sp != null) {
+                gender = sp.create(nivel).getGender().name();
+            }
+        } catch (Throwable ignored) {}
+
         return new PokemonModel(
                 c.especie(),
-                null,
-                null,
+                com.gitlab.srcmc.rctapi.api.util.Text.empty(),
+                gender,
                 nivel,
                 c.naturaleza(),
                 c.habilidad(),
@@ -388,6 +398,37 @@ public final class Adaptador {
                 items,
                 java.util.Set.of(),
                 new com.gitlab.srcmc.rctapi.api.models.Gimmicks());
+    }
+
+    /**
+     * Valida la construcción y conversión a través de rctapi para todas las fichas del líder.
+     * Permite auditar sin necesidad de un combate en vivo.
+     */
+    public static List<String> verificarConversion(Gimnasio.Gimnasio_ g) {
+        var pool = Repertorio.de(g.id());
+        if (pool == null || pool.isEmpty()) {
+            return List.of("§cNo hay repertorio para " + g.id());
+        }
+        var res = new ArrayList<String>();
+        var conv = new com.gitlab.srcmc.rctapi.api.models.converter.PokemonModelConverter();
+        for (var ficha : pool) {
+            try {
+                var model = construir(ficha, List.of(), g.nivel(), false);
+                var errors = com.gitlab.srcmc.rctapi.api.errors.RCTErrors.create();
+                var target = conv.toTarget(model, errors);
+                errors.check();
+                if (target == null) {
+                    res.add("§c[FAIL] " + ficha.especie() + " -> target nulo");
+                } else {
+                    res.add("§a[OK] §f" + target.getSpecies().getName() + " Nv." + target.getLevel()
+                            + " " + target.getGender() + " (" + target.getAbility().getName() + ") ["
+                            + target.getMoveSet().getMoves().stream().map(m -> m.getName()).collect(java.util.stream.Collectors.joining(", ")) + "]");
+                }
+            } catch (Throwable t) {
+                res.add("§c[EXCEPTION] " + ficha.especie() + ": " + t.getClass().getSimpleName() + " - " + t.getMessage());
+            }
+        }
+        return res;
     }
 
     /**

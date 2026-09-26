@@ -92,6 +92,8 @@
   "gimnasio.lunaeternal.no.faltan": "Te faltan %s medallas para retar a este líder.",
   "gimnasio.lunaeternal.no.lleno": "Ahora mismo no hay salas libres. Prueba en un minuto.",
   "gimnasio.lunaeternal.no.nivel_superado": "Tu equipo tiene Pokémon que superan el Nv. %s permitido para este gimnasio.",
+  "gimnasio.lunaeternal.no.doble_necesita_dos": "Este combate es doble (2v2). Necesitas al menos %s Pokémon conscientes en tu equipo.",
+  "gimnasio.lunaeternal.no.luana_necesita_dos": "El combate contra Luana es doble (2v2). Necesitas al menos %s Pokémon conscientes en tu equipo.",
   "gimnasio.lunaeternal.no.no_es_tuya": "Esta no es tu sala.",
   "gimnasio.lunaeternal.no.sin_construir": "Su gimnasio aún se está construyendo.",
   "gimnasio.lunaeternal.no.sin_dimension": "El gimnasio no está disponible.",

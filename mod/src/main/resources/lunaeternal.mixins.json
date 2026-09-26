@@ -12,7 +12,10 @@
     "FileStoreAccessor",
     "FaunaSpawnMixin",
     "MixinLeyendaDeath",
-    "LobbyNetworkGuardMixin"
+    "LobbyNetworkGuardMixin",
+    "battle.RequestInstructionFixMixin",
+    "battle.BattleActorChoiceFixMixin",
+    "battle.PokemonBattleSafetyMixin"
   ],
   "injectors": {
     "defaultRequire": 1

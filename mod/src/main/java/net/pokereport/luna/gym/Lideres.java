@@ -328,6 +328,33 @@ public final class Lideres {
                     }
                 }
             }
+
+            // 4. Guardián del Lobby (Lugia con tag luna_puerta)
+            if (entidad.getCommandTags().contains(net.pokereport.luna.puerta.PuertaNpc.MARCA)
+                    && LunaDimensions.LOBBY.equals(mundo.getRegistryKey())) {
+                var pos = entidad.getPos();
+                Box box = Box.of(pos, 8.0, 8.0, 8.0);
+                for (var otro : mundo.getEntitiesByClass(Entity.class, box,
+                        x -> x != entidad && !x.isRemoved() && x.getCommandTags().contains(net.pokereport.luna.puerta.PuertaNpc.MARCA))) {
+                    entidad.discard();
+                    LunaEternal.LOG.info("Deduplicado: eliminado guardián repetido en {}", pos);
+                    return;
+                }
+            }
+
+            // 5. Cartel del Guardián del Lobby (TextDisplay con tag luna_puerta_cartel)
+            if (entidad instanceof DisplayEntity.TextDisplayEntity
+                    && entidad.getCommandTags().contains("luna_puerta_cartel")
+                    && LunaDimensions.LOBBY.equals(mundo.getRegistryKey())) {
+                var pos = entidad.getPos();
+                Box box = Box.of(pos, 8.0, 8.0, 8.0);
+                for (var otro : mundo.getEntitiesByClass(DisplayEntity.TextDisplayEntity.class, box,
+                        x -> x != entidad && !x.isRemoved() && x.getCommandTags().contains("luna_puerta_cartel"))) {
+                    entidad.discard();
+                    LunaEternal.LOG.info("Deduplicado: eliminado cartel de guardián repetido en {}", pos);
+                    return;
+                }
+            }
         });
     }
 
@@ -410,6 +437,28 @@ public final class Lideres {
                     Decorativos.colocar(mundo, r.especie(), Decorativos.Postura.QUIETO, r.pokemon(), suGiro);
                 }
 
+                // 2.2 Segundo Pokémon decorativo (p. ej. Luana: Alakazam y Marowak)
+                if (r.tieneSegundoPokemon()) {
+                    Box boxP2 = Box.of(r.segundoPokemon(), 4.0, 4.0, 4.0);
+                    PokemonEntity existentePoke2 = null;
+                    for (var p : mundo.getEntitiesByClass(PokemonEntity.class, boxP2,
+                            x -> !x.isRemoved() && x.getCommandTags().contains(Decorativos.MARCA))) {
+                        if (existentePoke2 == null) {
+                            existentePoke2 = p;
+                        } else {
+                            p.discard();
+                        }
+                    }
+
+                    if (existentePoke2 != null) {
+                        existentePoke2.refreshPositionAndAngles(r.p2x(), r.p2y(), r.p2z(), suGiro, 0f);
+                        existentePoke2.setHeadYaw(suGiro);
+                        existentePoke2.setBodyYaw(suGiro);
+                    } else {
+                        Decorativos.colocar(mundo, r.especie2(), Decorativos.Postura.QUIETO, r.segundoPokemon(), suGiro);
+                    }
+                }
+
                 // 3. Cartel holográfico
                 Cartel.poner(mundo, g, r.lider());
                 n++;
@@ -456,6 +505,9 @@ public final class Lideres {
                 var r = Gimnasio.recepcion(g);
                 n += quitar(mundo, g, r.lider(), 3.5);
                 Decorativos.quitar(mundo, r.especie(), r.pokemon(), 3.5);
+                if (r.tieneSegundoPokemon()) {
+                    Decorativos.quitar(mundo, r.especie2(), r.segundoPokemon(), 3.5);
+                }
                 Cartel.quitar(mundo, g, r.lider());
             }
             return n;
@@ -481,7 +533,7 @@ public final class Lideres {
      */
     public static TrainerMob enArena(MinecraftServer servidor,
                                      Gimnasio.Gimnasio_ g, int ranura) {
-        ServerWorld mundo = Arenas.mundo(servidor);
+        ServerWorld mundo = Arenas.mundo(servidor, g);
         if (mundo == null) {
             return null;
         }
@@ -512,10 +564,59 @@ public final class Lideres {
     /** Se lleva al líder de una ranura. */
     public static void quitarDeArena(MinecraftServer servidor,
                                      Gimnasio.Gimnasio_ g, int ranura) {
-        ServerWorld mundo = Arenas.mundo(servidor);
+        ServerWorld mundo = Arenas.mundo(servidor, g);
         if (mundo != null) {
             quitarDeRanura(mundo, g, ranura);
         }
+    }
+
+    /**
+     * Retira el cartel holográfico (TextDisplay) de una ranura cuando empieza el combate.
+     * De esta forma, el cartel no estorba ni tapa la vista entre jugador y líder.
+     */
+    public static void quitarCartelDeRanura(ServerWorld mundo, Gimnasio.Gimnasio_ g, int ranura) {
+        if (mundo == null || g == null) {
+            return;
+        }
+        var o = Gimnasio.origen(g, ranura);
+        boolean esNaranja = g.region() == Gimnasio.Region.NARANJA;
+        int paso = Gimnasio.pasoRanura(g);
+        Box caja = new Box(
+                o.getX() + (esNaranja ? -128 : -8), o.getY() - 64, o.getZ() + (esNaranja ? -112 : -4),
+                o.getX() + (esNaranja ? 144 : ANCHO_MAX), o.getY() + 256,
+                o.getZ() + paso - 0.01);
+        String cartelGymTag = Cartel.marcaDe(g);
+        String liderNom = g.lider().toLowerCase(java.util.Locale.ROOT);
+
+        for (var text : mundo.getEntitiesByClass(DisplayEntity.TextDisplayEntity.class, caja, x -> true)) {
+            if (text.getCommandTags().contains(Cartel.MARCA) || text.getCommandTags().contains(cartelGymTag)) {
+                text.discard();
+            } else {
+                try {
+                    net.minecraft.text.Text txt = text.getText();
+                    if (txt != null && txt.getString().toLowerCase(java.util.Locale.ROOT).contains(liderNom)) {
+                        text.discard();
+                    }
+                } catch (Throwable ignored) {}
+            }
+        }
+
+        try {
+            for (Entity e : mundo.iterateEntities()) {
+                if (e instanceof DisplayEntity.TextDisplayEntity text && !text.isRemoved() && caja.contains(text.getPos())) {
+                    if (text.getCommandTags().contains(Cartel.MARCA) || text.getCommandTags().contains(cartelGymTag)) {
+                        text.discard();
+                    } else {
+                        net.minecraft.text.Text txt = text.getText();
+                        if (txt != null && txt.getString().toLowerCase(java.util.Locale.ROOT).contains(liderNom)) {
+                            text.discard();
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        LunaEternal.LOG.info("Gimnasio {}: cartel holográfico retirado de la ranura {} al iniciar combate", g.id(), ranura);
     }
 
     /**
@@ -549,13 +650,15 @@ public final class Lideres {
     public static int quitarDeRanura(ServerWorld mundo, Gimnasio.Gimnasio_ g,
                                      int ranura) {
         var o = Gimnasio.origen(g, ranura);
+        boolean esNaranja = g.region() == Gimnasio.Region.NARANJA;
+        int paso = Gimnasio.pasoRanura(g);
         // ⚠⚠⚠ FORZAR CARGA DE CHUNKS para que ServerEntityManager lea las entidades del disco
         // si la ranura estaba fría o el líder fue teletransportado a un chunk lejano (ej. battle stand).
         java.util.List<net.minecraft.util.math.ChunkPos> chunksForzados = new java.util.ArrayList<>();
-        int minCx = (o.getX() - 16) >> 4;
-        int maxCx = (o.getX() + ANCHO_MAX + 16) >> 4;
-        int minCz = (o.getZ() - 16) >> 4;
-        int maxCz = (o.getZ() + Gimnasio.PASO_RANURA + 16) >> 4;
+        int minCx = (o.getX() + (esNaranja ? -128 : -16)) >> 4;
+        int maxCx = (o.getX() + (esNaranja ? 144 : ANCHO_MAX + 16)) >> 4;
+        int minCz = (o.getZ() + (esNaranja ? -112 : -16)) >> 4;
+        int maxCz = (o.getZ() + paso + 16) >> 4;
 
         try {
             for (int cx = minCx; cx <= maxCx; cx++) {
@@ -571,9 +674,9 @@ public final class Lideres {
         // ⚠ Un pelo por debajo del paso: un líder justo en el borde es de la
         //   ranura siguiente, no de esta.
         Box caja = new Box(
-                o.getX() - 8, o.getY() - 64, o.getZ() - 4,
-                o.getX() + ANCHO_MAX, o.getY() + 256,
-                o.getZ() + Gimnasio.PASO_RANURA - 0.01);
+                o.getX() + (esNaranja ? -128 : -8), o.getY() - 64, o.getZ() + (esNaranja ? -112 : -4),
+                o.getX() + (esNaranja ? 144 : ANCHO_MAX), o.getY() + 256,
+                o.getZ() + paso - 0.01);
         int n = 0;
         String gymTag = marcaDe(g);
         String trainerId = g.entrenador();

@@ -371,8 +371,26 @@ public final class Gimnasio {
      * <p>La ranura 0 es la del maestro, y ese punto es el que se le da a
      * Litematica o a WorldEdit al pegar el esquema.
      */
+    public static int salaEnDimension(Gimnasio_ g) {
+        if (g != null && g.region() == Region.NARANJA) {
+            return switch (g.id()) {
+                case "cissy" -> 0;
+                case "danny" -> 1;
+                case "rudy" -> 2;
+                case "luana" -> 3;
+                case "drake" -> 4;
+                default -> 0;
+            };
+        }
+        return g != null ? g.sala() : 0;
+    }
+
+    public static int pasoRanura(Gimnasio_ g) {
+        return (g != null && g.region() == Region.NARANJA) ? 512 : PASO_RANURA;
+    }
+
     public static BlockPos origen(Gimnasio_ g, int ranura) {
-        return new BlockPos(g.sala() * SEPARACION, SUELO, ranura * PASO_RANURA);
+        return new BlockPos(salaEnDimension(g) * SEPARACION, SUELO, ranura * pasoRanura(g));
     }
 
     /** El maestro: donde se pega el gimnasio. */
@@ -404,10 +422,20 @@ public final class Gimnasio {
      * <p>⚠ Misty: medido por el usuario (1115.42, 91.0, 5.5) mirando a Oeste (90°)
      * sobre un origen en (1024, 64, 0).
      */
-    private static final java.util.Map<String, Punto> ENTRADAS = java.util.Map.of(
-        "brock", new Punto(48.0, 14.0, 17.26, 0f),
-        "misty", new Punto(91.42, 27.0, 5.5, 90f),
-        "surge", new Punto(7.459, 4.0, 90.47, -90f));
+    private static final java.util.Map<String, Punto> ENTRADAS = java.util.Map.ofEntries(
+        java.util.Map.entry("brock", new Punto(48.0, 14.0, 17.26, 0f)),
+        java.util.Map.entry("misty", new Punto(91.42, 27.0, 5.5, 90f)),
+        java.util.Map.entry("surge", new Punto(7.459, 4.0, 90.47, -90f)),
+        java.util.Map.entry("erika", new Punto(19.944, 15.0, 4.093, 0f)),
+        java.util.Map.entry("koga", new Punto(82.912, 28.0, 27.404, 0f)),
+        java.util.Map.entry("sabrina", new Punto(69.947, 31.0, 90.780, 180f)),
+        java.util.Map.entry("blaine", new Punto(46.534, 5.0, 52.399, 180f)),
+        java.util.Map.entry("giovanni", new Punto(45.997, 5.0, 67.244, 180f)),
+        java.util.Map.entry("cissy", new Punto(-22.93, 0.0, 54.78, 180f)),
+        java.util.Map.entry("danny", new Punto(-22.93, 0.0, 54.78, 180f)),
+        java.util.Map.entry("rudy", new Punto(-22.93, 0.0, 54.78, 180f)),
+        java.util.Map.entry("luana", new Punto(-22.93, 0.0, 54.78, 180f)),
+        java.util.Map.entry("drake", new Punto(-22.93, 0.0, 54.78, 180f)));
 
     /**
      * La tarima del líder, medida en su maestro.
@@ -419,10 +447,20 @@ public final class Gimnasio {
      * <p>⚠ Surge: en la arena de combate esperando en (2093.501, 68.0, 55.536)
      * mirando hacia Norte (180°) sobre un origen en (2048, 64, 0).
      */
-    private static final java.util.Map<String, Punto> LIDERES = java.util.Map.of(
-        "brock", new Punto(48.0, 8.0, 40.45, 180f),
-        "misty", new Punto(31.62, 7.0, 57.55, -90f),
-        "surge", new Punto(45.501, 4.0, 55.536, 180f));
+    private static final java.util.Map<String, Punto> LIDERES = java.util.Map.ofEntries(
+        java.util.Map.entry("brock", new Punto(48.0, 8.0, 40.45, 180f)),
+        java.util.Map.entry("misty", new Punto(31.62, 7.0, 57.55, -90f)),
+        java.util.Map.entry("surge", new Punto(45.501, 4.0, 55.536, 180f)),
+        java.util.Map.entry("erika", new Punto(51.951, 9.0, 60.800, 90f)),
+        java.util.Map.entry("koga", new Punto(46.267, 4.0, 45.527, -90f)),
+        java.util.Map.entry("sabrina", new Punto(41.603, 7.0, 52.524, 180f)),
+        java.util.Map.entry("blaine", new Punto(46.479, 5.0, 24.055, 0f)),
+        java.util.Map.entry("giovanni", new Punto(45.621, 5.0, 38.421, 0f)),
+        java.util.Map.entry("cissy", new Punto(-1.424, 8.0, 5.48, 90f)),
+        java.util.Map.entry("danny", new Punto(-1.424, 8.0, 5.48, 90f)),
+        java.util.Map.entry("rudy", new Punto(-1.424, 8.0, 5.48, 90f)),
+        java.util.Map.entry("luana", new Punto(-1.424, 8.0, 5.48, 90f)),
+        java.util.Map.entry("drake", new Punto(-1.424, 8.0, 5.48, 90f)));
 
     /**
      * DÓNDE ESPERA CADA LÍDER EN LA CIUDADELA, Y CON QUÉ POKÉMON AL LADO.
@@ -446,13 +484,27 @@ public final class Gimnasio {
      *                 pegar, ni capturar, ni retar, ni escanear
      */
     public record Recepcion(double x, double y, double z, float giro,
-                            double px, double py, double pz, String especie) {
+                            double px, double py, double pz, String especie,
+                            Double p2x, Double p2y, Double p2z, String especie2) {
+        public Recepcion(double x, double y, double z, float giro,
+                         double px, double py, double pz, String especie) {
+            this(x, y, z, giro, px, py, pz, especie, null, null, null, null);
+        }
+
         public net.minecraft.util.math.Vec3d lider() {
             return new net.minecraft.util.math.Vec3d(x, y, z);
         }
 
         public net.minecraft.util.math.Vec3d pokemon() {
             return new net.minecraft.util.math.Vec3d(px, py, pz);
+        }
+
+        public boolean tieneSegundoPokemon() {
+            return especie2 != null && p2x != null && p2y != null && p2z != null;
+        }
+
+        public net.minecraft.util.math.Vec3d segundoPokemon() {
+            return tieneSegundoPokemon() ? new net.minecraft.util.math.Vec3d(p2x, p2y, p2z) : null;
         }
     }
 
@@ -489,7 +541,18 @@ public final class Gimnasio {
             java.util.Map.entry("giovanni", new Recepcion(-145.84, 79.0, 71.27, 180f,
                                                           -143.296, 79.0, 70.52, "mewtwo")),
             java.util.Map.entry("campeon_kanto", new Recepcion(-145.22, 81.0, 47.52, 0f,
-                                                               -142.902, 81.0, 47.94, "pidgeot"))
+                                                               -142.902, 81.0, 47.94, "pidgeot")),
+            java.util.Map.entry("cissy", new Recepcion(-165.120, 69.06, 49.248, 90f,
+                                                       -165.385, 69.0, 52.32, "blastoise")),
+            java.util.Map.entry("danny", new Recepcion(-165.968, 69.0, 58.416, 90f,
+                                                       -165.655, 69.125, 60.70, "nidoqueen")),
+            java.util.Map.entry("rudy", new Recepcion(-175.901, 69.0, 49.314, -90f,
+                                                      -176.05, 69.0, 51.64, "starmie")),
+            java.util.Map.entry("luana", new Recepcion(-177.303, 70.0, 60.44, -90f,
+                                                       -175.84, 69.0, 58.30, "alakazam",
+                                                       -176.364, 69.0, 62.87, "marowak")),
+            java.util.Map.entry("drake", new Recepcion(-171.893, 68.50, 66.189, 180f,
+                                                       -169.174, 68.50, 66.279, "dragonite"))
         );
 
 

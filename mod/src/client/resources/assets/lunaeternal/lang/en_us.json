@@ -92,6 +92,8 @@
   "gimnasio.lunaeternal.no.faltan": "You need %s more badges to challenge this leader.",
   "gimnasio.lunaeternal.no.lleno": "No free rooms right now. Try again in a minute.",
   "gimnasio.lunaeternal.no.nivel_superado": "Your party has Pokemon above the Lv. %s cap for this gym.",
+  "gimnasio.lunaeternal.no.doble_necesita_dos": "This is a double battle (2v2). You need at least %s conscious Pokemon in your party.",
+  "gimnasio.lunaeternal.no.luana_necesita_dos": "The battle against Luana is a double battle (2v2). You need at least %s conscious Pokemon in your party.",
   "gimnasio.lunaeternal.no.no_es_tuya": "This is not your room.",
   "gimnasio.lunaeternal.no.sin_construir": "Their gym is still being built.",
   "gimnasio.lunaeternal.no.sin_dimension": "The gym is not available.",

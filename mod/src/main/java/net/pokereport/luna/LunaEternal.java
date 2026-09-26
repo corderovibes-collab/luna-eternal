@@ -177,6 +177,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.torrebatalla.TorreNpc.registrarClic();
         net.pokereport.luna.torrebatalla.TorreReglas.registrar();
         net.pokereport.luna.torrebatalla.TorreBatallaService.registrarEventos();
+        net.pokereport.luna.battlefix.BattleFixService.registrar();
         net.pokereport.luna.torrebatalla.TorreRanking.load();
         net.pokereport.luna.torrebatalla.TorreRecompensas.load();
         net.pokereport.luna.heal.EnfermeraService.registrar();
@@ -633,6 +634,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             net.pokereport.luna.gym.Programador.tick(server);
             // Partículas moradas ambientales en la zona de veneno del Gimnasio de Koga
             net.pokereport.luna.gym.ZonaVenenoKoga.tick(server);
+            // Detección y reinicio por caída en el parkour de Sabrina
+            net.pokereport.luna.gym.SabrinaParkourService.tick(server);
 
             if (server.getTicks() % 20 != 0) return;
             // ⚠ La cuenta atras de los viajes va AQUI, en el corte de 20 ticks:

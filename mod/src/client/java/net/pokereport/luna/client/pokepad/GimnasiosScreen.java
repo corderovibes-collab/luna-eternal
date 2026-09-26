@@ -179,7 +179,7 @@ public class GimnasiosScreen extends Screen {
 
     private Estado estadoDe(Gimnasio.Gimnasio_ g) {
         int m = mascara();
-        if ((m & (1 << g.sala())) != 0) {
+        if ((m & Gimnasio.bitMedalla(g)) != 0) {
             return Estado.GANADA;
         }
         if (!Gimnasio.construido(g)) {

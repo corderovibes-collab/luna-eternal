@@ -94,6 +94,14 @@ public final class Combate {
     /** Quién está retando a quién, para saber a qué gimnasio darle la medalla. */
     private static final Map<UUID, String> RETANDO = new ConcurrentHashMap<>();
 
+    /**
+     * Último recurso para una implementación de Cobblemon que publique el
+     * evento antes de poblar la lista de activos. La clave incluye el lado, de
+     * modo que los dos slots de un lado no dependen del orden del otro.
+     */
+    private static final Map<UUID, Map<String, Integer>> SLOTS_DE_RESPALDO =
+            new ConcurrentHashMap<>();
+
     // ------------------------------------------------------------- clic derecho
 
     /**
@@ -592,6 +600,7 @@ public final class Combate {
             try {
                 if (evento.getBattle() != null) {
                     limpiarReservaBatalla(evento.getBattle().getBattleId());
+                    SLOTS_DE_RESPALDO.remove(evento.getBattle().getBattleId());
                 }
                 //   solo da UUID, y para avisar a alguien hace falta su entidad.
                 //   Buscarla en el servidor obligaría a tener el servidor a mano
@@ -616,6 +625,7 @@ public final class Combate {
             try {
                 if (evento.getBattle() != null) {
                     limpiarReservaBatalla(evento.getBattle().getBattleId());
+                    SLOTS_DE_RESPALDO.remove(evento.getBattle().getBattleId());
                 }
                 for (ServerPlayerEntity p : evento.getBattle().getPlayers()) {
                     terminar(p, false);
@@ -635,14 +645,13 @@ public final class Combate {
         // → la batalla queda atascada en Turn 0 esperando que el Pokémon sea visible.
         //
         // SOLUCIÓN: POKEMON_SENT_POST siempre llega después de que la entidad existe en el
-        // mundo. Si el Pokémon no tiene dueño (es de un NPC), tomamos la posición del lado
-        // del NPC en BattlePositionStore y setPosition() lo mueve al lugar correcto.
+        // mundo. BattlePositionStore ofrece un ancla por lado, no por Pokémon;
+        // por tanto una batalla doble necesita repartir sus slots alrededor de
+        // esa ancla de forma determinista. Se hace para ambos lados: de otro
+        // modo el segundo Pokémon del jugador o del NPC puede acabar encima del
+        // primero dependiendo del orden de envío.
         CobblemonEvents.POKEMON_SENT_POST.subscribe(evento -> {
             try {
-                // Los del jugador ya los gestiona el mixin. Solo nos interesan NPC (sin dueño).
-                if (evento.getPokemon().getOwnerUUID() != null) {
-                    return;
-                }
                 PokemonEntity entidad = evento.getPokemonEntity();
                 if (entidad == null || entidad.isRemoved()) {
                     return;
@@ -652,20 +661,25 @@ public final class Combate {
                     return;
                 }
                 UUID battleId = batalla.getBattleId();
-                Vec3d posNpc = obtenerPosicionNpc(battleId, batalla);
-                if (posNpc == null) {
+                var actor = actorDe(batalla, entidad);
+                if (actor == null) {
+                    return;
+                }
+                Vec3d posicionBase = obtenerPosicion(battleId, actor.getSide());
+                if (posicionBase == null) {
                     // Sin datos en BattlePositionStore: combate fuera de arena de gimnasio.
                     return;
                 }
-                entidad.setPosition(posNpc);
+                Vec3d posicion = posicionConSlot(battleId, batalla, actor, entidad, posicionBase);
+                entidad.setPosition(posicion);
                 String species = evento.getPokemon().getSpecies().getName();
                 UUID entityUuid = entidad.getUuid();
                 LunaEternal.LOG.info(
-                        "[ERIKA-TRACE] FIX P0: NPC Pokemon {} -> ({}, {}, {}) en batalla {}",
+                        "[BATTLE-POSITION] Pokemon {} -> ({}, {}, {}) en batalla {}",
                         species,
-                        String.format("%.2f", posNpc.getX()),
-                        String.format("%.2f", posNpc.getY()),
-                        String.format("%.2f", posNpc.getZ()),
+                        String.format("%.2f", posicion.getX()),
+                        String.format("%.2f", posicion.getY()),
+                        String.format("%.2f", posicion.getZ()),
                         battleId);
 
                 // Auditoría P0 directiva 8: Verificar ciclo de vida en ticks +1, +5, +20
@@ -707,8 +721,8 @@ public final class Combate {
      * acceso en compilación. Devuelve {@code null} si la batalla no tiene datos de
      * arena o si el call falla.
      */
-    private static Vec3d obtenerPosicionNpc(UUID battleId,
-            com.cobblemon.mod.common.api.battles.model.PokemonBattle batalla) {
+    private static Vec3d obtenerPosicion(UUID battleId,
+            com.cobblemon.mod.common.battles.BattleSide lado) {
         try {
             Class<?> storeClass = Class.forName(
                     "com.pokemon.battlepositions.battle.BattlePositionStore");
@@ -719,22 +733,11 @@ public final class Combate {
             if (!hasData) {
                 return null;
             }
-            // Encontrar el lado del NPC en la batalla.
-            com.cobblemon.mod.common.battles.BattleSide ladoNpc = null;
-            for (var actor : batalla.getActors()) {
-                if (actor.getType() == ActorType.NPC) {
-                    ladoNpc = actor.getSide();
-                    break;
-                }
-            }
-            if (ladoNpc == null) {
-                return null;
-            }
             // BattlePositionStore.getPokemonPosition(UUID, BattleSide) → Vec3d/class_243
             Object vec = storeClass
                     .getMethod("getPokemonPosition", UUID.class,
                             com.cobblemon.mod.common.battles.BattleSide.class)
-                    .invoke(null, battleId, ladoNpc);
+                    .invoke(null, battleId, lado);
             if (vec == null) {
                 return null;
             }
@@ -758,6 +761,67 @@ public final class Combate {
         } catch (Throwable ignored) {
             return null;
         }
+    }
+
+    private static com.cobblemon.mod.common.api.battles.model.actor.BattleActor actorDe(
+            com.cobblemon.mod.common.api.battles.model.PokemonBattle batalla, PokemonEntity entidad) {
+        for (var actor : batalla.getActors()) {
+            if (actor.isForPokemon(entidad)) {
+                return actor;
+            }
+        }
+        return null;
+    }
+
+    private static Vec3d posicionConSlot(UUID battleId,
+            com.cobblemon.mod.common.api.battles.model.PokemonBattle batalla,
+            com.cobblemon.mod.common.api.battles.model.actor.BattleActor actor,
+            PokemonEntity entidad, Vec3d base) {
+        if (batalla.getFormat().getBattleType().getPokemonPerSide() < 2) {
+            return base;
+        }
+        int slot = slotActivo(battleId, batalla, actor.getSide(), entidad);
+        var otroLado = batalla.getSide1().equals(actor.getSide())
+                ? batalla.getSide2() : batalla.getSide1();
+        Vec3d opuesto = obtenerPosicion(battleId, otroLado);
+        double dx = opuesto == null ? 0.0 : opuesto.getX() - base.getX();
+        double dz = opuesto == null ? 1.0 : opuesto.getZ() - base.getZ();
+        double largo = Math.hypot(dx, dz);
+        if (largo < 0.001) {
+            dx = 0.0;
+            dz = 1.0;
+            largo = 1.0;
+        }
+        // Perpendicular al eje entre entrenadores: dos carriles de 3 bloques,
+        // simétricos y estables para especies, orden de envío y reintentos.
+        double lateral = slot == 0 ? -1.5 : 1.5;
+        return base.add((dz / largo) * lateral, 0.0, (-dx / largo) * lateral);
+    }
+
+    private static int slotActivo(UUID battleId,
+            com.cobblemon.mod.common.api.battles.model.PokemonBattle batalla,
+            com.cobblemon.mod.common.battles.BattleSide lado, PokemonEntity entidad) {
+        int indice = 0;
+        for (var activo : batalla.getActivePokemon()) {
+            if (!lado.equals(activo.getSide())) continue;
+            var pokemonActivo = activo.getBattlePokemon();
+            if (pokemonActivo.getEntity() == entidad
+                    || pokemonActivo.getUuid().equals(entidad.getPokemon().getUuid())) {
+                return indice;
+            }
+            indice++;
+        }
+        Map<String, Integer> porBatalla = SLOTS_DE_RESPALDO.computeIfAbsent(
+                battleId, ignored -> new ConcurrentHashMap<>());
+        String clave = lado.toString() + ":" + entidad.getUuid();
+        return porBatalla.computeIfAbsent(clave, ignored -> {
+            int usados = 0;
+            String prefijo = lado + ":";
+            for (String existente : porBatalla.keySet()) {
+                if (existente.startsWith(prefijo)) usados++;
+            }
+            return usados % 2;
+        });
     }
 
     private static void terminar(ServerPlayerEntity jugador, boolean gano) {

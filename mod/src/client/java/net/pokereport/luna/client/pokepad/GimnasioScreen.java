@@ -198,7 +198,7 @@ public class GimnasioScreen extends Screen {
             //   dia la lista se ordenara de otra forma, esto seguiria siendo
             //   correcto. El indice solo decide donde se dibuja.
             var g = GIMNASIOS.get(i);
-            boolean tiene = (mascara & (1 << g.sala())) != 0;
+            boolean tiene = (mascara & net.pokereport.luna.gym.Gimnasio.bitMedalla(g)) != 0;
             dibujarTextura(ctx, g.textura(), px(mx), py(my), pl(lado), pl(lado),
                     g.lado(), g.lado(), tiene ? 0xFFFFFFFF : MEDALLA_APAGADA);
         }

@@ -36,6 +36,11 @@ public final class FaunaControl {
                 || LunaDimensions.TORRE.equals(dim);
     }
 
+    /** Islas Naranja no es una zona de fauna: solo se permiten combatientes. */
+    private static boolean esIslasNaranja(net.minecraft.registry.RegistryKey<net.minecraft.world.World> dim) {
+        return LunaDimensions.ISLAS_NARANJA.equals(dim);
+    }
+
     public static boolean esPokemonDeBatalla(com.cobblemon.mod.common.entity.pokemon.PokemonEntity pe) {
         if (pe == null) return false;
         if (pe.getBattleId() != null || pe.isBattling() || pe.isBattleClone()) return true;
@@ -63,6 +68,13 @@ public final class FaunaControl {
                 return false;
             }
             var dim = e.getWorld().getRegistryKey();
+            // No se puede usar la excepción amplia de los gimnasios aquí: al
+            // nacer, un salvaje tampoco tiene dueño ni battleId. Los Pokémon
+            // de combate ya salieron arriba por su marca de batalla; cualquier
+            // otro Pokémon sin propietario es fauna y no pertenece a estas islas.
+            if (esIslasNaranja(dim)) {
+                return p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null;
+            }
             if (esGymOTorre(dim)) {
                 LunaEternal.LOG.info("[ERIKA-TRACE] FaunaControl.bloquear PERMITIDO: dimensión gimnasio/torre {} (pokemon={})",
                         dim.getValue(), (p != null ? p.getSpecies().getName() : "desconocido"));
@@ -90,6 +102,13 @@ public final class FaunaControl {
             if (pe == null) return;
             if (esPokemonDeBatalla(pe)) return;
             var dim = pe.getWorld().getRegistryKey();
+            if (esIslasNaranja(dim)) {
+                var p = pe.getPokemon();
+                if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {
+                    event.cancel();
+                }
+                return;
+            }
             if (esGymOTorre(dim)) return;
             var p = pe.getPokemon();
             if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {
@@ -131,6 +150,12 @@ public final class FaunaControl {
                     return;
                 }
                 var dim = w.getRegistryKey();
+                if (esIslasNaranja(dim)) {
+                    if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {
+                        pe.discard();
+                    }
+                    return;
+                }
                 if (esGymOTorre(dim)) {
                     return;
                 }
@@ -168,7 +193,7 @@ public final class FaunaControl {
         ServerTickEvents.START_WORLD_TICK.register(world -> {
             if (!activo) return;
             var dim = world.getRegistryKey();
-            if (!esHogarOSalvaje(dim)) return;
+            if (!esHogarOSalvaje(dim) && !esIslasNaranja(dim)) return;
             if (world.getTime() % 40 != 0) return;
 
             List<Entity> descartar = null;
@@ -190,8 +215,7 @@ public final class FaunaControl {
                         continue;
                     }
                     if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {
-                        int dex = p.getSpecies().getNationalPokedexNumber();
-                        if (!pokemonPermitido(p, dim.getValue().toString())) {
+                        if (esIslasNaranja(dim) || !pokemonPermitido(p, dim.getValue().toString())) {
                             if (descartar == null) descartar = new ArrayList<>();
                             descartar.add(pe);
                         }

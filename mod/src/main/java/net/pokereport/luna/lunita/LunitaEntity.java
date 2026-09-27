@@ -69,7 +69,8 @@ public final class LunitaEntity extends PathAwareEntity implements GeoEntity {
             RawAnimation animation = switch (state) {
                 case GREET -> RawAnimation.begin().thenPlay("animation.lunita.greet");
                 case RETURN_HOME, TAKE_OFF, FLY, GLIDE -> RawAnimation.begin().thenLoop("animation.lunita.return_home");
-                default -> RawAnimation.begin().thenLoop("animation.lunita.idle");
+                // Native Blockbench idle retained from the Lunita/Eevee model.
+                default -> RawAnimation.begin().thenLoop("animation.eevee.ground_idle");
             };
             return event.setAndContinue(animation);
         }));

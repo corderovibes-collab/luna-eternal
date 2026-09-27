@@ -464,9 +464,14 @@ public final class Gimnasio {
         java.util.Map.entry("rudy", new Punto(-1.424, 8.0, 5.48, 90f)),
         java.util.Map.entry("luana", new Punto(-1.424, 8.0, 5.48, 90f)),
         java.util.Map.entry("drake", new Punto(-1.424, 8.0, 5.48, 90f)),
-        // Blue espera al fondo de la arena, mirando al Norte:
-        // (13357.975, 68, 62.840) - (13312, 64, 0).
-        java.util.Map.entry("campeon_kanto", new Punto(45.975, 4.0, 62.840, 180f)));
+        // Blue espera aquí antes del combate, mirando al Norte:
+        // (13358.023, 68, 54.711) - (13312, 64, 0).
+        //
+        // Al empezar la batalla Battle Positions lo mueve a su bloque
+        // trainer_stand_position: (13357.975, 68, 62.840). No se usa ese
+        // segundo punto como tarima, o Blue aparecería adelantado antes de que
+        // el jugador le hiciera clic derecho.
+        java.util.Map.entry("campeon_kanto", new Punto(46.023, 4.0, 54.711, 180f)));
 
     /**
      * DÓNDE ESPERA CADA LÍDER EN LA CIUDADELA, Y CON QUÉ POKÉMON AL LADO.

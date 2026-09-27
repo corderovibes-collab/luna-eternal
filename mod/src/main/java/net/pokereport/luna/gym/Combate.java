@@ -865,6 +865,11 @@ public final class Combate {
                     Text.translatable("gimnasio.lunaeternal.sub.victoria", g.lider()),
                     net.minecraft.sound.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
                     1.0f);
+            // Blue cierra Kanto. La celebración ocurre antes del regreso para
+            // que sus tres ráfagas se vean en la arena, no en la Ciudadela.
+            if ("campeon_kanto".equals(g.id())) {
+                CelebracionCampeon.lanzar(jugador);
+            }
             if (nueva) {
                 // ⚠ El toast viaja como TEXTO YA COMPUESTO: así lo pide `Aviso`,
                 //   y por un motivo escrito ahí — si viajaran las piezas, el

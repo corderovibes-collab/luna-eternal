@@ -435,7 +435,10 @@ public final class Gimnasio {
         java.util.Map.entry("danny", new Punto(-22.93, 0.0, 54.78, 180f)),
         java.util.Map.entry("rudy", new Punto(-22.93, 0.0, 54.78, 180f)),
         java.util.Map.entry("luana", new Punto(-22.93, 0.0, 54.78, 180f)),
-        java.util.Map.entry("drake", new Punto(-22.93, 0.0, 54.78, 180f)));
+        java.util.Map.entry("drake", new Punto(-22.93, 0.0, 54.78, 180f)),
+        // Blue · maestro en (13312, 64, 0). Medido en su Liga de Kanto:
+        // (13357.972, 68, 8.653), mirando al Sur.
+        java.util.Map.entry("campeon_kanto", new Punto(45.972, 4.0, 8.653, 0f)));
 
     /**
      * La tarima del líder, medida en su maestro.
@@ -460,7 +463,10 @@ public final class Gimnasio {
         java.util.Map.entry("danny", new Punto(-1.424, 8.0, 5.48, 90f)),
         java.util.Map.entry("rudy", new Punto(-1.424, 8.0, 5.48, 90f)),
         java.util.Map.entry("luana", new Punto(-1.424, 8.0, 5.48, 90f)),
-        java.util.Map.entry("drake", new Punto(-1.424, 8.0, 5.48, 90f)));
+        java.util.Map.entry("drake", new Punto(-1.424, 8.0, 5.48, 90f)),
+        // Blue espera al fondo de la arena, mirando al Norte:
+        // (13357.975, 68, 62.840) - (13312, 64, 0).
+        java.util.Map.entry("campeon_kanto", new Punto(45.975, 4.0, 62.840, 180f)));
 
     /**
      * DÓNDE ESPERA CADA LÍDER EN LA CIUDADELA, Y CON QUÉ POKÉMON AL LADO.

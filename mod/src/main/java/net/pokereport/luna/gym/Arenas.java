@@ -341,6 +341,16 @@ public final class Arenas {
             new PosicionBloque(7214, 67, 50, "trainer_pokemon_position"),
             new PosicionBloque(7214, 67, 58, "player_pokemon_position"),
             new PosicionBloque(7214, 67, 64, "player_stand_position")
+        ),
+        // BLUE · Los cuatro anclajes se toman de la construcción maestra.
+        // Los bloques van dos unidades bajo el punto visual que midió el
+        // constructor, igual que Giovanni y Blaine. Si el constructor ya puso
+        // un bloque, la rutina de seguridad no lo reemplaza.
+        "campeon_kanto", java.util.List.of(
+            new PosicionBloque(13357, 66, 62, "trainer_stand_position"),
+            new PosicionBloque(13357, 66, 57, "trainer_pokemon_position"),
+            new PosicionBloque(13357, 66, 51, "player_pokemon_position"),
+            new PosicionBloque(13357, 66, 46, "player_stand_position")
         )
     );
 

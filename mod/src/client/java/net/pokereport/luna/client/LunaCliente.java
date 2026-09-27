@@ -62,6 +62,7 @@ public class LunaCliente implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         migrarServidorOficial();
+        QuienEsEsePokemonHud.registrar();
 
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
                 net.pokereport.luna.lunita.LunitaEntities.LUNITA,
@@ -113,6 +114,13 @@ public class LunaCliente implements ClientModInitializer {
                 (carga, ctx) -> ctx.client().execute(() ->
                         ctx.client().setScreen(new CinematicaScreen(
                                 carga.url(), carga.segundos(), carga.puedeSalir()))));
+
+        ClientPlayNetworking.registerGlobalReceiver(
+                net.pokereport.luna.quienesepokemon.QuienEsEsePokemonNet.Ronda.ID,
+                (carga, ctx) -> ctx.client().execute(() -> QuienEsEsePokemonHud.ronda(carga)));
+        ClientPlayNetworking.registerGlobalReceiver(
+                net.pokereport.luna.quienesepokemon.QuienEsEsePokemonNet.Revelacion.ID,
+                (carga, ctx) -> ctx.client().execute(() -> QuienEsEsePokemonHud.revelacion(carga)));
 
         // Los LOGROS: suben a la esquina como un toast. Van aqui y no en una
         // pantalla porque tienen que verse ESTES DONDE ESTES -- picando, pescando

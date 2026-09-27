@@ -2562,5 +2562,13 @@
         "stream": true
       }
     ]
+  },
+  "quien_es_ese_pokemon.inicio": {
+    "sounds": [
+      {
+        "name": "lunaeternal:quien_es_ese_pokemon/inicio",
+        "stream": false
+      }
+    ]
   }
 }

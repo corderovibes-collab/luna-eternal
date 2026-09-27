@@ -54,6 +54,17 @@ public final class LunaCommand {
                 .executes(ctx -> net.pokereport.luna.puerta.BienvenidaOak
                         .reproducir(ctx.getSource().getPlayerOrThrow())))
 
+            // QA del evento global. La respuesta sigue siendo exclusivamente
+            // por chat; este comando solo evita esperar quince minutos al probar.
+            .then(literal("quienpokemon")
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(literal("iniciar").executes(ctx ->
+                        net.pokereport.luna.quienesepokemon.QuienEsEsePokemonService
+                                .iniciarManual(ctx.getSource())))
+                .then(literal("estado").executes(ctx ->
+                        net.pokereport.luna.quienesepokemon.QuienEsEsePokemonService
+                                .estado(ctx.getSource()))))
+
             // Herramientas exclusivas de administración para instalar y revisar
             // a Lunita sin depender de coordenadas inventadas en código.
             .then(literal("lunita")

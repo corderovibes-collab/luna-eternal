@@ -3,6 +3,7 @@ package net.pokereport.luna.quest;
 import net.pokereport.luna.progression.Path;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 /**
  * Definición de una misión, cargada del JSON.
@@ -13,6 +14,9 @@ import java.time.LocalDate;
 public record Quest(String id, String chain, int order, String requires,
                     String name, String description,
                     Objective objective, Rewards rewards, Period period) {
+
+    /** Referencia única para los reinicios diarios/semanales de la red. */
+    private static final ZoneId ZONA_SERVIDOR = ZoneId.of("America/Bogota");
 
     /** Qué hay que hacer. */
     public record Objective(Type type, long amount) {
@@ -83,7 +87,7 @@ public record Quest(String id, String chain, int order, String requires,
          * estar disponible mañana sin borrar el historial de ayer.
          */
         public String key() {
-            LocalDate hoy = LocalDate.now();
+            LocalDate hoy = LocalDate.now(ZONA_SERVIDOR);
             return switch (this) {
                 case ONCE -> "";
                 case DAY  -> hoy.toString();

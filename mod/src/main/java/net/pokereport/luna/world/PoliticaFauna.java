@@ -19,7 +19,11 @@ public final class PoliticaFauna {
     public static float densidad(String dimension) {
         if (dimension.equals("minecraft:overworld")) return DENSIDAD_HOGAR;
         if (dimension.matches("lunaeternal:salvaje[2-6]?")) return DENSIDAD_SALVAJE;
-        return 0f;
+        // La Ciudadela no comparte el recorte del Hogar ni el multiplicador de
+        // las zonas salvajes: conserva la densidad base de su dimensión.
+        if (dimension.equals("lunaeternal:ciudadela")) return 1f;
+        // No imponemos una política de spawn a dimensiones ajenas al sistema.
+        return 1f;
     }
 
     public static boolean esSalvaje(String dimension) {

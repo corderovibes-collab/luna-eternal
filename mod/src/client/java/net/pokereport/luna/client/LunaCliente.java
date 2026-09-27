@@ -63,6 +63,10 @@ public class LunaCliente implements ClientModInitializer {
     public void onInitializeClient() {
         migrarServidorOficial();
 
+        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+                net.pokereport.luna.lunita.LunitaEntities.LUNITA,
+                net.pokereport.luna.client.lunita.LunitaRenderer::new);
+
         // El codec del Mercado Negro se registra en el entrypoint comun, pero
         // el receptor que anuncia al servidor que este cliente puede recibir
         // `buhonero_oferta` vive en la pantalla. Sin esta llamada el JAR puede

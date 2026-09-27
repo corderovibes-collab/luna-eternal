@@ -54,6 +54,16 @@ public final class LunaCommand {
                 .executes(ctx -> net.pokereport.luna.puerta.BienvenidaOak
                         .reproducir(ctx.getSource().getPlayerOrThrow())))
 
+            // Herramientas exclusivas de administración para instalar y revisar
+            // a Lunita sin depender de coordenadas inventadas en código.
+            .then(literal("lunita")
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(literal("status").executes(ctx -> net.pokereport.luna.lunita.LunitaManager.status(ctx.getSource())))
+                .then(literal("respawn").executes(ctx -> net.pokereport.luna.lunita.LunitaManager.respawn(ctx.getSource())))
+                .then(literal("goto").executes(ctx -> net.pokereport.luna.lunita.LunitaManager.gotoLunita(ctx.getSource())))
+                .then(literal("tp").executes(ctx -> net.pokereport.luna.lunita.LunitaManager.gotoLunita(ctx.getSource())))
+                .then(literal("debug").executes(ctx -> net.pokereport.luna.lunita.LunitaManager.debug(ctx.getSource()))))
+
             // Viaje entre dimensiones, para CONSTRUCTORES (nivel 2).
             //
             // Existe porque la Puerta del Mundo se fue con los menús (D-026) y

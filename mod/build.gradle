@@ -1,5 +1,7 @@
 plugins {
-    id 'fabric-loom' version '1.7-SNAPSHOT'
+    // Dependencias del modpack, incluido GeckoLib 4.9.2, fueron remapeadas
+    // con Loom 1.17.13. Compilar con Loom 1.7 falla antes de llegar a Java.
+    id 'fabric-loom' version '1.17.13'
     id 'java'
 }
 
@@ -27,6 +29,13 @@ loom {
 
 repositories {
     mavenCentral()
+    // GeckoLib ya forma parte del modpack de producción. Solo compilamos contra
+    // su API; no se empaqueta en Luna Eternal ni se duplica en el launcher.
+    maven {
+        name = 'GeckoLib'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        content { includeGroup 'software.bernie.geckolib' }
+    }
     // Cobblemon se publica aquí. Se usa la MISMA version que corre el
     // servidor (1.7.3); el `main` del repositorio va por 1.8.0 y su API
     // puede diferir.
@@ -61,6 +70,10 @@ dependencies {
     // Reproductor multimedia del cliente. El JAR y sus binarios se descargan
     // desde Modrinth por el launcher; aqui solo hace falta su API al compilar.
     modCompileOnly "maven.modrinth:watermedia:FdCZ5Rxq"
+
+    // Lunita: entidad propia con modelo y animaciones Bedrock/GeckoLib.
+    // La versión coincide con el JAR instalado en clientes y servidor.
+    modCompileOnly "software.bernie.geckolib:geckolib-fabric-${project.minecraft_version}:4.9.2"
 
     // Cobblemon Battle Extras: API cliente para reparar tooltips y efectividad de combate
     modCompileOnly files("${rootDir}/../build/cobblemon-battle-extras-fabric-1.13.45.jar")

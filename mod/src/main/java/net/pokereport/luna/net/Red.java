@@ -3707,6 +3707,9 @@ public class Red implements ModInitializer {
         net.pokereport.luna.backpack.Registro.registrar();
         net.pokereport.luna.item.LunaItems.init();
         net.pokereport.luna.pokestop.LunarStops.register();
+        // Registro común: el cliente debe conocer el tipo antes de que el
+        // servidor sincronice una Lunita existente en la Ciudadela.
+        net.pokereport.luna.lunita.LunitaEntities.register();
 
         PayloadTypeRegistry.playS2C().register(Cinematica.ID, Cinematica.CODEC);
 

@@ -386,7 +386,12 @@ public final class Gimnasio {
     }
 
     public static int pasoRanura(Gimnasio_ g) {
-        return (g != null && g.region() == Region.NARANJA) ? 512 : PASO_RANURA;
+        // Morti se copia en su propia dimensión nocturna. Su construcción puede
+        // tener patios y alas separados por huecos grandes, así que necesita la
+        // misma holgura que los gimnasios de la Liga Naranja; 128 cortaría o
+        // haría solapar las copias de los jugadores.
+        return (g != null && (g.region() == Region.NARANJA || "morti".equals(g.id())))
+                ? 512 : PASO_RANURA;
     }
 
     public static BlockPos origen(Gimnasio_ g, int ranura) {

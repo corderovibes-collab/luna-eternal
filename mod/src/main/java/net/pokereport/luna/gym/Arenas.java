@@ -184,13 +184,24 @@ public final class Arenas {
             return null;
         }
         int finIdx = primeraIdx;
-        int vacias = 0;
-        for (int zIdx = primeraIdx; zIdx < alcanceZ; zIdx++) {
-            if (ocupada[zIdx]) {
-                finIdx = zIdx + 1;
-                vacias = 0;
-            } else if (++vacias >= AIRE_QUE_CORTA) {
-                break;
+        if ("morti".equals(g.id())) {
+            // Morti tiene zonas intencionalmente separadas por aire (patios,
+            // pasillos y decoración exterior). El corte genérico de ocho capas
+            // vacías convertía esas zonas en un recorte silencioso. En su
+            // dimensión aislada hay 512 bloques entre ranuras, por lo que se
+            // mide toda la franja disponible y no se pierde nada del mapa.
+            for (int zIdx = primeraIdx; zIdx < alcanceZ; zIdx++) {
+                if (ocupada[zIdx]) finIdx = zIdx + 1;
+            }
+        } else {
+            int vacias = 0;
+            for (int zIdx = primeraIdx; zIdx < alcanceZ; zIdx++) {
+                if (ocupada[zIdx]) {
+                    finIdx = zIdx + 1;
+                    vacias = 0;
+                } else if (++vacias >= AIRE_QUE_CORTA) {
+                    break;
+                }
             }
         }
 

@@ -104,23 +104,30 @@ public final class LunitaManager {
         ServerPlayerEntity admin;
         try { admin = source.getPlayerOrThrow(); }
         catch (Exception e) { source.sendError(Text.literal("§cEste comando debe ejecutarlo un jugador en Ciudadela.")); return 0; }
-        if (!LunaDimensions.CIUDADELA.equals(admin.getWorld().getRegistryKey())) {
-            source.sendError(Text.literal("§cDebes estar en lunaeternal:ciudadela.")); return 0;
+        try {
+            if (!LunaDimensions.CIUDADELA.equals(admin.getWorld().getRegistryKey())) {
+                source.sendError(Text.literal("§cDebes estar en lunaeternal:ciudadela.")); return 0;
+            }
+            ServerWorld world = admin.getServerWorld();
+            LunitaEntity existing = buscar(world);
+            if (existing == null) {
+                existing = LunitaEntities.LUNITA.create(world);
+                if (existing == null) { source.sendError(Text.literal("§cNo se pudo crear Lunita.")); return 0; }
+                world.spawnEntity(existing);
+            }
+            BlockPos home = admin.getBlockPos();
+            world.getChunk(home);
+            existing.setHome(home);
+            existing.refreshPositionAndAngles(admin.getX(), admin.getY(), admin.getZ(), admin.getYaw(), 0f);
+            existing.state(LunitaState.IDLE);
+            source.sendFeedback(() -> Text.literal("§dLunita quedó ubicada en §f" + home.toShortString()), true);
+            LunaEternal.LOG.info("[LUNITA] admin respawn player={} home={}", admin.getUuid(), home.toShortString());
+            return 1;
+        } catch (Exception e) {
+            LunaEternal.LOG.error("[LUNITA] fallo al crear o reubicar la entidad para {}", admin.getUuid(), e);
+            source.sendError(Text.literal("§cNo se pudo ubicar Lunita. La causa quedó registrada en consola."));
+            return 0;
         }
-        ServerWorld world = admin.getServerWorld();
-        LunitaEntity existing = buscar(world);
-        if (existing == null) {
-            existing = LunitaEntities.LUNITA.create(world);
-            if (existing == null) { source.sendError(Text.literal("§cNo se pudo crear Lunita.")); return 0; }
-            world.spawnEntity(existing);
-        }
-        BlockPos home = admin.getBlockPos();
-        world.getChunk(home);
-        existing.setHome(home);
-        existing.refreshPositionAndAngles(admin.getX(), admin.getY(), admin.getZ(), admin.getYaw(), 0f);
-        existing.state(LunitaState.IDLE);
-        source.sendFeedback(() -> Text.literal("§dLunita quedó ubicada en §f" + home.toShortString()), true);
-        return 1;
     }
 
     public static int status(ServerCommandSource source) {

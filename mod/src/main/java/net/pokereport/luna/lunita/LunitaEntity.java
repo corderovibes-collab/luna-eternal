@@ -1,6 +1,8 @@
 package net.pokereport.luna.lunita;
 
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.attribute.DefaultAttributeContainer;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
 import net.minecraft.entity.ai.goal.WanderAroundFarGoal;
@@ -36,6 +38,14 @@ public final class LunitaEntity extends PathAwareEntity implements GeoEntity {
         setPersistent();
         setInvulnerable(true);
         addCommandTag(MARCA);
+    }
+
+    /** Atributos obligatorios para toda entidad viviente personalizada. */
+    public static DefaultAttributeContainer.Builder createAttributes() {
+        return PathAwareEntity.createMobAttributes()
+                .add(EntityAttributes.GENERIC_MAX_HEALTH, 20.0)
+                .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.18)
+                .add(EntityAttributes.GENERIC_FOLLOW_RANGE, 12.0);
     }
 
     @Override protected void initGoals() {

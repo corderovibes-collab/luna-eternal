@@ -1,5 +1,6 @@
 package net.pokereport.luna.lunita;
 
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.registry.Registries;
@@ -16,5 +17,8 @@ public final class LunitaEntities {
                     .maxTrackingRange(10).trackingTickInterval(2).build());
 
     private LunitaEntities() {}
-    public static void register() { /* fuerza la carga estática desde el entrypoint común */ }
+    public static void register() {
+        // Sin este registro Minecraft no puede construir la entidad viva.
+        FabricDefaultAttributeRegistry.register(LUNITA, LunitaEntity.createAttributes());
+    }
 }

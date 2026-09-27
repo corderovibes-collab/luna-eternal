@@ -348,14 +348,22 @@ public final class Combate {
         if (jugador == null || g == null) {
             return "No existe ese gimnasio.";
         }
-        if (!Gimnasio.construido(g)) {
-            return "El gimnasio " + g.id() + " todavía no está construido.";
-        }
         if (Ranuras.asignacionDe(jugador.getUuid()) != null) {
             return "Primero sal de la arena que ya estás probando.";
         }
         MinecraftServer servidor = jugador.getServer();
-        if (servidor == null || Arenas.mundo(servidor, g) == null) {
+        if (servidor == null) {
+            return "El servidor no está disponible.";
+        }
+        // El modo prueba es una herramienta de construcción. Los gimnasios
+        // nuevos (como Morti) aún no tienen las coordenadas finales de entrada
+        // registradas, pero sí pueden tener un mapa maestro perfectamente
+        // construido. No se debe bloquear al constructor por esa configuración
+        // pendiente: se usa la entrada de respaldo y jamás se concede progreso.
+        if (!Gimnasio.construido(g) && Arenas.medir(servidor, g) == null) {
+            return "El gimnasio " + g.id() + " todavía no tiene un mapa maestro construido.";
+        }
+        if (Arenas.mundo(servidor, g) == null) {
             return "No está disponible la dimensión de gimnasios.";
         }
         if (!Lideres.idValido(g)) {

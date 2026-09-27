@@ -56,9 +56,6 @@ public final class FaunaControl {
         }
         if (e instanceof com.cobblemon.mod.common.entity.pokemon.PokemonEntity pe) {
             var p = pe.getPokemon();
-            if (Decorativos.esDecorativo(p)) {
-                return false;
-            }
             // ⚠⚠ CRÍTICO: Jamás bloquear Pokémon de combate (NPCs de gimnasio, rivales, clones)
             if (esPokemonDeBatalla(pe)) {
                 if (esGymOTorre(e.getWorld().getRegistryKey())) {
@@ -74,6 +71,9 @@ public final class FaunaControl {
             // otro Pokémon sin propietario es fauna y no pertenece a estas islas.
             if (esIslasNaranja(dim)) {
                 return p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null;
+            }
+            if (Decorativos.esDecorativo(p)) {
+                return false;
             }
             if (esGymOTorre(dim)) {
                 LunaEternal.LOG.info("[ERIKA-TRACE] FaunaControl.bloquear PERMITIDO: dimensión gimnasio/torre {} (pokemon={})",
@@ -143,9 +143,6 @@ public final class FaunaControl {
             }
             if (e instanceof com.cobblemon.mod.common.entity.pokemon.PokemonEntity pe) {
                 var p = pe.getPokemon();
-                if (Decorativos.esDecorativo(p)) {
-                    return;
-                }
                 if (esPokemonDeBatalla(pe)) {
                     return;
                 }
@@ -154,6 +151,9 @@ public final class FaunaControl {
                     if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {
                         pe.discard();
                     }
+                    return;
+                }
+                if (Decorativos.esDecorativo(p)) {
                     return;
                 }
                 if (esGymOTorre(dim)) {
@@ -211,9 +211,6 @@ public final class FaunaControl {
                         continue;
                     }
                     var p = pe.getPokemon();
-                    if (Decorativos.esDecorativo(p)) {
-                        continue;
-                    }
                     if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {
                         if (esIslasNaranja(dim) || !pokemonPermitido(p, dim.getValue().toString())) {
                             if (descartar == null) descartar = new ArrayList<>();

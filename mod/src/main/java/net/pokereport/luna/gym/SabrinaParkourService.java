@@ -23,9 +23,9 @@ import net.pokereport.luna.world.LunaDimensions;
  *
  * <p>Delimitación exacta de la zona de caída por ranura:
  * <ul>
- *   <li>X: [5182.408, 5200.422]</li>
- *   <li>Z: [11.417 + r*128, 93.698 + r*128]</li>
- *   <li>Y: <= 78.0</li>
+ *   <li>X: [5182.564, 5200.490]</li>
+ *   <li>Z: [153.509 + r*128, 221.492 + r*128]</li>
+ *   <li>Y: <= 77.0</li>
  * </ul>
  *
  * <p>Reglas estrictas de ejecución:
@@ -38,11 +38,11 @@ import net.pokereport.luna.world.LunaDimensions;
  */
 public final class SabrinaParkourService {
 
-    private static final double MIN_X = 5182.408;
-    private static final double MAX_X = 5200.422;
-    private static final double REL_MIN_Z = 11.417;
-    private static final double REL_MAX_Z = 93.698;
-    private static final double MAX_Y = 78.0;
+    private static final double MIN_X = 5182.564;
+    private static final double MAX_X = 5200.490;
+    private static final double REL_MIN_Z = 153.509;
+    private static final double REL_MAX_Z = 221.492;
+    private static final double MAX_Y = 77.0;
 
     private static final long DEBOUNCE_MS = 1500L;
     private static final Map<UUID, Long> ULTIMA_CAIDA = new ConcurrentHashMap<>();

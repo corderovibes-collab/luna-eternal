@@ -2843,6 +2843,31 @@ public final class AutoTest {
         }
         check("toda aplicacion del PokePad tiene su icono dentro del jar", iconos);
 
+        // El nombre y la ayuda contextual forman parte de la interfaz, no son
+        // decoración. Si falta una clave, Minecraft enseña
+        // `pokepad.lunaeternal.app.algo.desc` al pasar el ratón: es un error
+        // técnico expuesto al jugador igual que una textura magenta.
+        boolean textosPad = true;
+        try (var in = AutoTest.class.getResourceAsStream(
+                "/assets/lunaeternal/lang/es_es.json")) {
+            var idioma = com.google.gson.JsonParser.parseReader(
+                    new java.io.InputStreamReader(in,
+                            java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            for (var ficha : net.pokereport.luna.pokepad.CatalogoPad.TODAS) {
+                String base = "pokepad.lunaeternal.app." + ficha.id();
+                if (!idioma.has(base) || !idioma.has(base + ".desc")) {
+                    textosPad = false;
+                    LunaEternal.LOG.error("La aplicacion {} no tiene nombre o "
+                            + "descripcion en es_es.json", ficha.id());
+                }
+            }
+        } catch (Exception e) {
+            textosPad = false;
+            LunaEternal.LOG.error("No se pudo validar los textos del PokePad: {}",
+                    e.toString());
+        }
+        check("toda aplicacion del PokePad tiene nombre y descripcion", textosPad);
+
         // ⚠⚠⚠ Y SU MCMETA TIENE QUE SER JSON DE VERDAD, no solo existir. Paso
         //    el 2026-09-04: un script escribio los .mcmeta con «\n» literales
         //    (backslash + n) en vez de saltos de linea. El servidor no los lee

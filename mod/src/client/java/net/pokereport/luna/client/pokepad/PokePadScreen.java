@@ -153,6 +153,8 @@ public class PokePadScreen extends Screen {
     // por su cuenta.
     private static final int TEXTO_COLOR = 0xFF16203A;
     private static final int TEXTO_CONTORNO = 0xFFF2F6FF;
+    /** Metadatos discretos: orientan sin competir con el nombre de cada app. */
+    private static final int TEXTO_SECCION = 0xFF566887;
 
     // El borde de la celda y la esquina mordida, tambien en pixeles del arte.
     // A 1 px sobre una celda de 124 no se ve ninguno de los dos.
@@ -552,6 +554,17 @@ public class PokePadScreen extends Screen {
         dibujar(ctx, CHASIS, x0, y0, ancho, alto,
                 NAT_ANCHO, NAT_ALTO, 0xFFFFFFFF);
 
+        // El logotipo ya identifica al servidor; esta línea identifica el
+        // CONTENIDO. Sin ella, al volver desde una aplicación la rejilla parece
+        // un mural de iconos sin un punto de orientación ni una indicación de
+        // que puede haber más páginas.
+        texto(ctx, Text.translatable("pokepad.lunaeternal.seccion.aplicaciones"),
+                REJ_X, 212, 12, TEXTO_SECCION, false, false);
+        texto(ctx, Text.translatable("pokepad.lunaeternal.pagina",
+                        pagina + 1, PAGINAS),
+                REJ_X + COLS * (CELDA + HUECO_X) - HUECO_X,
+                212, 12, TEXTO_SECCION, false, false, true);
+
         int celda = Math.round(CELDA * k);
         int icono = Math.round(ICONO * k);
         // Nunca por debajo de 1: a GUI Scale alto y ventana pequena, redondear
@@ -598,8 +611,8 @@ public class PokePadScreen extends Screen {
             // que mida siempre lo mismo respecto al Pad.
             int artX = REJ_X + (i % COLS) * (CELDA + HUECO_X) + CELDA / 2;
             int artY = REJ_Y + (i / COLS) * (CELDA + HUECO_Y) + CELDA - TEXTO_SOLAPE;
-            texto(ctx, apps ? app.nombre() : PROXIMAMENTE,
-                    artX, artY, TEXTO_ALTO, TEXTO_COLOR);
+            Text etiqueta = apps ? app.nombre() : PROXIMAMENTE;
+            texto(ctx, etiqueta, artX, artY, altoEtiqueta(etiqueta), TEXTO_COLOR);
         }
 
         panelLateral(ctx, ratonX, ratonY);
@@ -1127,6 +1140,23 @@ public class PokePadScreen extends Screen {
     private void texto(DrawContext ctx, net.minecraft.text.Text linea,
                        int cx, int arriba, int alto, int color) {
         texto(ctx, linea, cx, arriba, alto, color, true, true);
+    }
+
+    /**
+     * Conserva la jerarquía de los nombres sin dejar que una etiqueta larga
+     * invada la tarjeta vecina. Las cortas se mantienen a 18 px; solo las que
+     * realmente lo necesitan bajan en pasos pares, para preservar el aspecto
+     * nítido de la fuente de Minecraft.
+     */
+    private int altoEtiqueta(Text etiqueta) {
+        int maximo = CELDA - 12;
+        int ancho = textRenderer.getWidth(etiqueta);
+        for (int alto = TEXTO_ALTO; alto >= 12; alto -= 2) {
+            if (Math.ceil(ancho * (alto / (double) textRenderer.fontHeight)) <= maximo) {
+                return alto;
+            }
+        }
+        return 12;
     }
 
     /**

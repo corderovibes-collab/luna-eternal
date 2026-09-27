@@ -27,6 +27,7 @@ public class LunaCliente implements ClientModInitializer {
 
     private static KeyBinding abrirPad;
     private static KeyBinding abrirMochila;
+    private static KeyBinding alternarEvento;
 
     /**
      * El memorial que el servidor dijo que abrieramos, pendiente de que el
@@ -98,6 +99,9 @@ public class LunaCliente implements ClientModInitializer {
                 //   tecla que hay que ir a buscar a los ajustes no la usa nadie.
                 //   N no la usa vanilla y esta al lado de B, que ya es nuestra.
                 GLFW.GLFW_KEY_N,
+                "key.categories.lunaeternal"));
+        alternarEvento = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.lunaeternal.quienpokemon", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_F8,
                 "key.categories.lunaeternal"));
 
         // La respuesta del servidor con el saldo. Solo se guarda para dibujarla.
@@ -475,6 +479,14 @@ public class LunaCliente implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(cliente -> {
+            while (alternarEvento.wasPressed()) {
+                boolean visible = QuienEsEsePokemonHud.alternar();
+                if (cliente.player != null) {
+                    cliente.player.sendMessage(net.minecraft.text.Text.literal(visible
+                            ? "§aInterfaz de ¿Quién es este Pokémon? activada."
+                            : "§7Interfaz de ¿Quién es este Pokémon? oculta. Pulsa §fF8§7 para verla."), true);
+                }
+            }
 
             // Las partículas de las auras. Va lo PRIMERO del tick y fuera del
             // bucle de la tecla: si se colara dentro, solo se dibujarían mientras

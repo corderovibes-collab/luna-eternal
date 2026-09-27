@@ -450,6 +450,11 @@ public final class Combate {
                 sub = Text.literal("§fCombate Doble 2v2");
                 actionbar = Text.literal("§ePrepárate con al menos 2 Pokémon conscientes y reta a Giovanni");
             }
+            case "campeon_kanto" -> {
+                titulo = Text.literal("§6§lLIGA POKÉMON");
+                sub = Text.literal("§fCampeón Blue · El desafío final de Kanto");
+                actionbar = Text.literal("§eAvanza hasta Blue y haz clic derecho para disputar el campeonato");
+            }
             default -> {
                 titulo = Text.literal("§6§lGIMNASIO " + g.medalla().toUpperCase(java.util.Locale.ROOT));
                 sub = Text.literal("§fDesafía a " + g.lider());

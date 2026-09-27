@@ -87,6 +87,34 @@ custom['animation.lunita.walk'] = {
     wingRight: { rotation: { '0': [0, 0, 8], '0.4': [0, 0, -8], '0.8': [0, 0, 8] } }
   }
 };
+// Cobblemon's Eevee poser uses q.quadruped_walk(0.66, 1.4) on top of this
+// exact ground stance. GeckoLib does not execute Cobblemon poser expressions,
+// so the equivalent cycle is authored here while preserving every resting pose.
+custom['animation.lunita.idle'] = {
+  loop: true, animation_length: 2.4,
+  bones: {
+    body: { position: { '0': [0, -0.3, 0], '0.6': [0, -0.14, 0], '1.2': [0, -0.3, 0], '1.8': [0, -0.14, 0], '2.4': [0, -0.3, 0] } },
+    ear_right: { rotation: { '0': [10, 0, 10], '1.2': [12, 0, 13], '2.4': [10, 0, 10] } }, ear2_right: { rotation: [0, -10, 0] },
+    ear_left: { rotation: { '0': [10, 0, -10], '1.2': [12, 0, -13], '2.4': [10, 0, -10] } }, ear2_left: { rotation: [0, 10, 0] },
+    tail1: { rotation: { '0': [20, -10, 0], '0.8': [20, 10, 0], '1.6': [20, 16, 0], '2.4': [20, -10, 0] } },
+    tail2: { rotation: { '0': [10, -6, 0], '0.8': [10, 7, 0], '1.6': [10, 11, 0], '2.4': [10, -6, 0] } }, tail3: { rotation: [10, 0, 0] }, tail4: { rotation: [10, 0, 0] },
+    front_leg_left: { rotation: [15, 0, 0], position: [0, -0.2, 0] }, elbow_left: { rotation: [-20, 0, 0] }, frontpaw_left: { rotation: [5, 0, 0] },
+    front_leg_right: { rotation: [15, 0, 0], position: [0, -0.2, 0] }, elbow_right: { rotation: [-20, 0, 0] }, frontpaw_right: { rotation: [5, 0, 0] },
+    back_leg_left: { rotation: [7.5, 0, 0] }, ankle_left: { rotation: [-7.5, 0, 0] }, back_leg_right: { rotation: [7.5, 0, 0] }, ankle_right: { rotation: [-7.5, 0, 0] }
+  }
+};
+custom['animation.lunita.walk'] = {
+  loop: true, animation_length: 0.7143,
+  bones: {
+    body: { position: { '0': [0, -0.3, 0], '0.1786': [0, -0.16, 0], '0.3572': [0, -0.3, 0], '0.5358': [0, -0.16, 0], '0.7143': [0, -0.3, 0] } },
+    front_leg_left: { rotation: { '0': [52.8, 0, 0], '0.1786': [15, 0, 0], '0.3572': [-22.8, 0, 0], '0.5358': [15, 0, 0], '0.7143': [52.8, 0, 0] }, position: [0, -0.2, 0] },
+    front_leg_right: { rotation: { '0': [-22.8, 0, 0], '0.1786': [15, 0, 0], '0.3572': [52.8, 0, 0], '0.5358': [15, 0, 0], '0.7143': [-22.8, 0, 0] }, position: [0, -0.2, 0] },
+    back_leg_left: { rotation: { '0': [-30.3, 0, 0], '0.1786': [7.5, 0, 0], '0.3572': [45.3, 0, 0], '0.5358': [7.5, 0, 0], '0.7143': [-30.3, 0, 0] } },
+    back_leg_right: { rotation: { '0': [45.3, 0, 0], '0.1786': [7.5, 0, 0], '0.3572': [-30.3, 0, 0], '0.5358': [7.5, 0, 0], '0.7143': [45.3, 0, 0] } },
+    elbow_left: { rotation: [-20, 0, 0] }, elbow_right: { rotation: [-20, 0, 0] }, frontpaw_left: { rotation: [5, 0, 0] }, frontpaw_right: { rotation: [5, 0, 0] },
+    ankle_left: { rotation: [-7.5, 0, 0] }, ankle_right: { rotation: [-7.5, 0, 0] }, tail1: { rotation: { '0': [20, -8, 0], '0.3572': [20, 8, 0], '0.7143': [20, -8, 0] } }, tail2: { rotation: [10, 0, 0] }, tail3: { rotation: [10, 0, 0] }, tail4: { rotation: [10, 0, 0] }
+  }
+};
 // The original cry only references Cobblemon's Eevee sound event.  Keep its
 // source timeline and provide Lunita's separate visual reaction instead.
 custom['animation.lunita.cry'] ??= {

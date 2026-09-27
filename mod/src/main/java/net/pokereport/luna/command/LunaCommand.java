@@ -106,6 +106,20 @@ public final class LunaCommand {
                 .requires(s -> s.hasPermissionLevel(3))
                 .executes(ctx -> status(ctx.getSource())))
 
+            // Ensaya un líder real sin pasar por diálogo, progresión o espera.
+            // El combate sigue usando sus posiciones y mapa clonado reales.
+            .then(literal("probar")
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(argument("gimnasio", StringArgumentType.word())
+                    .suggests((c, b) -> {
+                        for (var g : net.pokereport.luna.gym.Gimnasio.TODOS) {
+                            b.suggest(g.id());
+                        }
+                        return b.buildFuture();
+                    })
+                    .executes(ctx -> probarGimnasio(ctx.getSource(),
+                            StringArgumentType.getString(ctx, "gimnasio")))))
+
             .then(literal("economia")
                 .requires(s -> s.hasPermissionLevel(3))
                 .executes(ctx -> { EconomyReport.send(ctx.getSource(), 24); return 1; })
@@ -998,6 +1012,27 @@ public final class LunaCommand {
                     .then(argument("dias", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 365))
                         .executes(ctx -> resetRotacionKits(ctx.getSource(),
                                 com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "dias")))))));
+    }
+
+    /** Entrada de administración para /luna probar <gimnasio>. */
+    private static int probarGimnasio(ServerCommandSource src, String id) {
+        ServerPlayerEntity jugador;
+        try {
+            jugador = src.getPlayerOrThrow();
+        } catch (Exception e) {
+            src.sendError(Text.literal("§cEste comando se ejecuta desde el juego."));
+            return 0;
+        }
+        var gimnasio = net.pokereport.luna.gym.Gimnasio.de(id);
+        String error = net.pokereport.luna.gym.Combate.probar(jugador, gimnasio);
+        if (error != null) {
+            src.sendError(Text.literal("§c" + error));
+            return 0;
+        }
+        src.sendFeedback(() -> Text.literal(
+                "§bPrueba iniciada: §f" + gimnasio.lider()
+                + "§7. No concederá medalla ni progreso."), false);
+        return 1;
     }
 
     private static int resetRotacionKits(ServerCommandSource src, int dias) {

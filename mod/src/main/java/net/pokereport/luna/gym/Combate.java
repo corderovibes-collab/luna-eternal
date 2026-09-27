@@ -12,6 +12,7 @@ import com.gitlab.srcmc.rctmod.api.RCTMod;
 import com.gitlab.srcmc.rctmod.world.entities.TrainerMob;
 
 import net.minecraft.registry.RegistryKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
@@ -93,6 +94,13 @@ public final class Combate {
 
     /** Quién está retando a quién, para saber a qué gimnasio darle la medalla. */
     private static final Map<UUID, String> RETANDO = new ConcurrentHashMap<>();
+
+    /**
+     * Retos abiertos por administración. Mantienen el ciclo real de arena y
+     * batalla, pero nunca conceden medallas ni desbloquean progresión.
+     */
+    private static final java.util.Set<UUID> PRUEBAS =
+            ConcurrentHashMap.newKeySet();
 
     /**
      * Último recurso para una implementación de Cobblemon que publique el
@@ -324,6 +332,74 @@ public final class Combate {
         return null;
     }
 
+    /**
+     * Abre una arena de prueba sin diálogo, medallas requeridas ni espera.
+     *
+     * <p>El administrador prueba el mismo líder, clonado y posición de batalla
+     * que usa un jugador normal; la única diferencia es que la victoria no
+     * escribe progreso. Así se puede ensayar cualquier escenario sin alterar
+     * una cuenta de producción.
+     *
+     * @return {@code null} si se preparó, o el motivo legible del rechazo
+     */
+    public static String probar(ServerPlayerEntity jugador, Gimnasio.Gimnasio_ g) {
+        if (jugador == null || g == null) {
+            return "No existe ese gimnasio.";
+        }
+        if (!Gimnasio.construido(g)) {
+            return "El gimnasio " + g.id() + " todavía no está construido.";
+        }
+        if (Ranuras.asignacionDe(jugador.getUuid()) != null) {
+            return "Primero sal de la arena que ya estás probando.";
+        }
+        MinecraftServer servidor = jugador.getServer();
+        if (servidor == null || Arenas.mundo(servidor, g) == null) {
+            return "No está disponible la dimensión de gimnasios.";
+        }
+        if (!Lideres.idValido(g)) {
+            return "El entrenador " + g.entrenador() + " no existe en el datapack.";
+        }
+        int ranura = Ranuras.reservar(g, jugador.getUuid());
+        if (ranura < 0) {
+            return "No hay ranuras libres para " + g.lider() + ".";
+        }
+        try {
+            Arenas.clonar(servidor, g, ranura);
+            VUELTAS.put(jugador.getUuid(), new Vuelta(
+                    jugador.getServerWorld().getRegistryKey(),
+                    jugador.getPos(), jugador.getYaw()));
+            RETANDO.put(jugador.getUuid(), g.id());
+            PRUEBAS.add(jugador.getUuid());
+            if (!Arenas.llevar(jugador, g, ranura)) {
+                soltar(jugador, g.id());
+                return "No se pudo llevarte a la arena.";
+            }
+            net.pokereport.luna.ui.Aviso.titulo(jugador,
+                    Text.literal("§b§lMODO PRUEBA"),
+                    Text.literal("§f" + g.lider() + " · sin medallas ni progreso"),
+                    net.minecraft.sound.SoundEvents.UI_BUTTON_CLICK.value(), 0.8f);
+            Programador.en(TICKS_LIDER, () -> {
+                ServerPlayerEntity vivo = servidor.getPlayerManager()
+                        .getPlayer(jugador.getUuid());
+                if (vivo == null || !PRUEBAS.contains(vivo.getUuid())) {
+                    return;
+                }
+                if (Lideres.enArena(servidor, g, ranura) == null) {
+                    vivo.sendMessage(Text.literal(
+                            "§cNo se pudo colocar a " + g.lider() + "."), false);
+                    devolver(vivo, g.id());
+                }
+            });
+            LunaEternal.LOG.info("Prueba de gimnasio: {} abre {} en ranura {}",
+                    jugador.getName().getString(), g.id(), ranura);
+            return null;
+        } catch (Throwable t) {
+            LunaEternal.LOG.error("No se pudo preparar prueba de {}", g.id(), t);
+            soltar(jugador, g.id());
+            return "Error preparando la arena: " + t.getMessage();
+        }
+    }
+
     /** Lo que pasa cuando la cuenta atras termina sin moverse. */
     private static void entrar(ServerPlayerEntity jugador, Gimnasio.Gimnasio_ g,
                                int ranura) {
@@ -539,13 +615,15 @@ public final class Combate {
             return;
         }
         int sobreNivel = primerSobreNivel(jugador, g.nivel());
-        if (sobreNivel > 0) {
+        if (!PRUEBAS.contains(jugador.getUuid()) && sobreNivel > 0) {
             jugador.sendMessage(Text.literal(
                     "§c§l¡COMBATE BLOQUEADO! §r§7Tu equipo contiene Pokémon por encima del §eNv. "
                     + g.nivel() + "§7 (detectado Nv. " + sobreNivel + ")."), false);
             return;
         }
-        if (("luana".equalsIgnoreCase(g.id()) || "giovanni".equalsIgnoreCase(g.id())) && contarConscientes(jugador) < 2) {
+        if (!PRUEBAS.contains(jugador.getUuid())
+                && ("luana".equalsIgnoreCase(g.id()) || "giovanni".equalsIgnoreCase(g.id()))
+                && contarConscientes(jugador) < 2) {
             jugador.sendMessage(Text.literal(
                     "§c§l¡COMBATE BLOQUEADO! §r§7El combate contra " + g.lider() + " es un combate doble (2v2). Necesitas al menos §e2 Pokémon conscientes§7 en tu equipo."), false);
             return;
@@ -832,6 +910,7 @@ public final class Combate {
     private static void terminar(ServerPlayerEntity jugador, boolean gano) {
         UUID uuid = jugador.getUuid();
         String cual = RETANDO.remove(uuid);
+        boolean prueba = PRUEBAS.remove(uuid);
         if (cual == null) {
             return;   // no estaba retando a nadie: es un combate cualquiera
         }
@@ -853,6 +932,19 @@ public final class Combate {
                     //   morir asusta, y perder un combate de gimnasio no es eso.
                     net.minecraft.sound.SoundEvents.ENTITY_ELDER_GUARDIAN_CURSE,
                     0.8f);
+            devolverEn(jugador, cual, TICKS_VUELTA);
+            return;
+        }
+        if (prueba) {
+            net.pokereport.luna.ui.Aviso.titulo(jugador,
+                    Text.literal("§b§lPRUEBA COMPLETADA"),
+                    Text.literal("§fHas vencido a " + g.lider()
+                            + " · sin medalla ni progreso"),
+                    net.minecraft.sound.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE,
+                    1.0f);
+            if ("campeon_kanto".equals(g.id())) {
+                CelebracionCampeon.lanzar(jugador);
+            }
             devolverEn(jugador, cual, TICKS_VUELTA);
             return;
         }
@@ -976,6 +1068,7 @@ public final class Combate {
     private static void soltar(ServerPlayerEntity jugador, String cual) {
         var servidor = jugador.getServer();
         RETANDO.remove(jugador.getUuid());
+        PRUEBAS.remove(jugador.getUuid());
         // ⚠⚠⚠ Y AQUÍ SE BORRA EL ENTRENADOR FABRICADO. `Adaptador` registra uno
         //    por combate en el registro de rctapi, y ese registro es un mapa que
         //    no se vacía solo: sin esta línea crecería con cada reto del

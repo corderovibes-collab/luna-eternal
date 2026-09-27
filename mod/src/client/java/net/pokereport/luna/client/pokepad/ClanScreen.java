@@ -109,6 +109,8 @@ public class ClanScreen extends Screen {
     private static final Identifier PAG_ADELANTE =
             Identifier.of("lunaeternal", "textures/gui/pokepad/boton_adelante.png");
     private String aviso = "";
+    /** La disolución borra la pertenencia del clan: exige una segunda pulsación deliberada. */
+    private boolean confirmarDisolucion;
 
     /**
      * Los campos de texto.
@@ -264,10 +266,34 @@ public class ClanScreen extends Screen {
         }
         dibujarPaginas(ctx, rx, ry);
 
+        if (confirmarDisolucion) {
+            dibujarConfirmacionDisolucion(ctx, rx, ry);
+        }
+
         if (!aviso.isEmpty()) {
             texto(ctx, Text.literal(aviso), PANT_X + PANT_W / 2, PANT_Y + PANT_H - 22,
                     16, ROJO, true, true);
         }
+    }
+
+    private void dibujarConfirmacionDisolucion(DrawContext ctx, int rx, int ry) {
+        int x = PANT_X + 82, y = PANT_Y + 250, w = PANT_W - 164, h = 210;
+        // Capa semitransparente: mantiene el contexto del clan, pero hace que la
+        // decisión no se confunda con una pulsación normal del panel.
+        ctx.fill(px(PANT_X), py(PANT_Y), px(PANT_X + PANT_W), py(PANT_Y + PANT_H), 0xB8000000);
+        ctx.fill(px(x), py(y), px(x + w), py(y + h), 0xFF171C2B);
+        marco(ctx, px(x), py(y), pl(w), pl(h), ROJO, Math.max(1, pl(3)));
+        texto(ctx, Text.literal("¿DISOLVER CLAN?"), x + w / 2, y + 24, 25, ROJO, true, false);
+        String nombre = estado != null && estado.mio() != null ? estado.mio().nombre() : "este clan";
+        texto(ctx, Text.literal(nombre), x + w / 2, y + 56, 20, 0xFFFFFFFF, true, false);
+        texto(ctx, Text.literal("Esta acción no se puede deshacer."), x + w / 2, y + 88,
+                16, TEXTO_SUAVE, true, false);
+        texto(ctx, Text.literal("Confirma solo si quieres cerrarlo para todos."), x + w / 2, y + 108,
+                14, TEXTO_SUAVE, true, false);
+        boton(ctx, rx, ry, x + 16, y + h - 58, (w - 48) / 2, 38,
+                Text.literal("CANCELAR"), true);
+        boton(ctx, rx, ry, x + 32 + (w - 48) / 2, y + h - 58, (w - 48) / 2, 38,
+                Text.literal("DISOLVER"), true);
     }
 
     private void dibujarNavegacion(DrawContext ctx, int rx, int ry) {
@@ -802,6 +828,22 @@ public class ClanScreen extends Screen {
         int rx = (int) mx, ry = (int) my;
         aviso = "";
 
+        if (confirmarDisolucion) {
+            int x = PANT_X + 82, y = PANT_Y + 250, w = PANT_W - 164, h = 210;
+            int bw = (w - 48) / 2;
+            if (dentro(rx, ry, px(x + 16), py(y + h - 58), pl(bw), pl(38))) {
+                confirmarDisolucion = false;
+                sonar();
+                return true;
+            }
+            if (dentro(rx, ry, px(x + 32 + bw), py(y + h - 58), pl(bw), pl(38))) {
+                confirmarDisolucion = false;
+                mandar("disolver", "", "", 0, 0);
+                return true;
+            }
+            return true;
+        }
+
         for (var c : new TextFieldWidget[] { campoNombre, campoEtiqueta,
                 campoJugador, campoCantidad }) {
             if (c != null && c.mouseClicked(mx, my, boton)) {
@@ -857,7 +899,8 @@ public class ClanScreen extends Screen {
             if (!tengoClan()) {
                 mandar("fundar", campoNombre.getText(), campoEtiqueta.getText(), 0, 0);
             } else if (soyLider()) {
-                mandar("disolver", "", "", 0, 0);
+                confirmarDisolucion = true;
+                sonar();
             } else {
                 mandar("salir", "", "", 0, 0);
             }
@@ -1000,6 +1043,13 @@ public class ClanScreen extends Screen {
 
     @Override
     public boolean keyPressed(int tecla, int escaneo, int mods) {
+        // Escape cancela el cuadro, no cierra accidentalmente el PokePad mientras
+        // el jugador está decidiendo sobre una acción destructiva.
+        if (confirmarDisolucion && tecla == 256) {
+            confirmarDisolucion = false;
+            sonar();
+            return true;
+        }
         // ⚠ Los campos de texto se quedan con la tecla ANTES que la pantalla. Sin
         //   esto, escribir «e» en el nombre del clan abriría el inventario.
         for (var c : new TextFieldWidget[] { campoNombre, campoEtiqueta,

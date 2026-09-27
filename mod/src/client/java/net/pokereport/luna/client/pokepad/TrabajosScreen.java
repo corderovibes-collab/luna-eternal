@@ -124,6 +124,8 @@ public class TrabajosScreen extends Screen {
     private int ancho, alto, x0, y0;
     private List<Red.ViaEstado> vias = List.of();
     private int pagina = 0;
+    /** Selección de lectura local; los niveles y XP siguen viniendo del servidor. */
+    private Path viaSeleccionada;
 
     public TrabajosScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.trabajos"));
@@ -267,27 +269,32 @@ public class TrabajosScreen extends Screen {
                 mejor = v;
             }
         }
-        Path via = mejor == null ? null : porNombre(mejor.id());
-        boolean empezado = via != null && (mejor.nivel() > 0 || mejor.xp() > 0);
+        Path principal = mejor == null ? null : porNombre(mejor.id());
+        Path via = viaSeleccionada == null ? principal : viaSeleccionada;
+        Red.ViaEstado vista = via == null ? null : buscar(via);
+        boolean seleccionada = viaSeleccionada != null && via != null;
+        boolean empezado = via != null && vista != null && (vista.nivel() > 0 || vista.xp() > 0);
 
         separador(ctx, VIA_Y - 18);
-        texto(ctx, Text.translatable("pokepad.lunaeternal.via_principal"),
+        texto(ctx, viaSeleccionada == null
+                        ? Text.translatable("pokepad.lunaeternal.via_principal")
+                        : Text.literal("VÍA SELECCIONADA"),
                 PANEL_X + PANEL_W / 2, VIA_Y, 20, TEXTO_SUAVE, true, false);
 
         // Sin datos, o todo a cero: se DICE, no se deja en blanco. Un hueco vacío
         // parece que algo falló; «Ninguna todavía» dice que estás al principio,
         // que es la verdad.
-        texto(ctx, empezado ? Text.literal(via.displayName)
+        texto(ctx, (empezado || seleccionada) ? Text.literal(via.displayName)
                         : Text.translatable("pokepad.lunaeternal.via_ninguna"),
                 PANEL_X + PANEL_W / 2, VIA_Y + 26, 32,
-                empezado ? color(via) : TEXTO_SUAVE, true, false);
+                (empezado || seleccionada) ? color(via) : TEXTO_SUAVE, true, false);
 
-        if (empezado && mejor.nivel() > 0) {
-            texto(ctx, Text.literal(Path.roman(mejor.nivel())),
+        if (empezado && vista.nivel() > 0) {
+            texto(ctx, Text.literal(Path.roman(vista.nivel())),
                     PANEL_X + PANEL_W / 2, VIA_Y + 64, 42, ORO, true, false);
         }
 
-        if (empezado) {
+        if (empezado || seleccionada) {
             separador(ctx, SUBE_Y - 16);
             texto(ctx, Text.translatable("pokepad.lunaeternal.como_se_sube"),
                     PANEL_X + PANEL_W / 2, SUBE_Y, 18, TEXTO_SUAVE, true, false);
@@ -417,10 +424,12 @@ public class TrabajosScreen extends Screen {
                              int ax, int ay, int aw, int ah, int rx, int ry) {
         int x = px(ax), y = py(ay), w = pl(aw), h = pl(ah);
         boolean encima = dentro(rx, ry, x, y, w, h);
+        boolean seleccionada = via == viaSeleccionada;
         int nivel = estado == null ? 0 : estado.nivel();
 
-        ctx.fill(x, y, x + w, y + h, encima ? FILA_ENCIMA : FILA_FONDO);
-        marco(ctx, x, y, w, h, encima ? BORDE_ENCIMA : FILA_BORDE, Math.max(1, pl(encima ? 4 : 2)));
+        ctx.fill(x, y, x + w, y + h, encima || seleccionada ? FILA_ENCIMA : FILA_FONDO);
+        marco(ctx, x, y, w, h, encima || seleccionada ? BORDE_ENCIMA : FILA_BORDE,
+                Math.max(1, pl(encima || seleccionada ? 4 : 2)));
 
         // ⚠ Una PESTAÑA DE COLOR a la izquierda, no la fila entera teñida. Cinco
         //   filas de cinco colores distintos convierten la pantalla en un
@@ -534,6 +543,18 @@ public class TrabajosScreen extends Screen {
             }
             if (dentro(rx, ry, px(pcx + PAG_SEP - PAG_W / 2), py(PAG_Y), pl(PAG_W), pl(PAG_H))) {
                 return cambiarPagina(+1);
+            }
+        }
+        int anchoUtil = PANT_W - 2 * MARGEN;
+        int altoUtil = PANT_H - 2 * MARGEN;
+        int fh = (altoUtil - (FILAS - 1) * AIRE) / FILAS;
+        int desde = pagina * FILAS;
+        for (int n = 0; n < FILAS && desde + n < Path.values().length; n++) {
+            int ay = PANT_Y + MARGEN + n * (fh + AIRE);
+            if (dentro(rx, ry, px(PANT_X + MARGEN), py(ay), pl(anchoUtil), pl(fh))) {
+                viaSeleccionada = Path.values()[desde + n];
+                sonar();
+                return true;
             }
         }
         return super.mouseClicked(mx, my, boton);

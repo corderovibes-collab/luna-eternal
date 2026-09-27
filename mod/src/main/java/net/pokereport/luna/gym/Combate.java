@@ -175,8 +175,10 @@ public final class Combate {
         // ⚠ Auto-liberación si el jugador sale de la dimensión de gimnasios (/spawn, teleport, etc.)
         net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((jugador, origen, destino) -> {
             boolean eraGym = net.pokereport.luna.world.LunaDimensions.GIMNASIOS.equals(origen.getRegistryKey())
+                    || net.pokereport.luna.world.LunaDimensions.GIMNASIO_MORTI.equals(origen.getRegistryKey())
                     || net.pokereport.luna.world.LunaDimensions.ISLAS_NARANJA.equals(origen.getRegistryKey());
             boolean sigueGym = net.pokereport.luna.world.LunaDimensions.GIMNASIOS.equals(destino.getRegistryKey())
+                    || net.pokereport.luna.world.LunaDimensions.GIMNASIO_MORTI.equals(destino.getRegistryKey())
                     || net.pokereport.luna.world.LunaDimensions.ISLAS_NARANJA.equals(destino.getRegistryKey());
             if (eraGym && !sigueGym) {
                 soltar(jugador, null);

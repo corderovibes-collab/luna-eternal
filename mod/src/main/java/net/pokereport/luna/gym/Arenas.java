@@ -118,7 +118,7 @@ public final class Arenas {
     private static final int AIRE_QUE_CORTA = 8;
 
     public static int[] medir(MinecraftServer servidor, Gimnasio.Gimnasio_ g) {
-        ServerWorld mundo = mundo(servidor, g);
+        ServerWorld mundo = mundoMaestro(servidor, g);
         if (mundo == null) {
             return null;
         }
@@ -225,10 +225,15 @@ public final class Arenas {
     }
 
     public static ServerWorld mundo(MinecraftServer servidor, Gimnasio.Gimnasio_ g) {
+        if (g != null && "morti".equals(g.id())) return servidor.getWorld(LunaDimensions.GIMNASIO_MORTI);
         if (g != null && g.region() == Gimnasio.Region.NARANJA) {
             return servidor.getWorld(LunaDimensions.ISLAS_NARANJA);
         }
         return servidor.getWorld(LunaDimensions.GIMNASIOS);
+    }
+
+    private static ServerWorld mundoMaestro(MinecraftServer servidor, Gimnasio.Gimnasio_ g) {
+        return g != null && "morti".equals(g.id()) ? servidor.getWorld(LunaDimensions.GIMNASIOS) : mundo(servidor, g);
     }
 
     /**
@@ -394,11 +399,12 @@ public final class Arenas {
         if (Ranuras.marcarConstruida(g, ranura)) {
             return;   // ya estaba
         }
+        ServerWorld fuente = mundoMaestro(servidor, g);
         ServerWorld mundo = mundo(servidor, g);
-        if (mundo == null) {
+        if (fuente == null || mundo == null) {
             return;
         }
-        asegurarPosicionesMaestro(mundo, g);
+        asegurarPosicionesMaestro(fuente, g);
         BlockPos src = Gimnasio.maestro(g);
         BlockPos dst = Gimnasio.origen(g, ranura);
 
@@ -450,7 +456,7 @@ public final class Arenas {
 
         for (int cz = minCZ_s; cz <= maxCZ_s; cz++) {
             for (int cx = minCX_s; cx <= maxCX_s; cx++) {
-                mundo.getChunk(cx, cz);
+                fuente.getChunk(cx, cz);
             }
         }
         for (int cz = minCZ_d; cz <= maxCZ_d; cz++) {
@@ -466,7 +472,7 @@ public final class Arenas {
             for (int dz = z0; dz < z0 + fondo; dz++) {
                 for (int dx = x0; dx < x0 + ancho; dx++) {
                     pos.set(src.getX() + dx, src.getY() + dy, src.getZ() + dz);
-                    var estado = mundo.getBlockState(pos);
+                    var estado = fuente.getBlockState(pos);
                     destino.set(dst.getX() + dx, dst.getY() + dy, dst.getZ() + dz);
                     if (estado.isAir()) {
                         // Si el maestro tiene aire, pero el destino tiene un bloque residual de un clonado anterior,
@@ -480,12 +486,12 @@ public final class Arenas {
                         mundo.setBlockState(destino, estado, 2);
                         puestos++;
                     }
-                    var be = mundo.getBlockEntity(pos);
+                    var be = fuente.getBlockEntity(pos);
                     if (be != null) {
                         var destBe = mundo.getBlockEntity(destino);
                         if (destBe != null) {
                             try {
-                                destBe.read(be.createNbtWithIdentifyingData(mundo.getRegistryManager()), mundo.getRegistryManager());
+                                destBe.read(be.createNbtWithIdentifyingData(fuente.getRegistryManager()), mundo.getRegistryManager());
                             } catch (Throwable ignored) {}
                         }
                     }

@@ -130,6 +130,7 @@ public final class Ranuras {
     public static boolean estabaEnArena(ServerPlayerEntity jugador) {
         var key = jugador.getServerWorld().getRegistryKey();
         return net.pokereport.luna.world.LunaDimensions.GIMNASIOS.equals(key)
+                || net.pokereport.luna.world.LunaDimensions.GIMNASIO_MORTI.equals(key)
                 || net.pokereport.luna.world.LunaDimensions.ISLAS_NARANJA.equals(key);
     }
 

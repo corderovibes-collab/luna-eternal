@@ -21,10 +21,10 @@ import java.util.Set;
 
 /** Evento global, autoritativo en el servidor. El cliente nunca conoce el nombre antes del resultado. */
 public final class QuienEsEsePokemonService {
-    private static final long INTERVALO_MS = 15 * 60_000L;
+    private static final long INTERVALO_MS = 2 * 60 * 60_000L;
     private static final long DURACION_MS = 45_000L;
     private static final long REVELACION_MS = 8_000L;
-    private static final long PREMIO = 2_500L;
+    private static final long PREMIO = 500L;
     /** Activar Gen 3+ solo exige sumar el número y las entradas/assets de esa generación. */
     private static final Set<Integer> GENERACIONES_ACTIVAS = Set.of(1, 2);
     private static final Random AZAR = new Random();
@@ -92,7 +92,6 @@ public final class QuienEsEsePokemonService {
         proximaRonda = Long.MAX_VALUE;
         var paquete = new QuienEsEsePokemonNet.Ronda(activa.id, especie.dex, activa.terminaEn);
         for (var player : server.getPlayerManager().getPlayerList()) ServerPlayNetworking.send(player, paquete);
-        server.getPlayerManager().broadcast(Text.literal("§8[§d✦§8] §d§l¿QUIÉN ES ESTE POKÉMON? §7Escribe su nombre en el chat. §8(45 s)"), false);
     }
 
     private static void comprobarRespuesta(ServerPlayerEntity jugador, String texto) {
@@ -117,10 +116,6 @@ public final class QuienEsEsePokemonService {
     private static void revelar(MinecraftServer server, Ronda ronda, String ganador, long premio, long ocultarEn) {
         var paquete = new QuienEsEsePokemonNet.Revelacion(ronda.id, ronda.especie.dex, ganador, premio, ocultarEn);
         for (var player : server.getPlayerManager().getPlayerList()) ServerPlayNetworking.send(player, paquete);
-        String mensaje = premio > 0
-                ? "§8[§a★§8] §a§l¡CORRECTO! §f" + ganador + " §7descubrió a §e" + ronda.especie.nombre + "§7 y gana §6$" + premio + "§7."
-                : "§8[§c✦§8] §7Era §e" + ronda.especie.nombre + "§7. Nadie acertó esta vez.";
-        server.getPlayerManager().broadcast(Text.literal(mensaje), false);
     }
 
     private static void concederPremio(ServerPlayerEntity jugador, Ronda ronda) {

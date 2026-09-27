@@ -28,6 +28,7 @@ public class LunaCliente implements ClientModInitializer {
     private static KeyBinding abrirPad;
     private static KeyBinding abrirMochila;
     private static KeyBinding alternarEvento;
+    private static boolean f8Pulsado;
 
     /**
      * El memorial que el servidor dijo que abrieramos, pendiente de que el
@@ -479,7 +480,11 @@ public class LunaCliente implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(cliente -> {
-            while (alternarEvento.wasPressed()) {
+            // Lectura directa: F8 puede estar asignada también por Minecraft u
+            // otro mod, y en ese caso KeyBinding.wasPressed() no recibe el pulso.
+            boolean f8Ahora = InputUtil.isKeyPressed(
+                    cliente.getWindow().getHandle(), GLFW.GLFW_KEY_F8);
+            if (f8Ahora && !f8Pulsado) {
                 boolean visible = QuienEsEsePokemonHud.alternar();
                 if (cliente.player != null) {
                     cliente.player.sendMessage(net.minecraft.text.Text.literal(visible
@@ -487,6 +492,7 @@ public class LunaCliente implements ClientModInitializer {
                             : "§7Interfaz de ¿Quién es este Pokémon? oculta. Pulsa §fF8§7 para verla."), true);
                 }
             }
+            f8Pulsado = f8Ahora;
 
             // Las partículas de las auras. Va lo PRIMERO del tick y fuera del
             // bucle de la tecla: si se colara dentro, solo se dibujarían mientras

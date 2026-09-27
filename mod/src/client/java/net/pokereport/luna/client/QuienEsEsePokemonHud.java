@@ -43,6 +43,11 @@ public final class QuienEsEsePokemonHud {
         var cliente = MinecraftClient.getInstance();
         if (cliente.getSoundManager() != null) cliente.getSoundManager().play(
                 PositionedSoundInstance.master(SoundEvent.of(INICIO), 0.82f));
+        if (cliente.player != null) {
+            cliente.player.sendMessage(Text.literal(oculto
+                    ? "§dEvento activo. §fF8 §7muestra la interfaz; también puedes responder por chat."
+                    : "§7Pulsa §fF8 §7para ocultar o volver a mostrar este evento."), true);
+        }
     }
 
     public static void revelacion(QuienEsEsePokemonNet.Revelacion paquete) {

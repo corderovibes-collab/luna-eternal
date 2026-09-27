@@ -177,6 +177,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         //   paradas abre Viajes. Se registra UNA vez, junto a lo demas.
         net.pokereport.luna.santuario.SantuarioNpc.registrarClic();
         net.pokereport.luna.torrebatalla.TorreNpc.registrarClic();
+        net.pokereport.luna.shop.ComercioNpc.registrar();
         net.pokereport.luna.torrebatalla.TorreReglas.registrar();
         net.pokereport.luna.torrebatalla.TorreBatallaService.registrarEventos();
         net.pokereport.luna.battlefix.BattleFixService.registrar();
@@ -261,6 +262,9 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         });
 
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            // Las paradas son infraestructura, no decoración opcional: se
+            // reconstruyen al arrancar si una restauración de mundo las perdió.
+            net.pokereport.luna.world.Paradas.colocarTodas(server);
             // ⚠ El borde del salvaje SE APLICA EN CADA ARRANQUE. Se guarda en el
             //   nivel, asi que bastaria con ponerlo una vez -- hasta que alguien
             //   lo cambie con un comando o restauremos un respaldo viejo.

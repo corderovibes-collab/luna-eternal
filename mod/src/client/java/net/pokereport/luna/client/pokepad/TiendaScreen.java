@@ -117,6 +117,7 @@ public class TiendaScreen extends Screen {
     private static final int[] CANTIDADES = { 1, 8, 64 };
 
     private final Screen anterior;
+    private final String categoriaInicial;
 
     private float k;
     private int ancho, alto, x0, y0;
@@ -135,8 +136,13 @@ public class TiendaScreen extends Screen {
     private boolean avisoBueno;
 
     public TiendaScreen(Screen anterior) {
+        this(anterior, "");
+    }
+
+    public TiendaScreen(Screen anterior, String categoriaInicial) {
         super(Text.translatable("pokepad.lunaeternal.app.tienda"));
         this.anterior = anterior;
+        this.categoriaInicial = categoriaInicial == null ? "" : categoriaInicial;
     }
 
     @Override
@@ -341,6 +347,14 @@ public class TiendaScreen extends Screen {
         var nueva = EstadoCliente.tienda();
         if (nueva != null && nueva != tienda) {
             tienda = nueva;
+            if (!categoriaInicial.isBlank()) {
+                for (int i = 0; i < categorias().size(); i++) {
+                    if (categoriaInicial.equals(categorias().get(i).id())) {
+                        categoria = i;
+                        break;
+                    }
+                }
+            }
             if (categoria >= categorias().size()) {
                 categoria = 0;
             }

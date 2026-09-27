@@ -230,6 +230,19 @@ public final class Apps {
         return true;
     }
 
+    /** Entrada de los vendedores del mundo; el servidor decide el destino. */
+    public static void abrirComercio(String destino) {
+        var cliente = MinecraftClient.getInstance();
+        if (cliente.currentScreen != null) return;
+        if (destino.startsWith("tienda:")) {
+            cliente.setScreen(new TiendaScreen(null, destino.substring("tienda:".length())));
+        } else if ("kits:exclusivos".equals(destino)) {
+            cliente.setScreen(new KitsScreen(null, 1));
+        } else if ("kits:rango".equals(destino)) {
+            cliente.setScreen(new KitsScreen(null, 0));
+        }
+    }
+
     /** Los clanes. Misma regla que las demas: NUESTRA pantalla, sin reflexion. */
     private static boolean abrirClan() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();

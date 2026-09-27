@@ -2196,6 +2196,15 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** Orden del servidor para abrir una sección concreta del PokePad al tocar un vendedor. */
+    public record AbrirComercio(String destino) implements CustomPayload {
+        public static final Id<AbrirComercio> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "abrir_comercio"));
+        public static final PacketCodec<RegistryByteBuf, AbrirComercio> CODEC =
+                PacketCodec.tuple(CADENA, AbrirComercio::destino, AbrirComercio::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
     public record PedirRecompensasTorre() implements CustomPayload {
         public static final Id<PedirRecompensasTorre> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_recompensas_torre"));
@@ -3728,6 +3737,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(EstadoSantuario.ID, EstadoSantuario.CODEC);
         PayloadTypeRegistry.playC2S().register(EntrarTorreBatalla.ID, EntrarTorreBatalla.CODEC);
         PayloadTypeRegistry.playS2C().register(AbrirTorreBatalla.ID, AbrirTorreBatalla.CODEC);
+        PayloadTypeRegistry.playS2C().register(AbrirComercio.ID, AbrirComercio.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirRecompensasTorre.ID, PedirRecompensasTorre.CODEC);
         PayloadTypeRegistry.playC2S().register(ReclamarRecompensaTorre.ID, ReclamarRecompensaTorre.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoRecompensasTorre.ID, EstadoRecompensasTorre.CODEC);
@@ -6560,6 +6570,11 @@ public class Red implements ModInitializer {
     public static void enviarAbrirTorreBatalla(
             net.minecraft.server.network.ServerPlayerEntity jugador) {
         ServerPlayNetworking.send(jugador, new AbrirTorreBatalla());
+    }
+
+    public static void enviarAbrirComercio(net.minecraft.server.network.ServerPlayerEntity jugador,
+                                           String destino) {
+        ServerPlayNetworking.send(jugador, new AbrirComercio(destino));
     }
 
     /**

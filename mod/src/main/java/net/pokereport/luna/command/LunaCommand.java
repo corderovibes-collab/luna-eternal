@@ -606,6 +606,15 @@ public final class LunaCommand {
                         return n;
                     })))
 
+            .then(literal("comercio")
+                .requires(x -> x.hasPermissionLevel(4))
+                .executes(ctx -> {
+                    int n = net.pokereport.luna.shop.ComercioNpc.colocarTodos(ctx.getSource().getServer());
+                    ctx.getSource().sendFeedback(() -> Text.literal(
+                            "§a" + n + " §7vendedores colocados en la Torre Comercial."), false);
+                    return n;
+                }))
+
             .then(literal("decorar")
                 // ⚠ Nivel 4: coloca entidades permanentes en el mundo. Es
                 //   decoracion, pero decoracion que no se despawnea sola.

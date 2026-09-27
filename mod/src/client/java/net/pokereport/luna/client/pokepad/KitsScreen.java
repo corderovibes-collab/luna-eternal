@@ -117,8 +117,13 @@ public class KitsScreen extends Screen {
     private boolean arrastrandoScroll;
 
     public KitsScreen(Screen anterior) {
+        this(anterior, 0);
+    }
+
+    public KitsScreen(Screen anterior, int pestanaInicial) {
         super(Text.translatable("pokepad.lunaeternal.app.kits"));
         this.anterior = anterior;
+        this.pestana = Math.max(0, Math.min(PESTANAS.length - 1, pestanaInicial));
     }
 
     @Override

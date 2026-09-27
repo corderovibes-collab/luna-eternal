@@ -2096,7 +2096,29 @@ public final class AutoTest {
         check("la primera se completa al cumplir el objetivo", s1.completed());
         check("completada pero sin cobrar es cobrable", s1.claimable());
 
+        // Cobrar es una operación compuesta: la marca, las monedas y la XP
+        // deben cambiar juntas. Medimos contra el saldo/estado anterior para
+        // no depender de cuánto hayan hecho los autotests anteriores.
+        var recompensaInicial = inicial.rewards();
+        long plataAntes = LunaEternal.economy().balance(p, Currency.POKEDOLLAR);
+        long marcasAntes = LunaEternal.economy().balance(p, Currency.MARK);
+        net.pokereport.luna.progression.ProgressionService.PathState viaAntes =
+                recompensaInicial.path() == null ? null
+                : LunaEternal.progression().all(p).get(recompensaInicial.path());
         check("se cobra una vez", quests.claim(p, inicial));
+        check("cobrar mision acredita exactamente la Plata",
+              LunaEternal.economy().balance(p, Currency.POKEDOLLAR)
+                      == plataAntes + recompensaInicial.pokedollar());
+        check("cobrar mision acredita exactamente las Marcas",
+              LunaEternal.economy().balance(p, Currency.MARK)
+                      == marcasAntes + recompensaInicial.mark());
+        if (recompensaInicial.path() != null && recompensaInicial.xp() > 0) {
+            var viaDespues = LunaEternal.progression().all(p).get(recompensaInicial.path());
+            check("cobrar mision acredita XP de la Via",
+                  viaDespues != null && viaAntes != null
+                      && (viaDespues.level() > viaAntes.level()
+                      || viaDespues.xp() > viaAntes.xp()));
+        }
         check("NO se cobra dos veces", !quests.claim(p, inicial));
         check("tras cobrar deja de ser cobrable",
               !quests.state(p, inicial).claimable());

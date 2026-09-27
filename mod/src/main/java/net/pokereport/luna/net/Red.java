@@ -7262,10 +7262,14 @@ public class Red implements ModInitializer {
                         .resolve(jugador.getUuid(), jugador.getName().getString());
                 var estados = LunaEternal.quests().allStates(id);
 
-                var completas = new java.util.HashSet<String>();
+                // `QuestService.disponible` exige que la previa esté COBRADA,
+                // no solo completada. El cliente debe recibir exactamente esa
+                // misma verdad: mostrarla abierta antes solo invita a intentar
+                // una acción que el servidor, correctamente, va a rechazar.
+                var cobradas = new java.util.HashSet<String>();
                 for (var e : estados) {
-                    if (e.completed()) {
-                        completas.add(e.quest().id());
+                    if (e.claimed()) {
+                        cobradas.add(e.quest().id());
                     }
                 }
 
@@ -7273,7 +7277,7 @@ public class Red implements ModInitializer {
                 for (var e : estados) {
                     var q = e.quest();
                     String req = q.requires() == null ? "" : q.requires();
-                    boolean abierta = req.isEmpty() || completas.contains(req);
+                    boolean abierta = req.isEmpty() || cobradas.contains(req);
                     salida.add(new MisionEstado(
                             q.id(), q.chain(), q.order(), req,
                             q.name(), q.description(),

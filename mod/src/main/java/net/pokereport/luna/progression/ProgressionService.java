@@ -95,42 +95,9 @@ public final class ProgressionService {
         try (Connection c = db.connection()) {
             c.setAutoCommit(false);
             try {
-                ensureRow(c, playerId, path);
-
-                int level;
-                long xp;
-                try (PreparedStatement ps = c.prepareStatement(
-                        "SELECT level, xp FROM player_path "
-                      + "WHERE player_id = ? AND path = ? FOR UPDATE")) {
-                    ps.setLong(1, playerId);
-                    ps.setString(2, path.name());
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (!rs.next()) throw new SQLException("Fila de vía no encontrada");
-                        level = rs.getInt(1);
-                        xp = rs.getLong(2);
-                    }
-                }
-
-                int nivelAntes = level;
-                xp += amount;
-                while (level < Path.MAX_LEVEL && xp >= Path.xpForNextLevel(level)) {
-                    xp -= Path.xpForNextLevel(level);
-                    level++;
-                }
-                if (level >= Path.MAX_LEVEL) xp = 0;   // al tope no se acumula
-
-                try (PreparedStatement ps = c.prepareStatement(
-                        "UPDATE player_path SET level = ?, xp = ? "
-                      + "WHERE player_id = ? AND path = ?")) {
-                    ps.setInt(1, level);
-                    ps.setLong(2, xp);
-                    ps.setLong(3, playerId);
-                    ps.setString(4, path.name());
-                    ps.executeUpdate();
-                }
-
+                Subida subida = grantInTransaction(c, playerId, path, amount);
                 c.commit();
-                return new Subida(new PathState(path, level, xp), nivelAntes);
+                return subida;
 
             } catch (Exception e) {
                 c.rollback();
@@ -139,6 +106,49 @@ public final class ProgressionService {
                 c.setAutoCommit(true);
             }
         }
+    }
+
+    /**
+     * Variante para una operación compuesta. No confirma ni revierte la
+     * conexión: quien la invoca debe hacerlo junto con el resto de efectos.
+     */
+    public Subida grantInTransaction(Connection c, long playerId, Path path, long amount)
+            throws SQLException {
+        if (amount <= 0) throw new IllegalArgumentException("La XP debe ser positiva");
+        ensureRow(c, playerId, path);
+
+        int level;
+        long xp;
+        try (PreparedStatement ps = c.prepareStatement(
+                "SELECT level, xp FROM player_path "
+              + "WHERE player_id = ? AND path = ? FOR UPDATE")) {
+            ps.setLong(1, playerId);
+            ps.setString(2, path.name());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) throw new SQLException("Fila de vía no encontrada");
+                level = rs.getInt(1);
+                xp = rs.getLong(2);
+            }
+        }
+
+        int nivelAntes = level;
+        xp += amount;
+        while (level < Path.MAX_LEVEL && xp >= Path.xpForNextLevel(level)) {
+            xp -= Path.xpForNextLevel(level);
+            level++;
+        }
+        if (level >= Path.MAX_LEVEL) xp = 0;
+
+        try (PreparedStatement ps = c.prepareStatement(
+                "UPDATE player_path SET level = ?, xp = ? "
+              + "WHERE player_id = ? AND path = ?")) {
+            ps.setInt(1, level);
+            ps.setLong(2, xp);
+            ps.setLong(3, playerId);
+            ps.setString(4, path.name());
+            ps.executeUpdate();
+        }
+        return new Subida(new PathState(path, level, xp), nivelAntes);
     }
 
     /** Vía con el nivel más alto. Es la que se muestra en la barra lateral. */

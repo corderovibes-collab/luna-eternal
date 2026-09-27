@@ -55,6 +55,38 @@ function importAnimation(animation) {
 
 const imported = Object.fromEntries((source.animations ?? []).map((animation) => [animation.name, importAnimation(animation)]));
 const custom = previous.animations ?? {};
+// These are authored for Lunita's exported bone hierarchy.  The source Eevee
+// "ground_idle" is a zero-length pose, so it cannot serve as live idle motion.
+custom['animation.lunita.idle'] = {
+  loop: true,
+  animation_length: 2.4,
+  bones: {
+    body: { position: { '0': [0, 0, 0], '0.6': [0, 0.18, 0], '1.2': [0, 0, 0], '1.8': [0, 0.18, 0], '2.4': [0, 0, 0] } },
+    head: { rotation: { '0': [0, -3, 0], '0.6': [1.5, 2, 0], '1.2': [0, 4, 0], '1.8': [-1.5, 2, 0], '2.4': [0, -3, 0] } },
+    ear_left: { rotation: { '0': [0, 0, -3], '0.6': [2, 0, 4], '1.2': [0, 0, -1], '1.8': [-2, 0, 3], '2.4': [0, 0, -3] } },
+    ear_right: { rotation: { '0': [0, 0, 3], '0.6': [2, 0, -4], '1.2': [0, 0, 1], '1.8': [-2, 0, -3], '2.4': [0, 0, 3] } },
+    tail1: { rotation: { '0': [0, -10, 0], '0.6': [0, 10, 0], '1.2': [0, 18, 0], '1.8': [0, 5, 0], '2.4': [0, -10, 0] } },
+    tail2: { rotation: { '0': [0, -6, 0], '0.6': [0, 8, 0], '1.2': [0, 13, 0], '1.8': [0, 3, 0], '2.4': [0, -6, 0] } },
+    wingLeft: { rotation: { '0': [0, 0, -4], '0.6': [0, 0, 7], '1.2': [0, 0, 2], '1.8': [0, 0, 7], '2.4': [0, 0, -4] } },
+    wingRight: { rotation: { '0': [0, 0, 4], '0.6': [0, 0, -7], '1.2': [0, 0, -2], '1.8': [0, 0, -7], '2.4': [0, 0, 4] } },
+    Aureola: { rotation: { '0': [0, 0, 0], '2.4': [0, 360, 0] } }
+  }
+};
+custom['animation.lunita.walk'] = {
+  loop: true,
+  animation_length: 0.8,
+  bones: {
+    body: { position: { '0': [0, 0, 0], '0.2': [0, 0.16, 0], '0.4': [0, 0, 0], '0.6': [0, 0.16, 0], '0.8': [0, 0, 0] } },
+    head: { rotation: { '0': [3, 0, 0], '0.4': [-2, 0, 0], '0.8': [3, 0, 0] } },
+    front_leg_left: { rotation: { '0': [28, 0, 0], '0.2': [0, 0, 0], '0.4': [-28, 0, 0], '0.6': [0, 0, 0], '0.8': [28, 0, 0] } },
+    front_leg_right: { rotation: { '0': [-28, 0, 0], '0.2': [0, 0, 0], '0.4': [28, 0, 0], '0.6': [0, 0, 0], '0.8': [-28, 0, 0] } },
+    back_leg_left: { rotation: { '0': [-28, 0, 0], '0.2': [0, 0, 0], '0.4': [28, 0, 0], '0.6': [0, 0, 0], '0.8': [-28, 0, 0] } },
+    back_leg_right: { rotation: { '0': [28, 0, 0], '0.2': [0, 0, 0], '0.4': [-28, 0, 0], '0.6': [0, 0, 0], '0.8': [28, 0, 0] } },
+    tail1: { rotation: { '0': [0, -13, 0], '0.4': [0, 13, 0], '0.8': [0, -13, 0] } },
+    wingLeft: { rotation: { '0': [0, 0, -8], '0.4': [0, 0, 8], '0.8': [0, 0, -8] } },
+    wingRight: { rotation: { '0': [0, 0, 8], '0.4': [0, 0, -8], '0.8': [0, 0, 8] } }
+  }
+};
 // The original cry only references Cobblemon's Eevee sound event.  Keep its
 // source timeline and provide Lunita's separate visual reaction instead.
 custom['animation.lunita.cry'] ??= {

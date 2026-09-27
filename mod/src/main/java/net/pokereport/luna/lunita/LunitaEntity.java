@@ -1,6 +1,7 @@
 package net.pokereport.luna.lunita;
 
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.ai.goal.LookAtEntityGoal;
@@ -56,6 +57,11 @@ public final class LunitaEntity extends PathAwareEntity implements GeoEntity {
         goalSelector.add(6, new LookAroundGoal(this));
     }
 
+    /** Guardiana decorativa: ninguna fuente puede reducir su vida. */
+    @Override public boolean damage(DamageSource source, float amount) {
+        return false;
+    }
+
     @Override public ActionResult interactMob(PlayerEntity player, Hand hand) {
         if (getWorld().isClient()) return ActionResult.SUCCESS;
         if (player instanceof ServerPlayerEntity serverPlayer) {
@@ -79,8 +85,11 @@ public final class LunitaEntity extends PathAwareEntity implements GeoEntity {
             RawAnimation animation = switch (state) {
                 case GREET -> RawAnimation.begin().thenPlay("animation.lunita.greet");
                 case RETURN_HOME, TAKE_OFF, FLY, GLIDE -> RawAnimation.begin().thenLoop("animation.lunita.return_home");
-                // Native Blockbench idle retained from the Lunita/Eevee model.
-                default -> RawAnimation.begin().thenLoop("animation.eevee.ground_idle");
+                // El idle original es una pose estática; Lunita usa una
+                // respiración viva y cambia a zancada al navegar.
+                default -> event.isMoving()
+                        ? RawAnimation.begin().thenLoop("animation.lunita.walk")
+                        : RawAnimation.begin().thenLoop("animation.lunita.idle");
             };
             return event.setAndContinue(animation);
         }));

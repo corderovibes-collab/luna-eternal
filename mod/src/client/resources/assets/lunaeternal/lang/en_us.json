@@ -751,5 +751,6 @@
   "gui.lunaeternal.menu.status.online": "§aOnline: ",
   "gui.lunaeternal.menu.status.connecting": "§eConnecting...",
   "gui.lunaeternal.menu.status.offline": "§cOffline",
-  "gui.lunaeternal.menu.greeting": "Welcome, %s!"
+  "gui.lunaeternal.menu.greeting": "Welcome, %s!",
+  "entity.lunaeternal.lunita": "Lunita"
 }

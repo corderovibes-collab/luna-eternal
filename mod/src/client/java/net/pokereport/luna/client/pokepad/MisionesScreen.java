@@ -151,6 +151,8 @@ public class MisionesScreen extends Screen {
     private List<String> cadenas = List.of("tutorial");
     private int pestana = 0;
     private Red.MisionEstado elegida;
+    /** Progreso presentado: se acerca al valor autoritativo sin saltos bruscos. */
+    private final Map<String, Float> progresoVisible = new HashMap<>();
 
     /** Dónde cae cada misión en la rejilla. Se recalcula al cambiar de pestaña. */
     private final Map<String, int[]> sitio = new HashMap<>();
@@ -348,6 +350,16 @@ public class MisionesScreen extends Screen {
         y += 10;
         separador(ctx, y);
         y += 16;
+        String estado = estadoDe(elegida);
+        int estadoAncho = Math.min(PANEL_W - 48, Math.max(118, anchoArte(estado, 16) + 26));
+        int estadoX = PANEL_X + (PANEL_W - estadoAncho) / 2;
+        ctx.fill(px(estadoX), py(y - 5), px(estadoX + estadoAncho), py(y + 21),
+                colorEstado(elegida));
+        marco(ctx, px(estadoX), py(y - 5), pl(estadoAncho), pl(26),
+                0xFF1B2438, Math.max(1, pl(2)));
+        texto(ctx, Text.literal(estado), PANEL_X + PANEL_W / 2, y, 16,
+                0xFFFFFFFF, true, false);
+        y += 38;
         for (String linea : partir(elegida.descripcion(), PANEL_W - 44, 19)) {
             texto(ctx, Text.literal(linea), cx, y, 19, 0xFFC9D2E6, true, false);
             y += 23;
@@ -362,11 +374,17 @@ public class MisionesScreen extends Screen {
                 cx, y, 18, TEXTO_SUAVE, true, false);
         y += 24;
         long meta = Math.max(1, elegida.meta());
-        double frac = Math.min(1.0, elegida.progreso() / (double) meta);
+        float objetivo = (float) Math.min(1.0, elegida.progreso() / (double) meta);
+        float mostrado = progresoVisible.getOrDefault(elegida.id(), objetivo);
+        // La animación solo interpola una representación. `objetivo` siempre
+        // llega del servidor; nunca se usa para decidir una recompensa.
+        mostrado += (objetivo - mostrado) * 0.20f;
+        if (Math.abs(objetivo - mostrado) < 0.002f) mostrado = objetivo;
+        progresoVisible.put(elegida.id(), mostrado);
         int bx = PANEL_X + 28, bw = PANEL_W - 56, bh = 18;
         ctx.fill(px(bx), py(y), px(bx + bw), py(y) + pl(bh), 0xFF2B3240);
-        if (frac > 0) {
-            ctx.fill(px(bx), py(y), px(bx) + (int) Math.round(pl(bw) * frac), py(y) + pl(bh),
+        if (mostrado > 0) {
+            ctx.fill(px(bx), py(y), px(bx) + (int) Math.round(pl(bw) * mostrado), py(y) + pl(bh),
                     elegida.completada() ? NODO_HECHO : 0xFF4F7BD0);
         }
         marco(ctx, px(bx), py(y), pl(bw), pl(bh), SEPARADOR, Math.max(1, pl(2)));
@@ -396,6 +414,24 @@ public class MisionesScreen extends Screen {
         }
 
         dibujarBotonCobrar(ctx, rx, ry);
+    }
+
+    /** Etiqueta de UX derivada exclusivamente de los banderines del servidor. */
+    private static String estadoDe(Red.MisionEstado q) {
+        if (q.cobrada()) return "RECOMPENSA COBRADA";
+        if (q.cobrable()) return "LISTA PARA COBRAR";
+        if (q.completada()) return "COMPLETADA";
+        if (!q.desbloqueada()) return "BLOQUEADA";
+        if (q.progreso() > 0) return "EN CURSO";
+        return "DISPONIBLE";
+    }
+
+    private static int colorEstado(Red.MisionEstado q) {
+        if (q.cobrada() || q.completada()) return 0xFF317A4B;
+        if (q.cobrable()) return 0xFFB67B12;
+        if (!q.desbloqueada()) return 0xFF5A647B;
+        if (q.progreso() > 0) return 0xFF3B609F;
+        return 0xFF426AAB;
     }
 
     /** El botón de cobrar, abajo del panel. Solo aparece cuando se puede. */

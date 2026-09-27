@@ -18,26 +18,26 @@ curso. Las reproducciones posteriores usan la copia local verificada.
 
 | Campo | Valor |
 |---|---|
-| Archivo | `profesor-oak-intro-stream-v2.mp4` |
-| Resolución / FPS | 1920×1080, 60 FPS |
-| Tamaño | 15,157,601 bytes |
-| Bitrate aproximado | 4.23 Mbps |
-| SHA-256 | `eca79c6a08a26c9b5730f0bf772af1278e17b81d942090d890c1f1f18ffd5c9a` |
-| SHA-1 | `8c77e8338793803ce695f38b7219761e39602e88` |
-| Release | `https://github.com/corderovibes-collab/luna-eternal-pack/releases/download/pack-assets/profesor-oak-intro-stream-v2-eca79c6a08a2.mp4` |
-| Copia de trabajo | `build/video/profesor-oak-intro-stream-v2.mp4` |
+| Archivo | `profesor-oak-intro-v3.mp4` |
+| Resolución / FPS | 1920×1080, 30 FPS |
+| Tamaño | 15,933,960 bytes |
+| Bitrate aproximado | 4.57 Mbps |
+| SHA-256 | `7ecf2151790565db6b1dc17ecd69374d0ec38e477d7530c8d472ad52cba0b195` |
+| Release | `https://github.com/corderovibes-collab/luna-eternal-pack/releases/download/pack-assets/profesor-oak-intro-v3.mp4` |
+| Copia de trabajo | `build/video/profesor-oak-intro-v3.mp4` |
 
-El archivo anterior sustituyó al original de unos 60 MB y 16.8 Mbps. La
-reducción se hizo sin bajar de 1080p60, usando H.264, GOP de 120, `faststart` y
-audio AAC a 160 kbit/s.
+La edición v3 procede de `oakintrolisto.mp4`. Se recodificó a H.264 High,
+1080p30, GOP de 60, `faststart` y audio AAC a 160 kbit/s. El archivo queda por
+debajo de 16 MB: conserva calidad de bienvenida y reduce tanto la descarga
+inicial como el trabajo de decodificación del cliente.
 
 Comando de referencia para reconstruirlo:
 
 ```powershell
 ffmpeg -i profesoroakintro.mp4 -c:v libx264 -preset medium -crf 21 `
-  -maxrate 8M -bufsize 16M -profile:v high -level 4.2 -r 60 `
-  -g 120 -keyint_min 60 -sc_threshold 0 -movflags +faststart `
-  -c:a aac -b:a 160k -ar 48000 profesor-oak-intro-stream-v2.mp4
+  -maxrate 8M -bufsize 16M -profile:v high -level 4.1 -r 30 `
+  -g 60 -keyint_min 30 -sc_threshold 0 -movflags +faststart `
+  -c:a aac -b:a 160k -ar 48000 profesor-oak-intro-v3.mp4
 ```
 
 No se debe reemplazar el archivo de la release bajo el mismo nombre. Cualquier
@@ -62,7 +62,7 @@ nueva edición debe publicarse con nombre y checksum nuevos y actualizar juntos
 La caché del jugador se ubica en:
 
 ```text
-<directorio de Minecraft>/cache/pokereport/cinematicas/profesor-oak-intro-v2.mp4
+<directorio de Minecraft>/cache/pokereport/cinematicas/profesor-oak-intro-v3.mp4
 ```
 
 La descarga temporal usa la extensión `.part`. La copia solo se promueve al

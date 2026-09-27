@@ -17,6 +17,7 @@ import org.watermedia.api.media.MediaAPI;
 import org.watermedia.api.media.players.MediaPlayer;
 
 import java.net.URI;
+import java.time.Duration;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -29,14 +30,16 @@ import java.util.concurrent.CompletableFuture;
 
 /** Reproductor a pantalla completa de las cinematicas de PokeReport. */
 public final class CinematicaScreen extends Screen {
+    /** Huella y tamaño del único archivo que el cliente puede reproducir. */
     private static final String OAK_SHA256 =
-            "eca79c6a08a26c9b5730f0bf772af1278e17b81d942090d890c1f1f18ffd5c9a";
+            "7ecf2151790565db6b1dc17ecd69374d0ec38e477d7530c8d472ad52cba0b195";
+    private static final long OAK_BYTES = 15_933_960L;
     private final String url;
     private volatile MRL medio;
     private final int limiteSegundos;
     private final boolean puedeSalir;
     private MediaPlayer reproductor;
-    private String error = "";
+    private volatile String error = "";
     private long inicio;
 
     public CinematicaScreen(String url, int limiteSegundos, boolean puedeSalir) {
@@ -64,17 +67,23 @@ public final class CinematicaScreen extends Screen {
                 Path dir = net.fabricmc.loader.api.FabricLoader.getInstance()
                         .getGameDir().resolve("cache/pokereport/cinematicas");
                 Files.createDirectories(dir);
-                Path destino = dir.resolve("profesor-oak-intro-v2.mp4");
-                if (!Files.isRegularFile(destino) || !hash(destino).equals(OAK_SHA256)) {
-                    Path temporal = dir.resolve("profesor-oak-intro-v2.mp4.part");
+                Path destino = dir.resolve("profesor-oak-intro-v3.mp4");
+                if (!Files.isRegularFile(destino) || Files.size(destino) != OAK_BYTES
+                        || !hash(destino).equals(OAK_SHA256)) {
+                    Path temporal = dir.resolve("profesor-oak-intro-v3.mp4.part");
                     Files.deleteIfExists(temporal);
                     HttpClient http = HttpClient.newBuilder()
-                            .followRedirects(HttpClient.Redirect.ALWAYS).build();
+                            .followRedirects(HttpClient.Redirect.ALWAYS)
+                            .connectTimeout(Duration.ofSeconds(15))
+                            .build();
                     HttpResponse<Path> respuesta = http.send(
                             HttpRequest.newBuilder(URI.create(url))
                                     .header("User-Agent", "PokeReport-Luna/1.0")
+                                    // Nunca dejar una pantalla de juego esperando una CDN caída.
+                                    .timeout(Duration.ofSeconds(90))
                                     .GET().build(), HttpResponse.BodyHandlers.ofFile(temporal));
                     if (respuesta.statusCode() < 200 || respuesta.statusCode() >= 300
+                            || Files.size(temporal) != OAK_BYTES
                             || !hash(temporal).equals(OAK_SHA256)) {
                         Files.deleteIfExists(temporal);
                         throw new IllegalStateException("descarga incompleta o checksum invalido");

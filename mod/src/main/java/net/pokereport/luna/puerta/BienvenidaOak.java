@@ -21,7 +21,7 @@ public final class BienvenidaOak {
     private static final String MARCA_ENTREGADO = "luna_intro_oak_v1";
     public static final String VIDEO = "https://github.com/corderovibes-collab/"
             + "luna-eternal-pack/releases/download/pack-assets/"
-            + "profesor-oak-intro-stream-v2-eca79c6a08a2.mp4";
+            + "profesor-oak-intro-v3.mp4";
 
     private BienvenidaOak() {}
 

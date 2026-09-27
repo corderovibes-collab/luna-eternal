@@ -125,12 +125,18 @@ public final class Arenas {
         BlockPos o = Gimnasio.maestro(g);
 
         boolean esNaranja = g.region() == Gimnasio.Region.NARANJA;
-        int minDx = esNaranja ? -128 : -16;
-        int maxDx = esNaranja ? 144 : 128;
-        int minDz = esNaranja ? -112 : -16;
-        int maxDz = esNaranja ? 192 : Gimnasio.pasoRanura(g) - 16;
-        int minDy = esNaranja ? -16 : -16;
-        int maxDy = esNaranja ? 56 : 115;
+        boolean esMorti = "morti".equals(g.id());
+        // Medido en el mapa real de Morti: va de X -65 a +55 y Z -43 a +62
+        // respecto a su origen (17408, 64, 0). El rango genérico arrancaba en
+        // -16 y eliminaba media fachada y las alas norte/oeste al clonar.
+        // Dejamos un margen amplio para decoración posterior, sin alcanzar el
+        // siguiente maestro de gimnasios.
+        int minDx = esNaranja ? -128 : (esMorti ? -96 : -16);
+        int maxDx = esNaranja ? 144 : (esMorti ? 160 : 128);
+        int minDz = esNaranja ? -112 : (esMorti ? -96 : -16);
+        int maxDz = esNaranja ? 192 : (esMorti ? 160 : Gimnasio.pasoRanura(g) - 16);
+        int minDy = esMorti ? -32 : -16;
+        int maxDy = esMorti ? 96 : (esNaranja ? 56 : 115);
 
         // ⚠ Aseguramos que los chunks del área del maestro estén cargados.
         //   Incluimos margen negativo porque estructuras como Misty empiezan en z = -2.

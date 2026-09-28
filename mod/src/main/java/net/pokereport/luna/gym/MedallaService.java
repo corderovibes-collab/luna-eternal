@@ -230,6 +230,48 @@ public final class MedallaService {
     }
 
     /**
+     * Otorga todas las medallas exclusivamente para control de calidad.
+     *
+     * <p>No reutiliza la recompensa de una victoria: un administrador que
+     * desbloquea la ruta no debe recibir XP del pase, dinero ni efectos de los
+     * líderes. Persiste primero y actualiza la caché en la misma operación,
+     * igual que {@link #conceder(ServerPlayerEntity, Gimnasio.Gimnasio_, java.util.function.Consumer)}.
+     */
+    public void concederTodas(ServerPlayerEntity jugador,
+                              java.util.function.Consumer<Integer> despues) {
+        UUID uuid = jugador.getUuid();
+        String nombre = jugador.getName().getString();
+        var servidor = jugador.getServer();
+        LunaEternal.submit(() -> {
+            int nuevas = 0;
+            int mascara = 0;
+            try {
+                long id = LunaEternal.players().resolve(uuid, nombre);
+                try (Connection c = db.connection();
+                     PreparedStatement ps = c.prepareStatement(
+                         "INSERT IGNORE INTO gym_badge (player_id, gym) VALUES (?, ?)")) {
+                    c.setAutoCommit(false);
+                    for (Gimnasio.Gimnasio_ g : Gimnasio.TODOS) {
+                        ps.setLong(1, id);
+                        ps.setString(2, g.id());
+                        nuevas += ps.executeUpdate();
+                        mascara |= 1 << g.sala();
+                    }
+                    c.commit();
+                }
+                final int bits = mascara;
+                CACHE.merge(uuid, bits, (a, b) -> a | b);
+            } catch (Exception e) {
+                LunaEternal.LOG.error("No se pudieron conceder todas las medallas a {}", nombre, e);
+            }
+            final int concedidas = nuevas;
+            if (despues != null && servidor != null) {
+                servidor.execute(() -> despues.accept(concedidas));
+            }
+        });
+    }
+
+    /**
      * QUITA UNA MEDALLA. <b>Va por el executor de E/S.</b>
      *
      * <h2>⚠ Existe para PROBAR, y por eso es de nivel 4</h2>

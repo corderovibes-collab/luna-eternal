@@ -782,6 +782,33 @@ public final class LunaCommand {
                                 net.minecraft.command.argument.EntityArgumentType
                                         .getPlayer(ctx, "jugador"))))))
 
+            // Atajo de QA: desbloquea la ruta completa sin simular victorias ni
+            // entregar las recompensas asociadas a derrotar líderes.
+            .then(literal("darmedalla")
+                .requires(s -> s.hasPermissionLevel(4))
+                .then(argument("cual", StringArgumentType.word())
+                    .suggests((c, b) -> {
+                        for (var g : net.pokereport.luna.gym.Gimnasio.TODOS) {
+                            b.suggest(g.id());
+                        }
+                        return b.buildFuture();
+                    })
+                    .executes(ctx -> darMedalla(ctx, null))
+                    .then(argument("jugador",
+                            net.minecraft.command.argument.EntityArgumentType.player())
+                        .executes(ctx -> darMedalla(ctx,
+                                net.minecraft.command.argument.EntityArgumentType
+                                        .getPlayer(ctx, "jugador"))))))
+
+            .then(literal("darmedallas")
+                .requires(s -> s.hasPermissionLevel(4))
+                .executes(ctx -> darTodasMedallas(ctx.getSource(), null))
+                .then(argument("jugador",
+                        net.minecraft.command.argument.EntityArgumentType.player())
+                    .executes(ctx -> darTodasMedallas(ctx.getSource(),
+                            net.minecraft.command.argument.EntityArgumentType
+                                    .getPlayer(ctx, "jugador")))))
+
             .then(literal("reiniciarinicial")
                 .requires(s -> s.hasPermissionLevel(4))
                 .executes(ctx -> reiniciarInicial(ctx.getSource(), null)))
@@ -3331,6 +3358,58 @@ public final class LunaCommand {
                 : "\u00a7e" + quien.getName().getString() + " no tenia la medalla "
                   + "de \u00a7f" + g.lider()), false);
         });
+        return 1;
+    }
+
+    /** Da una medalla concreta sin premios de combate; uso exclusivo de QA. */
+    private static int darMedalla(
+            com.mojang.brigadier.context.CommandContext<ServerCommandSource> ctx,
+            ServerPlayerEntity otro)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var s = ctx.getSource();
+        var g = net.pokereport.luna.gym.Gimnasio.de(
+                StringArgumentType.getString(ctx, "cual"));
+        if (g == null) {
+            s.sendError(Text.literal("§cNo existe ese gimnasio. Usa §f/luna gimnasio§c para verlos."));
+            return 0;
+        }
+        ServerPlayerEntity quien = otro != null ? otro : s.getPlayer();
+        if (quien == null) {
+            s.sendError(Text.literal("§cDesde consola indica al jugador: §f/luna darmedalla "
+                    + g.id() + " <jugador>"));
+            return 0;
+        }
+        var svc = LunaEternal.medallas();
+        if (svc == null) {
+            s.sendError(Text.literal("§cEl sistema de medallas no esta listo."));
+            return 0;
+        }
+        svc.conceder(quien, g, nueva -> {
+            s.sendFeedback(() -> Text.literal(nueva
+                    ? "§aMedalla de §f" + g.lider() + "§a otorgada a §f"
+                            + quien.getName().getString() + "§a (QA, sin recompensas)."
+                    : "§e" + quien.getName().getString() + " ya tenia la medalla de §f"
+                            + g.lider()), false);
+        });
+        return 1;
+    }
+
+    /** Da toda la ruta para probar cualquier líder desde el PokePad. */
+    private static int darTodasMedallas(ServerCommandSource s, ServerPlayerEntity otro)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayerEntity quien = otro != null ? otro : s.getPlayer();
+        if (quien == null) {
+            s.sendError(Text.literal("§cDesde consola indica al jugador: §f/luna darmedallas <jugador>"));
+            return 0;
+        }
+        var svc = LunaEternal.medallas();
+        if (svc == null) {
+            s.sendError(Text.literal("§cEl sistema de medallas no esta listo."));
+            return 0;
+        }
+        svc.concederTodas(quien, nuevas -> s.sendFeedback(() -> Text.literal(
+                "§aRuta de gimnasios desbloqueada para §f" + quien.getName().getString()
+                        + "§a: " + nuevas + " medallas nuevas (QA, sin recompensas)."), false));
         return 1;
     }
 }

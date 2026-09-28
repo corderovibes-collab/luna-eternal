@@ -397,6 +397,14 @@ public final class Arenas {
             new PosicionBloque(16385, 65, 5, "player_pokemon_position"),
             new PosicionBloque(16385, 65, 10, "player_stand_position")
         ),
+        // Morti: los puntos visuales están a Y=67; los bloques Battle Positions
+        // se colocan dos bloques debajo, como los demás gimnasios de Johto.
+        "morti", java.util.List.of(
+            new PosicionBloque(17409, 65, -8, "trainer_stand_position"),
+            new PosicionBloque(17409, 65, -3, "trainer_pokemon_position"),
+            new PosicionBloque(17409, 65, 5, "player_pokemon_position"),
+            new PosicionBloque(17409, 65, 10, "player_stand_position")
+        ),
         "anibal", java.util.List.of(
             new PosicionBloque(18433, 64, -7, "trainer_stand_position"),
             new PosicionBloque(18433, 64, -2, "trainer_pokemon_position"),

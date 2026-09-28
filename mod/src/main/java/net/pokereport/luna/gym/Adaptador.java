@@ -110,7 +110,7 @@ public final class Adaptador {
         }
         try {
             var rival = leerEquipo(jugador);
-            int minCuantos = (g != null && ("luana".equalsIgnoreCase(g.id()) || "giovanni".equalsIgnoreCase(g.id()))) ? 2 : 1;
+            int minCuantos = Gimnasio.equipoMinimo(g);
             int cuantos = Math.max(minCuantos, Math.min(TOPE_EQUIPO, rival.size()));
             var equipo = componer(pool, rival, cuantos, g.nivel());
 
@@ -202,7 +202,7 @@ public final class Adaptador {
         // ⚠⚠⚠ SE COPIA, NO SE MUTA. `BattleFormat.GEN_9_SINGLES` de rctapi es
         //    un ENUM, así que su formato de Cobblemon es UNA instancia
         //    compartida por todo el servidor.
-        var base = (g != null && ("luana".equalsIgnoreCase(g.id()) || "giovanni".equalsIgnoreCase(g.id())))
+        var base = Gimnasio.esCombateDoble(g)
                 ? com.gitlab.srcmc.rctapi.api.battle.BattleFormat.GEN_9_DOUBLES.getCobblemonBattleFormat()
                 : com.gitlab.srcmc.rctapi.api.battle.BattleFormat.GEN_9_SINGLES.getCobblemonBattleFormat();
         // ⚠ adjustLevel = 0 para no forzar ajuste artificial de nivel:

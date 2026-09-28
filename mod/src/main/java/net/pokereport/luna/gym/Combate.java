@@ -219,9 +219,9 @@ public final class Combate {
         if (!Gimnasio.construido(g)) {
             return new Motivo("sin_construir", 0);
         }
-        int tengo = MedallaService.cuantas(uuid);
-        if (tengo < g.medallas()) {
-            return new Motivo("faltan", g.medallas() - tengo);
+        int faltanRuta = Gimnasio.requisitosPendientes(MedallaService.enCache(uuid), g);
+        if (faltanRuta > 0) {
+            return new Motivo("faltan", faltanRuta);
         }
         // ⚠ Sin Pokémon no hay combate, y el error que da Cobblemon por dentro
         //   no se entiende. Mejor decirlo antes de teletransportar a nadie.
@@ -233,12 +233,9 @@ public final class Combate {
         if (sobreNivel > 0) {
             return new Motivo("nivel_superado", g.nivel());
         }
-        // ⚠ Luana y Giovanni combaten en formato doble (2v2): requieren al menos 2 Pokémon conscientes
-        if ("luana".equalsIgnoreCase(g.id()) && contarConscientes(jugador) < 2) {
-            return new Motivo("luana_necesita_dos", 2);
-        }
-        if ("giovanni".equalsIgnoreCase(g.id()) && contarConscientes(jugador) < 2) {
-            return new Motivo("doble_necesita_dos", 2);
+        int minimo = Gimnasio.equipoMinimo(g);
+        if (contarConscientes(jugador) < minimo) {
+            return new Motivo("equipo_insuficiente", minimo);
         }
         if (Ranuras.libres(g) <= 0) {
             return new Motivo("lleno", 0);
@@ -631,11 +628,11 @@ public final class Combate {
                     + g.nivel() + "§7 (detectado Nv. " + sobreNivel + ")."), false);
             return;
         }
-        if (!PRUEBAS.contains(jugador.getUuid())
-                && ("luana".equalsIgnoreCase(g.id()) || "giovanni".equalsIgnoreCase(g.id()))
-                && contarConscientes(jugador) < 2) {
+        int minimo = Gimnasio.equipoMinimo(g);
+        if (!PRUEBAS.contains(jugador.getUuid()) && contarConscientes(jugador) < minimo) {
             jugador.sendMessage(Text.literal(
-                    "§c§l¡COMBATE BLOQUEADO! §r§7El combate contra " + g.lider() + " es un combate doble (2v2). Necesitas al menos §e2 Pokémon conscientes§7 en tu equipo."), false);
+                    "§c§l¡COMBATE BLOQUEADO! §r§7Necesitas al menos §e" + minimo
+                    + " Pokémon conscientes§7 para retar a " + g.lider() + "."), false);
             return;
         }
         limpiarReservasDeRanura(g, mia);

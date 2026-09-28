@@ -271,7 +271,7 @@ public class GimnasiosScreen extends Screen {
             case PROXIMAMENTE ->
                     Text.translatable("gimnasios.lunaeternal.estado.proximamente");
             case FALTAN -> Text.translatable("gimnasios.lunaeternal.estado.faltan",
-                    g.medallas() - Integer.bitCount(mascara()));
+                    Gimnasio.requisitosPendientes(mascara(), g));
         };
         for (String l : partir(frase.getString(), PANEL_W - 60, 15)) {
             texto(ctx, Text.literal(l), PANEL_X + 30, y, 15, colorDe(e), false, 0);

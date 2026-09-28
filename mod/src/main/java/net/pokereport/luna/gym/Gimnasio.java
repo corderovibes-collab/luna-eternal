@@ -280,27 +280,29 @@ public final class Gimnasio {
         new Gimnasio_("drake",     "naranja_drake",        12, 12,  12,  62, 5,
                       "Drake",     "Liga Naranja",  "naranja_trofeo",     true, Region.NARANJA),
 
-        new Gimnasio_("campeon_kanto", "kanto_champion_blue", 13, 13, 13, 63, 5,
+        // Blue se abre con las ocho medallas de Kanto. La Liga Naranja es una
+        // ruta paralela: nunca debe bloquear al Campeón ni a Johto.
+        new Gimnasio_("campeon_kanto", "kanto_champion_blue", 13, 13, 8, 63, 5,
                       "Blue",      "Campeón de Kanto", "kanto_league_trophy", false, Region.KANTO),
 
-        new Gimnasio_("pegaso",    "johto_valerio",        14, 14,  14,  64, 4,
+        new Gimnasio_("pegaso",    "johto_valerio",        14, 14,   9,  64, 4,
                       "Pegaso",    "Céfiro",     "johto_zephyr_badge",   false, Region.JOHTO),
-        new Gimnasio_("anton",     "johto_raffaello",      15, 15,  15,  68, 4,
+        new Gimnasio_("anton",     "johto_raffaello",      15, 15,  10,  68, 4,
                       "Antón",     "Colmena",    "johto_hive_badge",     false, Region.JOHTO),
-        new Gimnasio_("blanca",    "johto_chiara",         16, 16,  16,  71, 4,
+        new Gimnasio_("blanca",    "johto_chiara",         16, 16,  11,  71, 4,
                       "Blanca",    "Llanura",    "johto_plain_badge",    false, Region.JOHTO),
-        new Gimnasio_("morti",     "johto_angelo",         17, 17,  17,  75, 4,
+        new Gimnasio_("morti",     "johto_angelo",         17, 17,  12,  75, 4,
                       "Morti",     "Niebla",     "johto_fog_badge",      false, Region.JOHTO),
-        new Gimnasio_("anibal",    "johto_furio",          18, 18,  18,  79, 5,
+        new Gimnasio_("anibal",    "johto_furio",          18, 18,  13,  79, 5,
                       "Aníbal",    "Tormenta",   "johto_storm_badge",    false, Region.JOHTO),
-        new Gimnasio_("yasmina",   "johto_jasmine",        19, 19,  19,  82, 5,
+        new Gimnasio_("yasmina",   "johto_jasmine",        19, 19,  14,  82, 5,
                       "Yasmina",   "Mineral",    "johto_mineral_badge",  false, Region.JOHTO),
-        new Gimnasio_("fredo",     "johto_alfredo",        20, 20,  20,  86, 5,
+        new Gimnasio_("fredo",     "johto_alfredo",        20, 20,  15,  86, 5,
                       "Fredo",     "Glaciar",    "johto_glacier_badge",  false, Region.JOHTO),
-        new Gimnasio_("debora",    "johto_sandra",         21, 21,  21,  90, 5,
+        new Gimnasio_("debora",    "johto_sandra",         21, 21,  16,  90, 5,
                       "Débora",    "Alzamiento", "johto_rising_badge",   false, Region.JOHTO),
 
-        new Gimnasio_("campeon_johto", "johto_champion_lance", 22, 22, 22, 100, 5,
+        new Gimnasio_("campeon_johto", "johto_champion_lance", 22, 22, 17, 100, 5,
                       "Lance",     "Campeón de Johto", "johto_league_trophy", false, Region.JOHTO));
 
     /**
@@ -317,6 +319,70 @@ public final class Gimnasio {
             }
         }
         return salida;
+    }
+
+    /**
+     * Medallas concretas que abren cada reto. Nunca se usa un simple contador:
+     * tener medallas de una ruta opcional no puede sustituir una de la historia.
+     */
+    public static List<Gimnasio_> requisitos(Gimnasio_ objetivo) {
+        var salida = new java.util.ArrayList<Gimnasio_>();
+        if (objetivo == null) return salida;
+        if (objetivo.region() == Region.NARANJA) {
+            for (Gimnasio_ g : deRegion(Region.NARANJA)) {
+                if (g == objetivo) break;
+                salida.add(g);
+            }
+            return salida;
+        }
+        // Kanto: Blue necesita exactamente los ocho líderes, no la Liga Naranja.
+        for (Gimnasio_ g : deRegion(Region.KANTO)) {
+            if ("campeon_kanto".equals(g.id())) break;
+            if (objetivo.region() == Region.KANTO && g == objetivo) break;
+            salida.add(g);
+        }
+        if (objetivo.region() == Region.KANTO) return salida;
+
+        // Johto: las ocho de Kanto y Blue, más los líderes Johto anteriores.
+        salida.add(de("campeon_kanto"));
+        for (Gimnasio_ g : deRegion(Region.JOHTO)) {
+            if (g == objetivo) break;
+            salida.add(g);
+        }
+        return salida;
+    }
+
+    /** Número de medallas de la ruta correcta que faltan en una máscara. */
+    public static int requisitosPendientes(int mascara, Gimnasio_ objetivo) {
+        int faltan = 0;
+        for (Gimnasio_ g : requisitos(objetivo)) {
+            if ((mascara & (1 << g.sala())) == 0) faltan++;
+        }
+        return faltan;
+    }
+
+    /** Mínimo de Pokémon conscientes para que cada reto sea una progresión real. */
+    private static final java.util.Map<String, Integer> EQUIPO_MINIMO = java.util.Map.ofEntries(
+        java.util.Map.entry("brock", 1), java.util.Map.entry("misty", 2),
+        java.util.Map.entry("surge", 2), java.util.Map.entry("erika", 3),
+        java.util.Map.entry("koga", 3), java.util.Map.entry("sabrina", 4),
+        java.util.Map.entry("blaine", 4), java.util.Map.entry("giovanni", 4),
+        java.util.Map.entry("campeon_kanto", 6),
+        java.util.Map.entry("cissy", 3), java.util.Map.entry("danny", 3),
+        java.util.Map.entry("rudy", 4), java.util.Map.entry("luana", 2),
+        java.util.Map.entry("drake", 6),
+        java.util.Map.entry("pegaso", 3), java.util.Map.entry("anton", 3),
+        java.util.Map.entry("blanca", 3), java.util.Map.entry("morti", 4),
+        java.util.Map.entry("anibal", 4), java.util.Map.entry("yasmina", 4),
+        java.util.Map.entry("fredo", 5), java.util.Map.entry("debora", 6),
+        java.util.Map.entry("campeon_johto", 6));
+
+    public static int equipoMinimo(Gimnasio_ g) {
+        return g == null ? 1 : EQUIPO_MINIMO.getOrDefault(g.id(), 1);
+    }
+
+    public static boolean esCombateDoble(Gimnasio_ g) {
+        return g != null && ("luana".equals(g.id()) || "giovanni".equals(g.id()));
     }
 
     /** El prefijo de los entrenadores que todavía no sirve nadie. */

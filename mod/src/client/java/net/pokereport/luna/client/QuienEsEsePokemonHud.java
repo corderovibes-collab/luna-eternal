@@ -61,6 +61,17 @@ public final class QuienEsEsePokemonHud {
         return !oculto;
     }
 
+    /** El estado de una ronda pertenece a una conexión, nunca a la siguiente. */
+    public static void olvidarRonda() {
+        rondaId = 0L;
+        dex = 0;
+        terminaEn = 0L;
+        ganador = "";
+        premio = 0L;
+        revelado = false;
+        mostradoDesde = 0L;
+    }
+
     private static void cargarPreferencia() {
         try {
             if (!Files.isRegularFile(CONFIG)) return;

@@ -474,6 +474,7 @@ public class LunaCliente implements ClientModInitializer {
 
         ClientPlayConnectionEvents.DISCONNECT.register((manejador, cliente) -> {
             EstadoCliente.olvidar();
+            QuienEsEsePokemonHud.olvidarRonda();
             VozPokedex.callar();
             memorialPendiente = "";
             // Sin esto, entrar en otro mundo arrastra los cosmeticos del anterior.

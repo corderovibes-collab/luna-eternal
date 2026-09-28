@@ -2,7 +2,6 @@ package net.pokereport.luna.quienesepokemon;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
@@ -47,8 +46,12 @@ public final class QuienEsEsePokemonService {
             comprobarRespuesta(jugador, mensaje.getContent().getString());
             return true; // Tablist conserva el formato y retransmite el chat normal.
         });
+        // El primer evento se programa desde este momento. Dejar `proximaRonda`
+        // en cero hacia que el primer jugador que entraba tras cada reinicio
+        // disparara una ronda y recibiera sonido/interfaz como si fuera un aviso
+        // de bienvenida.
+        proximaRonda = System.currentTimeMillis() + INTERVALO_MS;
         ServerTickEvents.END_SERVER_TICK.register(QuienEsEsePokemonService::tick);
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> sincronizar(handler.getPlayer()));
     }
 
     /** Herramienta de QA: no altera el calendario si ya hay una ronda en curso. */
@@ -134,13 +137,6 @@ public final class QuienEsEsePokemonService {
                 jugador.getServer().execute(() -> jugador.sendMessage(Text.literal("§cLa respuesta fue válida, pero el premio quedó pendiente. Un administrador debe revisar la consola."), false));
             }
         });
-    }
-
-    private static void sincronizar(ServerPlayerEntity jugador) {
-        Ronda ronda = activa;
-        if (ronda != null && System.currentTimeMillis() < ronda.terminaEn) {
-            ServerPlayNetworking.send(jugador, new QuienEsEsePokemonNet.Ronda(ronda.id, ronda.especie.dex, ronda.terminaEn));
-        }
     }
 
     private static Especie siguiente() {

@@ -126,14 +126,15 @@ public final class Arenas {
 
         boolean esNaranja = g.region() == Gimnasio.Region.NARANJA;
         boolean esMorti = "morti".equals(g.id());
+        boolean esJohto = g.region() == Gimnasio.Region.JOHTO;
         // Medido en el mapa real de Morti: va de X -65 a +55 y Z -43 a +62
         // respecto a su origen (17408, 64, 0). El rango genérico arrancaba en
         // -16 y eliminaba media fachada y las alas norte/oeste al clonar.
         // Dejamos un margen amplio para decoración posterior, sin alcanzar el
         // siguiente maestro de gimnasios.
-        int minDx = esNaranja ? -128 : (esMorti ? -96 : -16);
-        int maxDx = esNaranja ? 144 : (esMorti ? 160 : 128);
-        int minDz = esNaranja ? -112 : (esMorti ? -96 : -16);
+        int minDx = esNaranja ? -128 : (esMorti ? -96 : (esJohto ? -32 : -16));
+        int maxDx = esNaranja ? 144 : (esMorti ? 160 : (esJohto ? 160 : 128));
+        int minDz = esNaranja ? -112 : (esMorti ? -96 : (esJohto ? -48 : -16));
         int maxDz = esNaranja ? 192 : (esMorti ? 160 : Gimnasio.pasoRanura(g) - 16);
         int minDy = esMorti ? -32 : -16;
         int maxDy = esMorti ? 96 : (esNaranja ? 56 : 115);
@@ -376,12 +377,59 @@ public final class Arenas {
         )
     );
 
+    /** Anclajes de combate medidos en las construcciones maestras de Johto. */
+    public static final java.util.Map<String, java.util.List<PosicionBloque>> POSICIONES_JOHTO = java.util.Map.of(
+        "pegaso", java.util.List.of(
+            new PosicionBloque(14320, 65, 13, "trainer_stand_position"),
+            new PosicionBloque(14320, 65, 17, "trainer_pokemon_position"),
+            new PosicionBloque(14320, 65, 23, "player_pokemon_position"),
+            new PosicionBloque(14320, 65, 28, "player_stand_position")
+        ),
+        "anton", java.util.List.of(
+            new PosicionBloque(15361, 65, -5, "trainer_stand_position"),
+            new PosicionBloque(15361, 65, 0, "trainer_pokemon_position"),
+            new PosicionBloque(15361, 65, 3, "player_pokemon_position"),
+            new PosicionBloque(15361, 65, 8, "player_stand_position")
+        ),
+        "blanca", java.util.List.of(
+            new PosicionBloque(16385, 65, -7, "trainer_stand_position"),
+            new PosicionBloque(16385, 65, -2, "trainer_pokemon_position"),
+            new PosicionBloque(16385, 65, 5, "player_pokemon_position"),
+            new PosicionBloque(16385, 65, 10, "player_stand_position")
+        ),
+        "anibal", java.util.List.of(
+            new PosicionBloque(18433, 64, -7, "trainer_stand_position"),
+            new PosicionBloque(18433, 64, -2, "trainer_pokemon_position"),
+            new PosicionBloque(18433, 64, 4, "player_pokemon_position"),
+            new PosicionBloque(18433, 64, 10, "player_stand_position")
+        ),
+        "yasmina", java.util.List.of(
+            new PosicionBloque(19457, 63, -5, "trainer_stand_position"),
+            new PosicionBloque(19457, 63, -1, "trainer_pokemon_position"),
+            new PosicionBloque(19457, 63, 4, "player_pokemon_position"),
+            new PosicionBloque(19457, 63, 9, "player_stand_position")
+        ),
+        "fredo", java.util.List.of(
+            new PosicionBloque(20481, 63, -10, "trainer_stand_position"),
+            new PosicionBloque(20481, 63, -4, "trainer_pokemon_position"),
+            new PosicionBloque(20481, 63, 6, "player_pokemon_position"),
+            new PosicionBloque(20481, 63, 12, "player_stand_position")
+        ),
+        "debora", java.util.List.of(
+            new PosicionBloque(21505, 64, -8, "trainer_stand_position"),
+            new PosicionBloque(21505, 64, -4, "trainer_pokemon_position"),
+            new PosicionBloque(21505, 64, 6, "player_pokemon_position"),
+            new PosicionBloque(21505, 64, 9, "player_stand_position")
+        )
+    );
+
     /**
      * Asegura que los bloques de cobblemonbattlepositions estén colocados en el maestro.
      */
     public static int asegurarPosicionesMaestro(ServerWorld mundo, Gimnasio.Gimnasio_ g) {
         if (g == null || mundo == null) return 0;
         var lista = POSICIONES_KANTO.get(g.id());
+        if (lista == null) lista = POSICIONES_JOHTO.get(g.id());
         if (lista == null) return 0;
         int puestos = 0;
         for (PosicionBloque pb : lista) {

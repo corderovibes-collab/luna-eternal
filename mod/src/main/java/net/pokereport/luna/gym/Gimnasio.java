@@ -443,7 +443,14 @@ public final class Gimnasio {
         java.util.Map.entry("drake", new Punto(-22.93, 0.0, 54.78, 180f)),
         // Blue · maestro en (13312, 64, 0). Medido en su Liga de Kanto:
         // (13357.972, 68, 8.653), mirando al Sur.
-        java.util.Map.entry("campeon_kanto", new Punto(45.972, 4.0, 8.653, 0f)));
+        java.util.Map.entry("campeon_kanto", new Punto(45.972, 4.0, 8.653, 0f)),
+        java.util.Map.entry("pegaso", new Punto(-15.572, 3.0, 54.283, 180f)),
+        java.util.Map.entry("anton", new Punto(1.505, 3.0, 43.709, 180f)),
+        java.util.Map.entry("blanca", new Punto(1.492, 2.0, 42.632, 180f)),
+        java.util.Map.entry("anibal", new Punto(1.431, -5.0, 53.423, 180f)),
+        java.util.Map.entry("yasmina", new Punto(1.408, 1.0, 43.427, 180f)),
+        java.util.Map.entry("fredo", new Punto(1.407, 0.0, 52.418, 180f)),
+        java.util.Map.entry("debora", new Punto(1.474, 1.0, 48.955, 180f)));
 
     /**
      * La tarima del líder, medida en su maestro.
@@ -476,7 +483,14 @@ public final class Gimnasio {
         // trainer_stand_position: (13357.975, 68, 62.840). No se usa ese
         // segundo punto como tarima, o Blue aparecería adelantado antes de que
         // el jugador le hiciera clic derecho.
-        java.util.Map.entry("campeon_kanto", new Punto(46.023, 4.0, 54.711, 180f)));
+        java.util.Map.entry("campeon_kanto", new Punto(46.023, 4.0, 54.711, 180f)),
+        java.util.Map.entry("pegaso", new Punto(-15.217, 3.0, 8.946, 0f)),
+        java.util.Map.entry("anton", new Punto(1.372, 3.0, 0.638, 0f)),
+        java.util.Map.entry("blanca", new Punto(1.267, 11.0, -20.355, 0f)),
+        java.util.Map.entry("anibal", new Punto(1.334, 4.0, -15.800, 0f)),
+        java.util.Map.entry("yasmina", new Punto(1.580, 1.0, 1.274, 0f)),
+        java.util.Map.entry("fredo", new Punto(1.209, 10.0, -29.993, 0f)),
+        java.util.Map.entry("debora", new Punto(1.470, 11.0, -30.741, 0f)));
 
     /**
      * DÓNDE ESPERA CADA LÍDER EN LA CIUDADELA, Y CON QUÉ POKÉMON AL LADO.

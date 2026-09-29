@@ -165,9 +165,7 @@ CONTENIDO = {
     "Luckys-Cozyhome":   "muebles",
     "Carved Wood":       "madera tallada",
     "CobbleFurnies":     "muebles de Cobblemon",
-    "toms_storage":      "almacenamiento",
     "cobblemon-additions": "bloques de Cobblemon",
-    "sophisticatedstorage": "almacenamiento",
     "pokeblocks":        "bloques decorativos",
     # FUERA (2026-09-09, peticion del usuario). Viaje rapido PARALELO al
     # nuestro: Viajes solo funciona DENTRO de la ciudadela a proposito
@@ -179,9 +177,9 @@ CONTENIDO = {
     #   desbloquea por rango (V021). Este mod repartia mochilas por TRES
     #   vias --receta, cofre y mob que la lleva puesta-- o sea
     #   almacenamiento por fuera del sistema de rangos.
-    #   `sophisticatedcore` y `sophisticatedstorage` SE QUEDAN: storage da
-    #   bloques que pueden estar ya colocados en la ciudadela, y depende de
-    #   core, no de backpacks.
+    #   Sophisticated Storage y Tom's Storage se retiraron tambien por
+    #   peticion expresa del usuario el 2026-09-29. Sophisticated Core se
+    #   conserva como libreria separada para limitar el alcance de la baja.
     # "sophisticatedbackpacks": "mochilas",
     "comforts":          "sacos de dormir y hamacas",
     "beautify":          "decoracion",

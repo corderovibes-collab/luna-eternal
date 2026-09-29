@@ -29,6 +29,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--asset-ya-subido", action="store_true",
                         help="solo mueve el manifiesto tras verificar el activo")
+    parser.add_argument("--retirar-almacenamiento", action="store_true",
+                        help="retira Sophisticated Storage y Tom's Storage del manifiesto vivo")
     args = parser.parse_args()
     jar = RAIZ / "mod" / "build" / "libs" / "lunaeternal-0.1.0.jar"
     if not jar.is_file():
@@ -39,6 +41,22 @@ def main() -> None:
 
     pointer = descargar_json(manifest.URL_PUNTERO)
     live = descargar_json(pointer["manifest"])
+    retirados = []
+    if args.retirar_almacenamiento:
+        nombres = {
+            "sophisticatedstorage-1.21.1-1.3.7.9.139.jar",
+            "toms_storage_fabric-1.21-2.4.2.jar",
+        }
+        antes = len(live.get("files", []))
+        retirados = [f["path"] for f in live.get("files", [])
+                     if Path(f.get("path", "")).name in nombres]
+        if len(retirados) != len(nombres):
+            raise SystemExit(
+                "El manifiesto vivo no contiene exactamente los dos JAR esperados: "
+                + ", ".join(retirados))
+        live["files"] = [f for f in live["files"]
+                         if Path(f.get("path", "")).name not in nombres]
+        assert len(live["files"]) == antes - 2
     matches = [f for f in live.get("files", [])
                if f.get("path", "").startswith("mods/lunaeternal-")]
     if len(matches) != 1:
@@ -68,6 +86,8 @@ def main() -> None:
     live["files"][index] = replacement
     stamp = manifest.publicar_puntero(live)
     print(f"PUBLICADO solo Luna Eternal: {old['sha1'][:10]} -> {sha1[:10]}")
+    if retirados:
+        print("RETIRADOS: " + ", ".join(retirados))
     print(f"MANIFIESTO {stamp}; el resto de {len(live['files']) - 1} entradas no cambió.")
 
 

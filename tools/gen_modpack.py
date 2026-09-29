@@ -200,16 +200,22 @@ EXCLUIDOS = {
     #     PUERTA, SE QUITA». Una receta desactivada por datapack vuelve el dia
     #     que alguien regenere los datos; un mod que no esta no vuelve.
     #
-    # ⚠ Se quita SOLO `backpacks`. `sophisticatedcore` y `sophisticatedstorage`
-    #   se quedan: storage da bloques de almacenamiento que pueden estar YA
-    #   COLOCADOS en la ciudadela, y quitarlo los borraria. Comprobado en su
-    #   fabric.mod.json: storage depende de core, no de backpacks.
+    # Sophisticated Storage tambien se retiro por peticion expresa del usuario
+    # el 2026-09-29. Core se conserva por separado: quitar Storage no exige
+    # borrar su libreria y asi la retirada queda limitada a los dos sistemas
+    # solicitados.
     "sophisticated-backpacks-(unoffical-fabric-port)":
         "La mochila del servidor es NUESTRA y se desbloquea por rango (V021). "
         "Este mod repartia mochilas por receta, por cofre y por mob, o sea "
         "almacenamiento por fuera del sistema de rangos. OJO CON EL SLUG: el "
         "jar se llama sophisticatedbackpacks y el proyecto de Modrinth es "
         "sophisticated-backpacks-(unoffical-fabric-port)",
+    "sophisticated-storage-(unofficial-fabric-port)":
+        "Sistema de almacenamiento retirado por peticion expresa del usuario "
+        "(2026-09-29). Se conserva Sophisticated Core como libreria separada",
+    "toms-storage":
+        "Sistema de almacenamiento retirado por peticion expresa del usuario "
+        "(2026-09-29)",
 
     # --- musica: 421 MB, mas del doble de todo el pack de hoy --------------
     # No es un juicio sobre la musica: es que multiplicaba por cinco la
@@ -440,8 +446,6 @@ SUBIR = {
         "bloques decorativos",
     "rechiseled":
         "bloques decorativos",
-    "toms-storage":
-        "almacenamiento",
     "xaeros-world-map":
         "mapa",
     "default-options":
@@ -737,6 +741,11 @@ FIJADOS = {}
 #   `MixinSodiumRenderSectionManager` sigue nombrando `prepareRender`.
 CLAVADOS = {
     "axiom": "5.4.2",
+    # WaterMedia 2.x aparece como la ultima release estable aunque Binaries
+    # 3.0.0.6 exige la rama 3.x. Esta es la pareja ya publicada y probada en
+    # el launcher; sin fijarla una regeneracion produce un pack incompatible.
+    "watermedia": {"version": "3.0.0.23",
+                   "motivo": "compatible con watermedia-binaries 3.0.0.6"},
     # ⚠⚠⚠ CLAVADOS AL ESTADO DEL SERVIDOR (2026-09-10), NO PORQUE ESTEN ROTOS.
     #    Entre el 09-09 y el 10-09 Modrinth publico mega_showdown 1.1.2, zamega
     #    1.8.1 y el mapa 1.46.0, y una publicacion que solo iba a subir NUESTROS

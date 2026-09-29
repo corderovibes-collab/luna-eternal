@@ -84,8 +84,15 @@ public final class QuienEsEsePokemonService {
         if (activa != null && ahora >= activa.terminaEn) {
             vencer(server);
         }
-        if (activa == null && !server.getPlayerManager().getPlayerList().isEmpty() && ahora >= proximaRonda) {
-            iniciar(server, ahora);
+        if (activa == null && ahora >= proximaRonda) {
+            if (server.getPlayerManager().getPlayerList().isEmpty()) {
+                // Una ronda sin público no queda "vencida" esperando al primer
+                // login: se salta y se agenda la siguiente. Eso evita que entrar
+                // al servidor parezca disparar el evento como bienvenida.
+                proximaRonda = ahora + INTERVALO_MS;
+            } else {
+                iniciar(server, ahora);
+            }
         }
     }
 
@@ -94,15 +101,21 @@ public final class QuienEsEsePokemonService {
         activa = new Ronda(ahora ^ ((long) especie.dex << 32) ^ AZAR.nextLong(), especie, ahora + DURACION_MS);
         proximaRonda = Long.MAX_VALUE;
         var paquete = new QuienEsEsePokemonNet.Ronda(activa.id, especie.dex, activa.terminaEn);
-        for (var player : server.getPlayerManager().getPlayerList()) ServerPlayNetworking.send(player, paquete);
+        for (var player : server.getPlayerManager().getPlayerList()) {
+            if (ServerPlayNetworking.canSend(player, QuienEsEsePokemonNet.Ronda.ID)) {
+                ServerPlayNetworking.send(player, paquete);
+            } else {
+                LunaEternal.LOG.warn("Evento QEEP: el cliente de {} no acepta el paquete de ronda; debe actualizar el launcher",
+                        player.getGameProfile().getName());
+            }
+        }
     }
 
     private static void comprobarRespuesta(ServerPlayerEntity jugador, String texto) {
         Ronda ronda = activa;
         if (ronda == null || System.currentTimeMillis() >= ronda.terminaEn || !ronda.especie.respuesta.equals(normalizar(texto))) return;
         activa = null; // el hilo del servidor serializa chat: exactamente un ganador.
-        long ocultarEn = System.currentTimeMillis() + REVELACION_MS;
-        revelar(jugador.getServer(), ronda, jugador.getGameProfile().getName(), PREMIO, ocultarEn);
+        revelar(jugador.getServer(), ronda, jugador.getGameProfile().getName(), PREMIO);
         concederPremio(jugador, ronda);
         proximaRonda = System.currentTimeMillis() + INTERVALO_MS;
     }
@@ -111,30 +124,40 @@ public final class QuienEsEsePokemonService {
         Ronda ronda = activa;
         if (ronda == null) return;
         activa = null;
-        long ocultarEn = System.currentTimeMillis() + REVELACION_MS;
-        revelar(server, ronda, "Nadie acertó", 0L, ocultarEn);
+        revelar(server, ronda, "Nadie acertó", 0L);
         proximaRonda = System.currentTimeMillis() + INTERVALO_MS;
     }
 
-    private static void revelar(MinecraftServer server, Ronda ronda, String ganador, long premio, long ocultarEn) {
+    private static void revelar(MinecraftServer server, Ronda ronda, String ganador, long premio) {
+        long ocultarEn = System.currentTimeMillis() + REVELACION_MS;
         var paquete = new QuienEsEsePokemonNet.Revelacion(ronda.id, ronda.especie.dex, ganador, premio, ocultarEn);
-        for (var player : server.getPlayerManager().getPlayerList()) ServerPlayNetworking.send(player, paquete);
+        for (var player : server.getPlayerManager().getPlayerList()) {
+            if (ServerPlayNetworking.canSend(player, QuienEsEsePokemonNet.Revelacion.ID)) {
+                ServerPlayNetworking.send(player, paquete);
+            }
+        }
     }
 
     private static void concederPremio(ServerPlayerEntity jugador, Ronda ronda) {
-        Long playerId = LunaEternal.players().cachedId(jugador.getUuid());
-        if (playerId == null) {
-            LunaEternal.LOG.warn("Evento QEEP: {} respondió antes de cargar su perfil", jugador.getName().getString());
-            return;
-        }
+        var uuid = jugador.getUuid();
+        String nombre = jugador.getGameProfile().getName();
+        MinecraftServer server = jugador.getServer();
         String clave = "quien_es_ese_pokemon:" + ronda.id + ":" + jugador.getUuid();
         LunaEternal.submit(() -> {
             try {
+                // cachedId podía ser null durante la carga inicial y anunciaba
+                // $500 sin acreditarlos. resolve es idempotente y corre fuera
+                // del hilo principal, igual que la escritura económica.
+                long playerId = LunaEternal.players().resolve(uuid, nombre);
                 LunaEternal.economy().apply(playerId, Currency.POKEDOLLAR, PREMIO,
                         "quien_es_ese_pokemon", "quien_es_ese_pokemon", null, clave);
             } catch (Exception e) {
-                LunaEternal.LOG.error("No se pudo acreditar el premio QEEP a {}", jugador.getName().getString(), e);
-                jugador.getServer().execute(() -> jugador.sendMessage(Text.literal("§cLa respuesta fue válida, pero el premio quedó pendiente. Un administrador debe revisar la consola."), false));
+                LunaEternal.LOG.error("No se pudo acreditar el premio QEEP a {}", nombre, e);
+                server.execute(() -> {
+                    ServerPlayerEntity conectado = server.getPlayerManager().getPlayer(uuid);
+                    if (conectado != null) conectado.sendMessage(Text.literal(
+                            "§cLa respuesta fue válida, pero el premio quedó pendiente. Un administrador debe revisar la consola."), false);
+                });
             }
         });
     }

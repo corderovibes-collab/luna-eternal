@@ -1,6 +1,7 @@
 package net.pokereport.luna.client;
 
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.sound.PositionedSoundInstance;
@@ -34,14 +35,24 @@ public final class QuienEsEsePokemonHud {
         if (registrado) return;
         registrado = true;
         cargarPreferencia();
-        HudRenderCallback.EVENT.register((ctx, tickDelta) -> dibujar(ctx));
+        // Sin pantalla se dibuja como HUD. Con cualquier pantalla (incluida la
+        // batalla de Cobblemon), la pantalla se pinta después del HUD y lo
+        // taparía; por eso allí se vuelve a dibujar en AFTER_RENDER.
+        HudRenderCallback.EVENT.register((ctx, tickDelta) -> {
+            if (MinecraftClient.getInstance().currentScreen == null) dibujar(ctx);
+        });
+        ScreenEvents.AFTER_INIT.register((cliente, pantalla, ancho, alto) ->
+                ScreenEvents.afterRender(pantalla).register(
+                        (p, ctx, ratonX, ratonY, delta) -> dibujar(ctx)));
     }
 
     public static void ronda(QuienEsEsePokemonNet.Ronda paquete) {
-        rondaId = paquete.id(); dex = paquete.dex(); terminaEn = paquete.terminaEn(); revelado = false; ganador = "";
+        if (paquete.id() == rondaId && !revelado && System.currentTimeMillis() < terminaEn) return;
+        rondaId = paquete.id(); dex = paquete.dex(); terminaEn = paquete.terminaEn();
+        revelado = false; ganador = ""; premio = 0L;
         mostradoDesde = System.currentTimeMillis();
         var cliente = MinecraftClient.getInstance();
-        if (cliente.getSoundManager() != null) cliente.getSoundManager().play(
+        if (!oculto && cliente.getSoundManager() != null) cliente.getSoundManager().play(
                 PositionedSoundInstance.master(SoundEvent.of(INICIO), 0.82f));
         if (cliente.player != null) {
             cliente.player.sendMessage(Text.literal(oculto
@@ -52,7 +63,8 @@ public final class QuienEsEsePokemonHud {
 
     public static void revelacion(QuienEsEsePokemonNet.Revelacion paquete) {
         if (paquete.id() != rondaId) return;
-        dex = paquete.dex(); ganador = paquete.ganador(); premio = paquete.premio(); terminaEn = paquete.ocultarEn(); revelado = true;
+        dex = paquete.dex(); ganador = paquete.ganador(); premio = paquete.premio(); terminaEn = paquete.ocultarEn();
+        revelado = true;
         mostradoDesde = System.currentTimeMillis();
     }
     public static boolean alternar() {

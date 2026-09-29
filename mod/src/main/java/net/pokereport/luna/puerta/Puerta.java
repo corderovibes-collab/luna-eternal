@@ -226,6 +226,26 @@ public final class Puerta {
     }
 
     /**
+     * Margen humano alrededor de la llegada mientras la sesión sigue cerrada.
+     * Si EasyAuth restaura una posición vieja dentro de la misma dimensión, el
+     * jugador puede seguir técnicamente "en el lobby" pero quedar a cientos de
+     * bloques del guardián. Antes de cruzar no tiene nada que hacer fuera de la
+     * entrada, así que ese estado siempre es una restauración errónea.
+     */
+    private static final double RADIO_ENTRADA_LOBBY = 32.0;
+
+    private static boolean enZonaEntradaLobby(ServerPlayerEntity jugador) {
+        if (!enElLobby(jugador)) {
+            return false;
+        }
+        var entrada = TravelService.spawnLobby();
+        double dx = jugador.getX() - entrada.x;
+        double dy = jugador.getY() - entrada.y;
+        double dz = jugador.getZ() - entrada.z;
+        return dx * dx + dy * dy + dz * dz <= RADIO_ENTRADA_LOBBY * RADIO_ENTRADA_LOBBY;
+    }
+
+    /**
      * SI ESTA EN EL LOBBY, NO PUEDE HACER NADA.
      *
      * <h2>&#9888;&#9888;&#9888; SE COMPRUEBA EN EL SERVIDOR AUNQUE EL CLIENTE YA
@@ -277,13 +297,11 @@ public final class Puerta {
         }
         LunaEternal.LOG.info("PLAYER_CONNECT jugador={} ruta=LOBBY sesion=nueva",
                 jugador.getGameProfile().getName());
-        if (enElLobby(jugador)) {
-            bienvenida(jugador);
-            LunaEternal.LOG.info("LOBBY_READY jugador={} auth=pendiente cliente=pendiente",
-                    jugador.getGameProfile().getName());
-            return;
-        }
-        TravelService.travel(jugador, LunaDimensions.LOBBY, "el Lobby");
+        // EasyAuth puede haber restaurado ya la DIMENSION del lobby pero no el
+        // punto de entrada (conserva la posición de una sesión anterior). No
+        // basta con preguntar `enElLobby`: una sesión nueva tiene que aterrizar
+        // exactamente junto al guardián incluso cuando ya está en ese mundo.
+        TravelService.asegurarEntradaLobby(jugador);
         bienvenida(jugador);
         LunaEternal.LOG.info("LOBBY_READY jugador={} auth=pendiente cliente=pendiente",
                 jugador.getGameProfile().getName());
@@ -400,12 +418,24 @@ public final class Puerta {
             if (lista == null) {
                 continue;
             }
-            if (enElLobby(j)) {
+            if (enZonaEntradaLobby(j)) {
                 hayEncerrados = true;
                 reintentarSaludo(j);
                 continue;
             }
-            TravelService.travel(j, LunaDimensions.LOBBY, "el Lobby");
+            // También se corrige el caso más sutil: EasyAuth puede restaurar
+            // una posición vieja *en la propia dimensión* del lobby tras
+            // /login. `travel` lo considera correctamente un viaje nulo; para
+            // la puerta no lo es, porque el jugador queda perdido lejos del
+            // guardián. Reafirmamos la entrada exacta sin esperar a que cambie
+            // de mundo.
+            LunaEternal.LOG.info("LOBBY_REASSERT jugador={} mundo={} x={} y={} z={}",
+                    j.getGameProfile().getName(), j.getWorld().getRegistryKey().getValue(),
+                    String.format(java.util.Locale.ROOT, "%.2f", j.getX()),
+                    String.format(java.util.Locale.ROOT, "%.2f", j.getY()),
+                    String.format(java.util.Locale.ROOT, "%.2f", j.getZ()));
+            TravelService.asegurarEntradaLobby(j);
+            hayEncerrados = true;
         }
         if (hayEncerrados) {
             comprobarGuardian(servidor);

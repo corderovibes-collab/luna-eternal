@@ -83,6 +83,38 @@ public final class TravelService {
     public static Vec3d spawnLobby() {
         return SPAWN_LOBBY;
     }
+
+    /**
+     * Recoloca a un jugador en el punto exacto del lobby, incluso si ya está
+     * dentro de esa dimensión.
+     *
+     * <p>EasyAuth puede restaurar primero la dimensión del lobby y conservar
+     * una posición antigua dentro de ella. {@link #travel} correctamente evita
+     * volver a viajar al mismo mundo, pero para la puerta eso no basta: una
+     * sesión sin autorizar debe comenzar junto al guardián, no en cualquier
+     * coordenada que hubiera quedado guardada. Este método es deliberadamente
+     * específico de la entrada; no debe usarse para los viajes normales.
+     */
+    public static boolean asegurarEntradaLobby(ServerPlayerEntity player) {
+        var server = player.getServer();
+        if (server == null) return false;
+
+        ServerWorld lobby = server.getWorld(LunaDimensions.LOBBY);
+        if (lobby == null) {
+            player.sendMessage(Text.literal("§cEl Lobby todavía no está disponible."), false);
+            LunaEternal.LOG.warn("Dimension no cargada: {}", LunaDimensions.LOBBY.getValue());
+            return false;
+        }
+
+        Vec3d destination = safeSpawn(lobby);
+        boolean llegada = Traslado.ir(player, lobby, destination, GIRO_LOBBY, 0f);
+        if (!llegada) return false;
+
+        player.playSoundToPlayer(SoundEvents.BLOCK_PORTAL_TRAVEL,
+                SoundCategory.MASTER, 0.2f, 1.4f);
+        player.sendMessage(Text.literal("§8» §fHas llegado a §6el Lobby"), false);
+        return true;
+    }
     /** Radio de la plataforma de emergencia. */
     private static final int PLATFORM_RADIUS = 4;
 

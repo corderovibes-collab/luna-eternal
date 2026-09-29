@@ -524,6 +524,11 @@ OVERRIDES_FUERA = (
 # `iris`, `yacl`, `sodium`, `lithium`, `ferrite-core`, `entityculling` y
 # `modmenu` ya vienen en la base: no se repiten aqui.
 EXTRA_JUGADOR = [
+    # Animaciones de primera persona. Es estrictamente CLIENTE: no registra
+    # contenido ni paquetes de red, por lo que nunca se instala en el servidor.
+    # La build se fija abajo para que una regeneracion no salte por accidente a
+    # otra version de Minecraft.
+    "punchy-fpa",
     # Cinematicas internas: el libro del Profesor Oak reproduce MP4 dentro de
     # Minecraft. WaterMedia aporta la API y Binaries los FFmpeg nativos.
     "watermedia",
@@ -741,6 +746,8 @@ FIJADOS = {}
 #   `MixinSodiumRenderSectionManager` sigue nombrando `prepareRender`.
 CLAVADOS = {
     "axiom": "5.4.2",
+    "punchy-fpa": {"version": "2.8c",
+                    "motivo": "Fabric 1.21.1 auditado; mod estrictamente de cliente"},
     # WaterMedia 2.x aparece como la ultima release estable aunque Binaries
     # 3.0.0.6 exige la rama 3.x. Esta es la pareja ya publicada y probada en
     # el launcher; sin fijarla una regeneracion produce un pack incompatible.

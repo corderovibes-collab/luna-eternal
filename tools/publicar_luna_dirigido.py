@@ -31,6 +31,8 @@ def main() -> None:
                         help="solo mueve el manifiesto tras verificar el activo")
     parser.add_argument("--retirar-almacenamiento", action="store_true",
                         help="retira Sophisticated Storage y Tom's Storage del manifiesto vivo")
+    parser.add_argument("--incluir-punchy", action="store_true",
+                        help="anade Punchy 2.8c Fabric 1.21.1 solo al launcher")
     args = parser.parse_args()
     jar = RAIZ / "mod" / "build" / "libs" / "lunaeternal-0.1.0.jar"
     if not jar.is_file():
@@ -57,6 +59,23 @@ def main() -> None:
         live["files"] = [f for f in live["files"]
                          if Path(f.get("path", "")).name not in nombres]
         assert len(live["files"]) == antes - 2
+    punchy_agregado = False
+    if args.incluir_punchy:
+        punchy = {
+            "path": "mods/punchy-2.8c-fabric-1.21.1.jar",
+            "sha1": "fcca6d5503597d1175fa9b0d0cae55393f3a214c",
+            "size": 1858121,
+            "url": "https://cdn.modrinth.com/data/8aoMKplv/versions/80B8c9Qd/punchy-2.8c-fabric-1.21.1.jar",
+        }
+        existentes = [f for f in live.get("files", [])
+                      if Path(f.get("path", "")).name.startswith("punchy-")]
+        if existentes:
+            if len(existentes) != 1 or existentes[0].get("sha1") != punchy["sha1"]:
+                raise SystemExit("El manifiesto ya contiene una version distinta de Punchy")
+        else:
+            punchy["urls"] = [punchy["url"]]
+            live["files"].append(punchy)
+            punchy_agregado = True
     matches = [f for f in live.get("files", [])
                if f.get("path", "").startswith("mods/lunaeternal-")]
     if len(matches) != 1:
@@ -88,6 +107,8 @@ def main() -> None:
     print(f"PUBLICADO solo Luna Eternal: {old['sha1'][:10]} -> {sha1[:10]}")
     if retirados:
         print("RETIRADOS: " + ", ".join(retirados))
+    if punchy_agregado:
+        print("ANADIDO: mods/punchy-2.8c-fabric-1.21.1.jar (solo cliente)")
     print(f"MANIFIESTO {stamp}; el resto de {len(live['files']) - 1} entradas no cambió.")
 
 

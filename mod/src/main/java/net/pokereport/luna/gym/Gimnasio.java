@@ -521,7 +521,8 @@ public final class Gimnasio {
         java.util.Map.entry("anibal", new Punto(1.431, -5.0, 53.423, 180f)),
         java.util.Map.entry("yasmina", new Punto(1.408, 1.0, 43.427, 180f)),
         java.util.Map.entry("fredo", new Punto(1.407, 0.0, 52.418, 180f)),
-        java.util.Map.entry("debora", new Punto(1.474, 1.0, 48.955, 180f)));
+        java.util.Map.entry("debora", new Punto(1.474, 1.0, 48.955, 180f)),
+        java.util.Map.entry("campeon_johto", new Punto(1.872, 50.0, 15.673, 180f)));
 
     /**
      * La tarima del líder, medida en su maestro.
@@ -564,7 +565,8 @@ public final class Gimnasio {
         java.util.Map.entry("anibal", new Punto(1.334, 4.0, -15.800, 0f)),
         java.util.Map.entry("yasmina", new Punto(1.580, 1.0, 1.274, 0f)),
         java.util.Map.entry("fredo", new Punto(1.209, 10.0, -29.993, 0f)),
-        java.util.Map.entry("debora", new Punto(1.470, 11.0, -30.741, 0f)));
+        java.util.Map.entry("debora", new Punto(1.470, 11.0, -30.741, 0f)),
+        java.util.Map.entry("campeon_johto", new Punto(1.682, 4.0, -3.183, 0f)));
 
     /**
      * DÓNDE ESPERA CADA LÍDER EN LA CIUDADELA, Y CON QUÉ POKÉMON AL LADO.
@@ -656,7 +658,25 @@ public final class Gimnasio {
                                                        -175.84, 69.0, 58.30, "alakazam",
                                                        -176.364, 69.0, 62.87, "marowak")),
             java.util.Map.entry("drake", new Recepcion(-171.893, 68.50, 66.189, 180f,
-                                                       -169.174, 68.50, 66.279, "dragonite"))
+                                                       -169.174, 68.50, 66.279, "dragonite")),
+            java.util.Map.entry("pegaso", new Recepcion(-190.859, 69.062, 49.111, 90f,
+                                                       -190.732, 69.06, 46.945, "pidgeot")),
+            java.util.Map.entry("anton", new Recepcion(-190.713, 69.0, 55.994, 90f,
+                                                       -190.584, 69.0, 54.242, "scyther")),
+            java.util.Map.entry("blanca", new Recepcion(-190.916, 69.0, 62.795, 90f,
+                                                       -189.754, 69.0, 60.976, "miltank")),
+            java.util.Map.entry("morti", new Recepcion(-191.035, 69.0, 70.848, 90f,
+                                                       -190.793, 69.0, 68.537, "gengar")),
+            java.util.Map.entry("anibal", new Recepcion(-203.723, 69.0, 46.877, -90f,
+                                                       -203.718, 69.0, 49.202, "poliwrath")),
+            java.util.Map.entry("yasmina", new Recepcion(-202.688, 69.0, 54.142, -90f,
+                                                       -204.298, 69.0, 55.903, "steelix")),
+            java.util.Map.entry("fredo", new Recepcion(-202.712, 69.125, 60.879, -90f,
+                                                       -202.580, 69.0, 62.878, "piloswine")),
+            java.util.Map.entry("debora", new Recepcion(-203.084, 69.0, 68.546, -90f,
+                                                       -202.302, 69.0, 70.490, "kingdra")),
+            java.util.Map.entry("campeon_johto", new Recepcion(-194.728, 68.0, 83.289, 180f,
+                                                       -197.409, 68.0, 82.271, "dragonite"))
         );
 
 

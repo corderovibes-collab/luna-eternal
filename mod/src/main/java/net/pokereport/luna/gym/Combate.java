@@ -132,6 +132,18 @@ public final class Combate {
      * lección que las paradas del moto taxi.
      */
     public static void registrarClic() {
+        // El acceso a Lance es un salto de fe al volcán. Mientras el jugador
+        // tenga su ranura del Campeón de Johto reservada, ni caída, lava ni
+        // fuego pueden dañarlo; al salir o acabar se libera la ranura y vuelve
+        // a regir el daño normal del servidor.
+        net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DAMAGE
+                .register((entidad, fuente, cantidad) -> {
+                    if (entidad instanceof ServerPlayerEntity p) {
+                        var asignacion = Ranuras.asignacionDe(p.getUuid());
+                        return asignacion == null || !"campeon_johto".equals(asignacion.gymId());
+                    }
+                    return true;
+                });
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register(
                 (jugador, mundo, mano, entidad, golpe) -> {
                     var tags = entidad.getCommandTags();

@@ -428,6 +428,12 @@ public final class Arenas {
             new PosicionBloque(21505, 64, -4, "trainer_pokemon_position"),
             new PosicionBloque(21505, 64, 6, "player_pokemon_position"),
             new PosicionBloque(21505, 64, 9, "player_stand_position")
+        ),
+        "campeon_johto", java.util.List.of(
+            new PosicionBloque(22529, 66, -5, "trainer_stand_position"),
+            new PosicionBloque(22529, 66, -2, "trainer_pokemon_position"),
+            new PosicionBloque(22529, 66, 5, "player_pokemon_position"),
+            new PosicionBloque(22529, 66, 9, "player_stand_position")
         )
     );
 

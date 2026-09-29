@@ -58,10 +58,6 @@ public final class FaunaControl {
             var p = pe.getPokemon();
             // ⚠⚠ CRÍTICO: Jamás bloquear Pokémon de combate (NPCs de gimnasio, rivales, clones)
             if (esPokemonDeBatalla(pe)) {
-                if (esGymOTorre(e.getWorld().getRegistryKey())) {
-                    LunaEternal.LOG.info("[ERIKA-TRACE] FaunaControl.bloquear PERMITIDO: Pokémon de batalla {} (uuid={}, battleId={})",
-                            (p != null ? p.getSpecies().getName() : "desconocido"), pe.getUuid(), pe.getBattleId());
-                }
                 return false;
             }
             var dim = e.getWorld().getRegistryKey();
@@ -76,8 +72,6 @@ public final class FaunaControl {
                 return false;
             }
             if (esGymOTorre(dim)) {
-                LunaEternal.LOG.info("[ERIKA-TRACE] FaunaControl.bloquear PERMITIDO: dimensión gimnasio/torre {} (pokemon={})",
-                        dim.getValue(), (p != null ? p.getSpecies().getName() : "desconocido"));
                 return false;
             }
             if (p != null && p.getOwnerUUID() == null && p.getOwnerNPC() == null) {

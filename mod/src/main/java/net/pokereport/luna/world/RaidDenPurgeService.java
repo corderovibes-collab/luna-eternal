@@ -16,7 +16,9 @@ import net.minecraft.world.chunk.WorldChunk;
 import net.pokereport.luna.LunaEternal;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * ERRADICACIÓN SEGURA DE RAID DENS EN MUNDO HOGAR Y MUNDOS SALVAJES.
@@ -27,8 +29,6 @@ import java.util.List;
 public final class RaidDenPurgeService {
 
     private static final String MOD_NAMESPACE = "cobblemonraiddens";
-    private static int tickCounter = 0;
-
     private RaidDenPurgeService() {}
 
     /**
@@ -94,13 +94,19 @@ public final class RaidDenPurgeService {
         // Capa 3: Barrido periódico de chunks cargados en memoria alrededor de jugadores activos
         ServerTickEvents.START_WORLD_TICK.register(world -> {
             if (!FaunaControl.esHogarOSalvaje(world.getRegistryKey())) return;
-            tickCounter++;
-            if (tickCounter % 40 != 0) return;
+            // El contador anterior era global para todos los mundos: cuantos
+            // más mundos estaban cargados, más a menudo barría alguno. Usar el
+            // tick del servidor mantiene exactamente una pasada cada 2 s.
+            if (world.getServer().getTicks() % 40 != 0) return;
 
+            // Varios jugadores cercanos comparten casi todos sus chunks. No
+            // recorrer el mismo mapa de BlockEntities una vez por jugador.
+            Set<Long> revisados = new HashSet<>();
             for (var player : world.getPlayers()) {
                 ChunkPos cp = player.getChunkPos();
                 for (int cx = cp.x - 3; cx <= cp.x + 3; cx++) {
                     for (int cz = cp.z - 3; cz <= cp.z + 3; cz++) {
+                        if (!revisados.add(ChunkPos.toLong(cx, cz))) continue;
                         WorldChunk chunk = world.getChunkManager().getWorldChunk(cx, cz);
                         if (chunk != null) {
                             List<BlockPos> encontrados = null;

@@ -21,8 +21,10 @@ yaw inicial -90 (este). Fabric 1.21.1, Java 21, GeckoLib 4.9.2 y WaterMedia
 - `client/rotom/RotomClient`: renderer GeckoLib con máscaras emissive, expresiones
   sincronizadas y parpadeo desfasado por entidad.
 - `client/rotom/RotomVideoScreen`: caché validada por tamaño/SHA-256, cancelación,
-  descarga a temporal único, reproducción WaterMedia local con audio, letterbox,
-  cerrar/ESC/mute y fade al terminar. Redimensionar no crea otra descarga.
+  descarga a temporal único, reproducción WaterMedia local con audio, letterbox
+  negro 100% opaco, cerrar/ESC/mute y fade al terminar. Redimensionar no crea otra descarga.
+  Anulación de `renderBackground` como no-op para evitar que `super.render()` aplique el
+  shader de desenfoque (`applyBlur`) y oscurecido de Minecraft 1.20.5+ sobre el frame de video.
   Desconexión/cambio de dimensión/retirada de pantalla liberan reproductor.
   Atenuación de sonido mediante SoundManager sin escribir opciones; restauración
   de los niveles de opciones vigentes al salir.
@@ -47,20 +49,19 @@ MP4 H.264 Main 1920×1080 60 FPS, AAC 44.1 kHz estéreo; 53,15 s, 107.756.091 by
 CRF 21, maxrate 6M, buffer 12M, AAC 160k 48 kHz, faststart. 38.198.649 bytes.
 
 SHA-256: `906a33cf2aab7743601cff34c27742d708195e1510442e0090bc07352320167f`.
-URL prevista: release pack-assets de luna-eternal-pack, `rotom-gimnasios-v1.mp4`.
-La URL debe estar publicada y comprobada antes de desplegar el JAR.
+URL publicada: release pack-assets de luna-eternal-pack, `rotom-gimnasios-v1.mp4`.
+Activo verificado públicamente en CDN con tamaño y hash coincidentes.
 
-## Verificación y límites
+## Verificación y estado de despliegue
 
 Compilación cliente/servidor correcta. Dos pruebas JUnit validan jerarquía,
 animaciones, equivalencia del número de cubos con Blockbench, decodificación de
 texturas/máscaras y expresiones distintas. FFmpeg decodifica el derivado completo
-sin errores. `/luna autotest` incorpora recursos y registro de Rotom.
-
-Pendientes de ejecución real: orientación en Minecraft, apariencia con/sin
-shaders, dos jugadores, sonido sincronizado, memoria/FPS tras reproducciones,
-persistencia tras reinicio y carga/descarga de chunk. No se presentan como
-verificados a partir de la compilación o los renders ortográficos.
+sin errores.
+`/luna autotest` en el servidor de producción pasa en verde las 6 invariantes de Rotom.
+Entidad `lunaeternal:rotom_dex` confirmada viva en `(-113.479, 69, 0.500)` de Ciudadela.
+JAR publicado en el launcher via manifiesto `manifest-84d20227bd.json` (SHA-1 `936c2346bd...`)
+e instalado en el servidor. Desenfoque de interfaz anulado.
 
 La referencia es una adaptación voxel, no una copia píxel por píxel de la
 ilustración. Variantes shiny/premium no se activan: la petición exige el Rotom

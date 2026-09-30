@@ -128,6 +128,7 @@ public final class AutoTest {
             testNichoConfig();
             testPase(a);
             testInicial();
+            testRotomTutorial();
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());
@@ -5541,6 +5542,18 @@ public final class AutoTest {
                 return rs.next() ? rs.getInt(1) : 0;
             }
         }
+    }
+
+    private void testRotomTutorial() throws Exception {
+        for (String resource : java.util.List.of("geo/rotom_dex.geo.json", "animations/rotom_dex.animation.json",
+                "textures/entity/rotom_dex_0.png", "textures/entity/rotom_dex_4_glowmask.png")) {
+            try (var in = AutoTest.class.getResourceAsStream("/assets/lunaeternal/" + resource)) {
+                check("Rotom recurso empaquetado: " + resource, in != null && in.read() != -1);
+            }
+        }
+        check("Rotom video fijado por SHA-256", net.pokereport.luna.rotom.RotomTutorial.SHA256.matches("[0-9a-f]{64}"));
+        check("Rotom identidad propia registrada", net.minecraft.registry.Registries.ENTITY_TYPE.containsId(
+                net.minecraft.util.Identifier.of("lunaeternal", "rotom_dex")));
     }
 
     private void check(String name, boolean ok) {

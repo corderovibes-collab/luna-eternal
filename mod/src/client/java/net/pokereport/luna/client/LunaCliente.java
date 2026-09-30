@@ -119,6 +119,7 @@ public class LunaCliente implements ClientModInitializer {
                 (carga, ctx) -> ctx.client().execute(() ->
                         ctx.client().setScreen(new CinematicaScreen(
                                 carga.url(), carga.segundos(), carga.puedeSalir()))));
+        net.pokereport.luna.client.rotom.RotomClient.register();
 
         ClientPlayNetworking.registerGlobalReceiver(
                 net.pokereport.luna.quienesepokemon.QuienEsEsePokemonNet.Ronda.ID,

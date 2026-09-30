@@ -97,6 +97,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.world.FaunaControl.registrar();
         net.pokereport.luna.world.RaidDenPurgeService.registrar();
         net.pokereport.luna.lunita.LunitaManager.registrar();
+        net.pokereport.luna.rotom.RotomTutorial.server();
         net.pokereport.luna.quienesepokemon.QuienEsEsePokemonService.registrar();
 
         // Conservación de experiencia al morir para rango Leyenda

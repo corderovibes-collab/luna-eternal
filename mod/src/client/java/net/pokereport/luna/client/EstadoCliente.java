@@ -344,6 +344,29 @@ public final class EstadoCliente {
         enLobby = nuevo.enLobby();
     }
 
+    /**
+     * Repara exclusivamente el caso en que un paquete de una transición
+     * anterior llega después de que el cliente ya cargó otra dimensión.
+     *
+     * <p>La autoridad sigue siendo el servidor: por eso este método nunca
+     * inventa un candado al entrar visualmente al lobby. Solo puede soltar un
+     * {@code true} viejo cuando el propio cliente ya sabe, por el mundo que
+     * está renderizando, que no continúa allí. Sin esta asimetría, una cadena
+     * rápida AFK → Lobby → Ciudadela puede dejar el HUD y todas las pantallas
+     * ocultos hasta reconectar.
+     *
+     * @param clienteEnLobby si el mundo actualmente cargado por el cliente es
+     *                        la dimensión de lobby
+     * @return {@code true} si se liberó una marca obsoleta
+     */
+    public static boolean reconciliarPuertaConMundo(boolean clienteEnLobby) {
+        if (enLobby && !clienteEnLobby) {
+            enLobby = false;
+            return true;
+        }
+        return false;
+    }
+
     public static Red.EstadoSantuario santuario() {
         return santuario;
     }

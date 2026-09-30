@@ -6749,6 +6749,17 @@ public class Red implements ModInitializer {
      * muerto en la ciudadela, y eso se comporta igual que un fallo.
      */
     public static void enviarPuerta(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        enviarPuerta(jugador, net.pokereport.luna.puerta.Puerta.bloqueado(jugador));
+    }
+
+    /**
+     * Envía el estado que corresponde al destino confirmado de un cambio de
+     * mundo. No se vuelve a leer la dimensión del jugador aquí: durante las
+     * transiciones encadenadas de EasyAuth/AFK ese puntero puede pertenecer a
+     * la transición siguiente cuando se ejecuta el callback anterior.
+     */
+    public static void enviarPuerta(net.minecraft.server.network.ServerPlayerEntity jugador,
+                                    boolean enLobby) {
         // ⚠⚠ La guarda de `canSend` se queda, pero el motivo es otro: mandarle
         //    un canal que no conoce a un cliente sin el mod le TIRA la conexion
         //    («Failed to decode packet»). Lo que NO puede hacer esta guarda es
@@ -6762,8 +6773,7 @@ public class Red implements ModInitializer {
         //   lo rechazara por «la puerta esta activa», habria estados en los que
         //   uno dice si y el otro no -- y el sintoma seria una pantalla que se
         //   abre vacia, o una tecla muerta sin motivo.
-        ServerPlayNetworking.send(jugador, new EstadoPuerta(
-                net.pokereport.luna.puerta.Puerta.bloqueado(jugador)));
+        ServerPlayNetworking.send(jugador, new EstadoPuerta(enLobby));
     }
 
     public static void enviarSantuarioATodos(net.minecraft.server.MinecraftServer servidor) {

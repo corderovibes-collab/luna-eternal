@@ -162,7 +162,13 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         //      se arregla es que el cliente deje de mentir.
         net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents
                 .AFTER_PLAYER_CHANGE_WORLD.register((jugador, origen, destino) ->
-                        net.pokereport.luna.net.Red.enviarPuerta(jugador));
+                        // El destino del evento es la fuente fiable durante un
+                        // cambio encadenado; leer jugador.getWorld() aquí puede
+                        // observar la siguiente restauración de EasyAuth.
+                        net.pokereport.luna.net.Red.enviarPuerta(jugador,
+                                net.pokereport.luna.puerta.Puerta.activa()
+                                        && net.pokereport.luna.world.LunaDimensions.LOBBY
+                                        .equals(destino.getRegistryKey())));
         net.pokereport.luna.puerta.Puerta.cargarInterruptor();
         // El repartidor de iniciales de Cobblemon, apagado: aqui el inicial lo
         // da Oak (D-048). Ver SinIniciales -- no es esconder la tecla, es que

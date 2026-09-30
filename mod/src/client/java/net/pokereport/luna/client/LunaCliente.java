@@ -486,6 +486,18 @@ public class LunaCliente implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(cliente -> {
+            // El servidor manda EstadoPuerta en cada cambio de dimensión, pero
+            // EasyAuth y un traslado AFK pueden encadenar dos cambios antes de
+            // que el cliente procese el último paquete. Nunca dejamos que un
+            // "sigues en lobby" viejo oculte el HUD ya dentro de Ciudadela.
+            // Solo se libera un estado viejo: la entrada al lobby sigue siendo
+            // confirmada por el servidor, no una deducción del cliente.
+            if (cliente.world != null) {
+                EstadoCliente.reconciliarPuertaConMundo(
+                        net.pokereport.luna.world.LunaDimensions.LOBBY.equals(
+                                cliente.world.getRegistryKey()));
+            }
+
             // Lectura directa: F8 puede estar asignada también por Minecraft u
             // otro mod, y en ese caso KeyBinding.wasPressed() no recibe el pulso.
             boolean f8Ahora = InputUtil.isKeyPressed(

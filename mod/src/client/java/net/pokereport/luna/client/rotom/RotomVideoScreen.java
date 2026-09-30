@@ -142,8 +142,14 @@ public final class RotomVideoScreen extends Screen {
             }
         } catch (Exception | LinkageError e) { fail(e); releasePlayer(); }
     }
+    @Override
+    public void renderBackground(DrawContext ctx, int mx, int my, float delta) {
+        // En Minecraft 1.20.5+, Screen.render invoca renderBackground() que aplica el
+        // shader de desenfoque del juego (applyBlur / menuBackgroundBlurriness) y oscurecido.
+        // Se anula aquí para que el video en pantalla completa se reproduzca 100% nítido.
+    }
     @Override public void render(DrawContext ctx, int mx, int my, float delta) {
-        ctx.fill(0, 0, width, height, 0xFA040C16);
+        ctx.fill(0, 0, width, height, 0xFF000000);
         if (player != null && player.texture() > 0 && error == null) {
             float scale = Math.min((float)width / Math.max(1, player.width()), (float)height / Math.max(1, player.height()));
             float w = player.width()*scale, h = player.height()*scale, x = (width-w)/2, y = (height-h)/2;

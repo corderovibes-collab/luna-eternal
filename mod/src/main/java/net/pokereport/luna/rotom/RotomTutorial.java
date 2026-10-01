@@ -25,14 +25,14 @@ import static net.minecraft.server.command.CommandManager.literal;
 public final class RotomTutorial {
     public static final Vec3d POSITION = new Vec3d(-113.479, 69, .500);
     public static final String TAG = "luna_tutorial_rotom_dex";
-    public static final String VIDEO = "https://github.com/corderovibes-collab/luna-eternal-pack/releases/download/pack-assets/rotom-gimnasios-v1.mp4";
-    public static final String SHA256 = "906a33cf2aab7743601cff34c27742d708195e1510442e0090bc07352320167f";
-    public static final long BYTES = 38198649L;
+    public static final String VIDEO = "https://github.com/corderovibes-collab/luna-eternal-pack/releases/download/pack-assets/rotom-gimnasios-v2.mp4";
+    public static final String SHA256 = "bf98dae1f1043817ed283a22721e26f8409e7750be3f71f118b82947a448c979";
+    public static final long BYTES = 38415754L;
     public static final Vec3d TORRE_POSITION = new Vec3d(-1.552, 68, 82.717);
     public static final String TORRE_TAG = "luna_tutorial_rotom_torre";
-    public static final String TORRE_VIDEO = "https://github.com/corderovibes-collab/luna-eternal-pack/releases/download/pack-assets/rotom-torre-comercial-v1.mp4";
-    public static final String TORRE_SHA256 = "4858533874fc17efbca89a3915686e5f62cee0cf45aaf23e8c5d646eea06be75";
-    public static final long TORRE_BYTES = 41016420L;
+    public static final String TORRE_VIDEO = "https://github.com/corderovibes-collab/luna-eternal-pack/releases/download/pack-assets/rotom-torre-comercial-v2.mp4";
+    public static final String TORRE_SHA256 = "57df78a935777289fd2a5dbcda4c05cb6ca36f65a1c04545e0763af5997ce73b";
+    public static final long TORRE_BYTES = 41230465L;
 
     public record Device(String id, String tag, Vec3d position, float yaw, String name) {
         java.util.UUID uuid() {

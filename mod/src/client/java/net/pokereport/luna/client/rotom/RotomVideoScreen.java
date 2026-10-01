@@ -40,10 +40,10 @@ public final class RotomVideoScreen extends Screen {
     private record Video(String url, String sha256, long bytes, String file, String title, String loading, String error) {}
     private static Video video(String id) {
         if ("torre".equalsIgnoreCase(id)) return new Video(RotomTutorial.TORRE_VIDEO, RotomTutorial.TORRE_SHA256, RotomTutorial.TORRE_BYTES,
-                "rotom-torre-comercial-v1.mp4", "Rotom Dex — Torre Comercial", "Cargando tutorial de la Torre Comercial...",
+                "rotom-torre-comercial-v2.mp4", "Rotom Dex — Torre Comercial", "Cargando tutorial de la Torre Comercial...",
                 "No se pudo cargar el tutorial de la Torre Comercial. Inténtalo nuevamente.");
         return new Video(RotomTutorial.VIDEO, RotomTutorial.SHA256, RotomTutorial.BYTES,
-                "rotom-gimnasios-v1.mp4", "Rotom Dex — Guía de gimnasios", "Cargando guía de gimnasios...",
+                "rotom-gimnasios-v2.mp4", "Rotom Dex — Guía de gimnasios", "Cargando guía de gimnasios...",
                 "No se pudo cargar la guía de gimnasios. Inténtalo nuevamente.");
     }
     public RotomVideoScreen(String tutorial) {

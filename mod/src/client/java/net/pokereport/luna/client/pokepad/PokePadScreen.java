@@ -937,12 +937,31 @@ public class PokePadScreen extends Screen {
                 y0 + Math.round((y + (FILA_CELDA - FILA_ICONO) / 2) * k),
                 lado, lado, FILA_ICONO, FILA_ICONO, 0xFFFFFFFF);
 
-        int alto = TEXTO_ALTO;
-        int arriba = y + (FILA_CELDA - alto) / 2;
-        texto(ctx, etiqueta, FICHA_X0 + FILA_PAD + FILA_ICONO + 12, arriba, alto,
+        // Etiqueta y valor son dos columnas reales. Antes ambos se dibujaban a
+        // 18 px sin reservarse espacio: EXPLORADOR y PROXIMAMENTE empezaban
+        // encima de Trabajo/Division. Cada columna conserva su alineacion y
+        // solo reduce la letra si SU contenido no cabe.
+        int izquierda = FICHA_X0 + FILA_PAD + FILA_ICONO + 12;
+        int derecha = FICHA_X1 - FILA_PAD;
+        int separacion = 8;
+        int anchoEtiqueta = 82;
+        int anchoValor = Math.max(48, derecha - izquierda - anchoEtiqueta - separacion);
+        int altoEtiqueta = altoQueCabe(etiqueta, TEXTO_ALTO, 14, anchoEtiqueta);
+        Text textoValor = Text.literal(valor);
+        int altoValor = altoQueCabe(textoValor, TEXTO_ALTO, 11, anchoValor);
+        texto(ctx, etiqueta, izquierda,
+              y + (FILA_CELDA - altoEtiqueta) / 2, altoEtiqueta,
               FILA_ETIQUETA, false, false);
-        texto(ctx, Text.literal(valor), FICHA_X1 - FILA_PAD, arriba, alto, color,
+        texto(ctx, textoValor, derecha,
+              y + (FILA_CELDA - altoValor) / 2, altoValor, color,
               false, false, true);
+    }
+
+    private int altoQueCabe(Text texto, int preferido, int minimo, int anchoMaximo) {
+        int anchoFuente = Math.max(1, textRenderer.getWidth(texto));
+        int limite = Math.max(minimo,
+                (int)Math.floor(anchoMaximo * (double)textRenderer.fontHeight / anchoFuente));
+        return Math.max(minimo, Math.min(preferido, limite));
     }
 
     /**

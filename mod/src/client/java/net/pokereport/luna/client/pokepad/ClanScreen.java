@@ -123,6 +123,13 @@ public class ClanScreen extends Screen {
     private TextFieldWidget campoEtiqueta;
     private TextFieldWidget campoJugador;
     private TextFieldWidget campoCantidad;
+    private TextFieldWidget campoDescripcion;
+    private TextFieldWidget campoColorInicio;
+    private TextFieldWidget campoColorFin;
+    private TextFieldWidget campoTagPerfil;
+    private boolean estiloNegrita;
+    private boolean estiloCursiva;
+    private boolean aparienciaInicializada;
 
     public ClanScreen(Screen anterior) {
         super(Text.translatable("pokepad.lunaeternal.app.clan"));
@@ -132,6 +139,7 @@ public class ClanScreen extends Screen {
     @Override
     protected void init() {
         recalcular();
+        aparienciaInicializada = false;
         ClientPlayNetworking.send(new Red.PedirClan());
         // ⚠ El saldo hace falta AQUI: fundar cuesta 5.000 y aportar sale de tu
         //   bolsillo. Sin el numero delante, la decisión se toma a ciegas y el
@@ -146,8 +154,14 @@ public class ClanScreen extends Screen {
         campoEtiqueta = campo(PANEL_X + 28, PANEL_Y + 256, PANEL_W - 56, 5, "TAG");
         campoJugador = campo(PANT_X + MARGEN, PANT_Y + PANT_H - 52, 360, 16, "Jugador");
         campoCantidad = campo(PANEL_X + 28, PANEL_Y + 470, PANEL_W - 56, 9, "0");
+        campoDescripcion = campo(PANT_X + 60, PANT_Y + 176, PANT_W - 120, 140,
+                "Descripción del clan");
+        campoColorInicio = campo(PANT_X + 60, PANT_Y + 274, 280, 7, "#55FFFF");
+        campoColorFin = campo(PANT_X + 400, PANT_Y + 274, 280, 7, "#55FFFF");
+        campoTagPerfil = campo(PANT_X + 60, PANT_Y + 442, 280, 5, "TAG");
         for (var c : new TextFieldWidget[] { campoNombre, campoEtiqueta,
-                campoJugador, campoCantidad }) {
+                campoJugador, campoCantidad, campoDescripcion,
+                campoColorInicio, campoColorFin, campoTagPerfil }) {
             addSelectableChild(c);
         }
     }
@@ -210,7 +224,7 @@ public class ClanScreen extends Screen {
 
     private void leerDelServidor() {
         Red.EstadoClan e = EstadoCliente.clan();
-        if (e == null || e == estado) {
+        if (e == null || (e == estado && aparienciaInicializada)) {
             return;
         }
         estado = e;
@@ -226,11 +240,27 @@ public class ClanScreen extends Screen {
             //   que solo pueden leer los que podrían robar no vigila a nadie:
             //   lo que lo hace útil es que lo vean los demás.
             p.add("registro");
+            if (soyLider()) {
+                p.add("apariencia");
+            }
         } else {
             p.add("invitaciones");
             p.add("clanes");
         }
         pestanas = List.copyOf(p);
+        if (tengoClan() && !aparienciaInicializada && campoDescripcion != null) {
+            var c = estado.mio();
+            campoEtiqueta.setText(c.etiqueta());
+            campoTagPerfil.setText(c.etiqueta());
+            campoDescripcion.setText(c.descripcion());
+            campoColorInicio.setText(c.colorInicio());
+            campoColorFin.setText(c.colorFin());
+            estiloNegrita = c.negrita();
+            estiloCursiva = c.cursiva();
+            aparienciaInicializada = true;
+        } else if (!tengoClan()) {
+            aparienciaInicializada = true;
+        }
         if (pestana >= pestanas.size()) {
             pestana = 0;
             pagina = 0;
@@ -260,6 +290,7 @@ public class ClanScreen extends Screen {
             case "miembros" -> dibujarMiembros(ctx, rx, ry);
             case "tesoro" -> dibujarTesoro(ctx, rx, ry);
             case "registro" -> dibujarRegistro(ctx, rx, ry);
+            case "apariencia" -> dibujarApariencia(ctx, rx, ry);
             case "invitaciones" -> dibujarInvitaciones(ctx, rx, ry);
             case "clanes" -> dibujarClanes(ctx, rx, ry);
             default -> { }
@@ -444,6 +475,86 @@ public class ClanScreen extends Screen {
                     PANT_Y + MARGEN + (PESTANA_ALTO - alto) / 2 - 2, alto,
                     TEXTO_OSCURO, true, false);
         }
+    }
+
+    private void dibujarApariencia(DrawContext ctx, int rx, int ry) {
+        int cx = PANT_X + PANT_W / 2;
+        int y = primeraFilaY();
+        texto(ctx, Text.literal("IDENTIDAD DEL CLAN"), cx, y, 25, TEXTO_OSCURO, true, true);
+        texto(ctx, vistaPrevia(), cx, y + 38, 30, 0xFFFFFFFF, true, false);
+        texto(ctx, Text.literal("Creado " + hace(estado.mio().creado())), cx, y + 76,
+                14, TEXTO_SUAVE, true, false);
+
+        texto(ctx, Text.literal("DESCRIPCIÓN"), PANT_X + 60, PANT_Y + 150,
+                15, TEXTO_SUAVE, false, true);
+        campoDescripcion.render(ctx, rx, ry, 0);
+        texto(ctx, Text.literal(campoDescripcion.getText().length() + " / 140"),
+                PANT_X + PANT_W - 60, PANT_Y + 210, 13, TEXTO_SUAVE, true, false);
+
+        texto(ctx, Text.literal("COLOR INICIAL"), PANT_X + 60, PANT_Y + 250,
+                15, TEXTO_SUAVE, false, true);
+        texto(ctx, Text.literal("COLOR FINAL / DEGRADADO"), PANT_X + 400, PANT_Y + 250,
+                15, TEXTO_SUAVE, false, true);
+        campoColorInicio.render(ctx, rx, ry, 0);
+        campoColorFin.render(ctx, rx, ry, 0);
+
+        botonPeq(ctx, rx, ry, PANT_X + 120, PANT_Y + 340, 230, 42,
+                Text.literal((estiloNegrita ? "✓ " : "") + "NEGRITA"));
+        botonPeq(ctx, rx, ry, PANT_X + 450, PANT_Y + 340, 230, 42,
+                Text.literal((estiloCursiva ? "✓ " : "") + "CURSIVA"));
+        texto(ctx, Text.literal("TAG (2–5 letras o números)"), PANT_X + 60,
+                PANT_Y + 414, 15, TEXTO_SUAVE, false, true);
+        campoTagPerfil.render(ctx, rx, ry, 0);
+        boton(ctx, rx, ry, PANT_X + 210, PANT_Y + 510, 380, 48,
+                Text.literal("GUARDAR CAMBIOS"), true);
+        texto(ctx, Text.literal("El servidor valida tag, colores, permisos y palabras reservadas."),
+                cx, PANT_Y + 574, 14, TEXTO_SUAVE, true, false);
+    }
+
+    private Text vistaPrevia() {
+        String tag = campoTagPerfil == null || campoTagPerfil.getText().isBlank()
+                ? estado.mio().etiqueta() : campoTagPerfil.getText();
+        int inicio = parseHex(campoColorInicio == null ? "" : campoColorInicio.getText(), 0x55FFFF);
+        int fin = parseHex(campoColorFin == null ? "" : campoColorFin.getText(), inicio);
+        var out = Text.empty();
+        int[] cps = tag.codePoints().toArray();
+        out.append(letra("[", inicio));
+        for (int i = 0; i < cps.length; i++) {
+            float t = cps.length <= 1 ? 0f : i / (float) (cps.length - 1);
+            out.append(letra(new String(Character.toChars(cps[i])), mezclar(inicio, fin, t)));
+        }
+        out.append(letra("]", fin));
+        return out;
+    }
+
+    private Text letra(String valor, int rgb) {
+        return Text.literal(valor).styled(s -> s
+                .withColor(net.minecraft.text.TextColor.fromRgb(rgb))
+                .withBold(estiloNegrita).withItalic(estiloCursiva));
+    }
+
+    private static int mezclar(int a, int b, float t) {
+        int r = Math.round(((a >> 16) & 255) * (1f - t) + ((b >> 16) & 255) * t);
+        int g = Math.round(((a >> 8) & 255) * (1f - t) + ((b >> 8) & 255) * t);
+        int bl = Math.round((a & 255) * (1f - t) + (b & 255) * t);
+        return (r << 16) | (g << 8) | bl;
+    }
+
+    private static int parseHex(String texto, int fallback) {
+        try {
+            String v = texto == null ? "" : texto.trim();
+            if (v.startsWith("#")) v = v.substring(1);
+            return v.matches("[0-9A-Fa-f]{6}") ? Integer.parseInt(v, 16) : fallback;
+        } catch (RuntimeException e) {
+            return fallback;
+        }
+    }
+
+    private static int parseHexEstricto(String texto) {
+        String v = texto == null ? "" : texto.trim();
+        if (v.startsWith("#")) v = v.substring(1);
+        if (!v.matches("[0-9A-Fa-f]{6}")) return -1;
+        return Integer.parseInt(v, 16);
     }
 
     private int primeraFilaY() {
@@ -858,8 +969,11 @@ public class ClanScreen extends Screen {
             return true;
         }
 
-        for (var c : new TextFieldWidget[] { campoNombre, campoEtiqueta,
-                campoJugador, campoCantidad }) {
+        var camposClick = "apariencia".equals(pestanaActual())
+                ? new TextFieldWidget[] { campoDescripcion, campoColorInicio, campoColorFin,
+                        campoTagPerfil }
+                : new TextFieldWidget[] { campoNombre, campoEtiqueta, campoJugador, campoCantidad };
+        for (var c : camposClick) {
             if (c != null && c.mouseClicked(mx, my, boton)) {
                 setFocused(c);
                 return true;
@@ -902,6 +1016,7 @@ public class ClanScreen extends Screen {
                 // ⚠ Cambiar de pestaña vuelve a la página 1. Sin esto, pasar de
                 //   una lista larga a una corta deja la pantalla EN BLANCO.
                 pagina = 0;
+                setFocused(null);
                 sonar();
                 return true;
             }
@@ -949,6 +1064,25 @@ public class ClanScreen extends Screen {
         }
         if ("invitaciones".equals(cual)) {
             return clicInvitaciones(rx, ry);
+        }
+        if ("apariencia".equals(cual)) {
+            if (dentro(rx, ry, px(PANT_X + 120), py(PANT_Y + 340), pl(230), pl(42))) {
+                estiloNegrita = !estiloNegrita; sonar(); return true;
+            }
+            if (dentro(rx, ry, px(PANT_X + 450), py(PANT_Y + 340), pl(230), pl(42))) {
+                estiloCursiva = !estiloCursiva; sonar(); return true;
+            }
+            if (dentro(rx, ry, px(PANT_X + 210), py(PANT_Y + 510), pl(380), pl(48))) {
+                int inicio = parseHexEstricto(campoColorInicio.getText());
+                int fin = parseHexEstricto(campoColorFin.getText());
+                if (inicio < 0 || fin < 0) {
+                    aviso = "Usa colores con formato #RRGGBB."; sonar(); return true;
+                }
+                long a = inicio | (estiloNegrita ? (1L << 24) : 0L);
+                long b = fin | (estiloCursiva ? (1L << 24) : 0L);
+                mandar("perfil", campoTagPerfil.getText(), campoDescripcion.getText(), a, b);
+                return true;
+            }
         }
         return super.mouseClicked(mx, my, boton);
     }
@@ -1093,7 +1227,8 @@ public class ClanScreen extends Screen {
         // ⚠ Los campos de texto se quedan con la tecla ANTES que la pantalla. Sin
         //   esto, escribir «e» en el nombre del clan abriría el inventario.
         for (var c : new TextFieldWidget[] { campoNombre, campoEtiqueta,
-                campoJugador, campoCantidad }) {
+                campoJugador, campoCantidad, campoDescripcion,
+                campoColorInicio, campoColorFin, campoTagPerfil }) {
             if (c != null && c.isFocused() && c.keyPressed(tecla, escaneo, mods)) {
                 return true;
             }
@@ -1104,7 +1239,8 @@ public class ClanScreen extends Screen {
     @Override
     public boolean charTyped(char c, int mods) {
         for (var campo : new TextFieldWidget[] { campoNombre, campoEtiqueta,
-                campoJugador, campoCantidad }) {
+                campoJugador, campoCantidad, campoDescripcion,
+                campoColorInicio, campoColorFin, campoTagPerfil }) {
             if (campo != null && campo.isFocused() && campo.charTyped(c, mods)) {
                 return true;
             }

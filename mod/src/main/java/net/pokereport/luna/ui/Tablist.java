@@ -144,7 +144,8 @@ public final class Tablist {
         }
     }
 
-    public record ClanInfo(String etiqueta, char color) {}
+    public record ClanInfo(String etiqueta, char color, String colorInicio,
+                           String colorFin, boolean negrita, boolean cursiva) {}
     private static final java.util.Map<java.util.UUID, ClanInfo> CLAN_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static ClanInfo clanDe(ServerPlayerEntity player) {
@@ -169,7 +170,7 @@ public final class Tablist {
             Rank rank = rankOf(sender.server, sender);
             chatMsg.append(rank.badge()).append(net.minecraft.text.Text.literal(" "));
             if (clan != null && !clan.etiqueta().isEmpty()) {
-                chatMsg.append(net.minecraft.text.Text.literal("§" + clan.color() + "[" + clan.etiqueta() + "] "));
+                chatMsg.append(tagText(clan)).append(net.minecraft.text.Text.literal(" "));
             }
             chatMsg.append(net.minecraft.text.Text.literal(sender.getName().getString())
                            .formatted(rank.color))
@@ -204,6 +205,13 @@ public final class Tablist {
      */
     public static void aplicarEtiqueta(MinecraftServer server, ServerPlayerEntity player,
                                        String etiqueta, char color) {
+        aplicarEtiqueta(server, player, etiqueta, color,
+                legacyHex(color), legacyHex(color), false, false);
+    }
+
+    public static void aplicarEtiqueta(MinecraftServer server, ServerPlayerEntity player,
+                                       String etiqueta, char color, String colorInicio,
+                                       String colorFin, boolean negrita, boolean cursiva) {
         var scoreboard = server.getScoreboard();
         String nombre = player.getGameProfile().getName();
 
@@ -218,7 +226,8 @@ public final class Tablist {
         scoreboard.addScoreHolderToTeam(nombre, team);
 
         if (etiqueta != null && !etiqueta.isEmpty()) {
-            CLAN_CACHE.put(player.getUuid(), new ClanInfo(etiqueta, color));
+            CLAN_CACHE.put(player.getUuid(), new ClanInfo(etiqueta, color,
+                    colorInicio, colorFin, negrita, cursiva));
         } else {
             CLAN_CACHE.remove(player.getUuid());
         }
@@ -241,12 +250,20 @@ public final class Tablist {
         net.pokereport.luna.LunaEternal.submit(() -> {
             String etiqueta = "";
             char color = 'b';
+            String inicio = "#55FFFF";
+            String fin = "#55FFFF";
+            boolean negrita = false;
+            boolean cursiva = false;
             try {
                 long id = net.pokereport.luna.LunaEternal.players().resolve(uuid, nombre);
                 var clan = net.pokereport.luna.LunaEternal.clans().clanDe(id);
                 if (clan != null) {
                     etiqueta = clan.etiqueta();
                     color = clan.color();
+                    inicio = clan.colorInicio();
+                    fin = clan.colorFin();
+                    negrita = clan.negrita();
+                    cursiva = clan.cursiva();
                 }
             } catch (Exception e) {
                 // Sin etiqueta se ve el nombre a secas. Que falle esto no puede
@@ -256,12 +273,66 @@ public final class Tablist {
             }
             final String et = etiqueta;
             final char co = color;
+            final String ci = inicio;
+            final String cf = fin;
+            final boolean bold = negrita;
+            final boolean italic = cursiva;
             server.execute(() -> {
                 if (!player.isRemoved()) {
-                    aplicarEtiqueta(server, player, et, co);
+                    aplicarEtiqueta(server, player, et, co, ci, cf, bold, italic);
                 }
             });
         });
+    }
+
+    /** Tag con degradado real por carácter; nunca interpreta códigos § del usuario. */
+    private static MutableText tagText(ClanInfo clan) {
+        int inicio = parseHex(clan.colorInicio(), legacyRgb(clan.color()));
+        int fin = parseHex(clan.colorFin(), inicio);
+        int[] puntos = clan.etiqueta().codePoints().toArray();
+        MutableText out = Text.empty();
+        out.append(styled("[", inicio, clan));
+        for (int i = 0; i < puntos.length; i++) {
+            float t = puntos.length <= 1 ? 0f : i / (float) (puntos.length - 1);
+            int rgb = mezclar(inicio, fin, t);
+            out.append(styled(new String(Character.toChars(puntos[i])), rgb, clan));
+        }
+        out.append(styled("]", fin, clan));
+        return out;
+    }
+
+    private static MutableText styled(String value, int rgb, ClanInfo clan) {
+        return Text.literal(value).styled(s -> s
+                .withColor(net.minecraft.text.TextColor.fromRgb(rgb))
+                .withBold(clan.negrita()).withItalic(clan.cursiva()));
+    }
+
+    private static int mezclar(int a, int b, float t) {
+        int r = Math.round(((a >> 16) & 255) * (1f - t) + ((b >> 16) & 255) * t);
+        int g = Math.round(((a >> 8) & 255) * (1f - t) + ((b >> 8) & 255) * t);
+        int bl = Math.round((a & 255) * (1f - t) + (b & 255) * t);
+        return (r << 16) | (g << 8) | bl;
+    }
+
+    private static int parseHex(String value, int fallback) {
+        try {
+            if (value != null && value.matches("#[0-9A-Fa-f]{6}")) {
+                return Integer.parseInt(value.substring(1), 16);
+            }
+        } catch (RuntimeException ignored) {}
+        return fallback;
+    }
+
+    private static String legacyHex(char color) {
+        return String.format(java.util.Locale.ROOT, "#%06X", legacyRgb(color));
+    }
+
+    private static int legacyRgb(char color) {
+        return switch (color) {
+            case 'a' -> 0x55FF55; case 'c' -> 0xFF5555; case 'd' -> 0xFF55FF;
+            case 'e' -> 0xFFFF55; case '6' -> 0xFFAA00; case '7' -> 0xAAAAAA;
+            default -> 0x55FFFF;
+        };
     }
 
     /**

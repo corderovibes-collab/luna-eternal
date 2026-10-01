@@ -1656,7 +1656,8 @@ public class Red implements ModInitializer {
 
     public record ClanResumen(long id, String nombre, String etiqueta, String color,
                               String descripcion, long tesoro, int miembros,
-                              String lider) {
+                              String lider, String colorInicio, String colorFin,
+                              boolean negrita, boolean cursiva, long creado) {
         // ⚠ A MANO. `PacketCodec.tuple` llega a SEIS campos en 1.21.1 y aquí
         //   hay ocho; el error que da no dice cuál es el límite, solo que «no
         //   hay método adecuado». Escribirlo así además quita el techo.
@@ -1672,12 +1673,19 @@ public class Red implements ModInitializer {
             buf.writeVarLong(c.tesoro);
             buf.writeVarInt(c.miembros);
             cad(buf, c.lider);
+            cad(buf, c.colorInicio);
+            cad(buf, c.colorFin);
+            buf.writeBoolean(c.negrita);
+            buf.writeBoolean(c.cursiva);
+            buf.writeVarLong(c.creado);
         }
 
         private static ClanResumen leer(RegistryByteBuf buf) {
             return new ClanResumen(buf.readVarLong(), buf.readString(), buf.readString(),
                     buf.readString(), buf.readString(), buf.readVarLong(),
-                    buf.readVarInt(), buf.readString());
+                    buf.readVarInt(), buf.readString(), buf.readString(),
+                    buf.readString(), buf.readBoolean(), buf.readBoolean(),
+                    buf.readVarLong());
         }
     }
 
@@ -4846,6 +4854,12 @@ public class Red implements ModInitializer {
                         case "sacar" -> r = svc.sacar(id, carga.cantidad(),
                                 java.util.UUID.randomUUID().toString());
                         case "tope" -> r = svc.cambiarTope(id, carga.cantidad());
+                        case "perfil" -> r = svc.actualizarPerfil(id,
+                                carga.texto(), carga.texto2(),
+                                unpackColor(carga.objetivo()),
+                                unpackColor(carga.cantidad()),
+                                (carga.objetivo() & (1L << 24)) != 0,
+                                (carga.cantidad() & (1L << 24)) != 0);
                         default -> r = new net.pokereport.luna.clan.ClanService.Resultado(
                                 false, "Acción desconocida.", java.util.Set.of());
                     }
@@ -7168,6 +7182,11 @@ public class Red implements ModInitializer {
     private static final java.util.Set<String> MUEVEN_DINERO =
             java.util.Set.of("fundar", "aportar", "sacar");
 
+    /** RGB ocupa 24 bits; el bit 24 transporta negrita/cursiva según el campo. */
+    private static String unpackColor(long packed) {
+        return String.format(java.util.Locale.ROOT, "#%06X", packed & 0xFFFFFFL);
+    }
+
     /**
      * Refresca a TODOS los afectados por un cambio de clan: pantalla y etiqueta.
      *
@@ -7218,13 +7237,18 @@ public class Red implements ModInitializer {
                 var clan = LunaEternal.clans().clanDe(entrada.getKey());
                 String etiqueta = clan == null ? "" : clan.etiqueta();
                 char color = clan == null ? 'b' : clan.color();
+                String inicio = clan == null ? "#55FFFF" : clan.colorInicio();
+                String fin = clan == null ? "#55FFFF" : clan.colorFin();
+                boolean negrita = clan != null && clan.negrita();
+                boolean cursiva = clan != null && clan.cursiva();
                 servidor.execute(() -> {
                     if (jugador.isRemoved()) {
                         return;
                     }
                     ServerPlayNetworking.send(jugador, carga);
                     net.pokereport.luna.ui.Tablist.aplicarEtiqueta(
-                            servidor, jugador, etiqueta, color);
+                            servidor, jugador, etiqueta, color, inicio, fin,
+                            negrita, cursiva);
                 });
             } catch (Exception e) {
                 LunaEternal.LOG.warn("No se pudo refrescar el clan de {}: {}",
@@ -7271,7 +7295,8 @@ public class Red implements ModInitializer {
             }
             mio = new ClanResumen(clan.id(), clan.nombre(), clan.etiqueta(),
                     String.valueOf(clan.color()), clan.descripcion(), clan.tesoro(),
-                    clan.miembros(), lider);
+                    clan.miembros(), lider, clan.colorInicio(), clan.colorFin(),
+                    clan.negrita(), clan.cursiva(), clan.creado());
 
             // ⚠ EL HISTORIAL LO VE TODO EL CLAN, no solo quien manda. Un
             //   registro que solo pueden leer los que podrían robar no vigila a
@@ -7302,7 +7327,8 @@ public class Red implements ModInitializer {
         if (clan == null) {
             for (var c : svc.listar(25)) {
                 otros.add(new ClanResumen(c.id(), c.nombre(), c.etiqueta(),
-                        String.valueOf(c.color()), c.descripcion(), 0, c.miembros(), ""));
+                        String.valueOf(c.color()), c.descripcion(), 0, c.miembros(), "",
+                        c.colorInicio(), c.colorFin(), c.negrita(), c.cursiva(), c.creado()));
             }
         }
 

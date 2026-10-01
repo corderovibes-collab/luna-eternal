@@ -81,6 +81,12 @@ public final class ClanService {
     /** Tope máximo que un líder puede ponerle a sus oficiales. */
     public static final long TOPE_MAXIMO = 10_000_000;
 
+    /** Tags que podrían hacerse pasar por el servidor o por un rango oficial. */
+    private static final Set<String> TAGS_RESERVADOS = Set.of(
+            "ADMIN", "ADMINISTRADOR", "MOD", "MODERADOR", "OWNER", "DUEÑO",
+            "STAFF", "DEV", "HELPER", "SOPORTE", "ELITE", "CAMPEON",
+            "MAESTRO", "LEYENDA", "ENTRENADOR", "POKEREPORT", "LUNA");
+
     private final Database db;
 
     public ClanService(Database db) {
@@ -99,7 +105,8 @@ public final class ClanService {
 
     public record Clan(long id, String nombre, String etiqueta, char color,
                        String descripcion, long liderId, long tesoro, int miembros,
-                       long topeOficial) {}
+                       long topeOficial, String colorInicio, String colorFin,
+                       boolean negrita, boolean cursiva, long creado) {}
 
     public record Miembro(long playerId, String nombre, Rol rol, long desde) {}
 
@@ -189,7 +196,8 @@ public final class ClanService {
         String sql = "SELECT c.clan_id, c.name, c.tag, c.color, c.description, "
                 + "c.leader_id, c.treasury, "
                 + "(SELECT COUNT(*) FROM clan_member m2 WHERE m2.clan_id = c.clan_id), "
-                + "c.officer_daily_limit "
+                + "c.officer_daily_limit, c.tag_color_start, c.tag_color_end, "
+                + "c.tag_bold, c.tag_italic, c.created_at "
                 + "FROM clan c WHERE c.clan_id = ? FOR UPDATE";
         try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, clanId);
@@ -269,7 +277,8 @@ public final class ClanService {
         String sql = "SELECT c.clan_id, c.name, c.tag, c.color, c.description, "
                 + "c.leader_id, c.treasury, "
                 + "(SELECT COUNT(*) FROM clan_member m2 WHERE m2.clan_id = c.clan_id), "
-                + "c.officer_daily_limit "
+                + "c.officer_daily_limit, c.tag_color_start, c.tag_color_end, "
+                + "c.tag_bold, c.tag_italic, c.created_at "
                 + "FROM clan c JOIN clan_member m ON m.clan_id = c.clan_id "
                 + "WHERE m.player_id = ?";
         try (Connection c = db.connection();
@@ -347,7 +356,8 @@ public final class ClanService {
         String sql = "SELECT c.clan_id, c.name, c.tag, c.color, c.description, "
                 + "c.leader_id, c.treasury, "
                 + "(SELECT COUNT(*) FROM clan_member m2 WHERE m2.clan_id = c.clan_id) AS n, "
-                + "c.officer_daily_limit "
+                + "c.officer_daily_limit, c.tag_color_start, c.tag_color_end, "
+                + "c.tag_bold, c.tag_italic, c.created_at "
                 + "FROM clan c ORDER BY n DESC, c.created_at LIMIT ?";
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -450,7 +460,9 @@ public final class ClanService {
     private static Clan leerClan(ResultSet rs) throws SQLException {
         return new Clan(rs.getLong(1), rs.getString(2), rs.getString(3),
                 rs.getString(4).charAt(0), rs.getString(5), rs.getLong(6),
-                rs.getLong(7), rs.getInt(8), rs.getLong(9));
+                rs.getLong(7), rs.getInt(8), rs.getLong(9), rs.getString(10),
+                rs.getString(11), rs.getBoolean(12), rs.getBoolean(13),
+                rs.getTimestamp(14).getTime());
     }
 
     // ---- fundar ------------------------------------------------------------
@@ -547,7 +559,110 @@ public final class ClanService {
         if (!etiqueta.matches("[\\p{L}\\p{N}]+")) {
             return "La etiqueta solo admite letras y números.";
         }
+        if (TAGS_RESERVADOS.contains(normalizarReserva(etiqueta))) {
+            return "Esa etiqueta está reservada por el servidor.";
+        }
         return null;
+    }
+
+    private static String normalizarReserva(String texto) {
+        String sinAcentos = java.text.Normalizer.normalize(texto,
+                java.text.Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
+        return sinAcentos.toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * Cambia tag, descripción y apariencia en una sola transacción. Solo el
+     * dueño puede hacerlo y todas las reglas vuelven a comprobarse aquí.
+     */
+    public Resultado actualizarPerfil(long lider, String etiqueta, String descripcion,
+                                      String colorInicio, String colorFin,
+                                      boolean negrita, boolean cursiva)
+            throws SQLException {
+        String tag = etiqueta == null ? "" : etiqueta.trim();
+        String desc = descripcion == null ? "" : descripcion.trim();
+        String problema = validarEtiqueta(tag);
+        if (problema != null) return Resultado.no(problema);
+        if (desc.length() > 140) return Resultado.no("La descripción admite hasta 140 caracteres.");
+        if (desc.chars().anyMatch(c -> Character.isISOControl(c) && c != '\n')) {
+            return Resultado.no("La descripción contiene caracteres no permitidos.");
+        }
+        String inicio = normalizarHex(colorInicio);
+        String fin = normalizarHex(colorFin);
+        if (inicio == null || fin == null) {
+            return Resultado.no("Los colores deben escribirse como #RRGGBB.");
+        }
+        return enTransaccion(c -> {
+            Long clanId = clanIdDe(c, lider);
+            if (clanId == null) return Resultado.no("No estás en ningún clan.");
+            Clan clan = bloquear(c, clanId);
+            if (clan == null || clan.liderId() != lider) {
+                return Resultado.no("Solo el dueño puede cambiar la apariencia del clan.");
+            }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "UPDATE clan SET tag=?, tag_lower=?, description=?, color=?, "
+                    + "tag_color_start=?, tag_color_end=?, tag_bold=?, tag_italic=? "
+                    + "WHERE clan_id=? AND leader_id=?")) {
+                ps.setString(1, tag);
+                ps.setString(2, tag.toLowerCase(Locale.ROOT));
+                ps.setString(3, desc);
+                ps.setString(4, String.valueOf(colorLegacy(inicio)));
+                ps.setString(5, inicio);
+                ps.setString(6, fin);
+                ps.setBoolean(7, negrita);
+                ps.setBoolean(8, cursiva);
+                ps.setLong(9, clanId);
+                ps.setLong(10, lider);
+                if (ps.executeUpdate() != 1) {
+                    return Resultado.no("El clan cambió mientras lo editabas.");
+                }
+            }
+            anotar(c, clanId, lider, null, "PERFIL", tag + " " + inicio + "→" + fin);
+            LunaEternal.LOG.info("Perfil de clan actualizado: clan={} actor={} tag={} colores={}..{} bold={} italic={}",
+                    clanId, lider, tag, inicio, fin, negrita, cursiva);
+            return Resultado.si("Apariencia del clan actualizada.", idsDe(c, clanId));
+        });
+    }
+
+    private static String validarEtiqueta(String etiqueta) {
+        if (etiqueta == null || etiqueta.length() < 2 || etiqueta.length() > 5) {
+            return "La etiqueta va de 2 a 5 caracteres.";
+        }
+        if (!etiqueta.matches("[\\p{L}\\p{N}]+")) {
+            return "La etiqueta solo admite letras y números.";
+        }
+        if (TAGS_RESERVADOS.contains(normalizarReserva(etiqueta))) {
+            return "Esa etiqueta está reservada por el servidor.";
+        }
+        return null;
+    }
+
+    private static String normalizarHex(String color) {
+        if (color == null) return null;
+        String c = color.trim().toUpperCase(Locale.ROOT);
+        if (!c.startsWith("#")) c = "#" + c;
+        return c.matches("#[0-9A-F]{6}") ? c : null;
+    }
+
+    /** Compatibilidad con pantallas antiguas que todavía reciben un color vanilla. */
+    private static char colorLegacy(String hex) {
+        int rgb = Integer.parseInt(hex.substring(1), 16);
+        char[] codes = {'a', 'b', 'c', 'd', 'e', '6', '7'};
+        int[] colors = {0x55FF55, 0x55FFFF, 0xFF5555, 0xFF55FF, 0xFFFF55, 0xFFAA00, 0xAAAAAA};
+        long best = Long.MAX_VALUE;
+        char result = 'b';
+        for (int i = 0; i < colors.length; i++) {
+            int a = colors[i];
+            long dr = ((rgb >> 16) & 255) - ((a >> 16) & 255);
+            long dg = ((rgb >> 8) & 255) - ((a >> 8) & 255);
+            long db = (rgb & 255) - (a & 255);
+            long distance = dr * dr + dg * dg + db * db;
+            if (distance < best) {
+                best = distance;
+                result = codes[i];
+            }
+        }
+        return result;
     }
 
     // ---- entrar y salir ----------------------------------------------------

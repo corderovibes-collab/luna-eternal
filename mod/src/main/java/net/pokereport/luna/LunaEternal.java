@@ -743,6 +743,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             database = new Database(cfg);
             database.migrate();
 
+            // La economía de trabajos es editable sin recompilar. Se valida al
+            // arrancar para no aceptar recompensas negativas o límites nulos.
+            net.pokereport.luna.progression.JobsConfig.load();
+
             players = new PlayerService(database);
             economy = new EconomyService(database);
             progression = new net.pokereport.luna.progression.ProgressionService(database);

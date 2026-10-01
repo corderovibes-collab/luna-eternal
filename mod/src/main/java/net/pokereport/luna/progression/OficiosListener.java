@@ -48,15 +48,6 @@ public final class OficiosListener {
     //   Los umbrales de nivel son 100 · 400 · 1.200 · 3.000 · 7.500, así que con
     //   1 XP por piedra hacen falta ~12.200 piedras para Minero V. Suena mucho y
     //   lo es a propósito: el nivel V paga 25.000 de Plata.
-    private static final long XP_PIEDRA = 1;
-    private static final long XP_MENA = 8;
-    private static final long XP_MENA_RARA = 25;
-    private static final long XP_PESCA = 12;
-    private static final long XP_BAYA = 10;
-    private static final long XP_BELLOTA = 10;
-    private static final long XP_CULTIVO = 3;
-    private static final long XP_ECLOSION = 40;
-
     public static void register() {
         minero();
         pescador();
@@ -84,7 +75,8 @@ public final class OficiosListener {
         if (jugador == null) {
             return;
         }
-        if (oficio != null && xp > 0) {
+        if (oficio != null && xp > 0
+                && (!oficio.esOficio() || JobsConfig.allow(jugador, oficio))) {
             OficiosService.ganarAsync(jugador, oficio, xp);
         }
         // ⚠⚠ EL PASE DE BATALLA CUELGA DE AQUI Y NO DE SUS PROPIOS EVENTOS, y
@@ -200,19 +192,19 @@ public final class OficiosListener {
     private static long valorDe(Block bloque) {
         var estado = bloque.getDefaultState();
         if (estado.isIn(BlockTags.DIAMOND_ORES) || estado.isIn(BlockTags.EMERALD_ORES)) {
-            return XP_MENA_RARA;
+            return JobsConfig.rareOreXp();
         }
         if (estado.isIn(BlockTags.GOLD_ORES) || estado.isIn(BlockTags.IRON_ORES)
                 || estado.isIn(BlockTags.REDSTONE_ORES) || estado.isIn(BlockTags.LAPIS_ORES)
                 || estado.isIn(BlockTags.COPPER_ORES) || estado.isIn(BlockTags.COAL_ORES)) {
-            return XP_MENA;
+            return JobsConfig.oreXp();
         }
         // La piedra da poquísimo, pero da: cavar un túnel también es minar, y sin
         // esto el oficio solo avanzaría con suerte.
         if (estado.isIn(BlockTags.BASE_STONE_OVERWORLD)
                 || estado.isIn(BlockTags.BASE_STONE_NETHER)
                 || estado.isIn(BlockTags.DEEPSLATE_ORE_REPLACEABLES)) {
-            return XP_PIEDRA;
+            return JobsConfig.stoneXp();
         }
         return 0;
     }
@@ -229,10 +221,10 @@ public final class OficiosListener {
      */
     private static long valorPase(Block bloque) {
         long oficio = valorDe(bloque);
-        if (oficio >= XP_MENA_RARA) {
+        if (oficio >= JobsConfig.rareOreXp()) {
             return net.pokereport.luna.pase.PaseXp.MENA_RARA;
         }
-        if (oficio >= XP_MENA) {
+        if (oficio >= JobsConfig.oreXp()) {
             return net.pokereport.luna.pase.PaseXp.MENA;
         }
         return net.pokereport.luna.pase.PaseXp.PIEDRA;
@@ -259,15 +251,15 @@ public final class OficiosListener {
     private static long valorCultivo(net.minecraft.block.BlockState estado) {
         var bloque = estado.getBlock();
         if (bloque instanceof net.minecraft.block.CropBlock cultivo) {
-            return cultivo.isMature(estado) ? XP_CULTIVO : 0;
+            return cultivo.isMature(estado) ? JobsConfig.cropXp() : 0;
         }
         if (bloque == net.minecraft.block.Blocks.MELON
                 || bloque == net.minecraft.block.Blocks.PUMPKIN) {
-            return XP_CULTIVO;
+            return JobsConfig.cropXp();
         }
         if (bloque instanceof net.minecraft.block.CocoaBlock) {
             return estado.get(net.minecraft.block.CocoaBlock.AGE)
-                    >= net.minecraft.block.CocoaBlock.MAX_AGE ? XP_CULTIVO : 0;
+                    >= net.minecraft.block.CocoaBlock.MAX_AGE ? JobsConfig.cropXp() : 0;
         }
         return 0;
     }
@@ -285,7 +277,7 @@ public final class OficiosListener {
             CobblemonEvents.POKEROD_REEL.subscribe(evento -> {
                 try {
                     if (evento.getPlayer() instanceof ServerPlayerEntity sp) {
-                        anotar(sp, Path.PESCADOR, XP_PESCA,
+                        anotar(sp, Path.PESCADOR, JobsConfig.fishingXp(),
                                net.pokereport.luna.quest.Quest.Objective.Type.FISH, 1,
                                net.pokereport.luna.pase.PaseXp.PESCA);
                     }
@@ -307,7 +299,7 @@ public final class OficiosListener {
         try {
             CobblemonEvents.BERRY_HARVEST.subscribe(evento -> {
                 try {
-                    anotar(evento.getPlayer(), Path.AGRICULTOR, XP_BAYA,
+                    anotar(evento.getPlayer(), Path.AGRICULTOR, JobsConfig.berryXp(),
                            net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1,
                            net.pokereport.luna.pase.PaseXp.COSECHA);
                 } catch (Throwable t) {
@@ -320,7 +312,7 @@ public final class OficiosListener {
         try {
             CobblemonEvents.APRICORN_HARVESTED.subscribe(evento -> {
                 try {
-                    anotar(evento.getPlayer(), Path.AGRICULTOR, XP_BELLOTA,
+                    anotar(evento.getPlayer(), Path.AGRICULTOR, JobsConfig.apricornXp(),
                            net.pokereport.luna.quest.Quest.Objective.Type.HARVEST, 1,
                            net.pokereport.luna.pase.PaseXp.COSECHA);
                 } catch (Throwable t) {
@@ -342,7 +334,7 @@ public final class OficiosListener {
         try {
             CobblemonEvents.HATCH_EGG_POST.subscribe(evento -> {
                 try {
-                    anotar(evento.getPlayer(), Path.CRIADOR, XP_ECLOSION,
+                    anotar(evento.getPlayer(), Path.CRIADOR, JobsConfig.hatchingXp(),
                            net.pokereport.luna.quest.Quest.Objective.Type.HATCH, 1,
                            net.pokereport.luna.pase.PaseXp.ECLOSION);
                 } catch (Throwable t) {

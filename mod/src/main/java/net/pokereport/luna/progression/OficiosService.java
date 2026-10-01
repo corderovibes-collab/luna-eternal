@@ -84,7 +84,7 @@ public final class OficiosService {
         //   camino recorrido y no del sitio donde se acabó.
         long total = 0;
         for (int n = subida.nivelAnterior() + 1; n <= subida.estado().level(); n++) {
-            total += oficio.plataPorNivel(n);
+            total += JobsConfig.silverForLevel(n);
         }
         if (total > 0) {
             // ⚠ CLAVE DE IDEMPOTENCIA DERIVADA DEL NIVEL, y aquí sí es correcta.

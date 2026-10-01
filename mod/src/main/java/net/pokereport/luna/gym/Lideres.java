@@ -329,32 +329,6 @@ public final class Lideres {
                 }
             }
 
-            // 4. Guardián del Lobby (Lugia con tag luna_puerta)
-            if (entidad.getCommandTags().contains(net.pokereport.luna.puerta.PuertaNpc.MARCA)
-                    && LunaDimensions.LOBBY.equals(mundo.getRegistryKey())) {
-                var pos = entidad.getPos();
-                Box box = Box.of(pos, 8.0, 8.0, 8.0);
-                for (var otro : mundo.getEntitiesByClass(Entity.class, box,
-                        x -> x != entidad && !x.isRemoved() && x.getCommandTags().contains(net.pokereport.luna.puerta.PuertaNpc.MARCA))) {
-                    entidad.discard();
-                    LunaEternal.LOG.info("Deduplicado: eliminado guardián repetido en {}", pos);
-                    return;
-                }
-            }
-
-            // 5. Cartel del Guardián del Lobby (TextDisplay con tag luna_puerta_cartel)
-            if (entidad instanceof DisplayEntity.TextDisplayEntity
-                    && entidad.getCommandTags().contains("luna_puerta_cartel")
-                    && LunaDimensions.LOBBY.equals(mundo.getRegistryKey())) {
-                var pos = entidad.getPos();
-                Box box = Box.of(pos, 8.0, 8.0, 8.0);
-                for (var otro : mundo.getEntitiesByClass(DisplayEntity.TextDisplayEntity.class, box,
-                        x -> x != entidad && !x.isRemoved() && x.getCommandTags().contains("luna_puerta_cartel"))) {
-                    entidad.discard();
-                    LunaEternal.LOG.info("Deduplicado: eliminado cartel de guardián repetido en {}", pos);
-                    return;
-                }
-            }
         });
     }
 

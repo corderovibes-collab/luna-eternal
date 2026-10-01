@@ -35,8 +35,21 @@ public final class RotomVideoScreen extends Screen {
     private boolean muted;
     private boolean ducked;
     private net.minecraft.registry.RegistryKey<net.minecraft.world.World> origin;
+    private final Video video;
 
-    public RotomVideoScreen() { super(Text.literal("Rotom Dex — Guía de gimnasios")); }
+    private record Video(String url, String sha256, long bytes, String file, String title, String loading, String error) {}
+    private static Video video(String id) {
+        if ("torre".equalsIgnoreCase(id)) return new Video(RotomTutorial.TORRE_VIDEO, RotomTutorial.TORRE_SHA256, RotomTutorial.TORRE_BYTES,
+                "rotom-torre-comercial-v1.mp4", "Rotom Dex — Torre Comercial", "Cargando tutorial de la Torre Comercial...",
+                "No se pudo cargar el tutorial de la Torre Comercial. Inténtalo nuevamente.");
+        return new Video(RotomTutorial.VIDEO, RotomTutorial.SHA256, RotomTutorial.BYTES,
+                "rotom-gimnasios-v1.mp4", "Rotom Dex — Guía de gimnasios", "Cargando guía de gimnasios...",
+                "No se pudo cargar la guía de gimnasios. Inténtalo nuevamente.");
+    }
+    public RotomVideoScreen(String tutorial) {
+        super(Text.literal(video(tutorial).title()));
+        this.video = video(tutorial);
+    }
     @Override protected void init() {
         addDrawableChild(ButtonWidget.builder(Text.literal("Cerrar"), b -> close())
                 .dimensions(Math.max(0, width - 78), 8, 70, 20).build());
@@ -59,12 +72,12 @@ public final class RotomVideoScreen extends Screen {
             Path directory = net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir()
                     .resolve("cache/pokereport/cinematicas");
             Files.createDirectories(directory);
-            Path target = directory.resolve("rotom-gimnasios-v1.mp4");
+            Path target = directory.resolve(video.file());
             if (!valid(target)) {
                 temporary = Files.createTempFile(directory, "rotom-", ".part");
                 try (HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(12))
                         .followRedirects(HttpClient.Redirect.NORMAL).build()) {
-                    var response = http.send(HttpRequest.newBuilder(URI.create(RotomTutorial.VIDEO))
+                    var response = http.send(HttpRequest.newBuilder(URI.create(video.url()))
                             .timeout(Duration.ofSeconds(90)).GET().build(), HttpResponse.BodyHandlers.ofInputStream());
                     download = response.body();
                     try (var input = download; var output = Files.newOutputStream(temporary)) {
@@ -73,9 +86,9 @@ public final class RotomVideoScreen extends Screen {
                         for (int n; (n = input.read(buffer)) >= 0;) {
                             if (closed || Thread.currentThread().isInterrupted()) return;
                             total += n;
-                            if (total > RotomTutorial.BYTES) throw new java.io.IOException("Unexpected size");
+                            if (total > video.bytes()) throw new java.io.IOException("Unexpected size");
                             output.write(buffer, 0, n);
-                            percent = (int)(total * 100 / RotomTutorial.BYTES);
+                            percent = (int)(total * 100 / video.bytes());
                         }
                     } finally { download = null; }
                 }
@@ -95,7 +108,7 @@ public final class RotomVideoScreen extends Screen {
         }
     }
     private boolean valid(Path file) throws Exception {
-        if (!Files.isRegularFile(file) || Files.size(file) != RotomTutorial.BYTES) return false;
+        if (!Files.isRegularFile(file) || Files.size(file) != video.bytes()) return false;
         var digest = MessageDigest.getInstance("SHA-256");
         try (var in = Files.newInputStream(file)) {
             byte[] buffer = new byte[65536];
@@ -104,11 +117,11 @@ public final class RotomVideoScreen extends Screen {
                 digest.update(buffer, 0, n);
             }
         }
-        return HexFormat.of().formatHex(digest.digest()).equals(RotomTutorial.SHA256);
+        return HexFormat.of().formatHex(digest.digest()).equals(video.sha256());
     }
     private void fail(Throwable cause) {
         if (error != null || closed) return;
-        error = "No se pudo cargar la guía de gimnasios. Inténtalo nuevamente.";
+        error = video.error();
         org.slf4j.LoggerFactory.getLogger("PokeReport-Rotom").warn("Tutorial playback failed", cause);
     }
     @Override public void tick() {
@@ -164,7 +177,7 @@ public final class RotomVideoScreen extends Screen {
         } else {
             int cy=height/2;
             ctx.drawCenteredTextWithShadow(textRenderer,"ROTOM DEX",width/2,cy-35,0xFF56E8FF);
-            var message = Text.literal(error == null ? "Cargando guía de gimnasios..." : error);
+            var message = Text.literal(error == null ? video.loading() : error);
             int line=0;
             for (var text : textRenderer.wrapLines(message, Math.max(50,width-32)))
                 ctx.drawCenteredTextWithShadow(textRenderer,text,width/2,cy+line++*11,0xFFDEEDF9);

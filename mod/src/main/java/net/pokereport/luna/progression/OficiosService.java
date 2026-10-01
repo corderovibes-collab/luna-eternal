@@ -68,7 +68,7 @@ public final class OficiosService {
         }
         // Las vías históricas se conservan, pero un oficio solo progresa cuando
         // el jugador lo eligió expresamente como trabajo activo.
-        if (oficio.esOficio() && !LunaEternal.jobs().esActivo(playerId, oficio)) {
+        if (oficio.esTrabajoSeleccionable() && !LunaEternal.jobs().esActivo(playerId, oficio)) {
             return;
         }
         var subida = LunaEternal.progression().grantDetallado(playerId, oficio, xp);

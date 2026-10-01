@@ -6,6 +6,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ConfirmScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
@@ -455,7 +456,7 @@ public class TrabajosScreen extends Screen {
         if (via.name().equals(trabajoActivo)) {
             texto(ctx, Text.literal("ACTIVO · CLIC PARA ABANDONAR"),
                     tx, ay + ah - 26, 15, 0xFF2E7D46, false, true);
-        } else if (via.esOficio() && trabajoActivo.isEmpty()) {
+        } else if (via.esTrabajoSeleccionable() && trabajoActivo.isEmpty()) {
             texto(ctx, Text.literal("CLIC PARA SELECCIONAR"),
                     tx, ay + ah - 26, 15, 0xFF2E7D46, false, true);
         }
@@ -471,7 +472,7 @@ public class TrabajosScreen extends Screen {
 
         // Qué desbloquea. Siempre visible: es la promesa, y una promesa escondida
         // no motiva a nadie.
-        if (!via.esOficio()) {
+        if (!via.esOficio() && !via.name().equals(trabajoActivo) && !trabajoActivo.isEmpty()) {
             texto(ctx, Text.literal(via.unlocks), tx, ay + ah - 26, 18, TEXTO_SUAVE, false, true);
         }
 
@@ -572,12 +573,23 @@ public class TrabajosScreen extends Screen {
             int ay = PANT_Y + MARGEN + n * (fh + AIRE);
             if (dentro(rx, ry, px(PANT_X + MARGEN), py(ay), pl(anchoUtil), pl(fh))) {
                 viaSeleccionada = Path.values()[desde + n];
-                if (viaSeleccionada.esOficio()) {
+                if (viaSeleccionada.esTrabajoSeleccionable()) {
                     if (viaSeleccionada.name().equals(trabajoActivo)) {
-                        ClientPlayNetworking.send(new Red.AccionTrabajo("abandonar", ""));
+                        Path elegida = viaSeleccionada;
+                        client.setScreen(new ConfirmScreen(ok -> {
+                            client.setScreen(this);
+                            if (ok) ClientPlayNetworking.send(new Red.AccionTrabajo("abandonar", ""));
+                        }, Text.literal("¿ABANDONAR " + elegida.displayName.toUpperCase(java.util.Locale.ROOT) + "?"),
+                           Text.literal("Dejarás de sumar acciones y recompensas de este trabajo. Tu progreso de nivel se conserva."),
+                           Text.literal("ABANDONAR"), Text.literal("CANCELAR")));
                     } else if (trabajoActivo.isEmpty()) {
-                        ClientPlayNetworking.send(new Red.AccionTrabajo(
-                                "seleccionar", viaSeleccionada.name()));
+                        Path elegida = viaSeleccionada;
+                        client.setScreen(new ConfirmScreen(ok -> {
+                            client.setScreen(this);
+                            if (ok) ClientPlayNetworking.send(new Red.AccionTrabajo("seleccionar", elegida.name()));
+                        }, Text.literal("¿ELEGIR " + elegida.displayName.toUpperCase(java.util.Locale.ROOT) + "?"),
+                           Text.literal("Solo puedes tener un trabajo activo. Sumarás progreso al realizar: " + elegida.howToRaise + "."),
+                           Text.literal("CONFIRMAR"), Text.literal("CANCELAR")));
                     }
                 }
                 sonar();

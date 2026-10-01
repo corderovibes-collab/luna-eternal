@@ -56,7 +56,8 @@ public final class RotomEntity extends MobEntity implements GeoEntity {
     @Override public ActionResult interactMob(PlayerEntity player, Hand hand) {
         if (hand != Hand.MAIN_HAND) return ActionResult.SUCCESS;
         if (getWorld().isClient()) return ActionResult.SUCCESS;
-        if (!(player instanceof ServerPlayerEntity p) || !getCommandTags().contains(RotomTutorial.TAG)
+        var device = RotomTutorial.device(this);
+        if (!(player instanceof ServerPlayerEntity p) || device == null
                 || p.squaredDistanceTo(this) > 36 || net.pokereport.luna.puerta.Puerta.bloqueado(p))
             return ActionResult.FAIL;
         long now = getWorld().getTime();
@@ -68,29 +69,30 @@ public final class RotomEntity extends MobEntity implements GeoEntity {
         p.playSoundToPlayer(SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, .3f, 1.7f);
         ((ServerWorld)getWorld()).spawnParticles(ParticleTypes.ELECTRIC_SPARK,
                 getX(), getY() + .6, getZ(), 8, .25, .25, .25, .02);
-        ServerPlayNetworking.send(p, new RotomTutorial.Open());
+        ServerPlayNetworking.send(p, new RotomTutorial.Open(device.id()));
         return ActionResult.SUCCESS;
     }
     @Override public void tick() {
         setNoGravity(true); setVelocity(0, 0, 0);
         super.tick();
-        if (!getWorld().isClient() && getCommandTags().contains(RotomTutorial.TAG)) {
+        var device = RotomTutorial.device(this);
+        if (!getWorld().isClient() && device != null) {
             if (gestureTicks > 0) {
                 gestureTicks--;
                 dataTracker.set(FACE, gestureTicks > 36 ? 2 : gestureTicks > 16 ? 4 : 1);
             } else dataTracker.set(FACE, noticed ? 3 : 0);
-            var home = RotomTutorial.POSITION;
+            var home = device.position();
             if (squaredDistanceTo(home) > .0001) setPosition(home);
             if (age % 20 == 0) {
                 cooldowns.values().removeIf(until -> until <= getWorld().getTime());
                 var player = getWorld().getClosestPlayer(this, 5);
                 if (player != null && !noticed) triggerAnim("gesture", "notice");
                 noticed = player != null;
-                float facing = -90;
+                float facing = device.yaw();
                 if (player != null) {
                     float desired = (float)(Math.toDegrees(Math.atan2(player.getZ()-getZ(), player.getX()-getX())) - 90);
                     facing += net.minecraft.util.math.MathHelper.clamp(
-                            net.minecraft.util.math.MathHelper.wrapDegrees(desired + 90), -25, 25);
+                            net.minecraft.util.math.MathHelper.wrapDegrees(desired - device.yaw()), -25, 25);
                 }
                 setYaw(facing); setHeadYaw(facing); setBodyYaw(facing);
             }

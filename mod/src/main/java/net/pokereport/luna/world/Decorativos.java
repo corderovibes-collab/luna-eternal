@@ -297,6 +297,11 @@ public final class Decorativos {
      */
     public static PokemonEntity colocar(ServerWorld mundo, String especie,
                                         Postura postura, Vec3d donde, float giro) {
+        return colocar(mundo, especie, postura, donde, giro, null);
+    }
+
+    public static PokemonEntity colocar(ServerWorld mundo, String especie,
+                                        Postura postura, Vec3d donde, float giro, java.util.UUID uuid) {
         PokemonEntity e;
         try {
             // ⚠ `uncatchable` es una propiedad de Cobblemon, no un invento
@@ -311,6 +316,7 @@ public final class Decorativos {
             return null;
         }
 
+        if (uuid != null) e.setUuid(uuid);
         e.refreshPositionAndAngles(donde.x, donde.y, donde.z, giro, 0f);
         e.setHeadYaw(giro);
         e.setBodyYaw(giro);

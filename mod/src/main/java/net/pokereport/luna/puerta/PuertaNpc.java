@@ -51,6 +51,8 @@ public final class PuertaNpc {
 
     /** La marca del guardian. De ella cuelga el clic. */
     public static final String MARCA = "luna_puerta";
+    private static final UUID GUARDIAN_UUID = UUID.nameUUIDFromBytes(
+            MARCA.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
     private static final String MARCA_CARTEL = "luna_puerta_cartel";
 
@@ -139,7 +141,7 @@ public final class PuertaNpc {
         quitar(mundo, donde, RADIO);
 
         var e = Decorativos.colocar(mundo, especie, Decorativos.Postura.FLOTANDO,
-                donde, giro);
+                donde, giro, GUARDIAN_UUID);
         if (e == null) {
             LunaEternal.LOG.error("Puerta: la especie '{}' no existe, no se coloca "
                     + "el guardian. Sin guardian NADIE PUEDE SALIR DEL LOBBY.",
@@ -202,16 +204,14 @@ public final class PuertaNpc {
         var bp = net.minecraft.util.math.BlockPos.ofFloored(centro);
         mundo.getChunk(bp);
         Box caja = Box.of(centro, radio * 2, radio * 2, radio * 2);
-        int guardiasConservados = 0;
+        var guardianes = mundo.getEntitiesByClass(Entity.class, caja,
+                x -> !x.isRemoved() && x.getCommandTags().contains(MARCA));
+        Entity conservar = guardianes.stream().filter(e -> GUARDIAN_UUID.equals(e.getUuid()))
+                .findFirst().orElseGet(() -> guardianes.stream()
+                        .min(java.util.Comparator.comparingDouble(e -> e.squaredDistanceTo(centro))).orElse(null));
         int quitados = 0;
-        for (Entity e : mundo.getEntitiesByClass(Entity.class, caja,
-                x -> !x.isRemoved() && x.getCommandTags().contains(MARCA))) {
-            if (guardiasConservados == 0) {
-                guardiasConservados++;
-            } else {
-                e.discard();
-                quitados++;
-            }
+        for (Entity e : guardianes) {
+            if (e != conservar) { e.discard(); quitados++; }
         }
         int cartelesConservados = 0;
         for (Entity e : mundo.getEntitiesByClass(net.minecraft.entity.decoration.DisplayEntity.TextDisplayEntity.class, caja,

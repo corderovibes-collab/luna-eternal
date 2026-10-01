@@ -29,7 +29,7 @@ public final class RotomClient {
         ClientPlayNetworking.registerGlobalReceiver(RotomTutorial.Open.ID, (packet, ctx) ->
                 ctx.client().execute(() -> {
                     if (ctx.client().world != null && !(ctx.client().currentScreen instanceof RotomVideoScreen))
-                        ctx.client().setScreen(new RotomVideoScreen());
+                        ctx.client().setScreen(new RotomVideoScreen(packet.tutorial()));
                 }));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             if (client.currentScreen instanceof RotomVideoScreen screen) screen.removed();

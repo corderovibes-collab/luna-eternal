@@ -102,11 +102,8 @@ public final class CaptureListener {
 
         var species = pokemon.getSpecies();
         String name = species.getName();
-        // ⚠⚠ `name` es lo que SE LEE y `clave` es lo que SE GUARDA, y no son lo
-        //    mismo: «Nidoran-F» se enseña asi y se guarda `nidoranf`. Antes se
-        //    guardaba `name.toLowerCase()`, o sea «nidoran-f», que es un
-        //    identificador VALIDO Y QUE NO EXISTE -- se resolvia a null sin dar
-        //    ningun error, y asi lleva meses en la Pokedex de alguien.
+        // La clave canónica de especie es la que se persiste; no el nombre visual.
+        // Esto evita identificadores inexistentes en formas como Nidoran-F.
         String clave = ClaveEspecie.de(species);
         int dex = species.getNationalPokedexNumber();
         boolean shiny = pokemon.getShiny();
@@ -131,7 +128,7 @@ public final class CaptureListener {
                 }
 
                 // Progresión: capturar sube Coleccionista.
-                LunaEternal.progression().grant(id, Path.COLECCIONISTA,
+                net.pokereport.luna.progression.OficiosService.ganar(player, id, Path.COLECCIONISTA,
                     nueva ? XP_ESPECIE_NUEVA : XP_CAPTURA);
 
                 // PASE DE BATALLA. Va aquí y no en un listener aparte por lo

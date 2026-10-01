@@ -3,7 +3,7 @@ package net.pokereport.luna.progression;
 import java.sql.SQLException;
 import net.pokereport.luna.db.Database;
 
-/** Selección persistente de un único oficio activo. */
+/** Selección persistente de un único trabajo activo entre las ocho especialidades. */
 public final class JobService {
     public record Estado(Path trabajo, long actividades, long plataGanada) {}
     private final Database db;
@@ -18,7 +18,7 @@ public final class JobService {
                 if (!rs.next()) return new Estado(null, 0, 0);
                 try {
                     Path p = Path.valueOf(rs.getString(1));
-                    return p.esOficio() ? new Estado(p, rs.getLong(2), rs.getLong(3))
+                    return p.esTrabajoSeleccionable() ? new Estado(p, rs.getLong(2), rs.getLong(3))
                             : new Estado(null, 0, 0);
                 } catch (IllegalArgumentException e) {
                     return new Estado(null, 0, 0);
@@ -31,7 +31,7 @@ public final class JobService {
         final Path trabajo;
         try { trabajo = Path.valueOf(nombre == null ? "" : nombre.toUpperCase(java.util.Locale.ROOT)); }
         catch (IllegalArgumentException e) { return "Ese trabajo no existe."; }
-        if (!trabajo.esOficio()) return "Esa vía no es un trabajo seleccionable.";
+        if (!trabajo.esTrabajoSeleccionable()) return "Ese trabajo no se puede seleccionar.";
         try (var c = db.connection()) {
             c.setAutoCommit(false);
             try {

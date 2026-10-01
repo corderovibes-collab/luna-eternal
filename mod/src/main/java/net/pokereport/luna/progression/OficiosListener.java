@@ -122,7 +122,7 @@ public final class OficiosListener {
                         for (var uuid : ganador.getPlayerUUIDs()) {
                             var sp = servidor.getPlayerManager().getPlayer(uuid);
                             if (sp != null) {
-                                anotar(sp, null, 0,
+                                anotar(sp, Path.ENTRENADOR, 20,
                                        net.pokereport.luna.quest.Quest.Objective.Type.BATTLE_WIN,
                                        1, net.pokereport.luna.pase.PaseXp.COMBATE);
                             }

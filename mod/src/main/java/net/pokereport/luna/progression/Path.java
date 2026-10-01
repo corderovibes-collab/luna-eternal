@@ -141,6 +141,11 @@ public enum Path {
         };
     }
 
+    /** Todas las vías y oficios pueden elegirse como un único trabajo activo. */
+    public boolean esTrabajoSeleccionable() {
+        return true;
+    }
+
     /** Un oficio se trabaja y paga; una Vía se recorre y desbloquea. */
     public boolean esOficio() {
         return this == MINERO || this == PESCADOR || this == AGRICULTOR;

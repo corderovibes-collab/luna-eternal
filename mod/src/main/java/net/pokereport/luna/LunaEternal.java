@@ -74,6 +74,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static net.pokereport.luna.market.Tasador tasador;
     private static net.pokereport.luna.quest.QuestService quests;
     private static net.pokereport.luna.economy.EconomyStats stats;
+    private static net.pokereport.luna.economy.EconomyTelemetry economyTelemetry;
+    private static net.pokereport.luna.economy.EconomicController economicController;
     private static net.pokereport.luna.hunt.HuntService hunts;
     private static net.pokereport.luna.crate.CrateService crates;
     private static net.pokereport.luna.rank.RankService ranks;
@@ -276,11 +278,19 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             boot();
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            net.pokereport.luna.economy.SessionManager.stop();
+
             shutdown();
             serverInstance = null;
         });
 
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            net.pokereport.luna.economy.SessionManager.start();
+
+            net.pokereport.luna.progression.PlacedOreManager.startCleanup();
+
+            net.pokereport.luna.shop.DynamicPricing.start();
+            if (economicController != null) economicController.start();
             // Las paradas son infraestructura, no decoración opcional: se
             // reconstruyen al arrancar si una restauración de mundo las perdió.
             net.pokereport.luna.world.Paradas.colocarTodas(server);
@@ -365,6 +375,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            net.pokereport.luna.economy.SessionManager.onJoin(handler.player);
+
             var player = handler.getPlayer();
             Tablist.onJoin(server, player);
             // ⚠⚠ EL RANGO SE CARGA Y LUEGO SE REPINTA LA ETIQUETA. `onJoin` ya
@@ -576,8 +588,15 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         });
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            net.pokereport.luna.economy.SessionManager.onLeave(handler.player);
+
             var player = handler.getPlayer();
-            players.forget(player.getUuid());
+            
+            try {
+                long playTicks = player.getStatHandler().getStat(net.minecraft.stat.Stats.CUSTOM.getOrCreateStat(net.minecraft.stat.Stats.PLAY_TIME));
+                players.savePlayTicks(player.getUuid(), playTicks);
+            } catch (Exception ignored) {}
+
             PlayerCache.forget(player);
             net.pokereport.luna.heal.HealService.olvidar(player);
             net.pokereport.luna.heal.EnfermeraService.olvidar(player.getUuid());
@@ -625,6 +644,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             //   siempre (P6 -- la memoria del servidor no la llena nadie).
             net.pokereport.luna.net.Red.olvidarSubidas(player.getUuid());
             Tablist.onLeave(server, player);
+            players.forget(player.getUuid());
         });
 
         // AQUI IBA LA INTERFAZ.
@@ -720,6 +740,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             // corregir antes de que el problema sea visible.
             if (server.getTicks() % 72_000 == 0) {
                 net.pokereport.luna.command.EconomyReport.logDaily();
+                submit(() -> {
+                    try { economyTelemetry.snapshot(); }
+                    catch (Exception e) { LOG.error("No se pudo guardar snapshot economico", e); }
+                });
             }
         });
 
@@ -766,6 +790,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             tasador = new net.pokereport.luna.market.Tasador(database);
             quests = new net.pokereport.luna.quest.QuestService(database);
             stats = new net.pokereport.luna.economy.EconomyStats(database);
+            economyTelemetry = new net.pokereport.luna.economy.EconomyTelemetry(database);
+            economicController = new net.pokereport.luna.economy.EconomicController(database);
             hunts = new net.pokereport.luna.hunt.HuntService(database);
             ranks = new net.pokereport.luna.rank.RankService(database);
             trajes = new net.pokereport.luna.traje.TrajeService(database);
@@ -939,6 +965,8 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.clan.ClanHomeService clanHomes() { return clanHomes; }
     public static net.pokereport.luna.quest.QuestService quests() { return quests; }
     public static net.pokereport.luna.economy.EconomyStats stats() { return stats; }
+    public static net.pokereport.luna.economy.EconomyTelemetry economyTelemetry() { return economyTelemetry; }
+    public static net.pokereport.luna.economy.EconomicController economicController() { return economicController; }
     public static net.pokereport.luna.homes.HomeService homes() { return homes; }
     public static net.pokereport.luna.tebex.TebexService tebex() { return tebex; }
     public static net.minecraft.server.MinecraftServer server() { return serverInstance; }

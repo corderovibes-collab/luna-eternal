@@ -91,7 +91,10 @@ public final class Database implements AutoCloseable {
         "V050__trabajo_activo.sql",
         "V051__clan_home_y_reclutas.sql",
         "V052__apariencia_clan.sql",
-        "V053__catalogo_pwarps.sql"
+        "V053__catalogo_pwarps.sql",
+        "V054__economia_observable.sql",
+        "V055__minero_anti_exploit.sql",
+        "V056__economic_session.sql"
     };
 
     private final HikariDataSource ds;

@@ -44,7 +44,17 @@ public final class ShopService {
         var server = player.getServer();
         if (server == null) return;
 
-        long total = entry.buy() * amount;
+        if (amount <= 0) {
+            then.accept(new Result(false, "§cLa cantidad debe ser positiva."));
+            return;
+        }
+        final long total;
+        try {
+            total = Math.multiplyExact(net.pokereport.luna.shop.DynamicPricing.getDynamicBuyPrice(entry), (long) amount);
+        } catch (ArithmeticException overflow) {
+            then.accept(new Result(false, "§cEl importe supera el límite seguro."));
+            return;
+        }
 
         // ⚠⚠⚠ LO QUE SE ENTREGA NO SIEMPRE ES EL OBJETO A SECAS. Un modulo de
         //    proteccion es un `player_head` con la etiqueta de ClaimBlocks
@@ -80,6 +90,7 @@ public final class ShopService {
 
                 // 2. Cobrar.
                 LunaEternal.economy().debit(id, entry.currency(), total, "shop_buy", key);
+                recordTrade(entry, true, amount, total);
                 LunaEternal.quests().advance(id,
                     net.pokereport.luna.quest.Quest.Objective.Type.SHOP_BUY, 1);
 
@@ -124,6 +135,16 @@ public final class ShopService {
             then.accept(new Result(false, "§cEsto no se puede vender."));
             return;
         }
+        if (amount <= 0) {
+            then.accept(new Result(false, "§cLa cantidad debe ser positiva."));
+            return;
+        }
+        try {
+            Math.multiplyExact(net.pokereport.luna.shop.DynamicPricing.getDynamicSellPrice(entry), (long) amount);
+        } catch (ArithmeticException overflow) {
+            then.accept(new Result(false, "§cEl importe supera el límite seguro."));
+            return;
+        }
         if (countOf(player, entry) < amount) {
             then.accept(new Result(false, "§cNo tienes tantos."));
             return;
@@ -138,7 +159,7 @@ public final class ShopService {
             return;
         }
 
-        long total = entry.sell() * removed;
+        long total = Math.multiplyExact(net.pokereport.luna.shop.DynamicPricing.getDynamicSellPrice(entry), (long) removed);
         int finalRemoved = removed;
         var profile = player.getGameProfile();
 
@@ -147,6 +168,7 @@ public final class ShopService {
                 long id = LunaEternal.players().resolve(profile.getId(), profile.getName());
                 LunaEternal.economy().credit(id, entry.currency(), total,
                     "shop_sell", UUID.randomUUID().toString());
+                recordTrade(entry, false, finalRemoved, total);
                 server.execute(() -> then.accept(new Result(true,
                     "§aVendido §f" + finalRemoved + "x " + entry.displayName()
                     + " §7por §f" + fmt(total) + " " + entry.currency().displayName)));
@@ -164,6 +186,19 @@ public final class ShopService {
     }
 
     // ------------------------------------------------------------ auxiliares
+
+    private static void recordTrade(ShopCatalog.Entry entry, boolean playerBought,
+                                    long quantity, long value) {
+        try {
+            String category = LunaEternal.shop().categoryId(entry);
+            LunaEternal.economyTelemetry().recordNpcTrade(
+                category, entry.clave(), playerBought, quantity, value);
+        } catch (Exception telemetryError) {
+            // La telemetría nunca revierte una compra ya confirmada.
+            LunaEternal.LOG.warn("No se pudo registrar telemetría de tienda: {}",
+                telemetryError.toString());
+        }
+    }
 
     private static void refund(long playerId, ShopCatalog.Entry entry, long total,
                                String originalKey, ServerPlayerEntity player,

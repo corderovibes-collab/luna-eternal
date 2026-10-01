@@ -97,14 +97,16 @@ public final class EconomyStats {
         List<Flow> out = new ArrayList<>();
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement("""
-                SELECT reason,
-                       COALESCE(SUM(CASE WHEN delta > 0 THEN delta ELSE 0 END),0),
-                       COALESCE(SUM(CASE WHEN delta < 0 THEN -delta ELSE 0 END),0),
+                SELECT COALESCE(system_name, reason),
+                       COALESCE(SUM(CASE WHEN flow_kind='FAUCET' THEN ABS(delta) ELSE 0 END),0),
+                       COALESCE(SUM(CASE WHEN flow_kind='SINK' THEN ABS(delta) ELSE 0 END),0),
                        COUNT(*)
-                FROM ledger_entry
-                WHERE currency = ?
+                FROM ledger_entry l
+                WHERE currency = ? AND flow_kind IN ('FAUCET','SINK')
                   AND created_at >= DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL ? HOUR)
-                GROUP BY reason
+                  AND NOT EXISTS (SELECT 1 FROM economy_excluded_player x WHERE x.player_id=l.player_id)
+                  AND NOT EXISTS (SELECT 1 FROM ledger_entry bad WHERE bad.player_id=l.player_id AND bad.flow_kind IN ('TEST','ADMIN'))
+                GROUP BY COALESCE(system_name, reason)
                 ORDER BY (SUM(ABS(delta))) DESC
                 """)) {
             ps.setString(1, currency.name());
@@ -135,8 +137,10 @@ public final class EconomyStats {
 
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement(
-                 "SELECT balance FROM player_economy WHERE currency = ? "
-               + "ORDER BY balance ASC")) {
+                 "SELECT e.balance FROM player_economy e WHERE e.currency = ? "
+               + "AND NOT EXISTS (SELECT 1 FROM economy_excluded_player x WHERE x.player_id=e.player_id) "
+               + "AND NOT EXISTS (SELECT 1 FROM ledger_entry bad WHERE bad.player_id=e.player_id "
+               + "AND bad.flow_kind IN ('TEST','ADMIN')) ORDER BY e.balance ASC")) {
             ps.setString(1, currency.name());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -166,8 +170,12 @@ public final class EconomyStats {
     public long activePlayers(int horas) throws SQLException {
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement(
-                 "SELECT COUNT(DISTINCT player_id) FROM ledger_entry "
-               + "WHERE created_at >= DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL ? HOUR)")) {
+                 "SELECT COUNT(DISTINCT l.player_id) FROM ledger_entry l "
+               + "WHERE l.created_at >= DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL ? HOUR) "
+               + "AND l.flow_kind IN ('FAUCET','SINK') "
+               + "AND NOT EXISTS (SELECT 1 FROM economy_excluded_player x WHERE x.player_id=l.player_id) "
+               + "AND NOT EXISTS (SELECT 1 FROM ledger_entry bad WHERE bad.player_id=l.player_id "
+               + "AND bad.flow_kind IN ('TEST','ADMIN'))")) {
             ps.setInt(1, horas);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() ? rs.getLong(1) : 0;
@@ -196,11 +204,15 @@ public final class EconomyStats {
         List<Long> ingresos = new ArrayList<>();
         try (Connection c = db.connection();
              PreparedStatement ps = c.prepareStatement("""
-                SELECT player_id, SUM(delta) AS ingreso
-                FROM ledger_entry
-                WHERE currency = ? AND delta > 0
-                  AND created_at >= DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL 24 HOUR)
-                GROUP BY player_id
+                SELECT l.player_id, SUM(l.delta) AS ingreso
+                FROM ledger_entry l
+                WHERE l.currency = ? AND l.flow_kind='FAUCET'
+                  AND l.created_at >= DATE_SUB(CURRENT_TIMESTAMP(3), INTERVAL 24 HOUR)
+                  AND NOT EXISTS (SELECT 1 FROM economy_excluded_player x WHERE x.player_id=l.player_id)
+                  AND NOT EXISTS (SELECT 1 FROM ledger_entry bad WHERE bad.player_id=l.player_id
+                                    AND bad.flow_kind IN ('TEST','ADMIN'))
+                GROUP BY l.player_id
+                HAVING ingreso > 0
                 ORDER BY ingreso ASC
                 """)) {
             ps.setString(1, currency.name());

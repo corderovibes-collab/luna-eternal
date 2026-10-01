@@ -112,6 +112,14 @@ public final class ShopCatalog {
         return categories.stream().filter(c -> c.id().equals(id)).findFirst().orElse(null);
     }
 
+    /** Categoría estable de una entrada para telemetría; nunca depende del índice visual. */
+    public String categoryId(Entry entry) {
+        for (Category category : categories) {
+            if (category.entries().contains(entry)) return category.id();
+        }
+        return "unknown";
+    }
+
     // ------------------------------------------------------------ carga
 
     public static ShopCatalog load() {

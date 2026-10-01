@@ -102,29 +102,41 @@ public class EconomyService {
         // operaciones concurrentes leerían el mismo saldo y una pisaría a la
         // otra — que es exactamente cómo se duplica dinero.
         long current = readBalance(c, playerId, currency, true);
-        long after = current + delta;
+        final long after;
+        try {
+            after = Math.addExact(current, delta);
+        } catch (ArithmeticException overflow) {
+            throw new EconomyException(
+                EconomyException.Kind.INVALID_AMOUNT,
+                "El movimiento supera los limites seguros de saldo");
+        }
 
         if (after < 0) {
             throw new EconomyException(EconomyException.Kind.INSUFFICIENT_FUNDS,
                 "Saldo insuficiente: tiene " + current + ", necesita " + (-delta));
         }
 
+        EconomyFlowKind flowKind = classify(currency, delta, reason, refType);
+        String systemName = systemName(reason, refType);
+
         try (PreparedStatement ps = c.prepareStatement("""
                 INSERT INTO ledger_entry
                   (player_id, currency, delta, balance_after, reason,
-                   ref_type, ref_id, idempotency_key)
-                VALUES (?,?,?,?,?,?,?,?)
+                   flow_kind, system_name, ref_type, ref_id, idempotency_key)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
                 """)) {
             ps.setLong(1, playerId);
             ps.setString(2, currency.name());
             ps.setLong(3, delta);
             ps.setLong(4, after);
             ps.setString(5, reason);
-            if (refType == null) ps.setNull(6, java.sql.Types.VARCHAR);
-            else ps.setString(6, refType);
-            if (refId == null) ps.setNull(7, java.sql.Types.BIGINT);
-            else ps.setLong(7, refId);
-            ps.setString(8, idempotencyKey);
+            ps.setString(6, flowKind.name());
+            ps.setString(7, systemName);
+            if (refType == null) ps.setNull(8, java.sql.Types.VARCHAR);
+            else ps.setString(8, refType);
+            if (refId == null) ps.setNull(9, java.sql.Types.BIGINT);
+            else ps.setLong(9, refId);
+            ps.setString(10, idempotencyKey);
             ps.executeUpdate();
         } catch (SQLIntegrityConstraintViolationException dup) {
             throw new EconomyException(EconomyException.Kind.ALREADY_APPLIED,
@@ -284,5 +296,31 @@ public class EconomyService {
                 return rs.next() ? rs.getLong(1) : 0L;
             }
         }
+    }
+    /** Clasifica por semántica; el signo no basta para distinguir emisión de custodia. */
+    static EconomyFlowKind classify(Currency currency, long delta, String reason, String refType) {
+        String r = reason == null ? "" : reason.toLowerCase(java.util.Locale.ROOT);
+        String ref = refType == null ? "" : refType.toLowerCase(java.util.Locale.ROOT);
+        if (r.startsWith("autotest")) return EconomyFlowKind.TEST;
+        if (r.startsWith("admin_")) return EconomyFlowKind.ADMIN;
+        if (r.equals("retirada_marcas") || ref.equals("migration")) return EconomyFlowKind.MIGRATION;
+        if (ref.equals("transfer") || r.equals("gts_buy") || r.equals("gts_sale")
+                || r.equals("mercado_venta")) return EconomyFlowKind.TRANSFER;
+        if (r.startsWith("mercado_reservar") || r.startsWith("mercado_vuelta")
+                || r.startsWith("mercado_cancelar") || r.startsWith("mercado_caducar")
+                || r.equals("clan_aportar") || r.equals("clan_sacar")) {
+            return EconomyFlowKind.ESCROW;
+        }
+        if (r.contains("refund") || r.contains("reembolso")) return EconomyFlowKind.REFUND;
+        if (currency == Currency.REPORTCOIN) return EconomyFlowKind.PREMIUM;
+        return delta > 0 ? EconomyFlowKind.FAUCET : EconomyFlowKind.SINK;
+    }
+
+    static String systemName(String reason, String refType) {
+        if (refType != null && !refType.isBlank()) return refType;
+        if (reason == null || reason.isBlank()) return "unknown";
+        int cut = reason.indexOf('_');
+        String out = cut > 0 ? reason.substring(0, cut) : reason;
+        return out.length() <= 32 ? out : out.substring(0, 32);
     }
 }

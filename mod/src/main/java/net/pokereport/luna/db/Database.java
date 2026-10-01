@@ -90,7 +90,8 @@ public final class Database implements AutoCloseable {
         "V049__retirar_marcas.sql",
         "V050__trabajo_activo.sql",
         "V051__clan_home_y_reclutas.sql",
-        "V052__apariencia_clan.sql"
+        "V052__apariencia_clan.sql",
+        "V053__catalogo_pwarps.sql"
     };
 
     private final HikariDataSource ds;

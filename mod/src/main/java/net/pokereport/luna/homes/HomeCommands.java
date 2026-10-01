@@ -348,6 +348,39 @@ public final class HomeCommands {
         return 1;
     }
 
+    /** Entrada del PokéPad. El identificador se resuelve solo en servidor y nunca acepta coordenadas del cliente. */
+    public static boolean viajarDesdePokepad(ServerPlayerEntity p, long homeId) {
+        if (p == null) return false;
+        if (enCombatePokemon(p)) {
+            p.sendMessage(Text.literal("§c[Pwarp] No puedes viajar mientras estás en combate Pokémon."), false);
+            return false;
+        }
+        HomeService.PwarpEntry pw = LunaEternal.homes().getPwarp(homeId);
+        if (pw == null) {
+            p.sendMessage(Text.literal("§c[Pwarp] Ese destino ya no está disponible."), false);
+            return false;
+        }
+        ServerWorld destWorld = p.getServer().getWorld(LunaDimensions.HOGAR);
+        HomeService.Home h = pw.home();
+        Vec3d destino = new Vec3d(h.x(), h.y(), h.z());
+        if (destWorld == null || !Traslado.esDestinoSeguro(destWorld, destino)) {
+            p.sendMessage(Text.literal("§c[Pwarp] Ese destino ya no es seguro."), false);
+            return false;
+        }
+        if (p.getServerWorld().getRegistryKey().equals(LunaDimensions.HOGAR)) RankCommands.guardarBack(p);
+        Espera.pedir(p, "viajar al pwarp de " + pw.creadorNombre(), () -> {
+            if (Traslado.esDestinoSeguro(destWorld, destino)
+                    && Traslado.ir(p, destWorld, destino, h.yaw(), h.pitch())) {
+                long playerId = resolverPlayerId(p);
+                if (playerId > 0) LunaEternal.homes().registrarVisita(playerId, h.id());
+                p.sendMessage(Text.literal("§a[Pwarp] Has llegado a '§e" + h.name() + "§a' de §b" + pw.creadorNombre() + "§a."), false);
+            } else {
+                p.sendMessage(Text.literal("§c[Pwarp] El destino dejó de ser seguro; viaje cancelado."), false);
+            }
+        });
+        return true;
+    }
+
     private static int ejecutarPwarp(CommandContext<ServerCommandSource> ctx, String creador, String nombre) {
         ServerPlayerEntity p = ctx.getSource().getPlayer();
         if (p == null) return 0;
@@ -383,6 +416,8 @@ public final class HomeCommands {
         Espera.pedir(p, "viajar al pwarp de " + pw.creadorNombre(), () -> {
             if (Traslado.esDestinoSeguro(destWorld, destino)
                     && Traslado.ir(p, destWorld, destino, h.yaw(), h.pitch())) {
+                long playerId = resolverPlayerId(p);
+                if (playerId > 0) LunaEternal.homes().registrarVisita(playerId, h.id());
                 p.sendMessage(Text.literal("§a[Pwarp] Has llegado al lugar público '§e" + h.name() + "§a' de §b" + pw.creadorNombre() + "§a."), false);
             } else {
                 p.sendMessage(Text.literal("§c[Pwarp] El viaje se canceló porque el destino dejó de ser seguro."), false);

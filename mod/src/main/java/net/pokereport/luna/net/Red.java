@@ -1092,6 +1092,45 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** Catálogo de pWarps del PokéPad. */
+    public record PedirPwarps() implements CustomPayload {
+        public static final Id<PedirPwarps> ID = new Id<>(Identifier.of(LunaEternal.MOD_ID, "pedir_pwarps"));
+        public static final PacketCodec<RegistryByteBuf, PedirPwarps> CODEC = PacketCodec.unit(new PedirPwarps());
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
+    public record PwarpDato(long id, String creador, String nombre, String descripcion,
+                            String categoria, String dimension, long visitas,
+                            boolean favorito, boolean propio, long reciente) {
+        private static void escribir(RegistryByteBuf b, PwarpDato p) {
+            b.writeLong(p.id); b.writeString(p.creador, 32); b.writeString(p.nombre, 32);
+            b.writeString(p.descripcion, 120); b.writeString(p.categoria, 24); b.writeString(p.dimension, 128);
+            b.writeLong(p.visitas); b.writeBoolean(p.favorito); b.writeBoolean(p.propio); b.writeLong(p.reciente);
+        }
+        private static PwarpDato leer(RegistryByteBuf b) {
+            return new PwarpDato(b.readLong(), b.readString(32), b.readString(32), b.readString(120),
+                    b.readString(24), b.readString(128), b.readLong(), b.readBoolean(), b.readBoolean(), b.readLong());
+        }
+    }
+
+    public record EstadoPwarps(List<PwarpDato> lista) implements CustomPayload {
+        public static final Id<EstadoPwarps> ID = new Id<>(Identifier.of(LunaEternal.MOD_ID, "estado_pwarps"));
+        public static final PacketCodec<RegistryByteBuf, EstadoPwarps> CODEC = PacketCodec.ofStatic(
+                (b, e) -> { b.writeVarInt(e.lista.size()); for (PwarpDato p : e.lista) PwarpDato.escribir(b, p); },
+                b -> { int n = Math.min(200, b.readVarInt()); List<PwarpDato> out = new ArrayList<>(n);
+                    for (int i = 0; i < n; i++) out.add(PwarpDato.leer(b)); return new EstadoPwarps(List.copyOf(out)); });
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
+    /** Acciones permitidas: visitar, favorito y editar metadatos propios. */
+    public record AccionPwarp(String accion, long id, String descripcion, String categoria) implements CustomPayload {
+        public static final Id<AccionPwarp> ID = new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_pwarp"));
+        public static final PacketCodec<RegistryByteBuf, AccionPwarp> CODEC = PacketCodec.ofStatic(
+                (b, a) -> { b.writeString(a.accion, 16); b.writeLong(a.id); b.writeString(a.descripcion, 120); b.writeString(a.categoria, 24); },
+                b -> new AccionPwarp(b.readString(16), b.readLong(), b.readString(120), b.readString(24)));
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
     /** Un mundo salvaje y cuánta gente hay dentro. */
     public record MundoSalvaje(int numero, int jugadores, boolean lleno) {
         public static final PacketCodec<RegistryByteBuf, MundoSalvaje> CODEC =
@@ -3823,6 +3862,9 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playC2S().register(PedirExplorar.ID, PedirExplorar.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionExplorar.ID, AccionExplorar.CODEC);
         PayloadTypeRegistry.playS2C().register(EstadoExplorar.ID, EstadoExplorar.CODEC);
+        PayloadTypeRegistry.playC2S().register(PedirPwarps.ID, PedirPwarps.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionPwarp.ID, AccionPwarp.CODEC);
+        PayloadTypeRegistry.playS2C().register(EstadoPwarps.ID, EstadoPwarps.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirTrajes.ID, PedirTrajes.CODEC);
         PayloadTypeRegistry.playC2S().register(AccionTraje.ID, AccionTraje.CODEC);
         PayloadTypeRegistry.playC2S().register(ReclamarKit.ID, ReclamarKit.CODEC);
@@ -3920,6 +3962,22 @@ public class Red implements ModInitializer {
 
         ServerPlayNetworking.registerGlobalReceiver(PedirExplorar.ID, (carga, ctx) ->
                 enviarExplorar(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(PedirPwarps.ID, (carga, ctx) -> enviarPwarps(ctx.player()));
+        ServerPlayNetworking.registerGlobalReceiver(AccionPwarp.ID, (carga, ctx) -> {
+            var jugador = ctx.player();
+            long playerId = resolverPlayerIdSeguro(jugador);
+            if (playerId <= 0) return;
+            switch (carga.accion()) {
+                case "visitar" -> net.pokereport.luna.homes.HomeCommands.viajarDesdePokepad(jugador, carga.id());
+                case "favorito" -> LunaEternal.homes().toggleFavorito(playerId, carga.id(),
+                        () -> jugador.getServer().execute(() -> enviarPwarps(jugador)), t -> { });
+                case "editar" -> LunaEternal.homes().actualizarMetadata(playerId, carga.id(), carga.descripcion(), carga.categoria(),
+                        () -> jugador.getServer().execute(() -> enviarPwarps(jugador)),
+                        t -> jugador.getServer().execute(() -> jugador.sendMessage(net.minecraft.text.Text.literal("§c[Pwarp] " + t.getMessage()), false)));
+                default -> { }
+            }
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(PedirTrajes.ID, (carga, ctx) ->
                 { enviarTrajes(ctx.player()); enviarKits(ctx.player()); });
@@ -6503,6 +6561,28 @@ public class Red implements ModInitializer {
      * jugadores conectados, no consultas. Lo único que iría a la base es el
      * clan, y ese ya está en la caché de {@code PlayerCache}.
      */
+    private static void enviarPwarps(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        long playerId = resolverPlayerIdSeguro(jugador);
+        if (playerId <= 0) return;
+        LunaEternal.homes().listarPwarps(playerId, vistas -> jugador.getServer().execute(() -> {
+            if (jugador.isRemoved()) return;
+            List<PwarpDato> datos = vistas.stream().map(v -> new PwarpDato(v.id(), v.creador(), v.nombre(),
+                    v.descripcion(), v.categoria(), v.dimension(), v.visitas(), v.favorito(), v.propio(), v.reciente())).toList();
+            ServerPlayNetworking.send(jugador, new EstadoPwarps(datos));
+        }), t -> jugador.getServer().execute(() -> jugador.sendMessage(
+                net.minecraft.text.Text.literal("§c[Pwarp] No se pudo cargar el catálogo."), false)));
+    }
+
+    private static long resolverPlayerIdSeguro(net.minecraft.server.network.ServerPlayerEntity jugador) {
+        try {
+            return LunaEternal.players().resolve(jugador.getUuid(), jugador.getGameProfile().getName());
+        } catch (java.sql.SQLException e) {
+            LunaEternal.LOG.warn("No se pudo resolver el perfil de {} para pWarps: {}",
+                    jugador.getGameProfile().getName(), e.getMessage());
+            return -1;
+        }
+    }
+
     private static void enviarExplorar(
             net.minecraft.server.network.ServerPlayerEntity jugador) {
         var servidor = jugador.getServer();

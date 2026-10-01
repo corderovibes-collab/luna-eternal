@@ -42,6 +42,7 @@ public final class EstadoCliente {
      */
     private static Red.ResultadoCofre resultado;
     private static Red.EstadoExplorar explorar;
+    private static Red.EstadoPwarps pwarps;
     private static Red.EstadoViajes viajes;
     private static Red.EstadoGimnasio gimnasio;
     private static Red.EstadoTrajes trajes;
@@ -284,6 +285,9 @@ public final class EstadoCliente {
     public static Red.EstadoExplorar explorar() {
         return explorar;
     }
+
+    public static void guardar(Red.EstadoPwarps nuevo) { pwarps = nuevo; }
+    public static Red.EstadoPwarps pwarps() { return pwarps; }
 
     public static void guardar(Red.EstadoCazas nuevo) {
         cazas = nuevo;

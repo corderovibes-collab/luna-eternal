@@ -23,7 +23,16 @@ public final class HomeService {
     public record Home(long id, long playerId, String name, String dimension,
                        double x, double y, double z, float yaw, float pitch, boolean isPublic) {}
 
-    public record PwarpEntry(String creadorNombre, UUID creadorUuid, Home home) {}
+    public record PwarpEntry(String creadorNombre, UUID creadorUuid, Home home,
+                             String descripcion, String categoria, long visitas) {}
+
+    /** Proyección segura para la interfaz: nunca contiene coordenadas. */
+    public record PwarpView(long id, String creador, String nombre, String descripcion,
+                            String categoria, String dimension, long visitas,
+                            boolean favorito, boolean propio, long reciente) {}
+
+    private static final Set<String> CATEGORIAS = Set.of(
+            "TIENDA", "GRANJA", "CONSTRUCCION", "EVENTO", "SERVICIO", "OTROS");
 
     private final Database db;
 
@@ -69,6 +78,7 @@ public final class HomeService {
             try (Connection c = db.connection();
                  PreparedStatement ps = c.prepareStatement(
                      "SELECT h.id, h.player_id, h.name, h.dimension, h.x, h.y, h.z, h.yaw, h.pitch, h.is_public, "
+                   + "h.description, h.category, h.visits, "
                    + "p.username AS player_name, p.mc_uuid AS player_uuid "
                    + "FROM player_homes h "
                    + "JOIN player p ON h.player_id = p.player_id "
@@ -96,7 +106,8 @@ public final class HomeService {
                         } catch (Exception ignored) {}
 
                         String clave = (pName != null ? pName.toLowerCase(Locale.ROOT) : "anon") + ":" + h.name().toLowerCase(Locale.ROOT);
-                        nuevos.put(clave, new PwarpEntry(pName != null ? pName : "Desconocido", pUuid, h));
+                        nuevos.put(clave, new PwarpEntry(pName != null ? pName : "Desconocido", pUuid, h,
+                                rs.getString("description"), rs.getString("category"), rs.getLong("visits")));
                     }
                     cachePwarps.clear();
                     cachePwarps.putAll(nuevos);
@@ -263,7 +274,7 @@ public final class HomeService {
                     if (isPublic) {
                         Home h = getHome(playerId, name);
                         if (h != null) {
-                            cachePwarps.put(clave, new PwarpEntry(playerName, playerUuid, h));
+                            cachePwarps.put(clave, new PwarpEntry(playerName, playerUuid, h, "", "OTROS", 0));
                         }
                     }
                     if (onDone != null) onDone.run();
@@ -277,5 +288,97 @@ public final class HomeService {
 
     public void olvidar(long playerId) {
         cacheHomes.remove(playerId);
+    }
+
+    public PwarpEntry getPwarp(long homeId) {
+        for (PwarpEntry entry : cachePwarps.values()) {
+            if (entry.home().id() == homeId) return entry;
+        }
+        return null;
+    }
+
+    public void listarPwarps(long viewerId, Consumer<List<PwarpView>> ok, Consumer<Throwable> error) {
+        LunaEternal.submit(() -> {
+            String sql = "SELECT h.id,p.username,h.name,h.description,h.category,h.dimension,h.visits," +
+                    "(f.home_id IS NOT NULL) favorite,(h.player_id=?) own," +
+                    "COALESCE(UNIX_TIMESTAMP(r.visited_at),0) recent " +
+                    "FROM player_homes h JOIN player p ON p.player_id=h.player_id " +
+                    "LEFT JOIN pwarp_favorite f ON f.home_id=h.id AND f.player_id=? " +
+                    "LEFT JOIN pwarp_recent r ON r.home_id=h.id AND r.player_id=? " +
+                    "WHERE h.is_public=TRUE OR h.player_id=? ORDER BY h.visits DESC,h.id DESC LIMIT 200";
+            try (Connection c = db.connection(); PreparedStatement ps = c.prepareStatement(sql)) {
+                for (int i = 1; i <= 4; i++) ps.setLong(i, viewerId);
+                List<PwarpView> out = new ArrayList<>();
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) out.add(new PwarpView(rs.getLong(1), rs.getString(2), rs.getString(3),
+                            rs.getString(4), rs.getString(5), rs.getString(6), rs.getLong(7),
+                            rs.getBoolean(8), rs.getBoolean(9), rs.getLong(10)));
+                }
+                ok.accept(List.copyOf(out));
+            } catch (Throwable t) {
+                LunaEternal.LOG.error("No se pudo listar el catálogo de pWarps", t);
+                if (error != null) error.accept(t);
+            }
+        });
+    }
+
+    public void toggleFavorito(long playerId, long homeId, Runnable done, Consumer<Throwable> error) {
+        LunaEternal.submit(() -> {
+            try (Connection c = db.connection()) {
+                c.setAutoCommit(false);
+                try (PreparedStatement visible = c.prepareStatement("SELECT id FROM player_homes WHERE id=? AND is_public=TRUE FOR UPDATE");
+                     PreparedStatement exists = c.prepareStatement("SELECT 1 FROM pwarp_favorite WHERE player_id=? AND home_id=?");
+                     PreparedStatement del = c.prepareStatement("DELETE FROM pwarp_favorite WHERE player_id=? AND home_id=?");
+                     PreparedStatement add = c.prepareStatement("INSERT INTO pwarp_favorite(player_id,home_id) VALUES(?,?)")) {
+                    visible.setLong(1, homeId);
+                    try (ResultSet rs = visible.executeQuery()) { if (!rs.next()) throw new IllegalArgumentException("pWarp no disponible"); }
+                    exists.setLong(1, playerId); exists.setLong(2, homeId);
+                    boolean found; try (ResultSet rs = exists.executeQuery()) { found = rs.next(); }
+                    PreparedStatement change = found ? del : add;
+                    change.setLong(1, playerId); change.setLong(2, homeId); change.executeUpdate();
+                    c.commit();
+                } catch (Throwable t) { c.rollback(); throw t; }
+                if (done != null) done.run();
+            } catch (Throwable t) { if (error != null) error.accept(t); }
+        });
+    }
+
+    public void actualizarMetadata(long playerId, long homeId, String descripcion, String categoria,
+                                   Runnable done, Consumer<Throwable> error) {
+        String desc = descripcion == null ? "" : descripcion.strip();
+        String cat = categoria == null ? "OTROS" : categoria.strip().toUpperCase(Locale.ROOT);
+        if (desc.length() > 120 || desc.chars().anyMatch(ch -> Character.isISOControl(ch)) || !CATEGORIAS.contains(cat)) {
+            if (error != null) error.accept(new IllegalArgumentException("Datos de pWarp no válidos"));
+            return;
+        }
+        LunaEternal.submit(() -> {
+            try (Connection c = db.connection(); PreparedStatement ps = c.prepareStatement(
+                    "UPDATE player_homes SET description=?,category=? WHERE id=? AND player_id=?")) {
+                ps.setString(1, desc); ps.setString(2, cat); ps.setLong(3, homeId); ps.setLong(4, playerId);
+                if (ps.executeUpdate() != 1) throw new IllegalArgumentException("Ese pWarp no te pertenece");
+                cargarPwarps();
+                if (done != null) done.run();
+            } catch (Throwable t) { if (error != null) error.accept(t); }
+        });
+    }
+
+    public void registrarVisita(long playerId, long homeId) {
+        LunaEternal.submit(() -> {
+            try (Connection c = db.connection()) {
+                c.setAutoCommit(false);
+                try (PreparedStatement inc = c.prepareStatement(
+                        "UPDATE player_homes SET visits=visits+1,last_visit_at=CURRENT_TIMESTAMP(3) WHERE id=? AND is_public=TRUE");
+                     PreparedStatement recent = c.prepareStatement(
+                        "INSERT INTO pwarp_recent(player_id,home_id,visited_at,visit_count) VALUES(?,?,CURRENT_TIMESTAMP(3),1) " +
+                        "ON DUPLICATE KEY UPDATE visited_at=VALUES(visited_at),visit_count=visit_count+1")) {
+                    inc.setLong(1, homeId);
+                    if (inc.executeUpdate() == 1) {
+                        recent.setLong(1, playerId); recent.setLong(2, homeId); recent.executeUpdate();
+                    }
+                    c.commit();
+                } catch (Throwable t) { c.rollback(); throw t; }
+                cargarPwarps();
+            } catch (Throwable t) { LunaEternal.LOG.error("No se pudo registrar visita a pWarp {}", homeId, t); }
+        });
     }
 }

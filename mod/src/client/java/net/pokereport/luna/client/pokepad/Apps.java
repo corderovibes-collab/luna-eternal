@@ -68,7 +68,7 @@ public final class Apps {
             case "cazas" -> abrirCazas();
             case "mochila" -> abrirMochila();
             case "explorar" -> abrirExplorar();
-            case "warps" -> abrirViajes();
+            case "warps" -> abrirPwarps();
             case "gyms" -> abrirGimnasios();
             case "kits" -> abrirKits();
             case "tesoros" -> abrirTesoros();
@@ -193,6 +193,13 @@ public final class Apps {
     private static boolean abrirViajes() {
         var cliente = net.minecraft.client.MinecraftClient.getInstance();
         cliente.setScreen(new ViajesScreen(cliente.currentScreen));
+        return true;
+    }
+
+    /** pWarps comunitarios; desde su pie se conservan las paradas de viaje. */
+    private static boolean abrirPwarps() {
+        var cliente = net.minecraft.client.MinecraftClient.getInstance();
+        cliente.setScreen(new PwarpsScreen(cliente.currentScreen));
         return true;
     }
 

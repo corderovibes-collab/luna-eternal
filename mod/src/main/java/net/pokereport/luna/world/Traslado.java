@@ -72,4 +72,29 @@ public final class Traslado {
                              Vec3d donde) {
         return ir(jugador, destino, donde, jugador.getYaw(), jugador.getPitch());
     }
+
+    /**
+     * Valida un destino persistido antes de ofrecer y justo antes de ejecutar
+     * un teletransporte. No carga coordenadas fuera del borde ni acepta NaN.
+     */
+    public static boolean esDestinoSeguro(ServerWorld mundo, Vec3d pos) {
+        if (mundo == null || pos == null
+                || !Double.isFinite(pos.x) || !Double.isFinite(pos.y)
+                || !Double.isFinite(pos.z)) {
+            return false;
+        }
+        BlockPos pies = BlockPos.ofFloored(pos);
+        if (pies.getY() <= mundo.getBottomY() || pies.getY() + 1 >= mundo.getTopY()) {
+            return false;
+        }
+        if (!mundo.getWorldBorder().contains(pies)) {
+            return false;
+        }
+        // Cargar solo después de validar rango y borde. La segunda validación
+        // previa al TP detecta paredes o suelo retirado durante el countdown.
+        mundo.getChunk(pies);
+        return mundo.getBlockState(pies).getCollisionShape(mundo, pies).isEmpty()
+                && mundo.getBlockState(pies.up()).getCollisionShape(mundo, pies.up()).isEmpty()
+                && !mundo.getBlockState(pies.down()).getCollisionShape(mundo, pies.down()).isEmpty();
+    }
 }

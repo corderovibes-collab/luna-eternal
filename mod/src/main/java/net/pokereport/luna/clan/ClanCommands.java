@@ -11,7 +11,6 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.pokereport.luna.LunaEternal;
 import net.pokereport.luna.world.Espera;
@@ -40,7 +39,7 @@ public final class ClanCommands {
             return 0;
         }
         Vec3d pos = p.getPos();
-        if (!destinoSeguro(p.getServerWorld(), pos)) {
+        if (!Traslado.esDestinoSeguro(p.getServerWorld(), pos)) {
             p.sendMessage(Text.literal("§cEsa ubicación no es segura para un hogar de clan."));
             return 0;
         }
@@ -135,28 +134,18 @@ public final class ClanCommands {
         }
         ServerWorld world = p.getServer().getWorld(LunaDimensions.HOGAR);
         Vec3d pos = new Vec3d(h.x(), h.y(), h.z());
-        if (world == null || !destinoSeguro(world, pos)) {
+        if (world == null || !Traslado.esDestinoSeguro(world, pos)) {
             p.sendMessage(Text.literal("§cEl destino del hogar ya no es seguro. Pide al dueño que lo cambie."));
             return;
         }
         Espera.pedir(p, "viajar al hogar del clan", () -> {
-            if (destinoSeguro(world, pos) && Traslado.ir(p, world, pos, h.yaw(), h.pitch())) {
+            if (Traslado.esDestinoSeguro(world, pos) && Traslado.ir(p, world, pos, h.yaw(), h.pitch())) {
                 COOLDOWN.put(p.getUuid(), System.currentTimeMillis() + COOLDOWN_MS);
                 p.sendMessage(Text.literal("§aHas llegado al hogar de tu clan."));
             } else {
                 p.sendMessage(Text.literal("§cEl viaje se canceló porque el destino dejó de ser seguro."));
             }
         });
-    }
-
-    static boolean destinoSeguro(ServerWorld world, Vec3d pos) {
-        if (!Double.isFinite(pos.x) || !Double.isFinite(pos.y) || !Double.isFinite(pos.z)) return false;
-        BlockPos feet = BlockPos.ofFloored(pos);
-        if (feet.getY() <= world.getBottomY() || feet.getY() + 1 >= world.getTopY()) return false;
-        if (!world.getWorldBorder().contains(feet)) return false;
-        return world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()
-                && world.getBlockState(feet.up()).getCollisionShape(world, feet.up()).isEmpty()
-                && !world.getBlockState(feet.down()).getCollisionShape(world, feet.down()).isEmpty();
     }
 
     private static boolean enCombate(ServerPlayerEntity p) {

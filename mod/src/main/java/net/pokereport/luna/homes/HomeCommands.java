@@ -140,6 +140,10 @@ public final class HomeCommands {
         }
 
         Vec3d pos = p.getPos();
+        if (!Traslado.esDestinoSeguro(p.getServerWorld(), pos)) {
+            p.sendMessage(Text.literal("§c[Hogar] No puedes guardar un hogar sin suelo firme y dos bloques libres."), false);
+            return 0;
+        }
         svc.guardarHome(pid, p.getName().getString(), p.getUuid(), nombre,
             LunaDimensions.HOGAR.getValue().toString(),
             pos.x, pos.y, pos.z, p.getYaw(), p.getPitch(),
@@ -185,9 +189,17 @@ public final class HomeCommands {
         }
 
         Vec3d destino = new Vec3d(h.x(), h.y(), h.z());
+        if (!Traslado.esDestinoSeguro(destWorld, destino)) {
+            p.sendMessage(Text.literal("§c[Hogar] El destino ya no es seguro. Vuelve a establecerlo."), false);
+            return 0;
+        }
         Espera.pedir(p, "viajar a tu hogar '" + nombre + "'", () -> {
-            Traslado.ir(p, destWorld, destino, h.yaw(), h.pitch());
-            p.sendMessage(Text.literal("§a[Hogar] Bienvenido a tu hogar '§e" + nombre + "§a'."), false);
+            if (Traslado.esDestinoSeguro(destWorld, destino)
+                    && Traslado.ir(p, destWorld, destino, h.yaw(), h.pitch())) {
+                p.sendMessage(Text.literal("§a[Hogar] Bienvenido a tu hogar '§e" + nombre + "§a'."), false);
+            } else {
+                p.sendMessage(Text.literal("§c[Hogar] El viaje se canceló porque el destino dejó de ser seguro."), false);
+            }
         });
 
         return 1;
@@ -364,9 +376,17 @@ public final class HomeCommands {
 
         HomeService.Home h = pw.home();
         Vec3d destino = new Vec3d(h.x(), h.y(), h.z());
+        if (!Traslado.esDestinoSeguro(destWorld, destino)) {
+            p.sendMessage(Text.literal("§c[Pwarp] Ese destino ya no es seguro. Su propietario debe actualizarlo."), false);
+            return 0;
+        }
         Espera.pedir(p, "viajar al pwarp de " + pw.creadorNombre(), () -> {
-            Traslado.ir(p, destWorld, destino, h.yaw(), h.pitch());
-            p.sendMessage(Text.literal("§a[Pwarp] Has llegado al lugar público '§e" + h.name() + "§a' de §b" + pw.creadorNombre() + "§a."), false);
+            if (Traslado.esDestinoSeguro(destWorld, destino)
+                    && Traslado.ir(p, destWorld, destino, h.yaw(), h.pitch())) {
+                p.sendMessage(Text.literal("§a[Pwarp] Has llegado al lugar público '§e" + h.name() + "§a' de §b" + pw.creadorNombre() + "§a."), false);
+            } else {
+                p.sendMessage(Text.literal("§c[Pwarp] El viaje se canceló porque el destino dejó de ser seguro."), false);
+            }
         });
 
         return 1;

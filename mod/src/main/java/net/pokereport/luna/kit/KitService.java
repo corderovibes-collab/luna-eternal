@@ -75,10 +75,16 @@ public class KitService {
     }
 
     private final Database db;
+    private final EntitlementService entitlements;
     private final ConcurrentHashMap<Long, ReentrantLock> playerLocks = new ConcurrentHashMap<>();
 
     public KitService(Database db) {
+        this(db, new EntitlementService());
+    }
+
+    public KitService(Database db, EntitlementService entitlements) {
         this.db = db;
+        this.entitlements = entitlements;
     }
 
     protected Connection getConnection() throws SQLException {
@@ -217,31 +223,20 @@ public class KitService {
     public String entregar(ServerPlayerEntity jugador, long playerId,
                            KitCatalog.Kit kit) throws SQLException {
         if ("rank".equals(kit.category()) && !kit.once()) {
-            if (kit.requiredRank() != null) {
-                var pide = net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank());
-                var actual = net.pokereport.luna.ui.Tablist.rangoDe(jugador);
-                if (!actual.equipo && !jugador.hasPermissionLevel(2)) {
-                    if (actual.escalon < pide.escalon) {
-                        return "te falta el rango " + kit.requiredRank();
-                    }
-                    if (actual.escalon > pide.escalon) {
-                        return "este kit ya no está disponible para tu rango actual";
-                    }
-                }
+            if (!entitlements.canClaimRankKit(jugador, kit)) {
+                return "este kit todavía no está disponible para tu cuenta";
             }
         } else if ("rank_armor".equals(kit.category())) {
-            var actual = net.pokereport.luna.ui.Tablist.rangoDe(jugador);
-            if (actual != net.pokereport.luna.ui.Tablist.Rank.LEYENDA && !actual.equipo && !jugador.hasPermissionLevel(2)) {
+            if (!entitlements.canClaimLegendArmor(jugador)) {
                 return "requiere el rango LEYENDA";
             }
-            if (!actual.equipo && !jugador.hasPermissionLevel(2)) {
+            if (!entitlements.bypass(jugador.getUuid())) {
                 if (!esElegibleArmadurasLeyenda(playerId, jugador.getUuid())) {
                     return "solo disponible por compra directa de Leyenda sin upgrades previos";
                 }
             }
         } else if (kit.requiredRank() != null) {
-            var pide = net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank());
-            if (net.pokereport.luna.ui.Tablist.escalonDe(jugador) < pide.escalon) {
+            if (!entitlements.canClaimRankKit(jugador, kit)) {
                 return "te falta el rango " + kit.requiredRank();
             }
         }
@@ -422,6 +417,62 @@ public class KitService {
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next();
             }
+        }
+    }
+
+    /**
+     * Materializa el entitlement de un UUID de bypass como una compra auditable
+     * de coste cero. Así la reclamación usa exactamente el mismo camino atómico
+     * que una compra normal y sobrevive reinicios.
+     */
+    public String concederExclusivoBypass(ServerPlayerEntity jugador, long playerId,
+                                          KitCatalog.Kit kit) throws SQLException {
+        if (!entitlements.canClaimExclusiveKit(jugador, false)) {
+            return "este kit todavía no está disponible para tu cuenta";
+        }
+        if (!"exclusive".equals(kit.category())) return "kit exclusivo inválido";
+        ReentrantLock lock = playerLocks.computeIfAbsent(playerId, p -> new ReentrantLock());
+        lock.lock();
+        try {
+            if (posee(playerId, kit)) return null;
+            long saldo = 0;
+            try (Connection c = getConnection()) {
+                c.setAutoCommit(false);
+                try {
+                    try (PreparedStatement ps = c.prepareStatement(
+                            "SELECT balance FROM player_economy WHERE player_id=? AND currency='REPORTCOIN'")) {
+                        ps.setLong(1, playerId);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (rs.next()) saldo = rs.getLong(1);
+                        }
+                    }
+                    String purchaseId = "BYPASS:" + playerId + ":" + kit.id();
+                    try (PreparedStatement ps = c.prepareStatement(
+                            "INSERT IGNORE INTO exclusive_kit_purchase "
+                          + "(purchase_id,player_uuid,player_id,kit_id,price,currency,"
+                          + "balance_before,balance_after,purchase_status,claim_status) "
+                          + "VALUES (?,?,?,?,0,'REPORTCOIN',?,?,'COMPLETED','PENDING')")) {
+                        ps.setString(1, purchaseId);
+                        ps.setString(2, jugador.getUuid().toString());
+                        ps.setLong(3, playerId);
+                        ps.setString(4, kit.id());
+                        ps.setLong(5, saldo);
+                        ps.setLong(6, saldo);
+                        ps.executeUpdate();
+                    }
+                    c.commit();
+                    LunaEternal.LOG.info("Entitlement exclusivo por bypass: uuid={} kit={}",
+                            jugador.getUuid(), kit.id());
+                    return null;
+                } catch (Exception e) {
+                    c.rollback();
+                    throw e;
+                } finally {
+                    c.setAutoCommit(true);
+                }
+            }
+        } finally {
+            lock.unlock();
         }
     }
 

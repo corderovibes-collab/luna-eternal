@@ -163,7 +163,7 @@ public final class CaptureListener {
                     //
                     //    Es R4 aplicada como estaba escrita: la clave identifica
                     //    LA OPERACIÓN, no la llamada.
-                    LunaEternal.economy().credit(id, Currency.MARK,
+                    LunaEternal.economy().credit(id, Currency.POKEDOLLAR,
                         MARCAS_ESPECIE_NUEVA, "pokedex_nueva",
                         "pokedex_nueva:" + id + ":" + name.toLowerCase());
                 }
@@ -201,7 +201,7 @@ public final class CaptureListener {
                         if (nueva) {
                             net.pokereport.luna.ui.Aviso.logro(player,
                                     "POKEDEX  #" + dex,
-                                    name + "  ·  +" + MARCAS_ESPECIE_NUEVA + " Marcas",
+                                    name + "  ·  +" + MARCAS_ESPECIE_NUEVA + " Plata",
                                     "cobblemon:poke_ball",
                                     net.minecraft.sound.SoundEvents.ENTITY_PLAYER_LEVELUP,
                                     1.4f);

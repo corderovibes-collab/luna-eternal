@@ -66,7 +66,13 @@ public final class OficiosService {
         if (xp <= 0) {
             return;
         }
+        // Las vías históricas se conservan, pero un oficio solo progresa cuando
+        // el jugador lo eligió expresamente como trabajo activo.
+        if (oficio.esOficio() && !LunaEternal.jobs().esActivo(playerId, oficio)) {
+            return;
+        }
         var subida = LunaEternal.progression().grantDetallado(playerId, oficio, xp);
+        LunaEternal.jobs().anotarActividad(playerId);
         if (!subida.subio()) {
             return;
         }
@@ -93,6 +99,7 @@ public final class OficiosService {
             LunaEternal.economy().credit(playerId, Currency.POKEDOLLAR, total,
                     "oficio_nivel", clave);
         }
+        LunaEternal.jobs().anotarGanancia(playerId, total);
 
         // ⚠ EL ICONO ES EL DE LA VIA, el mismo que sale en la pantalla de
         //   Trabajos. Que el aviso y la pantalla enseñen lo mismo es lo que hace

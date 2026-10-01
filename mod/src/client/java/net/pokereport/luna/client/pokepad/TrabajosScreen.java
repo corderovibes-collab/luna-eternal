@@ -123,6 +123,9 @@ public class TrabajosScreen extends Screen {
     private float k;
     private int ancho, alto, x0, y0;
     private List<Red.ViaEstado> vias = List.of();
+    private String trabajoActivo = "";
+    private long actividades;
+    private long plataGanada;
     private int pagina = 0;
     /** Selección de lectura local; los niveles y XP siguen viniendo del servidor. */
     private Path viaSeleccionada;
@@ -221,6 +224,9 @@ public class TrabajosScreen extends Screen {
         Red.Trabajos t = EstadoCliente.trabajos();
         if (t != null) {
             vias = t.vias();
+            trabajoActivo = t.activo();
+            actividades = t.actividades();
+            plataGanada = t.plataGanada();
         }
     }
 
@@ -316,6 +322,10 @@ public class TrabajosScreen extends Screen {
                 PANEL_X + PANEL_W / 2, TOTAL_Y, 20, TEXTO_SUAVE, true, false);
         texto(ctx, Text.literal(suma + " / " + (Path.values().length * Path.MAX_LEVEL)),
                 PANEL_X + PANEL_W / 2, TOTAL_Y + 24, 34, 0xFFFFFFFF, true, false);
+        if (!trabajoActivo.isEmpty()) {
+            texto(ctx, Text.literal(String.format("%,d acciones · %,d Plata", actividades, plataGanada)),
+                    PANEL_X + PANEL_W / 2, TOTAL_Y + 58, 16, 0xFFD4DCEC, true, false);
+        }
     }
 
     /** Una línea fina de lado a lado del panel. Separa sin meter una caja más. */
@@ -442,6 +452,13 @@ public class TrabajosScreen extends Screen {
 
         int tx = ax + 92;
         texto(ctx, Text.literal(via.displayName), tx, ay + 10, 28, TEXTO_OSCURO, false, true);
+        if (via.name().equals(trabajoActivo)) {
+            texto(ctx, Text.literal("ACTIVO · CLIC PARA ABANDONAR"),
+                    tx, ay + ah - 26, 15, 0xFF2E7D46, false, true);
+        } else if (via.esOficio() && trabajoActivo.isEmpty()) {
+            texto(ctx, Text.literal("CLIC PARA SELECCIONAR"),
+                    tx, ay + ah - 26, 15, 0xFF2E7D46, false, true);
+        }
 
         // El nivel en romanos, a la derecha del todo y grande: es el dato que se
         // busca primero.
@@ -454,7 +471,9 @@ public class TrabajosScreen extends Screen {
 
         // Qué desbloquea. Siempre visible: es la promesa, y una promesa escondida
         // no motiva a nadie.
-        texto(ctx, Text.literal(via.unlocks), tx, ay + ah - 26, 18, TEXTO_SUAVE, false, true);
+        if (!via.esOficio()) {
+            texto(ctx, Text.literal(via.unlocks), tx, ay + ah - 26, 18, TEXTO_SUAVE, false, true);
+        }
 
         // ⚠ EN UN OFICIO SE ENSEÑA LO QUE PAGA EL SIGUIENTE NIVEL, y esa es toda
         //   la diferencia entre una Via y un oficio: una desbloquea contenido y el
@@ -553,6 +572,14 @@ public class TrabajosScreen extends Screen {
             int ay = PANT_Y + MARGEN + n * (fh + AIRE);
             if (dentro(rx, ry, px(PANT_X + MARGEN), py(ay), pl(anchoUtil), pl(fh))) {
                 viaSeleccionada = Path.values()[desde + n];
+                if (viaSeleccionada.esOficio()) {
+                    if (viaSeleccionada.name().equals(trabajoActivo)) {
+                        ClientPlayNetworking.send(new Red.AccionTrabajo("abandonar", ""));
+                    } else if (trabajoActivo.isEmpty()) {
+                        ClientPlayNetworking.send(new Red.AccionTrabajo(
+                                "seleccionar", viaSeleccionada.name()));
+                    }
+                }
                 sonar();
                 return true;
             }

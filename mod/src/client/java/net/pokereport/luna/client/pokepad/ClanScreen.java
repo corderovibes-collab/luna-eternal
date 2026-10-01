@@ -394,6 +394,20 @@ public class ClanScreen extends Screen {
                         : String.format("%,d", saldo.pokedolares())),
                 cx, y + 62, 20, 0xFFFFFFFF, true, false);
 
+        // Clan Home vive en el backend de comandos: estos botones no inventan
+        // estado local ni coordenadas. El servidor vuelve a validar rol,
+        // dimensión, combate, cooldown y seguridad del destino.
+        int hy = PANEL_Y + PANEL_H - 132;
+        if (soyLider()) {
+            int hw = (PANEL_W - 68) / 3;
+            boton(ctx, rx, ry, PANEL_X + 28, hy, hw, 38, Text.literal("IR"), true);
+            boton(ctx, rx, ry, PANEL_X + 34 + hw, hy, hw, 38, Text.literal("FIJAR"), true);
+            boton(ctx, rx, ry, PANEL_X + 40 + hw * 2, hy, hw, 38, Text.literal("BORRAR"), true);
+        } else {
+            boton(ctx, rx, ry, PANEL_X + 40, hy, PANEL_W - 80, 38,
+                    Text.literal("HOGAR DEL CLAN"), true);
+        }
+
         // ⚠ El líder ve DISOLVER y no SALIR, y no es un detalle: salir le está
         //   prohibido —dejaría el clan sin quien lo dirija— así que enseñárselo
         //   sería ofrecer un botón que siempre falla.
@@ -536,9 +550,9 @@ public class ClanScreen extends Screen {
                 int bx = ax + aw - 250;
                 if (soyLider()) {
                     botonPeq(ctx, rx, ry, bx, y + 8, 110, 30,
-                            Text.translatable("MIEMBRO".equals(m.rol())
-                                    ? "pokepad.lunaeternal.clan.ascender"
-                                    : "pokepad.lunaeternal.clan.degradar"));
+                            Text.translatable("OFICIAL".equals(m.rol())
+                                    ? "pokepad.lunaeternal.clan.degradar"
+                                    : "pokepad.lunaeternal.clan.ascender"));
                 }
                 botonPeq(ctx, rx, ry, ax + aw - 130, y + 8, 118, 30,
                         Text.translatable("pokepad.lunaeternal.clan.echar"));
@@ -894,6 +908,25 @@ public class ClanScreen extends Screen {
         }
 
         // El botón grande del panel
+        if (tengoClan()) {
+            int hy = PANEL_Y + PANEL_H - 132;
+            if (soyLider()) {
+                int hw = (PANEL_W - 68) / 3;
+                if (dentro(rx, ry, px(PANEL_X + 28), py(hy), pl(hw), pl(38))) {
+                    comando("clan home"); return true;
+                }
+                if (dentro(rx, ry, px(PANEL_X + 34 + hw), py(hy), pl(hw), pl(38))) {
+                    comando("clan sethome"); return true;
+                }
+                if (dentro(rx, ry, px(PANEL_X + 40 + hw * 2), py(hy), pl(hw), pl(38))) {
+                    comando("clan delhome"); return true;
+                }
+            } else if (dentro(rx, ry, px(PANEL_X + 40), py(hy),
+                    pl(PANEL_W - 80), pl(38))) {
+                comando("clan home"); return true;
+            }
+        }
+
         if (dentro(rx, ry, px(PANEL_X + 40), py(PANEL_Y + PANEL_H - 76),
                 pl(PANEL_W - 80), pl(46))) {
             if (!tengoClan()) {
@@ -920,6 +953,13 @@ public class ClanScreen extends Screen {
         return super.mouseClicked(mx, my, boton);
     }
 
+    private void comando(String comando) {
+        sonar();
+        if (client != null && client.player != null) {
+            client.player.networkHandler.sendChatCommand(comando);
+        }
+    }
+
     private boolean clicMiembros(int rx, int ry) {
         var lista = estado.miembros();
         int y = primeraFilaY();
@@ -933,7 +973,7 @@ public class ClanScreen extends Screen {
             if (mando() && !"LIDER".equals(m.rol())) {
                 if (soyLider() && dentro(rx, ry, px(ax + aw - 250), py(y + 8),
                         pl(110), pl(30))) {
-                    mandar("MIEMBRO".equals(m.rol()) ? "ascender" : "degradar",
+                    mandar("OFICIAL".equals(m.rol()) ? "degradar" : "ascender",
                             "", "", m.playerId(), 0);
                     return true;
                 }

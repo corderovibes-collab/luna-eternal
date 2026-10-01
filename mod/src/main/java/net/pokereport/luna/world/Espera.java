@@ -151,6 +151,23 @@ public final class Espera {
         }
     }
 
+    /** Cancela una cuenta de viaje cuando el jugador recibe daño. */
+    public static void cancelarPorDano(ServerPlayerEntity jugador) {
+        Cuenta c = CUENTAS.remove(jugador.getUuid());
+        if (c == null) return;
+        if (c.alCancelar() != null) {
+            try {
+                c.alCancelar().run();
+            } catch (Throwable t) {
+                LunaEternal.LOG.error("Fallo al cancelar espera por daño", t);
+            }
+        }
+        jugador.sendMessage(Text.literal(
+                "§cEl viaje se canceló porque recibiste daño."), false);
+        jugador.playSoundToPlayer(SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(),
+                SoundCategory.MASTER, 0.7f, 0.6f);
+    }
+
     /** Para las pruebas. */
     public static void olvidarTodo() {
         CUENTAS.clear();

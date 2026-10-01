@@ -398,14 +398,10 @@ public class MisionesScreen extends Screen {
         texto(ctx, Text.translatable("pokepad.lunaeternal.recompensa"),
                 cx, y, 18, TEXTO_SUAVE, true, false);
         y += 24;
-        if (elegida.plata() > 0) {
-            texto(ctx, Text.literal(String.format("%,d Plata", elegida.plata())),
+        if (elegida.plata() + elegida.marcas() > 0) {
+            texto(ctx, Text.literal(String.format("%,d Plata",
+                            elegida.plata() + elegida.marcas())),
                     cx, y, 20, 0xFFE2E8F2, true, false);
-            y += 24;
-        }
-        if (elegida.marcas() > 0) {
-            texto(ctx, Text.literal(elegida.marcas() + " Marcas"), cx, y, 20,
-                    0xFF9FD0F0, true, false);
             y += 24;
         }
         if (!elegida.via().isEmpty() && elegida.xp() > 0) {

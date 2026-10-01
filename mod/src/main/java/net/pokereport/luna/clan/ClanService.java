@@ -89,7 +89,7 @@ public final class ClanService {
 
     // ---- lo que se devuelve ------------------------------------------------
 
-    public enum Rol { LIDER, OFICIAL, MIEMBRO;
+    public enum Rol { LIDER, OFICIAL, MIEMBRO, RECLUTA;
 
         /** Puede invitar, echar y sacar del tesoro. */
         public boolean manda() {
@@ -627,7 +627,7 @@ public final class ClanService {
                 return Resultado.no("El clan está lleno (" + MAX_MIEMBROS + ").");
             }
             try (PreparedStatement ps = c.prepareStatement(
-                    "INSERT INTO clan_member (player_id, clan_id) VALUES (?,?)")) {
+                    "INSERT INTO clan_member (player_id, clan_id, role) VALUES (?,?,'RECLUTA')")) {
                 ps.setLong(1, playerId);
                 ps.setLong(2, clanId);
                 ps.executeUpdate();

@@ -61,12 +61,15 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     private static PlayerService players;
     private static EconomyService economy;
     private static net.pokereport.luna.progression.ProgressionService progression;
+    private static net.pokereport.luna.progression.JobService jobs;
     private static net.pokereport.luna.shop.ShopCatalog shop;
     private static net.pokereport.luna.gts.GtsService gts;
     private static net.pokereport.luna.pokedex.PokedexService pokedex;
     private static net.pokereport.luna.kit.KitCatalog kits;
     private static net.pokereport.luna.kit.KitService kitService;
+    private static net.pokereport.luna.kit.EntitlementService entitlements;
     private static net.pokereport.luna.clan.ClanService clans;
+    private static net.pokereport.luna.clan.ClanHomeService clanHomes;
     private static net.pokereport.luna.market.MarketService market;
     private static net.pokereport.luna.market.Tasador tasador;
     private static net.pokereport.luna.quest.QuestService quests;
@@ -99,6 +102,15 @@ public final class LunaEternal implements DedicatedServerModInitializer {
         net.pokereport.luna.lunita.LunitaManager.registrar();
         net.pokereport.luna.rotom.RotomTutorial.server();
         net.pokereport.luna.quienesepokemon.QuienEsEsePokemonService.registrar();
+        // Toda cuenta de teletransporte (home, pwarp, clan home y gimnasios)
+        // se cancela por daño desde un único punto server-side.
+        net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DAMAGE
+                .register((entity, source, amount) -> {
+                    if (amount > 0 && entity instanceof ServerPlayerEntity player) {
+                        net.pokereport.luna.world.Espera.cancelarPorDano(player);
+                    }
+                    return true;
+                });
 
         // Conservación de experiencia al morir para rango Leyenda
         net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
@@ -715,6 +727,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             (dispatcher, registry, env) -> {
                 LunaCommand.register(dispatcher);
                 net.pokereport.luna.homes.HomeCommands.registrar(dispatcher);
+                net.pokereport.luna.clan.ClanCommands.registrar(dispatcher);
                 net.pokereport.luna.command.RankCommands.registrar(dispatcher);
             });
     }
@@ -733,6 +746,7 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             players = new PlayerService(database);
             economy = new EconomyService(database);
             progression = new net.pokereport.luna.progression.ProgressionService(database);
+            jobs = new net.pokereport.luna.progression.JobService(database);
             // Valida el invariante anti-arbitraje. Si el catálogo permite
             // ganar dinero comprando y revendiendo, el servidor NO arranca.
             shop = net.pokereport.luna.shop.ShopCatalog.load();
@@ -740,8 +754,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
             pokedex = new net.pokereport.luna.pokedex.PokedexService(database);
             // Valida el tope diario. Si un kit inyecta de mas, NO arranca.
             kits = net.pokereport.luna.kit.KitCatalog.load();
-            kitService = new net.pokereport.luna.kit.KitService(database);
+            entitlements = new net.pokereport.luna.kit.EntitlementService();
+            kitService = new net.pokereport.luna.kit.KitService(database, entitlements);
             clans = new net.pokereport.luna.clan.ClanService(database);
+            clanHomes = new net.pokereport.luna.clan.ClanHomeService(database);
             market = new net.pokereport.luna.market.MarketService(database);
             tasador = new net.pokereport.luna.market.Tasador(database);
             quests = new net.pokereport.luna.quest.QuestService(database);
@@ -913,7 +929,10 @@ public final class LunaEternal implements DedicatedServerModInitializer {
     public static net.pokereport.luna.pokedex.PokedexService pokedex() { return pokedex; }
     public static net.pokereport.luna.kit.KitCatalog kits() { return kits; }
     public static net.pokereport.luna.kit.KitService kitService() { return kitService; }
+    public static net.pokereport.luna.progression.JobService jobs() { return jobs; }
+    public static net.pokereport.luna.kit.EntitlementService entitlements() { return entitlements; }
     public static net.pokereport.luna.clan.ClanService clans() { return clans; }
+    public static net.pokereport.luna.clan.ClanHomeService clanHomes() { return clanHomes; }
     public static net.pokereport.luna.quest.QuestService quests() { return quests; }
     public static net.pokereport.luna.economy.EconomyStats stats() { return stats; }
     public static net.pokereport.luna.homes.HomeService homes() { return homes; }

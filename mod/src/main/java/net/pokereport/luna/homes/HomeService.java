@@ -69,7 +69,7 @@ public final class HomeService {
             try (Connection c = db.connection();
                  PreparedStatement ps = c.prepareStatement(
                      "SELECT h.id, h.player_id, h.name, h.dimension, h.x, h.y, h.z, h.yaw, h.pitch, h.is_public, "
-                   + "p.name AS player_name, p.uuid AS player_uuid "
+                   + "p.username AS player_name, p.mc_uuid AS player_uuid "
                    + "FROM player_homes h "
                    + "JOIN player p ON h.player_id = p.player_id "
                    + "WHERE h.is_public = TRUE")) {

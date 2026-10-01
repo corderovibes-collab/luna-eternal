@@ -1471,15 +1471,15 @@ public final class LunaCommand {
                 long id = LunaEternal.players()
                     .resolve(p.getUuid(), p.getGameProfile().getName());
                 long dollars = LunaEternal.economy().balance(id, Currency.POKEDOLLAR);
-                long marks   = LunaEternal.economy().balance(id, Currency.MARK);
+                long luna = LunaEternal.economy().balance(id, Currency.REPORTCOIN);
                 // Volver al hilo del servidor para hablar con el jugador.
                 p.getServer().execute(() -> p.sendMessage(Text.literal(
                     // El nombre sale del enum, no escrito aqui: cambiarlo en
                     // dos sitios es como se acaba con una pantalla que dice
                     // "Plata" y un comando que sigue diciendo otra cosa.
                     Currency.POKEDOLLAR.color + Currency.POKEDOLLAR.displayName
-                    + ": §f" + dollars + "  " + Currency.MARK.color
-                    + Currency.MARK.displayName + ": §f" + marks), false));
+                    + ": §f" + dollars + "  " + Currency.REPORTCOIN.color
+                    + Currency.REPORTCOIN.displayName + ": §f" + luna), false));
             } catch (Exception e) {
                 reply(p, "§cError al consultar el saldo: " + e.getMessage());
             }
@@ -1506,6 +1506,10 @@ public final class LunaCommand {
                     .map(c -> c.name() + " (" + c.displayName + ")")
                     .collect(java.util.stream.Collectors.joining(", "));
             src.sendError(Text.literal("Moneda desconocida. Usa: " + monedas));
+            return 0;
+        }
+        if (currency == Currency.MARK) {
+            src.sendError(Text.literal("Marcas fue retirada. Usa POKEDOLLAR o REPORTCOIN."));
             return 0;
         }
 
@@ -1540,12 +1544,12 @@ public final class LunaCommand {
                     .resolve(p.getUuid(), p.getGameProfile().getName());
                 long dd = LunaEternal.economy()
                     .auditDiscrepancy(id, Currency.POKEDOLLAR);
-                long dm = LunaEternal.economy()
-                    .auditDiscrepancy(id, Currency.MARK);
-                String msg = (dd == 0 && dm == 0)
+                long dl = LunaEternal.economy()
+                    .auditDiscrepancy(id, Currency.REPORTCOIN);
+                String msg = (dd == 0 && dl == 0)
                     ? "§aSaldo y libro de asientos cuadran."
                     : "§c¡DESCUADRE! " + Currency.POKEDOLLAR.displayName + ": " + dd
-                      + "  " + Currency.MARK.displayName + ": " + dm;
+                      + "  " + Currency.REPORTCOIN.displayName + ": " + dl;
                 reply(p, msg);
             } catch (Exception e) {
                 reply(p, "§cError al auditar: " + e.getMessage());

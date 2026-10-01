@@ -66,11 +66,28 @@ public final class Catalogo {
     public static final String SOMBREROS = "sombreros";
     public static final String AURAS = "auras";
 
+    /** Precios oficiales. El servidor y la GUI leen las mismas piezas. */
+    public static final int PRECIO_AURA = 50;
+    public static final int PRECIO_SOMBRERO = 100;
+    public static final int PRECIO_SKIN_POKEMON = 250;
+
     private static final List<Pieza> PIEZAS = unir();
 
     private static List<Pieza> unir() {
-        List<Pieza> todas = new ArrayList<>(CatalogoMascotas.PIEZAS);
-        todas.addAll(CatalogoLuna.piezas());
+        List<Pieza> crudas = new ArrayList<>(CatalogoMascotas.PIEZAS);
+        crudas.addAll(CatalogoLuna.piezas());
+        List<Pieza> todas = new ArrayList<>(crudas.size());
+        for (Pieza p : crudas) {
+            // Cero significa exclusivo de evento y nunca se convierte en venta.
+            int precio = p.precio() == 0 ? 0 : switch (p.categoria()) {
+                case AURAS -> PRECIO_AURA;
+                case SOMBREROS -> PRECIO_SOMBRERO;
+                case MASCOTAS -> PRECIO_SKIN_POKEMON;
+                default -> throw new IllegalStateException(
+                        "Categoria cosmetica desconocida: " + p.categoria());
+            };
+            todas.add(new Pieza(p.id(), p.categoria(), p.especie(), p.aspecto(), precio));
+        }
         // ⚠ SE COMPRUEBA QUE NO HAYA IDENTIFICADORES REPETIDOS, y revienta el
         //   arranque si los hay. Suena drástico y es lo correcto: el
         //   identificador es la clave en `player_cosmetics`, así que dos piezas

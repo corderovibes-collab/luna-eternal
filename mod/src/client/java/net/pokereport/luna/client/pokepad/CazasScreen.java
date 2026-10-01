@@ -342,16 +342,10 @@ public class CazasScreen extends Screen {
     private int premio(DrawContext ctx, Red.ObjetivoCaza o, int ax, int y, int aw,
                        boolean compacto) {
         int alto = compacto ? 15 : 18;
-        if (o.dolar() > 0) {
+        if (o.dolar() + o.marca() > 0) {
             texto(ctx, Text.translatable("pokepad.lunaeternal.caza.plata",
-                            String.format("%,d", o.dolar())),
+                            String.format("%,d", o.dolar() + o.marca())),
                     ax, y, alto, ORO, false, CONTORNO_OSCURO);
-            y += alto + 7;
-        }
-        if (o.marca() > 0) {
-            texto(ctx, Text.translatable("pokepad.lunaeternal.caza.marcas",
-                            String.format("%,d", o.marca())),
-                    ax, y, alto, 0xFF7FD4FF, false, CONTORNO_OSCURO);
             y += alto + 7;
         }
         for (var e : objetos(o)) {
@@ -502,14 +496,10 @@ public class CazasScreen extends Screen {
             texto(ctx, Text.translatable("pokepad.lunaeternal.caza.recompensa"),
                     pxx, y + 10, 12, TEXTO_SUAVE, false, false);
             texto(ctx, recortar(Text.translatable("pokepad.lunaeternal.caza.plata",
-                            String.format("%,d", o.dolar())).getString(),
+                            String.format("%,d", o.dolar() + o.marca())).getString(),
                             ANCHO_PREMIO, 17),
                     pxx, y + 26, 17, 0xFF7A5D00, false, CONTORNO_CLARO);
-            texto(ctx, recortar(Text.translatable("pokepad.lunaeternal.caza.marcas",
-                            String.format("%,d", o.marca())).getString(),
-                            ANCHO_PREMIO, 15),
-                    pxx, y + 48, 15, 0xFF1F5B85, false, 0);
-            int ny = y + 70;
+            int ny = y + 52;
             for (var e : objetos(o)) {
                 texto(ctx, recortar(nombreDe(e.id()).getString()
                                 + " x" + e.cantidad(), ANCHO_PREMIO - 24, 14),

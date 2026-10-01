@@ -166,10 +166,13 @@ public final class Tablist {
         net.fabricmc.fabric.api.message.v1.ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {
             ClanInfo clan = clanDe(sender);
             net.minecraft.text.MutableText chatMsg = net.minecraft.text.Text.empty();
+            Rank rank = rankOf(sender.server, sender);
+            chatMsg.append(rank.badge()).append(net.minecraft.text.Text.literal(" "));
             if (clan != null && !clan.etiqueta().isEmpty()) {
                 chatMsg.append(net.minecraft.text.Text.literal("§" + clan.color() + "[" + clan.etiqueta() + "] "));
             }
-            chatMsg.append(sender.getDisplayName())
+            chatMsg.append(net.minecraft.text.Text.literal(sender.getName().getString())
+                           .formatted(rank.color))
                    .append(net.minecraft.text.Text.literal("§7: §f"))
                    .append(message.getContent());
             sender.server.getPlayerManager().broadcast(chatMsg, false);

@@ -37,7 +37,9 @@ public enum Currency {
      * desbloqueos de progresión. No se comercia — por eso no puede inflar
      * nada, y por eso la progresión no se compra.
      */
-    MARK("Marcas", "§b", false, false),
+    /** Solo se conserva para leer el historial anterior a V049. No es activa. */
+    @Deprecated
+    MARK("Marcas (retiradas)", "§8", false, false),
 
     /**
      * Premium. Se compra con dinero real y solo paga identidad y comodidad.

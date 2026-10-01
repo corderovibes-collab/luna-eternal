@@ -13,6 +13,7 @@
     "FaunaSpawnMixin",
     "MixinLeyendaDeath",
     "LobbyNetworkGuardMixin",
+    "StaffOnlyJoinMessageMixin",
     "battle.RequestInstructionFixMixin",
     "battle.BattleActorChoiceFixMixin",
     "battle.PokemonBattleSafetyMixin"

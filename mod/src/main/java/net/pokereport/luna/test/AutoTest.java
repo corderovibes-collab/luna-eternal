@@ -2102,17 +2102,14 @@ public final class AutoTest {
         // no depender de cuánto hayan hecho los autotests anteriores.
         var recompensaInicial = inicial.rewards();
         long plataAntes = LunaEternal.economy().balance(p, Currency.POKEDOLLAR);
-        long marcasAntes = LunaEternal.economy().balance(p, Currency.MARK);
         net.pokereport.luna.progression.ProgressionService.PathState viaAntes =
                 recompensaInicial.path() == null ? null
                 : LunaEternal.progression().all(p).get(recompensaInicial.path());
         check("se cobra una vez", quests.claim(p, inicial));
         check("cobrar mision acredita exactamente la Plata",
               LunaEternal.economy().balance(p, Currency.POKEDOLLAR)
-                      == plataAntes + recompensaInicial.pokedollar());
-        check("cobrar mision acredita exactamente las Marcas",
-              LunaEternal.economy().balance(p, Currency.MARK)
-                      == marcasAntes + recompensaInicial.mark());
+                      == plataAntes + recompensaInicial.pokedollar()
+                              + recompensaInicial.mark());
         if (recompensaInicial.path() != null && recompensaInicial.xp() > 0) {
             var viaDespues = LunaEternal.progression().all(p).get(recompensaInicial.path());
             check("cobrar mision acredita XP de la Via",
@@ -4370,6 +4367,7 @@ public final class AutoTest {
         long coste = net.pokereport.luna.clan.ClanService.COSTE_FUNDAR;
         var OFICIAL = net.pokereport.luna.clan.ClanService.Rol.OFICIAL;
         var MIEMBRO = net.pokereport.luna.clan.ClanService.Rol.MIEMBRO;
+        var RECLUTA = net.pokereport.luna.clan.ClanService.Rol.RECLUTA;
         var LIDER = net.pokereport.luna.clan.ClanService.Rol.LIDER;
 
         // --- el nombre, antes de tocar la base
@@ -4434,7 +4432,7 @@ public final class AutoTest {
         check("no se puede aceptar una invitacion que no existe",
                 !svc.aceptar(b, clan.id() + 9999).ok());
         check("el invitado acepta", svc.aceptar(b, clan.id()).ok());
-        check("el que acepta entra como MIEMBRO", svc.rolDe(b) == MIEMBRO);
+        check("el que acepta entra como RECLUTA", svc.rolDe(b) == RECLUTA);
         check("el clan pasa a dos miembros", svc.clanDe(a).miembros() == 2);
         check("aceptar consume la invitacion", svc.invitaciones(b).isEmpty());
         check("entrar queda anotado",

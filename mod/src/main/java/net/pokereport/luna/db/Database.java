@@ -86,7 +86,10 @@ public final class Database implements AutoCloseable {
         "V045__exclusive_kit_purchase.sql",
         "V046__tebex_offline_username_resolution.sql",
         "V047__expand_tebex_status_length.sql",
-        "V048__lunita.sql"
+        "V048__lunita.sql",
+        "V049__retirar_marcas.sql",
+        "V050__trabajo_activo.sql",
+        "V051__clan_home_y_reclutas.sql"
     };
 
     private final HikariDataSource ds;

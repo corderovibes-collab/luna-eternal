@@ -3543,6 +3543,16 @@ public class Red implements ModInitializer {
         }
     }
 
+    /** Solicitud: seleccionar un oficio o abandonar el actual. */
+    public record AccionTrabajo(String accion, String trabajo) implements CustomPayload {
+        public static final Id<AccionTrabajo> ID =
+                new Id<>(Identifier.of(LunaEternal.MOD_ID, "accion_trabajo"));
+        public static final PacketCodec<RegistryByteBuf, AccionTrabajo> CODEC =
+                PacketCodec.tuple(CADENA, AccionTrabajo::accion,
+                        CADENA, AccionTrabajo::trabajo, AccionTrabajo::new);
+        @Override public Id<? extends CustomPayload> getId() { return ID; }
+    }
+
     /**
      * Una Vía con su progreso REAL.
      *
@@ -3578,12 +3588,16 @@ public class Red implements ModInitializer {
      * escondería las que aún no has tocado — que son justo las que el jugador
      * necesita ver para saber que existen.
      */
-    public record Trabajos(List<ViaEstado> vias) implements CustomPayload {
+    public record Trabajos(List<ViaEstado> vias, String activo,
+                           long actividades, long plataGanada) implements CustomPayload {
         public static final Id<Trabajos> ID =
                 new Id<>(Identifier.of(LunaEternal.MOD_ID, "trabajos"));
         public static final PacketCodec<RegistryByteBuf, Trabajos> CODEC =
                 PacketCodec.tuple(
                         ViaEstado.CODEC.collect(PacketCodecs.toList()), Trabajos::vias,
+                        CADENA, Trabajos::activo,
+                        PacketCodecs.VAR_LONG, Trabajos::actividades,
+                        PacketCodecs.VAR_LONG, Trabajos::plataGanada,
                         Trabajos::new);
 
         @Override
@@ -3787,6 +3801,7 @@ public class Red implements ModInitializer {
         PayloadTypeRegistry.playS2C().register(Cosmeticos.ID, Cosmeticos.CODEC);
         PayloadTypeRegistry.playS2C().register(LlevaPuesto.ID, LlevaPuesto.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirTrabajos.ID, PedirTrabajos.CODEC);
+        PayloadTypeRegistry.playC2S().register(AccionTrabajo.ID, AccionTrabajo.CODEC);
         PayloadTypeRegistry.playS2C().register(Trabajos.ID, Trabajos.CODEC);
         PayloadTypeRegistry.playS2C().register(AvisoLogro.ID, AvisoLogro.CODEC);
         PayloadTypeRegistry.playC2S().register(PedirGts.ID, PedirGts.CODEC);
@@ -3920,8 +3935,16 @@ public class Red implements ModInitializer {
                     if ("exclusive".equals(kit.category())) {
                         boolean posee = LunaEternal.kitService().posee(id, kit);
                         if (!posee) {
-                            fallo = LunaEternal.kitService().comprar(jugador, id, kit, LunaEternal.economy());
-                            fueCompra = true;
+                            if (LunaEternal.entitlements().bypass(jugador.getUuid())) {
+                                fallo = LunaEternal.kitService().concederExclusivoBypass(jugador, id, kit);
+                                if (fallo == null) {
+                                    fallo = LunaEternal.kitService().reclamarExclusivo(jugador, id, kit);
+                                }
+                                fueCompra = false;
+                            } else {
+                                fallo = LunaEternal.kitService().comprar(jugador, id, kit, LunaEternal.economy());
+                                fueCompra = true;
+                            }
                         } else {
                             fallo = LunaEternal.kitService().reclamarExclusivo(jugador, id, kit);
                             fueCompra = false;
@@ -4802,10 +4825,20 @@ public class Red implements ModInitializer {
                         case "rechazar" -> r = svc.rechazar(id, carga.objetivo());
                         case "salir" -> r = svc.salir(id);
                         case "echar" -> r = svc.echar(id, carga.objetivo());
-                        case "ascender" -> r = svc.cambiarRol(id, carga.objetivo(),
-                                net.pokereport.luna.clan.ClanService.Rol.OFICIAL);
-                        case "degradar" -> r = svc.cambiarRol(id, carga.objetivo(),
-                                net.pokereport.luna.clan.ClanService.Rol.MIEMBRO);
+                        case "ascender" -> {
+                            var actual = svc.rolDe(carga.objetivo());
+                            var nuevo = actual == net.pokereport.luna.clan.ClanService.Rol.RECLUTA
+                                    ? net.pokereport.luna.clan.ClanService.Rol.MIEMBRO
+                                    : net.pokereport.luna.clan.ClanService.Rol.OFICIAL;
+                            r = svc.cambiarRol(id, carga.objetivo(), nuevo);
+                        }
+                        case "degradar" -> {
+                            var actual = svc.rolDe(carga.objetivo());
+                            var nuevo = actual == net.pokereport.luna.clan.ClanService.Rol.OFICIAL
+                                    ? net.pokereport.luna.clan.ClanService.Rol.MIEMBRO
+                                    : net.pokereport.luna.clan.ClanService.Rol.RECLUTA;
+                            r = svc.cambiarRol(id, carga.objetivo(), nuevo);
+                        }
                         case "traspasar" -> r = svc.traspasar(id, carga.objetivo());
                         case "disolver" -> r = svc.disolver(id);
                         case "aportar" -> r = svc.aportar(id, carga.cantidad(),
@@ -5088,30 +5121,30 @@ public class Red implements ModInitializer {
             });
         });
 
-        ServerPlayNetworking.registerGlobalReceiver(PedirTrabajos.ID, (carga, ctx) -> {
+        ServerPlayNetworking.registerGlobalReceiver(PedirTrabajos.ID, (carga, ctx) ->
+                enviarTrabajos(ctx.player()));
+
+        ServerPlayNetworking.registerGlobalReceiver(AccionTrabajo.ID, (carga, ctx) -> {
             var jugador = ctx.player();
             LunaEternal.submit(() -> {
                 try {
                     long id = LunaEternal.players()
                             .resolve(jugador.getUuid(), jugador.getName().getString());
-                    var niveles = LunaEternal.progression().all(id);
-                    List<ViaEstado> vias = new ArrayList<>(Path.values().length);
-                    for (Path via : Path.values()) {
-                        var estado = niveles.get(via);
-                        int nivel = estado == null ? 0 : estado.level();
-                        long xp = estado == null ? 0 : estado.xp();
-                        // ⚠ El cero de «nivel maximo» se decide AQUI y no en el
-                        //   cliente: la curva es del servidor, y el centinela que
-                        //   devuelve (Long.MAX_VALUE) es un detalle suyo.
-                        long falta = nivel >= Path.MAX_LEVEL
-                                ? 0 : Path.xpForNextLevel(nivel);
-                        vias.add(new ViaEstado(via.name(), nivel, xp, falta));
-                    }
-                    var carga2 = new Trabajos(vias);
-                    jugador.getServer().execute(
-                            () -> ServerPlayNetworking.send(jugador, carga2));
+                    String error = switch (carga.accion()) {
+                        case "seleccionar" -> LunaEternal.jobs().seleccionar(id, carga.trabajo());
+                        case "abandonar" -> LunaEternal.jobs().abandonar(id);
+                        default -> "Acción de trabajo desconocida.";
+                    };
+                    final String aviso = error;
+                    jugador.getServer().execute(() -> {
+                        jugador.sendMessage(net.minecraft.text.Text.literal(aviso == null
+                                ? "§aTrabajo actualizado correctamente."
+                                : "§c" + aviso), true);
+                        enviarTrabajos(jugador);
+                        enviarSaldo(jugador);
+                    });
                 } catch (Exception e) {
-                    LunaEternal.LOG.warn("No se pudieron leer las vias de {}: {}",
+                    LunaEternal.LOG.warn("No se pudo cambiar el trabajo de {}: {}",
                             jugador.getName().getString(), e.toString());
                 }
             });
@@ -5238,7 +5271,7 @@ public class Red implements ModInitializer {
                 var eco = LunaEternal.economy();
                 var saldo = new Saldo(
                         eco.balance(id, Currency.POKEDOLLAR),
-                        eco.balance(id, Currency.MARK),
+                        0,
                         eco.balance(id, Currency.REPORTCOIN));
                 // La tarjeta viaja en la MISMA peticion. Podria ser otro
                 // paquete con su propio viaje, pero se abren juntos y se
@@ -5281,7 +5314,10 @@ public class Red implements ModInitializer {
                 // lo unico que se puede leer desde aqui sin volver a la base.
                 int medallas = net.pokereport.luna.gym.MedallaService
                         .enCache(jugador.getUuid());
-                var ficha = new Ficha(vias, clan, "", "", medallas);
+                var trabajoEstado = LunaEternal.jobs().estado(id);
+                String trabajo = trabajoEstado.trabajo() == null
+                        ? "" : trabajoEstado.trabajo().displayName.toUpperCase(java.util.Locale.ROOT);
+                var ficha = new Ficha(vias, clan, trabajo, "PRÓXIMAMENTE", medallas);
                 // Volver al hilo del servidor para enviar: la red no es
                 // segura desde un hilo cualquiera.
                 jugador.getServer().execute(() -> {
@@ -5292,6 +5328,36 @@ public class Red implements ModInitializer {
                 // Que no se pueda leer el saldo no es motivo para echar a
                 // nadie: el Pad se queda con guiones donde iría el número.
                 LunaEternal.LOG.warn("No se pudo leer la ficha de {}: {}",
+                        jugador.getName().getString(), e.toString());
+            }
+        });
+    }
+
+    /** Compone el catálogo de vías junto al trabajo activo persistente. */
+    private static void enviarTrabajos(
+            net.minecraft.server.network.ServerPlayerEntity jugador) {
+        LunaEternal.submit(() -> {
+            try {
+                long id = LunaEternal.players().resolve(
+                        jugador.getUuid(), jugador.getName().getString());
+                var niveles = LunaEternal.progression().all(id);
+                List<ViaEstado> vias = new ArrayList<>(Path.values().length);
+                for (Path via : Path.values()) {
+                    var estado = niveles.get(via);
+                    int nivel = estado == null ? 0 : estado.level();
+                    long xp = estado == null ? 0 : estado.xp();
+                    long falta = nivel >= Path.MAX_LEVEL ? 0 : Path.xpForNextLevel(nivel);
+                    vias.add(new ViaEstado(via.name(), nivel, xp, falta));
+                }
+                var job = LunaEternal.jobs().estado(id);
+                var carga = new Trabajos(vias,
+                        job.trabajo() == null ? "" : job.trabajo().name(),
+                        job.actividades(), job.plataGanada());
+                jugador.getServer().execute(() -> {
+                    if (!jugador.isRemoved()) ServerPlayNetworking.send(jugador, carga);
+                });
+            } catch (Exception e) {
+                LunaEternal.LOG.warn("No se pudieron leer los trabajos de {}: {}",
                         jugador.getName().getString(), e.toString());
             }
         });
@@ -7436,8 +7502,8 @@ public class Red implements ModInitializer {
                 long pid = LunaEternal.players().resolve(jugador.getUuid(), jugador.getGameProfile().getName());
                 int escalon = net.pokereport.luna.ui.Tablist.escalonDe(jugador);
                 var playerRank = net.pokereport.luna.ui.Tablist.rangoDe(jugador);
-                boolean esStaff = playerRank.equipo || jugador.hasPermissionLevel(2);
-                boolean elegibleLeyendaDirecto = esStaff || (playerRank == net.pokereport.luna.ui.Tablist.Rank.LEYENDA
+                boolean bypass = LunaEternal.entitlements().bypass(jugador.getUuid());
+                boolean elegibleLeyendaDirecto = bypass || (playerRank == net.pokereport.luna.ui.Tablist.Rank.LEYENDA
                         && LunaEternal.kitService().esElegibleArmadurasLeyenda(pid, jugador.getUuid()));
 
                 var salida = new java.util.ArrayList<FichaKit>();
@@ -7463,7 +7529,7 @@ public class Red implements ModInitializer {
                     boolean rango;
                     if ("rank".equals(kit.category()) && !kit.once()) {
                         var reqRank = kit.requiredRank() != null ? net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank()) : null;
-                        if (reqRank == null || esStaff) {
+                        if (reqRank == null || bypass) {
                             rango = true;
                         } else if (playerRank.escalon < reqRank.escalon) {
                             rango = false;
@@ -7482,7 +7548,7 @@ public class Red implements ModInitializer {
                     if (ex) {
                         espera = reclamado ? "reclamado" : (propio ? "pendiente" : "");
                     } else if ("rank".equals(kit.category()) && !kit.once() && kit.requiredRank() != null
-                            && !esStaff && playerRank.escalon > net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank()).escalon) {
+                            && !bypass && playerRank.escalon > net.pokereport.luna.ui.Tablist.Rank.de(kit.requiredRank()).escalon) {
                         espera = "rango superado";
                     } else {
                         espera = (st == null || st.claimable() ? "" :

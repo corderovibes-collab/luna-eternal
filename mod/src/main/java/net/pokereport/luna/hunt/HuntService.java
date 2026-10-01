@@ -421,10 +421,8 @@ public final class HuntService {
                 }
 
                 var eco = LunaEternal.economy();
-                eco.applyInTransaction(c, playerId, Currency.POKEDOLLAR, dolar,
+                eco.applyInTransaction(c, playerId, Currency.POKEDOLLAR, dolar + marca,
                     "hunt_reward", "hunt", objetivoId, clave + ":d");
-                eco.applyInTransaction(c, playerId, Currency.MARK, marca,
-                    "hunt_reward", "hunt", objetivoId, clave + ":m");
 
                 c.commit();
                 // ⚠ DESPUÉS del commit. Si se anunciara antes y la transacción

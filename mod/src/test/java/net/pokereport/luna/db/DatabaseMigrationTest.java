@@ -49,8 +49,8 @@ public class DatabaseMigrationTest {
                 assertFalse(content.isBlank(), "El archivo de migración no debe estar vacío: " + file);
             }
         }
-        assertEquals(48, seenVersions.size(), "Deben verificarse las 48 migraciones, incluida la memoria de Lunita");
-        for (int version = 1; version <= 48; version++) {
+        assertEquals(51, seenVersions.size(), "Deben verificarse las 51 migraciones, incluido Clan Home");
+        for (int version = 1; version <= 51; version++) {
             assertTrue(seenVersions.contains(version), "Falta la migración " + version);
         }
     }

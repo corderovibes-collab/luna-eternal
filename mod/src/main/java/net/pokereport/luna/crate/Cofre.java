@@ -331,7 +331,7 @@ public final class Cofre {
         // ---- LEGENDARIOS ---------------------------------------------------
         // ⚠ Piedad 0: con los once al mismo porcentaje no hay nada raro que
         //   garantizar. Ver el javadoc de LEGENDARIOS.
-        new Cofre_("legendario", Llave.PREMIUM, 1200, 0, tablaLegendarios(false)),
+        new Cofre_("legendario", Llave.PREMIUM, 1500, 0, tablaLegendarios(false)),
 
         // ---- LEGENDARIOS SHINY ---------------------------------------------
         //
@@ -339,7 +339,7 @@ public final class Cofre {
         //    `treasures.md` §5 proponía «nunca shiny» como mitigación y que la
         //    decisión fue la contraria, a sabiendas: dentro de seis meses nadie
         //    tiene que reconstruir el razonamiento.
-        new Cofre_("legendario_shiny", Llave.PREMIUM, 3000, 0, tablaLegendarios(true))
+        new Cofre_("legendario_shiny", Llave.PREMIUM, 2500, 0, tablaLegendarios(true))
     );
 
     /** El cofre con ese identificador, o {@code null}. */

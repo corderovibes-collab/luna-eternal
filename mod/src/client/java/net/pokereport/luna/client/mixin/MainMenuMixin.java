@@ -70,11 +70,11 @@ public abstract class MainMenuMixin extends Screen {
     private static final Identifier ICON_WIKI = Identifier.of("lunaeternal", "textures/gui/title/social/wiki.png");
 
     @Unique
-    private static final String URL_DISCORD = "https://discord.gg/pokereport";
+    private static final String URL_DISCORD = "https://discord.gg/JsUTQWRH8H";
     @Unique
     private static final String URL_TIENDA = net.pokereport.luna.client.Enlaces.TIENDA;
     @Unique
-    private static final String URL_WIKI = "https://wiki.pokereport.net/";
+    private static final String URL_WIKI = "https://pokereport.online/wiki/";
 
     protected MainMenuMixin(Text title) {
         super(title);

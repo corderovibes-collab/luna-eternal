@@ -120,10 +120,8 @@ public final class CatalogoPad {
             new Ficha("torre_batalla", true),
             // ⚠ CRIANZA: el centro de crianza e incubación del PokePad (rango Élite+).
             new Ficha("crianza",    true),
-            // 💀 La WIKI baja aquí desde el hueco 10. Sigue bloqueada, y ese es
-            //   justo el motivo: lo que todavía no lleva a ningún sitio no ocupa
-            //   sitio en la pantalla que se ve al abrir el Pad.
-            new Ficha("wiki",       false)
+            // Official web guides open through Minecraft's link confirmation.
+            new Ficha("wiki",       true)
     );
 
     /** Dónde vive el icono de esa aplicación <b>dentro del jar</b>. */

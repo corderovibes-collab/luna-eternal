@@ -1,5 +1,7 @@
 # CLAUDE.md — PokeReport: Luna Eternal
 
+> **2026-10-02 — Portal y wiki:** `website/` contiene el proyecto editable de pokereport.online, publicado en el host SSH `su` (/opt/pokereport). Portada, `/jugar/`, `/wiki/` y tienda original en `/tienda/`; descarga del launcher desde el propio dominio. PokéPad Wiki habilitada con confirmación de Minecraft. No se cambiaron protocolo ni servidor de juego. Despliegue, restauración y comprobaciones en [website/README.md](website/README.md).
+
 > **2026-10-02 — Lunita conmemorativa:** guardiana GeckoLib reparada y especie Cobblemon independiente `lunaeternal:lunita`, Hada/Psíquico, habilidades y movimientos de Eevee, ambos hombros y Pokédex propia. Solo entrega administrativa `/lunita dar <jugador> [nivel]`; sin aparición natural, cría ni evolución. Evidencia: [docs/lunita-v2-validation.md](docs/lunita-v2-validation.md). El usuario autorizó instalar pese a seis fallos generales preexistentes; parches dirigidos preservan los activos ajenos.
 
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión

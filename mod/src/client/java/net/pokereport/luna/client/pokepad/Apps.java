@@ -78,8 +78,15 @@ public final class Apps {
             case "pase" -> abrirPase();
 
             case "crianza" -> abrirCrianza();
+            case "wiki" -> abrirWiki();
             default -> false;
         };
+    }
+
+    private static boolean abrirWiki() {
+        var cliente = MinecraftClient.getInstance();
+        net.pokereport.luna.client.Enlaces.abrirWiki(cliente, cliente.currentScreen);
+        return true;
     }
 
     /** Crianza disponible para todos los jugadores. */

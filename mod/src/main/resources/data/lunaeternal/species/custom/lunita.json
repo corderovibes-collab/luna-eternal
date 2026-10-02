@@ -1,0 +1,239 @@
+{
+  "implemented": true,
+  "nationalPokedexNumber": 2001,
+  "name": "Lunita",
+  "primaryType": "fairy",
+  "maleRatio": 0,
+  "height": 3,
+  "weight": 65,
+  "pokedex": [
+    "lunaeternal.species.lunita.desc"
+  ],
+  "labels": [
+    "custom",
+    "lunita_memorial",
+    "admin_only"
+  ],
+  "aspects": [],
+  "abilities": [
+    "runaway",
+    "adaptability",
+    "h:anticipation"
+  ],
+  "eggGroups": [
+    "undiscovered"
+  ],
+  "baseStats": {
+    "hp": 95,
+    "attack": 65,
+    "defence": 65,
+    "special_attack": 110,
+    "special_defence": 130,
+    "speed": 60
+  },
+  "evYield": {
+    "hp": 0,
+    "attack": 0,
+    "defence": 0,
+    "special_attack": 0,
+    "special_defence": 2,
+    "speed": 0
+  },
+  "baseExperienceYield": 184,
+  "experienceGroup": "medium_fast",
+  "catchRate": 45,
+  "eggCycles": 35,
+  "baseFriendship": 255,
+  "shoulderMountable": true,
+  "baseScale": 0.5,
+  "hitbox": {
+    "width": 0.9,
+    "height": 1,
+    "fixed": false
+  },
+  "drops": {
+    "amount": 0,
+    "entries": []
+  },
+  "moves": [
+    "1:tailwhip",
+    "1:tackle",
+    "1:helpinghand",
+    "1:growl",
+    "1:covet",
+    "5:sandattack",
+    "10:quickattack",
+    "15:babydolleyes",
+    "20:refresh",
+    "25:bite",
+    "30:copycat",
+    "35:batonpass",
+    "40:takedown",
+    "45:trumpcard",
+    "50:doubleedge",
+    "55:lastresort",
+    "egg:captivate",
+    "egg:curse",
+    "egg:detect",
+    "egg:doublekick",
+    "egg:flail",
+    "egg:mudslap",
+    "egg:naturalgift",
+    "egg:synchronoise",
+    "egg:tickle",
+    "egg:wish",
+    "egg:yawn",
+    "tm:alluringvoice",
+    "tm:babydolleyes",
+    "tm:batonpass",
+    "tm:bodyslam",
+    "tm:calmmind",
+    "tm:charm",
+    "tm:covet",
+    "tm:curse",
+    "tm:dig",
+    "tm:doubleedge",
+    "tm:echoedvoice",
+    "tm:endure",
+    "tm:facade",
+    "tm:faketears",
+    "tm:focusenergy",
+    "tm:headbutt",
+    "tm:healbell",
+    "tm:helpinghand",
+    "tm:hypervoice",
+    "tm:irontail",
+    "tm:laserfocus",
+    "tm:lastresort",
+    "tm:mudslap",
+    "tm:payday",
+    "tm:protect",
+    "tm:raindance",
+    "tm:rest",
+    "tm:retaliate",
+    "tm:roar",
+    "tm:shadowball",
+    "tm:sleeptalk",
+    "tm:storedpower",
+    "tm:substitute",
+    "tm:sunnyday",
+    "tm:swift",
+    "tm:takedown",
+    "tm:terablast",
+    "tm:trailblaze",
+    "tm:weatherball",
+    "tm:workup",
+    "tutor:babydolleyes",
+    "tutor:calmmind",
+    "tutor:covet",
+    "tutor:focusenergy",
+    "tutor:healbell",
+    "tutor:helpinghand",
+    "tutor:hypervoice",
+    "tutor:irontail",
+    "tutor:laserfocus",
+    "tutor:lastresort",
+    "tutor:mudslap",
+    "tutor:rest",
+    "tutor:shadowball",
+    "tutor:sleeptalk",
+    "tutor:swift",
+    "legacy:attract",
+    "legacy:bide",
+    "legacy:confide",
+    "legacy:doubleteam",
+    "legacy:frustration",
+    "legacy:hiddenpower",
+    "legacy:mimic",
+    "legacy:rage",
+    "legacy:reflect",
+    "legacy:return",
+    "legacy:round",
+    "legacy:secretpower",
+    "legacy:skullbash",
+    "legacy:snore",
+    "legacy:swagger",
+    "legacy:toxic",
+    "special:celebrate",
+    "special:sing",
+    "1:disarmingvoice",
+    "5:fairywind",
+    "10:confusion",
+    "15:charm",
+    "20:drainingkiss",
+    "25:wish",
+    "30:psybeam",
+    "35:calmmind",
+    "40:psychic",
+    "45:dazzlinggleam",
+    "50:moonblast",
+    "55:lifedew",
+    "60:healingwish",
+    "tm:psychic",
+    "tm:psyshock",
+    "tm:dazzlinggleam",
+    "tm:drainingkiss",
+    "tm:reflect",
+    "tm:lightscreen",
+    "tm:mistyterrain"
+  ],
+  "evolutions": [],
+  "forms": [],
+  "behaviour": {
+    "herd": {
+      "maxSize": 2,
+      "toleratedLeaders": [
+        {
+          "pokemon": "eevee alpha",
+          "tier": 1
+        },
+        {
+          "pokemon": "vaporeon",
+          "tier": 1
+        },
+        {
+          "pokemon": "jolteon",
+          "tier": 1
+        },
+        {
+          "pokemon": "flareon",
+          "tier": 1
+        },
+        {
+          "pokemon": "espeon",
+          "tier": 1
+        },
+        {
+          "pokemon": "umbreon",
+          "tier": 1
+        },
+        {
+          "pokemon": "leafeon",
+          "tier": 1
+        },
+        {
+          "pokemon": "glaceon",
+          "tier": 1
+        },
+        {
+          "pokemon": "sylveon",
+          "tier": 1
+        }
+      ]
+    },
+    "resting": {
+      "willSleepOnBed": true,
+      "drowsyChance": 0.0333,
+      "rouseChance": 0.0042
+    },
+    "moving": {
+      "swim": {
+        "avoidsWater": true
+      }
+    },
+    "combat": {
+      "willDefendOwner": true
+    }
+  },
+  "secondaryType": "psychic"
+}

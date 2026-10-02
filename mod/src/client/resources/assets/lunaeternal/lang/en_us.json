@@ -755,5 +755,8 @@
   "gui.lunaeternal.menu.status.connecting": "§eConnecting...",
   "gui.lunaeternal.menu.status.offline": "§cOffline",
   "gui.lunaeternal.menu.greeting": "Welcome, %s!",
-  "entity.lunaeternal.lunita": "Lunita"
+  "entity.lunaeternal.lunita": "Lunita",
+  "lunaeternal.species.lunita.name": "Lunita",
+  "lunaeternal.species.lunita.desc": "Lunita is a Fairy and Psychic companion so sweet that hearts melt at the mere sight of her. Her gentle eyes hold the light of happy memories. She loves resting on the shoulder of someone she loves and sharing every adventure. The love she left behind shines forever.",
+  "cobblemon.ui.pokedex.region.lunita": "In Memory of Lunita"
 }

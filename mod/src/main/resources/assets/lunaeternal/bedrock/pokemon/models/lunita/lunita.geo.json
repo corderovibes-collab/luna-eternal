@@ -5,7 +5,7 @@
       "description": {
         "identifier": "geometry.eevee_female",
         "texture_width": 128,
-        "texture_height": 64,
+        "texture_height": 128,
         "visible_bounds_width": 4,
         "visible_bounds_height": 2.5,
         "visible_bounds_offset": [
@@ -127,8 +127,8 @@
               ],
               "inflate": 0.25,
               "uv": [
-                0,
-                14
+                2,
+                66
               ]
             }
           ]
@@ -209,8 +209,8 @@
                 0
               ],
               "uv": [
-                31,
-                61
+                28,
+                66
               ]
             }
           ]
@@ -242,8 +242,8 @@
               ],
               "inflate": -0.01,
               "uv": [
-                28,
-                0
+                38,
+                66
               ]
             }
           ]
@@ -438,8 +438,8 @@
               ],
               "inflate": 0.15,
               "uv": [
-                45,
-                1
+                61,
+                66
               ]
             }
           ]
@@ -3550,8 +3550,8 @@
                 0
               ],
               "uv": [
-                2,
-                2
+                75,
+                66
               ]
             }
           ]
@@ -3587,8 +3587,8 @@
                 0
               ],
               "uv": [
-                49,
-                59
+                85,
+                66
               ]
             }
           ]

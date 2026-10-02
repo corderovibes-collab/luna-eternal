@@ -10,6 +10,7 @@
     "LobbyScreenGuardMixin",
     "LobbyHudGuardMixin",
     "MainMenuMixin",
+    "ConnectScreenMixin",
     "SplashOverlayMixin",
     "SplashOverlayAccessor",
     "SplashOverlayInvoker",

@@ -1,0 +1,108 @@
+{
+  "portraitScale": 1.94,
+  "portraitTranslation": [
+    -0.32,
+    -0.41,
+    0
+  ],
+  "profileScale": 0.77,
+  "profileTranslation": [
+    0,
+    0.6,
+    0
+  ],
+  "rootBone": "Lunita",
+  "animations": {
+    "cry": "q.bedrock_stateful('lunita', 'cry')",
+    "recoil": "q.bedrock_stateful('lunita', 'recoil')",
+    "physical": "q.bedrock_primary('lunita', 'physical', q.curve('symmetrical_wide'))",
+    "special": "q.bedrock_primary('lunita', 'special', q.curve('symmetrical_wide'))",
+    "status": "q.bedrock_primary('lunita', 'status', q.curve('symmetrical_wide'))"
+  },
+  "poses": {
+    "standing": {
+      "poseTypes": [
+        "STAND",
+        "NONE",
+        "PORTRAIT",
+        "PROFILE",
+        "FLOAT"
+      ],
+      "animations": [
+        "q.look('head_ai', 1, 1, 70, -45, 45, -45)",
+        "q.bedrock('lunita', 'idle')"
+      ],
+      "quirks": [
+        "q.bedrock_quirk('lunita', 'blink')"
+      ]
+    },
+    "walking": {
+      "poseTypes": [
+        "WALK",
+        "SWIM"
+      ],
+      "animations": [
+        "q.look('head_ai', 1, 1, 70, -45, 45, -45)",
+        "q.bedrock('lunita', 'ground_idle')",
+        "q.quadruped_walk(0.66, 1.4, 'front_leg_left', 'front_leg_right', 'back_leg_left', 'back_leg_right')"
+      ],
+      "quirks": [
+        "q.bedrock_quirk('lunita', 'blink')"
+      ]
+    },
+    "shoulder_left": {
+      "poseName": "shoulder_left",
+      "poseTypes": [
+        "SHOULDER_LEFT"
+      ],
+      "animations": [
+        "q.look('head_ai')",
+        "q.bedrock('lunita', 'ground_idle')"
+      ],
+      "quirks": [
+        "q.bedrock_quirk('lunita', 'blink')"
+      ],
+      "transformedParts": [
+        {
+          "part": "__root",
+          "position": [
+            5,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    "shoulder_right": {
+      "poseName": "shoulder_right",
+      "poseTypes": [
+        "SHOULDER_RIGHT"
+      ],
+      "animations": [
+        "q.look('head_ai')",
+        "q.bedrock('lunita', 'ground_idle')"
+      ],
+      "quirks": [
+        "q.bedrock_quirk('lunita', 'blink')"
+      ],
+      "transformedParts": [
+        {
+          "part": "__root",
+          "position": [
+            -5,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    "sleep": {
+      "poseTypes": [
+        "SLEEP"
+      ],
+      "animations": [
+        "q.bedrock('lunita', 'sleep')"
+      ]
+    }
+  }
+}

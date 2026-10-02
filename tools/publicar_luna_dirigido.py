@@ -12,6 +12,8 @@ import shutil
 import sys
 import urllib.request
 import argparse
+import base64
+import subprocess
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -27,6 +29,7 @@ def descargar_json(url: str) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--jar", type=Path, help="JAR validado; permite publicar un parche dirigido sobre el JAR vivo")
     parser.add_argument("--asset-ya-subido", action="store_true",
                         help="solo mueve el manifiesto tras verificar el activo")
     parser.add_argument("--retirar-almacenamiento", action="store_true",
@@ -34,7 +37,7 @@ def main() -> None:
     parser.add_argument("--incluir-punchy", action="store_true",
                         help="anade Punchy 2.8c Fabric 1.21.1 solo al launcher")
     args = parser.parse_args()
-    jar = RAIZ / "mod" / "build" / "libs" / "lunaeternal-0.1.0.jar"
+    jar = args.jar.resolve() if args.jar else RAIZ / "mod" / "build" / "libs" / "lunaeternal-0.1.0.jar"
     if not jar.is_file():
         raise SystemExit(f"No existe el JAR validado: {jar}")
     data = jar.read_bytes()
@@ -83,7 +86,6 @@ def main() -> None:
 
     asset = manifest.SALIDA / name
     if args.asset_ya_subido:
-        import subprocess
         listed = subprocess.check_output([
             "gh", "release", "view", manifest.TAG_ACTIVOS,
             "--repo", manifest.REPO_PUBLICO, "--json", "assets"], text=True)
@@ -104,6 +106,26 @@ def main() -> None:
     index = live["files"].index(old)
     live["files"][index] = replacement
     stamp = manifest.publicar_puntero(live)
+    # The Qt launcher falls back to master/manifest.json when GitHub releases
+    # are unreachable. Leaving it stale silently reinstalls the broken client.
+    endpoint = f"repos/{manifest.REPO_PUBLICO}/contents/manifest.json"
+    metadata = json.loads(subprocess.check_output(
+        ["gh", "api", endpoint + "?ref=master"], text=True))
+    fallback = json.loads(base64.b64decode(metadata["content"]))
+    fallback_matches = [f for f in fallback["files"] if f.get("path", "").startswith("mods/lunaeternal-")]
+    if len(fallback_matches) != 1:
+        raise SystemExit("El respaldo debe contener exactamente un JAR Luna Eternal")
+    fallback["files"][fallback["files"].index(fallback_matches[0])] = replacement
+    payload = {
+        "message": "Update Luna Eternal client in launcher fallback",
+        "sha": metadata["sha"], "branch": "master",
+        "content": base64.b64encode(json.dumps(fallback, indent=2).encode()).decode(),
+    }
+    payload_file = manifest.SALIDA / "luna-fallback-update.json"
+    payload_file.write_text(json.dumps(payload), encoding="utf-8")
+    subprocess.run(["gh", "api", "--method", "PUT", endpoint,
+                    "--input", str(payload_file)], check=True, stdout=subprocess.DEVNULL)
+    print("RESPALDO sincronizado: solo Luna Eternal; otras entradas conservadas.")
     print(f"PUBLICADO solo Luna Eternal: {old['sha1'][:10]} -> {sha1[:10]}")
     if retirados:
         print("RETIRADOS: " + ", ".join(retirados))

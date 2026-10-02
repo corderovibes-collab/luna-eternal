@@ -1,0 +1,15 @@
+{
+  "id": "lunaeternal:lunita",
+  "speciesId": "lunaeternal:lunita",
+  "displayAspects": [],
+  "conditionAspects": [],
+  "forms": [
+    {
+      "displayForm": "Normal",
+      "unlockForms": [
+        "Normal"
+      ]
+    }
+  ],
+  "variations": []
+}

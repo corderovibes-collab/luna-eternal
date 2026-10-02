@@ -129,6 +129,8 @@ public final class AutoTest {
             testPase(a);
             testInicial();
             testRotomTutorial();
+            net.pokereport.luna.lunita.LunitaAssets.verify();
+            check("Lunita: textura, modelo y huesos de animaciones compatibles", true);
 
         } catch (Exception e) {
             fail("excepcion inesperada", e.toString());

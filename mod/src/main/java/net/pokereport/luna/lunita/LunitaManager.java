@@ -21,6 +21,13 @@ public final class LunitaManager {
 
     /** Instala únicamente los ganchos de recuperación; nunca genera un clon. */
     public static void registrar() {
+        LunitaPokemon.register();
+        try {
+            LunitaAssets.verify();
+            LunaEternal.LOG.info("[LUNITA] modelo, textura y referencias de animación verificados");
+        } catch (Exception e) {
+            throw new IllegalStateException("Recursos de Lunita incompatibles", e);
+        }
         ServerLifecycleEvents.SERVER_STARTED.register(server ->
                 LunaEternal.LOG.info("[LUNITA] sistema listo; esperando punto configurado o alta administrativa"));
         // Una segunda entidad guardada por accidente no se convierte en una
@@ -75,13 +82,12 @@ public final class LunitaManager {
         w.playSound(null, l.getBlockPos(), SoundEvents.ENTITY_ALLAY_AMBIENT_WITHOUT_ITEM,
                 net.minecraft.sound.SoundCategory.NEUTRAL, .7f, 1.25f);
         if (r.regalo()) {
-            p.sendMessage(Text.literal("§d✦ §fLunita mueve sus alitas y te regala §a1.000 Plata§f."), false);
+            p.sendMessage(Text.literal("§d✦ §fLunita te saluda y te regala §a1.000 Plata§f."), false);
             LunaEternal.LOG.info("[LUNITA] reward granted player={} amount={}", p.getUuid(), LunitaMemoryService.RECOMPENSA_PLATA);
         } else {
             long m = Math.max(1L, r.restantesMillis() / 60_000L);
             p.sendMessage(Text.literal("§dLunita ya te dio un regalo. §7Vuelve en " + m + " min."), true);
         }
-        l.state(LunitaState.IDLE);
     }
 
     public static void recuperar(LunitaEntity lunita, String causa) {
@@ -92,10 +98,12 @@ public final class LunitaManager {
             return;
         }
         w.getChunk(home);
+        lunita.getNavigation().stop();
         lunita.refreshPositionAndAngles(home.getX() + .5, home.getY(), home.getZ() + .5,
                 lunita.getYaw(), 0f);
         lunita.setVelocity(net.minecraft.util.math.Vec3d.ZERO);
-        lunita.state(LunitaState.RETURN_HOME);
+        lunita.fallDistance = 0;
+        lunita.state(LunitaState.IDLE);
         LunaEternal.LOG.warn("[LUNITA] recovery triggered: {}", causa);
     }
 

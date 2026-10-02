@@ -1,5 +1,7 @@
 # CLAUDE.md — PokeReport: Luna Eternal
 
+> **2026-10-02 — Lunita conmemorativa:** guardiana GeckoLib reparada y especie Cobblemon independiente `lunaeternal:lunita`, Hada/Psíquico, habilidades y movimientos de Eevee, ambos hombros y Pokédex propia. Solo entrega administrativa `/lunita dar <jugador> [nivel]`; sin aparición natural, cría ni evolución. Evidencia: [docs/lunita-v2-validation.md](docs/lunita-v2-validation.md). El usuario autorizó instalar pese a seis fallos generales preexistentes; parches dirigidos preservan los activos ajenos.
+
 > Documento maestro. **Se lee antes de cualquier trabajo.** Si una decisión
 > arquitectónica cambia, se actualiza aquí antes de cerrar la sesión.
 

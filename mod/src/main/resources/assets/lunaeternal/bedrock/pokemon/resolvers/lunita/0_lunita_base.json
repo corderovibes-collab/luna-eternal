@@ -1,0 +1,13 @@
+{
+  "species": "lunaeternal:lunita",
+  "order": 0,
+  "variations": [
+    {
+      "aspects": [],
+      "poser": "lunaeternal:lunita",
+      "model": "lunaeternal:lunita.geo",
+      "texture": "lunaeternal:textures/pokemon/lunita/lunita.png",
+      "layers": []
+    }
+  ]
+}

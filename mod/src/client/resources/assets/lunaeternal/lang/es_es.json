@@ -849,5 +849,8 @@
   "gimnasio.lunaeternal.tipo.fredo": "Tipo Hielo · Pueblo Caoba",
   "gimnasio.lunaeternal.tipo.debora": "Tipo Dragón · Ciudad Endrino",
   "gimnasio.lunaeternal.tipo.campeon_johto": "Liga Pokémon · Meseta Añil",
-  "entity.lunaeternal.lunita": "Lunita"
+  "entity.lunaeternal.lunita": "Lunita",
+  "lunaeternal.species.lunita.name": "Lunita",
+  "lunaeternal.species.lunita.desc": "Lunita es una compañera de tipo Hada y Psíquico, tan tierna que todos se derriten de amor con tan solo verla. Su mirada guarda la luz de los recuerdos felices. Le encanta descansar en el hombro de quien ama y acompañarlo en cada aventura. El cariño que dejó sigue brillando para siempre.",
+  "cobblemon.ui.pokedex.region.lunita": "En memoria de Lunita"
 }
